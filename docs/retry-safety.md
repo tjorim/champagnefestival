@@ -99,7 +99,13 @@ Person anonymisation (`POST /api/people/{id}/anonymise`, see the inventory table
 
 Composed-message create/update (`POST`/`PUT /api/composer[/{id}]`) are **not
 retry-safe**, the same category as announcement create/update above — no
-idempotency key, admin client does not auto-retry.
+idempotency key, admin client does not auto-retry. The composer form disables
+submission and ignores submit events while saving; this prevents overlapping
+browser submissions, but does not make creates idempotent. Create and merged
+updates validate complete locale pairs and push payload size before persisting.
+
+Scheduling revalidates content before changing state or enqueueing a job.
+The admin UI displays scheduling failures and does not automatically retry.
 
 Schedule/send (`POST /api/composer/{id}/schedule`) is **natural resource key,
 convergent state only**. The message's `draft -> scheduled` transition and the

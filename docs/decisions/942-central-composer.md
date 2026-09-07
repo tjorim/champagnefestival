@@ -115,8 +115,10 @@ Shipped per the confirmed decisions and proposed defaults above:
 
 - **Model**: `ComposedMessage` (`app/models.py`), migration in the
   accumulated `001_contact_messages.py`. `state` is `draft`/`scheduled`/`sent`
-  (DB check constraint); "publish now" is `schedule` with no `scheduled_at`,
-  not a fourth state, matching the proposal.
+  (DB check constraint); "publish now" omits `scheduled_at` in the request.
+  `schedule_send` assigns the current UTC time to both
+  `ComposedMessage.scheduled_at` and the outbox job; delivery occurs on the
+  next worker poll. It is not a fourth state, matching the proposal.
 - **Draft lifecycle** (`app/services/composer_service.py`): create/update
   (only while `draft`), read with a live-computed `estimated_push_audience`
   and (once `sent`) aggregate `push_delivered_count`/`push_failed_count`/
@@ -154,7 +156,7 @@ Shipped per the confirmed decisions and proposed defaults above:
   treatment #932/#941 already give low-volume authenticated admin actions —
   satisfies the issue's "rate limits and admin authorisation are enforced"
   criterion alongside the router-wide `require_admin` dependency.
-- **Tests**: 25 backend tests (`test_composer.py`) covering draft validation,
+- **Tests**: 24 original backend test cases (`test_composer.py`) covering draft validation,
   the schedule/send idempotency guard, fresh-audience resolution, duplicate
   dispatch being a no-op, announcement creation, push delivery (success,
   locale fallback to Dutch, 404/410 retirement, retry-on-failure), and the
@@ -170,6 +172,15 @@ Shipped per the confirmed decisions and proposed defaults above:
   (confirmed out of scope — no real subscriber sets these yet, see the
   "Audience targeting scope" decision above) and any bulk email channel
   (explicitly out of scope for #942 itself).
+
+## Review corrections (2026-09-07)
+
+Create, merged draft updates, and scheduling require a complete title/body
+locale pair. Push payloads are checked with the same JSON serializer used
+for delivery before they can be scheduled. Fallback selects a complete pair,
+preferentially Dutch, then English or French. The admin form blocks repeat
+submissions while saving and displays scheduling errors without auto-retry.
+Regression coverage adds 10 backend cases and 2 frontend tests.
 
 ## References
 

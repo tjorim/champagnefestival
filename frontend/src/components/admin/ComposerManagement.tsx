@@ -143,6 +143,8 @@ export default function ComposerManagement({
         },
         m.admin_composer_error_send(),
       ),
+    onMutate: () => setError(""),
+    onError: (reason) => setError(String(reason)),
     onSuccess: () => void refresh(),
     retry: false,
   });
@@ -196,6 +198,7 @@ export default function ComposerManagement({
         <Form
           onSubmit={(event) => {
             event.preventDefault();
+            if (save.isPending) return;
             setError("");
             void save.mutateAsync().catch((reason) => setError(String(reason)));
           }}
@@ -278,7 +281,11 @@ export default function ComposerManagement({
           </div>
 
           <div className="d-flex gap-2">
-            <Button type="submit" variant="warning" disabled={draft.channels.length === 0}>
+            <Button
+              type="submit"
+              variant="warning"
+              disabled={draft.channels.length === 0 || save.isPending}
+            >
               {editing ? m.admin_composer_save_button() : m.admin_composer_create_button()}
             </Button>
             {editing && (

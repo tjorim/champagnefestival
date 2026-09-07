@@ -10,6 +10,8 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
+from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
+
 # ---------------------------------------------------------------------------
 # Shared value types
 # ---------------------------------------------------------------------------
@@ -1595,10 +1597,13 @@ class ComposedMessageWrite(RequestModel):
 
     @model_validator(mode="after")
     def validate_composed_message(self):
-        if not any((self.title_nl, self.title_en, self.title_fr)):
-            raise ValueError("a composed message needs at least one translated title")
-        if not any((self.body_nl, self.body_en, self.body_fr)):
-            raise ValueError("a composed message needs at least one translated body")
+        if pick_locale_text(self, "nl") is None:
+            raise ValueError("a composed message needs at least one complete translated title/body pair")
+        if "push" in self.channels:
+            for locale in LOCALES:
+                text = pick_locale_text(self, locale)
+                if text is not None:
+                    build_composer_payload(*text)
         if len(set(self.channels)) != len(self.channels):
             raise ValueError("channels must not contain duplicates")
         return self

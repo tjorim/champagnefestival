@@ -433,3 +433,81 @@ async def test_push_result_counts_do_not_leak_between_different_messages(client,
     body = r.json()
     assert body["push_delivered_count"] == 0
     assert body["push_pending_count"] == 1
+
+
+async def test_create_rejects_split_locale_pair(client):
+    response = await client.post(
+        "/api/composer",
+        json={"title_nl": "Titel", "body_en": "Body", "channels": ["push"]},
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 422
+
+
+@pytest.mark.parametrize("locale", ["nl", "en", "fr"])
+async def test_push_rejects_oversized_localized_payload(client, locale):
+    response = await client.post(
+        "/api/composer",
+        json=_draft_body(**{f"title_{locale}": "😀" * 500}),
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 422
+
+
+async def test_announcement_allows_text_over_push_byte_limit(client):
+    response = await client.post(
+        "/api/composer", json=_draft_body(channels=["announcement"], title_nl="😀" * 500), headers=ADMIN_HEADERS
+    )
+    assert response.status_code == 201
+    message_id = response.json()["id"]
+    response = await client.put(
+        f"/api/composer/{message_id}", json={"channels": ["push"]}, headers=ADMIN_HEADERS
+    )
+    assert response.status_code == 400
+    saved = await client.get(f"/api/composer/{message_id}", headers=ADMIN_HEADERS)
+    assert saved.json()["channels"] == ["announcement"]
+
+
+async def test_update_validates_merged_locale_pairs(client):
+    created = await client.post(
+        "/api/composer", json={"title_en": "Title", "body_en": "Body", "channels": ["push"]}, headers=ADMIN_HEADERS
+    )
+    message_id = created.json()["id"]
+    response = await client.put(f"/api/composer/{message_id}", json={"title_en": "Updated"}, headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    response = await client.put(
+        f"/api/composer/{message_id}", json={"body_en": None, "body_nl": "Inhoud"}, headers=ADMIN_HEADERS
+    )
+    assert response.status_code == 400
+    saved = await client.get(f"/api/composer/{message_id}", headers=ADMIN_HEADERS)
+    assert saved.json()["body_en"] == "Body"
+
+
+@pytest.mark.parametrize("locale", ["en", "fr"])
+def test_locale_fallback_uses_available_complete_pair(locale):
+    from app.composer_content import pick_locale_text
+
+    message = ComposedMessage(**{f"title_{locale}": "Title", f"body_{locale}": "Body"})
+    assert pick_locale_text(message, "nl") == ("Title", "Body")
+
+
+def test_locale_fallback_never_mixes_languages_and_prefers_dutch():
+    from app.composer_content import pick_locale_text
+
+    message = ComposedMessage(title_nl="Titel", body_nl="Inhoud", title_en="Title", title_fr="Titre", body_fr="Corps")
+    assert pick_locale_text(message, "en") == ("Titel", "Inhoud")
+    assert pick_locale_text(message, "fr") == ("Titre", "Corps")
+
+
+async def test_schedule_revalidates_legacy_push_payload(client, db_session):
+    created = await client.post("/api/composer", json=_draft_body(), headers=ADMIN_HEADERS)
+    message_id = created.json()["id"]
+    message = await db_session.get(ComposedMessage, message_id)
+    message.title_fr = "😀" * 500
+    await db_session.commit()
+    response = await client.post(f"/api/composer/{message_id}/schedule", json={}, headers=ADMIN_HEADERS)
+    assert response.status_code == 400
+    await db_session.refresh(message)
+    assert message.state == "draft"
+    jobs = (await db_session.execute(select(OutboxJob).where(OutboxJob.resource_id == message_id))).scalars().all()
+    assert jobs == []

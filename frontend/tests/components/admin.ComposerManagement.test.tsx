@@ -109,6 +109,49 @@ describe("ComposerManagement", () => {
     await waitFor(() => expect(scheduled).toBe(true));
   });
 
+  it("blocks duplicate submissions while a draft save is pending", async () => {
+    let requests = 0;
+    let finish!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    server.use(
+      http.get("/api/composer", () => HttpResponse.json([])),
+      http.post("/api/composer", async () => {
+        requests += 1;
+        await pending;
+        return HttpResponse.json(draftMessage, { status: 201 });
+      }),
+    );
+    renderComposer();
+    await screen.findByText("No composed messages yet.");
+    const button = screen.getByRole("button", { name: "Create draft" });
+    fireEvent.click(button);
+    await waitFor(() => expect(button).toBeDisabled());
+    fireEvent.submit(button.closest("form")!);
+    await waitFor(() => expect(requests).toBe(1));
+    finish();
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(requests).toBe(1);
+  });
+
+  it("displays scheduling failures without automatically retrying", async () => {
+    let requests = 0;
+    server.use(
+      http.get("/api/composer", () => HttpResponse.json([draftMessage])),
+      http.post("/api/composer/cmp_1/schedule", () => {
+        requests += 1;
+        return HttpResponse.json({ detail: "Scheduling failed" }, { status: 500 });
+      }),
+    );
+    renderComposer();
+    await screen.findByText("Festivalupdate");
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Scheduling failed");
+    expect(requests).toBe(1);
+  });
+
   it("has no axe violations", async () => {
     server.use(http.get("/api/composer", () => HttpResponse.json([draftMessage])));
     const { container } = renderComposer();

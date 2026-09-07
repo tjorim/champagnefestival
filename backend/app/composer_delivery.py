@@ -23,7 +23,6 @@ reused by #941's admin test-send:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 from datetime import UTC, datetime
 from typing import cast
@@ -33,11 +32,12 @@ from pywebpush import WebPushException
 from sqlalchemy import select
 
 from app.audit import write_audit_entry
+from app.composer_content import build_composer_payload as _build_composer_payload
+from app.composer_content import pick_locale_text as _pick_locale_text
 from app.database import async_session_factory
 from app.models import ComposedMessage, PushSubscription
 from app.push import (
     _INVALID_SUBSCRIPTION_STATUSES,
-    _MAX_PAYLOAD_BYTES,
     _resolves_to_public_address,
     _send_sync,
     push_enabled,
@@ -49,25 +49,6 @@ from app.services.outbox_service import enqueue_job
 logger = logging.getLogger(__name__)
 
 COMPOSER_MESSAGE_PUSH = "composer_message_push"
-
-
-def _pick_locale_text(message: ComposedMessage, locale: str) -> tuple[str, str] | None:
-    """The message's title/body for *locale*, falling back to Dutch when
-    that locale's translation is blank — a push notification needs some
-    text; silently skipping a subscriber over a missing translation would
-    be a worse outcome than sending the fallback-locale text."""
-    title = getattr(message, f"title_{locale}", None) or message.title_nl
-    body = getattr(message, f"body_{locale}", None) or message.body_nl
-    if not title or not body:
-        return None
-    return title, body
-
-
-def _build_composer_payload(title: str, body: str) -> str:
-    payload = json.dumps({"title": title, "body": body})
-    if len(payload.encode("utf-8")) > _MAX_PAYLOAD_BYTES:
-        raise ValueError("Composed Web Push payload exceeds the maximum size.")
-    return payload
 
 
 async def deliver_composer_message_dispatch(resource_id: str) -> bool:

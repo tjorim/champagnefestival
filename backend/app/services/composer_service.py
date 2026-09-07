@@ -11,12 +11,13 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import ComposedMessage, OutboxJob, PushSubscription
-from app.schemas import ComposedMessageCreate, ComposedMessageUpdate
+from app.schemas import ComposedMessageCreate, ComposedMessageUpdate, ComposedMessageWrite
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.outbox_service import enqueue_job
 from app.utils import make_id
@@ -131,12 +132,14 @@ async def update_draft(
     if item.state != "draft":
         raise ConflictError(f"Composed message '{message_id}' is no longer a draft; it cannot be edited.")
     fields_set = body.model_fields_set
+    merged = {name: getattr(item, name) for name in ComposedMessageWrite.model_fields}
+    merged.update(body.model_dump(exclude_unset=True))
+    try:
+        ComposedMessageWrite.model_validate(merged)
+    except ValidationError as exc:
+        raise ValidationFailedError(str(exc)) from exc
     for name in fields_set:
-        setattr(item, name, getattr(body, name))
-    if not any((item.title_nl, item.title_en, item.title_fr)):
-        raise ValidationFailedError("A composed message needs at least one translated title.")
-    if not any((item.body_nl, item.body_en, item.body_fr)):
-        raise ValidationFailedError("A composed message needs at least one translated body.")
+        setattr(item, name, merged[name])
     await write_audit_entry(
         db,
         actor=actor,
@@ -169,6 +172,11 @@ async def schedule_send(
         raise NotFoundError(f"Composed message '{message_id}' not found.")
     if item.state != "draft":
         raise ConflictError(f"Composed message '{message_id}' has already been scheduled or sent.")
+
+    try:
+        ComposedMessageWrite.model_validate({name: getattr(item, name) for name in ComposedMessageWrite.model_fields})
+    except ValidationError as exc:
+        raise ValidationFailedError(str(exc)) from exc
 
     when = scheduled_at or datetime.now(UTC)
     item.state = "scheduled"
