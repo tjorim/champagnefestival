@@ -14,6 +14,15 @@ const SSR_JSON_LD_SELECTOR = 'script[data-ssr-jsonld="true"]';
  * when there's no active/upcoming edition, so it never advertises a fake event —
  * and nothing when the backend already rendered one into <head> on this page
  * load, so a crawler never sees two conflicting Event objects.
+ *
+ * Known limitation, accepted deliberately: the SSR marker is checked once
+ * per mount and never cleared, so a visitor who navigates away from `/` and
+ * back via client-side routing (no full page load) keeps seeing the
+ * original server-rendered JSON-LD even if the edition data has since
+ * changed. This is invisible metadata with no effect on what a visitor
+ * actually sees, and crawlers — the audience this data is for — always
+ * fetch `/` fresh rather than navigating client-side, so they never hit
+ * this path. Revisit only if that stops being true.
  */
 const EventStructuredData: React.FC = () => {
   const { edition, hasEdition } = useActiveEdition();
