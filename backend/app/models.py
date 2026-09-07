@@ -637,6 +637,25 @@ class AuditEntry(Base):
     details: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
+class RateLimitBucket(Base):
+    """Cross-worker fixed-window rate-limit counter (#932 decision 1).
+
+    Backs ``app.ratelimit.check_rate_limit_pg`` — the Postgres-backed
+    replacement for check-in's per-registration limit and shared-IP backstop,
+    the two scopes this decision migrates off the in-process deque so they're
+    enforced consistently across worker processes. ``key`` packs ``scope`` and
+    the caller's bucket key (an IP or registration ID) with a separator that
+    can't appear in either half; see ``app.ratelimit._bucket_key``. Swept daily
+    by ``app.worker`` alongside the outbox cleanup.
+    """
+
+    __tablename__ = "rate_limit_buckets"
+
+    key: Mapped[str] = mapped_column(String(300), primary_key=True)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
 class IdempotencyKey(Base):
     """Replay cache guarding idempotency-key-protected bulk/import writes (#837).
 

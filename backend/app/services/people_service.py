@@ -37,8 +37,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.live import live_bus
 from app.live import mapping as live_mapping
+from app.live import notify_live_event
 from app.models import Exhibitor, Person, Registration, VolunteerPeriod
 from app.schemas import PersonCreate, PersonUpdate
 from app.utils import get_or_404, make_id, person_to_dict
@@ -322,14 +322,9 @@ async def delete_person(
         request_id=request_id,
         details={"deleted_registration_count": len(registrations)},
     )
-    await db.commit()
     for scope in registration_scopes:
-        try:
-            await live_bus.publish(live_mapping.registration_changed(action="deleted", **scope))
-        except Exception:
-            logger.warning(
-                "live_bus.publish failed for deleted registration %s", scope["registration_id"], exc_info=True
-            )
+        await notify_live_event(db, live_mapping.registration_changed(action="deleted", **scope))
+    await db.commit()
     return {"deleted": True, "id": person_id}
 
 

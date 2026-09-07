@@ -31,8 +31,8 @@ from app.config import settings
 from app.database import get_db
 from app.dependencies import Pagination
 from app.email import send_guest_access_email
-from app.live import live_bus
 from app.live import mapping as live_mapping
+from app.live import notify_live_event
 from app.models import Edition, Event, Person, Registration, ReservationAccessToken, Table
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
@@ -163,20 +163,18 @@ async def create_registration(
         actor=claims["sub"] if claims is not None else "anonymous",
         request_id=getattr(request.state, "request_id", None),
     )
+    await notify_live_event(
+        db,
+        live_mapping.registration_changed(
+            action="created",
+            registration_id=registration.id,
+            event_id=event.id,
+            edition_id=event.edition_id,
+        ),
+    )
     await db.commit()
 
     registration = await registrations_service.get_registration_or_404(db, registration.id)
-    try:
-        await live_bus.publish(
-            live_mapping.registration_changed(
-                action="created",
-                registration_id=registration.id,
-                event_id=registration.event_id,
-                edition_id=registration.event.edition_id,
-            )
-        )
-    except Exception:
-        logger.warning("live_bus.publish failed for registration %s", registration.id, exc_info=True)
     return registration_to_dict(registration, person, event)
 
 

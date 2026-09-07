@@ -1,7 +1,11 @@
 # Live backend rendering of `/` and `/privacy`
 
 **Status:** Templating approach and cache strategy proposed, pending owner
-confirmation before implementation starts.
+confirmation before implementation starts. Decision 2's `#932` dependency
+shipped 2026-09-07 (`docs/decisions/932-multi-worker-state.md`), so the
+Postgres `LISTEN`/`NOTIFY` bus this document's proactive-invalidation step
+needs already exists — that step is no longer blocked, only still
+unimplemented pending this document's own confirmation.
 **Date:** 2026-09-06
 **Issues:** [#992](https://github.com/tjorim/champagnefestival/issues/992)
 (primary); [#936](https://github.com/tjorim/champagnefestival/issues/936)

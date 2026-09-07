@@ -1,11 +1,19 @@
 """Broadcast wiring tests: assert mutation routes publish live events.
 
-Each test subscribes to live_bus directly (no HTTP streaming), performs
-a mutation via the HTTP test client, then reads from the queue immediately.
+Each test subscribes to live_bus directly (no HTTP streaming), performs a
+mutation via the HTTP test client, then awaits the event on the queue. Since
+#932, mutation routes only send a transactional Postgres NOTIFY
+(notify_live_event) — delivery into live_bus goes through the real
+cross-worker LISTEN relay (app.live.listener, started for the whole test
+session by the pg_live_listener fixture in conftest.py), which is genuinely
+asynchronous even within one process, so these await with a timeout rather
+than assuming the event is already queued the instant the HTTP call returns.
 These tests require a running PostgreSQL instance (they use the client fixture).
 """
 
 from __future__ import annotations
+
+import asyncio
 
 from app.live import live_bus
 from tests.helpers import (
@@ -20,6 +28,11 @@ from tests.helpers import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+async def _get_event(queue):
+    """Await the next event with a generous timeout (see module docstring)."""
+    return await asyncio.wait_for(queue.get(), timeout=5.0)
 
 
 async def _table_prerequisites(client) -> tuple[str, str]:
@@ -81,7 +94,7 @@ async def test_check_in_publishes_check_in_event(client):
         r = await client.post(f"/api/check-in/{reg_id}", json={"token": token, "issue_strap": False})
         assert r.status_code == 200
         assert not r.json()["already_checked_in"]
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "check_in"
     assert event.action == "updated"
@@ -109,7 +122,7 @@ async def test_public_create_registration_publishes_event(client):
     async with live_bus.subscribe() as queue:
         r = await _post_registration(client)
         assert r.status_code == 201
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "registration"
     assert event.action == "created"
@@ -137,7 +150,7 @@ async def test_admin_create_registration_publishes_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 201
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "registration"
     assert event.action == "created"
@@ -159,7 +172,7 @@ async def test_update_table_id_publishes_seating_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "seating"
     assert event.scope.registration_id == reg_id
@@ -176,7 +189,7 @@ async def test_update_status_publishes_registration_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "registration"
     assert event.action == "updated"
@@ -192,7 +205,7 @@ async def test_update_order_items_quantity_publishes_order_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "order"
 
@@ -221,7 +234,7 @@ async def test_update_order_items_delivery_publishes_delivery_event(client):
             },
         )
         assert r.status_code == 200
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "delivery"
 
@@ -237,7 +250,7 @@ async def test_delete_registration_publishes_event(client):
     async with live_bus.subscribe() as queue:
         r = await client.delete(f"/api/registrations/{reg_id}", headers=ADMIN_HEADERS)
         assert r.status_code == 204
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "registration"
     assert event.action == "deleted"
@@ -259,7 +272,7 @@ async def test_create_table_publishes_seating_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 201
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "seating"
     assert event.action == "created"
@@ -272,7 +285,7 @@ async def test_update_table_publishes_seating_event(client):
     async with live_bus.subscribe() as queue:
         r = await client.put(f"/api/tables/{table_id}", json={"name": "Renamed"}, headers=ADMIN_HEADERS)
         assert r.status_code == 200
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "seating"
     assert event.action == "updated"
@@ -285,7 +298,7 @@ async def test_delete_table_publishes_seating_event(client):
     async with live_bus.subscribe() as queue:
         r = await client.delete(f"/api/tables/{table_id}", headers=ADMIN_HEADERS)
         assert r.status_code == 204
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "seating"
     assert event.action == "deleted"

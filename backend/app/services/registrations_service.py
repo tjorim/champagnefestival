@@ -30,8 +30,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.live import live_bus
 from app.live import mapping as live_mapping
+from app.live import notify_live_event
 from app.models import Event, Layout, Person, Product, Registration, Table
 from app.schemas import (
     OrderItemBase,
@@ -278,20 +278,18 @@ async def admin_create_registration(
         details={"event_id": event.id, "person_id": person.id},
     )
     await enqueue_registration_confirmation(db, registration.id, actor=actor, request_id=request_id)
+    await notify_live_event(
+        db,
+        live_mapping.registration_changed(
+            action="created",
+            registration_id=registration.id,
+            event_id=event.id,
+            edition_id=event.edition_id,
+        ),
+    )
     await db.commit()
 
     registration = await get_registration_or_404(db, registration.id)
-    try:
-        await live_bus.publish(
-            live_mapping.registration_changed(
-                action="created",
-                registration_id=registration.id,
-                event_id=registration.event_id,
-                edition_id=registration.event.edition_id,
-            )
-        )
-    except Exception:
-        logger.warning("live_bus.publish failed for registration %s", registration.id, exc_info=True)
     return registration_to_dict(registration, person, event)
 
 
@@ -502,32 +500,28 @@ async def apply_registration_update(
             **audit_base,
         )
 
+    scope = {"registration_id": registration.id, "event_id": event_id, "edition_id": edition_id}
+    if registration.table_id != pre_table_id:
+        await notify_live_event(db, live_mapping.seating_changed(table_id=registration.table_id, **scope))
+    if registration.order_items != pre_order_items:
+        await notify_live_event(db, live_mapping.order_changed(**scope))
+    if registration.checked_in != pre_checked_in or registration.strap_issued != pre_strap_issued:
+        await notify_live_event(db, live_mapping.check_in_changed(**scope))
+    metadata_fields = {
+        "guest_count",
+        "status",
+        "payment_status",
+        "amount_due",
+        "notes",
+        "accessibility_note",
+        "person_id",
+    }
+    if any(f in body.model_fields_set for f in metadata_fields) or clear_amount_due:
+        await notify_live_event(db, live_mapping.registration_changed(action="updated", **scope))
+
     await db.commit()
     registration = await get_registration_or_404(db, registration.id)
     person_map = await fetch_person_map(db, [registration])
-
-    # Publish live-update events; bus errors must never break write responses.
-    try:
-        scope = {"registration_id": registration.id, "event_id": event_id, "edition_id": edition_id}
-        if registration.table_id != pre_table_id:
-            await live_bus.publish(live_mapping.seating_changed(table_id=registration.table_id, **scope))
-        if registration.order_items != pre_order_items:
-            await live_bus.publish(live_mapping.order_changed(**scope))
-        if registration.checked_in != pre_checked_in or registration.strap_issued != pre_strap_issued:
-            await live_bus.publish(live_mapping.check_in_changed(**scope))
-        metadata_fields = {
-            "guest_count",
-            "status",
-            "payment_status",
-            "amount_due",
-            "notes",
-            "accessibility_note",
-            "person_id",
-        }
-        if any(f in body.model_fields_set for f in metadata_fields) or clear_amount_due:
-            await live_bus.publish(live_mapping.registration_changed(action="updated", **scope))
-    except Exception:
-        logger.warning("live_bus.publish failed for registration %s", registration.id, exc_info=True)
 
     return registration_to_dict(registration, person_map[registration.person_id], registration.event)
 
@@ -548,16 +542,14 @@ async def delete_registration(
         details={"event_id": event_id},
     )
     await db.delete(registration)
+    await notify_live_event(
+        db,
+        live_mapping.registration_changed(
+            action="deleted",
+            registration_id=reg_id,
+            event_id=event_id,
+            edition_id=edition_id,
+        ),
+    )
     await db.commit()
-    try:
-        await live_bus.publish(
-            live_mapping.registration_changed(
-                action="deleted",
-                registration_id=reg_id,
-                event_id=event_id,
-                edition_id=edition_id,
-            )
-        )
-    except Exception:
-        logger.warning("live_bus.publish failed for deleted registration %s", reg_id, exc_info=True)
     return {"deleted": True, "id": reg_id}

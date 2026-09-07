@@ -10,8 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.database import get_db
-from app.live import live_bus
 from app.live import mapping as live_mapping
+from app.live import notify_live_event
 from app.models import Event, Person, Registration, Table
 from app.ratelimit import check_check_in_rate_limit, get_client_ip
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
@@ -44,7 +44,13 @@ async def lookup_check_in(
     check-in/strap status). PII fields (email, phone) are not included.
     """
     client_ip = get_client_ip(request)
-    if not check_check_in_rate_limit(reservation_id, client_ip):
+    # Commit the bucket increment immediately, before any lookup that can 401 —
+    # otherwise a failed guess (the exact traffic this limiter exists to catch)
+    # rolls back with the rest of the request's uncommitted transaction and is
+    # never actually counted.
+    allowed = await check_check_in_rate_limit(db, reservation_id, client_ip)
+    await db.commit()
+    if not allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",
@@ -78,7 +84,12 @@ async def post_check_in(
     Returns ``already_checked_in: true`` if the guest scanned their QR twice.
     """
     client_ip = get_client_ip(request)
-    if not check_check_in_rate_limit(reservation_id, client_ip):
+    # See lookup_check_in above: commit the bucket increment before any lookup
+    # that can 401, so a failed guess is durably counted even though the rest
+    # of this request's transaction hasn't committed yet.
+    allowed = await check_check_in_rate_limit(db, reservation_id, client_ip)
+    await db.commit()
+    if not allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",
@@ -132,18 +143,16 @@ async def post_check_in(
                 details={"event_id": r.event_id},
                 auth_source="token",
             )
+        await notify_live_event(
+            db,
+            live_mapping.check_in_changed(
+                registration_id=r.id,
+                event_id=r.event_id,
+                edition_id=event.edition_id,
+            ),
+        )
         await db.commit()
         await db.refresh(r)
-        try:
-            await live_bus.publish(
-                live_mapping.check_in_changed(
-                    registration_id=r.id,
-                    event_id=r.event_id,
-                    edition_id=event.edition_id,
-                )
-            )
-        except Exception:
-            logger.warning("live_bus.publish failed for check-in %s", r.id, exc_info=True)
 
     return {
         "registration": registration_to_checkin_dict(r, person, event, table_name=table_name),

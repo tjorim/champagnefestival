@@ -32,6 +32,21 @@ that's issued via Google Trust Services (`GTS Root R4` / `WE1`), not Let's Encry
 > changes, the pins in the `ANDROID_CERTIFICATE_PINS` GitHub secret must be
 > regenerated and a new release shipped, or the app will fail to connect.
 
+> **Single-worker constraint:** `champagnefestival-api` must run with exactly
+> one worker process (no `--workers N` on uvicorn/gunicorn, no horizontal
+> replica count beyond one instance). Two pieces of request-scoped state are
+> still process-local — slowapi's blanket per-route default limiter
+> (`app/middleware.py`) and the in-memory metrics collector behind
+> `GET /api/metrics` — and would silently under-enforce or under-report
+> across more than one worker. The check-in rate limiter and the live-update
+> SSE bus are cross-worker-safe (Postgres-backed counter and
+> `LISTEN`/`NOTIFY`, respectively); see
+> `docs/decisions/932-multi-worker-state.md`. Today's `infra/compose.yaml`
+> and Dockerfile `CMD`s already run single-worker, so this is a
+> forward-looking constraint, not a live bug — but don't reach for
+> `--workers N` as an event-day scaling lever without addressing the two
+> exceptions above first.
+
 ## Frontend build
 
 Build the frontend and ensure `frontend/dist/` is up to date before deploying:

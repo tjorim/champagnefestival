@@ -123,6 +123,7 @@ async def test_metrics_ok_with_secret(client, monkeypatch):
     assert "latency_avg_ms" in body
     assert "latency_p50_ms" in body
     assert "latency_p99_ms" in body
+    assert body["per_process"] is True
 
 
 # ---------------------------------------------------------------------------

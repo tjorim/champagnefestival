@@ -14,8 +14,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.live import live_bus
 from app.live import mapping as live_mapping
+from app.live import notify_live_event
 from app.models import Layout, Registration, Table, TableType
 from app.schemas import TableCreate, TableUpdate
 from app.services.errors import ConflictError, NotFoundError
@@ -37,11 +37,8 @@ async def _get_layout_edition_id(db: AsyncSession, layout_id: str) -> str | None
     return result.scalar_one_or_none()
 
 
-async def _publish_seating_changed(*, action: str, table_id: str, edition_id: str | None) -> None:
-    try:
-        await live_bus.publish(live_mapping.seating_changed(action=action, table_id=table_id, edition_id=edition_id))
-    except Exception:
-        logger.warning("live_bus.publish failed for table %s", table_id, exc_info=True)
+async def _notify_seating_changed(db: AsyncSession, *, action: str, table_id: str, edition_id: str | None) -> None:
+    await notify_live_event(db, live_mapping.seating_changed(action=action, table_id=table_id, edition_id=edition_id))
 
 
 async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, request_id: str | None = None) -> dict:
@@ -74,10 +71,10 @@ async def create_table(db: AsyncSession, *, actor: str, body: TableCreate, reque
         request_id=request_id,
         details={"layout_id": t.layout_id, "name": t.name},
     )
+    edition_id = await _get_layout_edition_id(db, t.layout_id)
+    await _notify_seating_changed(db, action="created", table_id=t.id, edition_id=edition_id)
     await db.commit()
     await db.refresh(t)
-    edition_id = await _get_layout_edition_id(db, t.layout_id)
-    await _publish_seating_changed(action="created", table_id=t.id, edition_id=edition_id)
     # New tables have no reservations yet
     return table_to_dict(t, [])
 
@@ -157,12 +154,11 @@ async def bulk_create_tables(
         record_idempotency_key(
             db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
         )
-    await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
-
     for t in rows:
-        await _publish_seating_changed(
-            action="created", table_id=t.id, edition_id=layout_edition_by_id.get(t.layout_id)
+        await _notify_seating_changed(
+            db, action="created", table_id=t.id, edition_id=layout_edition_by_id.get(t.layout_id)
         )
+    await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
     return response
 
 
@@ -249,10 +245,10 @@ async def update_table(
         request_id=request_id,
         details={"fields_changed": sorted(fields_changed)},
     )
+    edition_id = await _get_layout_edition_id(db, t.layout_id)
+    await _notify_seating_changed(db, action="updated", table_id=table_id, edition_id=edition_id)
     await db.commit()
     await db.refresh(t)
-    edition_id = await _get_layout_edition_id(db, t.layout_id)
-    await _publish_seating_changed(action="updated", table_id=table_id, edition_id=edition_id)
     res_result = await db.execute(select(Registration.id).where(Registration.table_id == table_id))
     registration_ids = [row[0] for row in res_result.all()]
     return table_to_dict(t, registration_ids)
@@ -276,6 +272,6 @@ async def delete_table(db: AsyncSession, *, actor: str, table_id: str, request_i
         details={"layout_id": t.layout_id, "name": t.name},
     )
     await db.delete(t)
+    await _notify_seating_changed(db, action="deleted", table_id=table_id, edition_id=edition_id)
     await db.commit()
-    await _publish_seating_changed(action="deleted", table_id=table_id, edition_id=edition_id)
     return {"deleted": True, "id": table_id}
