@@ -47,7 +47,13 @@ async def subscribe_to_push(
     db: AsyncSession = Depends(get_db),
 ) -> PushSubscriptionOut:
     client_ip = get_client_ip(request)
-    if not await check_push_subscription_rate_limit(db, client_ip):
+    # Commit the bucket increment immediately, before validation that can
+    # raise — otherwise a rejected request (e.g. an unknown event id) rolls
+    # back with the rest of this request's uncommitted transaction and is
+    # never actually counted, matching app.routers.check_in's identical fix.
+    allowed = await check_push_subscription_rate_limit(db, client_ip)
+    await db.commit()
+    if not allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",
@@ -74,7 +80,10 @@ async def unsubscribe_from_push(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     client_ip = get_client_ip(request)
-    if not await check_push_subscription_rate_limit(db, client_ip):
+    # See subscribe_to_push above: commit the bucket increment immediately.
+    allowed = await check_push_subscription_rate_limit(db, client_ip)
+    await db.commit()
+    if not allowed:
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail="Too many requests. Please try again later.",

@@ -260,6 +260,13 @@ class Settings(BaseSettings):
             raise ValueError("OUTBOX_LEASE_SECONDS must be at least 30 seconds.")
         return value
 
+    @field_validator("push_subscription_expiry_days")
+    @classmethod
+    def validate_push_subscription_expiry_days(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError("PUSH_SUBSCRIPTION_EXPIRY_DAYS must be greater than 0.")
+        return value
+
     @model_validator(mode="before")
     @classmethod
     def build_database_url_from_parts(cls, data: Any) -> Any:

@@ -132,7 +132,7 @@ Shipped per the confirmed decisions above:
   as `frontend/src/sw/push.ts`, following the additive-module contract
   above; the click handler always navigates to a fixed `"/"` path rather
   than any payload-supplied URL, per the issue's requirement.
-- **Tests:** 23 backend tests (`backend/tests/test_push.py`) and 15
+- **Tests:** 32 backend tests (`backend/tests/test_push.py`) and 18
   frontend tests (`usePushSubscription.test.ts`, `PushOptIn.test.tsx`,
   including axe accessibility checks) cover both opt-in states, rate
   limiting, admin-only test-send auth, subscription retirement, and
@@ -140,6 +140,62 @@ Shipped per the confirmed decisions above:
 - **Not built:** #942's actual notification composer/broadcast UI — #941
   was scoped to the subscription foundation plus a one-off admin test-send,
   not general-purpose sending.
+
+### Post-review hardening (2026-09-07, PR #1014)
+
+A CodeRabbit review of the implementation PR found 8 issues, 7 fixed in the
+same PR:
+
+- **SSRF (CWE-918):** a subscribed `endpoint` is visitor-supplied and only
+  constrained to `https://` at subscribe time; `app.push.deliver_web_push_test`
+  now resolves the endpoint's hostname at *delivery* time (not just subscribe
+  time, since DNS can change between the two — rebinding) and refuses to
+  send to a private, loopback, link-local, reserved, multicast, or
+  unspecified address, retiring the subscription the same way a 404/410
+  response would. Delivery also goes through a `requests.Session` subclass
+  that disables HTTP redirects, so a redirecting endpoint can't retarget the
+  VAPID-signed request after the address check already passed. IP-range
+  blocking was chosen over an allowlist of specific push-service hostnames,
+  which would need updating whenever a browser vendor changes its push
+  infrastructure.
+- **Rate-limit bypass:** `subscribe_to_push`/`unsubscribe_from_push` now
+  commit the Postgres rate-limit bucket increment immediately, before
+  validation that can raise — otherwise a rejected request (e.g. an unknown
+  event id) rolled back with the rest of the request's uncommitted
+  transaction and was never actually counted, letting invalid requests
+  bypass the limiter entirely. Matches the identical fix already shipped for
+  `app.routers.check_in`.
+- **Retention correctness:** a successful test delivery now refreshes
+  `last_seen_at`; previously only subscribe/resubscribe did, so an actively
+  delivered subscription with no resubscribe could still be swept by the
+  180-day cleanup as if it were stale.
+- **Config validation:** `push_subscription_expiry_days` now rejects
+  zero/negative values (would otherwise let the cleanup sweep delete
+  current subscriptions).
+- **Frontend reconciliation:** `usePushSubscription` now re-POSTs an
+  existing browser subscription to the backend on every mount (refreshing
+  `locale`/`last_seen_at`), not just on first subscribe.
+- **Frontend availability:** `navigator.serviceWorker.ready` never rejects,
+  so a blocked/failed registration previously left the opt-in card stuck in
+  "checking" forever; it's now raced against a 5-second timeout that
+  surfaces as "unsupported" (hiding the card) instead of hanging.
+- **Frontend unsubscribe retry:** if the browser-side unsubscribe succeeds
+  but the backend delete fails, the endpoint is now retained across a retry
+  instead of being re-derived from `getSubscription()` (which would already
+  return `null`, silently skipping the backend delete on a second attempt).
+
+**Deliberately not fixed:** the review also flagged that the service worker
+doesn't handle the browser-initiated `pushsubscriptionchange` event (a
+subscription the browser itself rotates or invalidates, distinct from an
+explicit unsubscribe). Implementing this correctly needs the service worker
+to independently fetch the VAPID key and resolve a locale it has no direct
+access to (no `document.cookie`, no app state) — plus MDN's own guidance
+that browser support for this event's `oldSubscription`/`newSubscription`
+fields is inconsistent enough that production implementations still need
+the mount-time reconciliation above as the primary sync mechanism regardless.
+Left as a known gap rather than shipping an untested, defensive-guard-heavy
+handler for an edge case (browser-rotated subscriptions are rare); revisit
+if it turns out to matter in practice.
 
 ## References
 

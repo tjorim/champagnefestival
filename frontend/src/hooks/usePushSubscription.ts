@@ -11,6 +11,22 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return Uint8Array.from(rawData, (char) => char.codePointAt(0) ?? 0);
 }
 
+const _SERVICE_WORKER_READY_TIMEOUT_MS = 5000;
+
+/** `navigator.serviceWorker.ready` never rejects — it waits indefinitely if
+ * no service worker ever becomes active for this page. Race it against a
+ * timeout so a failed/blocked registration surfaces as "unsupported"
+ * instead of leaving the hook (and any UI gated on it) stuck in "checking"
+ * forever. */
+function serviceWorkerReadyOrTimeout(): Promise<ServiceWorkerRegistration | "timeout"> {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<"timeout">((resolve) =>
+      setTimeout(() => resolve("timeout"), _SERVICE_WORKER_READY_TIMEOUT_MS),
+    ),
+  ]);
+}
+
 export type PushSupportState = "unsupported" | "disabled" | "checking" | "ready";
 
 interface UsePushSubscriptionResult {
@@ -35,6 +51,11 @@ export function usePushSubscription(): UsePushSubscriptionResult {
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [vapidPublicKey, setVapidPublicKey] = useState<string | null>(null);
+  // Set once the browser-side subscription is gone but the backend delete
+  // hasn't confirmed yet — see unsubscribe() below. Survives a failed
+  // unsubscribeFromPush call so a retry doesn't re-call getSubscription()
+  // (which would already return null) and silently skip the backend delete.
+  const [pendingUnsubscribeEndpoint, setPendingUnsubscribeEndpoint] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -50,9 +71,30 @@ export function usePushSubscription(): UsePushSubscriptionResult {
         return;
       }
       setVapidPublicKey(vapid.publicKey);
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await serviceWorkerReadyOrTimeout();
+      if (cancelled) return;
+      if (registration === "timeout") {
+        setState("unsupported");
+        return;
+      }
       const existing = await registration.pushManager.getSubscription();
       if (cancelled) return;
+      if (existing !== null) {
+        // Reconcile with the backend on every mount, not just first
+        // subscribe — a remount after a locale change (or just periodic
+        // refresh) should keep the stored locale/last_seen_at current.
+        // Best-effort: a transient failure here shouldn't block rendering.
+        const json = existing.toJSON();
+        if (json.endpoint && json.keys?.p256dh && json.keys.auth) {
+          await subscribeToPush({
+            endpoint: json.endpoint,
+            p256dh: json.keys.p256dh,
+            auth: json.keys.auth,
+            locale: getLocale(),
+          }).catch(() => undefined);
+        }
+        if (cancelled) return;
+      }
       setIsSubscribed(existing !== null);
       setState("ready");
     }
@@ -97,12 +139,19 @@ export function usePushSubscription(): UsePushSubscriptionResult {
     setIsBusy(true);
     setError(null);
     try {
-      const registration = await navigator.serviceWorker.ready;
-      const subscription = await registration.pushManager.getSubscription();
-      if (subscription) {
-        const endpoint = subscription.endpoint;
-        await subscription.unsubscribe();
+      let endpoint = pendingUnsubscribeEndpoint;
+      if (!endpoint) {
+        const registration = await navigator.serviceWorker.ready;
+        const subscription = await registration.pushManager.getSubscription();
+        if (subscription) {
+          endpoint = subscription.endpoint;
+          await subscription.unsubscribe();
+        }
+      }
+      if (endpoint) {
+        setPendingUnsubscribeEndpoint(endpoint);
         await unsubscribeFromPush(endpoint);
+        setPendingUnsubscribeEndpoint(null);
       }
       setIsSubscribed(false);
     } catch (err) {
@@ -110,7 +159,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
     } finally {
       setIsBusy(false);
     }
-  }, []);
+  }, [pendingUnsubscribeEndpoint]);
 
   return { state, isSubscribed, isBusy, error, subscribe, unsubscribe };
 }
