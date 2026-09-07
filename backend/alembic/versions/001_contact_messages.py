@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, and add marketing opt-in consent fields.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, and cross-worker rate-limit buckets.
 
 Revision ID: 001
 Revises: 000
@@ -268,9 +268,18 @@ def upgrade() -> None:
         "people",
         sa.Column("marketing_opt_in_at", sa.DateTime(timezone=True), nullable=True),
     )
+    # #932 decision 1: cross-worker rate-limit counter for check-in's
+    # per-registration limit and shared-IP backstop (app.ratelimit.check_rate_limit_pg).
+    op.create_table(
+        "rate_limit_buckets",
+        sa.Column("key", sa.String(300), primary_key=True),
+        sa.Column("window_start", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("count", sa.Integer(), nullable=False),
+    )
 
 
 def downgrade() -> None:
+    op.drop_table("rate_limit_buckets")
     op.drop_column("people", "marketing_opt_in_at")
     op.drop_column("people", "marketing_opt_in")
     op.drop_table("policy_versions")

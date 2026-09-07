@@ -24,8 +24,8 @@ from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_volunteer
 from app.database import get_db
 from app.dependencies import Pagination
-from app.live import live_bus
 from app.live import mapping as live_mapping
+from app.live import notify_live_event
 from app.models import Event, Person, Registration, Table
 from app.schemas import CheckInGuestOut, CheckInOut, VolunteerCheckInRequest, VolunteerRegistrationUpdate
 from app.services.operational_search import (
@@ -329,21 +329,16 @@ async def update_volunteer_registration(
         )
 
     if changed:
+        scope = {
+            "registration_id": registration.id,
+            "event_id": registration.event_id,
+            "edition_id": registration.event.edition_id,
+        }
+        if delivery_changed:
+            await notify_live_event(db, live_mapping.delivery_changed(**scope))
+        if registration.strap_issued != previous_strap_issued:
+            await notify_live_event(db, live_mapping.check_in_changed(**scope))
         await db.commit()
-        try:
-            scope = {
-                "registration_id": registration.id,
-                "event_id": registration.event_id,
-                "edition_id": registration.event.edition_id,
-            }
-            if delivery_changed:
-                await live_bus.publish(live_mapping.delivery_changed(**scope))
-            if registration.strap_issued != previous_strap_issued:
-                await live_bus.publish(live_mapping.check_in_changed(**scope))
-        except Exception:
-            logger.warning(
-                "live_bus.publish failed for volunteer registration update %s", registration.id, exc_info=True
-            )
 
     return registration_to_checkin_dict(registration, registration.person, registration.event, table_name=table_name)
 
@@ -424,17 +419,15 @@ async def volunteer_check_in_registration(
         reg_id = registration.id
         event_id = registration.event_id
         edition_id = registration.event.edition_id
+        await notify_live_event(
+            db,
+            live_mapping.check_in_changed(
+                registration_id=reg_id,
+                event_id=event_id,
+                edition_id=edition_id,
+            ),
+        )
         await db.commit()
-        try:
-            await live_bus.publish(
-                live_mapping.check_in_changed(
-                    registration_id=reg_id,
-                    event_id=event_id,
-                    edition_id=edition_id,
-                )
-            )
-        except Exception:
-            logger.warning("live_bus.publish failed for volunteer check-in %s", reg_id, exc_info=True)
 
     return {
         "registration": registration_dict,

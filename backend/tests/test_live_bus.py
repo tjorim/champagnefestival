@@ -110,3 +110,22 @@ async def test_exception_in_consumer_unsubscribes():
             raise RuntimeError("boom")
 
     assert bus.subscriber_count == 0
+
+
+# ---------------------------------------------------------------------------
+# Notify payload round-trip (app.live.notify / app.live.listener — #932)
+# ---------------------------------------------------------------------------
+
+
+def test_notify_payload_round_trips_through_from_notify_payload():
+    event = LiveEvent(
+        topic="seating",
+        action="updated",
+        scope=LiveScope(edition_id="ed-1", table_id="tbl-1"),
+        keys=(("admin", "tables"), ("admin", "registrations")),
+        id="evt_roundtrip",
+    )
+
+    reconstructed = LiveEvent.from_notify_payload(event.to_notify_payload())
+
+    assert reconstructed == event

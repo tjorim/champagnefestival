@@ -83,6 +83,24 @@ async def engine():
     await _engine.dispose()
 
 
+@pytest.fixture(scope="session", autouse=True)
+async def pg_live_listener(engine):
+    """Run the real cross-worker LISTEN relay for the whole test session.
+
+    Mutation routes only call ``notify_live_event`` (a transactional Postgres
+    NOTIFY) now, never ``live_bus.publish`` directly (#932) — tests that
+    subscribe to ``live_bus`` need this listener actually running to see
+    anything, the same way it runs in production via ``app.main``'s lifespan.
+    ``ASGITransport`` (used by the ``client`` fixture) never invokes that
+    lifespan, so it's started here instead, once per test session.
+    """
+    from app.live.listener import pg_live_listener as listener
+
+    await listener.start(TEST_DATABASE_URL)
+    yield
+    await listener.stop()
+
+
 @pytest.fixture()
 async def db_session(engine):
     factory = async_sessionmaker(engine, expire_on_commit=False)

@@ -39,7 +39,8 @@ def _event(
 
 
 # ---------------------------------------------------------------------------
-# Public mapping functions (called by mutation routes after db.commit())
+# Public mapping functions (called by mutation routes, then passed to
+# notify_live_event before db.commit() — see app/live/__init__.py)
 # ---------------------------------------------------------------------------
 
 

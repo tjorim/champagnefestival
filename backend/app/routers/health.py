@@ -146,12 +146,23 @@ def health_check() -> dict[str, str]:
 @router.get("/metrics")
 def metrics_endpoint(
     _: None = Depends(_require_metrics_access),
-) -> dict[str, float | int]:
+) -> dict[str, float | int | bool]:
     """HMAC-protected endpoint returning uptime, request rate, error rate and latency percentiles.
 
     Pass a fresh ``<unix-timestamp>:<hex-hmac-sha256>`` token in the
     ``X-Metrics-Token`` request header (see ``build_metrics_token``); tokens
     older than ``METRICS_TOKEN_MAX_AGE_SECONDS`` are rejected.
+
+    These figures are per-process (``InMemoryRequestMetrics`` is in-memory,
+    not aggregated across workers) — a known, documented limitation rather
+    than a correctness bug, deferred by
+    docs/decisions/932-multi-worker-state.md decision 3. That decision
+    assumed Sentry covered error tracking instead; ``SENTRY_DSN`` has never
+    actually been set in production (see decision 3's 2026-09-07
+    correction), so this is currently the only backend observability that
+    exists — treat it accordingly, not as a deliberately-accepted tradeoff
+    against a working alternative. Only accurate as a whole-deployment view
+    while the service runs single-worker, per DEPLOYMENT.md.
     """
     snapshot = metrics.snapshot()
     return {
@@ -163,4 +174,5 @@ def metrics_endpoint(
         "latency_avg_ms": round(snapshot.latency_avg_ms, 2),
         "latency_p50_ms": round(snapshot.latency_p50_ms, 2),
         "latency_p99_ms": round(snapshot.latency_p99_ms, 2),
+        "per_process": True,
     }

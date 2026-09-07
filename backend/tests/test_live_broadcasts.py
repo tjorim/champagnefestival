@@ -1,11 +1,26 @@
 """Broadcast wiring tests: assert mutation routes publish live events.
 
-Each test subscribes to live_bus directly (no HTTP streaming), performs
-a mutation via the HTTP test client, then reads from the queue immediately.
+Each test subscribes to live_bus directly (no HTTP streaming), performs a
+mutation via the HTTP test client, then awaits the event on the queue. Since
+#932, mutation routes only send a transactional Postgres NOTIFY
+(notify_live_event) — delivery into live_bus goes through the real
+cross-worker LISTEN relay (app.live.listener, started for the whole test
+session by the pg_live_listener fixture in conftest.py), which is genuinely
+asynchronous even within one process, so these await with a timeout rather
+than assuming the event is already queued the instant the HTTP call returns.
+
+Several tests create prerequisites (a registration, a table) via HTTP *before*
+subscribing. Because delivery is now asynchronous, that prerequisite's own
+NOTIFY can still be in flight when subscribe() starts and land in the queue
+ahead of the event under test — so _get_event() takes a predicate and drains
+non-matching events instead of returning the first one (see PR #1011 review).
+
 These tests require a running PostgreSQL instance (they use the client fixture).
 """
 
 from __future__ import annotations
+
+import asyncio
 
 from app.live import live_bus
 from tests.helpers import (
@@ -20,6 +35,21 @@ from tests.helpers import (
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+async def _get_event(queue, *, matches=lambda event: True):
+    """Await the next event satisfying *matches*, discarding earlier ones.
+
+    The 5s timeout budget is shared across every read in one call, not
+    restarted each time a non-matching event is skipped — see module
+    docstring for why non-matching events can show up at all.
+    """
+    deadline = asyncio.get_running_loop().time() + 5.0
+    while True:
+        remaining = deadline - asyncio.get_running_loop().time()
+        event = await asyncio.wait_for(queue.get(), timeout=max(remaining, 0.0))
+        if matches(event):
+            return event
 
 
 async def _table_prerequisites(client) -> tuple[str, str]:
@@ -81,9 +111,8 @@ async def test_check_in_publishes_check_in_event(client):
         r = await client.post(f"/api/check-in/{reg_id}", json={"token": token, "issue_strap": False})
         assert r.status_code == 200
         assert not r.json()["already_checked_in"]
-        event = queue.get_nowait()
+        event = await _get_event(queue, matches=lambda e: e.topic == "check_in")
 
-    assert event.topic == "check_in"
     assert event.action == "updated"
     assert event.scope.registration_id == reg_id
 
@@ -91,10 +120,14 @@ async def test_check_in_publishes_check_in_event(client):
 async def test_check_in_no_event_when_already_checked_in(client):
     reg_id, token = await _registration_with_token(client)
 
-    # First scan — checks in and publishes.
-    await client.post(f"/api/check-in/{reg_id}", json={"token": token, "issue_strap": False})
-
     async with live_bus.subscribe() as queue:
+        # First scan — checks in and publishes; drain it (and any still-in-flight
+        # notification from the registration created above it) before asserting
+        # the second scan below produces nothing.
+        await client.post(f"/api/check-in/{reg_id}", json={"token": token, "issue_strap": False})
+        await _get_event(queue, matches=lambda e: e.topic == "check_in")
+
+        # Second scan — already checked in, no notify sent.
         r = await client.post(f"/api/check-in/{reg_id}", json={"token": token, "issue_strap": False})
         assert r.json()["already_checked_in"] is True
         assert queue.empty()
@@ -109,7 +142,7 @@ async def test_public_create_registration_publishes_event(client):
     async with live_bus.subscribe() as queue:
         r = await _post_registration(client)
         assert r.status_code == 201
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "registration"
     assert event.action == "created"
@@ -137,7 +170,7 @@ async def test_admin_create_registration_publishes_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 201
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "registration"
     assert event.action == "created"
@@ -159,10 +192,8 @@ async def test_update_table_id_publishes_seating_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
-        event = queue.get_nowait()
+        event = await _get_event(queue, matches=lambda e: e.topic == "seating" and e.scope.registration_id == reg_id)
 
-    assert event.topic == "seating"
-    assert event.scope.registration_id == reg_id
     assert event.scope.table_id == table_id
 
 
@@ -176,10 +207,7 @@ async def test_update_status_publishes_registration_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
-        event = queue.get_nowait()
-
-    assert event.topic == "registration"
-    assert event.action == "updated"
+        await _get_event(queue, matches=lambda e: e.topic == "registration" and e.action == "updated")
 
 
 async def test_update_order_items_quantity_publishes_order_event(client):
@@ -192,9 +220,7 @@ async def test_update_order_items_quantity_publishes_order_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
-        event = queue.get_nowait()
-
-    assert event.topic == "order"
+        await _get_event(queue, matches=lambda e: e.topic == "order")
 
 
 async def test_update_order_items_delivery_publishes_delivery_event(client):
@@ -221,9 +247,7 @@ async def test_update_order_items_delivery_publishes_delivery_event(client):
             },
         )
         assert r.status_code == 200
-        event = queue.get_nowait()
-
-    assert event.topic == "delivery"
+        await _get_event(queue, matches=lambda e: e.topic == "delivery")
 
 
 # ---------------------------------------------------------------------------
@@ -237,10 +261,8 @@ async def test_delete_registration_publishes_event(client):
     async with live_bus.subscribe() as queue:
         r = await client.delete(f"/api/registrations/{reg_id}", headers=ADMIN_HEADERS)
         assert r.status_code == 204
-        event = queue.get_nowait()
+        event = await _get_event(queue, matches=lambda e: e.topic == "registration" and e.action == "deleted")
 
-    assert event.topic == "registration"
-    assert event.action == "deleted"
     assert event.scope.registration_id == reg_id
 
 
@@ -259,7 +281,7 @@ async def test_create_table_publishes_seating_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 201
-        event = queue.get_nowait()
+        event = await _get_event(queue)
 
     assert event.topic == "seating"
     assert event.action == "created"
@@ -272,10 +294,8 @@ async def test_update_table_publishes_seating_event(client):
     async with live_bus.subscribe() as queue:
         r = await client.put(f"/api/tables/{table_id}", json={"name": "Renamed"}, headers=ADMIN_HEADERS)
         assert r.status_code == 200
-        event = queue.get_nowait()
+        event = await _get_event(queue, matches=lambda e: e.topic == "seating" and e.action == "updated")
 
-    assert event.topic == "seating"
-    assert event.action == "updated"
     assert event.scope.table_id == table_id
 
 
@@ -285,8 +305,6 @@ async def test_delete_table_publishes_seating_event(client):
     async with live_bus.subscribe() as queue:
         r = await client.delete(f"/api/tables/{table_id}", headers=ADMIN_HEADERS)
         assert r.status_code == 204
-        event = queue.get_nowait()
+        event = await _get_event(queue, matches=lambda e: e.topic == "seating" and e.action == "deleted")
 
-    assert event.topic == "seating"
-    assert event.action == "deleted"
     assert event.scope.table_id == table_id

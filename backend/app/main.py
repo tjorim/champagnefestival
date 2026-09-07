@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 
 from app.config import settings
 from app.database import create_tables
+from app.live.listener import pg_live_listener
 from app.mcp.capabilities import get_mcp_capabilities
 from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
@@ -95,6 +96,11 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"❌ Database initialisation failed: {exc}")
         raise
 
+    # Cross-worker live-update fan-out (docs/decisions/932-multi-worker-state.md
+    # decision 2). Failures are logged and swallowed inside start() — a failed
+    # LISTEN connection degrades to no live-update delivery, not a startup crash.
+    await pg_live_listener.start(settings.database_url)
+
     logger.info("=" * 60)
     logger.info("Startup complete — server ready to accept connections")
     logger.info("=" * 60)
@@ -103,6 +109,7 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
     # Shutdown
     logger.info("Champagnefestival API shutting down...")
+    await pg_live_listener.stop()
 
 
 lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is not None else _app_lifespan

@@ -33,9 +33,8 @@ class LiveEvent:
     ts: datetime = field(default_factory=lambda: datetime.now(UTC))
     id: str = ""
 
-    def to_sse_data(self) -> str:
-        """Return the SSE-formatted message string for this event."""
-        payload = {
+    def _to_payload_dict(self) -> dict:
+        return {
             "topic": self.topic,
             "action": self.action,
             "scope": {
@@ -48,6 +47,41 @@ class LiveEvent:
             "ts": self.ts.isoformat(),
             "id": self.id,
         }
-        data = json.dumps(payload, separators=(",", ":"))
+
+    def to_sse_data(self) -> str:
+        """Return the SSE-formatted message string for this event."""
+        data = json.dumps(self._to_payload_dict(), separators=(",", ":"))
         id_line = f"id: {self.id}\n" if self.id else ""
         return f"event: invalidate\n{id_line}data: {data}\n\n"
+
+    def to_notify_payload(self) -> str:
+        """Return the JSON string sent as a Postgres NOTIFY payload.
+
+        Same shape as ``to_sse_data``'s data field, without the SSE framing —
+        see ``app.live.notify.notify_live_event``.
+        """
+        return json.dumps(self._to_payload_dict(), separators=(",", ":"))
+
+    @classmethod
+    def from_notify_payload(cls, raw: str) -> LiveEvent:
+        """Reconstruct a LiveEvent from a Postgres NOTIFY payload.
+
+        Inverse of ``to_notify_payload`` — used by the LISTEN callback in
+        ``app.live.listener`` to relay a cross-worker notification into this
+        process's local ``LiveBus``.
+        """
+        payload = json.loads(raw)
+        scope = payload["scope"]
+        return cls(
+            topic=payload["topic"],
+            action=payload["action"],
+            scope=LiveScope(
+                edition_id=scope["edition_id"],
+                event_id=scope["event_id"],
+                registration_id=scope["registration_id"],
+                table_id=scope["table_id"],
+            ),
+            keys=tuple(tuple(k) for k in payload["keys"]),
+            ts=datetime.fromisoformat(payload["ts"]),
+            id=payload["id"],
+        )
