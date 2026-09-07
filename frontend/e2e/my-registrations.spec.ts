@@ -50,17 +50,20 @@ test.describe("Guest self-service (/my-registrations)", () => {
     await expect(page.locator("text=Grand Opening")).toBeVisible();
   });
 
-  test("request new link button resets to email form", async ({ page }) => {
+  test("sign out button resets to email form", async ({ page }) => {
     await page.goto("/my-registrations?token=mock-token-reg-01");
 
     // Wait for registrations to load
     await expect(page.locator(".card").first()).toBeVisible({ timeout: 10_000 });
 
-    // Click the "request new link" button
-    const resetButton = page.getByRole("button", {
-      name: /request another secure link|nog een veilige link aanvragen/i,
+    // Redeeming a magic link establishes a passwordless session (#953), so
+    // the anonymous flow now shows "Sign out" here instead of "Request
+    // another secure link" — that button remains for the still-OIDC-only
+    // claim flow and for error/recovery states before a session exists.
+    const signOutButton = page.getByRole("button", {
+      name: /sign out|afmelden/i,
     });
-    await resetButton.click();
+    await signOutButton.click();
 
     // Should return to the email form
     await expect(page.locator("#my-registrations-email")).toBeVisible({ timeout: 5_000 });
