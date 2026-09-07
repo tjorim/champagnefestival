@@ -23,6 +23,7 @@ from app.audit import write_audit_entry
 from app.models import FaqItem
 from app.schemas import FaqItemCreate, FaqItemUpdate
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
+from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import faq_item_to_dict, make_id
 
 # A concurrent create can race this one for the same next `sort_order`; the
@@ -62,6 +63,7 @@ async def create_faq_item(db: AsyncSession, *, actor: str, body: FaqItemCreate, 
             details={"question_nl": f.question_nl},
         )
         try:
+            await notify_render_cache_invalidate(db)
             await db.commit()
         except IntegrityError:
             await db.rollback()
@@ -104,6 +106,7 @@ async def update_faq_item(
         request_id=request_id,
         details={"fields_changed": sorted(fields_set)},
     )
+    await notify_render_cache_invalidate(db)
     await db.commit()
     await db.refresh(f)
     return faq_item_to_dict(f)
@@ -123,6 +126,7 @@ async def delete_faq_item(db: AsyncSession, *, actor: str, faq_item_id: str, req
         request_id=request_id,
         details={},
     )
+    await notify_render_cache_invalidate(db)
     await db.commit()
     return {"deleted": True, "id": faq_item_id}
 
@@ -164,5 +168,6 @@ async def reorder_faq_items(
         request_id=request_id,
         details={"ordered_ids": ordered_ids},
     )
+    await notify_render_cache_invalidate(db)
     await db.commit()
     return await list_faq_items(db)

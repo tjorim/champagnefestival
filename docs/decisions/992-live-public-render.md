@@ -1,13 +1,11 @@
 # Live backend rendering of `/` and `/privacy`
 
-**Status:** Decided — the project owner confirmed decisions 1 and 2 on
-2026-09-07: marker replacement with a hand-rolled escaping helper (no new
-dependency), and — since #932's bus already exists — proactive `NOTIFY`-based
-invalidation ships together with the TTL cache in the same change, not as a
-deferred follow-up. Decisions 3 and 4 (JSON-LD ownership, no pixel-match) and
-the infra companion requirement proceed as originally proposed below, not
-separately re-litigated. Ready to implement.
-**Date:** 2026-09-06 (confirmed 2026-09-07)
+**Status:** Implemented in this repository (2026-09-07) — see "Implementation
+summary" below. **The `tjorim/apps` infra companion change has not been made
+yet**: until it ships, Caddy continues to serve `/` and `/privacy` as static
+files exactly as before, so this has no live effect in production yet — see
+"What's not done" below.
+**Date:** 2026-09-06 (confirmed 2026-09-07, implemented 2026-09-07)
 **Issues:** [#992](https://github.com/tjorim/champagnefestival/issues/992)
 (primary); [#936](https://github.com/tjorim/champagnefestival/issues/936)
 (superseded parent — its "S" part shipped in PR #990, this document covers the
@@ -224,28 +222,84 @@ new entry — noted explicitly because `AGENTS.md` requires a documented
 decision for every new or changed write operation, and "there is no write
 here" is the decision.
 
-## What remains before implementation starts
+## Implementation summary (2026-09-07)
 
-All decisions above are confirmed as of 2026-09-07. What's left is
-implementation:
+Shipped per the confirmed decisions above:
 
-1. ~~Confirmation of Decision 1's no-new-dependency approach~~ — done,
-   marker replacement, no Jinja2.
-2. ~~Confirmation of the 60-second TTL and the invalidation-timing
-   question~~ — done, TTL and proactive `NOTIFY` invalidation ship together.
-3. Add the inert `<!--ssr:*-->` markers to the frontend `index.html` — a
-   small change to a file the backend otherwise never touches.
-4. A companion change in `tjorim/apps`: the exact-path `handle` for `/` and
-   `/privacy`, **and** the read-only mount of the built frontend into the API
-   container. Both land there, not in this repository — same cross-repo
-   pattern #934's `tjorim/apps#192` already established.
-5. Implement the two route handlers, the fragment builder and its escaping
-   helper, the shared JSON-LD fixture and its two contract tests, the
-   `NOTIFY`-driven proactive invalidation on its own channel (not overloading
-   `live_events` — see the cross-cutting note in
-   [`932-multi-worker-state.md`](932-multi-worker-state.md)), the
-   client-side duplicate-suppression in `JsonLd.tsx`, and update
-   `docs/product-audit-2026-08.md`'s #992 row per `AGENTS.md`.
+- **`GET /` and `GET /privacy`** (`app/routers/public_pages.py`): read the
+  built shell (`Settings.frontend_dist_path`, default `../frontend/dist`,
+  re-read under the render cache's own TTL and keyed on the file's mtime —
+  a missing/unbuilt directory 404s rather than crashing), rewrite
+  title/description/og:\*/twitter:\*/canonical/`<html lang>` in place
+  (`app/services/public_render.py`'s `rewrite_head_meta`, matched by
+  attribute name so it works regardless of what Vite already substituted
+  into `%VITE_*%` placeholders at build time), and inject two fragments into
+  `<!--ssr:head-->` (the JSON-LD `<script>`) and `<!--ssr:content-->`
+  (FAQ/schedule text, or the privacy policy body) — both markers added to
+  `frontend/index.html`, inert everywhere else. Every interpolated value —
+  FAQ questions/answers, event titles, policy titles — goes through a small
+  `html.escape`-based helper (`_text`/`_attr`), not hand-concatenation,
+  since that content is admin-authored, not developer-controlled; a
+  dedicated test posts an XSS payload as a FAQ answer and asserts it comes
+  back escaped.
+- **Cache** (`app/services/public_render_cache.py`): an in-process
+  `RenderCache` (60s TTL, keyed by `f"{route}:{locale}"`) with last-known-good
+  — a refresh that raises falls back to the previous value if one exists,
+  re-raising only on a cold cache (which the route then turns into a 404,
+  not a 500). Proactive invalidation runs over its own Postgres NOTIFY
+  channel (`public_render_invalidate`, not `live_events` — see 932's
+  cross-cutting note that a render-cache invalidation is a different
+  message shape than an SSE client's), relayed by a new
+  `PgRenderCacheListener` (`app/live/render_cache_listener.py`) — a
+  deliberate near-duplicate of `PgLiveListener` rather than a
+  generalization of it, since the reconnect-with-backoff shape is identical
+  but reworking already-shipped, tested #932 code carried more regression
+  risk than the small duplication. `notify_render_cache_invalidate` is
+  called before `db.commit()` in FAQ create/update/delete/reorder, edition
+  create/update/delete, event create/update/delete, and policy *publish*
+  only (not draft saves, which aren't publicly visible yet).
+- **JSON-LD** (`app/services/jsonld_service.py`, decision 3): a Python
+  builder mirroring `frontend/src/components/JsonLd.tsx` field-for-field,
+  computing dates in a fixed `Europe/Brussels` timezone rather than a
+  viewer's local time (the client's own render has no single "true" instant
+  to reproduce — browser-local time varies per viewer). The shared contract
+  is `docs/fixtures/jsonld-edition.json`: a backend test
+  (`test_jsonld_service.py`) and a frontend test
+  (`JsonLd.contract.test.tsx`, pinning its own timezone to Brussels to make
+  the comparison meaningful) both build a JSON-LD Event from it and assert
+  byte-for-byte equality with the same expected structure. `JsonLd.tsx`
+  checks for a `[data-ssr-jsonld="true"]` script in the document and renders
+  nothing if one is already there, so a crawler never sees two Event
+  objects on `/`.
+- **Translated strings**: `festival_name`/`welcome_subtitle`/`faq_title`/
+  `schedule_title` are duplicated in `app/services/frontend_i18n_snippets.py`
+  (this process only has `frontend/dist` mounted, not the `messages/*.json`
+  source) — a test reads the real translation files and fails if they drift
+  from the duplicated constants.
+- **Tests**: 33 backend tests across `test_public_pages.py` (shell-missing
+  404, meta rewriting, FAQ/schedule/JSON-LD content, XSS-safe escaping,
+  locale handling including a real `?lng=fr` case, cache-hit reuse, a real
+  NOTIFY-based invalidation round trip via a session-scoped listener
+  fixture, and last-known-good under a simulated database failure),
+  `test_public_render_cache.py`, `test_pg_render_cache_listener.py`
+  (mirroring `test_pg_live_listener.py`'s reconnect-focused tests), and
+  `test_jsonld_service.py`; 2 new frontend tests
+  (`JsonLd.contract.test.tsx`).
+
+## What's not done
+
+- **The `tjorim/apps` infra companion change** (decision doc's own
+  "Constraint the issue did not surface" section): the exact-path Caddy
+  `handle` for `/` and `/privacy` routing to `champagnefestival-api`, and
+  the read-only mount of the built frontend into that API container. Both
+  land in that separate repository, not this one — this session has no
+  access to it, so **this has not been done by anyone yet**, unlike #934's
+  `tjorim/apps#192` (confirmed already closed when that work landed).
+  Without it, Caddy's existing `try_files … /index.html` keeps serving `/`
+  and `/privacy` as static files exactly as before; this repository's new
+  routes are correct and fully tested but currently unreachable in
+  production. Needs its own PR in `tjorim/apps` before this has any live
+  effect.
 
 ## References
 

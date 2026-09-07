@@ -95,16 +95,17 @@ below).
 
 ### Phase 4 — compliance and platform foundations
 
-#992 was `needs-discussion` pending owner confirmation; confirmed 2026-09-07
-(see its decision doc) and ready to implement. #953's backend and frontend
-session mechanism is implemented; one acceptance criterion (the public
-navigation entry) stays deliberately undone — see its row below. #941 is
-complete — see **Completed or superseded work**.
+#992's repo-side implementation is complete and tested (2026-09-07), but
+blocked from taking live effect by an unmade `tjorim/apps` infra companion
+change — see its row below. #953's backend and frontend session mechanism is
+implemented; one acceptance criterion (the public navigation entry) stays
+deliberately undone — see its row below. #941 is complete — see **Completed
+or superseded work**.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
 | 1 | #953 — visitor passwordless account and order history | Implemented 2026-09-07 per [`docs/decisions/953-visitor-passwordless-session.md`](decisions/953-visitor-passwordless-session.md), with one acceptance criterion deliberately left undone. `User.oidc_subject` is now nullable alongside a new `verified_email` (exactly one set, DB-enforced), backing a magic-link request/redeem/status/sign-out flow (`visitor_magic_links`, `visitor_sessions` — 7-day idle / 30-day hard-cap, `HttpOnly` cookie) that establishes the same `User` read paths `/api/me/*` already had for OIDC — `list_my_registrations`, the communication-preference endpoints, and `claim_my_registrations` now resolve the caller through either credential via a single `get_current_user` dependency structurally separate from `require_admin`/`require_volunteer` (never wired into either, so a visitor session cannot reach them). Redeeming a link immediately claims any currently-unowned registration matching the verified email, sharing `claim_unowned_registrations_for_email` with the pre-existing OIDC claim path rather than duplicating it. The frontend's pre-existing `/my-registrations` page (built for the one-shot guest lookup) now also auto-detects a returning visitor's session on load, so checking an order weeks later needs no fresh email, with a sign-out control and session-expiry display added. **Left undone, on purpose:** the public navigation entry stays off — advertising "My orders" before production transactional email delivery is verified end to end (per #953 and #924/#947's own gate) would be worse than not offering it — and the DB-stored privacy/account policy text (#944) hasn't been republished to describe the new session, the same kind of legal-content edit #934 left for the project owner rather than auto-editing. The old one-shot `POST /api/registrations/my/access` lookup stays in the backend, unused by this page now but not removed — a separate cleanup decision, not part of this scope. | L |
-| 2 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936 (now superseded, see **Completed or superseded work**) once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content. Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a routing change in `tjorim/apps`. Decisions confirmed 2026-09-07 in [`docs/decisions/992-live-public-render.md`](decisions/992-live-public-render.md): inject into the Vite-built shell through inert markers rather than adopting a template engine that would drift from the build artifact; a 60-second TTL with a last-known-good fallback as the correctness floor, with proactive `NOTIFY`-based invalidation built in the same change rather than deferred — since #932's bus already exists, there's no single-worker-only interim to wait out; the backend as the single JSON-LD source for these routes, with a shared fixture and contract tests on both sides; and equivalent, not pixel-matched, server markup. That document also surfaces an infra requirement #992 missed — the API container needs the built frontend mounted read-only, not just the Caddyfile route (a companion `tjorim/apps` change, same cross-repo pattern as #934's `tjorim/apps#192`). Ready to implement. Moved behind #953 on 2026-09-06 — see that row's note. | L |
+| 2 | #992 — live backend rendering of `/` and `/privacy` | Backend and frontend implementation complete and tested 2026-09-07 per [`docs/decisions/992-live-public-render.md`](decisions/992-live-public-render.md) — see that document's "Implementation summary". `GET /`/`GET /privacy` inject live-rendered meta tags, JSON-LD, and FAQ/schedule/policy content into the built shell via marker replacement; a 60-second TTL render cache with last-known-good is backed by proactive Postgres `NOTIFY`-based invalidation on FAQ/edition/event/policy-publish mutations (its own channel, not `live_events`); JSON-LD is built server-side from the same fixed fixture a frontend contract test also builds from, byte-for-byte equal. **Not yet in effect in production:** the `tjorim/apps` infra companion change (exact-path Caddy routing to the API, plus mounting the built frontend into the API container) has not been made — this session has no access to that repository. Until it ships, Caddy's existing static `file_server`/SPA fallback keeps serving `/` and `/privacy` exactly as before; this repo's new routes are correct and fully tested but currently unreachable. Needs a `tjorim/apps` PR before this can move to Completed. | L |
 
 ### Phase 5 — central composer
 
@@ -205,7 +206,7 @@ deliberately, since the phase order above is a better signal than a flat label.
 | #937 | frontend (completed 2026-09-03) | gap — event-day resilience |
 | #938 | docs (completed 2026-08-29) | accuracy |
 | #939 | backend, frontend (completed 2026-08-29) | bug — oversell risk |
-| #992 | backend, frontend | gap — discoverability (split from #936's "M" part) |
+| #992 | backend, frontend (implemented 2026-09-07, blocked on `tjorim/apps` infra) | gap — discoverability (split from #936's "M" part) |
 
 ## Communications roadmap index
 

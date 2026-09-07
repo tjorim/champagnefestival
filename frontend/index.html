@@ -72,6 +72,14 @@
     <link rel="alternate" hreflang="x-default" href="%VITE_PUBLIC_URL%" />
     <link rel="canonical" href="%VITE_PUBLIC_URL%" />
 
+    <!--
+      Reserved slot the backend fills for GET / and GET /privacy (#992) — a
+      server-rendered JSON-LD <script> for those two routes. Inert everywhere
+      else (pnpm dev, any route the backend doesn't render): a bare HTML
+      comment. See docs/decisions/992-live-public-render.md decision 1.
+    -->
+    <!--ssr:head-->
+
     <!-- Bootstrap will be imported via JS -->
     <script>
       (() => {
@@ -123,7 +131,14 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <!--
+      Reserved slot the backend fills for GET / and GET /privacy (#992) —
+      crawler-visible content (FAQ/schedule or the privacy policy body),
+      replaced wholesale once React mounts (createRoot, not hydrateRoot — no
+      hydration-mismatch failure mode to design around). Inert everywhere
+      else: a bare HTML comment inside the same fallback div React replaces.
+    -->
+    <div id="root"><!--ssr:content--></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

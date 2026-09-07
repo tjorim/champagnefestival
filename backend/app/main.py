@@ -13,6 +13,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from app.config import settings
 from app.database import create_tables
 from app.live.listener import pg_live_listener
+from app.live.render_cache_listener import pg_render_cache_listener
 from app.mcp.capabilities import get_mcp_capabilities
 from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
@@ -38,6 +39,7 @@ from app.routers import (
     people,
     policies,
     products,
+    public_pages,
     push,
     registrations,
     rooms,
@@ -103,6 +105,11 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # LISTEN connection degrades to no live-update delivery, not a startup crash.
     await pg_live_listener.start(settings.database_url)
 
+    # Proactive render-cache invalidation for GET / and GET /privacy
+    # (docs/decisions/992-live-public-render.md decision 2) — a separate
+    # channel/connection from the live bus above, not a second consumer of it.
+    await pg_render_cache_listener.start(settings.database_url)
+
     logger.info("=" * 60)
     logger.info("Startup complete — server ready to accept connections")
     logger.info("=" * 60)
@@ -112,6 +119,7 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # Shutdown
     logger.info("Champagnefestival API shutting down...")
     await pg_live_listener.stop()
+    await pg_render_cache_listener.stop()
 
 
 lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is not None else _app_lifespan
@@ -198,6 +206,7 @@ app.include_router(health.router)
 app.include_router(faq.router)
 app.include_router(policies.router)
 app.include_router(settings_router.router)
+app.include_router(public_pages.router)
 app.include_router(integration_clients.router)
 
 
