@@ -204,6 +204,25 @@ async def apply_person_update(
     if body.roles is not None:
         person.roles = normalise_roles(body.roles)
 
+    if body.marketing_opt_in is not None:
+        # Enforces PersonUpdate.marketing_opt_in's own contract: this path
+        # exists to process an opt-out received through another channel
+        # (e.g. the contact form), never to record consent — that can only
+        # come from the person themselves, via the registration form. A
+        # reject rather than a silent no-op, so an admin who tries it learns
+        # why nothing happened instead of assuming the correction worked.
+        if body.marketing_opt_in:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "marketing_opt_in can only be corrected to false here — "
+                    "consent can only be recorded through the registration form."
+                ),
+            )
+        if person.marketing_opt_in:
+            person.marketing_opt_in = False
+            person.marketing_opt_in_at = None
+
     await write_audit_entry(
         db,
         actor=actor,
@@ -218,6 +237,53 @@ async def apply_person_update(
     except IntegrityError:
         await db.rollback()
         raise_identity_conflict()
+    await db.refresh(person)
+    return person_to_dict(person)
+
+
+async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+    """Blank a person's identity fields in place, keeping their registrations.
+
+    See docs/decisions/934-data-retention-and-erasure.md for the retention
+    schedule this implements. Refuses anyone who currently or ever held the
+    volunteer role (identified by having a NISS/eID on file) — that
+    population's retention is settled as indefinite, and stripping their
+    identity would leave a NISS/eID that's useless for the insurance purpose
+    it's kept for. Someone with ``marketing_opt_in`` set keeps their `email`
+    and the opt-in fields; blanking those would silently revoke a still-active
+    consent the anonymisation window was never meant to touch.
+
+    Deterministic and safe to call again on an already-anonymised person: the
+    pseudonym is derived from the stable person ID, so a repeat produces the
+    same row rather than a second, different rewrite.
+
+    Does not touch ``registrations``, ``roles``, ``visits_per_month``, or
+    ``club_name`` — those are the operational/historical record this
+    anonymisation is deliberately scoped to leave alone.
+    """
+    if person.national_register_number or person.eid_document_number:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This person has a national register number or eID on file and cannot be anonymised.",
+        )
+
+    person.name = f"Guest #{person.id[-6:]}"
+    if not person.marketing_opt_in:
+        person.email = ""
+    person.phone = ""
+    person.address = ""
+    person.notes = ""
+    person.active = False
+
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="person_anonymised",
+        resource_type="person",
+        resource_id=person.id,
+        request_id=request_id,
+    )
+    await db.commit()
     await db.refresh(person)
     return person_to_dict(person)
 
@@ -275,6 +341,9 @@ async def merge_people(
     - All reservations and exhibitor contacts linked to the duplicate are
       re-pointed to the canonical person.
     - Blank string fields on the canonical person are filled from the duplicate.
+    - Marketing consent (marketing_opt_in / marketing_opt_in_at) is adopted from
+      the duplicate if the canonical person hasn't already given it — merging
+      away a duplicate must never silently discard a consent record.
     - Roles are merged (union).
     - Unique identity fields (national_register_number, eid_document_number)
       are adopted from the duplicate only if the canonical person lacks them;
@@ -318,6 +387,14 @@ async def merge_people(
     for field in ("visits_per_month",):
         if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
             setattr(canonical, field, getattr(duplicate, field))
+
+    # Marketing consent is one-way (docs/decisions/934-data-retention-and-erasure.md):
+    # adopt the duplicate's opt-in if canonical hasn't already given it, so
+    # deleting the duplicate below can never silently discard a consent
+    # record. Canonical's own consent (and its timestamp) wins if already set.
+    if duplicate.marketing_opt_in and not canonical.marketing_opt_in:
+        canonical.marketing_opt_in = True
+        canonical.marketing_opt_in_at = duplicate.marketing_opt_in_at
 
     # Merge roles (union).
     canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))

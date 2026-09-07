@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, and add versioned policy publishing.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, and add marketing opt-in consent fields.
 
 Revision ID: 001
 Revises: 000
@@ -260,9 +260,19 @@ def upgrade() -> None:
             }
         ],
     )
+    op.add_column(
+        "people",
+        sa.Column("marketing_opt_in", sa.Boolean(), nullable=False, server_default=sa.false()),
+    )
+    op.add_column(
+        "people",
+        sa.Column("marketing_opt_in_at", sa.DateTime(timezone=True), nullable=True),
+    )
 
 
 def downgrade() -> None:
+    op.drop_column("people", "marketing_opt_in_at")
+    op.drop_column("people", "marketing_opt_in")
     op.drop_table("policy_versions")
     op.drop_table("policies")
     op.drop_table("announcements")

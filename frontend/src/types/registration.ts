@@ -80,6 +80,7 @@ export interface RegistrationFormData {
   orderItems: OrderItem[];
   notes: string;
   accessibilityNote: string;
+  marketingOptIn: boolean;
   honeypot?: string;
   formStartTime: string;
 }

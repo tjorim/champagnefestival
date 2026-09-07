@@ -127,13 +127,24 @@ async def create_registration(
             name=body.name,
             email=email_norm,
             phone=phone_norm,
+            marketing_opt_in=body.marketing_opt_in,
+            marketing_opt_in_at=datetime.now(UTC) if body.marketing_opt_in else None,
         )
         db.add(person)
         await db.flush()
-    elif user is not None and await db.scalar(
-        select(Registration.id).where(Registration.person_id == person.id, Registration.user_id == user.id).limit(1)
-    ):
-        person.preferred_language = body.preferred_language
+    else:
+        if user is not None and await db.scalar(
+            select(Registration.id).where(Registration.person_id == person.id, Registration.user_id == user.id).limit(1)
+        ):
+            person.preferred_language = body.preferred_language
+        # Opting in is a one-way ratchet through this form: ticking the box
+        # records consent even on a returning visitor's record, but leaving it
+        # unticked on a later registration must not silently revoke a consent
+        # already given — that's a decision for an explicit unsubscribe, not
+        # an absent checkbox (docs/decisions/934-data-retention-and-erasure.md).
+        if body.marketing_opt_in and not person.marketing_opt_in:
+            person.marketing_opt_in = True
+            person.marketing_opt_in_at = datetime.now(UTC)
 
     registration = Registration(
         id=make_id("reg"),

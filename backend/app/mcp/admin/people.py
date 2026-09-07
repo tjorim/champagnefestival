@@ -18,7 +18,7 @@ from app.mcp.utils import MCPToolError, as_value_error, get_or_error, validate_w
 from app.models import Person
 from app.schemas import PersonCreate, PersonUpdate
 from app.services import people_service
-from app.utils import person_to_dict
+from app.utils import person_summary_dict
 
 
 async def create_person(
@@ -61,7 +61,7 @@ async def create_person(
 async def get_person(session_factory: Any, person_id: str) -> dict:
     async with session_factory() as db:
         person = await get_or_error(db, Person, person_id, f"Person '{person_id}' not found.")
-        return person_to_dict(person)
+        return person_summary_dict(person)
 
 
 async def update_person(

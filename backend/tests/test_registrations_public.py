@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.auth import get_optional_claims
 from app.main import app
-from app.models import OutboxJob, Registration, User
+from app.models import OutboxJob, Person, Registration, User
 from tests.helpers import (
     ADMIN_HEADERS,
     VALID_RESERVATION,
@@ -170,3 +170,51 @@ async def test_spam_invalid_timestamp(client):
     )
     assert r.status_code == 400
     assert r.json()["detail"] == "Submission rejected."
+
+
+@pytest.mark.anyio
+async def test_marketing_opt_in_recorded_for_new_person(client, db_session):
+    event = await _create_event(client)
+    r = await client.post(
+        "/api/registrations",
+        json=_registration_body(event, marketing_opt_in=True),
+    )
+    assert r.status_code == 201, r.text
+    person_id = r.json()["person_id"]
+
+    person = await db_session.get(Person, person_id)
+    assert person.marketing_opt_in is True
+    assert person.marketing_opt_in_at is not None
+
+
+@pytest.mark.anyio
+async def test_marketing_opt_in_defaults_false(client, db_session):
+    event = await _create_event(client)
+    r = await client.post("/api/registrations", json=_registration_body(event))
+    assert r.status_code == 201, r.text
+    person = await db_session.get(Person, r.json()["person_id"])
+    assert person.marketing_opt_in is False
+    assert person.marketing_opt_in_at is None
+
+
+@pytest.mark.anyio
+async def test_marketing_opt_in_is_a_one_way_ratchet(client, db_session):
+    """Leaving the checkbox unticked on a later registration must not revoke
+    a consent already given — see docs/decisions/934-data-retention-and-erasure.md."""
+    event = await _create_event(client)
+    r = await client.post(
+        "/api/registrations",
+        json=_registration_body(event, marketing_opt_in=True),
+    )
+    person_id = r.json()["person_id"]
+
+    # Same person (same name/email/phone) registers again without ticking the box.
+    r = await client.post(
+        "/api/registrations",
+        json=_registration_body(event, marketing_opt_in=False),
+    )
+    assert r.status_code == 201, r.text
+    assert r.json()["person_id"] == person_id
+
+    person = await db_session.get(Person, person_id)
+    assert person.marketing_opt_in is True

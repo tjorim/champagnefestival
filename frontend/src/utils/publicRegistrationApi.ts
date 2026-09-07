@@ -431,6 +431,7 @@ export async function submitRegistration(
       })),
       notes: payload.notes,
       accessibility_note: payload.accessibilityNote,
+      marketing_opt_in: payload.marketingOptIn,
       honeypot: payload.honeypot ?? "",
       form_start_time: payload.formStartTime,
     }),

@@ -130,6 +130,39 @@ class PersonOut(BaseModel):
     club_name: str
     notes: str
     active: bool
+    marketing_opt_in: bool
+    marketing_opt_in_at: datetime | None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class PersonAdminSummaryOut(BaseModel):
+    """``PersonOut`` without the volunteer-only identity fields.
+
+    Used for the general people/members list and single-person reads, which
+    have no business rendering a NISS/eID that belongs to a small subset of
+    rows — see docs/decisions/934-data-retention-and-erasure.md. Create,
+    update, and merge keep returning the full ``PersonOut`` unchanged: those
+    responses echo back data the caller just explicitly provided or is
+    actively verifying (e.g. a merge adopting an identity field from a
+    duplicate), not passive browsing.
+    """
+
+    id: str
+    name: str
+    email: str
+    phone: str
+    preferred_language: Literal["nl", "fr", "en"] | None = None
+    address: str
+    roles: list[str]
+    visits_per_month: int | None
+    club_name: str
+    notes: str
+    active: bool
+    marketing_opt_in: bool
+    marketing_opt_in_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -145,7 +178,7 @@ class PersonListEnvelope(BaseModel):
     ``RegistrationListEnvelope``, which this mirrors.
     """
 
-    items: list[PersonOut]
+    items: list[PersonAdminSummaryOut]
     total: int
     limit: int
     page: int
@@ -289,6 +322,13 @@ class RegistrationCreate(RequestModel):
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
     notes: str = Field(default="", max_length=2000)
     accessibility_note: str = Field(default="", max_length=2000)
+    marketing_opt_in: bool = Field(
+        default=False,
+        description=(
+            "Explicit, unticked-by-default consent to be contacted about future editions — "
+            "a separate legal basis from the operational registration purpose. Never implied."
+        ),
+    )
     honeypot: str = Field(default="", exclude=True)
     form_start_time: str = Field(default="", exclude=True)
 
@@ -631,6 +671,10 @@ class PersonUpdate(RequestModel):
     club_name: str | None = Field(default=None, max_length=200)
     notes: str | None = Field(default=None, max_length=2000)
     active: bool | None = None
+    marketing_opt_in: bool | None = None
+    """Admin-initiated correction only (e.g. processing an opt-out request
+    received through the contact form) — the registration form is the actual
+    consent channel; this is not exposed there."""
 
 
 # ---------------------------------------------------------------------------

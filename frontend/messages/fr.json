@@ -907,5 +907,7 @@
   "admin_policy_markdown_italic_placeholder": "texte en italique",
   "admin_policy_markdown_heading_placeholder": "Titre",
   "admin_policy_markdown_link_placeholder": "texte du lien",
-  "admin_policy_markdown_list_placeholder": "Élément de liste"
+  "admin_policy_markdown_list_placeholder": "Élément de liste",
+  "registration_marketing_opt_in": "Tenez-moi informé(e) des futures éditions",
+  "registration_marketing_opt_in_help": "Facultatif et décoché par défaut — nous l'utiliserons uniquement pour vous informer occasionnellement d'une nouvelle édition, jamais pour autre chose."
 }

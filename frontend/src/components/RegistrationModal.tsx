@@ -29,6 +29,7 @@ interface RegistrationFields {
   guestCount: number;
   notes: string;
   accessibilityNote: string;
+  marketingOptIn: boolean;
   honeypot: string;
   formStartTime: string;
 }
@@ -61,6 +62,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       guestCount: 1,
       notes: "",
       accessibilityNote: "",
+      marketingOptIn: false,
       honeypot: "",
       formStartTime: new Date().toISOString(),
     } as RegistrationFields,
@@ -156,6 +158,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       guestCount: 1,
       notes: "",
       accessibilityNote: "",
+      marketingOptIn: false,
       honeypot: "",
       formStartTime: new Date().toISOString(),
     });
@@ -387,6 +390,24 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   />
                   <Form.Text id="res-accessibility-help" className="text-secondary">
                     {m.registration_accessibility_note_help()}
+                  </Form.Text>
+                </Form.Group>
+              )}
+            </form.Field>
+
+            <form.Field name="marketingOptIn">
+              {(field) => (
+                <Form.Group className="mb-3" controlId="res-marketing-opt-in">
+                  <Form.Check
+                    id="res-marketing-opt-in-check"
+                    type="checkbox"
+                    label={m.registration_marketing_opt_in()}
+                    checked={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.checked)}
+                    aria-describedby="res-marketing-opt-in-help"
+                  />
+                  <Form.Text id="res-marketing-opt-in-help" className="text-secondary">
+                    {m.registration_marketing_opt_in_help()}
                   </Form.Text>
                 </Form.Group>
               )}

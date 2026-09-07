@@ -5,6 +5,8 @@ create/update/delete/merge transitions — lives in
 ``app.services.people_service`` and is shared with ``app.mcp.admin.people``.
 """
 
+from datetime import UTC, datetime, timedelta
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,10 +16,16 @@ from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, get_request_id
 from app.models import Event, Person, Registration
-from app.schemas import PersonCreate, PersonListEnvelope, PersonOut, PersonUpdate
+from app.schemas import PersonAdminSummaryOut, PersonCreate, PersonListEnvelope, PersonOut, PersonUpdate
 from app.services import people_service
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.utils import person_to_dict, registration_to_list_dict, roles_contains
+
+# The identity-field anonymisation window (docs/decisions/934-data-retention-and-erasure.md):
+# 7 years after a person's most recent registration's event date. 365.25 days/year
+# is precise enough for a "due" surface an admin reviews manually — not a hard
+# legal cutoff computed to the day.
+ANONYMISATION_WINDOW = timedelta(days=round(365.25 * 7))
 
 router = APIRouter(
     prefix="/api/people",
@@ -96,7 +104,44 @@ async def list_people(
     return {"items": items, "total": total, "limit": limit, "page": page}
 
 
-@router.get("/{person_id}", response_model=PersonOut)
+@router.get("/due-for-anonymisation", response_model=list[PersonAdminSummaryOut])
+async def list_people_due_for_anonymisation(db: AsyncSession = Depends(get_db)) -> list[dict]:
+    """People whose identity fields are due for anonymisation.
+
+    "Due" means: no NISS/eID on file (a current or former volunteer is never
+    due — see ``people_service.anonymise_person``), already anonymised people
+    excluded (nothing further to do), and their most recent registration's
+    event date is more than 7 years in the past. Deliberately not automatic —
+    an admin reviews this list and triggers each anonymisation individually
+    via ``POST /{person_id}/anonymise``.
+
+    Registered before ``/{person_id}`` so this literal path isn't swallowed by
+    that dynamic one.
+    """
+    last_event_date = (
+        select(func.max(Event.date))
+        .join(Registration, Registration.event_id == Event.id)
+        .where(Registration.person_id == Person.id)
+        .correlate(Person)
+        .scalar_subquery()
+    )
+    cutoff = (datetime.now(UTC) - ANONYMISATION_WINDOW).date()
+    stmt = (
+        select(Person)
+        .where(
+            Person.national_register_number.is_(None),
+            Person.eid_document_number.is_(None),
+            Person.active.is_(True),
+            last_event_date.isnot(None),
+            last_event_date < cutoff,
+        )
+        .order_by(last_event_date.asc())
+    )
+    rows = (await db.execute(stmt)).scalars().all()
+    return [person_to_dict(p) for p in rows]
+
+
+@router.get("/{person_id}", response_model=PersonAdminSummaryOut)
 async def get_person(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
     person = await people_service.get_person_or_404(db, person_id)
     return person_to_dict(person)
@@ -161,3 +206,19 @@ async def delete_person(
 ) -> None:
     person = await people_service.get_person_or_404(db, person_id)
     await people_service.delete_person(db, person, actor=actor, request_id=request_id)
+
+
+@router.post("/{person_id}/anonymise", response_model=PersonOut)
+async def anonymise_person(
+    person_id: str,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
+) -> dict:
+    """Blank a person's identity fields, keeping their registrations intact.
+
+    See ``app.services.people_service.anonymise_person``. Admin-triggered
+    only — not run on a schedule, per docs/decisions/934-data-retention-and-erasure.md.
+    """
+    person = await people_service.get_person_or_404(db, person_id)
+    return await people_service.anonymise_person(db, person, actor=actor, request_id=request_id)

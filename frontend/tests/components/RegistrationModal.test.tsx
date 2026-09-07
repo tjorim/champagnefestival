@@ -24,6 +24,9 @@ vi.mock("@/paraglide/messages", () => ({
     registration_accessibility_note: () => "Accessibility needs (optional)",
     registration_accessibility_note_help: () =>
       "Tell us about wheelchair access, seating or other support you need.",
+    registration_marketing_opt_in: () => "Keep me informed about future editions",
+    registration_marketing_opt_in_help: () =>
+      "Optional and unticked by default — we'll only use this to occasionally email you about a new edition, never for anything else.",
     registration_order_title: () => "Order",
     registration_order_description: () => "Order champagne or snacks with your registration",
     registration_order_required_hint: ({ products }: { products: string }) =>
@@ -144,6 +147,33 @@ describe("RegistrationModal component", () => {
         "/my-registrations",
       );
     });
+  });
+
+  it("defaults the marketing opt-in checkbox to unticked, and sends it only when ticked", async () => {
+    let requestBody: { marketing_opt_in?: boolean } = {};
+    server.use(
+      http.post("/api/registrations", async ({ request }) => {
+        requestBody = (await request.json()) as { marketing_opt_in?: boolean };
+        return HttpResponse.json({ id: "reg-opt-in" }, { status: 201 });
+      }),
+    );
+    renderModal();
+
+    const checkbox = screen.getByRole("checkbox", {
+      name: "Keep me informed about future editions",
+    });
+    expect(checkbox).not.toBeChecked();
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+    fireEvent.click(checkbox);
+    expect(checkbox).toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => expect(requestBody.marketing_opt_in).toBe(true));
   });
 
   it("sends the visitor token when placing a signed-in registration", async () => {

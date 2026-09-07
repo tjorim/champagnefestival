@@ -576,6 +576,14 @@ class Person(Base):
     notes: Mapped[str] = mapped_column(Text, default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
+    marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
+    """Explicit, unticked-by-default consent to be contacted about future
+    editions — a separate legal basis from the operational purposes covering
+    the rest of this record (see docs/decisions/934-data-retention-and-erasure.md).
+    Never set true by anything other than the person's own action.
+    """
+    marketing_opt_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
@@ -604,7 +612,21 @@ class AuditEntry(Base):
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
     actor: Mapped[str] = mapped_column(String(255), index=True)
-    """OIDC ``sub`` claim, client IP for token-gated ops, or 'anonymous'."""
+    """OIDC ``sub`` claim, client IP for token-gated ops (``auth_source ==
+    "token"``, set only by ``get_client_ip``'s callers — see
+    ``app.ratelimit.get_client_ip``, whose fallback value is the literal
+    string ``"unknown"`` when the connection has no resolvable peer), or
+    'anonymous'. A row with ``auth_source == "token"`` has its actor blanked
+    to ``""`` 30 days after ``timestamp`` by a VPS-scheduled job in
+    ``tjorim/apps`` (`infra/scheduled-jobs/champagnefestival-redact-audit-entry-ips.sql`)
+    — see docs/decisions/934-data-retention-and-erasure.md. The entry itself
+    (action, resource, timestamp) is kept indefinitely; only the actor is
+    time-limited. The job blanks every ``auth_source == "token"`` row
+    unconditionally rather than pattern-matching for IP-shaped values: that
+    ``auth_source`` is set by exactly this codebase's own writers, always
+    paired with ``get_client_ip``'s output, so there is no other value it
+    could hold to protect against — and blanking a placeholder like
+    "unknown" is harmless either way, since it was never personal data."""
     auth_source: Mapped[str] = mapped_column(String(32), nullable=False, default="unknown", index=True)
     subject: Mapped[str | None] = mapped_column(String(255), nullable=True)
     integration_client_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
