@@ -460,9 +460,7 @@ async def test_announcement_allows_text_over_push_byte_limit(client):
     )
     assert response.status_code == 201
     message_id = response.json()["id"]
-    response = await client.put(
-        f"/api/composer/{message_id}", json={"channels": ["push"]}, headers=ADMIN_HEADERS
-    )
+    response = await client.put(f"/api/composer/{message_id}", json={"channels": ["push"]}, headers=ADMIN_HEADERS)
     assert response.status_code == 400
     saved = await client.get(f"/api/composer/{message_id}", headers=ADMIN_HEADERS)
     assert saved.json()["channels"] == ["announcement"]
