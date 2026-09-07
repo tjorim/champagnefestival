@@ -911,5 +911,16 @@
   "admin_policy_markdown_link_placeholder": "linktekst",
   "admin_policy_markdown_list_placeholder": "Lijstitem",
   "registration_marketing_opt_in": "Houd me op de hoogte van toekomstige edities",
-  "registration_marketing_opt_in_help": "Optioneel en standaard niet aangevinkt — we gebruiken dit enkel om je af en toe te mailen over een nieuwe editie, nooit voor iets anders."
+  "registration_marketing_opt_in_help": "Optioneel en standaard niet aangevinkt — we gebruiken dit enkel om je af en toe te mailen over een nieuwe editie, nooit voor iets anders.",
+  "push_section_heading": "Meldingen",
+  "push_opt_in_title": "Meldingen inschakelen",
+  "push_opt_in_description": "Ontvang browsermeldingen over festivalupdates. Je toestel krijgt een abonnementssleutel zonder persoonlijke gegevens — we weten niet wie je bent, enkel dat deze browser zich heeft aangemeld. Je kan je toestemming op elk moment intrekken door meldingen hieronder uit te schakelen.",
+  "push_opt_in_consent_label": "Ik geef toestemming om browsermeldingen van Champagnefestival te ontvangen.",
+  "push_opt_in_subscribe_button": "Meldingen inschakelen",
+  "push_opt_in_unsubscribe_button": "Meldingen uitschakelen",
+  "push_opt_in_subscribed_status": "Meldingen zijn ingeschakeld op dit toestel.",
+  "push_opt_in_error": "Er is iets misgelopen. Probeer opnieuw.",
+  "push_test_send_button": "Testmelding versturen",
+  "push_test_send_success": "Testmelding verstuurd — controleer dit toestel.",
+  "push_error_generic": "Er is iets misgelopen. Probeer opnieuw."
 }

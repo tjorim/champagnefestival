@@ -7,14 +7,19 @@ progress:
 - Check-in's per-registration limit and shared-IP backstop (the
   security/abuse-sensitive paths, per #921's already-shipped keying work) are
   Postgres-backed (``check_rate_limit_pg`` / ``check_check_in_rate_limit``) so
-  they're enforced consistently across worker processes.
+  they're enforced consistently across worker processes. #941's push
+  subscription mutation endpoints (``check_push_subscription_rate_limit``)
+  join this group too — anonymous, public, unauthenticated write endpoints
+  are exactly the abuse-sensitive category this split exists for (see
+  docs/decisions/941-web-push-foundation.md).
 - The remaining scopes (``contact-submission``, ``registration-create``,
-  ``registration-access-request``) stay on the in-process deque below
-  (``check_rate_limit``). They're process-local — in a multi-worker deployment
-  each worker maintains its own buckets, so the effective limit is
-  max_requests × number_of_workers per client IP — and that's an accepted,
-  documented gap for now, the same treatment decision 1 gives slowapi's
-  blanket per-route limiter: revisit only if it turns out to matter in
+  ``registration-access-request``, ``push-test-send``) stay on the in-process
+  deque below (``check_rate_limit``). They're process-local — in a
+  multi-worker deployment each worker maintains its own buckets, so the
+  effective limit is max_requests × number_of_workers per client IP (or, for
+  ``push-test-send``, per admin actor) — and that's an accepted, documented
+  gap for now, the same treatment decision 1 gives slowapi's blanket
+  per-route limiter: revisit only if it turns out to matter in
   practice. Today's single-worker deployment (DEPLOYMENT.md) makes this a
   forward-looking constraint, not a live bug.
 """
@@ -36,6 +41,8 @@ _RATE_LIMIT_WINDOW_SECONDS = 600
 _CHECK_IN_REGISTRATION_MAX_REQUESTS = 10
 _CHECK_IN_IP_MAX_REQUESTS = 300
 _CHECK_IN_WINDOW_SECONDS = 600
+_PUSH_SUBSCRIPTION_MAX_REQUESTS = 20
+_PUSH_SUBSCRIPTION_WINDOW_SECONDS = 600
 _RATE_LIMIT_BUCKET_CAP = 10_000
 _rate_limit_buckets: dict[tuple[str, str], collections.deque[datetime]] = {}
 
@@ -195,6 +202,25 @@ async def check_check_in_rate_limit(db: AsyncSession, registration_id: str, clie
         scope="check-in-registration",
         max_requests=_CHECK_IN_REGISTRATION_MAX_REQUESTS,
         window_seconds=_CHECK_IN_WINDOW_SECONDS,
+    )
+
+
+async def check_push_subscription_rate_limit(db: AsyncSession, client_ip: str) -> bool:
+    """Limit push subscribe/unsubscribe mutations per IP (#941).
+
+    Postgres-backed (see module docstring): these are anonymous, public,
+    unauthenticated write endpoints in the same abuse-sensitive category as
+    check-in — a single shared scope covers both subscribe and unsubscribe,
+    since neither alone is more sensitive than the other and venue devices
+    can share one public IP the same way check-in's own IP backstop
+    accounts for.
+    """
+    return await check_rate_limit_pg(
+        db,
+        client_ip,
+        scope="push-subscription-mutation",
+        max_requests=_PUSH_SUBSCRIPTION_MAX_REQUESTS,
+        window_seconds=_PUSH_SUBSCRIPTION_WINDOW_SECONDS,
     )
 
 

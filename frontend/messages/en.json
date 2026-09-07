@@ -911,5 +911,16 @@
   "admin_policy_markdown_link_placeholder": "link text",
   "admin_policy_markdown_list_placeholder": "List item",
   "registration_marketing_opt_in": "Keep me informed about future editions",
-  "registration_marketing_opt_in_help": "Optional and unticked by default — we'll only use this to occasionally email you about a new edition, never for anything else."
+  "registration_marketing_opt_in_help": "Optional and unticked by default — we'll only use this to occasionally email you about a new edition, never for anything else.",
+  "push_section_heading": "Notifications",
+  "push_opt_in_title": "Enable notifications",
+  "push_opt_in_description": "Get browser notifications about festival updates. Your device receives a subscription key with no personal information attached — we don't know who you are, only that this browser opted in. You can withdraw consent at any time by disabling notifications below.",
+  "push_opt_in_consent_label": "I consent to receiving browser notifications from Champagnefestival.",
+  "push_opt_in_subscribe_button": "Enable notifications",
+  "push_opt_in_unsubscribe_button": "Disable notifications",
+  "push_opt_in_subscribed_status": "Notifications are enabled on this device.",
+  "push_opt_in_error": "Something went wrong. Please try again.",
+  "push_test_send_button": "Send test notification",
+  "push_test_send_success": "Test notification sent — check this device.",
+  "push_error_generic": "Something went wrong. Please try again."
 }

@@ -9,15 +9,20 @@ from datetime import UTC, datetime, timedelta
 from app.config import settings
 from app.database import async_session_factory
 from app.email import deliver_registration_confirmation
+from app.push import WEB_PUSH_TEST, deliver_web_push_test
 from app.ratelimit import cleanup_expired_rate_limit_buckets
 from app.services.outbox_service import REGISTRATION_CONFIRMATION, cleanup_completed_jobs, process_one_job
+from app.services.push_service import cleanup_expired_subscriptions
 from app.visitor_session import cleanup_expired_magic_links, cleanup_expired_sessions
 
 logger = logging.getLogger(__name__)
 
 
 async def run() -> None:
-    handlers = {REGISTRATION_CONFIRMATION: deliver_registration_confirmation}
+    handlers = {
+        REGISTRATION_CONFIRMATION: deliver_registration_confirmation,
+        WEB_PUSH_TEST: deliver_web_push_test,
+    }
     next_cleanup = datetime.now(UTC)
     while True:
         if datetime.now(UTC) >= next_cleanup:
@@ -33,6 +38,9 @@ async def run() -> None:
             async with async_session_factory() as db:
                 deleted_links = await cleanup_expired_magic_links(db)
             logger.info("Visitor magic-link cleanup removed %s expired links", deleted_links)
+            async with async_session_factory() as db:
+                deleted_subscriptions = await cleanup_expired_subscriptions(db)
+            logger.info("Push subscription cleanup removed %s stale subscriptions", deleted_subscriptions)
             next_cleanup = datetime.now(UTC) + timedelta(days=1)
         processed = await process_one_job(
             async_session_factory,

@@ -27,6 +27,7 @@ import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
 import RegistrationModal from "./components/RegistrationModal";
 import AnnouncementBanner from "./components/AnnouncementBanner";
+import PushOptIn from "./components/PushOptIn";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import MaintenancePage from "./components/MaintenancePage";
@@ -645,6 +646,19 @@ function App() {
                 <AppSuspense errorFallbackText={m.error_contact()}>
                   <ContactForm />
                 </AppSuspense>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Web Push opt-in (#941) — self-contained, renders nothing when
+            unsupported or VAPID isn't configured server-side. */}
+        <section id="notifications" className="content-section">
+          <div className="container">
+            <SectionHeading id="notifications-heading" title={m.push_section_heading()} />
+            <div className="row justify-content-center">
+              <div className="col-md-10 col-lg-6">
+                <PushOptIn />
               </div>
             </div>
           </div>
