@@ -127,6 +127,20 @@ async def test_check_rate_limit_pg_survives_a_later_rollback(db_session) -> None
     )
 
 
+async def test_check_rate_limit_pg_rejects_an_oversized_key_without_a_db_error(db_session) -> None:
+    """Regression (PR #1011 review): a packed key over RateLimitBucket.key's
+    300-char column width must be rejected in Python, not raise a DataError
+    mid-transaction — which would roll back an earlier successful check in
+    the same call (see check_check_in_rate_limit's IP-then-registration order).
+    """
+    oversized_key = "x" * 400
+    assert not await check_rate_limit_pg(
+        db_session, oversized_key, scope="pg-oversized", max_requests=5, window_seconds=600
+    )
+    result = await db_session.execute(select(RateLimitBucket))
+    assert result.scalars().all() == []
+
+
 async def test_check_rate_limit_pg_rejects_after_max_requests(db_session) -> None:
     for _ in range(3):
         assert await check_rate_limit_pg(

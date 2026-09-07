@@ -4,7 +4,7 @@ import logging
 import secrets
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,9 +30,12 @@ router = APIRouter(prefix="/api/check-in", tags=["check-in"])
 
 @router.post("/{reservation_id}/lookup", response_model=CheckInGuestOut)
 async def lookup_check_in(
-    reservation_id: str,
     body: CheckInLookupRequest,
     request: Request,
+    # Matches Registration.id's column width (models.py) — rejects an
+    # obviously-invalid oversized ID with a clean 422 before it can reach the
+    # rate limiter or the database (PR #1011 review).
+    reservation_id: str = Path(max_length=64),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Return minimal reservation details after validating the check-in token.
@@ -74,9 +77,10 @@ async def lookup_check_in(
 
 @router.post("/{reservation_id}", response_model=CheckInOut)
 async def post_check_in(
-    reservation_id: str,
     body: CheckInRequest,
     request: Request,
+    # See lookup_check_in above.
+    reservation_id: str = Path(max_length=64),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Mark the guest as checked-in (and optionally issue a strap).

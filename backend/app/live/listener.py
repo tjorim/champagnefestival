@@ -60,9 +60,11 @@ class PgLiveListener:
     async def start(self, database_url: str) -> None:
         """Open the LISTEN connection and register the notification callback.
 
-        Failures are logged and swallowed — the app continues to serve
-        requests, just without live-update delivery until a reconnect
-        succeeds (see the module docstring).
+        A failure here is logged and schedules the same reconnect-with-backoff
+        loop a later unexpected drop uses (see the module docstring) — it must
+        not call ``stop()``, which sets ``_closing`` and would permanently
+        disable reconnection after a merely transient startup failure (e.g.
+        Postgres not yet accepting connections during container startup).
         """
         self._dsn = _to_asyncpg_dsn(database_url)
         self._closing = False
@@ -71,10 +73,11 @@ class PgLiveListener:
             logger.info("✓ Live bus: Postgres LISTEN connection established on channel %r", LIVE_EVENTS_CHANNEL)
         except Exception:
             logger.warning(
-                "Live bus: Postgres LISTEN setup failed — live updates will not be delivered until reconnect",
+                "Live bus: Postgres LISTEN setup failed — scheduling reconnect; "
+                "live updates will not be delivered until it succeeds",
                 exc_info=True,
             )
-            await self.stop()
+            self._reconnect_task = asyncio.create_task(self._reconnect_with_backoff())
 
     async def _connect(self) -> None:
         conn = await asyncpg.connect(self._dsn)

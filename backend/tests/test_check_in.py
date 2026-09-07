@@ -44,6 +44,19 @@ async def test_check_in_wrong_token(client):
 
 
 @pytest.mark.anyio
+async def test_check_in_rejects_oversized_reservation_id(client):
+    """Regression (PR #1011 review): an ID longer than Registration.id's 64-char
+    column must 422 cleanly, not reach the rate limiter's Postgres upsert and
+    500 on a VARCHAR(300) overflow.
+    """
+    oversized_id = "x" * 500
+    r = await client.post(f"/api/check-in/{oversized_id}/lookup", json={"token": "irrelevant"})
+    assert r.status_code == 422
+    r = await client.post(f"/api/check-in/{oversized_id}", json={"token": "irrelevant"})
+    assert r.status_code == 422
+
+
+@pytest.mark.anyio
 async def test_canceled_registration_is_rejected_by_lookup_and_check_in(client):
     created = await _post_registration(client)
     registration_id = created.json()["id"]

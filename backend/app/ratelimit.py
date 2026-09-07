@@ -45,6 +45,17 @@ _rate_limit_buckets: dict[tuple[str, str], collections.deque[datetime]] = {}
 # RateLimitBucket.key is unambiguous even though we never need to unpack it.
 _BUCKET_KEY_SEPARATOR = "\x1f"
 
+# Matches RateLimitBucket.key's column width (models.py). check-in's
+# reservation_id is an unauthenticated path parameter reaching this function
+# before any token validation, so an attacker-controlled overlong value must
+# be rejected here rather than left to the VARCHAR(300) column: a DataError
+# from an oversized key would raise mid-transaction and roll back an
+# already-successful earlier bucket increment in the same call (e.g.
+# check_check_in_rate_limit's IP-scope check before its registration-scope
+# one) — silently defeating the venue-wide IP backstop for exactly the
+# crafted-input traffic it exists to catch (PR #1011 review).
+_BUCKET_KEY_MAX_LENGTH = 300
+
 _UPSERT_BUCKET_SQL = text(
     """
     INSERT INTO rate_limit_buckets (key, window_start, count)
@@ -146,10 +157,17 @@ async def check_rate_limit_pg(
     uses below: a burst can allow up to ~2x the limit right at a window
     boundary, the standard tradeoff most production rate limiters make at this
     scale (docs/decisions/932-multi-worker-state.md decision 1).
+
+    Returns ``False`` without touching the database if the packed key would
+    exceed ``RateLimitBucket.key``'s column width — see
+    ``_BUCKET_KEY_MAX_LENGTH``.
     """
+    packed_key = f"{scope}{_BUCKET_KEY_SEPARATOR}{key}"
+    if len(packed_key) > _BUCKET_KEY_MAX_LENGTH:
+        return False
     result = await db.execute(
         _UPSERT_BUCKET_SQL,
-        {"key": f"{scope}{_BUCKET_KEY_SEPARATOR}{key}", "window_seconds": window_seconds},
+        {"key": packed_key, "window_seconds": window_seconds},
     )
     count = result.scalar_one()
     return count <= max_requests
