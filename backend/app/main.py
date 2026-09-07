@@ -24,6 +24,7 @@ from app.routers import (
     audit,
     auth,
     check_in,
+    composer,
     contact,
     editions,
     events,
@@ -182,6 +183,7 @@ app.include_router(audit.router)
 app.include_router(members.router)
 app.include_router(events.router)
 app.include_router(check_in.router)
+app.include_router(composer.router)
 app.include_router(contact.router)
 app.include_router(outbox.router)
 app.include_router(tables.router)

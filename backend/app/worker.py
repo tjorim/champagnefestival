@@ -6,11 +6,13 @@ import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
 
+from app.composer_delivery import COMPOSER_MESSAGE_PUSH, deliver_composer_message_dispatch, deliver_composer_push
 from app.config import settings
 from app.database import async_session_factory
 from app.email import deliver_registration_confirmation
 from app.push import WEB_PUSH_TEST, deliver_web_push_test
 from app.ratelimit import cleanup_expired_rate_limit_buckets
+from app.services.composer_service import COMPOSER_MESSAGE_DISPATCH
 from app.services.outbox_service import REGISTRATION_CONFIRMATION, cleanup_completed_jobs, process_one_job
 from app.services.push_service import cleanup_expired_subscriptions
 from app.visitor_session import cleanup_expired_magic_links, cleanup_expired_sessions
@@ -22,6 +24,8 @@ async def run() -> None:
     handlers = {
         REGISTRATION_CONFIRMATION: deliver_registration_confirmation,
         WEB_PUSH_TEST: deliver_web_push_test,
+        COMPOSER_MESSAGE_DISPATCH: deliver_composer_message_dispatch,
+        COMPOSER_MESSAGE_PUSH: deliver_composer_push,
     }
     next_cleanup = datetime.now(UTC)
     while True:

@@ -183,6 +183,7 @@ export default function AdminSidebar({
                   "exhibitors",
                   "faq",
                   "announcements",
+                  "composer",
                   "policies",
                   "contact-messages",
                   "settings",
@@ -205,6 +206,12 @@ export default function AdminSidebar({
                   itemKey="announcements"
                   icon="bi-megaphone"
                   label={m.admin_announcements_section()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="composer"
+                  icon="bi-send"
+                  label={m.admin_composer_section()}
                   {...itemProps}
                 />
                 <SidebarItem

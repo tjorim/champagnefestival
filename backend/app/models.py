@@ -899,6 +899,54 @@ class Announcement(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
+class ComposedMessage(Base):
+    """A centrally-composed operational message delivered through one or more
+    explicit channels (#942): the in-app announcement banner and/or Web Push.
+
+    Deliberately reuses ``Announcement``/``announcements_service`` for the
+    in-app channel rather than a second in-app storage/delivery mechanism —
+    selecting "announcement" here creates/publishes an ``Announcement`` row
+    at send time (``announcement_id`` records which one). The Web Push
+    channel reuses #941's outbox-based delivery, generalized from one
+    admin-test-send job to one job per targeted subscriber — see
+    docs/decisions/942-central-composer.md.
+    """
+
+    __tablename__ = "composed_messages"
+    __table_args__ = (
+        CheckConstraint("level IN ('info', 'warning', 'urgent')", name="ck_composed_messages_level"),
+        CheckConstraint("state IN ('draft', 'scheduled', 'sent')", name="ck_composed_messages_state"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    title_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    title_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    title_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    body_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    body_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    body_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    level: Mapped[str] = mapped_column(String(10), default="info")
+    channels: Mapped[list[str]] = mapped_column(JSON, default=list)
+    """Values from ``{"announcement", "push"}`` — at least one, enforced at
+    the schema layer (a DB-level check on JSON array membership isn't worth
+    the complexity here)."""
+    link_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    state: Mapped[str] = mapped_column(String(20), default="draft", index=True)
+    scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    announcement_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("announcements.id", ondelete="SET NULL"), nullable=True
+    )
+    push_audience_snapshot: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    """``PushSubscription`` ids targeted at send time — null while
+    ``draft``/``scheduled``, immutable once set (the transition to ``sent``
+    resolves and freezes this in the same transaction). Resolved fresh at
+    send time, not compose time — see the decision doc's "Snapshot timing"."""
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    sent_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
 class Policy(Base):
     """A versioned legal/policy document identified by a stable key (e.g. ``privacy``).
 

@@ -12,6 +12,7 @@ import VenueManagement from "./VenueManagement";
 import { ContentSection, EditionsSection } from "./ContentManagement";
 import FaqManagement from "./FaqManagement";
 import AnnouncementManagement from "./AnnouncementManagement";
+import ComposerManagement from "./ComposerManagement";
 import PolicyManagement from "./PolicyManagement";
 import PushOptIn from "@/components/PushOptIn";
 import SettingsManagement from "./SettingsManagement";
@@ -654,6 +655,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {canManageAdminSections && activeKey === "announcements" && (
                   <AnnouncementManagement authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "composer" && (
+                  <ComposerManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "policies" && (
                   <PolicyManagement authHeaders={authHeaders} />

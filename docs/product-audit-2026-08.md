@@ -109,9 +109,7 @@ or superseded work**.
 
 ### Phase 5 — central composer
 
-| Order | Issue | Notes | Effort |
-| --- | --- | --- | --- |
-| 3 | #942 — central announcement and push composer | **Blocked by #947 (complete); #941 is complete (see Completed or superseded work); #945 is complete.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+No Phase 5 items remain. #942 is complete — see **Completed or superseded work**.
 
 ### Phase 6 — deferred visitor account
 
@@ -221,7 +219,7 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
 | #944 | backend, frontend, admin, security (completed 2026-09-04) | versioned policy publishing | Shipped ahead of #934's policy decisions; migrated text tightened to avoid overstating them |
 | #947 | backend, cross-cutting (completed 2026-08-30) | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
 | #941 | backend, frontend, security (completed 2026-09-07) | Web Push foundation | Uses #947; accounts for #932; service-worker contract documented for reuse |
-| #942 | backend, frontend, admin | central composer | Blocked by #947 (complete); #941 is complete |
+| #942 | backend, frontend, admin (completed 2026-09-07) | central composer | Uses #947, #941, and #945, all complete |
 
 ## Cross-cutting feature and audit relationships
 
@@ -250,8 +248,8 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
   `RegistrationList`, `VenueManagement`, `LayoutEditor`, `PeopleManagement`,
   and `ContentManagement`. No parallel convention was introduced.
 - **The shared outbox (#947)** is the bridge between the audit's individual
-  delivery gaps (#923 and #924) and the roadmap's push/composer work (#941,
-  complete, and #942). It owns persistence, claiming, retry, and
+  delivery gaps (#923 and #924) and the roadmap's push/composer work (#941
+  and #942, both complete). It owns persistence, claiming, retry, and
   crash-recovery mechanics, but deliberately owns no audience or
   message-composition product surface.
 - **Web Push (#941, complete)** added the production service worker's `push`/
@@ -262,9 +260,13 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
   [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md)
   (one worker file, per-feature cache versions, additive event handlers) still
   stands so a future consumer can share #941's worker without redesigning it.
-- **The central composer (#942)** also depends on the multi-process conclusions
-  of #932. Its scheduling and deduplication are DB-backed through #947; its rate
-  limits and any live invalidation must not rely on per-process state.
+- **The central composer (#942, complete)** reused #947's `scheduled_at` support
+  directly — no new worker infrastructure — and #945's `Announcement` model
+  for its in-app channel (extracted `announcements_service._create_uncommitted`
+  so the composer's own send transaction, which also enqueues push jobs,
+  doesn't commit early). Its per-recipient Web Push delivery generalizes
+  #941's single admin test-send job to one outbox job per targeted
+  subscriber, sharing the same SSRF guard and 404/410 retirement handling.
 
 ## Communications and policy feature specification
 
@@ -530,8 +532,8 @@ Acceptance criteria:
 
 [GitHub issue](https://github.com/tjorim/champagnefestival/issues/942)
 
-#941 and #947 are complete; #945's announcement destination is complete. Compose one operational message centrally and
-deliver it only through explicitly selected public-announcement and Web Push
+Implemented 2026-09-07 per [`docs/decisions/942-central-composer.md`](decisions/942-central-composer.md) — see that document's "Implementation summary". Composes one operational message centrally and
+delivers it only through explicitly selected public-announcement and Web Push
 channels. Server-sent bulk email remains out of scope.
 
 Proposed fields and audiences:
@@ -545,15 +547,15 @@ Proposed fields and audiences:
 
 Acceptance criteria:
 
-- [ ] Every locale/channel has an accurate preview.
-- [ ] The estimated audience is shown before explicit confirmation.
-- [ ] Scheduled sends use #947's durable, idempotent worker contract.
-- [ ] Duplicate worker execution cannot send twice.
-- [ ] The immutable snapshot and admin actor are audited.
-- [ ] Failure in one channel does not roll back a successful other channel.
-- [ ] Per-channel results are visible without exposing subscription secrets.
-- [ ] Authorisation and shared rate limits are enforced.
-- [ ] Email remains absent until campaign compliance and delivery handling have
+- [x] Every locale/channel has an accurate preview.
+- [x] The estimated audience is shown before explicit confirmation.
+- [x] Scheduled sends use #947's durable, idempotent worker contract.
+- [x] Duplicate worker execution cannot send twice.
+- [x] The immutable snapshot and admin actor are audited.
+- [x] Failure in one channel does not roll back a successful other channel.
+- [x] Per-channel results are visible without exposing subscription secrets.
+- [x] Authorisation and shared rate limits are enforced.
+- [x] Email remains absent until campaign compliance and delivery handling have
       a separately approved design.
 
 ## Examined and found sound
