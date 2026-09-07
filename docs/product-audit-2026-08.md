@@ -95,16 +95,17 @@ below).
 
 ### Phase 4 — compliance and platform foundations
 
-Two of these still need a decision before code (#941, #992), and are labelled
-`needs-discussion`. #953's backend and frontend session mechanism is
-implemented; one acceptance criterion (the public navigation entry) stays
-deliberately undone — see its row below.
+#941 and #992 were `needs-discussion` pending owner confirmation; both were
+confirmed 2026-09-07 (see their decision docs) and are ready to implement.
+#953's backend and frontend session mechanism is implemented; one acceptance
+criterion (the public navigation entry) stays deliberately undone — see its
+row below.
 
 | Order | Issue | Notes | Effort |
 | --- | --- | --- | --- |
-| 1 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions (complete — see **Completed or superseded work**). Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). That doc also proposes defaults for #941's required pre-implementation decisions (subscription model, retention, consent copy) — pending the project owner's confirmation before implementation starts. Remains opt-in/test-delivery infrastructure only. | L |
+| 1 | #941 — Web Push/VAPID subscription foundation | Uses #947 (complete) and follows #932's multi-worker decisions (complete — see **Completed or superseded work**). Its service-worker contract is documented in [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md) (one worker file, per-feature cache versions and additive handlers, so a future consumer can share it without redesign). Pre-implementation decisions confirmed 2026-09-07: subscriptions are anonymous and public (corrected from the doc's original authenticated-only proposal — "administrator-only" describes who can *send* a test push, not who can *subscribe*), per-device scope, multi-category and event-scoped subscriptions built now rather than deferred, retention via unsubscribe/404-410 plus a time-based expiry sweep, and Claude drafts GDPR consent copy for owner review during implementation. Ready to implement; still opt-in/admin-test-send only — no general broadcast composer (that's #942). | L |
 | 2 | #953 — visitor passwordless account and order history | Implemented 2026-09-07 per [`docs/decisions/953-visitor-passwordless-session.md`](decisions/953-visitor-passwordless-session.md), with one acceptance criterion deliberately left undone. `User.oidc_subject` is now nullable alongside a new `verified_email` (exactly one set, DB-enforced), backing a magic-link request/redeem/status/sign-out flow (`visitor_magic_links`, `visitor_sessions` — 7-day idle / 30-day hard-cap, `HttpOnly` cookie) that establishes the same `User` read paths `/api/me/*` already had for OIDC — `list_my_registrations`, the communication-preference endpoints, and `claim_my_registrations` now resolve the caller through either credential via a single `get_current_user` dependency structurally separate from `require_admin`/`require_volunteer` (never wired into either, so a visitor session cannot reach them). Redeeming a link immediately claims any currently-unowned registration matching the verified email, sharing `claim_unowned_registrations_for_email` with the pre-existing OIDC claim path rather than duplicating it. The frontend's pre-existing `/my-registrations` page (built for the one-shot guest lookup) now also auto-detects a returning visitor's session on load, so checking an order weeks later needs no fresh email, with a sign-out control and session-expiry display added. **Left undone, on purpose:** the public navigation entry stays off — advertising "My orders" before production transactional email delivery is verified end to end (per #953 and #924/#947's own gate) would be worse than not offering it — and the DB-stored privacy/account policy text (#944) hasn't been republished to describe the new session, the same kind of legal-content edit #934 left for the project owner rather than auto-editing. The old one-shot `POST /api/registrations/my/access` lookup stays in the backend, unused by this page now but not removed — a separate cleanup decision, not part of this scope. | L |
-| 3 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936 (now superseded, see **Completed or superseded work**) once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content. Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a routing change in `tjorim/apps`. Its required pre-implementation decisions are proposed in [`docs/decisions/992-live-public-render.md`](decisions/992-live-public-render.md): inject into the Vite-built shell through inert markers rather than adopting a template engine that would drift from the build artifact; a 60-second TTL with a last-known-good fallback as the correctness floor, with proactive invalidation deferred until #932's `LISTEN`/`NOTIFY` bus can reach every worker — that bus now exists (#932 shipped 2026-09-07), so this step is unblocked, only still unimplemented; the backend as the single JSON-LD source for these routes, with a shared fixture and contract tests on both sides; and equivalent, not pixel-matched, server markup. That document also surfaces an infra requirement #992 missed — the API container needs the built frontend mounted read-only, not just the Caddyfile route. Pending the project owner's confirmation before implementation starts. Moved behind #953 on 2026-09-06 — see that row's note. | L |
+| 3 | #992 — live backend rendering of `/` and `/privacy` | Split out of #936 (now superseded, see **Completed or superseded work**) once build-time prerendering turned out to be the wrong fit for admin-editable, live-DB-backed content. Proposes backend route handlers for those two paths only, rendering real meta/JSON-LD/FAQ/schedule content per request straight from the database, plus a routing change in `tjorim/apps`. Decisions confirmed 2026-09-07 in [`docs/decisions/992-live-public-render.md`](decisions/992-live-public-render.md): inject into the Vite-built shell through inert markers rather than adopting a template engine that would drift from the build artifact; a 60-second TTL with a last-known-good fallback as the correctness floor, with proactive `NOTIFY`-based invalidation built in the same change rather than deferred — since #932's bus already exists, there's no single-worker-only interim to wait out; the backend as the single JSON-LD source for these routes, with a shared fixture and contract tests on both sides; and equivalent, not pixel-matched, server markup. That document also surfaces an infra requirement #992 missed — the API container needs the built frontend mounted read-only, not just the Caddyfile route (a companion `tjorim/apps` change, same cross-repo pattern as #934's `tjorim/apps#192`). Ready to implement. Moved behind #953 on 2026-09-06 — see that row's note. | L |
 
 ### Phase 5 — central composer
 
@@ -482,17 +483,21 @@ Build secure opt-in and delivery infrastructure before adding an administrator
 broadcast button. There is currently no production notification service worker
 or VAPID subscription lifecycle.
 
-Decisions to record first — proposed defaults for all of these are in
-[`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md),
-pending the project owner's confirmation:
+Decisions confirmed 2026-09-07 in
+[`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md):
 
-- Anonymous, authenticated, or both kinds of subscribers.
-- Account- versus device-scoped subscriptions.
-- Notification categories and default preferences.
-- Event-specific subscription support.
-- Retention and expired-subscription cleanup.
-- Browser/iOS support expectations and future Android boundary.
-- Consent and privacy-policy wording.
+- Anonymous, public subscribers — corrected from the doc's original
+  authenticated-only proposal; "administrator-only" describes who can send a
+  test push, not who can subscribe.
+- Device-scoped subscriptions (not account fan-out).
+- Multi-category schema and event-specific subscription support, both built
+  now rather than deferred to #942.
+- Retention: unsubscribe or `404`/`410` retirement, plus a time-based expiry
+  sweep.
+- Browser/iOS support expectations and future Android boundary — documented
+  platform constraints, not choices.
+- Consent and privacy-policy wording — Claude drafts during implementation
+  (matching the existing `privacyPolicy.ts` pattern), project owner reviews.
 - Service-worker ownership, cache, and update strategy — settled: #937 was
   descoped to need no service worker, so this worker has no other co-tenant
   today, but the same file/versioning/additive-handler shape from the
@@ -577,22 +582,12 @@ Recorded so this ground does not get re-covered:
 
 ## Open questions for the maintainer
 
-Two findings propose changes that are judgement calls rather than clear fixes.
-(#934's were resolved by the project owner on 2026-09-06 — see
-[`docs/decisions/934-data-retention-and-erasure.md`](decisions/934-data-retention-and-erasure.md)
-for the confirmed retention windows and scope calls; it's no longer listed
-here, though implementation is still open — see Phase 4.)
+One remaining note, kept for historical context; the judgement calls
+themselves have all been resolved by the project owner as decision docs
+(#934 on 2026-09-06; #941, #953, and #992 on 2026-09-07 — see
+`docs/decisions/`; #953 and #992's implementation status is tracked in
+Phase 4 above, #941's decisions are confirmed and ready to implement).
 
 1. **#924** exposes `check_in_token` only from the short-lived, single-use
    email-token-protected guest endpoint so a guest can retrieve their own QR;
    the public registration response continues to omit it.
-2. **#992** (split from #936) needs a backend templating approach picked
-   for a service that's been a pure JSON API until now, and a decision on
-   whether its render cache should invalidate proactively on the relevant
-   admin mutations or purely on a short TTL. Both are now proposed in
-   [`docs/decisions/992-live-public-render.md`](decisions/992-live-public-render.md)
-   — marker injection into the built shell with no new templating dependency,
-   and a TTL floor with proactive invalidation deferred behind #932 — along
-   with a third question that document raises rather than settles: the
-   read-only frontend mount the API container needs, which lands in
-   `tjorim/apps` rather than here.
