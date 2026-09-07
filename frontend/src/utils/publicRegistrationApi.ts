@@ -364,16 +364,6 @@ async function parseRegistrationLookupResponse(response: Response): Promise<Gues
   return mapGuestRegistrations(data);
 }
 
-export async function accessMyRegistrations(token: string): Promise<GuestRegistration[]> {
-  const response = await fetch("/api/registrations/my/access", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ token }),
-  });
-
-  return parseRegistrationLookupResponse(response);
-}
-
 export async function claimMyRegistrations(token: string, accessToken: string): Promise<void> {
   const response = await fetch("/api/me/registrations/claim", {
     method: "POST",
@@ -398,6 +388,70 @@ export async function fetchOwnedRegistrations(accessToken: string): Promise<Gues
   });
 
   return parseRegistrationLookupResponse(response);
+}
+
+// --- Passwordless visitor "My orders" session (#953) -----------------------
+//
+// Distinct from the request/access pair above: redeeming a magic link here
+// establishes a persistent HttpOnly-cookie session instead of a one-shot
+// read, so a visitor can check back days or weeks later without a fresh
+// email. No Authorization header and no explicit `credentials` option is
+// needed on any of these — frontend and API are same-origin (in dev via the
+// Vite proxy, in production per DEPLOYMENT.md), and fetch's default
+// "same-origin" credentials mode already sends and stores cookies for
+// same-origin requests.
+
+export async function requestVisitorMagicLink(
+  email: string,
+): Promise<RegistrationLookupRequestAcceptedResponse> {
+  const response = await fetch("/api/visitor-sessions/request", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    throw new RegistrationLookupError(
+      response.status === 422 ? "invalid_email" : "request_failed",
+      response.status === 422 ? m.my_registrations_invalid_email() : m.my_registrations_error(),
+    );
+  }
+
+  return parseRegistrationLookupRequestAccepted(await response.json());
+}
+
+export async function redeemVisitorMagicLink(token: string): Promise<GuestRegistration[]> {
+  const response = await fetch("/api/visitor-sessions/redeem", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
+
+  return parseRegistrationLookupResponse(response);
+}
+
+export async function fetchOwnedRegistrationsViaSession(): Promise<GuestRegistration[]> {
+  const response = await fetch("/api/me/registrations");
+  return parseRegistrationLookupResponse(response);
+}
+
+export interface VisitorSessionStatus {
+  authenticated: boolean;
+  expiresAt: string | null;
+}
+
+export async function getVisitorSessionStatus(): Promise<VisitorSessionStatus> {
+  const response = await fetch("/api/visitor-sessions/status");
+  if (!response.ok) return { authenticated: false, expiresAt: null };
+  const data = (await response.json()) as { authenticated?: unknown; expires_at?: unknown };
+  return {
+    authenticated: data.authenticated === true,
+    expiresAt: typeof data.expires_at === "string" ? data.expires_at : null,
+  };
+}
+
+export async function signOutVisitorSession(): Promise<void> {
+  await fetch("/api/visitor-sessions/sign-out", { method: "POST" });
 }
 
 export class RegistrationSubmitError extends Error {

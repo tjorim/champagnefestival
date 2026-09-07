@@ -30,8 +30,10 @@ from app.services.pebble_access import (
     revoke_pebble_token,
     rotate_pebble_token,
 )
-from app.services.users_service import get_or_create_user
+from app.services.users_service import claim_unowned_registrations_for_email, get_or_create_user
 from app.utils import registration_to_guest_dict
+from app.visitor_session import actor_for_user
+from app.visitor_session import get_current_user as get_current_portal_user
 
 router = APIRouter(prefix="/api/me", tags=["me"])
 pebble_router = APIRouter(prefix="/api/pebble", tags=["pebble"])
@@ -52,9 +54,8 @@ async def _user_people(db: AsyncSession, user_id: str) -> list[Person]:
 
 @router.get("/communication-preference", response_model=CommunicationPreferenceOut)
 async def get_communication_preference(
-    claims: dict[str, Any] = Depends(get_current_claims), db: AsyncSession = Depends(get_db)
+    user: User = Depends(get_current_portal_user), db: AsyncSession = Depends(get_db)
 ) -> CommunicationPreferenceOut:
-    user = await get_or_create_user(db, claims["sub"])
     people = await _user_people(db, user.id)
     preferred_language = next((person.preferred_language for person in people if person.preferred_language), None)
     return CommunicationPreferenceOut.model_validate({"preferred_language": preferred_language})
@@ -63,18 +64,19 @@ async def get_communication_preference(
 @router.put("/communication-preference", response_model=CommunicationPreferenceOut)
 async def update_communication_preference(
     body: CommunicationPreferenceUpdate,
-    claims: dict[str, Any] = Depends(get_current_claims),
+    user: User = Depends(get_current_portal_user),
     db: AsyncSession = Depends(get_db),
 ) -> CommunicationPreferenceOut:
-    user = await get_or_create_user(db, claims["sub"])
     people = await _user_people(db, user.id)
     changed_people = [person for person in people if person.preferred_language != body.preferred_language]
     for person in changed_people:
         person.preferred_language = body.preferred_language
     if changed_people:
+        actor, auth_source = actor_for_user(user)
         await write_audit_entry(
             db,
-            actor=claims["sub"],
+            actor=actor,
+            auth_source=auth_source,
             action="communication_preference_updated",
             resource_type="user",
             resource_id=user.id,
@@ -120,14 +122,14 @@ async def _registrations_for_user(db: AsyncSession, user_id: str) -> list[MyRegi
 
 @router.get("/registrations", response_model=list[RegistrationGuestOut])
 async def list_my_registrations(
-    claims: dict[str, Any] = Depends(get_current_claims),
+    user: User = Depends(get_current_portal_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    """Return registrations claimed by the authenticated portal user."""
-    oidc_subject: str = claims.get("sub", "")
-    if not oidc_subject:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
-    user = await get_or_create_user(db, oidc_subject)
+    """Return registrations owned by the authenticated portal user.
+
+    ``user`` may be resolved from either an OIDC bearer token or a visitor
+    magic-link session (#953) — the read itself doesn't care which.
+    """
     rows = (
         await db.execute(
             select(Registration, Person, Event)
@@ -143,35 +145,26 @@ async def list_my_registrations(
 @router.post("/registrations/claim", response_model=list[RegistrationGuestOut])
 async def claim_my_registrations(
     body: RegistrationAccessLookupRequest,
-    claims: dict[str, Any] = Depends(get_current_claims),
+    user: User = Depends(get_current_portal_user),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    """Claim unowned registrations after proving control of their email address."""
+    """Claim unowned registrations after proving control of their email address.
+
+    Unchanged in shape since #953: still requires a fresh one-shot lookup
+    token proving control of the email being claimed, regardless of whether
+    the caller authenticated via OIDC or an existing visitor session — a
+    visitor session already proves control of *its own* verified_email (see
+    the magic-link redemption endpoint, which claims that email's
+    registrations directly, no separate token needed), but this endpoint
+    lets the caller claim registrations under *any* email they can prove,
+    exactly as it already did for OIDC callers.
+    """
     from app.routers.registrations import _get_guest_access_token_or_401, _load_guest_registrations_by_email
 
-    oidc_subject = claims.get("sub", "")
-    if not oidc_subject:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
     token_row = await _get_guest_access_token_or_401(db, body.token)
-    user = await get_or_create_user(db, oidc_subject, commit=False)
     token_row.expires_at = datetime.now(UTC)
-    registrations = (
-        await db.scalars(
-            select(Registration)
-            .join(Person, Registration.person_id == Person.id)
-            .where(Person.email == token_row.email, Registration.user_id.is_(None))
-            .with_for_update()
-        )
-    ).all()
-    for registration in registrations:
-        registration.user_id = user.id
-        await write_audit_entry(
-            db,
-            actor=oidc_subject,
-            action="registration_claimed",
-            resource_type="registration",
-            resource_id=registration.id,
-        )
+    actor, auth_source = actor_for_user(user)
+    await claim_unowned_registrations_for_email(db, user, token_row.email, actor=actor, auth_source=auth_source)
     rows = await _load_guest_registrations_by_email(db, token_row.email)
     await db.commit()
     return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]

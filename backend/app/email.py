@@ -238,6 +238,61 @@ async def send_guest_access_email(
     return True
 
 
+async def send_visitor_magic_link_email(
+    email: str,
+    token: str,
+    request_id: str,
+    expires_at: datetime,
+) -> bool:
+    """Send a passwordless sign-in link for the visitor "My orders" session (#953).
+
+    Same shape and failure handling as ``send_guest_access_email`` — a
+    structurally identical emailed credential, kept as its own function
+    because it links to a persistent session rather than a one-shot code
+    (docs/decisions/953-visitor-passwordless-session.md). The token goes in
+    the ``?token=`` query string, matching how ``MyRegistrationsPage``
+    already reads it (``useSearch({ from: "/my-registrations" })`` — a
+    TanStack Router search param, not a URL fragment). The frontend removes
+    it from browser history immediately on load
+    (``navigate({ search: {}, replace: true })``, before the redemption
+    network call), the same scrub-after-use protection the pre-existing
+    one-shot guest-lookup token already relies on for this exact acceptance
+    criterion.
+    """
+    if not settings.smtp_host or not settings.smtp_from:
+        logger.warning(
+            "Visitor magic-link email not sent for request_id=%s because SMTP is not configured.",
+            request_id,
+        )
+        return False
+
+    link = f"{settings.frontend_url.rstrip('/')}/my-registrations?token={token}"
+
+    message = EmailMessage()
+    message["Subject"] = "Sign in to your Champagnefestival orders"
+    message["From"] = settings.smtp_from
+    message["To"] = email
+    message.set_content(
+        "Hello,\n\n"
+        "Use the following secure link to sign in and view your Champagnefestival orders:\n\n"
+        f"{link}\n\n"
+        f"This link expires at {expires_at.isoformat()} and can only be used once.\n"
+        "If you did not request this email, you can ignore it.\n"
+    )
+
+    try:
+        await asyncio.to_thread(_send_message_sync, message)
+    except Exception:
+        logger.exception(
+            "Failed to send visitor magic-link email for request_id=%s.",
+            request_id,
+        )
+        return False
+
+    logger.info("Sent visitor magic-link email for request_id=%s.", request_id)
+    return True
+
+
 def _send_message_sync(message: EmailMessage) -> None:
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
         smtp.ehlo()

@@ -223,6 +223,67 @@ export const publicHandlers = [
     return HttpResponse.json(myRegs);
   }),
 
+  /** POST /api/visitor-sessions/request — request a passwordless magic link (#953). */
+  http.post("/api/visitor-sessions/request", async ({ request }) => {
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return HttpResponse.json({ error: "Malformed JSON payload" }, { status: 400 });
+    }
+    const email = String(body.email ?? "");
+
+    if (!email.includes("@")) {
+      return HttpResponse.json({ detail: "Invalid email address." }, { status: 422 });
+    }
+
+    return HttpResponse.json({
+      ok: true,
+      delivery_mode: "email",
+      expires_in_minutes: 30,
+    });
+  }),
+
+  /** POST /api/visitor-sessions/redeem — redeem a magic link, establishing a session (#953). */
+  http.post("/api/visitor-sessions/redeem", async ({ request }) => {
+    let body: Record<string, unknown>;
+    try {
+      body = (await request.json()) as Record<string, unknown>;
+    } catch {
+      return HttpResponse.json({ error: "Malformed JSON payload" }, { status: 400 });
+    }
+    const token = String(body.token ?? "");
+
+    if (!token) {
+      return HttpResponse.json(null, { status: 401 });
+    }
+
+    const myRegs = sharedStore.registrations.map((r) => ({
+      id: r.id,
+      event_title: (r.event as Record<string, unknown> | null | undefined)?.title ?? "",
+      event_date: (r.event as Record<string, unknown> | null | undefined)?.date ?? null,
+      check_in_token: r.check_in_token ?? `mock-token-${r.id}`,
+      guest_count: r.guest_count,
+      status: r.status,
+      payment_status: r.payment_status,
+      checked_in: r.checked_in,
+      checked_in_at: r.checked_in_at ?? null,
+      strap_issued: r.strap_issued,
+      created_at: r.created_at,
+      order_items: r.order_items,
+    }));
+
+    return HttpResponse.json(myRegs);
+  }),
+
+  /** GET /api/visitor-sessions/status — no session by default in tests (#953). */
+  http.get("/api/visitor-sessions/status", () =>
+    HttpResponse.json({ authenticated: false, expires_at: null }),
+  ),
+
+  /** POST /api/visitor-sessions/sign-out — always succeeds (#953). */
+  http.post("/api/visitor-sessions/sign-out", () => new HttpResponse(null, { status: 204 })),
+
   /** POST /api/check-in/:id/lookup — look up a registration for check-in. */
   http.post("/api/check-in/:id/lookup", async ({ params, request }) => {
     const { id } = params;

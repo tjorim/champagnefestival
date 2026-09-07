@@ -44,6 +44,7 @@ from app.routers import (
     tables,
     venue_plan,
     venues,
+    visitor_auth,
     volunteer_ops,
     volunteers,
 )
@@ -189,6 +190,7 @@ app.include_router(areas.router)
 app.include_router(venue_plan.router)
 app.include_router(me.router)
 app.include_router(me.pebble_router)
+app.include_router(visitor_auth.router)
 app.include_router(live.router)
 app.include_router(health.router)
 app.include_router(faq.router)

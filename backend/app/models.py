@@ -33,13 +33,34 @@ def _utcnow() -> datetime:
 
 
 class User(Base):
-    """An authenticated portal user, auto-provisioned on first OIDC login."""
+    """An authenticated portal user, provisioned on first OIDC login or first
+    redeemed visitor magic link (#953 decision 1).
+
+    Exactly one of ``oidc_subject``/``verified_email`` is set — staff/volunteer
+    accounts are provisioned via Keycloak OIDC login
+    (``app.services.users_service.get_or_create_user``); visitor accounts are
+    provisioned by redeeming a magic link
+    (``get_or_create_user_by_email``). Both read through the same
+    ``registrations`` relationship and the same ``/me`` handlers — see
+    ``app.visitor_session.get_current_user``, the dependency that resolves
+    either kind of caller to one ``User``.
+    """
 
     __tablename__ = "users"
+    __table_args__ = (
+        CheckConstraint(
+            "(oidc_subject IS NOT NULL) != (verified_email IS NOT NULL)",
+            name="ck_users_exactly_one_identity",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    oidc_subject: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    """OIDC ``sub`` claim — stable identifier from the identity provider."""
+    oidc_subject: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
+    """OIDC ``sub`` claim — stable identifier from the identity provider. Set
+    for staff/volunteer accounts, ``NULL`` for visitor accounts."""
+    verified_email: Mapped[str | None] = mapped_column(String(320), unique=True, index=True, nullable=True)
+    """Email address a visitor proved control of by redeeming a magic link.
+    Set for visitor accounts, ``NULL`` for staff/volunteer accounts."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
@@ -50,6 +71,7 @@ class User(Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
+    visitor_sessions: Mapped[list[VisitorSession]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class PebbleAccessToken(Base):
@@ -122,7 +144,14 @@ class Registration(Base):
 
 
 class ReservationAccessToken(Base):
-    """Short-lived visitor access token for viewing registrations via e-mail link."""
+    """Short-lived visitor access token for viewing registrations via e-mail link.
+
+    Deliberately session-less — one-shot lookup only. #953's visitor magic
+    link (``VisitorMagicLink`` below) is a structurally identical credential
+    shape reused for a different purpose (establishing a ``VisitorSession``,
+    not a one-shot read), kept as its own table rather than overloading this
+    one — see docs/decisions/953-visitor-passwordless-session.md.
+    """
 
     __tablename__ = "reservation_access_tokens"
 
@@ -132,6 +161,51 @@ class ReservationAccessToken(Base):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class VisitorMagicLink(Base):
+    """Short-lived, single-use passwordless sign-in credential (#953 decision 2).
+
+    Same shape as ``ReservationAccessToken`` (one outstanding link per email,
+    hashed token, TTL) but a separate table: redeeming this one establishes a
+    persistent ``VisitorSession`` rather than a one-shot read. 30-minute TTL
+    (``settings.guest_access_token_ttl_minutes``, the same number this
+    project already uses for a structurally identical emailed credential).
+    """
+
+    __tablename__ = "visitor_magic_links"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    email: Mapped[str] = mapped_column(String(320), unique=True)
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class VisitorSession(Base):
+    """Persistent passwordless session established by redeeming a magic link
+    (#953 decision 3).
+
+    Database-backed, not a stateless JWT: the opaque ``HttpOnly`` cookie value
+    is this row's ``id``, looked up by its hash (``session_hash``) rather than
+    the raw ID, mirroring how ``token_hash`` columns above never store a
+    credential in cleartext. ``last_seen_at``/``expires_at`` implement the
+    confirmed 7-day sliding idle window; ``hard_expires_at`` is the 30-day cap
+    that activity can never extend — see
+    ``app.visitor_session.SESSION_IDLE_TIMEOUT``/``SESSION_HARD_CAP``.
+    """
+
+    __tablename__ = "visitor_sessions"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    session_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
+    user_id: Mapped[str] = mapped_column(String(64), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    hard_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+
+    user: Mapped[User] = relationship(back_populates="visitor_sessions")
 
 
 class ContactMessage(Base):
@@ -615,7 +689,10 @@ class AuditEntry(Base):
     """OIDC ``sub`` claim, client IP for token-gated ops (``auth_source ==
     "token"``, set only by ``get_client_ip``'s callers — see
     ``app.ratelimit.get_client_ip``, whose fallback value is the literal
-    string ``"unknown"`` when the connection has no resolvable peer), or
+    string ``"unknown"`` when the connection has no resolvable peer), a
+    visitor session's opaque ``User.id`` (``auth_source == "visitor_session"``
+    — never the verified email itself, which would put PII in an audit trail
+    kept indefinitely; see ``app.visitor_session.actor_for_user``), or
     'anonymous'. A row with ``auth_source == "token"`` has its actor blanked
     to ``""`` 30 days after ``timestamp`` by a VPS-scheduled job in
     ``tjorim/apps`` (`infra/scheduled-jobs/champagnefestival-redact-audit-entry-ips.sql`)

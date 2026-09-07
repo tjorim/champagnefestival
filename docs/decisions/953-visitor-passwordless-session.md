@@ -1,13 +1,14 @@
 # Visitor passwordless magic-link session
 
-**Status:** Decided — the project owner confirmed all four questions on
-2026-09-06. Ready to implement. The confirmed calls: extend `User` with a
-nullable `verified_email` rather than a parallel identity model; a 30-minute
-single-use magic link; a **7-day idle / 30-day hard-cap** visitor session
-(tighter than this document's original 30-day/180-day proposal — see
-Decision 2); and an `HttpOnly` server-stored session cookie rather than a
-frontend-held JWT.
-**Date:** 2026-09-06 (confirmed same day)
+**Status:** Implemented (2026-09-07) — see "Implemented" below. The confirmed
+calls: extend `User` with a nullable `verified_email` rather than a parallel
+identity model; a 30-minute single-use magic link; a **7-day idle / 30-day
+hard-cap** visitor session (tighter than this document's original
+30-day/180-day proposal — see Decision 2); and an `HttpOnly` server-stored
+session cookie rather than a frontend-held JWT. One acceptance criterion is
+deliberately still undone: the public navigation entry, gated on verified
+production email delivery per #953's own text.
+**Date:** 2026-09-06 (confirmed same day, implemented 2026-09-07)
 **Issues:** [#953](https://github.com/tjorim/champagnefestival/issues/953)
 (primary); [#922](https://github.com/tjorim/champagnefestival/issues/922)
 (registration ownership — the read model this reuses); [#924](https://github.com/tjorim/champagnefestival/issues/924),
@@ -249,6 +250,65 @@ Every question this document raised was answered by the project owner on
    retryable) per `AGENTS.md`.
 7. Updating `docs/product-audit-2026-08.md`'s #953 row per that document's
    maintenance procedure.
+
+## Implemented
+
+All seven items above shipped as proposed, with a few implementation-time
+refinements worth recording:
+
+- **The magic link is its own table, `visitor_magic_links`, not
+  `reservation_access_tokens`.** The "What email delivery status does and
+  doesn't block" section above and the References list already said this was
+  the intent; worth confirming it's exactly what shipped — same shape (email
+  unique, hashed token, TTL), separate table, so the existing one-shot lookup
+  keeps its own single-use/session-less semantics undisturbed.
+- **Claiming on redemption reuses the existing claim logic directly, not a
+  second one-shot token.** Redeeming a magic link is already fresh proof of
+  control over that email, so it calls a new shared
+  `claim_unowned_registrations_for_email` (extracted from
+  `claim_my_registrations`'s previously-inline logic) with the verified email
+  directly — no separate lookup token required. `claim_my_registrations`
+  itself is unchanged in *shape*: still requires a fresh one-shot token, now
+  usable by either an OIDC caller or an already-signed-in visitor session to
+  claim registrations under *any* email they can prove control of (their own
+  or otherwise) — a visitor's own session already covers claiming their own
+  email's registrations without that endpoint.
+- **Audit actor for a visitor-session action is the opaque `User.id`, not the
+  verified email**, with a new `auth_source == "visitor_session"` value
+  (`app.visitor_session.actor_for_user`, documented in `AuditEntry.actor`'s
+  docstring) — the same reasoning #934 applied to client-IP actors: an audit
+  trail kept indefinitely shouldn't carry more PII than the existing actor
+  vocabulary already does.
+- **The frontend needed no new page.** `/my-registrations` already had the
+  entire email-request/loading/error/results UI built for the one-shot guest
+  lookup (#924-era work) — including order items, QR codes, payment/status
+  badges, and calendar links. Implementation only added: a session-status
+  check on mount so a returning visitor's cookie is tried before showing the
+  email form, a sign-out control with an expiry date, and redemption now
+  hitting `/api/visitor-sessions/redeem` (which establishes the session)
+  instead of the one-shot `/api/registrations/my/access` for a non-OIDC
+  caller. An OIDC-authenticated visitor to this page (unchanged) still goes
+  through `requestRegistrationLookup` → `claimMyRegistrations`, unaffected.
+- **`GET /api/visitor-sessions/status` was added** beyond the doc's original
+  four endpoints — a small, auth-optional "am I signed in, and until when"
+  check that never 401s, used by the frontend's on-mount session detection
+  and by the sign-out UI's expiry display. It piggybacks on the same sliding
+  refresh every other authenticated call gets, so it doubles as the
+  "session-refresh" endpoint item 4 above called for, rather than needing a
+  separate no-op refresh route.
+- **Left undone, matching #953's own gate:** the public navigation entry
+  ("My orders" in `frontend/src/config/navigation.ts`) was not added —
+  production transactional email delivery for #924/#947 is still
+  unverified, and #953's acceptance criteria explicitly require verifying
+  that first. The DB-stored privacy/account policy text (#944) also hasn't
+  been republished to describe the new session mechanism — the same kind of
+  legal-content edit #934 left for the project owner rather than
+  auto-editing.
+- **Not removed, out of scope:** the pre-existing one-shot
+  `POST /api/registrations/my/access` (and its `/my/request` counterpart)
+  stay in the backend. Nothing in the frontend calls them anymore, but
+  removing a still-functioning, still-tested public API surface is a
+  separate cleanup decision this document doesn't make.
 
 ## References
 

@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, and cross-worker rate-limit buckets.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, and visitor passwordless sessions.
 
 Revision ID: 001
 Revises: 000
@@ -277,8 +277,55 @@ def upgrade() -> None:
         sa.Column("count", sa.Integer(), nullable=False),
     )
 
+    # #953 decision 1: visitor accounts extend User rather than a parallel
+    # identity model — oidc_subject becomes nullable, verified_email is its
+    # visitor-account counterpart, exactly one of the two is ever set.
+    op.alter_column("users", "oidc_subject", nullable=True)
+    op.add_column("users", sa.Column("verified_email", sa.String(320), nullable=True))
+    op.create_index("ix_users_verified_email", "users", ["verified_email"], unique=True)
+    op.create_check_constraint(
+        "ck_users_exactly_one_identity",
+        "users",
+        "(oidc_subject IS NOT NULL) != (verified_email IS NOT NULL)",
+    )
+    # #953 decision 2: passwordless sign-in link, structurally identical to
+    # reservation_access_tokens but kept separate — redeeming this one
+    # establishes a persistent VisitorSession, not a one-shot read.
+    op.create_table(
+        "visitor_magic_links",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("email", sa.String(320), nullable=False, unique=True),
+        sa.Column("token_hash", sa.String(64), nullable=False, unique=True),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+    )
+    # #953 decision 3: database-backed visitor session (7-day idle / 30-day
+    # hard cap), not a stateless JWT — see app.visitor_session.
+    op.create_table(
+        "visitor_sessions",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("session_hash", sa.String(64), nullable=False, unique=True),
+        sa.Column("user_id", sa.String(64), sa.ForeignKey("users.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("last_seen_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("hard_expires_at", sa.DateTime(timezone=True), nullable=False),
+    )
+    op.create_index("ix_visitor_sessions_user_id", "visitor_sessions", ["user_id"])
+    op.create_index("ix_visitor_sessions_expires_at", "visitor_sessions", ["expires_at"])
+    op.create_index("ix_visitor_sessions_hard_expires_at", "visitor_sessions", ["hard_expires_at"])
+
 
 def downgrade() -> None:
+    op.drop_index("ix_visitor_sessions_hard_expires_at", table_name="visitor_sessions")
+    op.drop_index("ix_visitor_sessions_expires_at", table_name="visitor_sessions")
+    op.drop_index("ix_visitor_sessions_user_id", table_name="visitor_sessions")
+    op.drop_table("visitor_sessions")
+    op.drop_table("visitor_magic_links")
+    op.drop_constraint("ck_users_exactly_one_identity", "users", type_="check")
+    op.drop_index("ix_users_verified_email", table_name="users")
+    op.drop_column("users", "verified_email")
+    op.alter_column("users", "oidc_subject", nullable=False)
     op.drop_table("rate_limit_buckets")
     op.drop_column("people", "marketing_opt_in_at")
     op.drop_column("people", "marketing_opt_in")
