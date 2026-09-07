@@ -13,13 +13,14 @@ progress:
   are exactly the abuse-sensitive category this split exists for (see
   docs/decisions/941-web-push-foundation.md).
 - The remaining scopes (``contact-submission``, ``registration-create``,
-  ``registration-access-request``, ``push-test-send``) stay on the in-process
-  deque below (``check_rate_limit``). They're process-local — in a
-  multi-worker deployment each worker maintains its own buckets, so the
-  effective limit is max_requests × number_of_workers per client IP (or, for
-  ``push-test-send``, per admin actor) — and that's an accepted, documented
-  gap for now, the same treatment decision 1 gives slowapi's blanket
-  per-route limiter: revisit only if it turns out to matter in
+  ``registration-access-request``, ``push-test-send``, ``composer-schedule``)
+  stay on the in-process deque below (``check_rate_limit``). They're
+  process-local — in a multi-worker deployment each worker maintains its own
+  buckets, so the effective limit is max_requests × number_of_workers per
+  client IP (or, for ``push-test-send``/``composer-schedule``, per admin
+  actor) — and that's an accepted, documented gap for now, the same
+  treatment decision 1 gives slowapi's blanket per-route limiter: revisit
+  only if it turns out to matter in
   practice. Today's single-worker deployment (DEPLOYMENT.md) makes this a
   forward-looking constraint, not a live bug.
 """

@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, and Web Push subscriptions.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, and the central composer for announcements/push.
 
 Revision ID: 001
 Revises: 000
@@ -338,6 +338,38 @@ def upgrade() -> None:
     op.create_index("ix_push_subscriptions_endpoint", "push_subscriptions", ["endpoint"], unique=True)
     op.create_index("ix_push_subscriptions_last_seen_at", "push_subscriptions", ["last_seen_at"])
 
+    # #942: central composer for in-app announcements and Web Push — see
+    # app.models.ComposedMessage.
+    op.create_table(
+        "composed_messages",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("title_nl", sa.String(500), nullable=True),
+        sa.Column("title_en", sa.String(500), nullable=True),
+        sa.Column("title_fr", sa.String(500), nullable=True),
+        sa.Column("body_nl", sa.String(500), nullable=True),
+        sa.Column("body_en", sa.String(500), nullable=True),
+        sa.Column("body_fr", sa.String(500), nullable=True),
+        sa.Column("level", sa.String(10), nullable=False, server_default="info"),
+        sa.Column("channels", sa.JSON(), nullable=False, server_default=sa.text("'[]'::jsonb")),
+        sa.Column("link_url", sa.String(1000), nullable=True),
+        sa.Column("state", sa.String(20), nullable=False, server_default="draft"),
+        sa.Column("scheduled_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column(
+            "announcement_id",
+            sa.String(64),
+            sa.ForeignKey("announcements.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.Column("push_audience_snapshot", sa.JSON(), nullable=True),
+        sa.Column("sent_at", sa.DateTime(timezone=True), nullable=True),
+        sa.Column("sent_by", sa.String(255), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.CheckConstraint("level IN ('info', 'warning', 'urgent')", name="ck_composed_messages_level"),
+        sa.CheckConstraint("state IN ('draft', 'scheduled', 'sent')", name="ck_composed_messages_state"),
+    )
+    op.create_index("ix_composed_messages_state", "composed_messages", ["state"])
+
 
 def downgrade() -> None:
     # #953: restoring users.oidc_subject to NOT NULL below would violate that
@@ -356,6 +388,8 @@ def downgrade() -> None:
             "violate. Resolve them first (e.g. delete the accounts, accepting "
             "the loss of their registration ownership) before downgrading."
         )
+    op.drop_index("ix_composed_messages_state", table_name="composed_messages")
+    op.drop_table("composed_messages")
     op.drop_index("ix_push_subscriptions_last_seen_at", table_name="push_subscriptions")
     op.drop_index("ix_push_subscriptions_endpoint", table_name="push_subscriptions")
     op.drop_table("push_subscriptions")

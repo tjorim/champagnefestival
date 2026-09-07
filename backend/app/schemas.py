@@ -10,6 +10,8 @@ from urllib.parse import urlsplit
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
+from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
+
 # ---------------------------------------------------------------------------
 # Shared value types
 # ---------------------------------------------------------------------------
@@ -1570,3 +1572,113 @@ class VapidPublicKeyOut(BaseModel):
 
 class PushTestRequest(RequestModel):
     subscription_id: str = Field(min_length=1, max_length=64)
+
+
+# ---------------------------------------------------------------------------
+# Central composer (#942)
+# ---------------------------------------------------------------------------
+
+ComposedMessageChannel = Literal["announcement", "push"]
+ComposedMessageState = Literal["draft", "scheduled", "sent"]
+
+
+class ComposedMessageWrite(RequestModel):
+    title_nl: str | None = Field(default=None, max_length=500)
+    title_en: str | None = Field(default=None, max_length=500)
+    title_fr: str | None = Field(default=None, max_length=500)
+    body_nl: str | None = Field(default=None, max_length=500)
+    body_en: str | None = Field(default=None, max_length=500)
+    body_fr: str | None = Field(default=None, max_length=500)
+    level: AnnouncementLevel = "info"
+    channels: list[ComposedMessageChannel] = Field(min_length=1)
+    link_url: str | None = Field(default=None, max_length=1000)
+
+    _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
+
+    @model_validator(mode="after")
+    def validate_composed_message(self):
+        if pick_locale_text(self, "nl") is None:
+            raise ValueError("a composed message needs at least one complete translated title/body pair")
+        if "push" in self.channels:
+            for locale in LOCALES:
+                text = pick_locale_text(self, locale)
+                if text is not None:
+                    build_composer_payload(*text)
+        if len(set(self.channels)) != len(self.channels):
+            raise ValueError("channels must not contain duplicates")
+        return self
+
+
+class ComposedMessageCreate(ComposedMessageWrite):
+    pass
+
+
+class ComposedMessageUpdate(RequestModel):
+    """Only valid while the message is still ``draft`` — see
+    ``app.services.composer_service.update_draft``."""
+
+    title_nl: str | None = Field(default=None, max_length=500)
+    title_en: str | None = Field(default=None, max_length=500)
+    title_fr: str | None = Field(default=None, max_length=500)
+    body_nl: str | None = Field(default=None, max_length=500)
+    body_en: str | None = Field(default=None, max_length=500)
+    body_fr: str | None = Field(default=None, max_length=500)
+    level: AnnouncementLevel | None = None
+    channels: list[ComposedMessageChannel] | None = Field(default=None, min_length=1)
+    link_url: str | None = Field(default=None, max_length=1000)
+
+    _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
+
+    @field_validator("channels")
+    @classmethod
+    def no_duplicate_channels(cls, value: list[str] | None) -> list[str] | None:
+        if value is not None and len(set(value)) != len(value):
+            raise ValueError("channels must not contain duplicates")
+        return value
+
+
+class ComposedMessageOut(BaseModel):
+    id: str
+    title_nl: str | None
+    title_en: str | None
+    title_fr: str | None
+    body_nl: str | None
+    body_en: str | None
+    body_fr: str | None
+    level: AnnouncementLevel
+    channels: list[str]
+    link_url: str | None
+    state: ComposedMessageState
+    scheduled_at: datetime | None
+    announcement_id: str | None
+    push_audience_snapshot: list[str] | None
+    sent_at: datetime | None
+    sent_by: str | None
+    created_at: datetime
+    updated_at: datetime
+    estimated_push_audience: int
+    """Current opted-in push subscriber count — an estimate shown before
+    confirmation, not the immutable snapshot (``push_audience_snapshot``,
+    only set once ``state == "sent"``). Resolved fresh on every read."""
+    push_delivered_count: int
+    push_failed_count: int
+    push_pending_count: int
+    """Aggregate outcome counts for this message's push delivery jobs — all
+    zero until ``state == "sent"``. Never exposes a subscription's endpoint
+    or keys, only counts (acceptance criterion: "per-channel results are
+    visible without exposing secrets")."""
+
+    model_config = {"from_attributes": True}
+
+
+class ComposedMessageScheduleRequest(RequestModel):
+    scheduled_at: datetime | None = None
+    """``None`` sends as soon as the worker next polls (#947) — "publish now"
+    is "schedule for right now", not a separate code path."""
+
+    @field_validator("scheduled_at")
+    @classmethod
+    def timezone_required(cls, value: datetime | None) -> datetime | None:
+        if value and value.utcoffset() is None:
+            raise ValueError("scheduled_at must include a timezone")
+        return value

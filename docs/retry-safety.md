@@ -95,6 +95,40 @@ Public registration creation writes the explicitly selected communication langua
 
 Person anonymisation (`POST /api/people/{id}/anonymise`, see the inventory table above) is the one write in this decision that *is* a normal client-facing operation, admin-triggered rather than swept automatically.
 
+# Central composer writes (#942)
+
+Composed-message create/update (`POST`/`PUT /api/composer[/{id}]`) are **not
+retry-safe**, the same category as announcement create/update above — no
+idempotency key, admin client does not auto-retry. The composer form disables
+submission and ignores submit events while saving; this prevents overlapping
+browser submissions, but does not make creates idempotent. Create and merged
+updates validate complete locale pairs and push payload size before persisting.
+
+Scheduling revalidates content before changing state or enqueueing a job.
+The admin UI displays scheduling failures and does not automatically retry.
+
+Schedule/send (`POST /api/composer/{id}/schedule`) is **natural resource key,
+convergent state only**. The message's `draft -> scheduled` transition and the
+outbox enqueue happen in one transaction under the message row's own lock: a
+retried *ambiguous* request either finds the transition already applied (state
+is no longer `draft`, cleanly 409s) or, if the first attempt never committed,
+applies it exactly once. A *deliberate* second call after a confirmed success
+is rejected outright — this is not blind-retry-safe in the idempotency-key
+sense, but an ambiguous network result never needs anything beyond reloading
+the message before deciding whether to schedule again. The actual send
+(`app.composer_delivery.deliver_composer_message_dispatch`, run by the outbox
+worker) is itself convergent: it checks `state == "scheduled"` before doing
+anything and no-ops if the message is already `sent`, so duplicate worker
+execution (a recovered expired lease, #947's own retry) cannot create a second
+announcement or double-enqueue the push jobs — each per-subscriber push job's
+`deduplication_key` (`composer-push:{message_id}:{subscription_id}`) is a
+second backstop against the same race.
+
+Per-subscriber push delivery (`app.composer_delivery.deliver_composer_push`)
+follows #941's admin test-send precedent exactly: at-least-once via the
+outbox's lease/backoff, retiring the subscription on a 404/410 response
+instead of retrying it.
+
 # Announcement writes (#945)
 
 Announcement create, update/publish/unpublish, reorder, and delete operations are

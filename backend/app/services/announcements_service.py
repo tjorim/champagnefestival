@@ -42,7 +42,17 @@ async def list_all(db: AsyncSession) -> list[dict]:
     return [to_dict(item) for item in result.scalars()]
 
 
-async def create(db: AsyncSession, *, actor: str, body: AnnouncementCreate, request_id: str | None) -> dict:
+async def _create_uncommitted(
+    db: AsyncSession, *, actor: str, body: AnnouncementCreate, request_id: str | None
+) -> Announcement:
+    """Insert one announcement and its audit entries without committing.
+
+    Split out of ``create`` so ``app.services.composer_service`` (#942) can
+    create/publish an announcement as one delivery channel within its own
+    larger send transaction (which also enqueues push jobs and transitions
+    the composed message's state) — ``create`` below commits on its own,
+    which would end that transaction early.
+    """
     # Serialize the short max-plus-one allocation. Without this transaction-level
     # lock, two valid concurrent creates can choose the same sort_order and one
     # leaks the deferred unique-constraint failure at commit.
@@ -72,6 +82,11 @@ async def create(db: AsyncSession, *, actor: str, body: AnnouncementCreate, requ
             resource_id=item.id,
             request_id=request_id,
         )
+    return item
+
+
+async def create(db: AsyncSession, *, actor: str, body: AnnouncementCreate, request_id: str | None) -> dict:
+    item = await _create_uncommitted(db, actor=actor, body=body, request_id=request_id)
     await db.commit()
     await db.refresh(item)
     return to_dict(item)

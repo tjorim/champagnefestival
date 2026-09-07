@@ -109,9 +109,7 @@ or superseded work**.
 
 ### Phase 5 — central composer
 
-| Order | Issue | Notes | Effort |
-| --- | --- | --- | --- |
-| 3 | #942 — central announcement and push composer | **Blocked by #947 (complete); #941 is complete (see Completed or superseded work); #945 is complete.** Scheduled work uses the durable outbox, immutable snapshots, atomic claims, and per-channel results. It adds no bulk e-mail channel. | L |
+No Phase 5 items remain. #942 is complete — see **Completed or superseded work**.
 
 ### Phase 6 — deferred visitor account
 
@@ -156,6 +154,7 @@ active preferred-order tables.
 | #932 | Completed | 2026-09-07 | #932, `docs/decisions/932-multi-worker-state.md` | Moved check-in's per-registration limit and shared-IP backstop (`app.ratelimit.check_check_in_rate_limit`) off the in-process deque onto a Postgres-backed fixed-window counter (`rate_limit_buckets`, one atomic `INSERT ... ON CONFLICT ... RETURNING`), swept daily by `app.worker` alongside the outbox cleanup; the remaining three `check_rate_limit` scopes (contact submission, registration create, registration access-request) stay in-process, an accepted narrower-than-module scope matching the decision doc's own text and given the same treatment as slowapi's blanket per-route limiter. Replaced the live bus's fire-and-forget post-commit `live_bus.publish` at all 22 call sites with a transactional `notify_live_event` (`SELECT pg_notify(...)`) issued before `db.commit()` on the same session, so publication is atomic with the mutation; a new `app.live.listener.PgLiveListener` (dedicated asyncpg LISTEN connection, reconnect with backoff, started/stopped from `app.main`'s lifespan) relays every notification — including a worker's own — into that worker's local `LiveBus`, so delivery is uniform across single- and multi-worker deployments. `GET /api/metrics` gained a `per_process: true` response field and a docstring caveat (decision 3, documented rather than fixed). `DEPLOYMENT.md` documents the interim single-worker constraint and its two remaining exceptions (slowapi's blanket limiter, the in-memory metrics collector). |
 | #934 | Completed | 2026-09-07 | #934, `docs/decisions/934-data-retention-and-erasure.md`, `tjorim/apps#192` | Added `people_service.anonymise_person` (blanks name/phone/address/notes, keeps email and consent for anyone with `marketing_opt_in`, refuses anyone with a NISS/eID on file since volunteer retention is indefinite by separate decision), exposed as admin-triggered `POST /api/people/{id}/anonymise` plus `GET /api/people/due-for-anonymisation` surfacing candidates by `MAX(events.date)` — never a fully automatic sweep. Restricted `national_register_number`/`eid_document_number` out of the generic people/members list and single-person reads (REST `PersonSummaryOut`; MCP `get_person`/`get_member`/`list_members`), leaving create/update/merge and `/api/volunteers` unchanged since those already show the caller data they just provided or are actively verifying, with existing tests asserting exactly that for merge. Added `Person.marketing_opt_in`/`marketing_opt_in_at` with an unticked-by-default registration checkbox in `nl`/`en`/`fr` and an admin-only correction path. Corrected a pre-existing mislabelling: `write_audit_entry` had no way to record a client-IP actor as anything but a spurious OIDC subject; added an explicit `auth_source` parameter, and check-in's two audit writes now pass `auth_source="token"`. Two of the three proposed retention sweeps turned out to already exist as VPS-scheduled jobs (`tjorim/apps#177`, closed before this work) rather than needing new backend code; the third (30-day audit-IP redaction) ships the same way (`tjorim/apps#192`) rather than as in-process worker code, correcting the decision doc's original assumption that none of the three existed. Not done: republishing the privacy policy through #944's editor to describe the new pipeline — left for the project owner, since it's a legal-content edit outside this implementation's scope. |
 | #941 | Completed | 2026-09-07 | #941, `docs/decisions/941-web-push-foundation.md`, PR #1014 | Added an anonymous, device-scoped `PushSubscription` model (natural-key upsert by `endpoint`, free-form `categories`/`event_ids` built now rather than deferred, consent/created/last-seen timestamps) with `GET /api/push/vapid-public-key` and `POST /api/push/subscriptions`(`/unsubscribe`), VAPID-signed delivery via `pywebpush` in `app/push.py` that retires a subscription on a 404/410 response instead of retrying it, and a `POST /api/push/test` admin-only endpoint that enqueues through #947's durable outbox (its own `"delivery_queued"` audit entry, not a second one). Subscribe/unsubscribe extend #932's Postgres-backed `check_rate_limit_pg` with a new `push-subscription-mutation` scope (anonymous public writes); the authenticated admin test-send uses the in-process limiter, matching #932's narrower scope for lower-volume admin actions. Retention combines 404/410 retirement and explicit unsubscribe with a new daily `cleanup_expired_subscriptions` sweep (`push_subscription_expiry_days`, default 180) in `app/worker.py`. Frontend: `usePushSubscription` hook and a `PushOptIn` consent card (explicit checkbox before the browser permission prompt, matching #934's marketing opt-in) on both the public landing page and the admin dashboard (with a test-send button there only); `frontend/src/sw/push.ts` adds `push`/`notificationclick` listeners to the shared service worker per the additive-module contract in the decision doc, with `notificationclick` always navigating to a fixed `"/"` path rather than any payload-supplied URL. 32 backend tests and 18 frontend tests (including axe accessibility checks) cover both opt-in states, rate limiting, retirement, and cleanup. A post-review hardening pass (same PR) fixed an SSRF gap (delivery-time private-address rejection plus redirect-disabled delivery), a rate-limit bypass (bucket increment could roll back with a rejected request), retention correctness (successful delivery now refreshes `last_seen_at`), a missing config validator, and two frontend gaps (mount-time backend reconciliation for an existing subscription, an unbounded "checking" state when no service-worker registration ever activates); see the decision doc's "Post-review hardening" section, including one deliberately deferred item (`pushsubscriptionchange` handling). Not built: #942's actual broadcast composer — #941 was scoped to the subscription foundation plus a one-off admin test-send only. |
+| #942 | Completed | 2026-09-07 | #942, `docs/decisions/942-central-composer.md`, PR #1016 | Added a `ComposedMessage` model (`draft`/`scheduled`/`sent` state) and admin-only `POST /api/composer[/{id}]`/`PUT /api/composer/{id}`/`POST /api/composer/{id}/schedule` endpoints. The in-app channel reuses #945's `Announcement` model via a new no-commit `announcements_service._create_uncommitted` helper (extracted so the composer's own send transaction, which also enqueues push jobs, doesn't commit early). The Web Push channel generalizes #941's single admin test-send job to one `composer_message_push` outbox job per currently-opted-in subscriber, reusing that feature's SSRF guard, redirect-disabled delivery, and 404/410 retirement exactly, via a composite `resource_id` (`"{message_id}:{subscription_id}"`). Scheduling reuses #947's existing `scheduled_at` outbox support directly — no new worker infrastructure — with a two-job design (`composer_message_dispatch` resolves the audience fresh and does the `draft -> sent` transition atomically; `composer_message_push` delivers to one subscriber each) so a scheduled message reaches subscribers current at send time, not compose time. Duplicate worker execution is a no-op (state check plus per-recipient dedup keys); per-channel results are aggregate counts only (`push_delivered_count`/`push_failed_count`/`push_pending_count`), never subscription secrets. `schedule_send` is rate-limited (in-process, per admin actor, matching #941's precedent). Admin UI: `ComposerManagement.tsx` (new "Composer" sidebar entry) with a locale-toggle compose form, channel checkboxes, an estimated-audience display, and a confirm-before-send step reusing `useConfirmDialog`. Dropped from the original proposal: a server-side preview endpoint — composer text is plain strings with no server-side transformation, so the compose form's own live state is already an accurate preview. 24 original backend test cases and 4 original frontend tests (including an axe accessibility check that caught and fixed two real a11y gaps — missing `Form.Group controlId`s, an empty actions `<th>` — also present in the pre-existing `AnnouncementManagement.tsx` this was modelled on, fixed here only, not backported). Not built: recipient category/event targeting beyond "all subscribers" (no real subscriber sets these yet — the public opt-in UI never asks) and any bulk email channel (explicitly out of scope). |
 | #936 | Superseded | 2026-09-05 | #936, PR #990 | Fixed the wrong-domain `robots.txt`/`sitemap.xml`/`baseUrl` (generated from `VITE_PUBLIC_URL` instead of hardcoding `champagnefestival.be`), added the missing `/privacy` sitemap entry with `xhtml:link` hreflang alternates, disallowed and `noindex`'d the staff-only routes, localised the static shell's default description/OG/Twitter tags to the `nl` base locale with `og:locale`/`og:locale:alternate` added, and added a minimal installability-only production service worker (no caching, no offline queue) per the shared-worker contract in `docs/decisions/941-web-push-foundation.md`. The remaining part — making schedule/FAQ/exhibitor content and `EventStructuredData` visible without JS — turned out not to be a prerendering problem: that content is live, admin-editable data (schedule/FAQ via the API, `/privacy`'s body via #944) with no redeploy involved, so a build- or deploy-time snapshot would go stale. Split out to #992, which proposes rendering `/` and `/privacy` live from the backend on every request instead. |
 | #944 | Completed | 2026-09-04 | #944, PR (this change) | Added a versioned Markdown policy model (`policies`/`policy_versions`) with a draft → publish → superseded lifecycle enforced by partial-unique indexes and a policy-row lock (concurrency-tested against a double-publish race), a full audit trail, per-locale content with an explicit required-locale contract enforced at publish time (never silently serves another locale), and rollback by seeding a new draft from an older version's content and republishing it. Markdown renders through one shared `markdown-it-py` + `nh3` allowlist renderer/sanitizer used identically by the admin live preview and the public endpoint — raw HTML, scripts, iframes, event handlers, and unsafe link schemes are stripped or sanitised, and only h2/h3, paragraphs, emphasis, links, lists, blockquotes, and code survive. Added an admin editor (Markdown source, a small formatting toolbar, live preview, version history, rollback) and switched the public privacy-policy page from static compiled content to this backend. Migrated the currently-published privacy policy text into the initial published version unchanged, except that the data-retention and rights-request sections were tightened to stop asserting an automated deletion/anonymisation pipeline that #934 had not built yet — per this document's own guidance that the migration "must not preserve promises the product still cannot fulfil." #934's retention schedule and anonymisation mechanism are now implemented; the policy text has not yet been republished to describe them — a legal-content edit for the project owner to make through this editor. |
 | #937 | Completed | 2026-09-03 | #937, PR #975 | Added in-page QR check-in scanning (native `BarcodeDetector`, `jsqr` fallback) that hands decoded credentials straight to the existing lookup mutation with no navigation or OS-camera-app switch, an auto-return-to-scanner "Scan next" flow, and an online/offline connectivity banner. The offline queue/service-worker precaching from the original proposal was explicitly descoped: check-in requires live connectivity by product decision, so the banner (which already states check-ins can't be submitted while offline) is the intended behaviour rather than a gap. This issue no longer needs a service worker at all; the shared-worker contract the audit originally asked it to coordinate with #941 on now belongs to #941 alone, per `docs/decisions/941-web-push-foundation.md`. |
@@ -221,7 +220,7 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
 | #944 | backend, frontend, admin, security (completed 2026-09-04) | versioned policy publishing | Shipped ahead of #934's policy decisions; migrated text tightened to avoid overstating them |
 | #947 | backend, cross-cutting (completed 2026-08-30) | durable outbox and worker | Follows #923's persistence shape; serves #924, #941, and #942 |
 | #941 | backend, frontend, security (completed 2026-09-07) | Web Push foundation | Uses #947; accounts for #932; service-worker contract documented for reuse |
-| #942 | backend, frontend, admin | central composer | Blocked by #947 (complete); #941 is complete |
+| #942 | backend, frontend, admin (completed 2026-09-07) | central composer | Uses #947, #941, and #945, all complete |
 
 ## Cross-cutting feature and audit relationships
 
@@ -250,8 +249,8 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
   `RegistrationList`, `VenueManagement`, `LayoutEditor`, `PeopleManagement`,
   and `ContentManagement`. No parallel convention was introduced.
 - **The shared outbox (#947)** is the bridge between the audit's individual
-  delivery gaps (#923 and #924) and the roadmap's push/composer work (#941,
-  complete, and #942). It owns persistence, claiming, retry, and
+  delivery gaps (#923 and #924) and the roadmap's push/composer work (#941
+  and #942, both complete). It owns persistence, claiming, retry, and
   crash-recovery mechanics, but deliberately owns no audience or
   message-composition product surface.
 - **Web Push (#941, complete)** added the production service worker's `push`/
@@ -262,9 +261,13 @@ behaviour. They are tracked by #946 and appear in the combined phases above.
   [`docs/decisions/941-web-push-foundation.md`](decisions/941-web-push-foundation.md)
   (one worker file, per-feature cache versions, additive event handlers) still
   stands so a future consumer can share #941's worker without redesigning it.
-- **The central composer (#942)** also depends on the multi-process conclusions
-  of #932. Its scheduling and deduplication are DB-backed through #947; its rate
-  limits and any live invalidation must not rely on per-process state.
+- **The central composer (#942, complete)** reused #947's `scheduled_at` support
+  directly — no new worker infrastructure — and #945's `Announcement` model
+  for its in-app channel (extracted `announcements_service._create_uncommitted`
+  so the composer's own send transaction, which also enqueues push jobs,
+  doesn't commit early). Its per-recipient Web Push delivery generalizes
+  #941's single admin test-send job to one outbox job per targeted
+  subscriber, sharing the same SSRF guard and 404/410 retirement handling.
 
 ## Communications and policy feature specification
 
@@ -530,30 +533,37 @@ Acceptance criteria:
 
 [GitHub issue](https://github.com/tjorim/champagnefestival/issues/942)
 
-#941 and #947 are complete; #945's announcement destination is complete. Compose one operational message centrally and
-deliver it only through explicitly selected public-announcement and Web Push
+Implemented 2026-09-07 per [`docs/decisions/942-central-composer.md`](decisions/942-central-composer.md) — see that document's "Implementation summary". Composes one operational message centrally and
+delivers it only through explicitly selected public-announcement and Web Push
 channels. Server-sent bulk email remains out of scope.
 
 Proposed fields and audiences:
 
 - Translated short title/body, selected channels, severity/category, and an
   optional validated internal URL.
-- Explicit supported audience, draft/scheduled/published/sent state, immutable
+- Explicit supported audience, draft/scheduled/sent state, immutable
   send snapshot, delivery counts, and failure summary.
-- Initially, all opted-in subscribers and optionally event-specific opted-in
-  subscribers. No arbitrary queries or uploaded lists.
+- All opted-in subscribers. Event-specific subscriber targeting is future
+  scope. No arbitrary queries or uploaded lists.
+
+Historical proposal: “draft/scheduled/published/sent state” and “Initially, all
+opted-in subscribers and optionally event-specific opted-in subscribers.” The
+implemented scope uses three states and targets all subscribers, as recorded
+in the central composer decision. Review corrections add complete locale-pair
+and serialized push-size validation, pending-save protection, and visible
+scheduling failures, with 10 backend regression cases and 2 frontend tests.
 
 Acceptance criteria:
 
-- [ ] Every locale/channel has an accurate preview.
-- [ ] The estimated audience is shown before explicit confirmation.
-- [ ] Scheduled sends use #947's durable, idempotent worker contract.
-- [ ] Duplicate worker execution cannot send twice.
-- [ ] The immutable snapshot and admin actor are audited.
-- [ ] Failure in one channel does not roll back a successful other channel.
-- [ ] Per-channel results are visible without exposing subscription secrets.
-- [ ] Authorisation and shared rate limits are enforced.
-- [ ] Email remains absent until campaign compliance and delivery handling have
+- [x] Every locale/channel has an accurate preview.
+- [x] The estimated audience is shown before explicit confirmation.
+- [x] Scheduled sends use #947's durable, idempotent worker contract.
+- [x] Duplicate worker execution cannot send twice.
+- [x] The immutable snapshot and admin actor are audited.
+- [x] Failure in one channel does not roll back a successful other channel.
+- [x] Per-channel results are visible without exposing subscription secrets.
+- [x] Authorisation and shared rate limits are enforced.
+- [x] Email remains absent until campaign compliance and delivery handling have
       a separately approved design.
 
 ## Examined and found sound
