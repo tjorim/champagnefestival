@@ -208,7 +208,6 @@ async def delete_person(
     await people_service.delete_person(db, person, actor=actor, request_id=request_id)
 
 
-
 @router.post("/{person_id}/anonymise", response_model=PersonOut)
 async def anonymise_person(
     person_id: str,

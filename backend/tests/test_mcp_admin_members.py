@@ -178,9 +178,7 @@ async def test_delete_member_not_found(db_session):
 async def test_get_and_list_member_omit_identity_fields(db_session):
     factory = mcp_session_factory(db_session)
 
-    created = await mcp_members.create_member(
-        factory, "admin-1", name="Dana", national_register_number="85010199997"
-    )
+    created = await mcp_members.create_member(factory, "admin-1", name="Dana", national_register_number="85010199997")
     assert created["national_register_number"] == "85010199997"
 
     fetched = await mcp_members.get_member(factory, created["id"])

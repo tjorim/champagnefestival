@@ -179,9 +179,7 @@ async def test_merge_people_self(db_session):
 async def test_get_person_omits_identity_fields_but_create_shows_them(db_session):
     factory = mcp_session_factory(db_session)
 
-    created = await mcp_people.create_person(
-        factory, "admin-1", name="Carla", national_register_number="85010199998"
-    )
+    created = await mcp_people.create_person(factory, "admin-1", name="Carla", national_register_number="85010199998")
     assert created["national_register_number"] == "85010199998"
 
     fetched = await mcp_people.get_person(factory, created["id"])
