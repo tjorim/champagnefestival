@@ -67,11 +67,22 @@ class RenderCache:
                 logger.warning("public_render_cache: refresh failed for key=%r, serving stale value.", key)
                 return entry.value
             raise
-        self._entries[key] = _CacheEntry(value=value, rendered_at=now)
+        # Timestamp taken after render() returns, not before — otherwise a
+        # render slower than the TTL would store an entry already expired,
+        # forcing every subsequent request to re-render too.
+        self._entries[key] = _CacheEntry(value=value, rendered_at=time.monotonic())
         return value
 
     def invalidate(self) -> None:
-        """Drop every cached entry — a blanket invalidate, not per-key.
+        """Force every entry to re-render on its next request, without
+        discarding the values themselves — a blanket invalidate, not per-key.
+
+        Resets each entry's `rendered_at` to force a refresh rather than
+        deleting it: dropping the value here would break the last-known-good
+        contract (see module docstring) for the specific window right after
+        an invalidation — a mutation NOTIFY fires often enough that a
+        transient database failure on the very next request would otherwise
+        have nothing to fall back to.
 
         Mirrors the notify-then-pull live-update contract's own "reconnect
         does a blanket invalidate" precedent (#929): simpler than tracking
@@ -79,7 +90,8 @@ class RenderCache:
         and the cost of over-invalidating is one extra render per key, not a
         correctness issue.
         """
-        self._entries.clear()
+        for entry in self._entries.values():
+            entry.rendered_at = 0.0
 
 
 #: Module-level singleton; each worker process holds its own copy — see the
