@@ -11,7 +11,7 @@ materially changes tracked work. Remove completed items from the active queue,
 renumber the preferred order, and add a dated outcome with issue/PR or commit
 evidence to **Completed or superseded work**. Partial work stays active until
 its acceptance criteria are met. Preserve the original finding/specification
-through the historical source linked below rather than duplicate its narrative.
+in the Git history identified below rather than duplicate its narrative.
 
 ## Preferred order
 
@@ -59,7 +59,7 @@ For #992:
 
 The ledger records implementation completion, not proof of a production release.
 Detailed original specifications and checked acceptance criteria remain in the
-historical audit; final constraints live in the linked decisions.
+Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
@@ -68,19 +68,19 @@ historical audit; final constraints live in the linked decisions.
 | [#941](https://github.com/tjorim/champagnefestival/issues/941) | Completed | 2026-09-07 | PR #1014; [decision](decisions/941-web-push-foundation.md) | Anonymous device-scoped push consent, subscriptions, admin test delivery and expiry/retirement. Browser rotation events remain unsupported. |
 | [#942](https://github.com/tjorim/champagnefestival/issues/942) | Completed | 2026-09-07 | PR #1016; [decision](decisions/942-central-composer.md) | Announcement/push composer with dispatch-time audience, validation, confirmation and outbox results. All-subscriber targeting only; no bulk email. |
 | [#936](https://github.com/tjorim/champagnefestival/issues/936) | Superseded | 2026-09-05 | #936, PR #990 | Static SEO/PWA corrections in #990; live rendering split into #992. |
-| [#944](https://github.com/tjorim/champagnefestival/issues/944) | Completed | 2026-09-04 | #944; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Versioned, sanitised policy drafts/publication, locale enforcement and audit trail. |
+| [#944](https://github.com/tjorim/champagnefestival/issues/944) | Completed | 2026-09-04 | #944; Git history | Versioned, sanitised policy drafts/publication, locale enforcement and audit trail. |
 | [#937](https://github.com/tjorim/champagnefestival/issues/937) | Completed | 2026-09-03 | #937, PR #975 | QR scanning and connectivity feedback. Offline queues intentionally excluded. |
-| [#945](https://github.com/tjorim/champagnefestival/issues/945) | Completed | 2026-09-02 | #945; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Localised announcements with publish windows, safe links, admin preview and urgent-only live alerts. |
-| [#935](https://github.com/tjorim/champagnefestival/issues/935) | Completed | 2026-09-02 | #935; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Themed confirmations, accessible mutation feedback, translation fixes and reduced React warnings; 11 documented warnings remain. |
-| [#943](https://github.com/tjorim/champagnefestival/issues/943) | Completed | 2026-09-01 | #943; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Localised individual email-client actions and communication preferences; no bulk sender. |
-| [#933](https://github.com/tjorim/champagnefestival/issues/933) | Completed | 2026-09-01 | #933; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Capacity-safe party-size edits, order recalculation, accessibility needs and registration deadlines. |
-| [#931](https://github.com/tjorim/champagnefestival/issues/931) | Completed | 2026-09-01 | #931; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Bounded list APIs, server-paginated registrations, full-filter exports/bulk actions and client pagination for smaller admin datasets. |
-| [#926](https://github.com/tjorim/champagnefestival/issues/926) | Completed | 2026-08-30 | #926; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Removed the dead table reservation column, derived non-cancelled occupancy from registrations, and shipped a volunteer read-only floor plan linked from check-in. |
-| [#927](https://github.com/tjorim/champagnefestival/issues/927) | Completed | 2026-08-30 | #927; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Made the table type the single stored soft capacity source, added locked guest-capacity checks across REST/MCP assignment, preserved plan type editing, and added confirmation, audited override, and distinct overfilled styling. |
-| [#928](https://github.com/tjorim/champagnefestival/issues/928) | Completed | 2026-08-30 | #928; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Re-resolved admin/MCP order edits against event products, preserved clamped delivery state, and restricted volunteer edits to validated delivery counts. |
-| [#929](https://github.com/tjorim/champagnefestival/issues/929) | Completed | 2026-08-30 | #929; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Triggered blanket cache recovery on each server `ready` frame, before consuming later stream events, including the first connection for restored tabs. |
-| [#930](https://github.com/tjorim/champagnefestival/issues/930) | Completed | 2026-08-30 | #930; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Applied one shared spreadsheet-formula guard to every backend registration and volunteer CSV cell, aligned it with the frontend rule, and added export regression coverage. |
-| [#922](https://github.com/tjorim/champagnefestival/issues/922) | Completed | 2026-08-30 | #922; [historical audit](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md#completed-or-superseded-work) | Attached authenticated bookings at creation, added email-proven ownership claims for older unowned bookings, and made owned registrations available to the web and Pebble self-service reads without trusting OIDC email claims. |
+| [#945](https://github.com/tjorim/champagnefestival/issues/945) | Completed | 2026-09-02 | #945; Git history | Localised announcements with publish windows, safe links, admin preview and urgent-only live alerts. |
+| [#935](https://github.com/tjorim/champagnefestival/issues/935) | Completed | 2026-09-02 | #935; Git history | Themed confirmations, accessible mutation feedback, translation fixes and reduced React warnings; 11 documented warnings remain. |
+| [#943](https://github.com/tjorim/champagnefestival/issues/943) | Completed | 2026-09-01 | #943; Git history | Localised individual email-client actions and communication preferences; no bulk sender. |
+| [#933](https://github.com/tjorim/champagnefestival/issues/933) | Completed | 2026-09-01 | #933; Git history | Capacity-safe party-size edits, order recalculation, accessibility needs and registration deadlines. |
+| [#931](https://github.com/tjorim/champagnefestival/issues/931) | Completed | 2026-09-01 | #931; Git history | Bounded list APIs, server-paginated registrations, full-filter exports/bulk actions and client pagination for smaller admin datasets. |
+| [#926](https://github.com/tjorim/champagnefestival/issues/926) | Completed | 2026-08-30 | #926; Git history | Removed the dead table reservation column, derived non-cancelled occupancy from registrations, and shipped a volunteer read-only floor plan linked from check-in. |
+| [#927](https://github.com/tjorim/champagnefestival/issues/927) | Completed | 2026-08-30 | #927; Git history | Made the table type the single stored soft capacity source, added locked guest-capacity checks across REST/MCP assignment, preserved plan type editing, and added confirmation, audited override, and distinct overfilled styling. |
+| [#928](https://github.com/tjorim/champagnefestival/issues/928) | Completed | 2026-08-30 | #928; Git history | Re-resolved admin/MCP order edits against event products, preserved clamped delivery state, and restricted volunteer edits to validated delivery counts. |
+| [#929](https://github.com/tjorim/champagnefestival/issues/929) | Completed | 2026-08-30 | #929; Git history | Triggered blanket cache recovery on each server `ready` frame, before consuming later stream events, including the first connection for restored tabs. |
+| [#930](https://github.com/tjorim/champagnefestival/issues/930) | Completed | 2026-08-30 | #930; Git history | Applied one shared spreadsheet-formula guard to every backend registration and volunteer CSV cell, aligned it with the frontend rule, and added export regression coverage. |
+| [#922](https://github.com/tjorim/champagnefestival/issues/922) | Completed | 2026-08-30 | #922; Git history | Attached authenticated bookings at creation, added email-proven ownership claims for older unowned bookings, and made owned registrations available to the web and Pebble self-service reads without trusting OIDC email claims. |
 | [#947](https://github.com/tjorim/champagnefestival/issues/947) | Completed | 2026-08-30 | #947, PR #952 | Added a durable database-backed outbox, atomic token-bound worker claims, bounded retries, delivery diagnostics and retention, plus independently supervised worker deployment wiring. |
 | [#924](https://github.com/tjorim/champagnefestival/issues/924) | Completed | 2026-08-30 | #924, PR #952 | Queued confirmations for public and admin bookings and provided guests with booking references, QR/check-in access, calendar links, and order details through email and the protected guest view. |
 | [#940](https://github.com/tjorim/champagnefestival/issues/940) | Completed | 2026-08-29 | #940, PR #951 | Added validated, audited public contact settings with a translated admin form and shared last-good/fallback rendering across contact, maintenance, and privacy pages. |
@@ -93,12 +93,15 @@ historical audit; final constraints live in the linked decisions.
 
 ## Historical context
 
+Archived findings and acceptance criteria explain past work; they do not
+limit future scope. Revise current requirements when needs change, following
+[revising decisions](README.md#revising-decisions).
+
 The original audit reviewed `f392ab9` (`2026.8.2`). Its frontend checks were
 run; backend findings were initially static analysis because that environment
 had no PostgreSQL. Those results are historical evidence, not a current
 repository health claim.
 
-The [full audit before consolidation](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/product-audit-2026-08.md)
-preserves the original phase ordering, findings index, communications feature
-specifications, checked acceptance criteria, and detailed implementation
-history. Current source contracts are indexed in [docs/README.md](README.md).
+The original findings, specifications and implementation history remain in
+Git at `88396baf3275ae40cdd907239a0df6a04baed137`. Consult them for historical
+context, not as a checklist of current or future obligations. Current source contracts are indexed in [docs/README.md](README.md).

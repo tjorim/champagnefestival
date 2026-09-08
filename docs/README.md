@@ -25,8 +25,8 @@ Decision documents record final choices, reasoning and known limits. Keep
 code comments self-contained; link back to a decision only when its broader
 rationale helps prevent a mistaken change. Documentation should point to the
 implementation it explains. Original proposals
-and lengthy implementation history live in Git and the historical links in
-each consolidated document. Keep detailed plans for unfinished work until its
+and lengthy implementation history live in Git. Consolidated documents identify
+the historical commit without promoting it as current guidance. Keep detailed plans for unfinished work until its
 acceptance gates are satisfied.
 
 ## Implementation pointers
@@ -42,3 +42,17 @@ acceptance gates are satisfied.
 - Public rendering: [routes](../backend/app/routers/public_pages.py),
   [shell rendering](../backend/app/services/public_render.py),
   [render cache](../backend/app/services/public_render_cache.py).
+
+## Revising decisions
+
+Decision records describe the choices made for the requirements and evidence
+available at the time. They are not permanent constraints or vetoes on future
+designs. When requirements change, revise or supersede the current decision
+and update affected code, tests and operational guidance together. Record the
+reason briefly; there is no obligation to preserve the old implementation.
+
+Historical snapshots are reference material only. Their proposals, acceptance
+criteria and language such as “never” or “out of scope” do not create new
+requirements for future work. Existing runtime contracts still apply until
+changed deliberately, especially where callers, stored data or published
+user commitments depend on them.

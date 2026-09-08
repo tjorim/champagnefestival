@@ -65,4 +65,9 @@ error handling and accessibility. Shared delivery rules are in the
 
 ## Historical context
 
-Consolidated 2026-09-08. The [full pre-consolidation document](https://github.com/tjorim/champagnefestival/blob/88396baf3275ae40cdd907239a0df6a04baed137/docs/decisions/942-central-composer.md) preserves the original findings, proposals, acceptance criteria, and implementation history.
+This records a past decision, not a permanent design constraint. Revise or
+supersede it when requirements change; archived proposals are reference only.
+See [revising decisions](../README.md#revising-decisions).
+
+Consolidated 2026-09-08. Original proposals and implementation history remain
+in Git at `88396baf3275ae40cdd907239a0df6a04baed137`; they are not current requirements.
