@@ -145,6 +145,12 @@ def product_to_dict(p: Product) -> dict:
         "required": p.required,
         "included_product_id": p.included_product_id,
         "included_per_guests": p.included_per_guests,
+        "unit": p.unit,
+        "stock": p.stock,
+        "inclusions": p.inclusions,
+        "reserved_quantity": p.reserved_quantity,
+        "available_quantity": max(0, p.stock - p.reserved_quantity) if p.stock is not None else None,
+        "shortage": max(0, p.reserved_quantity - p.stock) if p.stock is not None else 0,
         "created_at": p.created_at,
         "updated_at": p.updated_at,
     }
@@ -162,11 +168,12 @@ def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:
         "guest_count": r.guest_count,
         "order_items": r.order_items,
         "notes": r.notes,
-        "accessibility_note": r.accessibility_note,
         "table_id": r.table_id,
         "status": r.status,
         "payment_status": r.payment_status,
         "amount_due": r.amount_due,
+        "amount_paid": r.amount_paid,
+        "refund_due": max(0, (r.amount_paid or 0) - (r.amount_due or 0)),
         "checked_in": r.checked_in,
         "checked_in_at": r.checked_in_at,
         "strap_issued": r.strap_issued,
@@ -208,10 +215,8 @@ def registration_to_dict_with_token(r: Registration, person: Person, event: Even
 
 
 def registration_to_list_dict(r: Registration, person: Person, event: Event) -> dict:
-    """Serialise a Registration for the list endpoint (drops notes)."""
-    d = registration_to_dict(r, person, event)
-    d.pop("notes", None)
-    return d
+    """Admin list includes notes needed for manual table allocation."""
+    return registration_to_dict(r, person, event)
 
 
 def registration_to_guest_dict(r: Registration, person: Person, event: Event) -> dict:
@@ -228,6 +233,8 @@ def registration_to_guest_dict(r: Registration, person: Person, event: Event) ->
         "status": r.status,
         "payment_status": r.payment_status,
         "amount_due": r.amount_due,
+        "amount_paid": r.amount_paid,
+        "refund_due": max(0, (r.amount_paid or 0) - (r.amount_due or 0)),
         "checked_in": r.checked_in,
         "checked_in_at": r.checked_in_at,
         "strap_issued": r.strap_issued,

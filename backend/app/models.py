@@ -20,8 +20,11 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    cast,
+    func,
     select,
     text,
+    true,
 )
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
@@ -102,9 +105,9 @@ class Registration(Base):
     )
     guest_count: Mapped[int] = mapped_column(Integer)
     order_items: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    product_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+    amount_paid: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     notes: Mapped[str] = mapped_column(Text, default="")
-    accessibility_note: Mapped[str] = mapped_column(Text, default="")
-    """Optional accessibility requirements for the guest (wheelchair, low table, etc.)."""
 
     person_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("people.id", ondelete="RESTRICT"), index=True, nullable=False
@@ -586,6 +589,9 @@ class Event(Base):
     products: Mapped[list[Product]] = relationship(back_populates="event", cascade="all, delete-orphan")
 
 
+_product_lines = func.json_array_elements(Registration.order_items).table_valued("value").alias("product_line")
+
+
 class Product(Base):
     """Something guests can order when registering for a specific event
     (a bottle of champagne, a cheese platter, ...). Scoped to one event —
@@ -603,10 +609,35 @@ class Product(Base):
     event_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("events.id", ondelete="CASCADE"), index=True, nullable=False
     )
+    reserved_quantity: Mapped[int] = column_property(
+        select(func.coalesce(func.sum(cast(_product_lines.c.value.op("->>")("quantity"), Integer)), 0))
+        .select_from(Registration.__table__.join(_product_lines, true()))
+        .where(
+            Registration.event_id == event_id,
+            Registration.status != "cancelled",
+            _product_lines.c.value.op("->>")("product_id") == id,
+        )
+        .correlate_except(Registration, _product_lines)
+        .scalar_subquery()
+    )
+
     name: Mapped[str] = mapped_column(String(200))
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     category: Mapped[str] = mapped_column(String(20))
     """"champagne" | "food" | "other" — matches OrderItemCategory."""
+    unit: Mapped[str] = mapped_column(String(10), default="item")
+    stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    inclusions: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
+    """Included product, numerator/denominator and rounding per parent quantity.
+
+    Null retains the legacy single inclusion until an administrator edits it.
+    An explicit empty list means no included products.
+    """
+    __table_args__ = (
+        CheckConstraint("stock IS NULL OR stock >= 0", name="ck_product_stock"),
+        CheckConstraint("unit IN ('item', 'table', 'person')", name="ck_product_unit"),
+    )
+
     active: Mapped[bool] = mapped_column(Boolean, default=True)
     required: Mapped[bool] = mapped_column(Boolean, default=False)
     """A prerequisite product for this event (e.g. an entry ticket). An order

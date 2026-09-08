@@ -312,41 +312,90 @@ export async function fetchEventProducts(
   return Array.isArray(data) ? data.map(apiToProduct) : [];
 }
 
-export async function saveEventProduct(
-  payload: {
-    id?: string;
-    eventId: string;
-    name: string;
-    price: number;
-    category: OrderItemCategory;
-    active: boolean;
-    required: boolean;
-    /** Both or neither — a bundle needs a target product and a ratio. */
-    includedProductId?: string;
-    includedPerGuests?: number;
-  },
+export interface ProductWrite {
+  id?: string;
+  eventId: string;
+  name: string;
+  price: number;
+  category: OrderItemCategory;
+  active: boolean;
+  required: boolean;
+  includedProductId?: string;
+  includedPerGuests?: number;
+  unit?: "item" | "table" | "person";
+  stock?: number | null;
+  inclusions?: import("@/types/event").ProductInclusion[] | null;
+  updateExistingContents?: boolean;
+  updateExistingPrices?: boolean;
+  confirmShortage?: boolean;
+  previewToken?: string;
+}
+export interface ProductChangePreview {
+  preview_token: string;
+  price_changed: boolean;
+  contents_changed: boolean;
+  bookings: {
+    id: string;
+    before_total: string;
+    after_total: string;
+    amount_paid: string;
+    refund_due: string;
+    before_items: { name: string; quantity: number }[];
+    after_items: { name: string; quantity: number }[];
+  }[];
+  shortages: { name: string; stock: number; reserved: number; shortage: number }[];
+}
+function productWriteBody(payload: ProductWrite) {
+  return {
+    ...(!payload.id ? { event_id: payload.eventId } : {}),
+    name: payload.name,
+    price: payload.price,
+    category: payload.category,
+    active: payload.active,
+    required: payload.required,
+    included_product_id: payload.includedProductId ?? null,
+    included_per_guests: payload.includedPerGuests ?? null,
+    ...(payload.unit !== undefined ? { unit: payload.unit } : {}),
+    ...(payload.stock !== undefined ? { stock: payload.stock } : {}),
+    ...(payload.inclusions !== undefined ? { inclusions: payload.inclusions } : {}),
+    ...(payload.id
+      ? {
+          update_existing_contents: payload.updateExistingContents ?? false,
+          update_existing_prices: payload.updateExistingPrices ?? false,
+          confirm_shortage: payload.confirmShortage ?? false,
+          preview_token: payload.previewToken,
+        }
+      : {}),
+  };
+}
+export async function previewEventProduct(
+  payload: ProductWrite,
   authHeaders: () => Record<string, string>,
-): Promise<Product> {
-  const isNew = !payload.id;
+): Promise<ProductChangePreview> {
   const response = await safeFetch(
-    isNew ? "/api/products" : `/api/products/${payload.id}`,
+    `/api/products/${payload.id}/preview`,
     {
-      method: isNew ? "POST" : "PUT",
+      method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({
-        ...(isNew ? { event_id: payload.eventId } : {}),
-        name: payload.name,
-        price: payload.price,
-        category: payload.category,
-        active: payload.active,
-        required: payload.required,
-        included_product_id: payload.includedProductId ?? null,
-        included_per_guests: payload.includedPerGuests ?? null,
-      }),
+      body: JSON.stringify(productWriteBody(payload)),
     },
     m.admin_content_error_save(),
   );
-
+  return response.json();
+}
+export async function saveEventProduct(
+  payload: ProductWrite,
+  authHeaders: () => Record<string, string>,
+): Promise<Product> {
+  const response = await safeFetch(
+    payload.id ? `/api/products/${payload.id}` : "/api/products",
+    {
+      method: payload.id ? "PUT" : "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(productWriteBody(payload)),
+    },
+    m.admin_content_error_save(),
+  );
   return apiToProduct((await response.json()) as Record<string, unknown>);
 }
 

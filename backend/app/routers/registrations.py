@@ -105,9 +105,12 @@ async def create_registration(
     if claims is not None:
         user = await get_or_create_user(db, claims["sub"])
 
-    event = await events_service.get_event_or_404(db, body.event_id)
+    from app.services import product_inventory as inventory
+
+    event = await inventory.lock_event(db, body.event_id)
     await _ensure_public_registration_allowed(db, event, body.guest_count)
-    resolved_order_items = registrations_service.resolve_order_items(event, body.order_items, body.guest_count)
+    resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
+    await inventory.check_stock(db, event, resolved_order_items)
 
     email_norm = str(body.email).lower().strip()
     name_norm = " ".join(body.name.lower().split())
@@ -156,6 +159,8 @@ async def create_registration(
         check_in_token=secrets.token_urlsafe(32),
     )
     registration.order_items = resolved_order_items
+    registration.product_snapshot = snapshot
+    registration.amount_due = inventory.order_total(resolved_order_items) if resolved_order_items else None
     db.add(registration)
     await enqueue_registration_confirmation(
         db,

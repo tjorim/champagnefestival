@@ -746,7 +746,7 @@ async def test_registration_rejects_order_item_quantity_over_limit(client):
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "order_items": [{"product_id": product["id"], "quantity": 101}],
+            "order_items": [{"product_id": product["id"], "quantity": 1000001}],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",

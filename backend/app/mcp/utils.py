@@ -224,5 +224,4 @@ def registration_base_dict(reg: Registration, person: Person, *, role: str) -> d
         "checked_in": reg.checked_in,
         "checked_in_at": reg.checked_in_at.isoformat() if reg.checked_in_at else None,
         "strap_issued": reg.strap_issued,
-        "accessibility_note": reg.accessibility_note,
     }

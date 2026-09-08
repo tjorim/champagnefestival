@@ -98,6 +98,12 @@ export default function RegistrationDetail({
 
   if (!registration) return null;
   const simpleRsvp = isSimpleRsvp(registration);
+  const changedPrices = registration.orderItems.flatMap((item) => {
+    const current = registration.event?.products?.find((product) => product.id === item.productId);
+    return current && current.price !== item.price && item.quantity > item.includedQuantity
+      ? [{ name: item.name, booked: item.price, current: current.price }]
+      : [];
+  });
 
   return (
     <Modal
@@ -116,6 +122,21 @@ export default function RegistrationDetail({
       </Modal.Header>
 
       <Modal.Body className="bg-dark text-light">
+        {(registration.refundDue ?? 0) > 0 && (
+          <Alert variant="warning">
+            {m.admin_inventory_refund()}: €{registration.refundDue?.toFixed(2)}
+          </Alert>
+        )}
+        {changedPrices.length > 0 && (
+          <Alert variant="info">
+            {m.admin_inventory_price_difference()}
+            {changedPrices.map((price) => (
+              <div key={price.name}>
+                {price.name}: €{price.booked.toFixed(2)} → €{price.current.toFixed(2)}
+              </div>
+            ))}
+          </Alert>
+        )}
         <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
         {actionError && (
           <Alert
@@ -294,15 +315,6 @@ export default function RegistrationDetail({
             <ListGroup.Item className="bg-dark text-light border-secondary">
               <span className="text-secondary d-block mb-1">{m.admin_notes()}</span>
               <span className="small">{registration.notes}</span>
-            </ListGroup.Item>
-          )}
-          {registration.accessibilityNote && (
-            <ListGroup.Item className="bg-dark text-light border-secondary">
-              <span className="text-secondary d-block mb-1">
-                <i className="bi bi-universal-access me-1" aria-hidden="true" />
-                {m.admin_accessibility_note_label()}
-              </span>
-              <span className="small">{registration.accessibilityNote}</span>
             </ListGroup.Item>
           )}
         </ListGroup>

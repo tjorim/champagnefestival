@@ -394,7 +394,6 @@ export const adminHandlers = [
       guest_count: Number(body.guest_count ?? 1),
       order_items: [],
       notes: String(body.notes ?? ""),
-      accessibility_note: "",
       table_id: null,
       status: "pending",
       payment_status: "unpaid",

@@ -14,7 +14,20 @@ export interface EventEditionSummary {
  * catalog, since what a VIP tasting sells has nothing to do with what a
  * different tasting or a bourse would.
  */
+export interface ProductInclusion {
+  product_id: string;
+  quantity: number;
+  per_quantity: number;
+  rounding: "up" | "down";
+}
+
 export interface Product {
+  unit?: "item" | "table" | "person";
+  stock?: number | null;
+  reservedQuantity?: number;
+  availableQuantity?: number | null;
+  shortage?: number;
+  inclusions?: ProductInclusion[] | null;
   id: string;
   eventId: string;
   name: string;
@@ -92,6 +105,12 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     category: isOrderItemCategory(data.category) ? data.category : "other",
     active: Boolean(data.active),
     required: Boolean(data.required),
+    unit: data.unit === "table" || data.unit === "person" ? data.unit : "item",
+    stock: typeof data.stock === "number" ? data.stock : null,
+    reservedQuantity: Number(data.reserved_quantity ?? 0),
+    availableQuantity: typeof data.available_quantity === "number" ? data.available_quantity : null,
+    shortage: Number(data.shortage ?? 0),
+    inclusions: Array.isArray(data.inclusions) ? (data.inclusions as ProductInclusion[]) : null,
     includedProductId:
       typeof data.included_product_id === "string" ? data.included_product_id : undefined,
     includedPerGuests:

@@ -147,7 +147,6 @@ export async function createAdminRegistration(
       guest_count: payload.guestCount,
       order_items: [],
       notes: payload.notes,
-      accessibility_note: "",
       status: "confirmed",
     }),
   });

@@ -62,12 +62,13 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
       };
     }),
     notes: (d.notes ?? "") as string,
-    accessibilityNote: (d.accessibility_note ?? "") as string,
     tableId: (d.table_id as string | undefined) ?? undefined,
     status: (d.status ?? "pending") as RegistrationStatus,
     paymentStatus: (d.payment_status ?? "unpaid") as PaymentStatus,
     // Serialized as a decimal string by the API to avoid float drift on money.
     amountDue: d.amount_due == null ? undefined : Number(d.amount_due),
+    amountPaid: Number(d.amount_paid ?? 0),
+    refundDue: Number(d.refund_due ?? 0),
     checkedIn: (d.checked_in ?? false) as boolean,
     checkedInAt: (d.checked_in_at as string | undefined) ?? undefined,
     strapIssued: (d.strap_issued ?? false) as boolean,

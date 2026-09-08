@@ -1,0 +1,107 @@
+# Booking products, stock, packages and table allocation
+
+**Status:** Design guidance agreed on 2026-09-08; inventory/package and notes implementation in progress. Physical seating remains outstanding.
+Related issue: [#802](https://github.com/tjorim/champagnefestival/issues/802).
+These notes capture the present requirements, not permanent architectural rules.
+
+## Booking and allocation
+
+- Collectors book a quantity of whole tables; administrators assign physical
+  tables later. Availability comes from product stock, independently of the
+  floor plan. No separate per-booking maximum is required.
+- One booking covers a whole purchased table and may purchase several tables.
+  The companion/headcount rule remains unresolved pending organiser input;
+  do not equate one table with one person or invent a relationship restriction.
+- Festival seating can share a physical table between bookings and split one
+  booking across several tables. Record the guest count on each allocation:
+  six guests may be allocated four at one table and two at another. Capacity
+  checks sum actual allocated guests at each table, not the booking's full
+  guest count at every linked table. Whole-table purchases allocate exclusive
+  tables within the event.
+  Booking per table versus per person determines the relevant unit; no new
+  event-wide allocation-mode setting was agreed. The exact schema is an
+  implementation choice, not settled by this conversation.
+- Plans belong to a room and a specific event. The same room can have different
+  breakfast and evening arrangements on the same date. Reuse the existing
+  independent copy-plan workflow across dates/events; no new copy feature is needed.
+- Existing plans are test data. No automatic historical event-matching workflow
+  is required; test plans can be recreated. This is not blanket permission to
+  delete unrelated records or ignore active client contracts.
+- Partial allocation is allowed: show “2 of 3 tables assigned”. All three units
+  still reserve product stock. When booked quantity drops below allocated
+  quantity, let the admin select tables to release and save the quantity,
+  allocation, price-total and stock changes together.
+- Merge `accessibility_note` into `notes`, preserving existing content. Use one
+  optional notes/requests field, visible during allocation. Placement preferences
+  (for example, sitting beside another booking) are requests, not guarantees.
+
+## Product stock and prices
+
+This broadens #802 into general event-product inventory as well as seating.
+The first implementation increment adds optional stock alongside existing product prices.
+
+- Every product may be unlimited or stock-limited. Bourse tables initially use
+  one table product/price per event; quantity times unit price gives the charge.
+- Bookings reserve stock immediately, including unpaid bookings. Cancellation
+  releases reservations. No automatic unpaid-booking expiry was requested;
+  administrators review, adjust or cancel excessive/unpaid requests.
+- Quantity changes use the booked unit price. Preserve payment history and flag
+  overpayment for manual refund when a reduction lowers the total.
+- Show booked versus current unit price when they differ, and offer an individual
+  contact-visitor action through the existing email-client workflow.
+- Administrators may lower stock below reservations after a warning. Retain
+  bookings, show the shortage, and block new sales requiring the depleted stock.
+  Reductions and cancellations can still release reservations.
+
+## Included products and nested packages
+
+- Main products may include multiple products, including other packages.
+  Reject circular inclusion. Included items have no additional charge even when
+  they also have a standalone selling price.
+- Count all included quantities toward preparation totals. Stock-limited included
+  items share availability with separately ordered quantities; unlimited items
+  are counted without limiting bookings. Show paid + included = total needed.
+- The main product is booked per table or per person. Children multiply the
+  quantity contributed by their parent; do not reapply the booking's attendee
+  count at each nesting level.
+- Example: two VIP tables × four included breakfasts × one coffee yields eight
+  coffees. Three per-person breakfast tickets × one coffee yields three coffees.
+- Where an inclusion uses a ratio, the administrator chooses rounding for that
+  inclusion. Exact configuration/rounding presentation must be tested against
+  these agreed examples; no further nested attendee multiplier was agreed.
+- On changing package contents, ask whether existing bookings keep their contents
+  or receive the update. Preview affected quantities and stock before confirmation.
+- If the main product price also changes, ask separately whether existing bookings
+  keep or receive the new price; preview totals and payment differences. Included
+  products' standalone price changes do not add charges to the package.
+- Updating existing packages may exceed stock after a warning: honour existing
+  bookings, flag shortages, and block further sales requiring depleted products.
+
+## Remaining question and implementation work
+
+The organiser must confirm companion/headcount rules for capsule exchanges.
+That choice is deliberately open; none of the stock or package decisions answers it.
+
+Implementation is divided into:
+
+1. Stable event-owned plans and physical allocation.
+2. General stock reservation and booked-price handling.
+3. Multiple/nested package inclusion and explicit updates to existing bookings.
+4. Consolidating notes and presenting allocation requests.
+
+Reconcile older #802 claims already addressed by #926/#927. Review Android,
+REST and MCP consumers before changing contracts. Design transactions and locking
+for stock races, allocation conflicts and bulk package updates; document and test
+write retry guarantees in `docs/retry-safety.md`. These are implementation work,
+not additional product choices being treated as agreed here. The first increment implements stock and nested packages, read-only previews with
+stale-preview rejection, booked-price snapshots, recorded payment/refund amounts,
+and consolidated notes. Existing partial-payment statuses do not establish an
+amount; administrators must record the known amount before relying on refund
+calculations. Existing paid bookings with a recorded total migrate that total to
+amount paid. New API payment edits are audited; the complete payment/quantity
+editor remains follow-up work.
+
+Event-owned plans, shared/split/exclusive table allocations and choosing tables
+to release are not implemented by this increment. Product units describe what is
+purchased; they do not yet change the existing physical table assignment model.
+No GitHub issue is closed by this partial implementation.

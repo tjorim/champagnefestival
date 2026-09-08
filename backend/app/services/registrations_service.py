@@ -22,7 +22,7 @@ from __future__ import annotations
 import logging
 import secrets
 from datetime import UTC, datetime
-from typing import cast
+from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -32,16 +32,15 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
-from app.models import Event, Layout, Person, Product, Registration, Table
+from app.models import Event, Layout, Person, Registration, Table
 from app.schemas import (
-    OrderItemBase,
-    OrderItemCategory,
     OrderItemRequest,
     RegistrationAdminCreate,
     RegistrationDeliveryUpdate,
     RegistrationUpdate,
 )
-from app.services import events_service, people_service
+from app.services import people_service
+from app.services import product_inventory as inventory
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.utils import make_id, registration_to_dict
 
@@ -153,71 +152,8 @@ async def assert_table_has_room(
 
 
 def resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_count: int) -> list[dict]:
-    """Resolve client-supplied product_id/quantity pairs against the event's real,
-    active products, snapshotting name/price/category server-side (see Product's
-    docstring). Rejects any product_id that isn't an active product on this event,
-    so a client can never set an arbitrary price or order a nonexistent product.
-
-    Also enforces that a required product (e.g. an entry ticket) is present
-    whenever an optional one is ordered — an event with required products
-    configured rejects an order for optional add-ons alone — and applies each
-    ordered product's bundle (Product.included_product_id/included_per_guests):
-    a free quantity of the bundled product, scaled to guest_count, is merged
-    into that product's line item on top of anything explicitly requested.
-    """
-    products_by_id: dict[str, Product] = {p.id: p for p in event.products if p.active}
-
-    # product_id -> (quantity, included_quantity)
-    line_items: dict[str, tuple[int, int]] = {}
-    ordered_ids: set[str] = set()
-    for req in requests:
-        product = products_by_id.get(req.product_id)
-        if product is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Product '{req.product_id}' is not available for this event.",
-            )
-        ordered_ids.add(product.id)
-        quantity, included_quantity = line_items.get(product.id, (0, 0))
-        line_items[product.id] = (quantity + req.quantity, included_quantity)
-
-    required_ids = {p.id for p in products_by_id.values() if p.required}
-    if required_ids and (ordered_ids - required_ids) and not (ordered_ids & required_ids):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This event requires a required product (e.g. an entry ticket) before any optional products can be ordered.",
-        )
-
-    for product_id in list(ordered_ids):
-        product = products_by_id[product_id]
-        # A zero/negative included_per_guests can't happen through the REST/MCP
-        # schemas (which require >= 1), but guard the division defensively
-        # against a row that reached the database some other way.
-        if product.included_product_id is None or not product.included_per_guests or product.included_per_guests < 1:
-            continue
-        target = products_by_id.get(product.included_product_id)
-        if target is None:
-            continue  # bundled product archived since — inclusion silently no longer applies
-        included_qty = guest_count // product.included_per_guests
-        if included_qty <= 0:
-            continue
-        quantity, included_quantity = line_items.get(target.id, (0, 0))
-        line_items[target.id] = (quantity + included_qty, included_quantity + included_qty)
-
-    resolved: list[dict] = []
-    for product_id, (quantity, included_quantity) in line_items.items():
-        product = products_by_id[product_id]
-        resolved.append(
-            OrderItemBase(
-                product_id=product.id,
-                name=product.name,
-                quantity=quantity,
-                price=float(product.price),
-                category=cast(OrderItemCategory, product.category),
-                included_quantity=included_quantity,
-            ).model_dump()
-        )
-    return resolved
+    """Resolve a new order using current server-side prices and package rules."""
+    return inventory.resolve_booking(event, requests, guest_count)[0]
 
 
 def apply_delivery_updates(order_items: list[dict] | None, updates: list[RegistrationDeliveryUpdate]) -> list[dict]:
@@ -253,20 +189,23 @@ async def admin_create_registration(
     db: AsyncSession, *, body: RegistrationAdminCreate, actor: str, request_id: str | None = None
 ) -> dict:
     person = await people_service.get_person_or_404(db, body.person_id)
-    event = await events_service.get_event_or_404(db, body.event_id)
-    resolved_order_items = resolve_order_items(event, body.order_items, body.guest_count)
+    event = await inventory.lock_event(db, body.event_id)
+    resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
+    if body.status != "cancelled":
+        await inventory.check_stock(db, event, resolved_order_items)
 
     registration = Registration(
         id=make_id("reg"),
         event_id=event.id,
         guest_count=body.guest_count,
         notes=body.notes,
-        accessibility_note=body.accessibility_note,
         status=body.status,
         person_id=person.id,
         check_in_token=secrets.token_urlsafe(32),
     )
     registration.order_items = resolved_order_items
+    registration.product_snapshot = snapshot
+    registration.amount_due = inventory.order_total(resolved_order_items) if resolved_order_items else None
     db.add(registration)
     await write_audit_entry(
         db,
@@ -311,6 +250,7 @@ async def apply_registration_update(
     in the JSON body, which already lands in ``body.model_fields_set`` and so
     never needs the flags (it always passes ``False``).
     """
+    await inventory.lock_event(db, registration.event_id)
     registration = (
         await db.execute(
             select(Registration)
@@ -332,6 +272,7 @@ async def apply_registration_update(
     pre_status = registration.status
     pre_payment_status = registration.payment_status
     pre_amount_due = registration.amount_due
+    pre_amount_paid = registration.amount_paid
     event_id = registration.event_id
     edition_id = registration.event.edition_id
 
@@ -395,8 +336,6 @@ async def apply_registration_update(
 
     if body.notes is not None:
         registration.notes = body.notes
-    if body.accessibility_note is not None:
-        registration.accessibility_note = body.accessibility_note
     if "person_id" in body.model_fields_set:
         if body.person_id is None:
             raise HTTPException(
@@ -404,26 +343,50 @@ async def apply_registration_update(
             )
         await people_service.get_person_or_404(db, body.person_id)
         registration.person_id = body.person_id
+    resolved_items = pre_order_items
     if body.order_items is not None or registration.guest_count != pre_guest_count:
-        delivered_by_product = {
-            item.get("product_id"): int(item.get("delivered_quantity") or 0) for item in pre_order_items
-        }
-        requests = body.order_items
-        if requests is None:
-            requests = [
-                OrderItemRequest(
-                    product_id=str(item["product_id"]),
-                    quantity=max(0, int(item.get("quantity") or 0) - int(item.get("included_quantity") or 0)),
-                )
-                for item in pre_order_items
-                if int(item.get("quantity") or 0) - int(item.get("included_quantity") or 0) > 0
-            ]
-        resolved_items = resolve_order_items(registration.event, requests, registration.guest_count)
-        for item in resolved_items:
-            delivered_quantity = min(delivered_by_product.get(item["product_id"], 0), item["quantity"])
-            item["delivered_quantity"] = delivered_quantity
-            item["delivered"] = delivered_quantity == item["quantity"]
-        registration.order_items = resolved_items
+        requests = body.order_items if body.order_items is not None else inventory.purchased_requests(pre_order_items)
+        resolved_items, snapshot = inventory.resolve_booking(
+            registration.event,
+            requests,
+            registration.guest_count,
+            previous_snapshot=registration.product_snapshot,
+            previous_items=pre_order_items,
+        )
+        registration.product_snapshot = snapshot
+        if body.order_items is not None or pre_order_items:
+            registration.amount_due = inventory.order_total(resolved_items)
+    if target_status != "cancelled":
+        # Validate against the pre-change reservation before assigning new items/status.
+        registration.status = pre_status
+        with db.no_autoflush:
+            await inventory.check_stock(db, registration.event, resolved_items, registration=registration)
+        registration.status = target_status
+    registration.order_items = resolved_items
+    if body.amount_paid is not None:
+        registration.amount_paid = body.amount_paid
+    elif body.payment_status == "paid":
+        registration.amount_paid = max(registration.amount_paid or Decimal(0), registration.amount_due or Decimal(0))
+    elif body.payment_status == "unpaid":
+        registration.amount_paid = Decimal(0)
+    if registration.amount_paid != pre_amount_paid:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="amount_paid_updated",
+            resource_type="registration",
+            resource_id=registration.id,
+            request_id=request_id,
+            details={"previous_amount_paid": str(pre_amount_paid), "amount_paid": str(registration.amount_paid)},
+        )
+    if body.amount_paid is not None or body.order_items is not None:
+        registration.payment_status = (
+            "paid"
+            if (registration.amount_paid or 0) >= (registration.amount_due or 0)
+            else "partial"
+            if registration.amount_paid
+            else "unpaid"
+        )
     if body.checked_in is not None:
         if body.checked_in and not registration.checked_in:
             registration.checked_in_at = datetime.now(UTC)
@@ -512,8 +475,8 @@ async def apply_registration_update(
         "status",
         "payment_status",
         "amount_due",
+        "amount_paid",
         "notes",
-        "accessibility_note",
         "person_id",
     }
     if any(f in body.model_fields_set for f in metadata_fields) or clear_amount_due:
@@ -529,6 +492,7 @@ async def apply_registration_update(
 async def delete_registration(
     db: AsyncSession, registration: Registration, *, actor: str, request_id: str | None = None
 ) -> dict:
+    await inventory.lock_event(db, registration.event_id)
     reg_id = registration.id
     event_id = registration.event_id
     edition_id = registration.event.edition_id

@@ -15,18 +15,18 @@ in the Git history identified below rather than duplicate its narrative.
 
 ## Preferred order
 
-The two implementation-ready follow-ups retain their previous order. #802 and
-#1006 need product/design clarification and are listed separately; this does
-not assign a new priority or approve their proposed designs.
+The two implementation-ready follow-ups retain their previous order. #802 has
+owner-agreed design guidance with one open organiser question; #1006 still
+needs design clarification. Their separate listing does not assign a new priority.
 
 | Order | Issue | Current status and remaining acceptance gates |
 | --- | --- | --- |
 | 1 | [#953 — visitor passwordless accounts](https://github.com/tjorim/champagnefestival/issues/953) | Session and order-history implementation merged in #1012. Verify production transactional email end to end before enabling the localised public **My orders** navigation. Publish the corresponding privacy/account copy. See [decision](decisions/953-visitor-passwordless-session.md). |
 | 2 | [#992 — live public rendering](https://github.com/tjorim/champagnefestival/issues/992) | Repository implementation merged in #1015. Complete the infrastructure routing for `/` and `/privacy` and mount the built frontend shell into the API, then verify live content and locale/cache behavior in production. See [decision](decisions/992-live-public-render.md). |
 
-### Work needing scope decisions
+### Active implementation and work needing scope decisions
 
-- [#802 — bourse seating model](https://github.com/tjorim/champagnefestival/issues/802): stable event-owned layouts, multi-table allocation, event eligibility and table products remain proposed work. Confirm migration/backfill and bourse requirements before implementation. The old issue also describes capacity/cancellation defects subsequently addressed by #926/#927; reconcile those before treating its entire body as outstanding. Preserve Android compatibility when changing assignment contracts.
+- [#802 — bourse seating model](https://github.com/tjorim/champagnefestival/issues/802): [owner-agreed booking/product guidance](decisions/802-booking-products-and-seating.md) now covers event-owned plans, manual/partial allocation with guest counts per table for split festival bookings, optional stock for all products, booked prices, nested included products, and merging accessibility text into notes. Implementation is split into product inventory/packages and physical seating. The first increment adds stock reservations, nested inclusions, booked-price snapshots, explicit package/price previews, payment/refund amounts and consolidated notes. Capsule-exchange companion rules remain unresolved. Existing plans are test data and need no historical event-matching workflow. Reconcile capacity/cancellation defects already addressed by #926/#927 and review Android/REST/MCP compatibility. Event-owned plans, split/exclusive allocation, atomic table release during quantity changes, and the full booking/payment editor remain outstanding; #802 stays open.
 - [#1006 — volunteer identity self-service](https://github.com/tjorim/champagnefestival/issues/1006): requires a verified link from OIDC identity to a Person before exposing NISS/eID or accepting corrections. Decide review/approval and card-renewal behavior first. Low-priority follow-up; the existing admin-only point-in-time record remains intentional.
 
 ### Active acceptance gates

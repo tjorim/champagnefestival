@@ -110,7 +110,6 @@ function makeRegistration(overrides: Partial<Registration> = {}): Registration {
     guestCount: 2,
     orderItems: [],
     notes: "",
-    accessibilityNote: "",
     status: "confirmed",
     paymentStatus: "paid",
     checkedIn: false,

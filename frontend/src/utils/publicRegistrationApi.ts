@@ -26,7 +26,6 @@ export interface CheckInData {
     delivered: boolean;
   }[];
   notes: string;
-  accessibilityNote: string;
   status: RegistrationStatus;
   checkedIn: boolean;
   checkedInAt?: string;
@@ -44,7 +43,6 @@ interface CheckInResponseRegistration {
   table_id?: string | null;
   order_items?: Record<string, unknown>[];
   notes?: string;
-  accessibility_note?: string;
   status?: RegistrationStatus;
   checked_in?: boolean;
   checked_in_at?: string;
@@ -108,7 +106,6 @@ function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
       category: isOrderItemCategory(item.category) ? item.category : "other",
     })),
     notes: data.notes ?? "",
-    accessibilityNote: data.accessibility_note ?? "",
     status: data.status ?? "pending",
     checkedIn: data.checked_in ?? false,
     checkedInAt: data.checked_in_at,
@@ -490,7 +487,6 @@ export async function submitRegistration(
         quantity: order.quantity,
       })),
       notes: payload.notes,
-      accessibility_note: payload.accessibilityNote,
       marketing_opt_in: payload.marketingOptIn,
       honeypot: payload.honeypot ?? "",
       form_start_time: payload.formStartTime,

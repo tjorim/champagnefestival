@@ -28,7 +28,6 @@ interface RegistrationFields {
   preferredLanguage: "nl" | "fr" | "en";
   guestCount: number;
   notes: string;
-  accessibilityNote: string;
   marketingOptIn: boolean;
   honeypot: string;
   formStartTime: string;
@@ -61,7 +60,6 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       preferredLanguage: getLocale(),
       guestCount: 1,
       notes: "",
-      accessibilityNote: "",
       marketingOptIn: false,
       honeypot: "",
       formStartTime: new Date().toISOString(),
@@ -130,21 +128,45 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
     [orderItems, requiredProducts],
   );
 
-  // product_id -> free quantity included by whichever bundling product is
-  // currently selected, computed the same way the server will (see
-  // _resolve_order_items): floor(guestCount / includedPerGuests).
   const includedQuantities = useMemo(() => {
     const included = new Map<string, { quantity: number; sourceName: string }>();
+    let visits = 0;
+    const expand = (id: string, quantity: number, sourceName: string, path: Set<string>) => {
+      if (path.has(id) || ++visits > 10000) return;
+      const product = products.find((p) => p.id === id);
+      if (!product) return;
+      const nextPath = new Set([...path, id]);
+      const edges =
+        product.inclusions ??
+        (product.includedProductId && product.includedPerGuests
+          ? [
+              {
+                product_id: product.includedProductId,
+                quantity: Math.floor((guestCount || 0) / product.includedPerGuests),
+                per_quantity: quantity,
+                rounding: "down" as const,
+              },
+            ]
+          : []);
+      for (const edge of edges) {
+        const value = (quantity * edge.quantity) / edge.per_quantity;
+        const count = edge.rounding === "up" ? Math.ceil(value) : Math.floor(value);
+        if (count <= 0) continue;
+        const old = included.get(edge.product_id);
+        included.set(edge.product_id, {
+          quantity: (old?.quantity ?? 0) + count,
+          sourceName: old ? `${old.sourceName}, ${sourceName}` : sourceName,
+        });
+        expand(edge.product_id, count, sourceName, nextPath);
+      }
+    };
     for (const order of orderItems) {
-      const source = products.find((p) => p.id === order.productId);
-      if (!source?.includedProductId || !source.includedPerGuests) continue;
-      const qty = Math.floor((guestCount || 0) / source.includedPerGuests);
-      if (qty <= 0) continue;
-      const existing = included.get(source.includedProductId);
-      included.set(source.includedProductId, {
-        quantity: (existing?.quantity ?? 0) + qty,
-        sourceName: existing ? `${existing.sourceName}, ${source.name}` : source.name,
-      });
+      expand(
+        order.productId,
+        order.quantity,
+        products.find((p) => p.id === order.productId)?.name ?? "",
+        new Set(),
+      );
     }
     return included;
   }, [guestCount, orderItems, products]);
@@ -157,7 +179,6 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       preferredLanguage: getLocale(),
       guestCount: 1,
       notes: "",
-      accessibilityNote: "",
       marketingOptIn: false,
       honeypot: "",
       formStartTime: new Date().toISOString(),
@@ -374,27 +395,6 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               )}
             </form.Field>
 
-            <form.Field name="accessibilityNote">
-              {(field) => (
-                <Form.Group className="mb-3" controlId="res-accessibility">
-                  <Form.Label>{m.registration_accessibility_note()}</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={2}
-                    maxLength={2000}
-                    aria-describedby="res-accessibility-help"
-                    className="bg-dark text-light border-secondary"
-                    value={field.state.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                  <Form.Text id="res-accessibility-help" className="text-secondary">
-                    {m.registration_accessibility_note_help()}
-                  </Form.Text>
-                </Form.Group>
-              )}
-            </form.Field>
-
             <form.Field name="marketingOptIn">
               {(field) => (
                 <Form.Group className="mb-3" controlId="res-marketing-opt-in">
@@ -456,13 +456,22 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                             variant="outline-warning"
                             size="sm"
                             onClick={() => handleQuantityChange(product.id, qty + 1)}
-                            disabled={isLockedOptional}
+                            disabled={
+                              isLockedOptional ||
+                              (product.availableQuantity != null &&
+                                qty + (included?.quantity ?? 0) >= product.availableQuantity)
+                            }
                             aria-label={`Increase quantity of ${label}`}
                           >
                             <i className="bi bi-plus" aria-hidden="true" />
                           </Button>
                         </div>
                       </div>
+                      {product.availableQuantity != null && (
+                        <div className="text-secondary small">
+                          {m.admin_inventory_available()}: {product.availableQuantity}
+                        </div>
+                      )}
                       {included && (
                         <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
                           {m.registration_order_included_note({
@@ -484,12 +493,17 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   <Form.Control
                     as="textarea"
                     rows={3}
+                    maxLength={4000}
+                    aria-describedby="res-notes-help"
                     placeholder={m.registration_notes_placeholder()}
                     className="bg-dark text-light border-secondary"
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   />
+                  <Form.Text id="res-notes-help" className="text-secondary">
+                    {m.registration_notes_help()}
+                  </Form.Text>
                 </Form.Group>
               )}
             </form.Field>

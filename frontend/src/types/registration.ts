@@ -46,7 +46,6 @@ export interface Registration {
   orderItems: OrderItem[];
   notes: string;
   /** Optional accessibility requirements (wheelchair, crutches, low table needed, etc.) */
-  accessibilityNote: string;
   tableId?: string;
   status: RegistrationStatus;
   paymentStatus: PaymentStatus;
@@ -55,6 +54,8 @@ export interface Registration {
    * Recorded by an admin and settled offline; undefined means nothing is owed.
    */
   amountDue?: number;
+  amountPaid?: number;
+  refundDue?: number;
   /** Whether the guest has physically checked in at the entrance */
   checkedIn: boolean;
   checkedInAt?: string;
@@ -79,7 +80,6 @@ export interface RegistrationFormData {
   guestCount: number;
   orderItems: OrderItem[];
   notes: string;
-  accessibilityNote: string;
   marketingOptIn: boolean;
   honeypot?: string;
   formStartTime: string;

@@ -140,3 +140,35 @@ the complete ordered ID set and applies it in one locked transaction, so it cann
 leave a partial order. Create serializes its internal display-position allocation
 with a transaction-scoped advisory lock; this prevents concurrent valid creates
 from colliding, but does not make a client retry idempotent.
+
+
+# Product inventory and package changes (#802)
+
+Product creation/deletion and registration creation remain **not automatically
+retry-safe**: no idempotency key is added. Reload after an ambiguous response.
+Product and registration updates use absolute values, but may produce fresh audit
+entries and notifications when repeated; clients must not automatically retry.
+
+All product inventory edits and registration create/update/delete operations take
+the event row lock before registration locks. Reservations are derived from
+non-cancelled order quantities (including free items), so repeating an absolute
+quantity/status update cannot increment a separate reservation counter. Existing
+shortages may shrink; new reservations cannot worsen them. The concurrent last-unit
+booking integration test verifies that only one booking succeeds.
+
+`POST /api/products/{id}/preview` is read-only and rolls back its transaction.
+Updates affecting existing package contents/prices or introducing a stock shortage
+require its fingerprint, covering product configuration and booking/payment state.
+A changed booking or configuration rejects a stale preview with 409. Shortages
+also require explicit acknowledgement. The product, affected snapshots/totals,
+audit records and notifications commit together. The fingerprint is a freshness
+check, not an idempotency key; after an uncertain save, reload and preview again.
+Tests cover a preview leaving stock unchanged and a competing booking invalidating
+its fingerprint.
+
+Registration notes are replaced as one value. Legacy `accessibility_note` request
+input merges into notes for older callers; the response contains only notes.
+`amount_paid` is an absolute recorded total, not an increment or a payment charge;
+changes retain previous/new values in the audit log. Order reductions preserve
+that amount and expose overpayment for manual refunds. Tests cover recorded
+payment preservation and booked-price quantity changes.

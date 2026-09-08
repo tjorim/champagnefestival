@@ -59,7 +59,6 @@ function mapVolunteerRegistration(data: VolunteerRegistrationResponse): CheckInD
       };
     }),
     notes: data.notes ?? "",
-    accessibilityNote: "",
     status: data.status ?? "pending",
     checkedIn: data.checked_in ?? false,
     checkedInAt: data.checked_in_at ?? undefined,

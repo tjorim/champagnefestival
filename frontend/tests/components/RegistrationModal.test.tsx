@@ -21,8 +21,7 @@ vi.mock("@/paraglide/messages", () => ({
     registration_preferred_language: () => "Preferred communication language",
     registration_preferred_language_help: () => "Used for confirmations and messages.",
     registration_guests: () => "Number of Guests",
-    registration_accessibility_note: () => "Accessibility needs (optional)",
-    registration_accessibility_note_help: () =>
+    registration_notes_help: () =>
       "Tell us about wheelchair access, seating or other support you need.",
     registration_marketing_opt_in: () => "Keep me informed about future editions",
     registration_marketing_opt_in_help: () =>

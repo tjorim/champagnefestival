@@ -87,7 +87,7 @@ class OrderItemRequest(RequestModel):
     """
 
     product_id: str = Field(min_length=1)
-    quantity: int = Field(ge=1, le=100)
+    quantity: int = Field(ge=1, le=1000000)
 
 
 class RegistrationDeliveryUpdate(RequestModel):
@@ -254,7 +254,17 @@ class EventOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ProductInclusion(RequestModel):
+    product_id: str = Field(min_length=1, max_length=64)
+    quantity: int = Field(default=1, ge=1, le=1000000)
+    per_quantity: int = Field(default=1, ge=1, le=1000000)
+    rounding: Literal["up", "down"] = "down"
+
+
 class ProductCreate(RequestModel):
+    unit: Literal["item", "table", "person"] = "item"
+    stock: int | None = Field(default=None, ge=0, le=2147483647)
+    inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=200)
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
@@ -272,6 +282,13 @@ class ProductCreate(RequestModel):
 
 
 class ProductUpdate(RequestModel):
+    unit: Literal["item", "table", "person"] | None = None
+    stock: int | None = Field(default=None, ge=0, le=2147483647)
+    inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
+    update_existing_contents: bool = False
+    update_existing_prices: bool = False
+    confirm_shortage: bool = False
+    preview_token: str | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory | None = None
@@ -285,6 +302,12 @@ class ProductUpdate(RequestModel):
 
 
 class ProductOut(BaseModel):
+    unit: str = "item"
+    stock: int | None = None
+    reserved_quantity: int = 0
+    available_quantity: int | None = None
+    shortage: int = 0
+    inclusions: list[ProductInclusion] | None = None
     id: str
     event_id: str
     name: str
@@ -314,7 +337,26 @@ class EventCheckInStats(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class RegistrationCreate(RequestModel):
+class RegistrationNotesRequest(RequestModel):
+    @model_validator(mode="before")
+    @classmethod
+    def merge_legacy_accessibility_note(cls, value):
+        # Accept older REST/MCP callers while storing one notes field.
+        if isinstance(value, dict) and "accessibility_note" in value:
+            value = dict(value)
+            accessibility = value.pop("accessibility_note")
+            if accessibility is not None and not isinstance(accessibility, str):
+                raise ValueError("accessibility_note must be text")
+            if value.get("notes") is not None and not isinstance(value["notes"], str):
+                raise ValueError("notes must be text")
+            if accessibility:
+                value["notes"] = "\n\n".join(
+                    dict.fromkeys(part for part in (value.get("notes"), accessibility) if part)
+                )
+        return value
+
+
+class RegistrationCreate(RegistrationNotesRequest):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone: str = Field(min_length=1, max_length=50)
@@ -322,8 +364,7 @@ class RegistrationCreate(RequestModel):
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
-    notes: str = Field(default="", max_length=2000)
-    accessibility_note: str = Field(default="", max_length=2000)
+    notes: str = Field(default="", max_length=4000)
     marketing_opt_in: bool = Field(
         default=False,
         description=(
@@ -334,22 +375,22 @@ class RegistrationCreate(RequestModel):
     honeypot: str = Field(default="", exclude=True)
     form_start_time: str = Field(default="", exclude=True)
 
-    @field_validator("name", "phone", "event_id", "notes", "accessibility_note", mode="before")
+    @field_validator("name", "phone", "event_id", "notes", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
         return v.strip() if isinstance(v, str) else v
 
 
-class RegistrationUpdate(RequestModel):
+class RegistrationUpdate(RegistrationNotesRequest):
     guest_count: int | None = Field(default=None, ge=1, le=20)
     status: RegistrationStatus | None = None
     payment_status: PaymentStatus | None = None
+    amount_paid: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     table_id: str | None = None
     confirm_over_capacity: bool = False
     order_items: list[OrderItemRequest] | None = Field(default=None, max_length=50)
-    notes: str | None = None
-    accessibility_note: str | None = None
+    notes: str | None = Field(default=None, max_length=4000)
     person_id: str | None = Field(default=None, min_length=1)
     checked_in: bool | None = None
     strap_issued: bool | None = None
@@ -364,11 +405,12 @@ class RegistrationOut(BaseModel):
     guest_count: int
     order_items: list[OrderItemOut]
     notes: str
-    accessibility_note: str
     table_id: str | None
     status: RegistrationStatus
     payment_status: PaymentStatus
     amount_due: Decimal | None
+    amount_paid: Decimal = Decimal(0)
+    refund_due: Decimal = Decimal(0)
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -396,11 +438,13 @@ class RegistrationListOut(BaseModel):
     event: EventOut
     guest_count: int
     order_items: list[OrderItemOut]
-    accessibility_note: str
+    notes: str
     table_id: str | None
     status: RegistrationStatus
     payment_status: PaymentStatus
     amount_due: Decimal | None
+    amount_paid: Decimal = Decimal(0)
+    refund_due: Decimal = Decimal(0)
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -439,6 +483,8 @@ class RegistrationGuestOut(BaseModel):
     status: RegistrationStatus
     payment_status: PaymentStatus
     amount_due: Decimal | None
+    amount_paid: Decimal = Decimal(0)
+    refund_due: Decimal = Decimal(0)
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -502,15 +548,14 @@ class VisitorSessionStatus(BaseModel):
     expires_at: datetime | None = None
 
 
-class RegistrationAdminCreate(RequestModel):
+class RegistrationAdminCreate(RegistrationNotesRequest):
     """Admin-only registration creation — skips spam checks, accepts person_id directly."""
 
     person_id: str = Field(min_length=1, max_length=64)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
-    notes: str = Field(default="", max_length=2000)
-    accessibility_note: str = Field(default="", max_length=2000)
+    notes: str = Field(default="", max_length=4000)
     status: RegistrationStatus = "confirmed"
 
     @field_validator("event_id", "notes", mode="before")

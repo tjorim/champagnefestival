@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, and the central composer for announcements/push.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, and booking product inventory/packages with consolidated notes.
 
 Revision ID: 001
 Revises: 000
@@ -370,8 +370,35 @@ def upgrade() -> None:
     )
     op.create_index("ix_composed_messages_state", "composed_messages", ["state"])
 
+    op.execute("""
+        UPDATE registrations SET notes = CASE
+            WHEN coalesce(accessibility_note, '') = '' OR accessibility_note = notes THEN notes
+            WHEN coalesce(notes, '') = '' THEN accessibility_note
+            ELSE notes || E'\\n\\n' || accessibility_note END
+    """)
+    op.drop_column("registrations", "accessibility_note")
+    op.add_column("registrations", sa.Column("product_snapshot", sa.JSON(), nullable=False, server_default="{}"))
+    op.add_column("registrations", sa.Column("amount_paid", sa.Numeric(10, 2), nullable=False, server_default="0"))
+    op.execute(
+        "UPDATE registrations SET amount_paid = amount_due WHERE payment_status = 'paid' AND amount_due IS NOT NULL AND amount_due > 0"
+    )
+    op.add_column("products", sa.Column("unit", sa.String(10), nullable=False, server_default="item"))
+    op.add_column("products", sa.Column("stock", sa.Integer(), nullable=True))
+    op.add_column("products", sa.Column("inclusions", sa.JSON(), nullable=True))
+    op.create_check_constraint("ck_product_stock", "products", "stock IS NULL OR stock >= 0")
+    op.create_check_constraint("ck_product_unit", "products", "unit IN ('item', 'table', 'person')")
+
 
 def downgrade() -> None:
+    op.drop_constraint("ck_product_unit", "products")
+    op.drop_constraint("ck_product_stock", "products")
+    for column in ("unit", "stock", "inclusions"):
+        op.drop_column("products", column)
+    op.drop_column("registrations", "amount_paid")
+    op.drop_column("registrations", "product_snapshot")
+    # Notes cannot be split reliably; retain all content in notes on rollback.
+    op.add_column("registrations", sa.Column("accessibility_note", sa.Text(), nullable=False, server_default=""))
+
     # #953: restoring users.oidc_subject to NOT NULL below would violate that
     # constraint for any visitor account (magic-link sign-in, oidc_subject IS
     # NULL by design). Fail loudly with an operational precondition rather

@@ -83,8 +83,8 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
         includedQuantity: 0,
       },
     ],
-    notes: "Please seat near the window.",
-    accessibilityNote: "Wheelchair access needed.",
+    notes: "Please seat near the window. Wheelchair access needed.",
+
     status: "confirmed",
     paymentStatus: "paid",
     checkedIn: false,
@@ -152,13 +152,14 @@ describe("RegistrationDetail", () => {
     expect(screen.getByText("+32 470 00 00 00")).toBeInTheDocument();
     expect(screen.getByRole("spinbutton", { name: "admin_guests_count" })).toHaveValue(2);
     expect(screen.getByText("Grand Tasting")).toBeInTheDocument();
-    expect(screen.getByText("Please seat near the window.")).toBeInTheDocument();
-    expect(screen.getByText("Wheelchair access needed.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Please seat near the window. Wheelchair access needed."),
+    ).toBeInTheDocument();
   });
 
-  it("hides notes and accessibility note sections when absent", () => {
+  it("hides notes when absent", () => {
     renderDetail({
-      registration: buildRegistration({ notes: "", accessibilityNote: "" }),
+      registration: buildRegistration({ notes: "" }),
     });
 
     expect(screen.queryByText("Please seat near the window.")).not.toBeInTheDocument();
