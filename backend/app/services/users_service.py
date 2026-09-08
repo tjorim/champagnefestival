@@ -84,8 +84,7 @@ async def claim_unowned_registrations_for_email(
     existing-owner-protection acceptance criterion). Shared by
     ``app.routers.me.claim_my_registrations`` (an OIDC user proving email
     control via a one-shot lookup token) and visitor magic-link redemption
-    (the link itself is that same proof) — see
-    docs/decisions/953-visitor-passwordless-session.md decision 1.
+    (the link itself is that same proof).
 
     Does not commit — caller commits as part of the same transaction.
     """

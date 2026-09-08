@@ -9,8 +9,7 @@ reused by #941's admin test-send:
   ``scheduled -> sent`` transition itself. Runs once per composed message,
   at the requested ``scheduled_at`` (or immediately for "send now" — see
   ``app.services.composer_service.schedule_send``). Resolves the audience
-  fresh at this point, not at schedule time — see
-  docs/decisions/942-central-composer.md's "Snapshot timing" decision.
+  fresh at this point, so subscribers added after scheduling are included.
 - ``composer_message_push`` (``deliver_composer_push``): one job per
   targeted subscriber, enqueued by the dispatch handler above. Reuses
   ``app.push``'s SSRF guard, redirect-disabled delivery, and 404/410

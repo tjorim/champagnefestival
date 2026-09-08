@@ -54,3 +54,8 @@ The frontend dev server proxies `/api/*` to the backend automatically.
 - **[frontend/README.md](./frontend/README.md)** — commands, project structure, i18n, code style
 - **[backend/README.md](./backend/README.md)** — architecture, API overview, dev tools, deployment options
 - **[DEPLOYMENT.md](./DEPLOYMENT.md)** — production VPS + Caddy setup
+
+## Documentation
+
+See the [documentation guide](docs/README.md) for operational contracts,
+current product work, and architectural decisions.

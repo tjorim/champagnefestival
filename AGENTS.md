@@ -26,8 +26,9 @@ pnpm build
 
 ```bash
 uv run uvicorn app.main:app --reload
-uv run ruff check app
-uv run ty check app
+uv run ruff check .
+uv run ruff format --check .  # what CI runs; includes tests and migrations
+uv run ty check .
 uv run pytest
 uv run alembic upgrade head
 ```

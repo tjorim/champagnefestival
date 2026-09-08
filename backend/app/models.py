@@ -283,9 +283,8 @@ class PushSubscription(Base):
     categories: Mapped[list[str]] = mapped_column(JSON, default=list)
     """Free-form category tags this subscription opted into (e.g.
     ``["system_test"]``). Not a fixed enum — #941 only ever emits
-    "system_test" itself; the schema exists ahead of #942's composer
-    needing real categories, per the project owner's explicit choice not
-    to defer this (see the decision doc's 2026-09-07 confirmation)."""
+    "system_test" itself. The composer currently targets all subscribers;
+    category-based targeting is not implemented."""
     event_ids: Mapped[list[str]] = mapped_column(JSON, default=list)
     """Specific Event ids this subscription wants event-scoped notifications
     for; empty means general/non-event-specific only. Validated against
@@ -907,9 +906,7 @@ class ComposedMessage(Base):
     in-app channel rather than a second in-app storage/delivery mechanism —
     selecting "announcement" here creates/publishes an ``Announcement`` row
     at send time (``announcement_id`` records which one). The Web Push
-    channel reuses #941's outbox-based delivery, generalized from one
-    admin-test-send job to one job per targeted subscriber — see
-    docs/decisions/942-central-composer.md.
+    channel enqueues one outbox delivery job per targeted subscriber.
     """
 
     __tablename__ = "composed_messages"
@@ -940,7 +937,7 @@ class ComposedMessage(Base):
     """``PushSubscription`` ids targeted at send time — null while
     ``draft``/``scheduled``, immutable once set (the transition to ``sent``
     resolves and freezes this in the same transaction). Resolved fresh at
-    send time, not compose time — see the decision doc's "Snapshot timing"."""
+    send time, not compose time."""
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sent_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

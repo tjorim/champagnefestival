@@ -1,7 +1,6 @@
 """Web Push subscription and admin test-send endpoints (#941).
 
-Subscriptions are anonymous and public — see app.models.PushSubscription and
-docs/decisions/941-web-push-foundation.md. Only the test-send endpoint
+Subscriptions are anonymous and public. Only the test-send endpoint
 requires admin auth; the rest are reachable by any visitor.
 """
 
@@ -109,9 +108,7 @@ async def send_test_push(
     test — an accepted, low-consequence gap for an admin-only testing tool,
     not a guest-facing write. See docs/retry-safety.md.
     """
-    # In-process limiter, not the Postgres-backed one: authenticated,
-    # low-volume, per docs/decisions/932-multi-worker-state.md decision 1's
-    # own narrower scope for admin actions (see app.ratelimit's module docstring).
+    # Per-actor local limit for admin tests; production uses one API worker.
     if not check_rate_limit(actor, scope="push-test-send", max_requests=10):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,

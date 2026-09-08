@@ -1,8 +1,6 @@
 /// <reference lib="webworker" />
-// Web Push handlers (#941), added into the site's one production service
-// worker per docs/decisions/941-web-push-foundation.md's additive-module
-// contract — this file owns only the `push`/`notificationclick` listeners,
-// nothing else in sw.ts.
+// Adds push and notificationclick listeners to the shared production worker.
+// Installation, activation and fetch handling remain in sw.ts.
 
 declare const self: ServiceWorkerGlobalScope;
 

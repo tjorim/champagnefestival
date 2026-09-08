@@ -2,7 +2,7 @@
 
 Actual delivery (announcement creation, push enqueueing, the state
 transition to ``sent``) is ``app.composer_delivery``'s job, run from the
-durable outbox — see that module and docs/decisions/942-central-composer.md.
+durable outbox.
 This module only owns the ``draft`` half: create, update, read, and the
 ``schedule`` call that hands off to delivery.
 """

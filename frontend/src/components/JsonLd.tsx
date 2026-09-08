@@ -4,8 +4,8 @@ import { getLocale } from "@/paraglide/runtime";
 import { getFestivalDateRange, useActiveEdition } from "@/hooks/useActiveEdition";
 import { baseUrl } from "@/config/site";
 
-/** Marks the JSON-LD <script> the backend renders into <head> for GET / (#992,
- * docs/decisions/992-live-public-render.md decision 3) — kept in sync with
+/** Marks the JSON-LD <script> the backend renders into <head> for GET /.
+ * Kept in sync with
  * backend/app/services/public_render.py's json_ld_script. */
 const SSR_JSON_LD_SELECTOR = 'script[data-ssr-jsonld="true"]';
 

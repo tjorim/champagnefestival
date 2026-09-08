@@ -153,16 +153,9 @@ def metrics_endpoint(
     ``X-Metrics-Token`` request header (see ``build_metrics_token``); tokens
     older than ``METRICS_TOKEN_MAX_AGE_SECONDS`` are rejected.
 
-    These figures are per-process (``InMemoryRequestMetrics`` is in-memory,
-    not aggregated across workers) — a known, documented limitation rather
-    than a correctness bug, deferred by
-    docs/decisions/932-multi-worker-state.md decision 3. That decision
-    assumed Sentry covered error tracking instead; ``SENTRY_DSN`` has never
-    actually been set in production (see decision 3's 2026-09-07
-    correction), so this is currently the only backend observability that
-    exists — treat it accordingly, not as a deliberately-accepted tradeoff
-    against a working alternative. Only accurate as a whole-deployment view
-    while the service runs single-worker, per DEPLOYMENT.md.
+    These figures are per-process (``InMemoryRequestMetrics`` is not aggregated
+    across API workers). A snapshot represents the whole API only when one
+    worker serves all requests; the response labels this with ``per_process``.
     """
     snapshot = metrics.snapshot()
     return {

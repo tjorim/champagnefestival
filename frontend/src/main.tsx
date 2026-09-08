@@ -746,8 +746,7 @@ async function enableMocking(): Promise<void> {
   }
 }
 
-// Registers the production service worker (src/sw.ts) purely for PWA
-// installability — see that file and docs/decisions/941-web-push-foundation.md.
+// Registers the production service worker (src/sw.ts), including push handlers.
 // Skipped outside production so it never fights the dev server or the
 // opt-in MSW mock worker above, which only ever runs in DEV.
 function registerServiceWorker(): void {

@@ -1,11 +1,10 @@
 """In-process TTL cache for the server-rendered `/` and `/privacy` fragments (#992).
 
-docs/decisions/992-live-public-render.md decision 2: a 60-second TTL is the
+A 60-second TTL is the
 correctness floor regardless of worker count. Proactive invalidation over a
 dedicated Postgres NOTIFY channel (kept separate from `app.live.notify`'s
 ``live_events`` — a render-cache invalidation is a different message shape
-than an SSE client's invalidate-these-query-keys event, see
-docs/decisions/932-multi-worker-state.md's cross-cutting note) clears entries
+than an SSE client's invalidate-these-query-keys event) expires entries
 early on FAQ/edition/event/policy mutations, but the TTL is never removed as
 a floor: a dropped NOTIFY degrades to at most 60s of staleness, never
 unbounded.

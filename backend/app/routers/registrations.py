@@ -141,7 +141,7 @@ async def create_registration(
         # records consent even on a returning visitor's record, but leaving it
         # unticked on a later registration must not silently revoke a consent
         # already given — that's a decision for an explicit unsubscribe, not
-        # an absent checkbox (docs/decisions/934-data-retention-and-erasure.md).
+        # an absent checkbox.
         if body.marketing_opt_in and not person.marketing_opt_in:
             person.marketing_opt_in = True
             person.marketing_opt_in_at = datetime.now(UTC)
