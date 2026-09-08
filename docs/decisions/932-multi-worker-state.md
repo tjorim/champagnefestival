@@ -26,10 +26,11 @@ persistent LISTEN connection per API worker relays events into its local SSE
 bus, including events originating in that worker. There is no second direct
 local publish, which would duplicate delivery. Reconnect uses backoff.
 
-#992 also uses PostgreSQL notifications, with a separate render-cache channel
-and listener for FAQ, edition/event, and policy publication changes. Its
-repository implementation is complete; infrastructure activation remains open.
-#941 uses the shared counter; #942 reuses the accepted local admin limiter.
+Issue `#992` also uses PostgreSQL notifications, with a separate render-cache
+channel and listener for FAQ, edition/event, and policy publication changes.
+Its repository implementation is complete; infrastructure activation remains
+open. Issue `#941` uses the shared counter; issue `#942` reuses the accepted
+local admin limiter.
 
 ## Decision 3 — metrics and deployment
 

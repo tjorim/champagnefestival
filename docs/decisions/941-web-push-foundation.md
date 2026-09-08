@@ -13,11 +13,12 @@ Feature modules add their own handlers. If a future feature needs caches,
 it owns independently versioned cache names and must not delete another
 feature's caches. The current worker does not cache pages or queue writes.
 
-#936 introduced the base worker; #941 added `push` and `notificationclick`
-handlers. #937 deliberately requires live connectivity for check-in; an
-offline replay queue is not planned. Native Android notifications are outside
-this public browser feature's scope. iOS users need the home-screen PWA for
-browser push; the UI handles unsupported browsers.
+Issue `#936` introduced the base worker; issue `#941` added `push` and
+`notificationclick` handlers. Issue `#937` deliberately requires live
+connectivity for check-in; an offline replay queue is not planned. Native
+Android notifications are outside this public browser feature's scope. iOS
+users need the home-screen PWA for browser push; the UI handles unsupported
+browsers.
 
 ## Subscription and consent contract
 
