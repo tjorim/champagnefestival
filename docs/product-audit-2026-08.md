@@ -95,7 +95,7 @@ Git history; current decisions live in the linked decisions.
 
 Archived findings and acceptance criteria explain past work; they do not
 limit future scope. Revise current requirements when needs change, following
-[revising decisions](README.md#revising-decisions).
+[using design guidance](README.md#using-design-guidance).
 
 The original audit reviewed `f392ab9` (`2026.8.2`). Its frontend checks were
 run; backend findings were initially static analysis because that environment

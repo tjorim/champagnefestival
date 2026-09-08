@@ -1,5 +1,8 @@
 # Central announcement and Web Push composer
 
+> Design guidance and implementation context from the time of writing, not
+> binding rules for future changes. See [using design guidance](../README.md#using-design-guidance).
+
 **Status:** Implemented in #1016 (2026-09-07); #942 closed.
 
 ## Confirmed decisions
@@ -64,10 +67,6 @@ error handling and accessibility. Shared delivery rules are in the
 [Web Push decision](941-web-push-foundation.md).
 
 ## Historical context
-
-This records a past decision, not a permanent design constraint. Revise or
-supersede it when requirements change; archived proposals are reference only.
-See [revising decisions](../README.md#revising-decisions).
 
 Consolidated 2026-09-08. Original proposals and implementation history remain
 in Git at `88396baf3275ae40cdd907239a0df6a04baed137`; they are not current requirements.

@@ -43,16 +43,16 @@ acceptance gates are satisfied.
   [shell rendering](../backend/app/services/public_render.py),
   [render cache](../backend/app/services/public_render_cache.py).
 
-## Revising decisions
+## Using design guidance
 
-Decision records describe the choices made for the requirements and evidence
-available at the time. They are not permanent constraints or vetoes on future
-designs. When requirements change, revise or supersede the current decision
-and update affected code, tests and operational guidance together. Record the
-reason briefly; there is no obligation to preserve the old implementation.
+Files under `decisions/` capture advice, guidelines and implementation context
+from the time they were written. The directory name does not make them binding
+architecture rules. Use what remains helpful, and change the approach freely
+when the task or evidence calls for it; no formal superseding decision or
+special approval is required merely because an old note recommends otherwise.
 
-Historical snapshots are reference material only. Their proposals, acceptance
-criteria and language such as “never” or “out of scope” do not create new
-requirements for future work. Existing runtime contracts still apply until
-changed deliberately, especially where callers, stored data or published
-user commitments depend on them.
+For current behavior, consult code and tests. For compatibility and operations,
+consult the API/data contracts, retry-safety inventory and deployment runbook.
+Those describe dependencies to account for when changing the implementation.
+Historical proposals and their “never”, “must” or “out of scope” wording are
+not standing instructions for future contributors.

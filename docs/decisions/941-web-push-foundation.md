@@ -1,5 +1,8 @@
 # Service-worker ownership and Web Push subscription foundation
 
+> Design guidance and implementation context from the time of writing, not
+> binding rules for future changes. See [using design guidance](../README.md#using-design-guidance).
+
 **Status:** Implemented in #1014 (2026-09-07); #941 closed.
 
 ## Decision: one service worker, additive per-feature modules
@@ -59,10 +62,6 @@ Tests: `backend/tests/test_push.py`, `usePushSubscription.test.ts`, and
 `PushOptIn.test.tsx` cover consent, delivery, limiting, cleanup and accessibility.
 
 ## Historical context
-
-This records a past decision, not a permanent design constraint. Revise or
-supersede it when requirements change; archived proposals are reference only.
-See [revising decisions](../README.md#revising-decisions).
 
 Consolidated 2026-09-08. Original proposals and implementation history remain
 in Git at `88396baf3275ae40cdd907239a0df6a04baed137`; they are not current requirements.
