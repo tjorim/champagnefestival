@@ -1,6 +1,6 @@
 """Marker replacement into the built frontend shell for `/` and `/privacy` (#992).
 
-docs/decisions/992-live-public-render.md decision 1: the shell (`index.html`
+The shell (`index.html`
 as built by Vite) stays owned by the frontend; this module only fills
 reserved slots (``<!--ssr:head-->``, ``<!--ssr:content-->``) and rewrites a
 handful of existing static meta tags (title, description, og:*, twitter:*,

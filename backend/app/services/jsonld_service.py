@@ -1,8 +1,7 @@
 """Server-side JSON-LD Event structured data for the active festival edition (#992).
 
-Mirrors ``frontend/src/components/JsonLd.tsx`` field-for-field — see
-docs/decisions/992-live-public-render.md decision 3's shared-fixture contract:
-``backend/tests/fixtures/jsonld_edition.json`` is exercised by both
+Mirrors ``frontend/src/components/JsonLd.tsx`` field-for-field. The shared
+``docs/fixtures/jsonld-edition.json`` fixture is exercised by both
 ``backend/tests/test_jsonld_service.py`` and a frontend contract test
 asserting ``EventStructuredData`` reproduces the same structure from the
 same input. Dates are computed in a fixed Europe/Brussels timezone rather

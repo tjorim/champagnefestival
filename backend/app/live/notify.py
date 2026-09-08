@@ -1,6 +1,6 @@
 """Transactional Postgres NOTIFY publication for LiveEvents.
 
-docs/decisions/932-multi-worker-state.md decision 2: publish inside the same
+Publish inside the same
 transaction as the mutation, on the same session, so publication is
 transactional — Postgres holds a NOTIFY sent inside a transaction until that
 transaction commits, and drops it entirely if the transaction rolls back.

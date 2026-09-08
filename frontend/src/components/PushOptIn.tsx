@@ -9,9 +9,7 @@ import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { sendTestPush } from "@/utils/pushApi";
 
 interface PushOptInProps {
-  /** Only meaningful for an already-authenticated admin — the endpoint
-   * itself enforces this regardless (#941 decision doc, decision 3's
-   * scope-limit pattern reused: no client-side check substitutes for it). */
+  /** Credentials for admin test-send; the backend enforces the admin role. */
   authHeaders?: () => Record<string, string>;
 }
 

@@ -218,7 +218,7 @@ async def anonymise_person(
     """Blank a person's identity fields, keeping their registrations intact.
 
     See ``app.services.people_service.anonymise_person``. Admin-triggered
-    only — not run on a schedule, per docs/decisions/934-data-retention-and-erasure.md.
+    only; no scheduled job invokes person anonymisation.
     """
     person = await people_service.get_person_or_404(db, person_id)
     return await people_service.anonymise_person(db, person, actor=actor, request_id=request_id)

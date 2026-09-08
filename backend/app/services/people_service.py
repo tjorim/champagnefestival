@@ -383,7 +383,7 @@ async def merge_people(
         if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
             setattr(canonical, field, getattr(duplicate, field))
 
-    # Marketing consent is one-way (docs/decisions/934-data-retention-and-erasure.md):
+    # Preserve existing marketing consent during a merge:
     # adopt the duplicate's opt-in if canonical hasn't already given it, so
     # deleting the duplicate below can never silently discard a consent
     # record. Canonical's own consent (and its timestamp) wins if already set.

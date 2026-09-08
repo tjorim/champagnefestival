@@ -1,8 +1,6 @@
 """GET / and GET /privacy — live backend rendering (#992).
 
-See docs/decisions/992-live-public-render.md. Both routes are pure reads;
-that document's "Retry-safety" section is the explicit decision that
-docs/retry-safety.md needs no new entry for them.
+Both routes are read-only and perform no persisted mutations.
 
 Reads nothing from the request except an optional ``?lng=`` locale — the
 same query parameter the SPA already uses, kept as part of the cache key on
@@ -43,7 +41,7 @@ router = APIRouter(tags=["public-pages"])
 
 class _ShellCache:
     """The built `index.html`, re-read under the same TTL as the render
-    cache and keyed on the file's mtime (decision doc's infra note: a
+    cache and keyed on the file's mtime (a
     frontend deploy replaces this file and its hashed asset names while the
     backend keeps running, so caching it at process start would serve
     `<script>` tags pointing at assets that no longer exist)."""
@@ -73,7 +71,7 @@ _shell_cache = _ShellCache()
 
 def _read_shell() -> str | None:
     """``None`` when the frontend build isn't mounted/present — callers
-    degrade to a 404 rather than crash, per decision doc's infra note."""
+    return a 404 rather than crash."""
     shell_path = Path(settings.frontend_dist_path) / "index.html"
     return _shell_cache.read(shell_path)
 

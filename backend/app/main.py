@@ -101,13 +101,12 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         logger.error(f"❌ Database initialisation failed: {exc}")
         raise
 
-    # Cross-worker live-update fan-out (docs/decisions/932-multi-worker-state.md
-    # decision 2). Failures are logged and swallowed inside start() — a failed
+    # Cross-worker live-update fan-out. start() logs connection failures; a failed
     # LISTEN connection degrades to no live-update delivery, not a startup crash.
     await pg_live_listener.start(settings.database_url)
 
     # Proactive render-cache invalidation for GET / and GET /privacy
-    # (docs/decisions/992-live-public-render.md decision 2) — a separate
+    # uses a separate
     # channel/connection from the live bus above, not a second consumer of it.
     await pg_render_cache_listener.start(settings.database_url)
 

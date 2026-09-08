@@ -43,8 +43,7 @@ interface UsePushSubscriptionResult {
 
 /** Manages the browser-side half of a Web Push subscription (#941): permission,
  * PushManager subscribe/unsubscribe, and syncing with the backend. Callers
- * render their own consent copy and opt-in UI around this — see
- * docs/decisions/941-web-push-foundation.md. */
+ * render their own consent copy and require explicit opt-in before subscribing. */
 export function usePushSubscription(): UsePushSubscriptionResult {
   const [state, setState] = useState<PushSupportState>("checking");
   const [isSubscribed, setIsSubscribed] = useState(false);

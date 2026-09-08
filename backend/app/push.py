@@ -1,10 +1,10 @@
 """Web Push delivery (#941): VAPID-signed payloads via pywebpush.
 
-Test-send is the only sender in this phase — no general broadcast composer
-(#942 owns that). Delivery goes through the same durable outbox #947 built
-for email (see app.services.outbox_service), not a parallel pipeline: one
-job per subscription, at-least-once delivery, retry/backoff, and an audit
-trail come for free — see docs/decisions/941-web-push-foundation.md.
+This module owns admin test-send and the shared delivery primitives reused
+by app.composer_delivery for composed broadcasts (#942). Both use the durable
+outbox built for email (#947): one job per subscription, at-least-once
+delivery, retry/backoff, and an audit trail. See
+docs/decisions/941-web-push-foundation.md.
 """
 
 from __future__ import annotations
@@ -97,9 +97,9 @@ def _resolves_to_public_address(hostname: str) -> bool:
 
 
 def _build_test_payload() -> str:
-    # Fixed content, not admin-supplied text — #941 ships no composer, so
-    # there is no free-text input to validate beyond this static message.
-    # notificationclick below navigates to a fixed path, not a URL carried
+    # Admin test-send uses fixed content; composer payload validation lives
+    # in app.composer_content. The service worker notificationclick handler
+    # navigates to a fixed path, not a URL carried
     # in this payload, so there is no admin-controlled target URL either.
     payload = json.dumps({"title": "Champagnefestival", "body": "Test notification delivered successfully."})
     if len(payload.encode("utf-8")) > _MAX_PAYLOAD_BYTES:

@@ -185,7 +185,7 @@ multi-worker deployment makes no difference to it.
 
 ## What email delivery status does and doesn't block
 
-Per #953 and `docs/product-audit-2026-08.md`'s existing Phase 6 note, the
+Per #953 and `docs/product-audit-2026-08.md`'s active acceptance gates, the
 **navigation entry** (making "My orders" publicly discoverable) stays gated
 behind verified end-to-end production email delivery — advertising a
 sign-in flow that can't actually deliver its login link would be worse than

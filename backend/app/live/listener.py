@@ -1,9 +1,8 @@
 """Postgres LISTEN/NOTIFY fan-out into the local in-process LiveBus.
 
-docs/decisions/932-multi-worker-state.md decision 2. Mirrors tjorim/worktime's
-``backend/app/utils/sse_manager.py`` LISTEN half: a dedicated asyncpg
-connection (bypassing the SQLAlchemy pool — a long-lived LISTEN connection
-doesn't belong in a request-scoped pool) relays every notification on
+A dedicated asyncpg connection bypasses the SQLAlchemy pool because a
+long-lived LISTEN connection must outlive request-scoped sessions. It relays
+every notification on
 ``live_events`` into this worker's local ``LiveBus``, including notifications
 this same worker produced. There is no separate "publish immediately, then
 also relay" path — every event reaches ``LiveBus.publish`` exactly once, via
