@@ -46,18 +46,13 @@ export function useAdminDashboardData({
   }, [activeEdition.events, activeEdition.id, registrations, todayKey]);
 
   const layoutDayOptions = useMemo(() => {
-    const uniqueDates = [...new Set(activeEdition.events.map((event) => event.date))]
-      .filter(Boolean)
-      .sort((a, b) => a.localeCompare(b));
-
-    return uniqueDates.map((date) => ({
-      date,
-      label: new Date(`${date}T00:00:00`).toLocaleDateString(undefined, {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      }),
-    }));
+    return [...activeEdition.events]
+      .sort((a, b) => `${a.date} ${a.startTime}`.localeCompare(`${b.date} ${b.startTime}`))
+      .map((event) => ({
+        eventId: event.id,
+        date: event.date,
+        label: `${event.title} — ${event.date} ${event.startTime}`,
+      }));
   }, [activeEdition.events]);
 
   const registrationCountByPersonId = useMemo(() => {

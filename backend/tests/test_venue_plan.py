@@ -59,7 +59,7 @@ async def _setup_edition_with_layout(client) -> tuple[str, str, str]:
     r = await client.post("/api/events", json=event_payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201
 
-    layout_payload = {"room_id": room_id, "edition_id": "vp-2026", "day_id": 1}
+    layout_payload = {"room_id": room_id, "event_id": r.json()["id"]}
     r = await client.post("/api/layouts", json=layout_payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     layout_id = r.json()["id"]
@@ -76,7 +76,7 @@ async def test_venue_plan_admin_can_access(client):
     assert data["edition_id"] == edition_id
     assert len(data["layouts"]) == 1
     layout = data["layouts"][0]
-    assert layout["day_id"] == 1
+    assert layout["event_id"]
     assert layout["room"] is not None
     assert layout["tables"] == []
     assert layout["areas"] == []
@@ -137,7 +137,9 @@ async def test_venue_plan_returns_non_cancelled_guest_occupancy(client):
     registration = await _post_registration(client, event=event, guest_count=3)
     registration_id = registration.json()["id"]
     assigned = await client.put(
-        f"/api/registrations/{registration_id}", json={"table_id": table.json()["id"]}, headers=ADMIN_HEADERS
+        f"/api/registrations/{registration_id}",
+        json={"allocations": [{"table_id": table.json()["id"], "guest_count": 3}]},
+        headers=ADMIN_HEADERS,
     )
     assert assigned.status_code == 200
 

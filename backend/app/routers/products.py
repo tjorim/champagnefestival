@@ -135,10 +135,11 @@ async def update_product(
 @router.post("/{product_id}/preview")
 async def preview_product(product_id: str, body: ProductUpdate, db: AsyncSession = Depends(get_db)) -> dict:
     # Same calculation and fingerprint as saving, but no persisted mutation.
-    with db.no_autoflush:
-        result = await change_product(db, product_id, body, preview=True, actor="", request_id=None)
-    await db.rollback()
-    return result
+    try:
+        with db.no_autoflush:
+            return await change_product(db, product_id, body, preview=True, actor="", request_id=None)
+    finally:
+        await db.rollback()
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)

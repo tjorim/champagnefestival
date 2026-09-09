@@ -24,7 +24,6 @@ interface UseVenueMutationsOptions {
 export function useVenueMutations({
   queryClient,
   authHeaders,
-  activeEditionId,
   tablesQueryKey,
   venuesQueryKey,
   roomsQueryKey,
@@ -370,16 +369,15 @@ export function useVenueMutations({
   });
 
   const createLayoutMutation = useMutation({
-    mutationFn: ({ roomId, date, label }: { roomId: string; date: string; label?: string }) =>
+    mutationFn: ({ roomId, eventId, label }: { roomId: string; eventId: string; label?: string }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         "/api/layouts",
         {
           method: "POST",
           headers: authHeaders(),
           body: JSON.stringify({
-            edition_id: activeEditionId,
             room_id: roomId,
-            date,
+            event_id: eventId,
             ...(label?.trim() ? { label: label.trim() } : {}),
           }),
         },

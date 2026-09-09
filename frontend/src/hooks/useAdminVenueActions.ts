@@ -260,7 +260,7 @@ export function useAdminVenueActions({
   const handleAddLayout = useCallback(
     async (
       roomId: string,
-      date: string,
+      eventId: string,
       label?: string,
       copyFromLayoutId?: string | null,
       copyOptions?: { tables: boolean; areas: boolean },
@@ -274,9 +274,8 @@ export function useAdminVenueActions({
             method: "POST",
             headers: authHeaders(),
             body: JSON.stringify({
-              edition_id: activeEditionId,
               room_id: roomId,
-              date,
+              event_id: eventId,
               ...(label?.trim() ? { label: label.trim() } : {}),
               copy_tables: shouldCopyTables,
               copy_areas: shouldCopyAreas,
@@ -292,13 +291,12 @@ export function useAdminVenueActions({
         return;
       }
 
-      const d = await createLayoutMutation.mutateAsync({ roomId, date, label });
+      const d = await createLayoutMutation.mutateAsync({ roomId, eventId, label });
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
         prev ? [...prev, apiLayoutToLayout(d)] : [apiLayoutToLayout(d)],
       );
     },
     [
-      activeEditionId,
       areasQueryKey,
       authHeaders,
       createLayoutMutation,

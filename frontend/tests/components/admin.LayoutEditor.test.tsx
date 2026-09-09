@@ -53,6 +53,7 @@ function makeTableType(overrides: Partial<TableType> = {}): TableType {
 function makeLayout(overrides: Partial<Layout> = {}): Layout {
   return {
     id: "layout-1",
+    eventId: "event-1",
     editionId: "edition-1",
     roomId: "room-1",
     date: "2026-08-01",
@@ -121,7 +122,7 @@ function makeRegistration(overrides: Partial<Registration> = {}): Registration {
 }
 
 interface RenderOverrides {
-  dayOptions?: { date: string; label: string }[];
+  dayOptions?: { eventId: string; date: string; label: string }[];
   tables?: FloorTable[];
   tableTypes?: TableType[];
   layouts?: Layout[];
@@ -182,8 +183,8 @@ function realisticFixture(): Required<
 > {
   return {
     dayOptions: [
-      { date: "2026-08-01", label: "Saturday" },
-      { date: "2026-08-02", label: "Sunday" },
+      { eventId: "event-1", date: "2026-08-01", label: "Saturday" },
+      { eventId: "event-2", date: "2026-08-02", label: "Sunday" },
     ],
     tables: [makeTable(), makeTable({ id: "table-2", name: "Table B", capacity: 6, x: 40, y: 40 })],
     tableTypes: [makeTableType()],

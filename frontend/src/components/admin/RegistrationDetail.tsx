@@ -8,12 +8,13 @@ import Modal from "react-bootstrap/Modal";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
-import type { OrderItem, Registration } from "@/types/registration";
+import type { OrderItem, Registration, TableAllocation } from "@/types/registration";
 import {
   buildRegistrationEmailDraft,
   type EmailDraft,
   type RegistrationEmailTemplate,
 } from "@/utils/emailComposer";
+import AllocationEditor from "./AllocationEditor";
 import EmailComposeModal from "./EmailComposeModal";
 
 interface RegistrationDetailProps {
@@ -27,7 +28,7 @@ interface RegistrationDetailProps {
   onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
-  onAssignTable: (registrationId: string, tableId: string | undefined) => void;
+  onSaveAllocations?: (registrationId: string, allocations: TableAllocation[]) => Promise<void>;
   onUpdateGuestCount?: (registrationId: string, guestCount: number) => Promise<void>;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
   actionError?: string;
@@ -48,8 +49,8 @@ export default function RegistrationDetail({
   onToggleDelivered,
   onCheckIn,
   onIssueStrap,
-  onAssignTable,
   onUpdateGuestCount,
+  onSaveAllocations,
   onMergeDuplicate,
   actionError,
   onClearActionError,
@@ -288,27 +289,14 @@ export default function RegistrationDetail({
               }}
             />
           </ListGroup.Item>
-          {!simpleRsvp && (
+          {onSaveAllocations && (
             <ListGroup.Item className="bg-dark text-light border-secondary">
-              <Form.Group controlId={`registration-detail-table-${registration.id}`}>
-                <Form.Label className="text-secondary">{m.admin_action_assign_table()}</Form.Label>
-                <Form.Select
-                  size="sm"
-                  className="bg-dark text-light border-secondary"
-                  value={registration.tableId ?? ""}
-                  onChange={(event) =>
-                    onAssignTable(registration.id, event.target.value || undefined)
-                  }
-                  aria-label={m.admin_action_assign_table()}
-                >
-                  <option value="">{m.admin_unassigned()}</option>
-                  {sortedTables.map((table) => (
-                    <option key={table.id} value={table.id}>
-                      {table.name} ({table.capacity})
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
+              <AllocationEditor
+                key={`${registration.id}:${registration.updatedAt}`}
+                registration={registration}
+                tables={sortedTables}
+                onSave={onSaveAllocations}
+              />
             </ListGroup.Item>
           )}
           {registration.notes && (

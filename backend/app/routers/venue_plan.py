@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,7 +9,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import require_volunteer
 from app.database import get_db
-from app.models import Edition, Layout, Registration
+from app.models import Edition, Layout, Registration, RegistrationAllocation
 from app.schemas import VenuePlanAreaOut, VenuePlanLayoutOut, VenuePlanOut, VenuePlanRoomOut, VenuePlanTableOut
 
 router = APIRouter(
@@ -37,8 +35,6 @@ async def get_venue_plan(
     if edition is None:
         raise HTTPException(status_code=404, detail="Edition not found.")
 
-    unique_dates: list[date] = sorted({event.date for event in edition.events})
-
     # Load all layouts for the edition together with rooms, tables, and areas.
     layouts_result = await db.execute(
         select(Layout)
@@ -48,7 +44,7 @@ async def get_venue_plan(
             selectinload(Layout.areas),
         )
         .where(Layout.edition_id == edition_id)
-        .order_by(Layout.day_id)
+        .order_by(Layout.event_id, Layout.room_id)
     )
     layouts = list(layouts_result.scalars().all())
 
@@ -57,22 +53,28 @@ async def get_venue_plan(
 
     table_ids = [table.id for layout in layouts for table in layout.tables]
     table_registration_ids: dict[str, list[str]] = {}
+    exclusive_tables: set[str] = set()
     occupied_seats: dict[str, int] = {}
     if table_ids:
         registrations = await db.execute(
-            select(Registration.id, Registration.table_id, Registration.guest_count).where(
-                Registration.table_id.in_(table_ids), Registration.status != "cancelled"
+            select(
+                Registration.id,
+                RegistrationAllocation.table_id,
+                RegistrationAllocation.guest_count,
+                RegistrationAllocation.exclusive,
             )
+            .join(RegistrationAllocation, RegistrationAllocation.registration_id == Registration.id)
+            .where(RegistrationAllocation.table_id.in_(table_ids), Registration.status != "cancelled")
         )
-        for registration_id, table_id, guest_count in registrations.all():
+        for registration_id, table_id, guest_count, exclusive in registrations.all():
+            if exclusive:
+                exclusive_tables.add(table_id)
             table_registration_ids.setdefault(table_id, []).append(registration_id)
             occupied_seats[table_id] = occupied_seats.get(table_id, 0) + guest_count
 
     payload_layouts = []
     for lay in layouts:
-        layout_date: date | None = None
-        if 1 <= lay.day_id <= len(unique_dates):
-            layout_date = unique_dates[lay.day_id - 1]
+        layout_date = lay.event.date
 
         room = lay.room
         room_payload = (
@@ -98,6 +100,7 @@ async def get_venue_plan(
                 table_type_id=t.table_type_id,
                 registration_ids=table_registration_ids.get(t.id, []),
                 occupied_seats=occupied_seats.get(t.id, 0),
+                exclusive=t.id in exclusive_tables,
             )
             for t in lay.tables
         ]
@@ -120,7 +123,8 @@ async def get_venue_plan(
         payload_layouts.append(
             VenuePlanLayoutOut(
                 id=lay.id,
-                day_id=lay.day_id,
+                event_id=lay.event_id,
+                event_title=lay.event.title,
                 date=layout_date,
                 label=lay.label,
                 room=room_payload,

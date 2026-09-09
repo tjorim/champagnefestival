@@ -1,3 +1,9 @@
+export interface TableAllocation {
+  tableId: string;
+  guestCount: number;
+  exclusive: boolean;
+}
+
 /**
  * Types for the VIP registration and ordering system.
  */
@@ -37,6 +43,8 @@ export interface PersonSummary {
 }
 
 export interface Registration {
+  allocations?: TableAllocation[];
+  bookedTableQuantity?: number;
   id: string;
   personId: string;
   person: PersonSummary;
@@ -45,7 +53,7 @@ export interface Registration {
   guestCount: number;
   orderItems: OrderItem[];
   notes: string;
-  /** Optional accessibility requirements (wheelchair, crutches, low table needed, etc.) */
+  /** First allocated table for compact displays; allocations hold the complete seating. */
   tableId?: string;
   status: RegistrationStatus;
   paymentStatus: PaymentStatus;

@@ -122,6 +122,15 @@ async def change_product(
         for item in items:
             item["delivered_quantity"] = min(delivered.get(item["product_id"], 0), item["quantity"])
             item["delivered"] = item["delivered_quantity"] == item["quantity"]
+        allocated = registration.allocations
+        table_quantity = sum(
+            item["quantity"] for item in items if snapshot.get(item["product_id"], {}).get("unit") == "table"
+        )
+        if allocated and (
+            (table_quantity and (len(allocated) > table_quantity or any(not a.exclusive for a in allocated)))
+            or (not table_quantity and any(a.exclusive for a in allocated))
+        ):
+            raise HTTPException(409, "Adjust this booking's table allocations before applying the package change.")
         total = inventory.order_total(items)
         changed_rows.append(
             {

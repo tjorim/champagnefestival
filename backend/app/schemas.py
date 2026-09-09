@@ -381,13 +381,19 @@ class RegistrationCreate(RegistrationNotesRequest):
         return v.strip() if isinstance(v, str) else v
 
 
+class TableAllocation(RequestModel):
+    table_id: str = Field(min_length=1, max_length=64)
+    guest_count: int = Field(ge=0, le=20)
+    exclusive: bool = False
+
+
 class RegistrationUpdate(RegistrationNotesRequest):
+    allocations: list[TableAllocation] | None = Field(default=None, max_length=1000)
     guest_count: int | None = Field(default=None, ge=1, le=20)
     status: RegistrationStatus | None = None
     payment_status: PaymentStatus | None = None
     amount_paid: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
-    table_id: str | None = None
     confirm_over_capacity: bool = False
     order_items: list[OrderItemRequest] | None = Field(default=None, max_length=50)
     notes: str | None = Field(default=None, max_length=4000)
@@ -397,6 +403,8 @@ class RegistrationUpdate(RegistrationNotesRequest):
 
 
 class RegistrationOut(BaseModel):
+    booked_table_quantity: int = 0
+    allocations: list[TableAllocation] = Field(default_factory=list)
     id: str
     person_id: str
     person: PersonSummaryOut
@@ -428,6 +436,8 @@ class RegistrationOutWithToken(RegistrationOut):
 
 
 class RegistrationListOut(BaseModel):
+    booked_table_quantity: int = 0
+    allocations: list[TableAllocation] = Field(default_factory=list)
     """Registration item returned in the list endpoint.
     check_in_token is intentionally excluded here."""
 
@@ -775,17 +785,9 @@ class ExhibitorOut(BaseModel):
 
 
 class LayoutCreate(RequestModel):
-    edition_id: str | None = Field(default=None, max_length=100)
-    room_id: str = Field(max_length=64)
-    day_id: int | None = Field(default=None, ge=1)
-    date: dt_date | None = None
+    event_id: str = Field(min_length=1, max_length=64)
+    room_id: str = Field(min_length=1, max_length=64)
     label: str = Field(default="", max_length=200)
-
-    @model_validator(mode="after")
-    def validate_day_reference(self) -> Self:
-        if self.day_id is None and self.date is None:
-            raise ValueError("Either day_id or date is required.")
-        return self
 
 
 class LayoutCopyCreate(LayoutCreate):
@@ -794,10 +796,10 @@ class LayoutCopyCreate(LayoutCreate):
 
 
 class LayoutOut(BaseModel):
+    event_id: str
     id: str
     edition_id: str | None
     room_id: str
-    day_id: int
     date: dt_date | None
     label: str
     created_at: datetime
@@ -810,7 +812,7 @@ class LayoutBulkCreate(RequestModel):
     """Create several layouts in one atomic transaction (#837).
 
     All items are validated and, within the batch, checked against each other
-    for the same room+day+edition duplication ``create_layout`` already
+    for the same room+event duplication ``create_layout`` already
     rejects — a failure partway through leaves no layout created. Pass
     ``idempotency_key`` to safely retry after a timeout or partial failure
     without risking duplicates.
@@ -935,6 +937,7 @@ class TableUpdate(RequestModel):
 
 
 class TableOut(BaseModel):
+    event_id: str
     id: str
     name: str
     capacity: int
@@ -1033,6 +1036,7 @@ class VenuePlanRoomOut(BaseModel):
 
 
 class VenuePlanTableOut(BaseModel):
+    exclusive: bool = False
     id: str
     name: str
     capacity: int
@@ -1057,8 +1061,9 @@ class VenuePlanAreaOut(BaseModel):
 
 
 class VenuePlanLayoutOut(BaseModel):
+    event_title: str
     id: str
-    day_id: int
+    event_id: str
     date: dt_date | None
     label: str
     room: VenuePlanRoomOut | None

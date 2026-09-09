@@ -7,7 +7,7 @@ import pytest
 from app.live import live_bus
 from app.mcp.admin import tables as mcp_tables
 from app.models import Layout, Room, TableType, Venue
-from tests.helpers import mcp_session_factory
+from tests.helpers import mcp_session_factory, seed_layout_event
 
 
 async def _seed_layout(db_session, *, layout_id: str = "lay-1") -> None:
@@ -17,7 +17,7 @@ async def _seed_layout(db_session, *, layout_id: str = "lay-1") -> None:
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
     db_session.add(room)
     await db_session.flush()
-    layout = Layout(id=layout_id, edition_id=None, room_id="room-1", day_id=1)
+    layout = Layout(id=layout_id, room_id="room-1", event_id=await seed_layout_event(db_session, "room-1", 1))
     db_session.add(layout)
     await db_session.commit()
 
@@ -54,7 +54,7 @@ async def test_create_get_list_table(db_session):
 async def test_list_tables_filters_by_layout_id(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session, layout_id="lay-1")
-    db_session.add(Layout(id="lay-2", edition_id=None, room_id="room-1", day_id=2))
+    db_session.add(Layout(id="lay-2", room_id="room-1", event_id=await seed_layout_event(db_session, "room-1", 2)))
     await db_session.commit()
     await _seed_table_type(db_session)
 

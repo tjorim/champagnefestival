@@ -101,7 +101,23 @@ calculations. Existing paid bookings with a recorded total migrate that total to
 amount paid. New API payment edits are audited; the complete payment/quantity
 editor remains follow-up work.
 
-Event-owned plans, shared/split/exclusive table allocations and choosing tables
-to release are not implemented by this increment. Product units describe what is
-purchased; they do not yet change the existing physical table assignment model.
-No GitHub issue is closed by this partial implementation.
+The second increment adds event-owned plans, unique per room and event, with
+edition/date derived from the event. An event can use several rooms, and copying
+a plan copies geometry without bookings. The old day/edition layout fields and
+single-table assignment write are removed. Migration 001 requires test plans to
+be recreated instead of guessing their event ownership.
+
+Bookings now have explicit allocations with guest counts and exclusive flags.
+Shared bookings can split across tables; whole-table products use exclusive
+allocations, including partial assignment without changing reserved stock.
+Cancellation releases allocations. REST and MCP save the complete allocation
+list atomically, including alongside quantity edits; the admin detail editor
+supports allocation editing. Capacity uses allocated guests, with an explicit
+admin override; exclusivity cannot be overridden. Package changes that would
+invalidate existing allocations require releasing those allocations first.
+
+The full booking/payment/quantity editor, including choosing which tables to
+release during a quantity reduction, remains the third increment. Capsule-exchange
+companion rules remain undecided. No GitHub issue is closed by this partial work.
+These implementation notes describe current behaviour and can change with the
+product; they are not additional constraints on future design.

@@ -653,7 +653,11 @@ export default function RegistrationList({
           cell: ({ row }) => {
             const reg = row.original;
             const isStandalone = isStandaloneRegistration(reg);
-            return isStandalone ? (
+            return (reg.allocations?.length ?? 0) > 1 ? (
+              <span>
+                {reg.allocations?.length} {m.admin_tables_tab()}
+              </span>
+            ) : isStandalone && !(reg.bookedTableQuantity ?? 0) ? (
               <span className="text-secondary small">—</span>
             ) : (
               <Form.Select
@@ -664,11 +668,13 @@ export default function RegistrationList({
                 aria-label={m.admin_action_assign_table()}
               >
                 <option value="">{m.admin_unassigned()}</option>
-                {tables.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.capacity})
-                  </option>
-                ))}
+                {tables
+                  .filter((t) => t.eventId === reg.eventId)
+                  .map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} ({t.capacity})
+                    </option>
+                  ))}
               </Form.Select>
             );
           },

@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from app.mcp.admin import layouts as mcp_layouts
 from app.models import Area, Exhibitor, Room, Table, TableType, Venue
-from tests.helpers import mcp_session_factory
+from tests.helpers import mcp_session_factory, seed_layout_event
 
 
 async def _seed_room(db_session, *, room_id: str = "room-1") -> None:
@@ -23,9 +23,11 @@ async def test_create_get_list_layout(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
 
-    created = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    created = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
     assert created["room_id"] == "room-1"
-    assert created["day_id"] == 1
+    assert created["event_id"] == await seed_layout_event(db_session)
     layout_id = created["id"]
 
     fetched = await mcp_layouts.get_layout(factory, layout_id)
@@ -41,8 +43,10 @@ async def test_list_layouts_filters_by_room_id(db_session):
     db_session.add(Room(id="room-2", venue_id="venue-1", name="Second Room", width_m=25.0, length_m=18.0))
     await db_session.commit()
 
-    created_a = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
-    await mcp_layouts.create_layout(factory, "admin-1", room_id="room-2", day_id=1)
+    created_a = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
+    await mcp_layouts.create_layout(factory, "admin-1", room_id="room-2", event_id=await seed_layout_event(db_session))
 
     listed = await mcp_layouts.list_layouts(factory, room_id="room-1")
     assert [lay["id"] for lay in listed["layouts"]] == [created_a["id"]]
@@ -51,7 +55,9 @@ async def test_list_layouts_filters_by_room_id(db_session):
 async def test_get_layout_include_tables(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
-    created = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    created = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
 
     db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
@@ -72,23 +78,27 @@ async def test_create_layout_rejects_invalid_input(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
 
-    with pytest.raises(ValueError, match="day_id"):
-        await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=0)  # ge=1
+    with pytest.raises(ValueError, match="event_id"):
+        await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", event_id="")  # ge=1
 
 
 async def test_create_layout_rejects_unknown_room(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_layouts.create_layout(factory, "admin-1", room_id="nonexistent", day_id=1)
+        await mcp_layouts.create_layout(
+            factory, "admin-1", room_id="nonexistent", event_id=await seed_layout_event(db_session)
+        )
 
 
 async def test_create_layout_rejects_duplicate_room_day(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
 
-    await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session))
     with pytest.raises(ValueError, match="already exists"):
-        await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+        await mcp_layouts.create_layout(
+            factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+        )
 
 
 async def test_get_layout_not_found(db_session):
@@ -100,7 +110,9 @@ async def test_get_layout_not_found(db_session):
 async def test_delete_layout(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
-    created = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    created = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
 
     result = await mcp_layouts.delete_layout(factory, "admin-1", created["id"])
     assert result == {"deleted": True, "id": created["id"]}
@@ -118,7 +130,9 @@ async def test_delete_layout_not_found(db_session):
 async def test_delete_layout_blocked_while_table_in_use(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
-    created = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    created = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
 
     db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
@@ -133,26 +147,42 @@ async def test_copy_layout_not_found_source(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_layouts.copy_layout(factory, "admin-1", "nonexistent", room_id="room-1", day_id=1)
+        await mcp_layouts.copy_layout(
+            factory, "admin-1", "nonexistent", room_id="room-1", event_id=await seed_layout_event(db_session)
+        )
 
 
 async def test_copy_layout_rejects_unknown_target_room(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
-    source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    source = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
 
     with pytest.raises(ValueError, match="not found"):
-        await mcp_layouts.copy_layout(factory, "admin-1", source["id"], room_id="nonexistent", day_id=2)
+        await mcp_layouts.copy_layout(
+            factory,
+            "admin-1",
+            source["id"],
+            room_id="nonexistent",
+            event_id=await seed_layout_event(db_session, number=2),
+        )
 
 
 async def test_copy_layout_rejects_duplicate_room_day(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
-    source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
-    await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=2)
+    source = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
+    await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session, number=2)
+    )
 
     with pytest.raises(ValueError, match="already exists"):
-        await mcp_layouts.copy_layout(factory, "admin-1", source["id"], room_id="room-1", day_id=2)
+        await mcp_layouts.copy_layout(
+            factory, "admin-1", source["id"], room_id="room-1", event_id=await seed_layout_event(db_session, number=2)
+        )
 
 
 async def test_copy_layout_clones_tables_and_areas_with_new_ids(db_session):
@@ -161,7 +191,9 @@ async def test_copy_layout_clones_tables_and_areas_with_new_ids(db_session):
     (matching _table_in_any_area's inside/outside classification)."""
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
-    source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    source = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
 
     db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
@@ -192,7 +224,7 @@ async def test_copy_layout_clones_tables_and_areas_with_new_ids(db_session):
         "admin-1",
         source["id"],
         room_id="room-1",
-        day_id=2,
+        event_id=await seed_layout_event(db_session, number=2),
         copy_tables=True,
         copy_areas=True,
     )
@@ -218,7 +250,9 @@ async def test_copy_layout_rejects_area_with_inactive_exhibitor(db_session):
     would reject."""
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
-    source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    source = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
 
     exhibitor = Exhibitor(name="Bollinger", type="producer", active=False)
     db_session.add(exhibitor)
@@ -228,14 +262,22 @@ async def test_copy_layout_rejects_area_with_inactive_exhibitor(db_session):
 
     with pytest.raises(ValueError, match="inactive"):
         await mcp_layouts.copy_layout(
-            factory, "admin-1", source["id"], room_id="room-1", day_id=2, copy_tables=False, copy_areas=True
+            factory,
+            "admin-1",
+            source["id"],
+            room_id="room-1",
+            event_id=await seed_layout_event(db_session, number=2),
+            copy_tables=False,
+            copy_areas=True,
         )
 
 
 async def test_copy_layout_copy_tables_false_skips_outside_tables(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
-    source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    source = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
 
     db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
@@ -256,7 +298,7 @@ async def test_copy_layout_copy_tables_false_skips_outside_tables(db_session):
         "admin-1",
         source["id"],
         room_id="room-1",
-        day_id=2,
+        event_id=await seed_layout_event(db_session, number=2),
         copy_tables=False,
         copy_areas=False,
     )
@@ -271,7 +313,9 @@ async def test_copy_layout_copy_areas_true_without_tables(db_session):
     any table can be copied while a table outside any area is skipped."""
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
-    source = await mcp_layouts.create_layout(factory, "admin-1", room_id="room-1", day_id=1)
+    source = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
 
     db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
     await db_session.flush()
@@ -293,7 +337,7 @@ async def test_copy_layout_copy_areas_true_without_tables(db_session):
         "admin-1",
         source["id"],
         room_id="room-1",
-        day_id=2,
+        event_id=await seed_layout_event(db_session, number=2),
         copy_tables=False,
         copy_areas=True,
     )

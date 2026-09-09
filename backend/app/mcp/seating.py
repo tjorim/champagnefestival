@@ -14,6 +14,7 @@ from app.mcp.utils import (
     registration_base_dict,
 )
 from app.models import Layout, Person, Registration, Table
+from app.services.allocations_service import allocated_registration_filter
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
     best_person_match,
@@ -142,7 +143,7 @@ async def get_table_seating(
             return {"tables": []}
 
         table_ids = [t.id for t in tables]
-        regs_result = await db.execute(select(Registration).where(Registration.table_id.in_(table_ids)))
+        regs_result = await db.execute(select(Registration).where(allocated_registration_filter(table_ids)))
         regs: list[Registration] = list(regs_result.scalars().all())
 
         person_ids = list({reg.person_id for reg in regs})
@@ -153,8 +154,8 @@ async def get_table_seating(
 
         table_reg_map: dict[str, list[Registration]] = {}
         for reg in regs:
-            if reg.table_id:
-                table_reg_map.setdefault(reg.table_id, []).append(reg)
+            for allocation in reg.allocations:
+                table_reg_map.setdefault(allocation.table_id, []).append(reg)
 
         result_tables = []
         for table in tables:
@@ -166,14 +167,16 @@ async def get_table_seating(
                 person = persons.get(reg.person_id)
                 if person is None:
                     continue
-                guest_count += reg.guest_count
+                assigned_guests = next(a.guest_count for a in reg.allocations if a.table_id == table.id)
+                if reg.status != "cancelled":
+                    guest_count += assigned_guests
                 if reg.checked_in:
                     checked_in_count += 1
                 guests.append(
                     {
                         "registration_id": reg.id,
                         "name": person.name,
-                        "guest_count": reg.guest_count,
+                        "guest_count": assigned_guests,
                         "checked_in": reg.checked_in,
                         "checked_in_at": reg.checked_in_at.isoformat() if reg.checked_in_at else None,
                         "strap_issued": reg.strap_issued,

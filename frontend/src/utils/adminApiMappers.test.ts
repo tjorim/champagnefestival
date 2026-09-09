@@ -290,6 +290,7 @@ describe("apiLayoutToLayout", () => {
 
   const full = {
     id: "ly2",
+    event_id: "event-2",
     edition_id: "ed1",
     room_id: "r2",
     date: "2025-06-01",
@@ -300,6 +301,7 @@ describe("apiLayoutToLayout", () => {
   it("maps all fields from a fully populated response", () => {
     expect(apiLayoutToLayout(full)).toEqual<Layout>({
       id: "ly2",
+      eventId: "event-2",
       editionId: "ed1",
       roomId: "r2",
       date: "2025-06-01",

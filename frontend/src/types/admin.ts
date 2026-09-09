@@ -19,6 +19,7 @@ export interface TableType {
 }
 
 export interface FloorTable {
+  eventId?: string;
   id: string;
   name: string;
   capacity: number;
@@ -51,6 +52,7 @@ export interface FloorArea {
 
 export interface Layout {
   id: string;
+  eventId: string;
   editionId: string | null;
   /** Room this layout applies to */
   roomId: string;

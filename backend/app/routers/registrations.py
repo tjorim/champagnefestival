@@ -48,6 +48,7 @@ from app.schemas import (
     RegistrationUpdate,
 )
 from app.services import events_service, registrations_service
+from app.services.allocations_service import allocated_registration_filter
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.services.people_service import parse_phone
@@ -251,7 +252,7 @@ async def list_registrations(
     if event_id:
         filtered_stmt = filtered_stmt.where(Registration.event_id == event_id)
     if table_id:
-        filtered_stmt = filtered_stmt.where(Registration.table_id == table_id)
+        filtered_stmt = filtered_stmt.where(allocated_registration_filter([table_id]))
     if person_id:
         filtered_stmt = filtered_stmt.where(Registration.person_id == person_id)
     if edition_id:

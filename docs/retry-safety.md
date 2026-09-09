@@ -172,3 +172,31 @@ input merges into notes for older callers; the response contains only notes.
 changes retain previous/new values in the audit log. Order reductions preserve
 that amount and expose overpayment for manual refunds. Tests cover recorded
 payment preservation and booked-price quantity changes.
+
+
+# Event plans and physical allocations (#802, second increment)
+
+Layout create/copy now require an event and room; `(room_id, event_id)` is unique.
+These writes still have no automatic retry: after an ambiguous response, reload
+plans to find the result. Copy creates fresh table/area identities and never copies
+allocations. Bulk layout creation retains its tested idempotency-key replay.
+Event and room locks serialize plan creation against deletion/venue changes.
+Room venue changes are rejected while plans exist; event venue changes must keep
+all its rooms compatible. These absolute updates retain the no-automatic-retry
+policy because audit entries and notifications may be repeated.
+
+Registration `allocations` replaces the complete allocation list. REST and MCP
+share the same service, lock the event, then the booking, then sorted table rows,
+and commit allocations, quantities, stock effects, audit and notifications in one
+transaction. Allocation replacement does not itself reserve or release product
+stock. Cancellation clears allocations; reducing booked quantities must include
+any necessary allocation adjustment. Table move/delete takes a table lock and
+rejects allocated tables. Package changes cannot invalidate existing allocations.
+
+No automatic retry is enabled for these writes. Repeating an allocation list
+cannot add duplicate allocation rows, but may repeat audit/live effects. After an
+ambiguous save, reload the booking and reconcile. The explicit capacity override
+is a new confirmed request following a rejected save, not a blind retry, and
+cannot override exclusivity. Tests cover split occupancy, exclusive claims,
+partial assignment with unchanged stock, cancellation, copy isolation, atomic
+rejection and concurrent claims on the last available seats.

@@ -61,6 +61,14 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
         includedQuantity,
       };
     }),
+    allocations: Array.isArray(d.allocations)
+      ? d.allocations.map((a: Record<string, unknown>) => ({
+          tableId: String(a.table_id),
+          guestCount: Number(a.guest_count),
+          exclusive: Boolean(a.exclusive),
+        }))
+      : [],
+    bookedTableQuantity: Number(d.booked_table_quantity ?? 0),
     notes: (d.notes ?? "") as string,
     tableId: (d.table_id as string | undefined) ?? undefined,
     status: (d.status ?? "pending") as RegistrationStatus,

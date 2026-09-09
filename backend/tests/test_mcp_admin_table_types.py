@@ -6,7 +6,7 @@ import pytest
 
 from app.mcp.admin import table_types as mcp_table_types
 from app.models import Layout, Room, Table, Venue
-from tests.helpers import mcp_session_factory
+from tests.helpers import mcp_session_factory, seed_layout_event
 
 
 async def _seed_venue(db_session, venue_id: str = "venue-1") -> Venue:
@@ -122,7 +122,7 @@ async def test_update_table_type_venue_reassignment_blocked_while_table_in_use_e
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
     db_session.add(room)
     await db_session.flush()
-    layout = Layout(id="lay-1", edition_id=None, room_id="room-1", day_id=1)
+    layout = Layout(id="lay-1", room_id="room-1", event_id=await seed_layout_event(db_session, "room-1", 1))
     db_session.add(layout)
     await db_session.flush()
     table = Table(id="tbl-1", name="T1", table_type_id=created["id"], layout_id="lay-1")
@@ -236,7 +236,7 @@ async def test_delete_table_type_blocked_while_table_in_use(db_session):
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
     db_session.add(room)
     await db_session.flush()
-    layout = Layout(id="lay-1", edition_id=None, room_id="room-1", day_id=1)
+    layout = Layout(id="lay-1", room_id="room-1", event_id=await seed_layout_event(db_session, "room-1", 1))
     db_session.add(layout)
     await db_session.flush()
     table = Table(id="tbl-1", name="T1", table_type_id=created["id"], layout_id="lay-1")

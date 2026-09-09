@@ -2,13 +2,13 @@ import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
 import type {
+  TableAllocation,
   OrderItem,
   PaymentStatus,
   Registration,
   RegistrationStatus,
 } from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
-import type { FloorTable } from "@/types/admin";
 import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { devError } from "@/utils/devLog";
@@ -178,65 +178,42 @@ export function useAdminRegistrationActions({
     ],
   );
 
-  const handleAssignTable = useCallback(
-    async (registrationId: string, tableId: string | undefined) => {
-      const assign = (overCapacityConfirmed = false) =>
+  const handleSaveAllocations = useCallback(
+    async (registrationId: string, allocations: TableAllocation[]) => {
+      const save = (confirm = false) =>
         updateRegistrationMutation.mutateAsync({
           id: registrationId,
           payload: {
-            table_id: tableId ?? null,
-            ...(overCapacityConfirmed ? { confirm_over_capacity: true } : {}),
+            allocations: allocations.map((a) => ({
+              table_id: a.tableId,
+              guest_count: a.guestCount,
+              exclusive: a.exclusive,
+            })),
+            confirm_over_capacity: confirm,
           },
           fallbackMessage: m.admin_error_assign_table(),
         });
       try {
         let response: Record<string, unknown>;
         try {
-          response = await assign();
-        } catch (err) {
-          const isCapacityWarning =
-            tableId !== undefined &&
-            err instanceof Error &&
-            err.message.includes("seat(s) remaining");
-          if (!isCapacityWarning || !(await confirmOverCapacity())) throw err;
-          response = await assign(true);
+          response = await save();
+        } catch (error) {
+          if (
+            !(error instanceof Error && error.message.includes("remaining seats")) ||
+            !(await confirmOverCapacity())
+          )
+            throw error;
+          response = await save(true);
         }
         const updated = apiToRegistration(response);
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-          prev
-            ? prev.map((registration) =>
-                registration.id === registrationId
-                  ? { ...registration, tableId: updated.tableId, updatedAt: updated.updatedAt }
-                  : registration,
-              )
-            : prev,
+          prev?.map((r) => (r.id === registrationId ? updated : r)),
         );
-        queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-          prev
-            ? prev.map((table) => {
-                const wasAssigned = table.registrationIds.includes(registrationId);
-                const shouldBeAssigned = table.id === updated.tableId;
-                if (wasAssigned && !shouldBeAssigned) {
-                  return {
-                    ...table,
-                    registrationIds: table.registrationIds.filter((id) => id !== registrationId),
-                  };
-                }
-                if (!wasAssigned && shouldBeAssigned) {
-                  return { ...table, registrationIds: [...table.registrationIds, registrationId] };
-                }
-                return table;
-              })
-            : prev,
-        );
-        setDetailRegistration((prev) =>
-          prev?.id === registrationId
-            ? { ...prev, tableId: updated.tableId, updatedAt: updated.updatedAt }
-            : prev,
-        );
-      } catch (err) {
-        devError("Failed to assign table", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_assign_table());
+        setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
+        await queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      } catch (error) {
+        setRegistrationError(error instanceof Error ? error.message : m.admin_error_assign_table());
+        throw error;
       }
     },
     [
@@ -248,6 +225,34 @@ export function useAdminRegistrationActions({
       tablesQueryKey,
       updateRegistrationMutation,
     ],
+  );
+
+  const handleAssignTable = useCallback(
+    async (registrationId: string, tableId: string | undefined) => {
+      const registration = queryClient
+        .getQueryData<Registration[]>(registrationsQueryKey)
+        ?.find((r) => r.id === registrationId);
+      if (!registration || (registration.allocations?.length ?? 0) > 1) return;
+      try {
+        await handleSaveAllocations(
+          registrationId,
+          tableId
+            ? [
+                {
+                  tableId,
+                  guestCount:
+                    registration.allocations?.[0]?.guestCount ??
+                    ((registration.bookedTableQuantity ?? 0) > 0 ? 0 : registration.guestCount),
+                  exclusive: (registration.bookedTableQuantity ?? 0) > 0,
+                },
+              ]
+            : [],
+        );
+      } catch {
+        /* Shared action feedback already displays the error. */
+      }
+    },
+    [queryClient, registrationsQueryKey, handleSaveAllocations],
   );
 
   const handleAddRegistration = useCallback(
@@ -385,6 +390,7 @@ export function useAdminRegistrationActions({
   return {
     handleAddRegistration,
     handleAssignTable,
+    handleSaveAllocations,
     handleCheckIn,
     handleIssueStrap,
     handleToggleDelivered,

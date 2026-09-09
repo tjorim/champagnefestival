@@ -115,8 +115,8 @@ class TestNoRedundantDateUnions:
     @pytest.mark.parametrize(
         ("tool_name", "param_name"),
         [
-            ("create_layout", "date"),
-            ("copy_layout", "date"),
+            ("create_layout", "event_id"),
+            ("copy_layout", "event_id"),
             ("create_event", "date"),
             ("update_event", "date"),
             ("create_event", "registrations_open_from"),

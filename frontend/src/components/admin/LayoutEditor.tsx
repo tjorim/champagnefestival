@@ -54,22 +54,23 @@ const SENSORS = [
 ];
 
 interface DayOption {
+  eventId: string;
   date: string;
   label: string;
 }
 
 function getInitialNewLayoutState(dayOptions: DayOption[]) {
   return {
-    date: dayOptions[0]?.date ?? "",
+    eventId: dayOptions[0]?.eventId ?? "",
     copyFromLayoutId: "",
     copyTables: true,
     copyAreas: true,
   };
 }
 
-function getDayLabel(date: string | null, dayOptions: DayOption[], fallbackLabel = ""): string {
-  if (!date) return fallbackLabel;
-  return dayOptions.find((day) => day.date === date)?.label ?? date;
+function getDayLabel(eventId: string | null, dayOptions: DayOption[], fallbackLabel = ""): string {
+  if (!eventId) return fallbackLabel;
+  return dayOptions.find((day) => day.eventId === eventId)?.label ?? fallbackLabel;
 }
 
 interface ItemRef {
@@ -93,7 +94,7 @@ interface LayoutEditorProps {
   onRotateTable: (tableId: string, rotation: number) => void;
   onAddLayout: (
     roomId: string,
-    date: string,
+    eventId: string,
     label?: string,
     copyFromLayoutId?: string | null,
     copyOptions?: {
@@ -133,6 +134,7 @@ interface DraggableTableProps {
   table: FloorTable;
   tableTypes: TableType[];
   assignedCount: number;
+  exclusive: boolean;
   isSelected: boolean;
   isInteractive: boolean;
   isInSelectedArea: boolean;
@@ -145,6 +147,7 @@ function DraggableTable({
   table,
   tableTypes,
   assignedCount,
+  exclusive,
   isSelected,
   isInteractive,
   isInSelectedArea,
@@ -165,7 +168,7 @@ function DraggableTable({
   const topPx = (table.y / 100) * canvasH;
 
   const isOverfilled = table.capacity > 0 && assignedCount > table.capacity;
-  const isFull = table.capacity > 0 && assignedCount === table.capacity;
+  const isFull = exclusive || (table.capacity > 0 && assignedCount === table.capacity);
   const borderCls = isSelected
     ? "border-warning"
     : isOverfilled
@@ -454,8 +457,12 @@ function RoomCanvas({
           )}
           {roomTables.map((table) => {
             const assigned = registrations
-              .filter((r) => table.registrationIds.includes(r.id))
-              .reduce((sum, r) => sum + r.guestCount, 0);
+              .filter((r) => r.status !== "cancelled" && table.registrationIds.includes(r.id))
+              .reduce(
+                (sum, r) =>
+                  sum + (r.allocations?.find((a) => a.tableId === table.id)?.guestCount ?? 0),
+                0,
+              );
             const isInSelectedArea = selectedArea
               ? (() => {
                   const area = roomAreas.find((a) => a.id === selectedArea);
@@ -470,6 +477,11 @@ function RoomCanvas({
                 table={table}
                 tableTypes={tableTypes}
                 assignedCount={assigned}
+                exclusive={registrations.some(
+                  (r) =>
+                    r.status !== "cancelled" &&
+                    r.allocations?.some((a) => a.tableId === table.id && a.exclusive),
+                )}
                 isSelected={selectedTable === table.id}
                 isInteractive={layer === "seating"}
                 isInSelectedArea={isInSelectedArea}
@@ -573,10 +585,10 @@ export default function LayoutEditor({
     if (!activeRoomId) return;
     setAddLayoutError(null);
     try {
-      if (!newLayout.date) return;
+      if (!newLayout.eventId) return;
       await onAddLayout(
         activeRoomId,
-        newLayout.date,
+        newLayout.eventId,
         undefined,
         newLayout.copyFromLayoutId || undefined,
         {
@@ -595,8 +607,8 @@ export default function LayoutEditor({
   // Keep the add-layout form's date valid as dayOptions loads or changes.
   // Adjusted during render rather than in an effect — idempotent once the
   // date is valid, same as the room/layout selection above.
-  if (dayOptions.length > 0 && !dayOptions.some((day) => day.date === newLayout.date)) {
-    setNewLayout((current) => ({ ...current, date: dayOptions[0]!.date }));
+  if (dayOptions.length > 0 && !dayOptions.some((day) => day.eventId === newLayout.eventId)) {
+    setNewLayout((current) => ({ ...current, eventId: dayOptions[0]!.eventId }));
   }
 
   const handleDeleteLayout = useCallback(
@@ -716,8 +728,8 @@ export default function LayoutEditor({
 
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
   const activeLayoutDateLabel = useMemo(
-    () => getDayLabel(activeLayout?.date ?? null, dayOptions, activeLayout?.label ?? ""),
-    [activeLayout?.date, activeLayout?.label, dayOptions],
+    () => getDayLabel(activeLayout?.eventId ?? null, dayOptions, activeLayout?.label ?? ""),
+    [activeLayout?.eventId, activeLayout?.label, dayOptions],
   );
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
   const roomLayouts = layouts
@@ -888,7 +900,7 @@ export default function LayoutEditor({
                           }}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                         >
-                          {getDayLabel(layout.date, dayOptions, layout.label)}
+                          {getDayLabel(layout.eventId, dayOptions, layout.label)}
                         </Button>
                         <Button
                           size="sm"
@@ -1096,7 +1108,10 @@ export default function LayoutEditor({
                   <ListGroup.Item key={r.id} className="bg-dark text-light border-secondary">
                     <span className="fw-semibold">{r.person.name}</span>
                     <span className="text-secondary ms-2 small">
-                      ({r.guestCount} {m.admin_guests_count()})
+                      (
+                      {r.allocations?.find((a) => a.tableId === selectedTableData?.id)
+                        ?.guestCount ?? 0}{" "}
+                      {m.admin_guests_count()})
                     </span>
                   </ListGroup.Item>
                 ))}
@@ -1383,12 +1398,12 @@ export default function LayoutEditor({
           <Form.Group className="mb-3" controlId="layout-day">
             <Form.Label>{m.admin_layout_day_label()}</Form.Label>
             <Form.Select
-              value={newLayout.date}
-              onChange={(e) => setNewLayout((p) => ({ ...p, date: e.target.value }))}
+              value={newLayout.eventId}
+              onChange={(e) => setNewLayout((p) => ({ ...p, eventId: e.target.value }))}
               className="bg-dark text-light border-secondary"
             >
               {dayOptions.map((day) => (
-                <option key={day.date} value={day.date}>
+                <option key={day.eventId} value={day.eventId}>
                   {day.label}
                 </option>
               ))}
@@ -1404,7 +1419,7 @@ export default function LayoutEditor({
               <option value="">{m.admin_layout_copy_from_empty()}</option>
               {roomLayouts.map((layout) => (
                 <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout.date, dayOptions, layout.label)}
+                  {getDayLabel(layout.eventId, dayOptions, layout.label)}
                 </option>
               ))}
             </Form.Select>

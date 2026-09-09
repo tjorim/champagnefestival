@@ -113,7 +113,6 @@ function renderDetail(props: Partial<React.ComponentProps<typeof RegistrationDet
       onCheckIn={onCheckIn}
       onIssueStrap={onIssueStrap}
       tables={tables}
-      onAssignTable={onAssignTable}
       onMergeDuplicate={onMergeDuplicate}
       {...props}
     />,
@@ -133,7 +132,6 @@ describe("RegistrationDetail", () => {
         onCheckIn={vi.fn()}
         onIssueStrap={vi.fn()}
         tables={[]}
-        onAssignTable={vi.fn()}
       />,
     );
 
@@ -201,12 +199,69 @@ describe("RegistrationDetail", () => {
     );
   });
 
-  it("renders table assignment in the detail modal and updates it on change", () => {
-    const { onAssignTable } = renderDetail({
-      registration: buildRegistration({ tableId: "table-2" }),
+  it("keeps a whole-table booking partially allocated without inventing a companion count", () => {
+    const onSaveAllocations = vi.fn().mockResolvedValue(undefined);
+    renderDetail({
+      onSaveAllocations,
+      registration: buildRegistration({
+        bookedTableQuantity: 3,
+        allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
+      }),
+    });
+    expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
+      '"assigned":1,"total":3',
+    );
+    fireEvent.click(screen.getByRole("button", { name: "admin_allocation_add" }));
+    const selectors = screen.getAllByRole("combobox", { name: "admin_inventory_unit_table" });
+    expect(
+      within(selectors[1]!).queryByRole("option", { name: /Table 10/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(selectors[1]!, { target: { value: "table-2" } });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    expect(onSaveAllocations).toHaveBeenCalledWith("reg-1", [
+      { tableId: "table-1", guestCount: 0, exclusive: true },
+      { tableId: "table-2", guestCount: 0, exclusive: true },
+    ]);
+  });
+
+  it("records actual guest counts when splitting a booking", () => {
+    const onSaveAllocations = vi.fn().mockResolvedValue(undefined);
+    renderDetail({
+      onSaveAllocations,
+      registration: buildRegistration({
+        guestCount: 6,
+        allocations: [
+          { tableId: "table-1", guestCount: 4, exclusive: false },
+          { tableId: "table-2", guestCount: 2, exclusive: false },
+        ],
+      }),
+    });
+    expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
+      '"assigned":6,"total":6',
+    );
+    fireEvent.change(screen.getAllByRole("spinbutton", { name: "admin_guests_count" }).at(-1)!, {
+      target: { value: "1" },
+    });
+    expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
+      '"assigned":5,"total":6',
+    );
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    expect(onSaveAllocations).toHaveBeenCalledWith("reg-1", [
+      { tableId: "table-1", guestCount: 4, exclusive: false },
+      { tableId: "table-2", guestCount: 1, exclusive: false },
+    ]);
+  });
+
+  it("saves table allocations explicitly from the detail modal", async () => {
+    const onSaveAllocations = vi.fn().mockResolvedValue(undefined);
+    renderDetail({
+      onSaveAllocations,
+      registration: buildRegistration({
+        allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
+      }),
     });
 
-    const select = screen.getByRole("combobox", { name: "admin_action_assign_table" });
+    const select = screen.getByRole("combobox", { name: "admin_inventory_unit_table" });
     expect(select).toHaveValue("table-2");
     expect(
       within(select)
@@ -216,7 +271,11 @@ describe("RegistrationDetail", () => {
 
     fireEvent.change(select, { target: { value: "table-1" } });
 
-    expect(onAssignTable).toHaveBeenCalledWith("reg-1", "table-1");
+    expect(onSaveAllocations).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    expect(onSaveAllocations).toHaveBeenCalledWith("reg-1", [
+      { tableId: "table-1", guestCount: 2, exclusive: false },
+    ]);
   });
 
   it("hides table assignment for simple RSVP (non-festival) registrations", () => {

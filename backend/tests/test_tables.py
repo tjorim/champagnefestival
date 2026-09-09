@@ -10,7 +10,9 @@ from tests.helpers import (
     TABLE_TYPE_PAYLOAD,
     VENUE_PAYLOAD,
     _post_registration,
+    event_for_room,
 )
+from tests.test_event_allocations import room_and_plan
 
 
 @pytest.mark.anyio
@@ -20,7 +22,11 @@ async def test_table_crud(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     layout_id = r.json()["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
@@ -56,9 +62,17 @@ async def test_list_tables_filters_by_layout_id(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     layout_a = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 2}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 2)},
+        headers=ADMIN_HEADERS,
+    )
     layout_b = r.json()["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
@@ -94,7 +108,11 @@ async def test_table_position_bounds_rejected(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     layout_id = r.json()["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
@@ -118,7 +136,11 @@ async def test_table_with_layout_id(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     layout_id = r.json()["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
@@ -151,14 +173,12 @@ async def test_table_id_can_be_cleared(client):
     r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
     res_id = r.json()["id"]
+    booking_event = r.json()["event"]
 
     # Create table prerequisites: venue → room → layout + table_type
-    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
-    venue_id = r.json()["id"]
-    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
-    room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
-    layout_id = r.json()["id"]
+    room, plan = await room_and_plan(client, booking_event)
+    venue_id = room["venue_id"]
+    layout_id = plan["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
@@ -178,7 +198,7 @@ async def test_table_id_can_be_cleared(client):
     # Assign the table
     r = await client.put(
         f"/api/registrations/{res_id}",
-        json={"table_id": tbl_id},
+        json={"allocations": [{"table_id": tbl_id, "guest_count": 2}]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -187,7 +207,7 @@ async def test_table_id_can_be_cleared(client):
     # Clear the table (set to null)
     r = await client.put(
         f"/api/registrations/{res_id}",
-        json={"table_id": None},
+        json={"allocations": []},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -207,14 +227,12 @@ async def test_table_registration_ids_computed_from_registration_table_id(client
     r = await _post_registration(client, path="/api/registrations")
     assert r.status_code == 201
     res_id = r.json()["id"]
+    booking_event = r.json()["event"]
 
     # Build prerequisites: venue → room → layout + table_type
-    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
-    venue_id = r.json()["id"]
-    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
-    room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
-    layout_id = r.json()["id"]
+    room, plan = await room_and_plan(client, booking_event)
+    venue_id = room["venue_id"]
+    layout_id = plan["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
 
@@ -236,7 +254,7 @@ async def test_table_registration_ids_computed_from_registration_table_id(client
     # Assign the reservation to the table via the reservation endpoint
     r = await client.put(
         f"/api/registrations/{res_id}",
-        json={"table_id": tbl_id},
+        json={"allocations": [{"table_id": tbl_id, "guest_count": 2}]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -259,7 +277,7 @@ async def test_table_registration_ids_computed_from_registration_table_id(client
     # After clearing the table assignment the list must also update
     r = await client.put(
         f"/api/registrations/{res_id}",
-        json={"table_id": None},
+        json={"allocations": []},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200

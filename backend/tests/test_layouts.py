@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VENUE_PAYLOAD
+from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VENUE_PAYLOAD, event_for_room
 
 
 @pytest.mark.anyio
@@ -14,12 +14,20 @@ async def test_layout_rejects_duplicate_room_day(client):
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
 
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 4}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 4)},
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 201
 
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 4}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 4)},
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 409
-    assert r.json()["detail"] == "A layout already exists for this room and day."
+    assert r.json()["detail"] == "A layout already exists for this room and event."
 
 
 @pytest.mark.anyio
@@ -39,11 +47,15 @@ async def test_list_layouts_filters_by_edition_id_and_room_id(client):
 
     r = await client.post(
         "/api/layouts",
-        json={"room_id": room_a, "day_id": 1, "edition_id": "edition-834"},
+        json={"room_id": room_a, "event_id": await event_for_room(client, room_a, 1, "edition-834")},
         headers=ADMIN_HEADERS,
     )
     layout_a = r.json()["id"]
-    await client.post("/api/layouts", json={"room_id": room_b, "day_id": 1}, headers=ADMIN_HEADERS)
+    await client.post(
+        "/api/layouts",
+        json={"room_id": room_b, "event_id": await event_for_room(client, room_b, 1)},
+        headers=ADMIN_HEADERS,
+    )
 
     r = await client.get("/api/layouts", params={"edition_id": "edition-834"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
@@ -76,7 +88,11 @@ async def test_get_layout_include_tables(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     layout_id = r.json()["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
@@ -114,19 +130,23 @@ async def test_copy_layout_basic(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 201
     source_id = r.json()["id"]
 
     r = await client.post(
         f"/api/layouts/{source_id}/copy",
-        json={"room_id": room_id, "day_id": 2},
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 2)},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
     data = r.json()
     assert data["room_id"] == room_id
-    assert data["day_id"] == 2
+    assert data["event_id"] == await event_for_room(client, room_id, 2)
     assert data["id"] != source_id
 
 
@@ -140,7 +160,7 @@ async def test_copy_layout_404_source(client):
 
     r = await client.post(
         "/api/layouts/nonexistent-id/copy",
-        json={"room_id": room_id, "day_id": 1},
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 404
@@ -153,18 +173,26 @@ async def test_copy_layout_409_duplicate(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     source_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 2}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 2)},
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 201
 
     r = await client.post(
         f"/api/layouts/{source_id}/copy",
-        json={"room_id": room_id, "day_id": 2},
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 2)},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 409
-    assert r.json()["detail"] == "A layout already exists for this room and day."
+    assert r.json()["detail"] == "A layout already exists for this room and event."
 
 
 @pytest.mark.anyio
@@ -174,7 +202,11 @@ async def test_copy_layout_copies_tables(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     source_id = r.json()["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
@@ -189,7 +221,12 @@ async def test_copy_layout_copies_tables(client):
 
     r = await client.post(
         f"/api/layouts/{source_id}/copy",
-        json={"room_id": room_id, "day_id": 2, "copy_tables": True, "copy_areas": False},
+        json={
+            "room_id": room_id,
+            "event_id": await event_for_room(client, room_id, 2),
+            "copy_tables": True,
+            "copy_areas": False,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -209,7 +246,11 @@ async def test_copy_layout_copies_areas(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     source_id = r.json()["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
@@ -240,7 +281,12 @@ async def test_copy_layout_copies_areas(client):
 
     r = await client.post(
         f"/api/layouts/{source_id}/copy",
-        json={"room_id": room_id, "day_id": 2, "copy_tables": False, "copy_areas": True},
+        json={
+            "room_id": room_id,
+            "event_id": await event_for_room(client, room_id, 2),
+            "copy_tables": False,
+            "copy_areas": True,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -267,7 +313,11 @@ async def test_copy_layout_rejects_area_with_inactive_exhibitor(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     source_id = r.json()["id"]
 
     r = await client.post("/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
@@ -284,7 +334,12 @@ async def test_copy_layout_rejects_area_with_inactive_exhibitor(client):
 
     r = await client.post(
         f"/api/layouts/{source_id}/copy",
-        json={"room_id": room_id, "day_id": 2, "copy_tables": False, "copy_areas": True},
+        json={
+            "room_id": room_id,
+            "event_id": await event_for_room(client, room_id, 2),
+            "copy_tables": False,
+            "copy_areas": True,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 400
@@ -298,7 +353,11 @@ async def test_copy_layout_no_tables_when_flags_false(client):
     venue_id = r.json()["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     source_id = r.json()["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     tt_id = r.json()["id"]
@@ -312,7 +371,12 @@ async def test_copy_layout_no_tables_when_flags_false(client):
 
     r = await client.post(
         f"/api/layouts/{source_id}/copy",
-        json={"room_id": room_id, "day_id": 2, "copy_tables": False, "copy_areas": False},
+        json={
+            "room_id": room_id,
+            "event_id": await event_for_room(client, room_id, 2),
+            "copy_tables": False,
+            "copy_areas": False,
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201

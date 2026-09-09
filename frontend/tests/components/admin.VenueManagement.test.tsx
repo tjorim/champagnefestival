@@ -98,6 +98,7 @@ const archivedTableType: TableType = {
 
 const layout1: Layout = {
   id: "layout-1",
+  eventId: "event-1",
   editionId: "edition-1",
   roomId: "room-1",
   date: "2026-08-01",

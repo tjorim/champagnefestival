@@ -151,14 +151,84 @@ async def _post_registration(
     return await client.post(path, json=_registration_body(event, **overrides))
 
 
-async def _create_layout_prerequisites(client):
+async def _create_layout_prerequisites(client, event_id: str | None = None):
     """Helper: create venue → room → layout; return layout_id."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     assert r.status_code == 201, f"venue creation failed: {r.text}"
     venue_id = r.json()["id"]
+    if event_id:
+        event = (await client.get(f"/api/events/{event_id}")).json()
+        edition = (await client.get(f"/api/editions/{event['edition_id']}")).json()
+        venue_id = edition["venue"]["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     assert r.status_code == 201, f"room creation failed: {r.text}"
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": event_id or await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 201, f"layout creation failed: {r.text}"
     return r.json()["id"]
+
+
+async def event_for_room(client, room_id: str, number: int = 1, edition_id: str | None = None) -> str:
+    """Create a stable event fixture for a room, reusing it within a test."""
+    room = (await client.get(f"/api/rooms/{room_id}")).json()
+    if "venue_id" not in room:
+        return "missing-event"
+    edition_id = edition_id or f"ed-{room_id}"
+    edition = await client.get(f"/api/editions/{edition_id}")
+    if edition.status_code == 404:
+        response = await client.post(
+            "/api/editions",
+            json={"id": edition_id, "venue_id": room["venue_id"], "year": 2099, "month": "march", "active": True},
+        )
+        assert response.status_code == 201, response.text
+    events = (await client.get("/api/events", params={"edition_id": edition_id})).json()
+    title = f"Layout event {number}"
+    for event in events:
+        if event["title"] == title:
+            return event["id"]
+    response = await client.post(
+        "/api/events",
+        json={
+            "edition_id": edition_id,
+            "title": title,
+            "date": f"2099-03-{20 + number:02d}",
+            "start_time": "10:00",
+            "category": "other",
+            "registration_required": True,
+        },
+    )
+    assert response.status_code == 201, response.text
+    return response.json()["id"]
+
+
+async def seed_layout_event(db, room_id: str = "room-1", number: int = 1) -> str:
+    from datetime import date
+
+    from app.models import Edition, Event, Room
+
+    room = await db.get(Room, room_id)
+    if room is None:
+        return "missing-event"
+    event_id = f"evt-{room_id}-{number}"
+    if await db.get(Event, event_id) is not None:
+        return event_id
+    edition_id = f"ed-{room.venue_id}"
+    if await db.get(Edition, edition_id) is None:
+        db.add(Edition(id=edition_id, year=2099, month="march", venue_id=room.venue_id, active=False))
+        await db.flush()
+    db.add(
+        Event(
+            id=event_id,
+            edition_id=edition_id,
+            title=f"Event {number}",
+            date=date(2099, 3, 20 + number),
+            start_time="10:00",
+            category="other",
+        )
+    )
+    await db.flush()
+    return event_id

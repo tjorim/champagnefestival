@@ -32,14 +32,15 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
-from app.models import Event, Layout, Person, Registration, Table
+from app.models import Event, Person, Registration
 from app.schemas import (
     OrderItemRequest,
     RegistrationAdminCreate,
     RegistrationDeliveryUpdate,
     RegistrationUpdate,
+    TableAllocation,
 )
-from app.services import people_service
+from app.services import allocations_service, people_service
 from app.services import product_inventory as inventory
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.utils import make_id, registration_to_dict
@@ -77,78 +78,6 @@ async def fetch_person_map(db: AsyncSession, rows: list[Registration]) -> dict[s
     person_ids = {row.person_id for row in rows}
     people = (await db.execute(select(Person).where(Person.id.in_(person_ids)))).scalars().all()
     return {person.id: person for person in people}
-
-
-async def assert_table_matches_edition(db: AsyncSession, table_id: str, edition_id: str | None) -> None:
-    """Reject seating a registration at a table belonging to another edition.
-
-    Layouts are per-edition, so a table only makes sense for registrations of the
-    edition its layout was drawn for. Layouts predating the edition link carry a
-    null edition_id and are left alone.
-    """
-    row = (
-        await db.execute(
-            select(Layout.edition_id).join(Table, Table.layout_id == Layout.id).where(Table.id == table_id)
-        )
-    ).first()
-    if row is None:
-        raise HTTPException(status_code=404, detail=f"Table '{table_id}' not found.")
-    table_edition_id = row[0]
-    if table_edition_id is not None and edition_id is not None and table_edition_id != edition_id:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Table '{table_id}' belongs to edition '{table_edition_id}', "
-                f"but this registration is for edition '{edition_id}'."
-            ),
-        )
-
-
-async def assert_table_has_room(
-    db: AsyncSession,
-    *,
-    table_id: str,
-    edition_id: str | None,
-    registration_id: str,
-    guest_count: int,
-) -> None:
-    """Lock a table and reject an assignment that exceeds its guest capacity."""
-    row = (
-        await db.execute(
-            select(Table, Layout.edition_id)
-            .join(Layout, Table.layout_id == Layout.id)
-            .where(Table.id == table_id)
-            .with_for_update()
-        )
-    ).first()
-    if row is None:
-        raise HTTPException(status_code=404, detail=f"Table '{table_id}' not found.")
-    table, table_edition_id = row
-    if table_edition_id is not None and edition_id is not None and table_edition_id != edition_id:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                f"Table '{table_id}' belongs to edition '{table_edition_id}', "
-                f"but this registration is for edition '{edition_id}'."
-            ),
-        )
-    occupied = (
-        await db.execute(
-            select(func.coalesce(func.sum(Registration.guest_count), 0)).where(
-                Registration.table_id == table_id,
-                Registration.id != registration_id,
-                Registration.status != "cancelled",
-            )
-        )
-    ).scalar_one()
-    if occupied + guest_count > table.capacity:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Table '{table.name}' has {table.capacity - occupied} seat(s) remaining; "
-                f"this party requires {guest_count}."
-            ),
-        )
 
 
 def resolve_order_items(event: Event, requests: list[OrderItemRequest], guest_count: int) -> list[dict]:
@@ -240,13 +169,12 @@ async def apply_registration_update(
     actor: str,
     request_id: str | None = None,
     clear_amount_due: bool = False,
-    clear_table: bool = False,
 ) -> dict:
     """Apply a partial registration update and return the refreshed payload.
 
-    ``clear_amount_due``/``clear_table`` exist for the MCP adapter, whose
-    kwargs can't distinguish "omitted" from "explicitly null" for these two
-    nullable fields — REST expresses the same intent via an explicit ``null``
+    ``clear_amount_due`` exists for the MCP adapter, whose
+    kwargs cannot distinguish "omitted" from "explicitly null" for this
+    nullable field — REST expresses the same intent via an explicit ``null``
     in the JSON body, which already lands in ``body.model_fields_set`` and so
     never needs the flags (it always passes ``False``).
     """
@@ -264,7 +192,10 @@ async def apply_registration_update(
         )
     ).scalar_one()
 
-    pre_table_id = registration.table_id
+    pre_allocations = [
+        TableAllocation(table_id=a.table_id, guest_count=a.guest_count, exclusive=a.exclusive)
+        for a in registration.allocations
+    ]
     pre_guest_count = registration.guest_count
     pre_order_items = list(registration.order_items) if registration.order_items else []
     pre_checked_in = registration.checked_in
@@ -312,27 +243,8 @@ async def apply_registration_update(
     elif "amount_due" in body.model_fields_set:
         registration.amount_due = body.amount_due
 
-    table_id_targeted = clear_table or "table_id" in body.model_fields_set
-    target_table_id = (
-        None if clear_table else body.table_id if "table_id" in body.model_fields_set else registration.table_id
-    )
-
+    allocation_entries = [] if target_status == "cancelled" else body.allocations
     capacity_override_used = False
-    capacity_may_change = table_id_targeted or body.status is not None or body.guest_count is not None
-    if target_table_id is not None and registration.status != "cancelled" and capacity_may_change:
-        if body.confirm_over_capacity:
-            await assert_table_matches_edition(db, target_table_id, edition_id)
-            capacity_override_used = True
-        else:
-            await assert_table_has_room(
-                db,
-                table_id=target_table_id,
-                edition_id=edition_id,
-                registration_id=registration.id,
-                guest_count=registration.guest_count,
-            )
-    if table_id_targeted:
-        registration.table_id = target_table_id
 
     if body.notes is not None:
         registration.notes = body.notes
@@ -363,6 +275,18 @@ async def apply_registration_update(
             await inventory.check_stock(db, registration.event, resolved_items, registration=registration)
         registration.status = target_status
     registration.order_items = resolved_items
+    if allocation_entries is not None or (
+        registration.allocations and {"guest_count", "status", "order_items"} & body.model_fields_set
+    ):
+        selected = allocation_entries if allocation_entries is not None else pre_allocations
+        with db.no_autoflush:
+            if target_status != "cancelled":
+                await allocations_service.validate_allocations(
+                    db, registration, selected, confirm_over_capacity=body.confirm_over_capacity
+                )
+        if allocation_entries is not None:
+            allocations_service.replace_allocations(registration, selected)
+        capacity_override_used |= bool(body.confirm_over_capacity and selected)
     if body.amount_paid is not None:
         registration.amount_paid = body.amount_paid
     elif body.payment_status == "paid":
@@ -397,15 +321,6 @@ async def apply_registration_update(
         registration.strap_issued = body.strap_issued
 
     audit_base = {"resource_type": "registration", "resource_id": registration.id, "request_id": request_id}
-    if table_id_targeted and registration.table_id != pre_table_id:
-        action = "table_unassigned" if registration.table_id is None else "table_assigned"
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action=action,
-            details={"table_id": registration.table_id, "previous_table_id": pre_table_id},
-            **audit_base,
-        )
     if capacity_override_used:
         await write_audit_entry(
             db,
@@ -464,8 +379,20 @@ async def apply_registration_update(
         )
 
     scope = {"registration_id": registration.id, "event_id": event_id, "edition_id": edition_id}
-    if registration.table_id != pre_table_id:
-        await notify_live_event(db, live_mapping.seating_changed(table_id=registration.table_id, **scope))
+    if allocation_entries is not None:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="table_allocations_updated",
+            details={
+                "before": [a.model_dump() for a in pre_allocations],
+                "after": [a.model_dump() for a in allocation_entries],
+                "capacity_override": capacity_override_used,
+            },
+            **audit_base,
+        )
+    if allocation_entries is not None:
+        await notify_live_event(db, live_mapping.seating_changed(**scope))
     if registration.order_items != pre_order_items:
         await notify_live_event(db, live_mapping.order_changed(**scope))
     if registration.checked_in != pre_checked_in or registration.strap_issued != pre_strap_issued:

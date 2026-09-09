@@ -26,6 +26,7 @@ from sqlalchemy import (
     text,
     true,
 )
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
@@ -96,6 +97,22 @@ class PebbleAccessToken(Base):
     user: Mapped[User] = relationship(back_populates="pebble_access_token")
 
 
+class RegistrationAllocation(Base):
+    """Actual guests assigned to one table; whole-table purchases are exclusive."""
+
+    __tablename__ = "registration_allocations"
+    registration_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("registrations.id", ondelete="CASCADE"), primary_key=True
+    )
+    table_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("tables.id", ondelete="RESTRICT"), primary_key=True, index=True
+    )
+    guest_count: Mapped[int] = mapped_column(Integer)
+    exclusive: Mapped[bool] = mapped_column(Boolean, default=False)
+    table: Mapped[Table] = relationship(lazy="joined")
+    __table_args__ = (CheckConstraint("guest_count >= 0", name="ck_allocation_guests"),)
+
+
 class Registration(Base):
     __tablename__ = "registrations"
 
@@ -105,6 +122,9 @@ class Registration(Base):
     )
     guest_count: Mapped[int] = mapped_column(Integer)
     order_items: Mapped[list[dict]] = mapped_column(JSON, default=list)
+    allocations: Mapped[list[RegistrationAllocation]] = relationship(
+        cascade="all, delete-orphan", lazy="selectin", order_by="RegistrationAllocation.table_id"
+    )
     product_snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
     amount_paid: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
     notes: Mapped[str] = mapped_column(Text, default="")
@@ -112,9 +132,24 @@ class Registration(Base):
     person_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("people.id", ondelete="RESTRICT"), index=True, nullable=False
     )
-    table_id: Mapped[str | None] = mapped_column(
-        String(64), ForeignKey("tables.id", ondelete="SET NULL"), index=True, nullable=True
-    )
+
+    @hybrid_property
+    def table_id(self) -> str | None:
+        """First allocated table for compact displays, derived from allocations."""
+        return self.allocations[0].table_id if self.allocations else None
+
+    @table_id.inplace.expression
+    @classmethod
+    def _table_expression(cls):
+        return (
+            select(RegistrationAllocation.table_id)
+            .where(RegistrationAllocation.registration_id == cls.id)
+            .order_by(RegistrationAllocation.table_id)
+            .limit(1)
+            .correlate_except(RegistrationAllocation)
+            .scalar_subquery()
+        )
+
     user_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("users.id", ondelete="SET NULL"), index=True, nullable=True
     )
@@ -382,24 +417,23 @@ class Room(Base):
 
 
 class Layout(Base):
-    """A named floor-plan snapshot for a specific room and edition day index.
-
-    Each snapshot captures the table configuration for one room on a numbered
-    day within an edition, allowing managers to maintain different floor plans
-    per day and restore previous versions.
-    """
+    """A room arrangement for one event; edition and date derive from that event."""
 
     __tablename__ = "layouts"
-
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    edition_id: Mapped[str | None] = mapped_column(
-        String(100), ForeignKey("editions.id", ondelete="SET NULL"), nullable=True
-    )
-    room_id: Mapped[str] = mapped_column(String(64), ForeignKey("rooms.id", ondelete="CASCADE"), nullable=False)
-    """FK to the room this layout belongs to."""
+    event_id: Mapped[str] = mapped_column(String(64), ForeignKey("events.id", ondelete="RESTRICT"), index=True)
+    room_id: Mapped[str] = mapped_column(String(64), ForeignKey("rooms.id", ondelete="CASCADE"))
+    event: Mapped[Event] = relationship(lazy="joined")
+    __table_args__ = (UniqueConstraint("room_id", "event_id", name="uq_layout_room_event"),)
 
-    day_id: Mapped[int] = mapped_column(Integer)
-    """1-based day index within the edition."""
+    @hybrid_property
+    def edition_id(self) -> str:
+        return self.event.edition_id
+
+    @edition_id.inplace.expression
+    @classmethod
+    def _edition_expression(cls):
+        return select(Event.edition_id).where(Event.id == cls.event_id).correlate_except(Event).scalar_subquery()
 
     label: Mapped[str] = mapped_column(String(200), default="")
     """Human-readable version label, e.g. 'pre-event', 'after cancellations'."""
@@ -471,6 +505,10 @@ class Table(Base):
 
     layout_id: Mapped[str] = mapped_column(String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False)
     """FK to the Layout this table belongs to."""
+
+    event_id: Mapped[str] = column_property(
+        select(Layout.event_id).where(Layout.id == layout_id).correlate_except(Layout).scalar_subquery()
+    )
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

@@ -6,7 +6,7 @@ import pytest
 
 from app.mcp.admin import areas as mcp_areas
 from app.models import Exhibitor, Layout, Room, Venue
-from tests.helpers import mcp_session_factory
+from tests.helpers import mcp_session_factory, seed_layout_event
 
 
 async def _seed_layout(db_session, *, layout_id: str = "lay-1") -> None:
@@ -16,7 +16,7 @@ async def _seed_layout(db_session, *, layout_id: str = "lay-1") -> None:
     room = Room(id="room-1", venue_id="venue-1", name="Main Hall")
     db_session.add(room)
     await db_session.flush()
-    layout = Layout(id=layout_id, edition_id=None, room_id="room-1", day_id=1)
+    layout = Layout(id=layout_id, room_id="room-1", event_id=await seed_layout_event(db_session, "room-1", 1))
     db_session.add(layout)
     await db_session.commit()
 

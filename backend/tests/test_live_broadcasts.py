@@ -52,17 +52,17 @@ async def _get_event(queue, *, matches=lambda event: True):
             return event
 
 
-async def _table_prerequisites(client) -> tuple[str, str]:
+async def _table_prerequisites(client, event_id=None) -> tuple[str, str]:
     """Return (layout_id, table_type_id) after creating all prerequisites."""
-    layout_id = await _create_layout_prerequisites(client)
+    layout_id = await _create_layout_prerequisites(client, event_id=event_id)
     venue_id = await _create_venue(client)
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     return layout_id, r.json()["id"]
 
 
-async def _create_table(client) -> str:
-    layout_id, tt_id = await _table_prerequisites(client)
+async def _create_table(client, event_id=None) -> str:
+    layout_id, tt_id = await _table_prerequisites(client, event_id=event_id)
     r = await client.post(
         "/api/tables",
         json={"name": "T1", "x": 0.0, "y": 0.0, "table_type_id": tt_id, "layout_id": layout_id},
@@ -183,18 +183,19 @@ async def test_admin_create_registration_publishes_event(client):
 
 async def test_update_table_id_publishes_seating_event(client):
     reg_id, _ = await _registration_with_token(client)
-    table_id = await _create_table(client)
+    registration = (await client.get(f"/api/registrations/{reg_id}")).json()
+    table_id = await _create_table(client, event_id=registration["event_id"])
 
     async with live_bus.subscribe() as queue:
         r = await client.put(
             f"/api/registrations/{reg_id}",
-            json={"table_id": table_id},
+            json={"allocations": [{"table_id": table_id, "guest_count": registration["guest_count"]}]},
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
         event = await _get_event(queue, matches=lambda e: e.topic == "seating" and e.scope.registration_id == reg_id)
 
-    assert event.scope.table_id == table_id
+    assert event.scope.event_id == registration["event_id"]
 
 
 async def test_update_status_publishes_registration_event(client):

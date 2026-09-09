@@ -13,6 +13,7 @@ from tests.helpers import (
     VENUE_PAYLOAD,
     _create_event,
     _post_registration,
+    event_for_room,
 )
 
 
@@ -26,12 +27,20 @@ def test_delivery_update_allows_bundled_order_quantity_above_request_limit():
     assert updated[0]["delivered"] is False
 
 
-async def _create_table(client, *, name: str) -> str:
+async def _create_table(client, *, event_id: str | None = None, name: str) -> str:
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
+    if event_id:
+        event = (await client.get(f"/api/events/{event_id}")).json()
+        edition = (await client.get(f"/api/editions/{event['edition_id']}")).json()
+        venue_id = edition["venue"]["id"]
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": event_id or await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     layout_id = r.json()["id"]
     r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     table_type_id = r.json()["id"]
@@ -71,11 +80,11 @@ async def test_volunteer_registrations_support_table_lookup_and_hide_pii(client)
     registration = await _post_registration(client, path="/api/registrations", notes="No sugar")
     assert registration.status_code == 201
     registration_id = registration.json()["id"]
-    table_id = await _create_table(client, name="Table A")
+    table_id = await _create_table(client, name="Table A", event_id=registration.json()["event_id"])
 
     r = await client.put(
         f"/api/registrations/{registration_id}",
-        json={"table_id": table_id},
+        json={"allocations": [{"table_id": table_id, "guest_count": registration.json()["guest_count"]}]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -126,10 +135,10 @@ async def test_volunteer_registrations_normalize_visible_table_reference_and_fil
     registration = await _post_registration_with_order(client, quantity=1)
     assert registration.status_code == 201
     registration_id = registration.json()["id"]
-    table_id = await _create_table(client, name="table-12")
+    table_id = await _create_table(client, name="table-12", event_id=registration.json()["event_id"])
     r = await client.put(
         f"/api/registrations/{registration_id}",
-        json={"table_id": table_id},
+        json={"allocations": [{"table_id": table_id, "guest_count": registration.json()["guest_count"]}]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200

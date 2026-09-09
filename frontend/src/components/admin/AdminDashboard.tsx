@@ -206,6 +206,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const {
     handleAddRegistration,
     handleAssignTable,
+    handleSaveAllocations,
     handleUpdateGuestCount,
     handleCheckIn,
     handleIssueStrap,
@@ -683,7 +684,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           registration={detailRegistration}
           baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
           emailDuplicates={emailDuplicates}
-          tables={tables}
+          tables={tables.filter((t) =>
+            layouts.some((l) => l.id === t.layoutId && l.eventId === detailRegistration.eventId),
+          )}
+          onSaveAllocations={handleSaveAllocations}
           onClose={() => {
             setDetailRegistration(null);
             setRegistrationError("");
@@ -691,7 +695,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           onToggleDelivered={handleToggleDelivered}
           onCheckIn={handleCheckIn}
           onIssueStrap={handleIssueStrap}
-          onAssignTable={handleAssignTable}
           onUpdateGuestCount={handleUpdateGuestCount}
           actionError={registrationError}
           onClearActionError={() => setRegistrationError("")}

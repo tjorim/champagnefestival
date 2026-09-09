@@ -26,8 +26,9 @@ from app.database import get_db
 from app.dependencies import Pagination
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
-from app.models import Event, Person, Registration, Table
+from app.models import Event, Person, Registration, RegistrationAllocation, Table
 from app.schemas import CheckInGuestOut, CheckInOut, VolunteerCheckInRequest, VolunteerRegistrationUpdate
+from app.services.allocations_service import allocated_registration_filter
 from app.services.operational_search import (
     DEFAULT_RESULT_LIMIT,
     best_registration_match,
@@ -131,7 +132,7 @@ async def get_table_order_summary(
         (
             await db.execute(
                 select(Registration)
-                .where(Registration.table_id == table.id)
+                .where(allocated_registration_filter([table.id]))
                 .options(selectinload(Registration.person), selectinload(Registration.event))
                 .order_by(Registration.created_at)
                 .limit(DEFAULT_RESULT_LIMIT)
@@ -198,8 +199,14 @@ async def search_registrations(
                 table_query_like = f"%{table_query_escaped}%"
                 or_conditions.extend(
                     [
-                        Table.id.ilike(table_query_like, escape="\\"),
-                        Table.name.ilike(table_query_like, escape="\\"),
+                        Registration.allocations.any(
+                            RegistrationAllocation.table.has(
+                                or_(
+                                    Table.id.ilike(table_query_like, escape="\\"),
+                                    Table.name.ilike(table_query_like, escape="\\"),
+                                )
+                            )
+                        ),
                     ]
                 )
         else:
@@ -215,8 +222,14 @@ async def search_registrations(
                 table_query_like = f"%{table_query_escaped}%"
                 or_conditions.extend(
                     [
-                        Table.id.ilike(table_query_like, escape="\\"),
-                        Table.name.ilike(table_query_like, escape="\\"),
+                        Registration.allocations.any(
+                            RegistrationAllocation.table.has(
+                                or_(
+                                    Table.id.ilike(table_query_like, escape="\\"),
+                                    Table.name.ilike(table_query_like, escape="\\"),
+                                )
+                            )
+                        ),
                     ]
                 )
         stmt = stmt.where(or_(*or_conditions))
@@ -247,6 +260,13 @@ async def search_registrations(
             if q_stripped
             else None
         )
+        if q_stripped:
+            matches = [
+                rank_table_reference(q_stripped, table_id=a.table_id, table_name=a.table.name)
+                for a in registration.allocations
+            ]
+            candidates = [m for m in [match, *matches] if m is not None]
+            match = min(candidates, key=lambda m: (m.rank, m.distance)) if candidates else None
         if q_stripped and match is None:
             continue
         ranked_rows.append((match, registration, table_name))

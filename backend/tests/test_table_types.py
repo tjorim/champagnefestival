@@ -9,6 +9,7 @@ from tests.helpers import (
     ROOM_PAYLOAD,
     TABLE_TYPE_PAYLOAD,
     _create_venue,
+    event_for_room,
 )
 
 
@@ -97,7 +98,11 @@ async def test_table_type_venue_reassignment_blocked_while_table_in_use_elsewher
 
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_a}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     layout_id = r.json()["id"]
     r = await client.post(
         "/api/tables",
@@ -148,7 +153,11 @@ async def test_table_type_delete_blocked_while_table_in_use(client):
 
     r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
     room_id = r.json()["id"]
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": 1}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
     layout_id = r.json()["id"]
     r = await client.post(
         "/api/tables",

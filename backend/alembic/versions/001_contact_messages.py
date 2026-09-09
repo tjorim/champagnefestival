@@ -388,8 +388,47 @@ def upgrade() -> None:
     op.create_check_constraint("ck_product_stock", "products", "stock IS NULL OR stock >= 0")
     op.create_check_constraint("ck_product_unit", "products", "unit IN ('item', 'table', 'person')")
 
+    if op.get_bind().execute(sa.text("SELECT EXISTS(SELECT 1 FROM layouts)")).scalar():
+        raise RuntimeError(
+            "Remove existing test floor plans before upgrading; recreate them afterward with explicit event ownership."
+        )
+    op.drop_column("layouts", "edition_id")
+    op.drop_column("layouts", "day_id")
+    op.add_column(
+        "layouts", sa.Column("event_id", sa.String(64), sa.ForeignKey("events.id", ondelete="RESTRICT"), nullable=False)
+    )
+    op.create_index("ix_layouts_event_id", "layouts", ["event_id"])
+    op.create_unique_constraint("uq_layout_room_event", "layouts", ["room_id", "event_id"])
+
+    op.drop_column("registrations", "table_id")
+    op.create_table(
+        "registration_allocations",
+        sa.Column(
+            "registration_id", sa.String(64), sa.ForeignKey("registrations.id", ondelete="CASCADE"), primary_key=True
+        ),
+        sa.Column("table_id", sa.String(64), sa.ForeignKey("tables.id", ondelete="RESTRICT"), primary_key=True),
+        sa.Column("guest_count", sa.Integer(), nullable=False),
+        sa.Column("exclusive", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.CheckConstraint("guest_count >= 0", name="ck_allocation_guests"),
+    )
+    op.create_index("ix_registration_allocations_table_id", "registration_allocations", ["table_id"])
+
 
 def downgrade() -> None:
+    op.drop_table("registration_allocations")
+    op.add_column(
+        "registrations",
+        sa.Column("table_id", sa.String(64), sa.ForeignKey("tables.id", ondelete="SET NULL"), nullable=True),
+    )
+    op.create_index("ix_registrations_table_id", "registrations", ["table_id"])
+    op.drop_constraint("uq_layout_room_event", "layouts")
+    op.drop_index("ix_layouts_event_id", "layouts")
+    op.drop_column("layouts", "event_id")
+    op.add_column(
+        "layouts",
+        sa.Column("edition_id", sa.String(100), sa.ForeignKey("editions.id", ondelete="SET NULL"), nullable=True),
+    )
+    op.add_column("layouts", sa.Column("day_id", sa.Integer(), nullable=False, server_default="1"))
     op.drop_constraint("ck_product_unit", "products")
     op.drop_constraint("ck_product_stock", "products")
     for column in ("unit", "stock", "inclusions"):
