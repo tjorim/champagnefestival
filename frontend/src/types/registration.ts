@@ -11,6 +11,10 @@ export interface BookingUpdate {
   amountPaid: number;
   notes: string;
   status: RegistrationStatus;
+  /** Why `amountPaid` changed — ignored unless it actually changes. */
+  paymentReason?: "payment" | "refund" | "correction";
+  /** When the money actually moved (YYYY-MM-DD); defaults to the edit time if omitted. */
+  paymentTransactionDate?: string;
 }
 
 /**
@@ -41,6 +45,8 @@ export interface OrderItem {
    * billed at `price` per unit.
    */
   includedQuantity: number;
+  /** Whether this line should appear in the visitor-facing order summary. */
+  visible: boolean;
 }
 
 export interface PersonSummary {

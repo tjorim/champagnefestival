@@ -109,6 +109,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
           // The server computes and merges any bundle-included quantity on top
           // of this — the client only ever asks for what's explicitly chosen.
           includedQuantity: 0,
+          visible: true,
         };
 
         if (existing) {
@@ -130,6 +131,10 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
   const includedQuantities = useMemo(() => {
     const included = new Map<string, { quantity: number; sourceName: string }>();
+    // Tracks products reached via at least one *visible* inclusion edge —
+    // gates the "Includes X free" note only. Stock accounting above still
+    // uses `included` unfiltered, since a hidden inclusion still reserves stock.
+    const visibleIncluded = new Set<string>();
     let visits = 0;
     const expand = (id: string, quantity: number, sourceName: string, path: Set<string>) => {
       if (path.has(id) || ++visits > 10000) return;
@@ -145,6 +150,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 quantity: Math.floor((guestCount || 0) / product.includedPerGuests),
                 per_quantity: quantity,
                 rounding: "down" as const,
+                visible: true,
               },
             ]
           : []);
@@ -157,6 +163,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
           quantity: (old?.quantity ?? 0) + count,
           sourceName: old ? `${old.sourceName}, ${sourceName}` : sourceName,
         });
+        if (edge.visible) visibleIncluded.add(edge.product_id);
         expand(edge.product_id, count, sourceName, nextPath);
       }
     };
@@ -168,7 +175,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         new Set(),
       );
     }
-    return included;
+    return { included, visibleIncluded };
   }, [guestCount, orderItems, products]);
 
   const handleClose = useCallback(() => {
@@ -431,11 +438,22 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   const label = `${product.name} - €${product.price}`;
                   const isLockedOptional =
                     !product.required && requiredProducts.length > 0 && !hasRequiredSelected;
-                  const included = includedQuantities.get(product.id);
+                  const included = includedQuantities.included.get(product.id);
+                  const includedVisible = includedQuantities.visibleIncluded.has(product.id);
                   return (
                     <div key={product.id} className="mb-2">
                       <div className="d-flex align-items-center justify-content-between">
-                        <span className="text-light small">{label}</span>
+                        <span className="text-light small">
+                          {label}
+                          {product.description && (
+                            <span
+                              className="text-secondary d-block"
+                              style={{ fontSize: "0.75rem" }}
+                            >
+                              {product.description}
+                            </span>
+                          )}
+                        </span>
                         <div className="d-flex align-items-center gap-2">
                           <Button
                             variant="outline-secondary"
@@ -472,7 +490,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                           {m.registration_order_available()}: {product.availableQuantity}
                         </div>
                       )}
-                      {included && (
+                      {included && includedVisible && (
                         <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
                           {m.registration_order_included_note({
                             count: included.quantity,

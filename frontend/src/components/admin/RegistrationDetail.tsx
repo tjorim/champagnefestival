@@ -19,6 +19,7 @@ import EmailComposeModal from "./EmailComposeModal";
 
 interface RegistrationDetailProps {
   registration: Registration | null;
+  authHeaders: () => Record<string, string>;
   /** Full origin + router basename (e.g. `https://example.com`). Used to build the check-in QR code URL. */
   baseUrl: string;
   /** Other people sharing the same email address, shown in the merge-duplicate alert. */
@@ -41,6 +42,7 @@ function isSimpleRsvp(registration: Registration) {
 
 export default function RegistrationDetail({
   registration,
+  authHeaders,
   baseUrl,
   emailDuplicates = [],
   tables = [],
@@ -271,6 +273,7 @@ export default function RegistrationDetail({
               <BookingEditor
                 key={`${registration.id}:${registration.updatedAt}`}
                 registration={registration}
+                authHeaders={authHeaders}
                 tables={sortedTables}
                 onSave={onSaveBooking}
               />

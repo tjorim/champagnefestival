@@ -660,13 +660,18 @@ class Product(Base):
     )
 
     name: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str] = mapped_column(String(300), default="")
+    """Short, optional blurb shown alongside the product name to visitors and admins."""
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     category: Mapped[str] = mapped_column(String(20))
     """"champagne" | "food" | "other" — matches OrderItemCategory."""
     unit: Mapped[str] = mapped_column(String(10), default="item")
     stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
     inclusions: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
-    """Included product, numerator/denominator and rounding per parent quantity.
+    """Included product, numerator/denominator, rounding and visibility per parent
+    quantity. Each edge's ``visible`` key (default ``True`` when absent, for rows
+    predating it) controls whether that inclusion appears in the *visitor-facing*
+    order summary — it always still counts toward stock/preparation totals.
 
     Null retains the legacy single inclusion until an administrator edits it.
     An explicit empty list means no included products.

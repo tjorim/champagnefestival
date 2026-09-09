@@ -51,6 +51,8 @@ export function apiEditionStatsToEditionAttendanceStats(
     totalRegistrations: d.total_registrations as number,
     totalGuests: d.total_guests as number,
     totalCheckedIn: d.total_checked_in as number,
+    totalPaid: Number(d.total_paid ?? 0),
+    totalDue: Number(d.total_due ?? 0),
   };
 }
 

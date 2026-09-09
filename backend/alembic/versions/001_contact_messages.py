@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, and booking product inventory/packages with consolidated notes.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, and a short product description.
 
 Revision ID: 001
 Revises: 000
@@ -462,8 +462,11 @@ def upgrade() -> None:
     op.drop_column("registrations", "table_id")
     op.create_index("ix_registration_allocations_table_id", "registration_allocations", ["table_id"])
 
+    op.add_column("products", sa.Column("description", sa.String(300), nullable=False, server_default=""))
+
 
 def downgrade() -> None:
+    op.drop_column("products", "description")
     op.drop_table("registration_allocations")
     op.add_column(
         "registrations",

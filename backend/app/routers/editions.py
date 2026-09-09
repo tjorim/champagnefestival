@@ -98,6 +98,8 @@ async def list_edition_attendance_stats(
             func.coalesce(func.sum(Registration.guest_count).filter(Registration.checked_in.is_(True)), 0).label(
                 "total_checked_in"
             ),
+            func.coalesce(func.sum(Registration.amount_paid), 0).label("total_paid"),
+            func.coalesce(func.sum(Registration.amount_due), 0).label("total_due"),
         )
         .join(Event, Event.id == Registration.event_id)
         .where(Registration.status != "cancelled")
@@ -119,6 +121,8 @@ async def list_edition_attendance_stats(
                 "total_registrations": stats.total_registrations if stats else 0,
                 "total_guests": stats.total_guests if stats else 0,
                 "total_checked_in": stats.total_checked_in if stats else 0,
+                "total_paid": stats.total_paid if stats else 0,
+                "total_due": stats.total_due if stats else 0,
             }
         )
     return payloads

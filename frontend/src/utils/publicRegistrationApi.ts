@@ -184,6 +184,7 @@ export interface GuestRegistration {
     price: number;
     category: string;
     delivered: boolean;
+    visible: boolean;
   }[];
 }
 
@@ -195,6 +196,7 @@ interface GuestOrderItemResponse {
   price: number;
   category: string;
   delivered: boolean;
+  visible?: boolean;
 }
 
 interface GuestRegistrationResponse {
@@ -326,6 +328,7 @@ function mapGuestRegistrations(data: GuestRegistrationResponse[]): GuestRegistra
       quantity: item.quantity,
       price: item.price,
       category: item.category,
+      visible: item.visible !== false,
     })),
   }));
 }

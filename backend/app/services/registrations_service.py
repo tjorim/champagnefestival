@@ -294,6 +294,11 @@ async def apply_registration_update(
     elif body.payment_status == "unpaid":
         registration.amount_paid = Decimal(0)
     if registration.amount_paid != pre_amount_paid:
+        details = {"previous_amount_paid": str(pre_amount_paid), "amount_paid": str(registration.amount_paid)}
+        if body.payment_reason is not None:
+            details["reason"] = body.payment_reason
+        if body.payment_transaction_date is not None:
+            details["transaction_date"] = body.payment_transaction_date.isoformat()
         await write_audit_entry(
             db,
             actor=actor,
@@ -301,7 +306,7 @@ async def apply_registration_update(
             resource_type="registration",
             resource_id=registration.id,
             request_id=request_id,
-            details={"previous_amount_paid": str(pre_amount_paid), "amount_paid": str(registration.amount_paid)},
+            details=details,
         )
     if body.amount_paid is not None or body.order_items is not None:
         registration.payment_status = (

@@ -102,6 +102,7 @@ describe("Schedule component", () => {
             id: "product-1",
             eventId: "fri-tasting",
             name: "VIP Package",
+            description: "",
             price: 50,
             category: "other" as const,
             active: true,

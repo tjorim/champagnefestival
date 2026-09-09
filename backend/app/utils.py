@@ -139,6 +139,7 @@ def product_to_dict(p: Product) -> dict:
         "id": p.id,
         "event_id": p.event_id,
         "name": p.name,
+        "description": p.description,
         "price": p.price,
         "category": p.category,
         "active": p.active,

@@ -53,6 +53,8 @@ describe("AnalyticsDashboard", () => {
         totalRegistrations: 10,
         totalGuests: 25,
         totalCheckedIn: 18,
+        totalPaid: 500,
+        totalDue: 600,
       },
     ]);
     renderAnalyticsDashboard();
@@ -76,6 +78,8 @@ describe("AnalyticsDashboard", () => {
         totalRegistrations: 10,
         totalGuests: 25,
         totalCheckedIn: 18,
+        totalPaid: 500,
+        totalDue: 600,
       },
     ]);
     renderAnalyticsDashboard();

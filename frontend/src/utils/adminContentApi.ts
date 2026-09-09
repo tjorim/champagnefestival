@@ -316,6 +316,7 @@ export interface ProductWrite {
   id?: string;
   eventId: string;
   name: string;
+  description?: string;
   price: number;
   category: OrderItemCategory;
   active: boolean;
@@ -349,6 +350,7 @@ function productWriteBody(payload: ProductWrite) {
   return {
     ...(!payload.id ? { event_id: payload.eventId } : {}),
     name: payload.name,
+    ...(payload.description !== undefined ? { description: payload.description } : {}),
     price: payload.price,
     category: payload.category,
     active: payload.active,

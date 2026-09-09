@@ -30,6 +30,7 @@ interface EventProductsModalProps {
 
 interface ProductFormState {
   name: string;
+  description: string;
   price: string;
   category: OrderItemCategory;
   required: boolean;
@@ -45,6 +46,7 @@ interface ProductFormState {
 
 const EMPTY_FORM: ProductFormState = {
   name: "",
+  description: "",
   price: "",
   category: "champagne",
   required: false,
@@ -144,6 +146,7 @@ export default function EventProductsModal({
     setEditingId(product.id);
     setForm({
       name: product.name,
+      description: product.description,
       price: String(product.price),
       category: product.category,
       required: product.required,
@@ -160,6 +163,7 @@ export default function EventProductsModal({
                 quantity: 1,
                 per_quantity: product.includedPerGuests ?? 1,
                 rounding: "down",
+                visible: true,
               },
             ]
           : []),
@@ -201,6 +205,7 @@ export default function EventProductsModal({
         eventId,
         id: editingId ?? undefined,
         name: form.name.trim(),
+        description: form.description.trim(),
         price,
         category: form.category,
         active: existing?.active ?? true,
@@ -489,6 +494,21 @@ export default function EventProductsModal({
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 />
               </Form.Group>
+              <Form.Group
+                style={{ minWidth: "200px", flex: "2 1 200px" }}
+                controlId="product-description"
+              >
+                <Form.Label className="text-secondary small mb-1">
+                  {m.admin_products_description()}
+                </Form.Label>
+                <Form.Control
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  maxLength={300}
+                  value={form.description}
+                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                />
+              </Form.Group>
               <Form.Group style={{ maxWidth: "120px" }} controlId="product-price">
                 <Form.Label className="text-secondary small mb-1">
                   {m.admin_products_price()}
@@ -624,6 +644,21 @@ export default function EventProductsModal({
                     <option value="down">{m.admin_inventory_round_down()}</option>
                     <option value="up">{m.admin_inventory_round_up()}</option>
                   </Form.Select>
+                  <Form.Check
+                    type="checkbox"
+                    id={`inclusion-visible-${index}`}
+                    className="align-self-center"
+                    label={m.admin_inventory_inclusion_visible()}
+                    checked={edge.visible}
+                    onChange={(e) =>
+                      setForm((f) => ({
+                        ...f,
+                        inclusions: f.inclusions.map((x, i) =>
+                          i === index ? { ...x, visible: e.target.checked } : x,
+                        ),
+                      }))
+                    }
+                  />
                   <Button
                     type="button"
                     variant="outline-danger"
@@ -639,6 +674,9 @@ export default function EventProductsModal({
                 </div>
               ))}
               <Form.Text className="d-block mb-2">{m.admin_inventory_ratio_help()}</Form.Text>
+              <Form.Text className="d-block mb-2">
+                {m.admin_inventory_inclusion_visible_help()}
+              </Form.Text>
               <Button
                 type="button"
                 onClick={() =>
@@ -646,7 +684,13 @@ export default function EventProductsModal({
                     ...f,
                     inclusions: [
                       ...f.inclusions,
-                      { product_id: "", quantity: 1, per_quantity: 1, rounding: "down" },
+                      {
+                        product_id: "",
+                        quantity: 1,
+                        per_quantity: 1,
+                        rounding: "down",
+                        visible: true,
+                      },
                     ],
                   }))
                 }

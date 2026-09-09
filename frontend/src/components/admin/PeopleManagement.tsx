@@ -217,6 +217,24 @@ export default function PeopleManagement({
   const personRegistrations = personRegistrationsQuery.data ?? [];
   const loadingPersonRegistrations = personRegistrationsQuery.isPending;
   const personRegistrationsError = personRegistrationsQuery.isError;
+  const personPaymentTotals = useMemo(() => {
+    const nonCancelled = (personRegistrationsQuery.data ?? []).filter(
+      (r) => r.status !== "cancelled",
+    );
+    const byEdition = new Map<string, { label: string; totalPaid: number }>();
+    for (const r of nonCancelled) {
+      const key = r.editionId || r.editionLabel || "?";
+      const existing = byEdition.get(key);
+      byEdition.set(key, {
+        label: r.editionLabel || key,
+        totalPaid: (existing?.totalPaid ?? 0) + r.amountPaid,
+      });
+    }
+    return {
+      grandTotal: nonCancelled.reduce((sum, r) => sum + r.amountPaid, 0),
+      byEdition: [...byEdition.values()],
+    };
+  }, [personRegistrationsQuery.data]);
 
   const columns = useMemo(
     () =>
@@ -788,6 +806,23 @@ export default function PeopleManagement({
             {!loadingPersonRegistrations &&
               !personRegistrationsError &&
               personRegistrations.length > 0 && (
+                <div className="px-3 pt-3 small text-secondary">
+                  <div>
+                    {m.admin_people_total_paid({
+                      amount: personPaymentTotals.grandTotal.toFixed(2),
+                    })}
+                  </div>
+                  {personPaymentTotals.byEdition.length > 1 &&
+                    personPaymentTotals.byEdition.map((edition) => (
+                      <div key={edition.label} className="ms-2">
+                        {edition.label}: €{edition.totalPaid.toFixed(2)}
+                      </div>
+                    ))}
+                </div>
+              )}
+            {!loadingPersonRegistrations &&
+              !personRegistrationsError &&
+              personRegistrations.length > 0 && (
                 <ListGroup variant="flush">
                   {personRegistrations.map((r) => (
                     <ListGroup.Item key={r.id} className="bg-dark border-secondary text-light py-2">
@@ -797,6 +832,7 @@ export default function PeopleManagement({
                           <div className="text-secondary small">
                             <i className="bi bi-people me-1" aria-hidden="true" />
                             {r.guestCount}
+                            <span className="ms-2">€{r.amountPaid.toFixed(2)}</span>
                           </div>
                         </div>
                         <div className="d-flex gap-1 flex-wrap justify-content-end">

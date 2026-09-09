@@ -69,6 +69,7 @@ async def create_product(
         id=make_id("prod"),
         event_id=body.event_id,
         name=body.name,
+        description=body.description,
         price=body.price,
         category=body.category,
         active=body.active,

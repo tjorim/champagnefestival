@@ -535,18 +535,20 @@ export default function MyRegistrationsPage() {
                                   {m.my_registrations_request_change()}
                                 </Button>
                               )}
-                              {registration.orderItems.length > 0 && (
+                              {registration.orderItems.some((item) => item.visible) && (
                                 <ListGroup variant="flush" className="mt-2">
-                                  {registration.orderItems.map((item, idx) => (
-                                    <ListGroup.Item
-                                      key={`${item.productId}-${idx}`}
-                                      className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center px-0 py-1"
-                                    >
-                                      <span className="small">
-                                        {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
-                                      </span>
-                                    </ListGroup.Item>
-                                  ))}
+                                  {registration.orderItems
+                                    .filter((item) => item.visible)
+                                    .map((item, idx) => (
+                                      <ListGroup.Item
+                                        key={`${item.productId}-${idx}`}
+                                        className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center px-0 py-1"
+                                      >
+                                        <span className="small">
+                                          {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
+                                        </span>
+                                      </ListGroup.Item>
+                                    ))}
                                 </ListGroup>
                               )}
                             </Card.Body>
@@ -647,6 +649,7 @@ export default function MyRegistrationsPage() {
                 <Form.Control
                   as="textarea"
                   rows={4}
+                  placeholder={m.my_registrations_request_details_placeholder()}
                   value={requestDetails}
                   onChange={(event) => setRequestDetails(event.target.value)}
                 />

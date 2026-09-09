@@ -140,4 +140,6 @@ export interface EditionAttendanceStats {
   totalRegistrations: number;
   totalGuests: number;
   totalCheckedIn: number;
+  totalPaid: number;
+  totalDue: number;
 }

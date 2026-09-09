@@ -51,6 +51,10 @@ export function bookingUpdatePayload(update: BookingUpdate, confirmOverCapacity 
       exclusive: allocation.exclusive,
     })),
     amount_paid: update.amountPaid,
+    ...(update.paymentReason !== undefined ? { payment_reason: update.paymentReason } : {}),
+    ...(update.paymentTransactionDate !== undefined
+      ? { payment_transaction_date: update.paymentTransactionDate }
+      : {}),
     notes: update.notes,
     status: update.status,
     confirm_over_capacity: confirmOverCapacity,

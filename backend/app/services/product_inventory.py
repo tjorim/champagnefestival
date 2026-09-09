@@ -117,6 +117,7 @@ def resolve_booking(
         raise HTTPException(400, "This event requires a required product before optional products can be ordered.")
 
     included: dict[str, int] = defaultdict(int)
+    visible_included: dict[str, int] = defaultdict(int)
     used: set[str] = set()
     visits = 0
 
@@ -136,6 +137,7 @@ def resolve_booking(
                 qty = guest_count // per
                 if qty:
                     included[target] += qty
+                    visible_included[target] += qty
                     expand(target, qty)
             return
         for edge in edges:
@@ -145,6 +147,8 @@ def resolve_booking(
             qty = (numerator + denominator - 1) // denominator if edge["rounding"] == "up" else numerator // denominator
             if qty:
                 included[target] += qty
+                if edge.get("visible", True):
+                    visible_included[target] += qty
                 if included[target] > 1000000:
                     raise HTTPException(400, "Expanded package quantity is too large.")
                 expand(target, qty)
@@ -165,6 +169,7 @@ def resolve_booking(
                 quantity=quantity,
                 included_quantity=included.get(key, 0),
                 delivered_quantity=delivered,
+                visible=bool(ordered.get(key, 0)) or bool(visible_included.get(key, 0)),
             ).model_dump()
         )
     return items, {key: graph[key] for key in used}

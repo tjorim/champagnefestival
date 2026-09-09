@@ -57,6 +57,9 @@ class OrderItemBase(BaseModel):
     """How many of `quantity` came free via a product bundle (see
     Product.included_product_id) — only `quantity - included_quantity` is
     billed at `price` per unit."""
+    visible: bool = True
+    """Whether this line should be shown in the visitor-facing order summary
+    (see ProductInclusion.visible) — always counted for stock/prep regardless."""
 
     @model_validator(mode="after")
     def validate_delivery_quantities(self) -> Self:
@@ -259,6 +262,13 @@ class ProductInclusion(RequestModel):
     quantity: int = Field(default=1, ge=1, le=1000000)
     per_quantity: int = Field(default=1, ge=1, le=1000000)
     rounding: Literal["up", "down"] = "down"
+    visible: bool = Field(
+        default=True,
+        description=(
+            "Whether this inclusion appears in the visitor-facing order summary. "
+            "It always counts toward stock and preparation totals either way."
+        ),
+    )
 
 
 class ProductCreate(RequestModel):
@@ -267,6 +277,7 @@ class ProductCreate(RequestModel):
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=300)
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory
     active: bool = True
@@ -290,6 +301,7 @@ class ProductUpdate(RequestModel):
     confirm_shortage: bool = False
     preview_token: str | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=300)
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory | None = None
     active: bool | None = None
@@ -311,6 +323,7 @@ class ProductOut(BaseModel):
     id: str
     event_id: str
     name: str
+    description: str = ""
     price: Decimal
     category: OrderItemCategory
     active: bool
@@ -410,6 +423,13 @@ class RegistrationUpdate(RegistrationNotesRequest):
     status: RegistrationStatus | None = None
     payment_status: PaymentStatus | None = None
     amount_paid: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
+    payment_reason: Literal["payment", "refund", "correction"] | None = None
+    """Why `amount_paid` changed — recorded on the resulting audit entry so a
+    payment history can distinguish a normal payment from a refund/correction.
+    Ignored unless `amount_paid` actually changes."""
+    payment_transaction_date: dt_date | None = None
+    """When the money actually moved (a bank transfer date), which may predate
+    when this edit is made. Defaults to the edit time if omitted."""
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     confirm_over_capacity: bool = False
     order_items: list[OrderItemRequest] | None = Field(default=None, max_length=50)
@@ -1588,6 +1608,8 @@ class EditionAttendanceStats(BaseModel):
     total_registrations: int
     total_guests: int
     total_checked_in: int
+    total_paid: Decimal
+    total_due: Decimal
 
 
 # ---------------------------------------------------------------------------

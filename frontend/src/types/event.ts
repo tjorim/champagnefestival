@@ -19,6 +19,8 @@ export interface ProductInclusion {
   quantity: number;
   per_quantity: number;
   rounding: "up" | "down";
+  /** Whether this inclusion appears in the visitor-facing order summary. */
+  visible: boolean;
 }
 
 export interface Product {
@@ -31,6 +33,8 @@ export interface Product {
   id: string;
   eventId: string;
   name: string;
+  /** Short, optional blurb shown alongside the product name. */
+  description: string;
   price: number;
   category: OrderItemCategory;
   active: boolean;
@@ -101,6 +105,7 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     id: String(data.id ?? ""),
     eventId: String(data.event_id ?? ""),
     name: String(data.name ?? ""),
+    description: String(data.description ?? ""),
     price: Number(data.price ?? 0),
     category: isOrderItemCategory(data.category) ? data.category : "other",
     active: Boolean(data.active),

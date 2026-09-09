@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import RegistrationDetail from "@/components/admin/RegistrationDetail";
 import type { FloorTable } from "@/types/admin";
 import type { Registration } from "@/types/registration";
+import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
@@ -81,6 +82,7 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
         category: "champagne",
         delivered: false,
         includedQuantity: 0,
+        visible: true,
       },
     ],
     notes: "Please seat near the window. Wheelchair access needed.",
@@ -103,19 +105,23 @@ function renderDetail(props: Partial<React.ComponentProps<typeof RegistrationDet
   const onIssueStrap = vi.fn();
   const onMergeDuplicate = vi.fn();
   const onAssignTable = vi.fn();
+  const Wrapper = createTestQueryClientWrapper();
 
   render(
-    <RegistrationDetail
-      registration={buildRegistration()}
-      baseUrl="https://example.com"
-      onClose={onClose}
-      onToggleDelivered={onToggleDelivered}
-      onCheckIn={onCheckIn}
-      onIssueStrap={onIssueStrap}
-      tables={tables}
-      onMergeDuplicate={onMergeDuplicate}
-      {...props}
-    />,
+    <Wrapper>
+      <RegistrationDetail
+        registration={buildRegistration()}
+        authHeaders={() => ({})}
+        baseUrl="https://example.com"
+        onClose={onClose}
+        onToggleDelivered={onToggleDelivered}
+        onCheckIn={onCheckIn}
+        onIssueStrap={onIssueStrap}
+        tables={tables}
+        onMergeDuplicate={onMergeDuplicate}
+        {...props}
+      />
+    </Wrapper>,
   );
 
   return { onClose, onToggleDelivered, onCheckIn, onIssueStrap, onMergeDuplicate, onAssignTable };
@@ -126,6 +132,7 @@ describe("RegistrationDetail", () => {
     render(
       <RegistrationDetail
         registration={null}
+        authHeaders={() => ({})}
         baseUrl="https://example.com"
         onClose={vi.fn()}
         onToggleDelivered={vi.fn()}
@@ -297,6 +304,7 @@ describe("RegistrationDetail", () => {
       id: "table-product",
       eventId: "event-1",
       name: "Bourse table",
+      description: "",
       price: 50,
       category: "other" as const,
       unit: "table" as const,
@@ -320,6 +328,7 @@ describe("RegistrationDetail", () => {
             delivered: false,
             price: 50,
             category: "other",
+            visible: true,
           },
         ],
         bookedTableQuantity: 2,

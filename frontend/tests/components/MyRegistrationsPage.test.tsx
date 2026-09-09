@@ -80,6 +80,7 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_request_type_change: () => "Change my booking",
     my_registrations_request_type_cancellation: () => "Cancel my booking",
     my_registrations_request_details: () => "Details",
+    my_registrations_request_details_placeholder: () => "Placeholder",
     my_registrations_submit_request: () => "Submit request",
     my_registrations_request_change_success: () => "Request submitted.",
     my_registrations_request_change_error: () => "Request failed.",

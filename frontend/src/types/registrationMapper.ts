@@ -59,6 +59,7 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
         category: (item.category ?? "other") as OrderItemCategory,
         delivered: deliveredQuantitySafe === quantitySafe,
         includedQuantity,
+        visible: item.visible !== false,
       };
     }),
     allocations: Array.isArray(d.allocations)

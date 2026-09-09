@@ -26,6 +26,7 @@ import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/adm
 import { getAreaSizePx, getCanvasSizePx, getTableSizePx } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
+import LayoutCompareModal from "./LayoutCompareModal";
 import ConfirmModal from "@/components/ConfirmModal";
 
 // Preset icons available for floor areas — labels resolved at render time for i18n
@@ -54,7 +55,7 @@ const SENSORS = [
   }),
 ];
 
-interface DayOption {
+export interface DayOption {
   eventId: string;
   date: string;
   label: string;
@@ -69,7 +70,11 @@ function getInitialNewLayoutState(dayOptions: DayOption[]) {
   };
 }
 
-function getDayLabel(eventId: string | null, dayOptions: DayOption[], fallbackLabel = ""): string {
+export function getDayLabel(
+  eventId: string | null,
+  dayOptions: DayOption[],
+  fallbackLabel = "",
+): string {
   if (!eventId) return fallbackLabel;
   return dayOptions.find((day) => day.eventId === eventId)?.label ?? fallbackLabel;
 }
@@ -555,6 +560,7 @@ export default function LayoutEditor({
 }: LayoutEditorProps) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
+  const [showCompareLayouts, setShowCompareLayouts] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [layer, setLayer] = useState<"seating" | "areas">("seating");
@@ -976,6 +982,17 @@ export default function LayoutEditor({
                       <i className="bi bi-plus-lg me-1" aria-hidden="true" />
                       {m.admin_add_layout()}
                     </Button>
+                    {roomLayouts.length > 1 && (
+                      <Button
+                        size="sm"
+                        variant="outline-info"
+                        onClick={() => setShowCompareLayouts(true)}
+                        title={m.admin_layout_compare_title()}
+                      >
+                        <i className="bi bi-arrow-left-right me-1" aria-hidden="true" />
+                        {m.admin_layout_compare_title()}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1867,6 +1884,15 @@ export default function LayoutEditor({
           onHide={() => setConfirmDeleteAreaId(null)}
         />
       )}
+      <LayoutCompareModal
+        show={showCompareLayouts}
+        onHide={() => setShowCompareLayouts(false)}
+        roomLayouts={roomLayouts}
+        tables={tables}
+        areas={areas}
+        tableTypes={tableTypes}
+        dayOptions={dayOptions}
+      />
     </div>
   );
 }
