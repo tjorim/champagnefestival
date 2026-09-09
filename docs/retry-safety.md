@@ -200,3 +200,12 @@ is a new confirmed request following a rejected save, not a blind retry, and
 cannot override exclusivity. Tests cover split occupancy, exclusive claims,
 partial assignment with unchanged stock, cancellation, copy isolation, atomic
 rejection and concurrent claims on the last available seats.
+
+The combined admin booking editor submits guest count, status, purchased
+quantities, recorded payment, notes and the complete allocation list in the same
+absolute update. It has no automatic retry. A table-quantity reduction cannot be
+submitted while more tables remain allocated than purchased; the administrator
+chooses the released allocation first. The backend validates and commits the
+quantity, derived stock reservation, payment total and allocation replacement in
+one transaction. After an ambiguous response, reload the booking before editing
+or submitting again.

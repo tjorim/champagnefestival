@@ -207,7 +207,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleAddRegistration,
     handleAssignTable,
     handleSaveAllocations,
-    handleUpdateGuestCount,
+    handleSaveBooking,
     handleCheckIn,
     handleIssueStrap,
     handleToggleDelivered,
@@ -587,6 +587,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onChangeTableType={handleChangeTableType}
                     onUpdateTable={handleUpdateTable}
                     onResizeArea={handleResizeArea}
+                    onSaveAllocations={handleSaveAllocations}
                   />
                 )}
                 {canManageAdminSections && activeKey === "venues" && (
@@ -687,7 +688,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           tables={tables.filter((t) =>
             layouts.some((l) => l.id === t.layoutId && l.eventId === detailRegistration.eventId),
           )}
-          onSaveAllocations={handleSaveAllocations}
+          onSaveBooking={handleSaveBooking}
           onClose={() => {
             setDetailRegistration(null);
             setRegistrationError("");
@@ -695,7 +696,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           onToggleDelivered={handleToggleDelivered}
           onCheckIn={handleCheckIn}
           onIssueStrap={handleIssueStrap}
-          onUpdateGuestCount={handleUpdateGuestCount}
           actionError={registrationError}
           onClearActionError={() => setRegistrationError("")}
           onMergeDuplicate={async (canonicalId, duplicateId) => {

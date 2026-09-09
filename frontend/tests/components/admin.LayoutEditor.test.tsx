@@ -149,6 +149,7 @@ function renderLayoutEditor(overrides: RenderOverrides = {}) {
     onChangeTableType: vi.fn().mockResolvedValue(undefined),
     onUpdateTable: vi.fn().mockResolvedValue(undefined),
     onResizeArea: vi.fn().mockResolvedValue(undefined),
+    onSaveAllocations: vi.fn().mockResolvedValue(undefined),
   };
 
   const utils = render(
@@ -217,6 +218,42 @@ describe("LayoutEditor", () => {
     expect(screen.getAllByText("Main Hall").length).toBeGreaterThan(0);
     expect(screen.getByText("Table A")).toBeInTheDocument();
     expect(screen.getByText("Table B")).toBeInTheDocument();
+  });
+
+  it("assigns an unallocated booking from the selected table on the plan", async () => {
+    const fixture = realisticFixture();
+    const { callbacks } = renderLayoutEditor(fixture);
+    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "admin_layout_assign_booking" }), {
+      target: { value: "reg-1" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "admin_layout_assign_booking" }));
+    await waitFor(() =>
+      expect(callbacks.onSaveAllocations).toHaveBeenCalledWith("reg-1", [
+        { tableId: "table-1", guestCount: 2, exclusive: false },
+      ]),
+    );
+  });
+
+  it("moves or removes an existing allocation from the selected table", async () => {
+    const fixture = realisticFixture();
+    fixture.tables[0] = makeTable({ registrationIds: ["reg-1"] });
+    fixture.registrations[0] = makeRegistration({
+      allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
+    });
+    const { callbacks } = renderLayoutEditor(fixture);
+    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    fireEvent.change(screen.getByRole("combobox", { name: "admin_layout_move_booking Jane Doe" }), {
+      target: { value: "table-2" },
+    });
+    await waitFor(() =>
+      expect(callbacks.onSaveAllocations).toHaveBeenCalledWith("reg-1", [
+        { tableId: "table-2", guestCount: 2, exclusive: false },
+      ]),
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_layout_remove_booking" }));
+    await waitFor(() => expect(callbacks.onSaveAllocations).toHaveBeenLastCalledWith("reg-1", []));
   });
 
   it("switches rooms when a different room tab is clicked", () => {

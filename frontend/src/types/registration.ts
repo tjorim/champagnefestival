@@ -4,6 +4,15 @@ export interface TableAllocation {
   exclusive: boolean;
 }
 
+export interface BookingUpdate {
+  guestCount: number;
+  quantities: Record<string, number>;
+  allocations: TableAllocation[];
+  amountPaid: number;
+  notes: string;
+  status: RegistrationStatus;
+}
+
 /**
  * Types for the VIP registration and ordering system.
  */

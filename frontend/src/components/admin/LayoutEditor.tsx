@@ -21,6 +21,7 @@ import Modal from "react-bootstrap/Modal";
 import Nav from "react-bootstrap/Nav";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
+import type { TableAllocation } from "@/types/registration";
 import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/admin";
 import { getAreaSizePx, getCanvasSizePx, getTableSizePx } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
@@ -124,6 +125,7 @@ interface LayoutEditorProps {
   onChangeTableType: (tableId: string, tableTypeId: string) => Promise<void>;
   onUpdateTable: (tableId: string, name: string) => Promise<void>;
   onResizeArea: (areaId: string, widthM: number, lengthM: number) => Promise<void>;
+  onSaveAllocations: (registrationId: string, allocations: TableAllocation[]) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -549,6 +551,7 @@ export default function LayoutEditor({
   onChangeTableType,
   onUpdateTable,
   onResizeArea,
+  onSaveAllocations,
 }: LayoutEditorProps) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
@@ -638,6 +641,10 @@ export default function LayoutEditor({
 
   const [confirmDeleteTableId, setConfirmDeleteTableId] = useState<string | null>(null);
   const [updateTableError, setUpdateTableError] = useState<string | null>(null);
+  const [allocationError, setAllocationError] = useState<string | null>(null);
+  const [allocationPending, setAllocationPending] = useState(false);
+  const [bookingToAssign, setBookingToAssign] = useState("");
+  const [guestsToAssign, setGuestsToAssign] = useState(1);
   // Add Area modal
   const [showAddArea, setShowAddArea] = useState(false);
   const [newArea, setNewArea] = useState({
@@ -727,6 +734,41 @@ export default function LayoutEditor({
     : [];
 
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
+  const eventLayoutIds = new Set(
+    layouts.filter((layout) => layout.eventId === activeLayout?.eventId).map((layout) => layout.id),
+  );
+  const eventTables = tables.filter((table) => eventLayoutIds.has(table.layoutId));
+  const assignableRegistrations = registrations.filter((registration) => {
+    if (registration.status === "cancelled" || registration.eventId !== activeLayout?.eventId)
+      return false;
+    if (
+      registration.allocations?.some((allocation) => allocation.tableId === selectedTableData?.id)
+    )
+      return false;
+    const used = registration.bookedTableQuantity
+      ? (registration.allocations?.length ?? 0)
+      : (registration.allocations?.reduce((sum, allocation) => sum + allocation.guestCount, 0) ??
+        0);
+    return used < (registration.bookedTableQuantity || registration.guestCount);
+  });
+  const selectedBookingToAssign = assignableRegistrations.find(
+    (item) => item.id === bookingToAssign,
+  );
+
+  const savePlanAllocations = async (
+    registration: Registration,
+    allocations: TableAllocation[],
+  ) => {
+    setAllocationError(null);
+    setAllocationPending(true);
+    try {
+      await onSaveAllocations(registration.id, allocations);
+    } catch (error) {
+      setAllocationError(error instanceof Error ? error.message : m.admin_error_assign_table());
+    } finally {
+      setAllocationPending(false);
+    }
+  };
   const activeLayoutDateLabel = useMemo(
     () => getDayLabel(activeLayout?.eventId ?? null, dayOptions, activeLayout?.label ?? ""),
     [activeLayout?.eventId, activeLayout?.label, dayOptions],
@@ -1043,6 +1085,11 @@ export default function LayoutEditor({
                 {updateTableError}
               </Alert>
             )}
+            {allocationError && (
+              <Alert role="alert" variant="danger" className="py-1 mb-2 small">
+                {allocationError}
+              </Alert>
+            )}
             <Form.Group className="mb-3" controlId="table-name-edit">
               <Form.Label className="text-secondary small">{m.admin_table_name()}</Form.Label>
               <Form.Control
@@ -1103,20 +1150,155 @@ export default function LayoutEditor({
             {selectedRegistrations.length === 0 ? (
               <p className="text-secondary mb-0">{m.admin_unassigned()}</p>
             ) : (
-              <ListGroup variant="flush">
+              <ListGroup variant="flush" className="mb-3">
                 {selectedRegistrations.map((r) => (
                   <ListGroup.Item key={r.id} className="bg-dark text-light border-secondary">
-                    <span className="fw-semibold">{r.person.name}</span>
-                    <span className="text-secondary ms-2 small">
-                      (
-                      {r.allocations?.find((a) => a.tableId === selectedTableData?.id)
-                        ?.guestCount ?? 0}{" "}
-                      {m.admin_guests_count()})
-                    </span>
+                    <div className="d-flex flex-wrap align-items-center gap-2">
+                      <span className="fw-semibold me-auto">{r.person.name}</span>
+                      {(() => {
+                        const allocation = r.allocations?.find(
+                          (item) => item.tableId === selectedTableData.id,
+                        );
+                        if (!allocation) return null;
+                        return (
+                          <>
+                            <Form.Control
+                              aria-label={`${m.admin_guests_count()} ${r.person.name}`}
+                              type="number"
+                              min={allocation.exclusive ? 0 : 1}
+                              max={20}
+                              defaultValue={allocation.guestCount}
+                              disabled={allocationPending || allocation.exclusive}
+                              className="bg-dark text-light border-secondary"
+                              style={{ width: "5rem" }}
+                              onBlur={(event) => {
+                                const guestCount = Number(event.currentTarget.value);
+                                if (
+                                  Number.isInteger(guestCount) &&
+                                  guestCount >= 1 &&
+                                  guestCount !== allocation.guestCount
+                                ) {
+                                  void savePlanAllocations(
+                                    r,
+                                    (r.allocations ?? []).map((item) =>
+                                      item.tableId === selectedTableData.id
+                                        ? { ...item, guestCount }
+                                        : item,
+                                    ),
+                                  );
+                                }
+                              }}
+                            />
+                            <Form.Select
+                              aria-label={`${m.admin_layout_move_booking()} ${r.person.name}`}
+                              size="sm"
+                              value={selectedTableData.id}
+                              disabled={allocationPending}
+                              onChange={(event) =>
+                                void savePlanAllocations(
+                                  r,
+                                  (r.allocations ?? []).map((item) =>
+                                    item.tableId === selectedTableData.id
+                                      ? { ...item, tableId: event.target.value }
+                                      : item,
+                                  ),
+                                )
+                              }
+                            >
+                              {eventTables.map((table) => (
+                                <option key={table.id} value={table.id}>
+                                  {table.name}
+                                </option>
+                              ))}
+                            </Form.Select>
+                            <Button
+                              size="sm"
+                              variant="outline-danger"
+                              disabled={allocationPending}
+                              onClick={() =>
+                                void savePlanAllocations(
+                                  r,
+                                  (r.allocations ?? []).filter(
+                                    (item) => item.tableId !== selectedTableData.id,
+                                  ),
+                                )
+                              }
+                            >
+                              {m.admin_layout_remove_booking()}
+                            </Button>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </ListGroup.Item>
                 ))}
               </ListGroup>
             )}
+            <div className="border-top border-secondary pt-3 mt-3">
+              <Form.Label className="text-secondary small">
+                {m.admin_layout_assign_booking()}
+              </Form.Label>
+              <div className="d-flex flex-wrap gap-2">
+                <Form.Select
+                  aria-label={m.admin_layout_assign_booking()}
+                  value={bookingToAssign}
+                  disabled={allocationPending || assignableRegistrations.length === 0}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    const booking = assignableRegistrations.find((item) => item.id === id);
+                    const alreadyAssigned =
+                      booking?.allocations?.reduce((sum, item) => sum + item.guestCount, 0) ?? 0;
+                    setBookingToAssign(id);
+                    setGuestsToAssign(
+                      booking?.bookedTableQuantity
+                        ? 0
+                        : Math.max(1, (booking?.guestCount ?? 1) - alreadyAssigned),
+                    );
+                  }}
+                >
+                  <option value="">{m.admin_layout_choose_booking()}</option>
+                  {assignableRegistrations.map((registration) => (
+                    <option key={registration.id} value={registration.id}>
+                      {registration.person.name} · {registration.id}
+                    </option>
+                  ))}
+                </Form.Select>
+                <Form.Control
+                  aria-label={m.admin_guests_count()}
+                  type="number"
+                  min={selectedBookingToAssign?.bookedTableQuantity ? 0 : 1}
+                  max={20}
+                  value={guestsToAssign}
+                  disabled={
+                    allocationPending ||
+                    !bookingToAssign ||
+                    Boolean(selectedBookingToAssign?.bookedTableQuantity)
+                  }
+                  onChange={(event) => setGuestsToAssign(Number(event.target.value))}
+                  style={{ width: "6rem" }}
+                />
+                <Button
+                  variant="warning"
+                  disabled={allocationPending || !selectedBookingToAssign}
+                  onClick={async () => {
+                    if (!selectedBookingToAssign) return;
+                    await savePlanAllocations(selectedBookingToAssign, [
+                      ...(selectedBookingToAssign.allocations ?? []),
+                      {
+                        tableId: selectedTableData.id,
+                        guestCount: selectedBookingToAssign.bookedTableQuantity
+                          ? 0
+                          : guestsToAssign,
+                        exclusive: Boolean(selectedBookingToAssign.bookedTableQuantity),
+                      },
+                    ]);
+                    setBookingToAssign("");
+                  }}
+                >
+                  {m.admin_layout_assign_booking()}
+                </Button>
+              </div>
+            </div>
           </Card.Body>
         </Card>
       )}

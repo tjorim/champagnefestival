@@ -3,6 +3,7 @@ import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
 import type {
   TableAllocation,
+  BookingUpdate,
   OrderItem,
   PaymentStatus,
   Registration,
@@ -27,6 +28,28 @@ interface UseAdminRegistrationActionsOptions {
    * the dialog itself.
    */
   confirmOverCapacity: () => Promise<boolean>;
+}
+
+export function bookingUpdatePayload(update: BookingUpdate, confirmOverCapacity = false) {
+  return {
+    guest_count: update.guestCount,
+    ...(Object.keys(update.quantities).length
+      ? {
+          order_items: Object.entries(update.quantities)
+            .filter(([, quantity]) => quantity > 0)
+            .map(([product_id, quantity]) => ({ product_id, quantity })),
+        }
+      : {}),
+    allocations: update.allocations.map((allocation) => ({
+      table_id: allocation.tableId,
+      guest_count: allocation.guestCount,
+      exclusive: allocation.exclusive,
+    })),
+    amount_paid: update.amountPaid,
+    notes: update.notes,
+    status: update.status,
+    confirm_over_capacity: confirmOverCapacity,
+  };
 }
 
 export function useAdminRegistrationActions({
@@ -227,6 +250,50 @@ export function useAdminRegistrationActions({
     ],
   );
 
+  const handleSaveBooking = useCallback(
+    async (registrationId: string, update: BookingUpdate) => {
+      const save = (confirm = false) =>
+        updateRegistrationMutation.mutateAsync({
+          id: registrationId,
+          payload: bookingUpdatePayload(update, confirm),
+          fallbackMessage: m.admin_error_update_registration(),
+        });
+      try {
+        let response: Record<string, unknown>;
+        try {
+          response = await save();
+        } catch (error) {
+          if (
+            !(error instanceof Error && error.message.includes("remaining seats")) ||
+            !(await confirmOverCapacity())
+          )
+            throw error;
+          response = await save(true);
+        }
+        const updated = apiToRegistration(response);
+        queryClient.setQueryData<Registration[]>(registrationsQueryKey, (previous) =>
+          previous?.map((item) => (item.id === registrationId ? updated : item)),
+        );
+        setDetailRegistration((previous) => (previous?.id === registrationId ? updated : previous));
+        await queryClient.invalidateQueries({ queryKey: tablesQueryKey });
+      } catch (error) {
+        setRegistrationError(
+          error instanceof Error ? error.message : m.admin_error_update_registration(),
+        );
+        throw error;
+      }
+    },
+    [
+      confirmOverCapacity,
+      queryClient,
+      registrationsQueryKey,
+      setDetailRegistration,
+      setRegistrationError,
+      tablesQueryKey,
+      updateRegistrationMutation,
+    ],
+  );
+
   const handleAssignTable = useCallback(
     async (registrationId: string, tableId: string | undefined) => {
       const registration = queryClient
@@ -391,6 +458,7 @@ export function useAdminRegistrationActions({
     handleAddRegistration,
     handleAssignTable,
     handleSaveAllocations,
+    handleSaveBooking,
     handleCheckIn,
     handleIssueStrap,
     handleToggleDelivered,

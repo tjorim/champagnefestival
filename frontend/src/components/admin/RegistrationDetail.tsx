@@ -8,13 +8,13 @@ import Modal from "react-bootstrap/Modal";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
-import type { OrderItem, Registration, TableAllocation } from "@/types/registration";
+import type { BookingUpdate, OrderItem, Registration } from "@/types/registration";
 import {
   buildRegistrationEmailDraft,
   type EmailDraft,
   type RegistrationEmailTemplate,
 } from "@/utils/emailComposer";
-import AllocationEditor from "./AllocationEditor";
+import BookingEditor from "./BookingEditor";
 import EmailComposeModal from "./EmailComposeModal";
 
 interface RegistrationDetailProps {
@@ -28,8 +28,7 @@ interface RegistrationDetailProps {
   onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
-  onSaveAllocations?: (registrationId: string, allocations: TableAllocation[]) => Promise<void>;
-  onUpdateGuestCount?: (registrationId: string, guestCount: number) => Promise<void>;
+  onSaveBooking?: (registrationId: string, update: BookingUpdate) => Promise<void>;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
   actionError?: string;
   onClearActionError?: () => void;
@@ -49,8 +48,7 @@ export default function RegistrationDetail({
   onToggleDelivered,
   onCheckIn,
   onIssueStrap,
-  onUpdateGuestCount,
-  onSaveAllocations,
+  onSaveBooking,
   onMergeDuplicate,
   actionError,
   onClearActionError,
@@ -243,6 +241,12 @@ export default function RegistrationDetail({
               {registration.person.email}
             </a>
           </ListGroup.Item>
+          {!onSaveBooking && (
+            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
+              <span className="text-secondary">{m.admin_guests_count()}</span>
+              <span aria-label={m.admin_guests_count()}>{registration.guestCount}</span>
+            </ListGroup.Item>
+          )}
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.registration_phone()}</span>
             <span>{registration.person.phone}</span>
@@ -262,44 +266,17 @@ export default function RegistrationDetail({
               })()}
             </span>
           </ListGroup.Item>
-          <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.admin_guests_count()}</span>
-            <Form.Control
-              type="number"
-              min={1}
-              max={20}
-              size="sm"
-              aria-label={m.admin_guests_count()}
-              className="bg-dark text-light border-secondary"
-              style={{ width: "5rem" }}
-              defaultValue={registration.guestCount}
-              onBlur={(event) => {
-                const value = Number(event.currentTarget.value);
-                if (
-                  Number.isInteger(value) &&
-                  value >= 1 &&
-                  value <= 20 &&
-                  value !== registration.guestCount
-                ) {
-                  const update = onUpdateGuestCount?.(registration.id, value);
-                  if (update) void update.catch(() => undefined);
-                } else {
-                  event.currentTarget.value = String(registration.guestCount);
-                }
-              }}
-            />
-          </ListGroup.Item>
-          {onSaveAllocations && (
+          {onSaveBooking && (
             <ListGroup.Item className="bg-dark text-light border-secondary">
-              <AllocationEditor
+              <BookingEditor
                 key={`${registration.id}:${registration.updatedAt}`}
                 registration={registration}
                 tables={sortedTables}
-                onSave={onSaveAllocations}
+                onSave={onSaveBooking}
               />
             </ListGroup.Item>
           )}
-          {registration.notes && (
+          {!onSaveBooking && registration.notes && (
             <ListGroup.Item className="bg-dark text-light border-secondary">
               <span className="text-secondary d-block mb-1">{m.admin_notes()}</span>
               <span className="small">{registration.notes}</span>

@@ -148,7 +148,7 @@ describe("RegistrationDetail", () => {
     expect(emailLink).toHaveAttribute("href", "mailto:jane@example.com");
 
     expect(screen.getByText("+32 470 00 00 00")).toBeInTheDocument();
-    expect(screen.getByRole("spinbutton", { name: "admin_guests_count" })).toHaveValue(2);
+    expect(screen.getByLabelText("admin_guests_count")).toHaveTextContent("2");
     expect(screen.getByText("Grand Tasting")).toBeInTheDocument();
     expect(
       screen.getByText("Please seat near the window. Wheelchair access needed."),
@@ -200,9 +200,9 @@ describe("RegistrationDetail", () => {
   });
 
   it("keeps a whole-table booking partially allocated without inventing a companion count", () => {
-    const onSaveAllocations = vi.fn().mockResolvedValue(undefined);
+    const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     renderDetail({
-      onSaveAllocations,
+      onSaveBooking,
       registration: buildRegistration({
         bookedTableQuantity: 3,
         allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
@@ -217,17 +217,22 @@ describe("RegistrationDetail", () => {
       within(selectors[1]!).queryByRole("option", { name: /Table 10/ }),
     ).not.toBeInTheDocument();
     fireEvent.change(selectors[1]!, { target: { value: "table-2" } });
-    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
-    expect(onSaveAllocations).toHaveBeenCalledWith("reg-1", [
-      { tableId: "table-1", guestCount: 0, exclusive: true },
-      { tableId: "table-2", guestCount: 0, exclusive: true },
-    ]);
+    fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({
+        allocations: [
+          { tableId: "table-1", guestCount: 0, exclusive: true },
+          { tableId: "table-2", guestCount: 0, exclusive: true },
+        ],
+      }),
+    );
   });
 
   it("records actual guest counts when splitting a booking", () => {
-    const onSaveAllocations = vi.fn().mockResolvedValue(undefined);
+    const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     renderDetail({
-      onSaveAllocations,
+      onSaveBooking,
       registration: buildRegistration({
         guestCount: 6,
         allocations: [
@@ -239,23 +244,28 @@ describe("RegistrationDetail", () => {
     expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
       '"assigned":6,"total":6',
     );
-    fireEvent.change(screen.getAllByRole("spinbutton", { name: "admin_guests_count" }).at(-1)!, {
+    fireEvent.change(screen.getAllByRole("spinbutton", { name: "admin_guests_count" })[2]!, {
       target: { value: "1" },
     });
     expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
       '"assigned":5,"total":6',
     );
-    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
-    expect(onSaveAllocations).toHaveBeenCalledWith("reg-1", [
-      { tableId: "table-1", guestCount: 4, exclusive: false },
-      { tableId: "table-2", guestCount: 1, exclusive: false },
-    ]);
+    fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({
+        allocations: [
+          { tableId: "table-1", guestCount: 4, exclusive: false },
+          { tableId: "table-2", guestCount: 1, exclusive: false },
+        ],
+      }),
+    );
   });
 
   it("saves table allocations explicitly from the detail modal", async () => {
-    const onSaveAllocations = vi.fn().mockResolvedValue(undefined);
+    const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     renderDetail({
-      onSaveAllocations,
+      onSaveBooking,
       registration: buildRegistration({
         allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
       }),
@@ -271,11 +281,74 @@ describe("RegistrationDetail", () => {
 
     fireEvent.change(select, { target: { value: "table-1" } });
 
-    expect(onSaveAllocations).not.toHaveBeenCalled();
-    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
-    expect(onSaveAllocations).toHaveBeenCalledWith("reg-1", [
-      { tableId: "table-1", guestCount: 2, exclusive: false },
-    ]);
+    expect(onSaveBooking).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({
+        allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
+      }),
+    );
+  });
+
+  it("previews a table quantity reduction and saves the chosen release with payment", () => {
+    const onSaveBooking = vi.fn().mockResolvedValue(undefined);
+    const tableProduct = {
+      id: "table-product",
+      eventId: "event-1",
+      name: "Bourse table",
+      price: 50,
+      category: "other" as const,
+      unit: "table" as const,
+      active: true,
+      required: false,
+      createdAt: "",
+      updatedAt: "",
+    };
+    renderDetail({
+      onSaveBooking,
+      registration: buildRegistration({
+        amountPaid: 100,
+        orderItems: [
+          {
+            productId: tableProduct.id,
+            name: tableProduct.name,
+            quantity: 2,
+            includedQuantity: 0,
+            deliveredQuantity: 0,
+            remainingQuantity: 2,
+            delivered: false,
+            price: 50,
+            category: "other",
+          },
+        ],
+        bookedTableQuantity: 2,
+        allocations: [
+          { tableId: "table-1", guestCount: 0, exclusive: true },
+          { tableId: "table-2", guestCount: 0, exclusive: true },
+        ],
+        event: { ...buildRegistration().event!, products: [tableProduct] },
+      }),
+    });
+    fireEvent.change(
+      screen.getByRole("spinbutton", { name: "admin_booking_quantity Bourse table" }),
+      {
+        target: { value: "1" },
+      },
+    );
+    expect(screen.getByText(/admin_booking_release_tables/)).toBeInTheDocument();
+    expect(screen.getByText(/admin_inventory_refund/)).toHaveTextContent("€50.00");
+    expect(screen.getByRole("button", { name: "admin_booking_save_all" })).toBeDisabled();
+    fireEvent.click(screen.getAllByRole("button", { name: "admin_inventory_remove" })[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({
+        quantities: { "table-product": 1 },
+        amountPaid: 100,
+        allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
+      }),
+    );
   });
 
   it("hides table assignment for simple RSVP (non-festival) registrations", () => {

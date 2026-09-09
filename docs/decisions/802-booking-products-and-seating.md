@@ -1,6 +1,6 @@
 # Booking products, stock, packages and table allocation
 
-**Status:** Design guidance agreed on 2026-09-08; inventory/package and notes implementation in progress. Physical seating remains outstanding.
+**Status:** Agreed implementation completed through the combined booking editor on 2026-09-09; capsule-exchange companion policy remains open.
 Related issue: [#802](https://github.com/tjorim/champagnefestival/issues/802).
 These notes capture the present requirements, not permanent architectural rules.
 
@@ -116,8 +116,18 @@ supports allocation editing. Capacity uses allocated guests, with an explicit
 admin override; exclusivity cannot be overridden. Package changes that would
 invalidate existing allocations require releasing those allocations first.
 
-The full booking/payment/quantity editor, including choosing which tables to
-release during a quantity reduction, remains the third increment. Capsule-exchange
-companion rules remain undecided. No GitHub issue is closed by this partial work.
+The third increment adds one booking editor for guest count, status, purchased
+quantities, recorded payment, notes and table allocations. It previews the new
+total at the booking's preserved unit prices, along with the balance or manual
+refund. When table quantity falls below the number assigned, saving remains
+disabled until the administrator chooses which allocations to release. The API
+then applies quantity, stock, payment and allocation changes in one transaction.
+The floor-plan editor also supports the seating workflow directly: selecting a
+table shows its assigned people and lets the administrator add a booking, change
+the guest count on that allocation, move it to another table, or remove it.
+
+All currently agreed implementation increments are complete. Capsule-exchange
+companion rules remain undecided, so #802 remains open until that operating rule
+is confirmed or explicitly split into a later issue.
 These implementation notes describe current behaviour and can change with the
 product; they are not additional constraints on future design.
