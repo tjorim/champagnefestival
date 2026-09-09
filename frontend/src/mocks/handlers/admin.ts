@@ -115,6 +115,7 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
   const byTableId = new Map<string, string[]>();
 
   for (const registration of sharedStore.registrations) {
+    if (registration.status === "cancelled") continue;
     const allocations = (registration.allocations ?? []) as { table_id: string }[];
     for (const allocation of allocations) {
       const ids = byTableId.get(allocation.table_id) ?? [];

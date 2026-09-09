@@ -182,7 +182,7 @@ async def event_for_room(client, room_id: str, number: int = 1, edition_id: str 
     if edition.status_code == 404:
         response = await client.post(
             "/api/editions",
-            json={"id": edition_id, "venue_id": room["venue_id"], "year": 2099, "month": "march", "active": True},
+            json={"id": edition_id, "venue_id": room["venue_id"], "year": 2099, "month": "march", "active": False},
         )
         assert response.status_code == 201, response.text
     events = (await client.get("/api/events", params={"edition_id": edition_id})).json()

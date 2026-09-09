@@ -141,6 +141,7 @@
   "registration_order_description": "Order champagne or snacks with your registration",
   "registration_order_required_hint": "Add {products} first to unlock the optional items below.",
   "registration_order_included_note": "Includes {count} free with your {source}",
+  "registration_order_available": "Available",
   "registration_notes": "Notes and requests (optional)",
   "registration_notes_placeholder": "Tell us about accessibility needs or placement preferences, such as being next to another booking. Placement requests are not guaranteed.",
   "registration_submit": "Submit Registration",

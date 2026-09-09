@@ -1589,11 +1589,11 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update a registration; omitted fields are left unchanged.
 
-        ``amount_due`` have no natural "clear" value via a plain optional
-        parameter (0.0 is a valid amount_due) — pass ``clear_amount_due=True`` /
-        ``clear_table=True`` to null them out. ``order_items`` takes
-        ``product_id``/``quantity`` pairs; product details are resolved server-side.
-        Requires the ``admin`` role.
+        ``amount_due`` has no natural "clear" value via a plain optional
+        parameter (0.0 is a valid amount_due) — pass ``clear_amount_due=True``
+        to null it out. ``order_items`` takes ``product_id``/``quantity`` pairs;
+        product details are resolved server-side. ``allocations`` replaces the
+        complete table allocation list. Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_registrations.update_registration(

@@ -30,6 +30,11 @@ interface UseAdminRegistrationActionsOptions {
   confirmOverCapacity: () => Promise<boolean>;
 }
 
+/** Matches the backend's table-capacity rejection (see `allocations_service.validate_allocations`). */
+function isCapacityError(error: unknown): error is Error {
+  return error instanceof Error && error.message.includes("remaining seats");
+}
+
 export function bookingUpdatePayload(update: BookingUpdate, confirmOverCapacity = false) {
   return {
     guest_count: update.guestCount,
@@ -124,11 +129,7 @@ export function useAdminRegistrationActions({
         );
         setDetailRegistration((prev) => (prev?.id === id ? updated : prev));
       } catch (err) {
-        if (
-          err instanceof Error &&
-          err.message.includes("seat(s) remaining") &&
-          (await confirmOverCapacity())
-        ) {
+        if (isCapacityError(err) && (await confirmOverCapacity())) {
           const updated = apiToRegistration(
             await updateRegistrationMutation.mutateAsync({
               id,
@@ -221,11 +222,7 @@ export function useAdminRegistrationActions({
         try {
           response = await save();
         } catch (error) {
-          if (
-            !(error instanceof Error && error.message.includes("remaining seats")) ||
-            !(await confirmOverCapacity())
-          )
-            throw error;
+          if (!isCapacityError(error) || !(await confirmOverCapacity())) throw error;
           response = await save(true);
         }
         const updated = apiToRegistration(response);
@@ -263,11 +260,7 @@ export function useAdminRegistrationActions({
         try {
           response = await save();
         } catch (error) {
-          if (
-            !(error instanceof Error && error.message.includes("remaining seats")) ||
-            !(await confirmOverCapacity())
-          )
-            throw error;
+          if (!isCapacityError(error) || !(await confirmOverCapacity())) throw error;
           response = await save(true);
         }
         const updated = apiToRegistration(response);

@@ -12,7 +12,6 @@ import { m } from "@/paraglide/messages";
 interface UseVenueMutationsOptions {
   queryClient: QueryClient;
   authHeaders: () => Record<string, string>;
-  activeEditionId: string;
   tablesQueryKey: QueryKey;
   venuesQueryKey: QueryKey;
   roomsQueryKey: QueryKey;

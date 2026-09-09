@@ -16,7 +16,6 @@ import {
 } from "@/utils/adminApiMappers";
 
 interface UseAdminVenueActionsOptions {
-  activeEditionId: string;
   areasQueryKey: QueryKey;
   authHeaders: () => Record<string, string>;
   layoutsQueryKey: QueryKey;
@@ -28,7 +27,6 @@ interface UseAdminVenueActionsOptions {
 }
 
 export function useAdminVenueActions({
-  activeEditionId,
   areasQueryKey,
   authHeaders,
   layoutsQueryKey,
@@ -66,7 +64,6 @@ export function useAdminVenueActions({
   } = useVenueMutations({
     queryClient,
     authHeaders,
-    activeEditionId,
     tablesQueryKey,
     venuesQueryKey,
     roomsQueryKey,

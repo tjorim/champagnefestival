@@ -44,6 +44,7 @@ deliberate decision, not an implicit idempotency guarantee.
 | Visitor session refresh (any authenticated `GET`/`POST` while a visitor-session cookie is presented) | Public browser | **Convergent — safe to retry.** Every dependency resolution that accepts the cookie extends the sliding 7-day idle window (`VisitorSession.expires_at`, capped by the never-extended 30-day `hard_expires_at`) as a side effect; repeating the same authenticated request extends the same way each time, with no additional state created. Sign-out (`POST /api/visitor-sessions/sign-out`) is likewise convergent — deleting an already-deleted session is a no-op. |
 | Single creates, layout copy, people merge, registration creation, registration-access email request, Pebble token creation, and integration-client creation/rotation | Browser, public clients, and MCP automation | **Not retry safe.** Server-generated identity or an external side effect makes blind retry unsafe. Use server-side replay or a client-generated resource ID before adding automatic retries. Secret-returning operations must not gain replay storage without a separate security review. |
 | Outbox enqueue within registration creation | Backend transaction | **Natural resource key.** The unique `registration-confirmation:{registration_id}` key permits one confirmation job per registration, and the job is committed atomically with the registration. This does not make registration creation itself retry safe because a repeated create receives a new registration ID. |
+| Outbox enqueue within a visitor booking change/cancellation request | Backend transaction | **Natural resource key.** The unique `contact-notification:{submission_id}` key permits one notification job per client-generated submission UUID, committed atomically with the stored `ContactMessage`. A replay of the same submission finds the message already inserted and does not enqueue a second job. |
 | Outbox delivery attempts | Supervised worker | **At-least-once delivery.** A lease and atomic `SKIP LOCKED` claim prevent concurrent workers from owning the same live attempt, and expired claims recover after a crash. A process failure after SMTP accepts a message but before the result commits is inherently ambiguous and can cause a duplicate email; consumers must tolerate duplicates. Retries are bounded and use exponential backoff before terminal failure. |
 | Web Push subscribe (`POST /api/push/subscriptions`) | Public browser | **Natural-key upsert.** `endpoint` is the browser-chosen stable key; a repeat (deliberate or ambiguous-response retry) upserts the same row rather than creating a duplicate. `consent_at` is set only on first creation and never overwritten, so a resubscribe cannot backdate consent; `categories`/`event_ids`/`locale`/`last_seen_at` do refresh on every call, which is the intended "renew my preferences" behaviour, not a retry hazard. |
 | Web Push unsubscribe (`POST /api/push/subscriptions/unsubscribe`) | Public browser | **Natural-key upsert, convergent state only.** Deletes by `endpoint`; repeating after the row is already gone is a no-op that still returns 204. |
@@ -175,8 +176,13 @@ payment preservation and booked-price quantity changes.
 
 Visitor booking change/cancellation requests use a client-generated submission
 UUID. Replaying the same `POST /api/me/registrations/{id}/request` returns success
-without creating another inbox item, audit entry or organiser notification. A
-request never changes booking status, quantities, allocations or payment state.
+without creating another inbox item or audit entry. Organiser notification is
+enqueued through the durable outbox exactly once, atomically with the stored
+message (see the outbox enqueue inventory entry above); a replay does not enqueue
+a second delivery job, and a transient delivery failure is retried by the outbox
+worker's at-least-once, exponential-backoff delivery rather than being silently
+dropped or left dependent on the client retrying the request. A request never
+changes booking status, quantities, allocations or payment state.
 
 
 # Event plans and physical allocations (#802, second increment)

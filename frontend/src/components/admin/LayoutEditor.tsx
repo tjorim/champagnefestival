@@ -1205,11 +1205,19 @@ export default function LayoutEditor({
                                 )
                               }
                             >
-                              {eventTables.map((table) => (
-                                <option key={table.id} value={table.id}>
-                                  {table.name}
-                                </option>
-                              ))}
+                              {eventTables
+                                .filter(
+                                  (table) =>
+                                    table.id === selectedTableData.id ||
+                                    !(r.allocations ?? []).some(
+                                      (item) => item.tableId === table.id,
+                                    ),
+                                )
+                                .map((table) => (
+                                  <option key={table.id} value={table.id}>
+                                    {table.name}
+                                  </option>
+                                ))}
                             </Form.Select>
                             <Button
                               size="sm"

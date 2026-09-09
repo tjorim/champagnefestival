@@ -141,6 +141,7 @@
   "registration_order_description": "Commandez du champagne ou des amuse-bouches avec votre inscription",
   "registration_order_required_hint": "Ajoutez d'abord {products} pour débloquer les éléments optionnels ci-dessous.",
   "registration_order_included_note": "Inclut {count} gratuit(s) avec votre {source}",
+  "registration_order_available": "Disponible",
   "registration_notes": "Remarques et demandes (facultatif)",
   "registration_notes_placeholder": "Indiquez vos besoins d’accessibilité ou vos préférences de placement, par exemple à côté d’une autre réservation. Les demandes de placement ne sont pas garanties.",
   "registration_submit": "Soumettre l'inscription",

@@ -51,7 +51,7 @@ export function useAdminDashboardData({
       .map((event) => ({
         eventId: event.id,
         date: event.date,
-        label: `${event.title} — ${event.date} ${event.startTime}`,
+        label: `${event.title} — ${new Date(`${event.date}T00:00:00`).toLocaleDateString()} ${event.startTime}`,
       }));
   }, [activeEdition.events]);
 

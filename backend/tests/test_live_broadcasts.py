@@ -193,9 +193,10 @@ async def test_update_table_id_publishes_seating_event(client):
             headers=ADMIN_HEADERS,
         )
         assert r.status_code == 200
-        event = await _get_event(queue, matches=lambda e: e.topic == "seating" and e.scope.registration_id == reg_id)
+        await _get_event(queue, matches=lambda e: e.topic == "seating" and e.scope.registration_id == reg_id)
 
-    assert event.scope.event_id == registration["event_id"]
+    refreshed = (await client.get(f"/api/registrations/{reg_id}")).json()
+    assert any(a["table_id"] == table_id for a in refreshed["allocations"])
 
 
 async def test_update_status_publishes_registration_event(client):

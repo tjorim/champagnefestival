@@ -141,6 +141,7 @@
   "registration_order_description": "Bestel champagne of hapjes bij uw inschrijving",
   "registration_order_required_hint": "Voeg eerst {products} toe om de optionele items hieronder te ontgrendelen.",
   "registration_order_included_note": "Inclusief {count} gratis bij uw {source}",
+  "registration_order_available": "Beschikbaar",
   "registration_notes": "Opmerkingen en verzoeken (optioneel)",
   "registration_notes_placeholder": "Vermeld toegankelijkheidsbehoeften of plaatsingsvoorkeuren, bijvoorbeeld naast een andere boeking. Plaatsingsverzoeken zijn niet gegarandeerd.",
   "registration_submit": "Registratie indienen",

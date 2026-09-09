@@ -321,9 +321,9 @@ async def test_table_assignment_enforces_capacity_and_allows_audited_override(db
     assert len(audit["entries"]) == 1
 
 
-async def test_update_registration_rejects_table_from_another_edition(db_session):
-    """Layouts (and their tables) are per-edition; seating a registration at a
-    table drawn for a different edition's floor plan must be rejected."""
+async def test_update_registration_rejects_table_from_another_event(db_session):
+    """Layouts (and their tables) are per-event; seating a registration at a
+    table drawn for a different event's floor plan must be rejected."""
     factory = mcp_session_factory(db_session)
     person, event = await _seed_event(db_session, with_product=False)
     created = await mcp_registrations.create_registration(
@@ -347,7 +347,7 @@ async def test_update_registration_rejects_table_from_another_edition(db_session
     db_session.add(table)
     await db_session.commit()
 
-    with pytest.raises(ValueError, match="event"):
+    with pytest.raises(ValueError, match="belonging to this booking's event"):
         await mcp_registrations.update_registration(
             factory, "admin-1", created["id"], allocations=[{"table_id": "tbl-other", "guest_count": 1}]
         )

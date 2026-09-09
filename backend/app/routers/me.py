@@ -17,7 +17,6 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.auth import get_current_claims
 from app.database import get_db
-from app.email import send_contact_notification
 from app.models import ContactMessage, Event, Person, Registration, User
 from app.ratelimit import get_client_ip
 from app.schemas import (
@@ -30,6 +29,7 @@ from app.schemas import (
     RegistrationGuestOut,
     RegistrationStatus,
 )
+from app.services.outbox_service import enqueue_contact_notification
 from app.services.pebble_access import (
     authenticate_pebble_token,
     revoke_pebble_token,
@@ -192,6 +192,7 @@ async def request_registration_change(
     details = body.details.strip() or "No additional details provided."
     message_text = f"{request_label} request for booking {registration.id}\nEvent: {event.title}\n\n{details}"
     message_id = str(body.submission_id)
+    request_id = getattr(request.state, "request_id", None)
     inserted = await db.scalar(
         insert(ContactMessage)
         .values(
@@ -200,7 +201,7 @@ async def request_registration_change(
             email=person.email,
             message=message_text,
             client_ip=get_client_ip(request),
-            request_id=getattr(request.state, "request_id", None),
+            request_id=request_id,
         )
         .on_conflict_do_nothing(index_elements=[ContactMessage.id])
         .returning(ContactMessage.id)
@@ -216,14 +217,12 @@ async def request_registration_change(
             resource_id=registration.id,
             details={"request_type": body.request_type, "contact_message_id": message_id},
         )
+        # Queued in the same transaction as the message so a replay of this
+        # idempotent submission (same submission_id) never needs to re-attempt
+        # delivery itself — the durable outbox worker retries with backoff
+        # until it succeeds or exhausts its attempts. See docs/retry-safety.md.
+        await enqueue_contact_notification(db, message_id, actor=actor, request_id=request_id)
     await db.commit()
-    if inserted is not None:
-        await send_contact_notification(
-            name=person.name,
-            email=person.email,
-            message_text=message_text,
-            message_id=message_id,
-        )
     return {"ok": True}
 
 

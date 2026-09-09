@@ -67,6 +67,10 @@ def validate_graph(snapshot: dict) -> None:
         edges = node.get("inclusions")
         if edges is None:
             edges = [{"product_id": node["included_product_id"]}] if node.get("included_product_id") else []
+        else:
+            for edge in edges:
+                if edge.get("per_quantity", 1) <= 0:
+                    raise HTTPException(400, "Package inclusion per_quantity must be a positive number.")
         targets = [edge["product_id"] for edge in edges]
         if len(targets) != len(set(targets)):
             raise HTTPException(400, "A package cannot include the same product more than once.")
@@ -197,7 +201,7 @@ async def check_stock(
     rows = (
         (
             await db.execute(
-                select(Registration).where(
+                select(Registration.order_items).where(
                     Registration.event_id == event.id,
                     Registration.status != "cancelled",
                     *([Registration.id != registration.id] if registration else []),
@@ -208,8 +212,8 @@ async def check_stock(
         .all()
     )
     occupied: dict[str, int] = defaultdict(int)
-    for row in rows:
-        for key, qty in quantities(row.order_items).items():
+    for order_items in rows:
+        for key, qty in quantities(order_items).items():
             occupied[key] += qty
     old = quantities(registration.order_items) if registration and registration.status != "cancelled" else {}
     for key, qty in quantities(items).items():

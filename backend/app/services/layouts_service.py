@@ -241,8 +241,17 @@ async def bulk_create_layouts(
             details={"room_id": lay.room_id, "event_id": lay.event_id, "bulk": True},
         )
 
-    await db.execute(select(Layout).where(Layout.id.in_([lay.id for lay in rows])))
-    response = {"items": [layout_to_dict(lay, date=date) for lay, date in zip(rows, resolved_dates, strict=True)]}
+    # layout_to_dict() reads edition_id via lay.event, which flush() does not
+    # populate on these freshly constructed rows — reload with it so the
+    # hybrid property doesn't need an implicit (and, under AsyncSession,
+    # unsafe) lazy load during serialization.
+    reloaded = {
+        lay.id: lay
+        for lay in (await db.execute(select(Layout).where(Layout.id.in_([lay.id for lay in rows])))).scalars().all()
+    }
+    response = {
+        "items": [layout_to_dict(reloaded[lay.id], date=date) for lay, date in zip(rows, resolved_dates, strict=True)]
+    }
     if idempotency_key:
         record_idempotency_key(
             db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response

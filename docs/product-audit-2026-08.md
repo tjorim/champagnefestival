@@ -1,6 +1,6 @@
 # Product audit and remaining work
 
-Updated 2026-09-08. This is the current scope, dependency and preferred-order
+Updated 2026-09-09. This is the current scope, dependency and preferred-order
 record for the August 2026 audit and communications roadmap. GitHub issues
 hold discussion and workflow state; decision documents hold current contracts.
 

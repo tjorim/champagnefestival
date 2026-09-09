@@ -173,7 +173,7 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
 async def apply_event_update(
     db: AsyncSession, event: Event, body: EventUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
-    event = (
+    locked_event = (
         await db.execute(
             select(Event)
             .where(Event.id == event.id)
@@ -181,7 +181,10 @@ async def apply_event_update(
             .with_for_update()
             .execution_options(populate_existing=True)
         )
-    ).scalar_one()
+    ).scalar_one_or_none()
+    if locked_event is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Event not found.")
+    event = locked_event
     edition = event.edition
 
     if "edition_id" in body.model_fields_set and body.edition_id is not None:

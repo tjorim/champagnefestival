@@ -256,7 +256,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleUpdateTable,
     handleUpdateTableType,
   } = useAdminVenueActions({
-    activeEditionId: activeEdition.id,
     areasQueryKey,
     authHeaders,
     layoutsQueryKey,

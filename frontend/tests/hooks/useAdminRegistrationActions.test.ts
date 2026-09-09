@@ -23,6 +23,18 @@ describe("bookingUpdatePayload", () => {
     });
   });
 
+  it("sends an explicit empty order when every tracked product quantity is zero", () => {
+    const payload = bookingUpdatePayload({
+      guestCount: 1,
+      quantities: { table: 0 },
+      allocations: [],
+      amountPaid: 0,
+      notes: "",
+      status: "pending",
+    });
+    expect(payload).toHaveProperty("order_items", []);
+  });
+
   it("does not erase a manual amount due when a booking has no product quantities", () => {
     const payload = bookingUpdatePayload({
       guestCount: 1,

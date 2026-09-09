@@ -388,19 +388,61 @@ def upgrade() -> None:
     op.create_check_constraint("ck_product_stock", "products", "stock IS NULL OR stock >= 0")
     op.create_check_constraint("ck_product_unit", "products", "unit IN ('item', 'table', 'person')")
 
-    if op.get_bind().execute(sa.text("SELECT EXISTS(SELECT 1 FROM layouts)")).scalar():
+    bind = op.get_bind()
+    # A layout's day_id only ever meant "the Nth distinct event date within
+    # this edition" (see the removed resolve_layout_day()); reconstruct that
+    # mapping to backfill event_id instead of requiring existing floor plans
+    # to be deleted.
+    bind.execute(
+        sa.text("""
+            CREATE TEMP TABLE _layout_event_map AS
+            WITH edition_dates AS (
+                SELECT edition_id, date, row_number() OVER (PARTITION BY edition_id ORDER BY date) AS day_id
+                FROM (SELECT DISTINCT edition_id, date FROM events) AS d
+            ),
+            matches AS (
+                SELECT l.id AS layout_id, e.id AS event_id
+                FROM layouts l
+                JOIN edition_dates ed ON ed.edition_id = l.edition_id AND ed.day_id = l.day_id
+                JOIN events e ON e.edition_id = ed.edition_id AND e.date = ed.date
+            )
+            SELECT layout_id, min(event_id) AS event_id, count(*) AS match_count
+            FROM matches
+            GROUP BY layout_id
+        """)
+    )
+    unresolved = [
+        row[0]
+        for row in bind.execute(
+            sa.text("""
+                SELECT l.id FROM layouts l
+                LEFT JOIN _layout_event_map m ON m.layout_id = l.id AND m.match_count = 1
+                WHERE m.layout_id IS NULL
+            """)
+        ).all()
+    ]
+    if unresolved:
         raise RuntimeError(
-            "Remove existing test floor plans before upgrading; recreate them afterward with explicit event ownership."
+            "Cannot automatically determine event_id for layout(s): "
+            f"{', '.join(unresolved)}. Their edition has no event on the matching "
+            "day, or more than one event sharing that date. Set layouts.event_id "
+            "manually for these rows, then re-run this migration."
         )
+
+    op.add_column("layouts", sa.Column("event_id", sa.String(64), nullable=True))
+    bind.execute(
+        sa.text("""
+            UPDATE layouts l SET event_id = m.event_id
+            FROM _layout_event_map m WHERE m.layout_id = l.id
+        """)
+    )
+    op.alter_column("layouts", "event_id", nullable=False)
     op.drop_column("layouts", "edition_id")
     op.drop_column("layouts", "day_id")
-    op.add_column(
-        "layouts", sa.Column("event_id", sa.String(64), sa.ForeignKey("events.id", ondelete="RESTRICT"), nullable=False)
-    )
+    op.create_foreign_key("layouts_event_id_fkey", "layouts", "events", ["event_id"], ["id"], ondelete="RESTRICT")
     op.create_index("ix_layouts_event_id", "layouts", ["event_id"])
     op.create_unique_constraint("uq_layout_room_event", "layouts", ["room_id", "event_id"])
 
-    op.drop_column("registrations", "table_id")
     op.create_table(
         "registration_allocations",
         sa.Column(
@@ -411,6 +453,13 @@ def upgrade() -> None:
         sa.Column("exclusive", sa.Boolean(), nullable=False, server_default=sa.false()),
         sa.CheckConstraint("guest_count >= 0", name="ck_allocation_guests"),
     )
+    bind.execute(
+        sa.text("""
+            INSERT INTO registration_allocations (registration_id, table_id, guest_count, exclusive)
+            SELECT id, table_id, guest_count, false FROM registrations WHERE table_id IS NOT NULL
+        """)
+    )
+    op.drop_column("registrations", "table_id")
     op.create_index("ix_registration_allocations_table_id", "registration_allocations", ["table_id"])
 
 

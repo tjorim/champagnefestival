@@ -469,7 +469,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       </div>
                       {product.availableQuantity != null && (
                         <div className="text-secondary small">
-                          {m.admin_inventory_available()}: {product.availableQuantity}
+                          {m.registration_order_available()}: {product.availableQuantity}
                         </div>
                       )}
                       {included && (

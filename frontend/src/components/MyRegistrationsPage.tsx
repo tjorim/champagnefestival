@@ -622,7 +622,9 @@ export default function MyRegistrationsPage() {
         </Modal.Header>
         <Modal.Body>
           {requestSubmitted ? (
-            <Alert variant="success">{m.my_registrations_request_change_success()}</Alert>
+            <Alert variant="success" role="status">
+              {m.my_registrations_request_change_success()}
+            </Alert>
           ) : (
             <>
               <Alert variant="warning">{m.my_registrations_request_change_warning()}</Alert>
@@ -650,7 +652,7 @@ export default function MyRegistrationsPage() {
                 />
               </Form.Group>
               {bookingRequestMutation.isError && (
-                <Alert variant="danger" className="mt-3 mb-0">
+                <Alert variant="danger" className="mt-3 mb-0" role="alert">
                   {m.my_registrations_request_change_error()}
                 </Alert>
               )}

@@ -32,7 +32,6 @@ describe("useVenueMutations", () => {
             "Content-Type": "application/json",
             Authorization: "Bearer test-token",
           }),
-          activeEditionId: "edition-2026",
           tablesQueryKey: ["admin", "tables"],
           venuesQueryKey: ["admin", "venues"],
           roomsQueryKey: ["admin", "rooms"],

@@ -337,6 +337,15 @@ class EventCheckInStats(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+_MAX_REQUESTED_ORDER_LINE_QUANTITY = 1000
+"""Ceiling on a client-requested (not yet package-expanded) order line quantity.
+
+Far above any real booking (guest_count is capped at 20), but well below
+OrderItemRequest.quantity's own 1,000,000 field bound, which stays high because
+it also re-validates already-persisted order items when reconstructed
+internally (see app.services.product_inventory.purchased_requests)."""
+
+
 class RegistrationNotesRequest(RequestModel):
     @model_validator(mode="before")
     @classmethod
@@ -354,6 +363,14 @@ class RegistrationNotesRequest(RequestModel):
                     dict.fromkeys(part for part in (value.get("notes"), accessibility) if part)
                 )
         return value
+
+    @field_validator("order_items", check_fields=False)
+    @classmethod
+    def cap_requested_order_quantities(cls, items: list[OrderItemRequest] | None) -> list[OrderItemRequest] | None:
+        for item in items or []:
+            if item.quantity > _MAX_REQUESTED_ORDER_LINE_QUANTITY:
+                raise ValueError(f"quantity cannot exceed {_MAX_REQUESTED_ORDER_LINE_QUANTITY} per order line.")
+        return items
 
 
 class RegistrationCreate(RegistrationNotesRequest):
@@ -418,7 +435,7 @@ class RegistrationOut(BaseModel):
     payment_status: PaymentStatus
     amount_due: Decimal | None
     amount_paid: Decimal = Decimal(0)
-    refund_due: Decimal = Decimal(0)
+    refund_due: Decimal | None = Decimal(0)
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -454,7 +471,7 @@ class RegistrationListOut(BaseModel):
     payment_status: PaymentStatus
     amount_due: Decimal | None
     amount_paid: Decimal = Decimal(0)
-    refund_due: Decimal = Decimal(0)
+    refund_due: Decimal | None = Decimal(0)
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -494,7 +511,7 @@ class RegistrationGuestOut(BaseModel):
     payment_status: PaymentStatus
     amount_due: Decimal | None
     amount_paid: Decimal = Decimal(0)
-    refund_due: Decimal = Decimal(0)
+    refund_due: Decimal | None = Decimal(0)
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool

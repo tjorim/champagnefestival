@@ -86,8 +86,8 @@ export default function BookingEditor({
 
   const changeAllocation = (index: number, patch: Partial<TableAllocation>) =>
     setAllocations((items) => items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
-  const allocationShortage =
-    status !== "cancelled" && allocations.length > tableQuantity && tableQuantity > 0;
+  const allocationShortage = status !== "cancelled" && assigned > allocationTotal;
+  const tableReleaseCount = allocations.length - tableQuantity;
   const invalidQuantity = Object.values(quantities).some(
     (quantity) => !Number.isInteger(quantity) || quantity < 0 || quantity > 1000,
   );
@@ -198,9 +198,9 @@ export default function BookingEditor({
             unit: tableQuantity ? m.admin_inventory_unit_table() : m.admin_inventory_unit_person(),
           })}
         </p>
-        {allocationShortage && (
+        {allocationShortage && tableQuantity > 0 && (
           <Alert variant="warning">
-            {m.admin_booking_release_tables({ count: allocations.length - tableQuantity })}
+            {m.admin_booking_release_tables({ count: tableReleaseCount })}
           </Alert>
         )}
         {allocations.map((entry, index) => (
