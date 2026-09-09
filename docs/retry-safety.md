@@ -173,6 +173,11 @@ changes retain previous/new values in the audit log. Order reductions preserve
 that amount and expose overpayment for manual refunds. Tests cover recorded
 payment preservation and booked-price quantity changes.
 
+Visitor booking change/cancellation requests use a client-generated submission
+UUID. Replaying the same `POST /api/me/registrations/{id}/request` returns success
+without creating another inbox item, audit entry or organiser notification. A
+request never changes booking status, quantities, allocations or payment state.
+
 
 # Event plans and physical allocations (#802, second increment)
 

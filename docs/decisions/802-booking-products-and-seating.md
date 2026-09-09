@@ -45,6 +45,10 @@ The first implementation increment adds optional stock alongside existing produc
 - Bookings reserve stock immediately, including unpaid bookings. Cancellation
   releases reservations. No automatic unpaid-booking expiry was requested;
   administrators review, adjust or cancel excessive/unpaid requests.
+- Visitors may request a booking change or cancellation from their booking.
+  A request leaves the booking active until an administrator decides; the UI
+  explains that acceptance and reimbursement are not guaranteed, including
+  when a reserved table cannot be resold. Cancellation remains an administrator action.
 - Quantity changes use the booked unit price. Preserve payment history and flag
   overpayment for manual refund when a reduction lowers the total.
 - Show booked versus current unit price when they differ, and offer an individual

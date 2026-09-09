@@ -387,6 +387,31 @@ export async function fetchOwnedRegistrations(accessToken: string): Promise<Gues
   return parseRegistrationLookupResponse(response);
 }
 
+export async function requestBookingChange(
+  registrationId: string,
+  requestType: "change" | "cancellation",
+  details: string,
+  submissionId: string,
+  accessToken?: string | null,
+): Promise<void> {
+  const response = await fetch(
+    `/api/me/registrations/${encodeURIComponent(registrationId)}/request`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify({
+        submission_id: submissionId,
+        request_type: requestType,
+        details,
+      }),
+    },
+  );
+  if (!response.ok) throw new Error(m.my_registrations_request_change_error());
+}
+
 // --- Passwordless visitor "My orders" session (#953) -----------------------
 //
 // Distinct from the request/access pair above: redeeming a magic link here

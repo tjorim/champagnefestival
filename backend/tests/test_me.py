@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.auth import require_admin
 from app.main import app
-from app.models import AuditEntry, PebbleAccessToken, Registration, ReservationAccessToken, User
+from app.models import AuditEntry, ContactMessage, PebbleAccessToken, Registration, ReservationAccessToken, User
 from app.routers import me as me_router
 from app.routers import registrations as registrations_router
 from app.schemas import RegistrationAccessLookupRequest
@@ -95,6 +95,53 @@ async def test_me_registrations_auto_provisions_user(me_client, db_session):
     user = result.scalar_one_or_none()
     assert user is not None
     assert user.oidc_subject == "visitor-sub"
+
+
+@pytest.mark.anyio
+async def test_booking_cancellation_request_does_not_cancel_and_replays_safely(
+    me_client, db_session, monkeypatch
+):
+    await me_client.get("/api/me/registrations")
+    created = await _post_registration_with_admin_setup(me_client, email="request@example.com")
+    registration_id = created.json()["id"]
+    user = await db_session.scalar(select(User).where(User.oidc_subject == "visitor-sub"))
+    registration = await db_session.get(Registration, registration_id)
+    assert user is not None and registration is not None
+    registration.user_id = user.id
+    await db_session.commit()
+
+    deliveries = 0
+
+    async def fake_delivery(**_kwargs):
+        nonlocal deliveries
+        deliveries += 1
+        return True
+
+    monkeypatch.setattr(me_router, "send_contact_notification", fake_delivery)
+    body = {
+        "submission_id": "27d6a186-ded1-45b9-af20-2061bb739436",
+        "request_type": "cancellation",
+        "details": "Please cancel both tables.",
+    }
+    first = await me_client.post(f"/api/me/registrations/{registration_id}/request", json=body)
+    replay = await me_client.post(f"/api/me/registrations/{registration_id}/request", json=body)
+    assert first.status_code == replay.status_code == 200
+    assert deliveries == 1
+
+    await db_session.refresh(registration)
+    assert registration.status != "cancelled"
+    stored = await db_session.get(ContactMessage, body["submission_id"])
+    assert stored is not None
+    assert registration_id in stored.message
+    audits = (
+        await db_session.scalars(
+            select(AuditEntry).where(
+                AuditEntry.action == "registration_change_requested",
+                AuditEntry.resource_id == registration_id,
+            )
+        )
+    ).all()
+    assert len(audits) == 1
 
 
 @pytest.mark.anyio

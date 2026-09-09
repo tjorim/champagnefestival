@@ -9,6 +9,7 @@ import Col from "react-bootstrap/Col";
 import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
+import Modal from "react-bootstrap/Modal";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { QRCodeSVG } from "qrcode.react";
@@ -21,6 +22,7 @@ import {
   isRegistrationLookupError,
   redeemVisitorMagicLink,
   requestRegistrationLookup,
+  requestBookingChange,
   requestVisitorMagicLink,
   signOutVisitorSession,
   type GuestRegistration,
@@ -55,6 +57,7 @@ export default function MyRegistrationsPage() {
   const { token: rawToken } = useSearch({ from: "/my-registrations" });
   const token = rawToken?.trim() ?? "";
   const navigate = useNavigate({ from: "/my-registrations" });
+  const accessToken = auth.getAccessToken();
 
   const [email, setEmail] = useState("");
   const [requestSent, setRequestSent] = useState(false);
@@ -76,6 +79,24 @@ export default function MyRegistrationsPage() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
+  const [requestRegistration, setRequestRegistration] = useState<GuestRegistration | null>(null);
+  const [requestType, setRequestType] = useState<"change" | "cancellation">("change");
+  const [requestDetails, setRequestDetails] = useState("");
+  const [requestSubmitted, setRequestSubmitted] = useState(false);
+  const submissionId = useRef(crypto.randomUUID());
+
+  const bookingRequestMutation = useMutation({
+    mutationFn: () =>
+      requestBookingChange(
+        requestRegistration?.id ?? "",
+        requestType,
+        requestDetails,
+        submissionId.current,
+        accessToken,
+      ),
+    retry: false,
+    onSuccess: () => setRequestSubmitted(true),
+  });
 
   const requestLookupMutation = useMutation({
     mutationFn: (targetEmail: string) =>
@@ -85,7 +106,6 @@ export default function MyRegistrationsPage() {
     retry: false,
   });
 
-  const accessToken = auth.getAccessToken();
   const attemptedToken = useRef("");
   const registrationsMutation = useMutation({
     mutationFn: async ({
@@ -498,6 +518,23 @@ export default function MyRegistrationsPage() {
                                   {m.my_registrations_add_calendar()}
                                 </a>
                               )}
+                              {registration.status !== "cancelled" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline-light"
+                                  className="mt-2 ms-2"
+                                  onClick={() => {
+                                    submissionId.current = crypto.randomUUID();
+                                    setRequestRegistration(registration);
+                                    setRequestType("change");
+                                    setRequestDetails("");
+                                    setRequestSubmitted(false);
+                                    bookingRequestMutation.reset();
+                                  }}
+                                >
+                                  {m.my_registrations_request_change()}
+                                </Button>
+                              )}
                               {registration.orderItems.length > 0 && (
                                 <ListGroup variant="flush" className="mt-2">
                                   {registration.orderItems.map((item, idx) => (
@@ -515,6 +552,9 @@ export default function MyRegistrationsPage() {
                             </Card.Body>
                           </Card>
                         ))}
+                        <Alert variant="info" className="mb-0">
+                          {m.my_registrations_changes_contact()}
+                        </Alert>
                       </div>
                     ) : null}
 
@@ -572,6 +612,66 @@ export default function MyRegistrationsPage() {
           </Col>
         </Row>
       </Container>
+      <Modal
+        show={requestRegistration !== null}
+        onHide={() => setRequestRegistration(null)}
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>{m.my_registrations_request_change()}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {requestSubmitted ? (
+            <Alert variant="success">{m.my_registrations_request_change_success()}</Alert>
+          ) : (
+            <>
+              <Alert variant="warning">{m.my_registrations_request_change_warning()}</Alert>
+              <Form.Group className="mb-3">
+                <Form.Label>{m.my_registrations_request_type()}</Form.Label>
+                <Form.Select
+                  value={requestType}
+                  onChange={(event) =>
+                    setRequestType(event.target.value as "change" | "cancellation")
+                  }
+                >
+                  <option value="change">{m.my_registrations_request_type_change()}</option>
+                  <option value="cancellation">
+                    {m.my_registrations_request_type_cancellation()}
+                  </option>
+                </Form.Select>
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>{m.my_registrations_request_details()}</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={4}
+                  value={requestDetails}
+                  onChange={(event) => setRequestDetails(event.target.value)}
+                />
+              </Form.Group>
+              {bookingRequestMutation.isError && (
+                <Alert variant="danger" className="mt-3 mb-0">
+                  {m.my_registrations_request_change_error()}
+                </Alert>
+              )}
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="outline-secondary" onClick={() => setRequestRegistration(null)}>
+            {m.close()}
+          </Button>
+          {!requestSubmitted && (
+            <Button
+              variant="warning"
+              disabled={bookingRequestMutation.isPending}
+              onClick={() => bookingRequestMutation.mutate()}
+            >
+              {m.my_registrations_submit_request()}
+            </Button>
+          )}
+        </Modal.Footer>
+      </Modal>
     </section>
   );
 }
