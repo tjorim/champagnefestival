@@ -190,10 +190,7 @@ async def request_registration_change(
 
     request_label = "Cancellation" if body.request_type == "cancellation" else "Change"
     details = body.details.strip() or "No additional details provided."
-    message_text = (
-        f"{request_label} request for booking {registration.id}\n"
-        f"Event: {event.title}\n\n{details}"
-    )
+    message_text = f"{request_label} request for booking {registration.id}\nEvent: {event.title}\n\n{details}"
     message_id = str(body.submission_id)
     inserted = await db.scalar(
         insert(ContactMessage)

@@ -98,9 +98,7 @@ async def test_me_registrations_auto_provisions_user(me_client, db_session):
 
 
 @pytest.mark.anyio
-async def test_booking_cancellation_request_does_not_cancel_and_replays_safely(
-    me_client, db_session, monkeypatch
-):
+async def test_booking_cancellation_request_does_not_cancel_and_replays_safely(me_client, db_session, monkeypatch):
     await me_client.get("/api/me/registrations")
     created = await _post_registration_with_admin_setup(me_client, email="request@example.com")
     registration_id = created.json()["id"]
