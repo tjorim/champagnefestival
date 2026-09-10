@@ -137,10 +137,16 @@ async def get_room(db: AsyncSession, room_id: str) -> dict:
 async def update_room(
     db: AsyncSession, *, actor: str, room_id: str, body: RoomUpdate, request_id: str | None = None
 ) -> dict:
-    r = await db.get(Room, room_id)
+    r = (
+        await db.execute(
+            select(Room).where(Room.id == room_id).with_for_update().execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
     if r is None:
         raise NotFoundError(f"Room '{room_id}' not found.")
-    if "venue_id" in body.model_fields_set:
+    if "venue_id" in body.model_fields_set and body.venue_id != r.venue_id:
+        if (await db.execute(select(Layout.id).where(Layout.room_id == room_id).limit(1))).first():
+            raise ConflictError("Remove this room's event plans before changing its venue.")
         venue = await db.execute(select(Venue).where(Venue.id == body.venue_id))
         if venue.scalar_one_or_none() is None:
             raise NotFoundError(f"Venue '{body.venue_id}' not found.")

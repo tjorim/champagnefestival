@@ -32,7 +32,6 @@ describe("useVenueMutations", () => {
             "Content-Type": "application/json",
             Authorization: "Bearer test-token",
           }),
-          activeEditionId: "edition-2026",
           tablesQueryKey: ["admin", "tables"],
           venuesQueryKey: ["admin", "venues"],
           roomsQueryKey: ["admin", "rooms"],
@@ -46,16 +45,15 @@ describe("useVenueMutations", () => {
     await act(async () => {
       await result.current.createLayoutMutation.mutateAsync({
         roomId: "room-1",
-        date: "2026-03-14",
+        eventId: "event-1",
         label: "  Saturday evening  ",
       });
     });
 
     expect(seen.authorization).toBe("Bearer test-token");
     expect(seen.body).toEqual({
-      edition_id: "edition-2026",
       room_id: "room-1",
-      date: "2026-03-14",
+      event_id: "event-1",
       label: "Saturday evening",
     });
     await waitFor(() => {

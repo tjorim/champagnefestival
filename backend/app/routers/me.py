@@ -3,18 +3,22 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any, Literal, cast
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.auth import get_current_claims
 from app.database import get_db
-from app.models import Event, Person, Registration, User
+from app.models import ContactMessage, Event, Person, Registration, User
+from app.ratelimit import get_client_ip
 from app.schemas import (
     CommunicationPreferenceOut,
     CommunicationPreferenceUpdate,
@@ -25,6 +29,7 @@ from app.schemas import (
     RegistrationGuestOut,
     RegistrationStatus,
 )
+from app.services.outbox_service import enqueue_contact_notification
 from app.services.pebble_access import (
     authenticate_pebble_token,
     revoke_pebble_token,
@@ -38,6 +43,12 @@ from app.visitor_session import get_current_user as get_current_portal_user
 router = APIRouter(prefix="/api/me", tags=["me"])
 pebble_router = APIRouter(prefix="/api/pebble", tags=["pebble"])
 _bearer_scheme = HTTPBearer(auto_error=True)
+
+
+class BookingRequestCreate(BaseModel):
+    submission_id: UUID
+    request_type: Literal["change", "cancellation"]
+    details: str = Field(default="", max_length=5000)
 
 
 async def _user_people(db: AsyncSession, user_id: str) -> list[Person]:
@@ -153,6 +164,66 @@ async def list_my_registrations(
         )
     ).all()
     return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]
+
+
+@router.post("/registrations/{registration_id}/request")
+async def request_registration_change(
+    registration_id: str,
+    body: BookingRequestCreate,
+    request: Request,
+    user: User = Depends(get_current_portal_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict[str, bool]:
+    row = (
+        await db.execute(
+            select(Registration, Person, Event)
+            .join(Person, Registration.person_id == Person.id)
+            .join(Event, Registration.event_id == Event.id)
+            .where(Registration.id == registration_id, Registration.user_id == user.id)
+        )
+    ).one_or_none()
+    if row is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found")
+    registration, person, event = row
+    if registration.status == "cancelled":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Registration is already cancelled")
+
+    request_label = "Cancellation" if body.request_type == "cancellation" else "Change"
+    details = body.details.strip() or "No additional details provided."
+    message_text = f"{request_label} request for booking {registration.id}\nEvent: {event.title}\n\n{details}"
+    message_id = str(body.submission_id)
+    request_id = getattr(request.state, "request_id", None)
+    inserted = await db.scalar(
+        insert(ContactMessage)
+        .values(
+            id=message_id,
+            name=person.name,
+            email=person.email,
+            message=message_text,
+            client_ip=get_client_ip(request),
+            request_id=request_id,
+        )
+        .on_conflict_do_nothing(index_elements=[ContactMessage.id])
+        .returning(ContactMessage.id)
+    )
+    if inserted is not None:
+        actor, auth_source = actor_for_user(user)
+        await write_audit_entry(
+            db,
+            actor=actor,
+            auth_source=auth_source,
+            action="registration_change_requested",
+            resource_type="registration",
+            resource_id=registration.id,
+            details={"request_type": body.request_type, "contact_message_id": message_id},
+        )
+        # Queued in the same transaction as the message so a replay of this
+        # idempotent submission (same submission_id) never needs to re-attempt
+        # delivery itself — the durable outbox worker retries with backoff
+        # until it succeeds or exhausts its attempts. See docs/retry-safety.md.
+        await enqueue_contact_notification(db, message_id, actor=actor, request_id=request_id)
+    await db.commit()
+    return {"ok": True}
 
 
 @router.post("/registrations/claim", response_model=list[RegistrationGuestOut])

@@ -43,7 +43,7 @@ async def _edition_with_table(client, edition_id: str, date: str, venue_id: str,
 
     r = await client.post(
         "/api/layouts",
-        json={"edition_id": edition_id, "room_id": room_id, "date": date},
+        json={"event_id": r.json()["id"], "room_id": room_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -90,20 +90,24 @@ async def test_table_from_another_edition_is_rejected(client):
 
     # Cross-edition seating is refused...
     r = await client.put(
-        f"/api/registrations/{registration_id}", json={"table_id": festival_table}, headers=ADMIN_HEADERS
+        f"/api/registrations/{registration_id}",
+        json={"allocations": [{"table_id": festival_table, "guest_count": 1}]},
+        headers=ADMIN_HEADERS,
     )
     assert r.status_code == 400, r.text
-    assert "festival-2026" in r.json()["detail"]
+    assert "event" in r.json()["detail"]
 
     # ...while a table from the registration's own edition works.
     r = await client.put(
-        f"/api/registrations/{registration_id}", json={"table_id": bourse_table}, headers=ADMIN_HEADERS
+        f"/api/registrations/{registration_id}",
+        json={"allocations": [{"table_id": bourse_table, "guest_count": 1}]},
+        headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200, r.text
     assert r.json()["table_id"] == bourse_table
 
     # Clearing the assignment stays allowed.
-    r = await client.put(f"/api/registrations/{registration_id}", json={"table_id": None}, headers=ADMIN_HEADERS)
+    r = await client.put(f"/api/registrations/{registration_id}", json={"allocations": []}, headers=ADMIN_HEADERS)
     assert r.status_code == 200, r.text
     assert r.json()["table_id"] is None
 
@@ -120,6 +124,8 @@ async def test_unknown_table_is_a_404(client):
     registration_id = await _registration_for(client, "bourse-2026")
 
     r = await client.put(
-        f"/api/registrations/{registration_id}", json={"table_id": "tbl_missing"}, headers=ADMIN_HEADERS
+        f"/api/registrations/{registration_id}",
+        json={"allocations": [{"table_id": "tbl_missing", "guest_count": 1}]},
+        headers=ADMIN_HEADERS,
     )
     assert r.status_code == 404, r.text

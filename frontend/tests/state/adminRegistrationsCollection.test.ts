@@ -58,7 +58,7 @@ describe("admin registrations pilot collection", () => {
       body: JSON.stringify({
         checked_in: true,
         checked_in_at: "2026-03-07T12:30:00Z",
-        table_id: "table-03",
+        allocations: [{ table_id: "table-03", guest_count: 2, exclusive: false }],
         status: "cancelled",
       }),
     });
@@ -68,7 +68,8 @@ describe("admin registrations pilot collection", () => {
 
     const registration = collection.get("reg-01");
     expect(registration?.checkedIn).toBe(true);
-    expect(registration?.tableId).toBe("table-03");
+    expect(registration?.tableId).toBeUndefined();
+    expect(registration?.allocations).toEqual([]);
     expect(registration?.status).toBe("cancelled");
   });
 

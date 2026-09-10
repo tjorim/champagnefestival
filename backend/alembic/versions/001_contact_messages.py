@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, and the central composer for announcements/push.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, and a short product description.
 
 Revision ID: 001
 Revises: 000
@@ -370,15 +370,166 @@ def upgrade() -> None:
     )
     op.create_index("ix_composed_messages_state", "composed_messages", ["state"])
 
+    op.execute("""
+        UPDATE registrations SET notes = CASE
+            WHEN coalesce(accessibility_note, '') = '' OR accessibility_note = notes THEN notes
+            WHEN coalesce(notes, '') = '' THEN accessibility_note
+            ELSE notes || E'\\n\\n' || accessibility_note END
+    """)
+    op.drop_column("registrations", "accessibility_note")
+    op.add_column("registrations", sa.Column("product_snapshot", sa.JSON(), nullable=False, server_default="{}"))
+    op.add_column("registrations", sa.Column("amount_paid", sa.Numeric(10, 2), nullable=False, server_default="0"))
+    op.execute(
+        "UPDATE registrations SET amount_paid = amount_due WHERE payment_status = 'paid' AND amount_due IS NOT NULL AND amount_due > 0"
+    )
+    op.add_column("products", sa.Column("unit", sa.String(10), nullable=False, server_default="item"))
+    op.add_column("products", sa.Column("stock", sa.Integer(), nullable=True))
+    op.add_column("products", sa.Column("inclusions", sa.JSON(), nullable=True))
+    op.create_check_constraint("ck_product_stock", "products", "stock IS NULL OR stock >= 0")
+    op.create_check_constraint("ck_product_unit", "products", "unit IN ('item', 'table', 'person')")
+
+    bind = op.get_bind()
+    # A layout's day_id only ever meant "the Nth distinct event date within
+    # this edition" (see the removed resolve_layout_day()); reconstruct that
+    # mapping to backfill event_id instead of requiring existing floor plans
+    # to be deleted.
+    bind.execute(
+        sa.text("""
+            CREATE TEMP TABLE _layout_event_map AS
+            WITH edition_dates AS (
+                SELECT edition_id, date, row_number() OVER (PARTITION BY edition_id ORDER BY date) AS day_id
+                FROM (SELECT DISTINCT edition_id, date FROM events) AS d
+            ),
+            matches AS (
+                SELECT l.id AS layout_id, e.id AS event_id
+                FROM layouts l
+                JOIN edition_dates ed ON ed.edition_id = l.edition_id AND ed.day_id = l.day_id
+                JOIN events e ON e.edition_id = ed.edition_id AND e.date = ed.date
+            )
+            SELECT layout_id, min(event_id) AS event_id, count(*) AS match_count
+            FROM matches
+            GROUP BY layout_id
+        """)
+    )
+    unresolved = [
+        row[0]
+        for row in bind.execute(
+            sa.text("""
+                SELECT l.id FROM layouts l
+                LEFT JOIN _layout_event_map m ON m.layout_id = l.id AND m.match_count = 1
+                WHERE m.layout_id IS NULL
+            """)
+        ).all()
+    ]
+    if unresolved:
+        raise RuntimeError(
+            "Cannot automatically determine event_id for layout(s): "
+            f"{', '.join(unresolved)}. Their edition has no event on the matching "
+            "day, or more than one event sharing that date. Set layouts.event_id "
+            "manually for these rows, then re-run this migration."
+        )
+
+    op.add_column("layouts", sa.Column("event_id", sa.String(64), nullable=True))
+    bind.execute(
+        sa.text("""
+            UPDATE layouts l SET event_id = m.event_id
+            FROM _layout_event_map m WHERE m.layout_id = l.id
+        """)
+    )
+    op.alter_column("layouts", "event_id", nullable=False)
+    op.drop_column("layouts", "edition_id")
+    op.drop_column("layouts", "day_id")
+    op.create_foreign_key("layouts_event_id_fkey", "layouts", "events", ["event_id"], ["id"], ondelete="RESTRICT")
+    op.create_index("ix_layouts_event_id", "layouts", ["event_id"])
+    op.create_unique_constraint("uq_layout_room_event", "layouts", ["room_id", "event_id"])
+
+    op.create_table(
+        "registration_allocations",
+        sa.Column(
+            "registration_id", sa.String(64), sa.ForeignKey("registrations.id", ondelete="CASCADE"), primary_key=True
+        ),
+        sa.Column("table_id", sa.String(64), sa.ForeignKey("tables.id", ondelete="RESTRICT"), primary_key=True),
+        sa.Column("guest_count", sa.Integer(), nullable=False),
+        sa.Column("exclusive", sa.Boolean(), nullable=False, server_default=sa.false()),
+        sa.CheckConstraint("guest_count >= 0", name="ck_allocation_guests"),
+    )
+    bind.execute(
+        sa.text("""
+            INSERT INTO registration_allocations (registration_id, table_id, guest_count, exclusive)
+            SELECT id, table_id, guest_count, false FROM registrations WHERE table_id IS NOT NULL
+        """)
+    )
+    op.drop_column("registrations", "table_id")
+    op.create_index("ix_registration_allocations_table_id", "registration_allocations", ["table_id"])
+
+    op.add_column("products", sa.Column("description", sa.String(300), nullable=False, server_default=""))
+
 
 def downgrade() -> None:
+    op.drop_column("products", "description")
+
+    # The legacy schema can store only one table per registration. Preserve a
+    # deterministic allocation before dropping the richer allocation rows.
+    op.add_column(
+        "registrations",
+        sa.Column("table_id", sa.String(64), sa.ForeignKey("tables.id", ondelete="SET NULL"), nullable=True),
+    )
+    bind = op.get_bind()
+    bind.execute(
+        sa.text("""
+            UPDATE registrations r
+            SET table_id = (
+                SELECT ra.table_id
+                FROM registration_allocations ra
+                WHERE ra.registration_id = r.id
+                ORDER BY ra.table_id
+                LIMIT 1
+            )
+        """)
+    )
+    op.create_index("ix_registrations_table_id", "registrations", ["table_id"])
+    op.drop_table("registration_allocations")
+
+    # Recover the legacy edition/day representation from the event that now
+    # owns each layout. This is the inverse of the date-to-event mapping in
+    # upgrade(), where a day meant the ordinal distinct event date per edition.
+    op.add_column(
+        "layouts",
+        sa.Column("edition_id", sa.String(100), sa.ForeignKey("editions.id", ondelete="SET NULL"), nullable=True),
+    )
+    op.add_column("layouts", sa.Column("day_id", sa.Integer(), nullable=True))
+    bind.execute(
+        sa.text("""
+            WITH edition_dates AS (
+                SELECT edition_id, date, row_number() OVER (PARTITION BY edition_id ORDER BY date) AS day_id
+                FROM (SELECT DISTINCT edition_id, date FROM events) AS d
+            )
+            UPDATE layouts l
+            SET edition_id = e.edition_id, day_id = ed.day_id
+            FROM events e
+            JOIN edition_dates ed ON ed.edition_id = e.edition_id AND ed.date = e.date
+            WHERE e.id = l.event_id
+        """)
+    )
+    op.alter_column("layouts", "day_id", nullable=False)
+    op.drop_constraint("uq_layout_room_event", "layouts")
+    op.drop_index("ix_layouts_event_id", "layouts")
+    op.drop_column("layouts", "event_id")
+    op.drop_constraint("ck_product_unit", "products")
+    op.drop_constraint("ck_product_stock", "products")
+    for column in ("unit", "stock", "inclusions"):
+        op.drop_column("products", column)
+    op.drop_column("registrations", "amount_paid")
+    op.drop_column("registrations", "product_snapshot")
+    # Notes cannot be split reliably; retain all content in notes on rollback.
+    op.add_column("registrations", sa.Column("accessibility_note", sa.Text(), nullable=False, server_default=""))
+
     # #953: restoring users.oidc_subject to NOT NULL below would violate that
     # constraint for any visitor account (magic-link sign-in, oidc_subject IS
     # NULL by design). Fail loudly with an operational precondition rather
     # than silently deleting those accounts and their registration ownership,
     # or letting Postgres abort mid-migration with a raw constraint error
     # (PR #1012 review).
-    bind = op.get_bind()
     visitor_user_count = bind.execute(sa.text("SELECT COUNT(*) FROM users WHERE oidc_subject IS NULL")).scalar()
     if visitor_user_count:
         raise RuntimeError(

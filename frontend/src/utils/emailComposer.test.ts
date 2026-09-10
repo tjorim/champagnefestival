@@ -11,7 +11,6 @@ const registration = {
   paymentStatus: "partial",
   amountDue: 12.5,
   notes: "SECRET NOTE",
-  accessibilityNote: "SECRET ACCESS",
   checkInToken: "SECRET TOKEN",
 } as Registration;
 

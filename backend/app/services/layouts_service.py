@@ -19,8 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.models import Area, Edition, Exhibitor, Layout, Registration, Room, Table, TableType
+from app.models import Area, Edition, Event, Exhibitor, Layout, Room, Table, TableType
 from app.schemas import LayoutCopyCreate, LayoutCreate
+from app.services.allocations_service import registration_ids_by_table
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.idempotency import (
     check_idempotency_key,
@@ -105,56 +106,31 @@ def table_in_any_area(
     return False
 
 
-async def resolve_layout_day(db: AsyncSession, body: LayoutCreate | LayoutCopyCreate) -> tuple[int, dt_date | None]:
-    if body.date is None:
-        return body.day_id or 1, None
-    if not body.edition_id:
-        raise ValidationFailedError("edition_id is required when date is provided.")
-
-    result = await db.execute(
-        select(Edition).options(selectinload(Edition.events)).where(Edition.id == body.edition_id)
-    )
-    edition = result.scalar_one_or_none()
-    if edition is None:
-        raise NotFoundError("Edition not found.")
-
-    unique_dates = sorted({event.date for event in edition.events})
-    if body.date not in unique_dates:
-        raise ValidationFailedError("Layout date must match one of the edition event dates.")
-    return unique_dates.index(body.date) + 1, body.date
+async def resolve_layout_event(db: AsyncSession, body: LayoutCreate) -> dt_date:
+    event = (await db.execute(select(Event).where(Event.id == body.event_id).with_for_update())).scalar_one_or_none()
+    if event is None:
+        raise NotFoundError("Event not found.")
+    room = (
+        await db.execute(
+            select(Room).where(Room.id == body.room_id).with_for_update().execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    edition = await db.get(Edition, event.edition_id)
+    if room is not None and edition is not None and room.venue_id != edition.venue_id:
+        raise ValidationFailedError("The room must belong to the event venue.")
+    return event.date
 
 
 async def layout_payloads(db: AsyncSession, layouts: list[Layout]) -> list[dict]:
-    edition_ids = {layout.edition_id for layout in layouts if layout.edition_id}
-    edition_dates_by_id: dict[str, list] = {}
-    if edition_ids:
-        result = await db.execute(
-            select(Edition).options(selectinload(Edition.events)).where(Edition.id.in_(edition_ids))
-        )
-        for edition in result.scalars().all():
-            edition_dates_by_id[edition.id] = sorted({event.date for event in edition.events})
-
-    payloads: list[dict] = []
-    for layout in layouts:
-        date = None
-        if layout.edition_id and layout.edition_id in edition_dates_by_id:
-            dates = edition_dates_by_id[layout.edition_id]
-            if 1 <= layout.day_id <= len(dates):
-                date = dates[layout.day_id - 1]
-        payloads.append(layout_to_dict(layout, date=date))
-    return payloads
+    return [layout_to_dict(layout, date=layout.event.date) for layout in layouts]
 
 
-async def _reject_if_duplicate(db: AsyncSession, *, room_id: str, day_id: int, edition_id: str | None) -> None:
-    existing_stmt = select(Layout).where(Layout.room_id == room_id, Layout.day_id == day_id)
-    existing_stmt = (
-        existing_stmt.where(Layout.edition_id.is_(None))
-        if edition_id is None
-        else existing_stmt.where(Layout.edition_id == edition_id)
-    )
-    existing = (await db.execute(existing_stmt.limit(1))).scalar_one_or_none()
+async def _reject_if_duplicate(db: AsyncSession, *, room_id: str, event_id: str) -> None:
+    existing = (
+        await db.execute(select(Layout.id).where(Layout.room_id == room_id, Layout.event_id == event_id).limit(1))
+    ).scalar_one_or_none()
     if existing is not None:
-        raise ConflictError("A layout already exists for this room and day.")
+        raise ConflictError("A layout already exists for this room and event.")
 
 
 async def create_layout(
@@ -164,7 +140,7 @@ async def create_layout(
     body: LayoutCreate,
     request_id: str | None = None,
 ) -> dict:
-    resolved_day_id, resolved_date = await resolve_layout_day(db, body)
+    resolved_date = await resolve_layout_event(db, body)
 
     # Lock the room row so a concurrent room deletion (which refuses to proceed
     # while layouts reference the room) can't race this insert: whichever
@@ -178,13 +154,12 @@ async def create_layout(
     if locked_room is None:
         raise NotFoundError(f"Room '{body.room_id}' not found.")
 
-    await _reject_if_duplicate(db, room_id=body.room_id, day_id=resolved_day_id, edition_id=body.edition_id)
+    await _reject_if_duplicate(db, room_id=body.room_id, event_id=body.event_id)
 
     lay = Layout(
         id=make_id("lay"),
-        edition_id=body.edition_id,
+        event_id=body.event_id,
         room_id=body.room_id,
-        day_id=resolved_day_id,
         label=body.label.strip(),
     )
     db.add(lay)
@@ -195,7 +170,7 @@ async def create_layout(
         resource_type="layout",
         resource_id=lay.id,
         request_id=request_id,
-        details={"room_id": lay.room_id, "day_id": lay.day_id},
+        details={"room_id": lay.room_id, "event_id": lay.event_id},
     )
     await db.commit()
     await db.refresh(lay)
@@ -229,34 +204,28 @@ async def bulk_create_layouts(
     # Lock every referenced room up front — also doubles as the existence
     # check, same as create_layout. Ordered by id so two overlapping batches
     # always acquire their locks in the same sequence and can't deadlock.
+    await db.execute(
+        select(Event.id).where(Event.id.in_({item.event_id for item in items})).order_by(Event.id).with_for_update()
+    )
     room_ids = {item.room_id for item in items}
     locked_rooms = await db.execute(select(Room.id).where(Room.id.in_(room_ids)).order_by(Room.id).with_for_update())
     missing_rooms = room_ids - set(locked_rooms.scalars().all())
     if missing_rooms:
         raise NotFoundError(f"Room(s) not found: {sorted(missing_rooms)}.")
 
-    resolved_days: list[int] = []
-    resolved_dates: list[dt_date | None] = []
-    seen_in_batch: set[tuple[str, int, str | None]] = set()
+    resolved_dates: list[dt_date] = []
+    seen_in_batch: set[tuple[str, str]] = set()
     for item in items:
-        day_id, date = await resolve_layout_day(db, item)
-        dedupe_key = (item.room_id, day_id, item.edition_id)
+        date = await resolve_layout_event(db, item)
+        dedupe_key = (item.room_id, item.event_id)
         if dedupe_key in seen_in_batch:
-            raise ConflictError(f"Duplicate layout for room '{item.room_id}' and day {day_id} within this batch.")
+            raise ConflictError("Duplicate layout for room and event within this batch.")
         seen_in_batch.add(dedupe_key)
-        await _reject_if_duplicate(db, room_id=item.room_id, day_id=day_id, edition_id=item.edition_id)
-        resolved_days.append(day_id)
+        await _reject_if_duplicate(db, room_id=item.room_id, event_id=item.event_id)
         resolved_dates.append(date)
-
     rows = [
-        Layout(
-            id=make_id("lay"),
-            edition_id=item.edition_id,
-            room_id=item.room_id,
-            day_id=day_id,
-            label=item.label.strip(),
-        )
-        for item, day_id in zip(items, resolved_days, strict=True)
+        Layout(id=make_id("lay"), event_id=item.event_id, room_id=item.room_id, label=item.label.strip())
+        for item in items
     ]
     db.add_all(rows)
     await db.flush()
@@ -269,10 +238,20 @@ async def bulk_create_layouts(
             resource_type="layout",
             resource_id=lay.id,
             request_id=request_id,
-            details={"room_id": lay.room_id, "day_id": lay.day_id, "bulk": True},
+            details={"room_id": lay.room_id, "event_id": lay.event_id, "bulk": True},
         )
 
-    response = {"items": [layout_to_dict(lay, date=date) for lay, date in zip(rows, resolved_dates, strict=True)]}
+    # layout_to_dict() reads edition_id via lay.event, which flush() does not
+    # populate on these freshly constructed rows — reload with it so the
+    # hybrid property doesn't need an implicit (and, under AsyncSession,
+    # unsafe) lazy load during serialization.
+    reloaded = {
+        lay.id: lay
+        for lay in (await db.execute(select(Layout).where(Layout.id.in_([lay.id for lay in rows])))).scalars().all()
+    }
+    response = {
+        "items": [layout_to_dict(reloaded[lay.id], date=date) for lay, date in zip(rows, resolved_dates, strict=True)]
+    }
     if idempotency_key:
         record_idempotency_key(
             db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
@@ -293,7 +272,7 @@ async def copy_layout(
     if source is None:
         raise NotFoundError(f"Layout '{source_layout_id}' not found.")
 
-    resolved_day_id, resolved_date = await resolve_layout_day(db, body)
+    resolved_date = await resolve_layout_event(db, body)
 
     # See create_layout: lock the target room (also doubling as the existence
     # check) so it can't be deleted out from under this insert.
@@ -303,7 +282,7 @@ async def copy_layout(
     if locked_target_room is None:
         raise NotFoundError(f"Room '{body.room_id}' not found.")
 
-    await _reject_if_duplicate(db, room_id=body.room_id, day_id=resolved_day_id, edition_id=body.edition_id)
+    await _reject_if_duplicate(db, room_id=body.room_id, event_id=body.event_id)
 
     room_stmt = select(Room).where(Room.id == source.room_id)
     source_room = (await db.execute(room_stmt)).scalar_one_or_none()
@@ -337,9 +316,8 @@ async def copy_layout(
 
     cloned = Layout(
         id=make_id("lay"),
-        edition_id=body.edition_id,
+        event_id=body.event_id,
         room_id=body.room_id,
-        day_id=resolved_day_id,
         label=body.label.strip(),
     )
     db.add(cloned)
@@ -401,7 +379,7 @@ async def copy_layout(
         resource_type="layout",
         resource_id=cloned.id,
         request_id=request_id,
-        details={"source_layout_id": source_layout_id, "room_id": cloned.room_id, "day_id": cloned.day_id},
+        details={"source_layout_id": source_layout_id, "room_id": cloned.room_id, "event_id": cloned.event_id},
     )
     await db.commit()
     await db.refresh(cloned)
@@ -415,10 +393,13 @@ async def list_layouts(
     offset: int = 0,
     edition_id: str | None = None,
     room_id: str | None = None,
+    event_id: str | None = None,
 ) -> list[dict]:
     stmt = select(Layout).order_by(Layout.created_at, Layout.id).offset(offset)
     if edition_id is not None:
         stmt = stmt.where(Layout.edition_id == edition_id)
+    if event_id is not None:
+        stmt = stmt.where(Layout.event_id == event_id)
     if room_id is not None:
         stmt = stmt.where(Layout.room_id == room_id)
     if limit is not None:
@@ -444,13 +425,7 @@ async def get_layout(db: AsyncSession, layout_id: str, *, include_tables: bool =
     payload = payloads[0]
     if include_tables:
         table_ids = [t.id for t in lay.tables]
-        table_res_map: dict[str, list[str]] = {}
-        if table_ids:
-            res_result = await db.execute(
-                select(Registration.id, Registration.table_id).where(Registration.table_id.in_(table_ids))
-            )
-            for res_id, tbl_id in res_result.all():
-                table_res_map.setdefault(tbl_id, []).append(res_id)
+        table_res_map = await registration_ids_by_table(db, table_ids)
         payload["tables"] = [table_to_dict(t, table_res_map.get(t.id, [])) for t in lay.tables]
         payload["areas"] = [area_to_dict(a) for a in lay.areas]
     return payload

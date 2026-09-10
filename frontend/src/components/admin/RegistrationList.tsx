@@ -393,6 +393,19 @@ export default function RegistrationList({
     () => new Map(registrations.map((r) => [r.id, r] as const)),
     [registrations],
   );
+  const tableOccupancy = useMemo(() => {
+    const occupied = new Map<string, number>();
+    for (const r of registrations) {
+      if (r.status === "cancelled") continue;
+      for (const allocation of r.allocations ?? []) {
+        occupied.set(
+          allocation.tableId,
+          (occupied.get(allocation.tableId) ?? 0) + allocation.guestCount,
+        );
+      }
+    }
+    return occupied;
+  }, [registrations]);
   const pageRegistrations = useMemo(
     () => (pageQuery.data?.registrations ?? []).map((r) => registrationsById.get(r.id) ?? r),
     [pageQuery.data, registrationsById],
@@ -653,7 +666,11 @@ export default function RegistrationList({
           cell: ({ row }) => {
             const reg = row.original;
             const isStandalone = isStandaloneRegistration(reg);
-            return isStandalone ? (
+            return (reg.allocations?.length ?? 0) > 1 ? (
+              <span>
+                {reg.allocations?.length} {m.admin_tables_tab()}
+              </span>
+            ) : isStandalone && !(reg.bookedTableQuantity ?? 0) ? (
               <span className="text-secondary small">—</span>
             ) : (
               <Form.Select
@@ -664,11 +681,21 @@ export default function RegistrationList({
                 aria-label={m.admin_action_assign_table()}
               >
                 <option value="">{m.admin_unassigned()}</option>
-                {tables.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.name} ({t.capacity})
-                  </option>
-                ))}
+                {tables
+                  .filter((t) => t.eventId === reg.eventId)
+                  .map((t) => {
+                    const ownAtTable =
+                      reg.allocations?.find((a) => a.tableId === t.id)?.guestCount ?? 0;
+                    const remaining = Math.max(
+                      0,
+                      t.capacity - (tableOccupancy.get(t.id) ?? 0) + ownAtTable,
+                    );
+                    return (
+                      <option key={t.id} value={t.id}>
+                        {t.name} ({m.admin_table_capacity_remaining({ count: remaining })})
+                      </option>
+                    );
+                  })}
               </Form.Select>
             );
           },
@@ -764,6 +791,7 @@ export default function RegistrationList({
     [
       allContactPersonIds,
       tables,
+      tableOccupancy,
       handleAssignTable,
       onViewDetail,
       onUpdateStatus,

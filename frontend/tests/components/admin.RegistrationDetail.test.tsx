@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import RegistrationDetail from "@/components/admin/RegistrationDetail";
 import type { FloorTable } from "@/types/admin";
 import type { Registration } from "@/types/registration";
+import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
@@ -81,10 +82,11 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
         category: "champagne",
         delivered: false,
         includedQuantity: 0,
+        visible: true,
       },
     ],
-    notes: "Please seat near the window.",
-    accessibilityNote: "Wheelchair access needed.",
+    notes: "Please seat near the window. Wheelchair access needed.",
+
     status: "confirmed",
     paymentStatus: "paid",
     checkedIn: false,
@@ -103,20 +105,23 @@ function renderDetail(props: Partial<React.ComponentProps<typeof RegistrationDet
   const onIssueStrap = vi.fn();
   const onMergeDuplicate = vi.fn();
   const onAssignTable = vi.fn();
+  const Wrapper = createTestQueryClientWrapper();
 
   render(
-    <RegistrationDetail
-      registration={buildRegistration()}
-      baseUrl="https://example.com"
-      onClose={onClose}
-      onToggleDelivered={onToggleDelivered}
-      onCheckIn={onCheckIn}
-      onIssueStrap={onIssueStrap}
-      tables={tables}
-      onAssignTable={onAssignTable}
-      onMergeDuplicate={onMergeDuplicate}
-      {...props}
-    />,
+    <Wrapper>
+      <RegistrationDetail
+        registration={buildRegistration()}
+        authHeaders={() => ({})}
+        baseUrl="https://example.com"
+        onClose={onClose}
+        onToggleDelivered={onToggleDelivered}
+        onCheckIn={onCheckIn}
+        onIssueStrap={onIssueStrap}
+        tables={tables}
+        onMergeDuplicate={onMergeDuplicate}
+        {...props}
+      />
+    </Wrapper>,
   );
 
   return { onClose, onToggleDelivered, onCheckIn, onIssueStrap, onMergeDuplicate, onAssignTable };
@@ -127,13 +132,13 @@ describe("RegistrationDetail", () => {
     render(
       <RegistrationDetail
         registration={null}
+        authHeaders={() => ({})}
         baseUrl="https://example.com"
         onClose={vi.fn()}
         onToggleDelivered={vi.fn()}
         onCheckIn={vi.fn()}
         onIssueStrap={vi.fn()}
         tables={[]}
-        onAssignTable={vi.fn()}
       />,
     );
 
@@ -150,15 +155,16 @@ describe("RegistrationDetail", () => {
     expect(emailLink).toHaveAttribute("href", "mailto:jane@example.com");
 
     expect(screen.getByText("+32 470 00 00 00")).toBeInTheDocument();
-    expect(screen.getByRole("spinbutton", { name: "admin_guests_count" })).toHaveValue(2);
+    expect(screen.getByLabelText("admin_guests_count")).toHaveTextContent("2");
     expect(screen.getByText("Grand Tasting")).toBeInTheDocument();
-    expect(screen.getByText("Please seat near the window.")).toBeInTheDocument();
-    expect(screen.getByText("Wheelchair access needed.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Please seat near the window. Wheelchair access needed."),
+    ).toBeInTheDocument();
   });
 
-  it("hides notes and accessibility note sections when absent", () => {
+  it("hides notes when absent", () => {
     renderDetail({
-      registration: buildRegistration({ notes: "", accessibilityNote: "" }),
+      registration: buildRegistration({ notes: "" }),
     });
 
     expect(screen.queryByText("Please seat near the window.")).not.toBeInTheDocument();
@@ -200,22 +206,193 @@ describe("RegistrationDetail", () => {
     );
   });
 
-  it("renders table assignment in the detail modal and updates it on change", () => {
-    const { onAssignTable } = renderDetail({
-      registration: buildRegistration({ tableId: "table-2" }),
+  it("keeps a whole-table booking partially allocated without inventing a companion count", () => {
+    const onSaveBooking = vi.fn().mockResolvedValue(undefined);
+    renderDetail({
+      onSaveBooking,
+      registration: buildRegistration({
+        bookedTableQuantity: 3,
+        allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
+      }),
+    });
+    expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
+      '"assigned":1,"total":3',
+    );
+    fireEvent.click(screen.getByRole("button", { name: "admin_allocation_add" }));
+    const selectors = screen.getAllByRole("combobox", { name: "admin_inventory_unit_table" });
+    expect(
+      within(selectors[1]!).queryByRole("option", { name: /Table 10/ }),
+    ).not.toBeInTheDocument();
+    fireEvent.change(selectors[1]!, { target: { value: "table-2" } });
+    fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({
+        allocations: [
+          { tableId: "table-1", guestCount: 0, exclusive: true },
+          { tableId: "table-2", guestCount: 0, exclusive: true },
+        ],
+      }),
+    );
+  });
+
+  it("records actual guest counts when splitting a booking", () => {
+    const onSaveBooking = vi.fn().mockResolvedValue(undefined);
+    renderDetail({
+      onSaveBooking,
+      registration: buildRegistration({
+        guestCount: 6,
+        allocations: [
+          { tableId: "table-1", guestCount: 4, exclusive: false },
+          { tableId: "table-2", guestCount: 2, exclusive: false },
+        ],
+      }),
+    });
+    expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
+      '"assigned":6,"total":6',
+    );
+    fireEvent.change(screen.getAllByRole("spinbutton", { name: "admin_guests_count" })[2]!, {
+      target: { value: "1" },
+    });
+    expect(screen.getByText(/admin_allocation_progress/)).toHaveTextContent(
+      '"assigned":5,"total":6',
+    );
+    fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({
+        allocations: [
+          { tableId: "table-1", guestCount: 4, exclusive: false },
+          { tableId: "table-2", guestCount: 1, exclusive: false },
+        ],
+      }),
+    );
+  });
+
+  it("saves table allocations explicitly from the detail modal", async () => {
+    const onSaveBooking = vi.fn().mockResolvedValue(undefined);
+    renderDetail({
+      onSaveBooking,
+      registration: buildRegistration({
+        allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
+      }),
     });
 
-    const select = screen.getByRole("combobox", { name: "admin_action_assign_table" });
+    const select = screen.getByRole("combobox", { name: "admin_inventory_unit_table" });
     expect(select).toHaveValue("table-2");
     expect(
       within(select)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["admin_unassigned", "Table 2 (6)", "Table 10 (8)"]);
+    ).toEqual([
+      "admin_unassigned",
+      'Table 2 (admin_table_capacity_remaining({"count":6}))',
+      'Table 10 (admin_table_capacity_remaining({"count":8}))',
+    ]);
 
     fireEvent.change(select, { target: { value: "table-1" } });
 
-    expect(onAssignTable).toHaveBeenCalledWith("reg-1", "table-1");
+    expect(onSaveBooking).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({
+        allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
+      }),
+    );
+  });
+
+  it("shows remaining seats, not total capacity, when another booking already occupies a table", () => {
+    const otherRegistration = buildRegistration({
+      id: "reg-2",
+      allocations: [{ tableId: "table-1", guestCount: 3, exclusive: false }],
+    });
+    renderDetail({
+      onSaveBooking: vi.fn().mockResolvedValue(undefined),
+      registration: buildRegistration({
+        allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
+      }),
+      registrations: [
+        buildRegistration({
+          allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
+        }),
+        otherRegistration,
+      ],
+    });
+
+    const select = screen.getByRole("combobox", { name: "admin_inventory_unit_table" });
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual([
+      "admin_unassigned",
+      'Table 2 (admin_table_capacity_remaining({"count":6}))',
+      // Table 10 has capacity 8; reg-2 (a different registration) occupies 3 of them.
+      'Table 10 (admin_table_capacity_remaining({"count":5}))',
+    ]);
+  });
+
+  it("previews a table quantity reduction and saves the chosen release with payment", () => {
+    const onSaveBooking = vi.fn().mockResolvedValue(undefined);
+    const tableProduct = {
+      id: "table-product",
+      eventId: "event-1",
+      name: "Bourse table",
+      description: "",
+      price: 50,
+      category: "other" as const,
+      unit: "table" as const,
+      active: true,
+      required: false,
+      createdAt: "",
+      updatedAt: "",
+    };
+    renderDetail({
+      onSaveBooking,
+      registration: buildRegistration({
+        amountPaid: 100,
+        orderItems: [
+          {
+            productId: tableProduct.id,
+            name: tableProduct.name,
+            quantity: 2,
+            includedQuantity: 0,
+            deliveredQuantity: 0,
+            remainingQuantity: 2,
+            delivered: false,
+            price: 50,
+            category: "other",
+            visible: true,
+          },
+        ],
+        bookedTableQuantity: 2,
+        allocations: [
+          { tableId: "table-1", guestCount: 0, exclusive: true },
+          { tableId: "table-2", guestCount: 0, exclusive: true },
+        ],
+        event: { ...buildRegistration().event!, products: [tableProduct] },
+      }),
+    });
+    fireEvent.change(
+      screen.getByRole("spinbutton", { name: "admin_booking_quantity Bourse table" }),
+      {
+        target: { value: "1" },
+      },
+    );
+    expect(screen.getByText(/admin_booking_release_tables/)).toBeInTheDocument();
+    expect(screen.getByText(/admin_inventory_refund/)).toHaveTextContent("€50.00");
+    expect(screen.getByRole("button", { name: "admin_booking_save_all" })).toBeDisabled();
+    fireEvent.click(screen.getAllByRole("button", { name: "admin_inventory_remove" })[1]!);
+    fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({
+        quantities: { "table-product": 1 },
+        amountPaid: 100,
+        allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
+      }),
+    );
   });
 
   it("hides table assignment for simple RSVP (non-festival) registrations", () => {

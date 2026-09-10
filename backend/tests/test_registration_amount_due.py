@@ -86,6 +86,27 @@ async def test_admin_records_a_table_fee_and_marks_it_paid(client):
 
 
 @pytest.mark.anyio
+async def test_amount_due_change_recomputes_payment_status(client):
+    registration_id = await _registration(client)
+
+    r = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"amount_due": "25.00", "amount_paid": "25.00"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["payment_status"] == "paid"
+
+    r = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"amount_due": "30.00"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["payment_status"] == "partial"
+
+
+@pytest.mark.anyio
 async def test_amount_due_can_be_cleared_and_rejects_negatives(client):
     registration_id = await _registration(client)
     await client.put(f"/api/registrations/{registration_id}", json={"amount_due": "25.00"}, headers=ADMIN_HEADERS)

@@ -26,7 +26,6 @@ export interface CheckInData {
     delivered: boolean;
   }[];
   notes: string;
-  accessibilityNote: string;
   status: RegistrationStatus;
   checkedIn: boolean;
   checkedInAt?: string;
@@ -44,7 +43,6 @@ interface CheckInResponseRegistration {
   table_id?: string | null;
   order_items?: Record<string, unknown>[];
   notes?: string;
-  accessibility_note?: string;
   status?: RegistrationStatus;
   checked_in?: boolean;
   checked_in_at?: string;
@@ -108,7 +106,6 @@ function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
       category: isOrderItemCategory(item.category) ? item.category : "other",
     })),
     notes: data.notes ?? "",
-    accessibilityNote: data.accessibility_note ?? "",
     status: data.status ?? "pending",
     checkedIn: data.checked_in ?? false,
     checkedInAt: data.checked_in_at,
@@ -187,6 +184,7 @@ export interface GuestRegistration {
     price: number;
     category: string;
     delivered: boolean;
+    visible: boolean;
   }[];
 }
 
@@ -198,6 +196,7 @@ interface GuestOrderItemResponse {
   price: number;
   category: string;
   delivered: boolean;
+  visible?: boolean;
 }
 
 interface GuestRegistrationResponse {
@@ -329,6 +328,7 @@ function mapGuestRegistrations(data: GuestRegistrationResponse[]): GuestRegistra
       quantity: item.quantity,
       price: item.price,
       category: item.category,
+      visible: item.visible !== false,
     })),
   }));
 }
@@ -388,6 +388,31 @@ export async function fetchOwnedRegistrations(accessToken: string): Promise<Gues
   });
 
   return parseRegistrationLookupResponse(response);
+}
+
+export async function requestBookingChange(
+  registrationId: string,
+  requestType: "change" | "cancellation",
+  details: string,
+  submissionId: string,
+  accessToken?: string | null,
+): Promise<void> {
+  const response = await fetch(
+    `/api/me/registrations/${encodeURIComponent(registrationId)}/request`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      },
+      body: JSON.stringify({
+        submission_id: submissionId,
+        request_type: requestType,
+        details,
+      }),
+    },
+  );
+  if (!response.ok) throw new Error(m.my_registrations_request_change_error());
 }
 
 // --- Passwordless visitor "My orders" session (#953) -----------------------
@@ -490,7 +515,6 @@ export async function submitRegistration(
         quantity: order.quantity,
       })),
       notes: payload.notes,
-      accessibility_note: payload.accessibilityNote,
       marketing_opt_in: payload.marketingOptIn,
       honeypot: payload.honeypot ?? "",
       form_start_time: payload.formStartTime,

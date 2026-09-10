@@ -206,7 +206,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const {
     handleAddRegistration,
     handleAssignTable,
-    handleUpdateGuestCount,
+    handleSaveAllocations,
+    handleSaveBooking,
     handleCheckIn,
     handleIssueStrap,
     handleToggleDelivered,
@@ -255,7 +256,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleUpdateTable,
     handleUpdateTableType,
   } = useAdminVenueActions({
-    activeEditionId: activeEdition.id,
     areasQueryKey,
     authHeaders,
     layoutsQueryKey,
@@ -586,6 +586,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onChangeTableType={handleChangeTableType}
                     onUpdateTable={handleUpdateTable}
                     onResizeArea={handleResizeArea}
+                    onSaveAllocations={handleSaveAllocations}
                   />
                 )}
                 {canManageAdminSections && activeKey === "venues" && (
@@ -681,9 +682,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       {detailRegistration && (
         <RegistrationDetail
           registration={detailRegistration}
+          registrations={registrations}
+          authHeaders={authHeaders}
           baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
           emailDuplicates={emailDuplicates}
-          tables={tables}
+          tables={tables.filter((t) =>
+            layouts.some((l) => l.id === t.layoutId && l.eventId === detailRegistration.eventId),
+          )}
+          onSaveBooking={handleSaveBooking}
           onClose={() => {
             setDetailRegistration(null);
             setRegistrationError("");
@@ -691,8 +697,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
           onToggleDelivered={handleToggleDelivered}
           onCheckIn={handleCheckIn}
           onIssueStrap={handleIssueStrap}
-          onAssignTable={handleAssignTable}
-          onUpdateGuestCount={handleUpdateGuestCount}
           actionError={registrationError}
           onClearActionError={() => setRegistrationError("")}
           onMergeDuplicate={async (canonicalId, duplicateId) => {

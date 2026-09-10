@@ -19,7 +19,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import settings
 from app.database import async_session_factory
-from app.models import Event, Person, Registration
+from app.models import ContactMessage, Event, Person, Registration
 
 logger = logging.getLogger(__name__)
 
@@ -168,6 +168,18 @@ async def send_registration_confirmation(registration: Registration, person: Per
         return False
     logger.info("Sent registration confirmation for registration_id=%s.", registration.id)
     return True
+
+
+async def deliver_contact_notification(message_id: str) -> bool:
+    """Load the persisted contact submission and send its durable outbox notification."""
+    async with async_session_factory() as db:
+        message = await db.get(ContactMessage, message_id)
+        if message is None:
+            logger.error("Contact notification resource missing for message_id=%s", message_id)
+            return False
+        return await send_contact_notification(
+            name=message.name, email=message.email, message_text=message.message, message_id=message.id
+        )
 
 
 async def send_contact_notification(*, name: str, email: str, message_text: str, message_id: str) -> bool:

@@ -139,12 +139,19 @@ def product_to_dict(p: Product) -> dict:
         "id": p.id,
         "event_id": p.event_id,
         "name": p.name,
+        "description": p.description,
         "price": p.price,
         "category": p.category,
         "active": p.active,
         "required": p.required,
         "included_product_id": p.included_product_id,
         "included_per_guests": p.included_per_guests,
+        "unit": p.unit,
+        "stock": p.stock,
+        "inclusions": p.inclusions,
+        "reserved_quantity": p.reserved_quantity,
+        "available_quantity": max(0, p.stock - p.reserved_quantity) if p.stock is not None else None,
+        "shortage": max(0, p.reserved_quantity - p.stock) if p.stock is not None else 0,
         "created_at": p.created_at,
         "updated_at": p.updated_at,
     }
@@ -162,11 +169,20 @@ def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:
         "guest_count": r.guest_count,
         "order_items": r.order_items,
         "notes": r.notes,
-        "accessibility_note": r.accessibility_note,
-        "table_id": r.table_id,
+        "table_id": (r.allocations[0].table_id if r.allocations else None),
+        "booked_table_quantity": sum(
+            i["quantity"]
+            for i in r.order_items
+            if (r.product_snapshot or {}).get(i["product_id"], {}).get("unit") == "table"
+        ),
+        "allocations": [
+            {"table_id": a.table_id, "guest_count": a.guest_count, "exclusive": a.exclusive} for a in r.allocations
+        ],
         "status": r.status,
         "payment_status": r.payment_status,
         "amount_due": r.amount_due,
+        "amount_paid": r.amount_paid,
+        "refund_due": None if r.amount_due is None else max(0, (r.amount_paid or 0) - r.amount_due),
         "checked_in": r.checked_in,
         "checked_in_at": r.checked_in_at,
         "strap_issued": r.strap_issued,
@@ -190,8 +206,16 @@ def registration_to_checkin_dict(
         "event_title": event.title,
         "event_date": event.date,
         "check_in_token": r.check_in_token,
-        "table_id": r.table_id,
-        "table_name": table_name,
+        "table_id": (r.allocations[0].table_id if r.allocations else None),
+        "booked_table_quantity": sum(
+            i["quantity"]
+            for i in r.order_items
+            if (r.product_snapshot or {}).get(i["product_id"], {}).get("unit") == "table"
+        ),
+        "allocations": [
+            {"table_id": a.table_id, "guest_count": a.guest_count, "exclusive": a.exclusive} for a in r.allocations
+        ],
+        "table_name": ", ".join(a.table.name for a in r.allocations) or table_name,
         "guest_count": r.guest_count,
         "order_items": r.order_items,
         "notes": r.notes,
@@ -208,10 +232,8 @@ def registration_to_dict_with_token(r: Registration, person: Person, event: Even
 
 
 def registration_to_list_dict(r: Registration, person: Person, event: Event) -> dict:
-    """Serialise a Registration for the list endpoint (drops notes)."""
-    d = registration_to_dict(r, person, event)
-    d.pop("notes", None)
-    return d
+    """Admin list includes notes needed for manual table allocation."""
+    return registration_to_dict(r, person, event)
 
 
 def registration_to_guest_dict(r: Registration, person: Person, event: Event) -> dict:
@@ -228,6 +250,8 @@ def registration_to_guest_dict(r: Registration, person: Person, event: Event) ->
         "status": r.status,
         "payment_status": r.payment_status,
         "amount_due": r.amount_due,
+        "amount_paid": r.amount_paid,
+        "refund_due": None if r.amount_due is None else max(0, (r.amount_paid or 0) - r.amount_due),
         "checked_in": r.checked_in,
         "checked_in_at": r.checked_in_at,
         "strap_issued": r.strap_issued,
@@ -301,10 +325,10 @@ def table_type_to_dict(tt: TableType) -> dict:
 
 def layout_to_dict(lay: Layout, date: date | None = None) -> dict:
     return {
+        "event_id": lay.event_id,
         "id": lay.id,
         "edition_id": lay.edition_id,
         "room_id": lay.room_id,
-        "day_id": lay.day_id,
         "date": date,
         "label": lay.label,
         "created_at": lay.created_at,
@@ -314,6 +338,7 @@ def layout_to_dict(lay: Layout, date: date | None = None) -> dict:
 
 def table_to_dict(t: Table, registration_ids: list[str], *, capacity: int | None = None) -> dict:
     return {
+        "event_id": t.event_id,
         "id": t.id,
         "name": t.name,
         "capacity": t.capacity if capacity is None else capacity,

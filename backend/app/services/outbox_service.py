@@ -14,6 +14,7 @@ from app.models import DeliveryAttempt, OutboxJob
 from app.utils import make_id
 
 REGISTRATION_CONFIRMATION = "registration_confirmation"
+CONTACT_NOTIFICATION = "contact_notification"
 Handler = Callable[[str], Awaitable[bool]]
 
 
@@ -59,6 +60,20 @@ async def enqueue_registration_confirmation(
         resource_type="registration",
         resource_id=registration_id,
         deduplication_key=f"registration-confirmation:{registration_id}",
+        actor=actor,
+        request_id=request_id,
+    )
+
+
+async def enqueue_contact_notification(
+    db: AsyncSession, message_id: str, *, actor: str, request_id: str | None = None
+) -> OutboxJob:
+    return await enqueue_job(
+        db,
+        job_type=CONTACT_NOTIFICATION,
+        resource_type="contact_message",
+        resource_id=message_id,
+        deduplication_key=f"contact-notification:{message_id}",
         actor=actor,
         request_id=request_id,
     )

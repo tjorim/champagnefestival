@@ -21,8 +21,7 @@ vi.mock("@/paraglide/messages", () => ({
     registration_preferred_language: () => "Preferred communication language",
     registration_preferred_language_help: () => "Used for confirmations and messages.",
     registration_guests: () => "Number of Guests",
-    registration_accessibility_note: () => "Accessibility needs (optional)",
-    registration_accessibility_note_help: () =>
+    registration_notes_help: () =>
       "Tell us about wheelchair access, seating or other support you need.",
     registration_marketing_opt_in: () => "Keep me informed about future editions",
     registration_marketing_opt_in_help: () =>
@@ -63,6 +62,7 @@ const champagneProduct: Product = {
   id: "champagne-standard",
   eventId: "fri-vip",
   name: "Champagne Bottle (Standard)",
+  description: "",
   price: 65,
   category: "champagne",
   active: true,
@@ -311,6 +311,7 @@ describe("RegistrationModal component", () => {
       id: "vip-entry",
       eventId: "fri-vip",
       name: "VIP Entry",
+      description: "",
       price: 50,
       category: "other",
       active: true,
@@ -364,6 +365,7 @@ describe("RegistrationModal component", () => {
       id: "bottle",
       eventId: "fri-vip",
       name: "Champagne Bottle",
+      description: "",
       price: 65,
       category: "champagne",
       active: true,
@@ -375,6 +377,7 @@ describe("RegistrationModal component", () => {
       id: "vip-table",
       eventId: "fri-vip",
       name: "VIP Table",
+      description: "",
       price: 200,
       category: "other",
       active: true,

@@ -77,7 +77,6 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
     guestCount: 2,
     orderItems: [],
     notes: "",
-    accessibilityNote: "",
     status: "confirmed",
     paymentStatus: "unpaid",
     checkedIn: false,

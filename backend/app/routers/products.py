@@ -12,8 +12,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import Event, Product
+from app.models import Product
 from app.schemas import ProductCreate, ProductOut, ProductUpdate
+from app.services import product_inventory as inventory
+from app.services.product_changes import change_product
 from app.utils import get_or_404, make_id, product_to_dict
 
 router = APIRouter(
@@ -60,20 +62,27 @@ async def create_product(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    await get_or_404(db, Event, body.event_id, "Event not found.")
+    event = await inventory.lock_event(db, body.event_id)
     if body.included_product_id is not None:
         await _validate_inclusion_target(db, body.event_id, None, body.included_product_id)
     product = Product(
         id=make_id("prod"),
         event_id=body.event_id,
         name=body.name,
+        description=body.description,
         price=body.price,
         category=body.category,
         active=body.active,
         required=body.required,
         included_product_id=body.included_product_id,
         included_per_guests=body.included_per_guests,
+        unit=body.unit,
+        stock=body.stock,
+        inclusions=[i.model_dump() for i in body.inclusions] if body.inclusions is not None else None,
     )
+    graph = inventory.current_snapshot(event)
+    graph[product.id] = {"inclusions": product.inclusions, "included_product_id": product.included_product_id}
+    inventory.validate_graph(graph)
     db.add(product)
     await write_audit_entry(
         db,
@@ -114,47 +123,24 @@ async def update_product(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    product = await get_or_404(db, Product, product_id, "Product not found.")
-    if body.name is not None:
-        product.name = body.name
-    if body.price is not None:
-        product.price = body.price
-    if body.category is not None:
-        product.category = body.category
-    if body.active is not None:
-        product.active = body.active
-    if body.required is not None:
-        product.required = body.required
-
-    if "included_product_id" in body.model_fields_set or "included_per_guests" in body.model_fields_set:
-        resulting_included_product_id = (
-            body.included_product_id if "included_product_id" in body.model_fields_set else product.included_product_id
-        )
-        resulting_included_per_guests = (
-            body.included_per_guests if "included_per_guests" in body.model_fields_set else product.included_per_guests
-        )
-        if (resulting_included_product_id is None) != (resulting_included_per_guests is None):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="included_product_id and included_per_guests must be set together.",
-            )
-        if resulting_included_product_id is not None:
-            await _validate_inclusion_target(db, product.event_id, product.id, resulting_included_product_id)
-        product.included_product_id = resulting_included_product_id
-        product.included_per_guests = resulting_included_per_guests
-
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="product_updated",
-        resource_type="product",
-        resource_id=product.id,
-        request_id=getattr(request.state, "request_id", None),
-        details={"fields_changed": sorted(body.model_fields_set)},
+    if body.included_product_id is not None and body.inclusions is None:
+        existing = await get_or_404(db, Product, product_id, "Product not found.")
+        await inventory.lock_event(db, existing.event_id)
+        await _validate_inclusion_target(db, existing.event_id, product_id, body.included_product_id)
+    product = await change_product(
+        db, product_id, body, preview=False, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    await db.commit()
-    await db.refresh(product)
     return product_to_dict(product)
+
+
+@router.post("/{product_id}/preview")
+async def preview_product(product_id: str, body: ProductUpdate, db: AsyncSession = Depends(get_db)) -> dict:
+    # Same calculation and fingerprint as saving, but no persisted mutation.
+    try:
+        with db.no_autoflush:
+            return await change_product(db, product_id, body, preview=True, actor="", request_id=None)
+    finally:
+        await db.rollback()
 
 
 @router.delete("/{product_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -165,6 +151,9 @@ async def delete_product(
     actor: str = Depends(get_actor_id),
 ) -> None:
     product = await get_or_404(db, Product, product_id, "Product not found.")
+    graph = inventory.current_snapshot(await inventory.lock_event(db, product.event_id))
+    if any(any(edge["product_id"] == product_id for edge in node.get("inclusions") or []) for node in graph.values()):
+        raise HTTPException(409, "Remove this product from packages before deleting it.")
     # ON DELETE SET NULL clears included_product_id on any product that bundles
     # this one; clear its paired quantity too so the "both or neither" invariant holds.
     await db.execute(

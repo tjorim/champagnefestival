@@ -44,6 +44,7 @@ deliberate decision, not an implicit idempotency guarantee.
 | Visitor session refresh (any authenticated `GET`/`POST` while a visitor-session cookie is presented) | Public browser | **Convergent — safe to retry.** Every dependency resolution that accepts the cookie extends the sliding 7-day idle window (`VisitorSession.expires_at`, capped by the never-extended 30-day `hard_expires_at`) as a side effect; repeating the same authenticated request extends the same way each time, with no additional state created. Sign-out (`POST /api/visitor-sessions/sign-out`) is likewise convergent — deleting an already-deleted session is a no-op. |
 | Single creates, layout copy, people merge, registration creation, registration-access email request, Pebble token creation, and integration-client creation/rotation | Browser, public clients, and MCP automation | **Not retry safe.** Server-generated identity or an external side effect makes blind retry unsafe. Use server-side replay or a client-generated resource ID before adding automatic retries. Secret-returning operations must not gain replay storage without a separate security review. |
 | Outbox enqueue within registration creation | Backend transaction | **Natural resource key.** The unique `registration-confirmation:{registration_id}` key permits one confirmation job per registration, and the job is committed atomically with the registration. This does not make registration creation itself retry safe because a repeated create receives a new registration ID. |
+| Outbox enqueue within a visitor booking change/cancellation request | Backend transaction | **Natural resource key.** The unique `contact-notification:{submission_id}` key permits one notification job per client-generated submission UUID, committed atomically with the stored `ContactMessage`. A replay of the same submission finds the message already inserted and does not enqueue a second job. |
 | Outbox delivery attempts | Supervised worker | **At-least-once delivery.** A lease and atomic `SKIP LOCKED` claim prevent concurrent workers from owning the same live attempt, and expired claims recover after a crash. A process failure after SMTP accepts a message but before the result commits is inherently ambiguous and can cause a duplicate email; consumers must tolerate duplicates. Retries are bounded and use exponential backoff before terminal failure. |
 | Web Push subscribe (`POST /api/push/subscriptions`) | Public browser | **Natural-key upsert.** `endpoint` is the browser-chosen stable key; a repeat (deliberate or ambiguous-response retry) upserts the same row rather than creating a duplicate. `consent_at` is set only on first creation and never overwritten, so a resubscribe cannot backdate consent; `categories`/`event_ids`/`locale`/`last_seen_at` do refresh on every call, which is the intended "renew my preferences" behaviour, not a retry hazard. |
 | Web Push unsubscribe (`POST /api/push/subscriptions/unsubscribe`) | Public browser | **Natural-key upsert, convergent state only.** Deletes by `endpoint`; repeating after the row is already gone is a no-op that still returns 204. |
@@ -140,3 +141,82 @@ the complete ordered ID set and applies it in one locked transaction, so it cann
 leave a partial order. Create serializes its internal display-position allocation
 with a transaction-scoped advisory lock; this prevents concurrent valid creates
 from colliding, but does not make a client retry idempotent.
+
+
+# Product inventory and package changes (#802)
+
+Product creation/deletion and registration creation remain **not automatically
+retry-safe**: no idempotency key is added. Reload after an ambiguous response.
+Product and registration updates use absolute values, but may produce fresh audit
+entries and notifications when repeated; clients must not automatically retry.
+
+All product inventory edits and registration create/update/delete operations take
+the event row lock before registration locks. Reservations are derived from
+non-cancelled order quantities (including free items), so repeating an absolute
+quantity/status update cannot increment a separate reservation counter. Existing
+shortages may shrink; new reservations cannot worsen them. The concurrent last-unit
+booking integration test verifies that only one booking succeeds.
+
+`POST /api/products/{id}/preview` is read-only and rolls back its transaction.
+Updates affecting existing package contents/prices or introducing a stock shortage
+require its fingerprint, covering product configuration and booking/payment state.
+A changed booking or configuration rejects a stale preview with 409. Shortages
+also require explicit acknowledgement. The product, affected snapshots/totals,
+audit records and notifications commit together. The fingerprint is a freshness
+check, not an idempotency key; after an uncertain save, reload and preview again.
+Tests cover a preview leaving stock unchanged and a competing booking invalidating
+its fingerprint.
+
+Registration notes are replaced as one value. Legacy `accessibility_note` request
+input merges into notes for older callers; the response contains only notes.
+`amount_paid` is an absolute recorded total, not an increment or a payment charge;
+changes retain previous/new values in the audit log. Order reductions preserve
+that amount and expose overpayment for manual refunds. Tests cover recorded
+payment preservation and booked-price quantity changes.
+
+Visitor booking change/cancellation requests use a client-generated submission
+UUID. Replaying the same `POST /api/me/registrations/{id}/request` returns success
+without creating another inbox item or audit entry. Organiser notification is
+enqueued through the durable outbox exactly once, atomically with the stored
+message (see the outbox enqueue inventory entry above); a replay does not enqueue
+a second delivery job, and a transient delivery failure is retried by the outbox
+worker's at-least-once, exponential-backoff delivery rather than being silently
+dropped or left dependent on the client retrying the request. A request never
+changes booking status, quantities, allocations or payment state.
+
+
+# Event plans and physical allocations (#802, second increment)
+
+Layout create/copy now require an event and room; `(room_id, event_id)` is unique.
+These writes still have no automatic retry: after an ambiguous response, reload
+plans to find the result. Copy creates fresh table/area identities and never copies
+allocations. Bulk layout creation retains its tested idempotency-key replay.
+Event and room locks serialize plan creation against deletion/venue changes.
+Room venue changes are rejected while plans exist; event venue changes must keep
+all its rooms compatible. These absolute updates retain the no-automatic-retry
+policy because audit entries and notifications may be repeated.
+
+Registration `allocations` replaces the complete allocation list. REST and MCP
+share the same service, lock the event, then the booking, then sorted table rows,
+and commit allocations, quantities, stock effects, audit and notifications in one
+transaction. Allocation replacement does not itself reserve or release product
+stock. Cancellation clears allocations; reducing booked quantities must include
+any necessary allocation adjustment. Table move/delete takes a table lock and
+rejects allocated tables. Package changes cannot invalidate existing allocations.
+
+No automatic retry is enabled for these writes. Repeating an allocation list
+cannot add duplicate allocation rows, but may repeat audit/live effects. After an
+ambiguous save, reload the booking and reconcile. The explicit capacity override
+is a new confirmed request following a rejected save, not a blind retry, and
+cannot override exclusivity. Tests cover split occupancy, exclusive claims,
+partial assignment with unchanged stock, cancellation, copy isolation, atomic
+rejection and concurrent claims on the last available seats.
+
+The combined admin booking editor submits guest count, status, purchased
+quantities, recorded payment, notes and the complete allocation list in the same
+absolute update. It has no automatic retry. A table-quantity reduction cannot be
+submitted while more tables remain allocated than purchased; the administrator
+chooses the released allocation first. The backend validates and commits the
+quantity, derived stock reservation, payment total and allocation replacement in
+one transaction. After an ambiguous response, reload the booking before editing
+or submitting again.

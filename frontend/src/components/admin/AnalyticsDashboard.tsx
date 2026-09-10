@@ -101,6 +101,8 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
               <th scope="col">{m.admin_analytics_column_guests()}</th>
               <th scope="col">{m.admin_analytics_column_checked_in()}</th>
               <th scope="col">{m.admin_analytics_column_checkin_rate()}</th>
+              <th scope="col">{m.admin_analytics_column_total_paid()}</th>
+              <th scope="col">{m.admin_analytics_column_total_due()}</th>
             </tr>
           </thead>
           <tbody>
@@ -118,6 +120,8 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                     ? `${Math.round((edition.totalCheckedIn / edition.totalGuests) * 100)}%`
                     : "—"}
                 </td>
+                <td>€{edition.totalPaid.toFixed(2)}</td>
+                <td>€{edition.totalDue.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>

@@ -36,6 +36,10 @@ export interface PersonRegistration {
   paymentStatus: PaymentStatus;
   checkedIn: boolean;
   createdAt: string;
+  amountPaid: number;
+  amountDue: number | null;
+  editionId: string;
+  editionLabel: string;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -52,12 +56,15 @@ function isPaymentStatus(value: unknown): value is PaymentStatus {
 
 function isPersonRegistrationRecord(value: unknown): value is Record<string, unknown> & {
   id: string;
-  event: { title: string };
+  event: { title: string; edition?: { id: string; year: number; month: string } };
   guest_count: number;
   status: RegistrationStatus;
   payment_status: PaymentStatus;
   checked_in: boolean;
   created_at: string;
+  amount_paid?: number | string | null;
+  amount_due?: number | string | null;
+  edition_id?: string;
 } {
   return (
     isRecord(value) &&
@@ -123,15 +130,22 @@ export async function fetchAdminPersonRegistrations(
   if (!Array.isArray(raw) || !raw.every(isPersonRegistrationRecord))
     throw new Error(`Invalid registrations payload for person ${personId}.`);
 
-  return raw.map((registration) => ({
-    id: registration.id,
-    eventTitle: registration.event.title,
-    guestCount: registration.guest_count,
-    status: registration.status,
-    paymentStatus: registration.payment_status,
-    checkedIn: registration.checked_in,
-    createdAt: registration.created_at,
-  }));
+  return raw.map((registration) => {
+    const edition = registration.event.edition;
+    return {
+      id: registration.id,
+      eventTitle: registration.event.title,
+      guestCount: registration.guest_count,
+      status: registration.status,
+      paymentStatus: registration.payment_status,
+      checkedIn: registration.checked_in,
+      createdAt: registration.created_at,
+      amountPaid: Number(registration.amount_paid ?? 0),
+      amountDue: registration.amount_due == null ? null : Number(registration.amount_due),
+      editionId: registration.edition_id ?? edition?.id ?? "",
+      editionLabel: edition ? `${edition.year} ${edition.month}` : "",
+    };
+  });
 }
 
 export async function createAdminRegistration(
@@ -147,7 +161,6 @@ export async function createAdminRegistration(
       guest_count: payload.guestCount,
       order_items: [],
       notes: payload.notes,
-      accessibility_note: "",
       status: "confirmed",
     }),
   });

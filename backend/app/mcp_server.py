@@ -751,12 +751,10 @@ class ChampagneFestivalMcpBackend:
     async def create_layout(
         self,
         room_id: str,
-        edition_id: str | None = None,
-        day_id: int | None = None,
-        date: dt_date | None = None,
+        event_id: str,
         label: str = "",
     ) -> dict:
-        """Create a floor-plan layout for a room. Either ``day_id`` or ``date`` is required.
+        """Create a floor-plan layout for a room. The event determines the edition and date.
 
         Requires the ``admin`` role.
         """
@@ -765,9 +763,7 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             room_id=room_id,
-            edition_id=edition_id,
-            day_id=day_id,
-            date=date,
+            event_id=event_id,
             label=label,
         )
 
@@ -775,23 +771,19 @@ class ChampagneFestivalMcpBackend:
         self,
         source_layout_id: str,
         room_id: str,
-        edition_id: str | None = None,
-        day_id: int | None = None,
-        date: dt_date | None = None,
+        event_id: str,
         label: str = "",
         copy_tables: bool = True,
         copy_areas: bool = True,
     ) -> dict:
-        """Copy a layout's tables/areas onto a new room+day. Requires the ``admin`` role."""
+        """Copy a layout's tables/areas onto a new room+event. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_layouts.copy_layout(
             self.session_factory,
             self._actor(),
             source_layout_id,
             room_id=room_id,
-            edition_id=edition_id,
-            day_id=day_id,
-            date=date,
+            event_id=event_id,
             label=label,
             copy_tables=copy_tables,
             copy_areas=copy_areas,
@@ -812,13 +804,17 @@ class ChampagneFestivalMcpBackend:
             self.session_factory, self._actor(), items=items, idempotency_key=idempotency_key
         )
 
-    async def list_layouts(self, edition_id: str | None = None, room_id: str | None = None) -> dict:
-        """List layouts, optionally filtered by ``edition_id`` and/or ``room_id``.
+    async def list_layouts(
+        self, edition_id: str | None = None, room_id: str | None = None, event_id: str | None = None
+    ) -> dict:
+        """List layouts, optionally filtered by edition, room, or event.
 
         Requires the ``admin`` role.
         """
         self._require_admin()
-        return await mcp_admin_layouts.list_layouts(self.session_factory, edition_id=edition_id, room_id=room_id)
+        return await mcp_admin_layouts.list_layouts(
+            self.session_factory, edition_id=edition_id, room_id=room_id, event_id=event_id
+        )
 
     async def get_layout(self, layout_id: str, include_tables: bool = False) -> dict:
         """Return a single layout. Requires the ``admin`` role.
@@ -1582,8 +1578,7 @@ class ChampagneFestivalMcpBackend:
         payment_status: str | None = None,
         amount_due: float | None = None,
         clear_amount_due: bool = False,
-        table_id: str | None = None,
-        clear_table: bool = False,
+        allocations: list[dict] | None = None,
         confirm_over_capacity: bool = False,
         order_items: list[dict] | None = None,
         notes: str | None = None,
@@ -1594,11 +1589,11 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update a registration; omitted fields are left unchanged.
 
-        ``amount_due``/``table_id`` have no natural "clear" value via a plain optional
-        parameter (0.0 is a valid amount_due) — pass ``clear_amount_due=True`` /
-        ``clear_table=True`` to null them out. ``order_items`` takes
-        ``product_id``/``quantity`` pairs; product details are resolved server-side.
-        Requires the ``admin`` role.
+        ``amount_due`` has no natural "clear" value via a plain optional
+        parameter (0.0 is a valid amount_due) — pass ``clear_amount_due=True``
+        to null it out. ``order_items`` takes ``product_id``/``quantity`` pairs;
+        product details are resolved server-side. ``allocations`` replaces the
+        complete table allocation list. Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_registrations.update_registration(
@@ -1610,8 +1605,7 @@ class ChampagneFestivalMcpBackend:
             payment_status=payment_status,
             amount_due=amount_due,
             clear_amount_due=clear_amount_due,
-            table_id=table_id,
-            clear_table=clear_table,
+            allocations=allocations,
             confirm_over_capacity=confirm_over_capacity,
             order_items=order_items,
             notes=notes,

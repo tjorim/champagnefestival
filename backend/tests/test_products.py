@@ -54,6 +54,31 @@ async def test_product_crud(client):
 
 
 @pytest.mark.anyio
+async def test_product_description_round_trips(client):
+    event = await _create_event(client)
+
+    r = await client.post(
+        "/api/products",
+        json={**PRODUCT_PAYLOAD, "event_id": event["id"], "description": "Vintage brut, chilled on arrival."},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    product = r.json()
+    assert product["description"] == "Vintage brut, chilled on arrival."
+    product_id = product["id"]
+
+    r = await client.put(f"/api/products/{product_id}", json={"price": "30.00"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["description"] == "Vintage brut, chilled on arrival."  # untouched by the partial update
+
+    r = await client.put(
+        f"/api/products/{product_id}", json={"description": "Updated tasting note."}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200
+    assert r.json()["description"] == "Updated tasting note."
+
+
+@pytest.mark.anyio
 async def test_product_requires_admin(unauth_client):
     r = await unauth_client.post("/api/products", json={**PRODUCT_PAYLOAD, "event_id": "evt-x"})
     assert r.status_code == 401
@@ -592,6 +617,34 @@ async def test_registration_computes_included_bundle_quantity(client):
 
 
 @pytest.mark.anyio
+async def test_registration_marks_hidden_inclusion_not_visible(client):
+    """An inclusion edge with visible=False still reserves stock/prep totals but is
+    flagged so the visitor-facing order summary can hide it (see ProductInclusion.visible)."""
+    event = await _create_event(client)
+    napkin = await _create_product(client, event["id"], name="Napkin", price="0.50")
+    coffee = await _create_product(client, event["id"], name="Coffee", price="3.00")
+    table = await _create_product(
+        client,
+        event["id"],
+        name="VIP Table",
+        price="200.00",
+        required=True,
+        inclusions=[
+            {"product_id": napkin["id"], "quantity": 1, "per_quantity": 1, "rounding": "down", "visible": False},
+            {"product_id": coffee["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"},
+        ],
+    )
+
+    r = await _register(client, event["id"], [{"product_id": table["id"], "quantity": 1}])
+    assert r.status_code == 201, r.text
+    order_items = r.json()["order_items"]
+    napkin_item = next(item for item in order_items if item["product_id"] == napkin["id"])
+    coffee_item = next(item for item in order_items if item["product_id"] == coffee["id"])
+    assert napkin_item["visible"] is False
+    assert coffee_item["visible"] is True
+
+
+@pytest.mark.anyio
 async def test_registration_merges_explicit_extra_with_included_bundle_quantity(client):
     event = await _create_event(client)
     bottle = await _create_product(client, event["id"], name="Champagne Bottle", price="65.00")
@@ -746,7 +799,7 @@ async def test_registration_rejects_order_item_quantity_over_limit(client):
             "phone": "+32499000000",
             "event_id": event["id"],
             "guest_count": 1,
-            "order_items": [{"product_id": product["id"], "quantity": 101}],
+            "order_items": [{"product_id": product["id"], "quantity": 1000001}],
             "notes": "",
             "honeypot": "",
             "form_start_time": "",

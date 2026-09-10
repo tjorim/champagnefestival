@@ -151,6 +151,7 @@ def _make_registration(
     r.person_id = person_id
     r.event_id = event_id
     r.table_id = table_id
+    r.allocations = [SimpleNamespace(table_id=table_id, guest_count=guest_count, exclusive=False)] if table_id else []
     r.guest_count = guest_count
     r.checked_in = checked_in
     r.checked_in_at = checked_in_at
@@ -202,7 +203,7 @@ def _make_layout(
     lay.id = layout_id
     lay.edition_id = edition_id
     lay.room_id = room_id
-    lay.day_id = day_id
+    lay.event_id = f"event-{day_id}"
     room = MagicMock()
     room.id = room_id
     room.name = "Main Hall"

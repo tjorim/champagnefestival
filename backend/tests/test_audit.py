@@ -209,7 +209,7 @@ async def test_admin_create_registration_writes_audit_entry(client, db_session):
 @pytest.mark.anyio
 async def test_table_assignment_writes_audit_entry(client, db_session):
     reg, event = await _create_admin_registration(client)
-    layout_id = await _create_layout_prerequisites(client)
+    layout_id = await _create_layout_prerequisites(client, event_id=event["id"])
     venue_id = await _create_venue(client)
     tt_r = await client.post(
         "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS
@@ -225,15 +225,15 @@ async def test_table_assignment_writes_audit_entry(client, db_session):
 
     r = await client.put(
         f"/api/registrations/{reg['id']}",
-        json={"table_id": table_id},
+        json={"allocations": [{"table_id": table_id, "guest_count": reg["guest_count"]}]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
 
     entries = await _all_audit_entries(db_session)
-    assigned = [e for e in entries if e.action == "table_assigned"]
+    assigned = [e for e in entries if e.action == "table_allocations_updated"]
     assert len(assigned) == 1
-    assert assigned[0].details["table_id"] == table_id
+    assert assigned[0].details["after"][0]["table_id"] == table_id
 
 
 @pytest.mark.anyio

@@ -13,13 +13,24 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from app import email as email_module
 from app.auth import require_admin
+from app.database import async_session_factory
 from app.main import app
-from app.models import AuditEntry, PebbleAccessToken, Registration, ReservationAccessToken, User
+from app.models import (
+    AuditEntry,
+    ContactMessage,
+    OutboxJob,
+    PebbleAccessToken,
+    Registration,
+    ReservationAccessToken,
+    User,
+)
 from app.routers import me as me_router
 from app.routers import registrations as registrations_router
 from app.schemas import RegistrationAccessLookupRequest
 from app.services import users_service
+from app.services.outbox_service import CONTACT_NOTIFICATION, REGISTRATION_CONFIRMATION, process_one_job
 from app.services.pebble_access import rotate_pebble_token
 from tests.helpers import _post_registration
 
@@ -95,6 +106,107 @@ async def test_me_registrations_auto_provisions_user(me_client, db_session):
     user = result.scalar_one_or_none()
     assert user is not None
     assert user.oidc_subject == "visitor-sub"
+
+
+@pytest.mark.anyio
+async def test_booking_cancellation_request_does_not_cancel_and_replays_safely(me_client, db_session):
+    await me_client.get("/api/me/registrations")
+    created = await _post_registration_with_admin_setup(me_client, email="request@example.com")
+    registration_id = created.json()["id"]
+    user = await db_session.scalar(select(User).where(User.oidc_subject == "visitor-sub"))
+    registration = await db_session.get(Registration, registration_id)
+    assert user is not None and registration is not None
+    registration.user_id = user.id
+    await db_session.commit()
+
+    body = {
+        "submission_id": "27d6a186-ded1-45b9-af20-2061bb739436",
+        "request_type": "cancellation",
+        "details": "Please cancel both tables.",
+    }
+    first = await me_client.post(f"/api/me/registrations/{registration_id}/request", json=body)
+    replay = await me_client.post(f"/api/me/registrations/{registration_id}/request", json=body)
+    assert first.status_code == replay.status_code == 200
+
+    await db_session.refresh(registration)
+    assert registration.status != "cancelled"
+    stored = await db_session.get(ContactMessage, body["submission_id"])
+    assert stored is not None
+    assert registration_id in stored.message
+    audits = (
+        await db_session.scalars(
+            select(AuditEntry).where(
+                AuditEntry.action == "registration_change_requested",
+                AuditEntry.resource_id == registration_id,
+            )
+        )
+    ).all()
+    assert len(audits) == 1
+
+    # Notification delivery is enqueued once, atomically with the message —
+    # a replay of this idempotent submission must not enqueue a second job
+    # (its deduplication_key is unique) nor skip delivery outright.
+    jobs = (
+        await db_session.scalars(
+            select(OutboxJob).where(OutboxJob.deduplication_key == f"contact-notification:{body['submission_id']}")
+        )
+    ).all()
+    assert len(jobs) == 1
+    assert jobs[0].job_type == CONTACT_NOTIFICATION
+    assert jobs[0].state == "pending"
+
+
+@pytest.mark.anyio
+async def test_booking_change_request_notification_retries_after_failure_then_delivers(
+    me_client, db_session, monkeypatch
+):
+    """A transient delivery failure must not be lost — the outbox worker retries it (#retry-safety)."""
+    await me_client.get("/api/me/registrations")
+    created = await _post_registration_with_admin_setup(me_client, email="retry-request@example.com")
+    registration_id = created.json()["id"]
+    user = await db_session.scalar(select(User).where(User.oidc_subject == "visitor-sub"))
+    registration = await db_session.get(Registration, registration_id)
+    assert user is not None and registration is not None
+    registration.user_id = user.id
+    await db_session.commit()
+
+    attempts = 0
+
+    async def flaky_send(**_kwargs):
+        nonlocal attempts
+        attempts += 1
+        return attempts > 1
+
+    monkeypatch.setattr(email_module, "send_contact_notification", flaky_send)
+    submission_id = "9c6a4e0a-2f3a-4b8e-9a0d-6a2b8f7c1e11"
+    response = await me_client.post(
+        f"/api/me/registrations/{registration_id}/request",
+        json={"submission_id": submission_id, "request_type": "cancellation", "details": "Retry check."},
+    )
+    assert response.status_code == 200
+
+    async def _delivered(_resource_id: str) -> bool:
+        return True
+
+    handlers = {
+        REGISTRATION_CONFIRMATION: _delivered,  # drain the booking's own confirmation job first
+        CONTACT_NOTIFICATION: email_module.deliver_contact_notification,
+    }
+    assert await process_one_job(async_session_factory, handlers) is True
+    assert await process_one_job(async_session_factory, handlers) is True
+    job = await db_session.scalar(
+        select(OutboxJob).where(OutboxJob.deduplication_key == f"contact-notification:{submission_id}")
+    )
+    assert job is not None
+    assert attempts == 1
+    assert job.state == "pending"  # first attempt failed; rescheduled for retry
+
+    job.scheduled_at = datetime.now(UTC)
+    await db_session.commit()
+    assert await process_one_job(async_session_factory, handlers) is True
+    await db_session.refresh(job)
+    assert attempts == 2
+    assert job.state == "delivered"
 
 
 @pytest.mark.anyio

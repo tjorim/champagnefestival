@@ -59,15 +59,25 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
         category: (item.category ?? "other") as OrderItemCategory,
         delivered: deliveredQuantitySafe === quantitySafe,
         includedQuantity,
+        visible: item.visible !== false,
       };
     }),
+    allocations: Array.isArray(d.allocations)
+      ? d.allocations.map((a: Record<string, unknown>) => ({
+          tableId: String(a.table_id),
+          guestCount: Number(a.guest_count),
+          exclusive: Boolean(a.exclusive),
+        }))
+      : [],
+    bookedTableQuantity: Number(d.booked_table_quantity ?? 0),
     notes: (d.notes ?? "") as string,
-    accessibilityNote: (d.accessibility_note ?? "") as string,
     tableId: (d.table_id as string | undefined) ?? undefined,
     status: (d.status ?? "pending") as RegistrationStatus,
     paymentStatus: (d.payment_status ?? "unpaid") as PaymentStatus,
     // Serialized as a decimal string by the API to avoid float drift on money.
     amountDue: d.amount_due == null ? undefined : Number(d.amount_due),
+    amountPaid: Number(d.amount_paid ?? 0),
+    refundDue: Number(d.refund_due ?? 0),
     checkedIn: (d.checked_in ?? false) as boolean,
     checkedInAt: (d.checked_in_at as string | undefined) ?? undefined,
     strapIssued: (d.strap_issued ?? false) as boolean,

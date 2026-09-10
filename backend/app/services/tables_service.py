@@ -18,6 +18,7 @@ from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Layout, Registration, Table, TableType
 from app.schemas import TableCreate, TableUpdate
+from app.services.allocations_service import allocated_registration_filter, registration_ids_by_table
 from app.services.errors import ConflictError, NotFoundError
 from app.services.idempotency import (
     check_idempotency_key,
@@ -148,6 +149,7 @@ async def bulk_create_tables(
             details={"layout_id": t.layout_id, "name": t.name, "bulk": True},
         )
 
+    await db.execute(select(Table).where(Table.id.in_([t.id for t in rows])))
     # New tables have no reservations yet.
     response = {"items": [table_to_dict(t, [], capacity=table_types[t.table_type_id].capacity) for t in rows]}
     if idempotency_key:
@@ -169,16 +171,7 @@ async def list_tables(db: AsyncSession, layout_id: str | None = None) -> list[di
     result = await db.execute(stmt)
     tables = result.scalars().all()
 
-    # Compute registration_ids from the Registration.table_id FK (source of truth),
-    # scoped to the tables actually being returned.
-    table_res_map: dict[str, list[str]] = {}
-    table_ids = [t.id for t in tables]
-    if table_ids:
-        res_result = await db.execute(
-            select(Registration.id, Registration.table_id).where(Registration.table_id.in_(table_ids))
-        )
-        for res_id, tbl_id in res_result.all():
-            table_res_map.setdefault(tbl_id, []).append(res_id)
+    table_res_map = await registration_ids_by_table(db, [t.id for t in tables])
 
     return [table_to_dict(t, table_res_map.get(t.id, [])) for t in tables]
 
@@ -187,7 +180,7 @@ async def get_table(db: AsyncSession, table_id: str) -> dict:
     t = (await db.execute(select(Table).where(Table.id == table_id).with_for_update())).scalar_one_or_none()
     if t is None:
         raise NotFoundError(f"Table '{table_id}' not found.")
-    res_result = await db.execute(select(Registration.id).where(Registration.table_id == table_id))
+    res_result = await db.execute(select(Registration.id).where(allocated_registration_filter([table_id])))
     registration_ids = [row[0] for row in res_result.all()]
     return table_to_dict(t, registration_ids)
 
@@ -200,7 +193,14 @@ async def update_table(
     body: TableUpdate,
     request_id: str | None = None,
 ) -> dict:
-    t = await db.get(Table, table_id)
+    t = (
+        await db.execute(
+            select(Table)
+            .where(Table.id == table_id)
+            .with_for_update(of=Table)
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
     if t is None:
         raise NotFoundError(f"Table '{table_id}' not found.")
 
@@ -233,6 +233,8 @@ async def update_table(
         lay = await db.execute(select(Layout).where(Layout.id == body.layout_id))
         if lay.scalar_one_or_none() is None:
             raise NotFoundError(f"Layout '{body.layout_id}' not found.")
+        if body.layout_id != t.layout_id and (await registration_ids_by_table(db, [t.id]))[t.id]:
+            raise ConflictError("Release this table's allocations before moving it to another plan.")
         t.layout_id = body.layout_id
         fields_changed.append("layout_id")
 
@@ -249,16 +251,23 @@ async def update_table(
     await _notify_seating_changed(db, action="updated", table_id=table_id, edition_id=edition_id)
     await db.commit()
     await db.refresh(t)
-    res_result = await db.execute(select(Registration.id).where(Registration.table_id == table_id))
+    res_result = await db.execute(select(Registration.id).where(allocated_registration_filter([table_id])))
     registration_ids = [row[0] for row in res_result.all()]
     return table_to_dict(t, registration_ids)
 
 
 async def delete_table(db: AsyncSession, *, actor: str, table_id: str, request_id: str | None = None) -> dict:
-    t = await db.get(Table, table_id)
+    t = (
+        await db.execute(
+            select(Table)
+            .where(Table.id == table_id)
+            .with_for_update(of=Table)
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
     if t is None:
         raise NotFoundError(f"Table '{table_id}' not found.")
-    regs = await db.execute(select(Registration.id).where(Registration.table_id == table_id).limit(1))
+    regs = await db.execute(select(Registration.id).where(allocated_registration_filter([table_id])).limit(1))
     if regs.scalars().first() is not None:
         raise ConflictError("Cannot delete: registrations are still assigned to this table.")
     edition_id = await _get_layout_edition_id(db, t.layout_id)

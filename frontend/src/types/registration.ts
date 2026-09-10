@@ -1,3 +1,22 @@
+export interface TableAllocation {
+  tableId: string;
+  guestCount: number;
+  exclusive: boolean;
+}
+
+export interface BookingUpdate {
+  guestCount: number;
+  quantities: Record<string, number>;
+  allocations: TableAllocation[];
+  amountPaid: number;
+  notes: string;
+  status: RegistrationStatus;
+  /** Why `amountPaid` changed — ignored unless it actually changes. */
+  paymentReason?: "payment" | "refund" | "correction";
+  /** When the money actually moved (YYYY-MM-DD); defaults to the edit time if omitted. */
+  paymentTransactionDate?: string;
+}
+
 /**
  * Types for the VIP registration and ordering system.
  */
@@ -26,6 +45,8 @@ export interface OrderItem {
    * billed at `price` per unit.
    */
   includedQuantity: number;
+  /** Whether this line should appear in the visitor-facing order summary. */
+  visible: boolean;
 }
 
 export interface PersonSummary {
@@ -37,6 +58,8 @@ export interface PersonSummary {
 }
 
 export interface Registration {
+  allocations?: TableAllocation[];
+  bookedTableQuantity?: number;
   id: string;
   personId: string;
   person: PersonSummary;
@@ -45,8 +68,7 @@ export interface Registration {
   guestCount: number;
   orderItems: OrderItem[];
   notes: string;
-  /** Optional accessibility requirements (wheelchair, crutches, low table needed, etc.) */
-  accessibilityNote: string;
+  /** First allocated table for compact displays; allocations hold the complete seating. */
   tableId?: string;
   status: RegistrationStatus;
   paymentStatus: PaymentStatus;
@@ -55,6 +77,8 @@ export interface Registration {
    * Recorded by an admin and settled offline; undefined means nothing is owed.
    */
   amountDue?: number;
+  amountPaid?: number;
+  refundDue?: number;
   /** Whether the guest has physically checked in at the entrance */
   checkedIn: boolean;
   checkedInAt?: string;
@@ -79,7 +103,6 @@ export interface RegistrationFormData {
   guestCount: number;
   orderItems: OrderItem[];
   notes: string;
-  accessibilityNote: string;
   marketingOptIn: boolean;
   honeypot?: string;
   formStartTime: string;

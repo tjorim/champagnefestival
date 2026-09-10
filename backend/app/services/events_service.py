@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.models import Edition, Event, Registration
+from app.models import Edition, Event, Layout, Registration, Room
 from app.schemas import EventCreate, EventUpdate
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import event_to_summary_dict, get_or_404, make_id
@@ -173,10 +173,34 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
 async def apply_event_update(
     db: AsyncSession, event: Event, body: EventUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
+    locked_event = (
+        await db.execute(
+            select(Event)
+            .where(Event.id == event.id)
+            .options(selectinload(Event.edition), selectinload(Event.products))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if locked_event is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Event not found.")
+    event = locked_event
     edition = event.edition
 
     if "edition_id" in body.model_fields_set and body.edition_id is not None:
         edition = await ensure_edition_exists(db, body.edition_id)
+        if (
+            await db.execute(
+                select(Layout.id)
+                .join(Room, Room.id == Layout.room_id)
+                .where(Layout.event_id == event.id, Room.venue_id != edition.venue_id)
+                .limit(1)
+            )
+        ).first():
+            raise HTTPException(
+                409,
+                "The event's floor plans belong to another venue. Remove those plans before changing the event venue.",
+            )
         event.edition_id = body.edition_id
 
     fields_set = body.model_fields_set
@@ -234,6 +258,9 @@ async def apply_event_update(
 
 async def delete_event(db: AsyncSession, event: Event, *, actor: str, request_id: str | None = None) -> dict:
     event_id = event.id
+    await db.execute(select(Event.id).where(Event.id == event_id).with_for_update())
+    if (await db.execute(select(Layout.id).where(Layout.event_id == event_id).limit(1))).first():
+        raise HTTPException(409, "Remove the event's floor plans before deleting it.")
     await reject_if_registrations_exist(db, event_id)
     await db.delete(event)
     await write_audit_entry(

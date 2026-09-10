@@ -51,6 +51,8 @@ export function apiEditionStatsToEditionAttendanceStats(
     totalRegistrations: d.total_registrations as number,
     totalGuests: d.total_guests as number,
     totalCheckedIn: d.total_checked_in as number,
+    totalPaid: Number(d.total_paid ?? 0),
+    totalDue: Number(d.total_due ?? 0),
   };
 }
 
@@ -87,6 +89,7 @@ export function apiFaqItemToFaqItem(d: Record<string, unknown>): FaqItem {
 /** Map FastAPI snake_case layout response to frontend camelCase Layout type */
 export function apiLayoutToLayout(d: Record<string, unknown>): Layout {
   return {
+    eventId: d.event_id as string,
     id: d.id as string,
     editionId: (d.edition_id as string | null) ?? null,
     roomId: d.room_id as string,
@@ -128,6 +131,7 @@ export function apiRoomToRoom(d: Record<string, unknown>): Room {
 /** Map FastAPI snake_case table response to frontend camelCase Table type */
 export function apiTableToTable(d: Record<string, unknown>): FloorTable {
   return {
+    eventId: d.event_id as string,
     id: d.id as string,
     name: d.name as string,
     capacity: d.capacity as number,

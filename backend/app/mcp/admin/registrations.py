@@ -143,8 +143,7 @@ async def update_registration(
     payment_status: str | None = None,
     amount_due: float | None = None,
     clear_amount_due: bool = False,
-    table_id: str | None = None,
-    clear_table: bool = False,
+    allocations: list[dict] | None = None,
     confirm_over_capacity: bool = False,
     order_items: list[dict] | None = None,
     notes: str | None = None,
@@ -155,11 +154,9 @@ async def update_registration(
 ) -> dict:
     """Update a registration.
 
-    ``amount_due``/``table_id`` are nullable fields with no natural "leave
-    unchanged" vs "clear" signal via a plain optional parameter (0.0 is a
-    valid amount_due; an empty table_id isn't meaningful) — pass
-    ``clear_amount_due=True`` / ``clear_table=True`` to null them out
-    instead of providing a value. ``order_items`` accepts only
+    ``clear_amount_due=True`` clears the nullable amount; omitting the value
+    leaves it unchanged. ``allocations=[]`` releases all assigned tables;
+    otherwise the list replaces the complete allocation. ``order_items`` accepts only
     ``product_id``/``quantity`` pairs. Product metadata is resolved from the
     event and existing delivery counts are preserved (clamped to quantity).
     """
@@ -170,7 +167,7 @@ async def update_registration(
             "status": status,
             "payment_status": payment_status,
             "amount_due": amount_due,
-            "table_id": table_id,
+            "allocations": allocations,
             "confirm_over_capacity": confirm_over_capacity if confirm_over_capacity else None,
             "order_items": order_items,
             "notes": notes,
@@ -192,7 +189,6 @@ async def update_registration(
                 body,
                 actor=actor,
                 clear_amount_due=clear_amount_due,
-                clear_table=clear_table,
             )
         except HTTPException as exc:
             raise as_value_error(exc) from exc

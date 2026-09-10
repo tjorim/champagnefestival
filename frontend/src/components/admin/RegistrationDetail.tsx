@@ -8,16 +8,20 @@ import Modal from "react-bootstrap/Modal";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
-import type { OrderItem, Registration } from "@/types/registration";
+import type { BookingUpdate, OrderItem, Registration } from "@/types/registration";
 import {
   buildRegistrationEmailDraft,
   type EmailDraft,
   type RegistrationEmailTemplate,
 } from "@/utils/emailComposer";
+import BookingEditor from "./BookingEditor";
 import EmailComposeModal from "./EmailComposeModal";
 
 interface RegistrationDetailProps {
   registration: Registration | null;
+  /** Every currently-known registration, used to compute remaining table capacity in the booking editor. */
+  registrations?: Registration[];
+  authHeaders: () => Record<string, string>;
   /** Full origin + router basename (e.g. `https://example.com`). Used to build the check-in QR code URL. */
   baseUrl: string;
   /** Other people sharing the same email address, shown in the merge-duplicate alert. */
@@ -27,8 +31,7 @@ interface RegistrationDetailProps {
   onToggleDelivered: (registrationId: string, updatedOrders: OrderItem[]) => void;
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
-  onAssignTable: (registrationId: string, tableId: string | undefined) => void;
-  onUpdateGuestCount?: (registrationId: string, guestCount: number) => Promise<void>;
+  onSaveBooking?: (registrationId: string, update: BookingUpdate) => Promise<void>;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
   actionError?: string;
   onClearActionError?: () => void;
@@ -41,6 +44,8 @@ function isSimpleRsvp(registration: Registration) {
 
 export default function RegistrationDetail({
   registration,
+  registrations = [],
+  authHeaders,
   baseUrl,
   emailDuplicates = [],
   tables = [],
@@ -48,8 +53,7 @@ export default function RegistrationDetail({
   onToggleDelivered,
   onCheckIn,
   onIssueStrap,
-  onAssignTable,
-  onUpdateGuestCount,
+  onSaveBooking,
   onMergeDuplicate,
   actionError,
   onClearActionError,
@@ -98,6 +102,12 @@ export default function RegistrationDetail({
 
   if (!registration) return null;
   const simpleRsvp = isSimpleRsvp(registration);
+  const changedPrices = registration.orderItems.flatMap((item) => {
+    const current = registration.event?.products?.find((product) => product.id === item.productId);
+    return current && current.price !== item.price && item.quantity > item.includedQuantity
+      ? [{ name: item.name, booked: item.price, current: current.price }]
+      : [];
+  });
 
   return (
     <Modal
@@ -116,6 +126,21 @@ export default function RegistrationDetail({
       </Modal.Header>
 
       <Modal.Body className="bg-dark text-light">
+        {(registration.refundDue ?? 0) > 0 && (
+          <Alert variant="warning">
+            {m.admin_inventory_refund()}: €{registration.refundDue?.toFixed(2)}
+          </Alert>
+        )}
+        {changedPrices.length > 0 && (
+          <Alert variant="info">
+            {m.admin_inventory_price_difference()}
+            {changedPrices.map((price) => (
+              <div key={price.name}>
+                {price.name}: €{price.booked.toFixed(2)} → €{price.current.toFixed(2)}
+              </div>
+            ))}
+          </Alert>
+        )}
         <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
         {actionError && (
           <Alert
@@ -221,6 +246,12 @@ export default function RegistrationDetail({
               {registration.person.email}
             </a>
           </ListGroup.Item>
+          {!onSaveBooking && (
+            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
+              <span className="text-secondary">{m.admin_guests_count()}</span>
+              <span aria-label={m.admin_guests_count()}>{registration.guestCount}</span>
+            </ListGroup.Item>
+          )}
           <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
             <span className="text-secondary">{m.registration_phone()}</span>
             <span>{registration.person.phone}</span>
@@ -240,69 +271,22 @@ export default function RegistrationDetail({
               })()}
             </span>
           </ListGroup.Item>
-          <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.admin_guests_count()}</span>
-            <Form.Control
-              type="number"
-              min={1}
-              max={20}
-              size="sm"
-              aria-label={m.admin_guests_count()}
-              className="bg-dark text-light border-secondary"
-              style={{ width: "5rem" }}
-              defaultValue={registration.guestCount}
-              onBlur={(event) => {
-                const value = Number(event.currentTarget.value);
-                if (
-                  Number.isInteger(value) &&
-                  value >= 1 &&
-                  value <= 20 &&
-                  value !== registration.guestCount
-                ) {
-                  const update = onUpdateGuestCount?.(registration.id, value);
-                  if (update) void update.catch(() => undefined);
-                } else {
-                  event.currentTarget.value = String(registration.guestCount);
-                }
-              }}
-            />
-          </ListGroup.Item>
-          {!simpleRsvp && (
+          {onSaveBooking && (
             <ListGroup.Item className="bg-dark text-light border-secondary">
-              <Form.Group controlId={`registration-detail-table-${registration.id}`}>
-                <Form.Label className="text-secondary">{m.admin_action_assign_table()}</Form.Label>
-                <Form.Select
-                  size="sm"
-                  className="bg-dark text-light border-secondary"
-                  value={registration.tableId ?? ""}
-                  onChange={(event) =>
-                    onAssignTable(registration.id, event.target.value || undefined)
-                  }
-                  aria-label={m.admin_action_assign_table()}
-                >
-                  <option value="">{m.admin_unassigned()}</option>
-                  {sortedTables.map((table) => (
-                    <option key={table.id} value={table.id}>
-                      {table.name} ({table.capacity})
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
+              <BookingEditor
+                key={`${registration.id}:${registration.updatedAt}`}
+                registration={registration}
+                registrations={registrations}
+                authHeaders={authHeaders}
+                tables={sortedTables}
+                onSave={onSaveBooking}
+              />
             </ListGroup.Item>
           )}
-          {registration.notes && (
+          {!onSaveBooking && registration.notes && (
             <ListGroup.Item className="bg-dark text-light border-secondary">
               <span className="text-secondary d-block mb-1">{m.admin_notes()}</span>
               <span className="small">{registration.notes}</span>
-            </ListGroup.Item>
-          )}
-          {registration.accessibilityNote && (
-            <ListGroup.Item className="bg-dark text-light border-secondary">
-              <span className="text-secondary d-block mb-1">
-                <i className="bi bi-universal-access me-1" aria-hidden="true" />
-                {m.admin_accessibility_note_label()}
-              </span>
-              <span className="small">{registration.accessibilityNote}</span>
             </ListGroup.Item>
           )}
         </ListGroup>

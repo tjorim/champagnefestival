@@ -88,9 +88,12 @@ async def list_layouts(
     limit: int | None = Query(default=None, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     edition_id: str | None = Query(default=None, description="Filter by edition ID"),
+    event_id: str | None = Query(default=None),
     room_id: str | None = Query(default=None, description="Filter by room ID"),
 ) -> list[dict]:
-    return await layouts_service.list_layouts(db, limit=limit, offset=offset, edition_id=edition_id, room_id=room_id)
+    return await layouts_service.list_layouts(
+        db, limit=limit, offset=offset, edition_id=edition_id, room_id=room_id, event_id=event_id
+    )
 
 
 @router.get("/{layout_id}", response_model=LayoutWithTablesOut)

@@ -8,6 +8,7 @@ from sqlalchemy import select
 
 from app.mcp.utils import ROLE_ADMIN, MCPToolError, order_item_dict
 from app.models import Person, Registration, Table
+from app.services.allocations_service import allocated_registration_filter
 from app.services.operational_search import DEFAULT_RESULT_LIMIT, rank_table_reference
 
 
@@ -50,7 +51,7 @@ async def get_table_order_summary(
         if table is None:
             return {"table_id": table_id, "registrations": [], "message": f"Table '{table_id}' not found."}
 
-        regs_result = await db.execute(select(Registration).where(Registration.table_id == table_id))
+        regs_result = await db.execute(select(Registration).where(allocated_registration_filter([table_id])))
         regs: list[Registration] = list(regs_result.scalars().all())
 
         person_ids = list({reg.person_id for reg in regs})

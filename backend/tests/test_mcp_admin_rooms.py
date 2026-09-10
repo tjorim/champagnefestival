@@ -6,7 +6,7 @@ import pytest
 
 from app.mcp.admin import rooms as mcp_rooms
 from app.models import Layout, Room, Venue
-from tests.helpers import mcp_session_factory
+from tests.helpers import mcp_session_factory, seed_layout_event
 
 
 async def _seed_venue(db_session, venue_id: str = "venue-1") -> Venue:
@@ -191,7 +191,9 @@ async def test_delete_room_blocked_while_layout_in_use(db_session):
         factory, "admin-1", name="Main Hall", venue_id="venue-1", width_m=25.0, length_m=18.0
     )
 
-    db_session.add(Layout(id="lay-1", edition_id=None, room_id=created["id"], day_id=1))
+    db_session.add(
+        Layout(id="lay-1", room_id=created["id"], event_id=await seed_layout_event(db_session, created["id"], 1))
+    )
     await db_session.commit()
 
     with pytest.raises(ValueError, match="layouts"):

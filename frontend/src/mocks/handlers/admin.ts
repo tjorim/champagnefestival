@@ -115,17 +115,12 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
   const byTableId = new Map<string, string[]>();
 
   for (const registration of sharedStore.registrations) {
-    const tableId = registration.table_id;
-    const registrationId = registration.id;
-    if (
-      typeof tableId === "string" &&
-      tableId.length > 0 &&
-      typeof registrationId === "string" &&
-      registrationId.length > 0
-    ) {
-      const registrationIds = byTableId.get(tableId) ?? [];
-      registrationIds.push(registrationId);
-      byTableId.set(tableId, registrationIds);
+    if (registration.status === "cancelled") continue;
+    const allocations = (registration.allocations ?? []) as { table_id: string }[];
+    for (const allocation of allocations) {
+      const ids = byTableId.get(allocation.table_id) ?? [];
+      ids.push(String(registration.id));
+      byTableId.set(allocation.table_id, ids);
     }
   }
 
@@ -133,7 +128,11 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
     const tableId = table.id;
     const registrationIds =
       typeof tableId === "string" && tableId.length > 0 ? (byTableId.get(tableId) ?? []) : [];
-    return { ...table, registration_ids: registrationIds };
+    return {
+      ...table,
+      event_id: layouts.find((l) => l.id === table.layout_id)?.event_id,
+      registration_ids: registrationIds,
+    };
   });
 }
 
@@ -357,7 +356,11 @@ export const adminHandlers = [
       ...body,
       updated_at: now(),
     };
-    return HttpResponse.json(sharedStore.registrations[idx]);
+    const registration = sharedStore.registrations[idx]!;
+    if (registration.status === "cancelled") registration.allocations = [];
+    const allocations = (registration.allocations ?? []) as { table_id: string }[];
+    registration.table_id = allocations[0]?.table_id ?? null;
+    return HttpResponse.json(registration);
   }),
 
   http.delete("/api/registrations/:id", ({ request, params }) => {
@@ -394,7 +397,6 @@ export const adminHandlers = [
       guest_count: Number(body.guest_count ?? 1),
       order_items: [],
       notes: String(body.notes ?? ""),
-      accessibility_note: "",
       table_id: null,
       status: "pending",
       payment_status: "unpaid",
@@ -1126,10 +1128,10 @@ export const adminHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     const newLayout = {
       id: uid(),
-      edition_id: typeof body.edition_id === "string" ? body.edition_id : null,
+      edition_id: events.find((e) => e.id === body.event_id)?.edition_id ?? null,
       room_id: String(body.room_id ?? ""),
-      day_id: Number(body.day_id ?? 1),
-      date: typeof body.date === "string" ? body.date : null,
+      event_id: String(body.event_id),
+      date: events.find((e) => e.id === body.event_id)?.date ?? null,
       label: String(body.label ?? ""),
       created_at: now(),
       updated_at: now(),

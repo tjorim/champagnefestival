@@ -113,7 +113,7 @@ async def get_venue_plan_summary(session_factory: Any, edition_id: str | None = 
                     "room_id": room.id,
                     "room_name": room.name,
                     "layout_id": layout.id,
-                    "day_id": layout.day_id,
+                    "event_id": layout.event_id,
                 }
             )
 

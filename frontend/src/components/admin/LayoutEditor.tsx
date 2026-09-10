@@ -21,10 +21,12 @@ import Modal from "react-bootstrap/Modal";
 import Nav from "react-bootstrap/Nav";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
+import type { TableAllocation } from "@/types/registration";
 import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/admin";
 import { getAreaSizePx, getCanvasSizePx, getTableSizePx } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
+import LayoutCompareModal from "./LayoutCompareModal";
 import ConfirmModal from "@/components/ConfirmModal";
 
 // Preset icons available for floor areas — labels resolved at render time for i18n
@@ -53,23 +55,28 @@ const SENSORS = [
   }),
 ];
 
-interface DayOption {
+export interface DayOption {
+  eventId: string;
   date: string;
   label: string;
 }
 
 function getInitialNewLayoutState(dayOptions: DayOption[]) {
   return {
-    date: dayOptions[0]?.date ?? "",
+    eventId: dayOptions[0]?.eventId ?? "",
     copyFromLayoutId: "",
     copyTables: true,
     copyAreas: true,
   };
 }
 
-function getDayLabel(date: string | null, dayOptions: DayOption[], fallbackLabel = ""): string {
-  if (!date) return fallbackLabel;
-  return dayOptions.find((day) => day.date === date)?.label ?? date;
+export function getDayLabel(
+  eventId: string | null,
+  dayOptions: DayOption[],
+  fallbackLabel = "",
+): string {
+  if (!eventId) return fallbackLabel;
+  return dayOptions.find((day) => day.eventId === eventId)?.label ?? fallbackLabel;
 }
 
 interface ItemRef {
@@ -93,7 +100,7 @@ interface LayoutEditorProps {
   onRotateTable: (tableId: string, rotation: number) => void;
   onAddLayout: (
     roomId: string,
-    date: string,
+    eventId: string,
     label?: string,
     copyFromLayoutId?: string | null,
     copyOptions?: {
@@ -123,6 +130,7 @@ interface LayoutEditorProps {
   onChangeTableType: (tableId: string, tableTypeId: string) => Promise<void>;
   onUpdateTable: (tableId: string, name: string) => Promise<void>;
   onResizeArea: (areaId: string, widthM: number, lengthM: number) => Promise<void>;
+  onSaveAllocations: (registrationId: string, allocations: TableAllocation[]) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +141,7 @@ interface DraggableTableProps {
   table: FloorTable;
   tableTypes: TableType[];
   assignedCount: number;
+  exclusive: boolean;
   isSelected: boolean;
   isInteractive: boolean;
   isInSelectedArea: boolean;
@@ -145,6 +154,7 @@ function DraggableTable({
   table,
   tableTypes,
   assignedCount,
+  exclusive,
   isSelected,
   isInteractive,
   isInSelectedArea,
@@ -165,7 +175,7 @@ function DraggableTable({
   const topPx = (table.y / 100) * canvasH;
 
   const isOverfilled = table.capacity > 0 && assignedCount > table.capacity;
-  const isFull = table.capacity > 0 && assignedCount === table.capacity;
+  const isFull = exclusive || (table.capacity > 0 && assignedCount === table.capacity);
   const borderCls = isSelected
     ? "border-warning"
     : isOverfilled
@@ -454,8 +464,12 @@ function RoomCanvas({
           )}
           {roomTables.map((table) => {
             const assigned = registrations
-              .filter((r) => table.registrationIds.includes(r.id))
-              .reduce((sum, r) => sum + r.guestCount, 0);
+              .filter((r) => r.status !== "cancelled" && table.registrationIds.includes(r.id))
+              .reduce(
+                (sum, r) =>
+                  sum + (r.allocations?.find((a) => a.tableId === table.id)?.guestCount ?? 0),
+                0,
+              );
             const isInSelectedArea = selectedArea
               ? (() => {
                   const area = roomAreas.find((a) => a.id === selectedArea);
@@ -470,6 +484,11 @@ function RoomCanvas({
                 table={table}
                 tableTypes={tableTypes}
                 assignedCount={assigned}
+                exclusive={registrations.some(
+                  (r) =>
+                    r.status !== "cancelled" &&
+                    r.allocations?.some((a) => a.tableId === table.id && a.exclusive),
+                )}
                 isSelected={selectedTable === table.id}
                 isInteractive={layer === "seating"}
                 isInSelectedArea={isInSelectedArea}
@@ -537,9 +556,11 @@ export default function LayoutEditor({
   onChangeTableType,
   onUpdateTable,
   onResizeArea,
+  onSaveAllocations,
 }: LayoutEditorProps) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
+  const [showCompareLayouts, setShowCompareLayouts] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [layer, setLayer] = useState<"seating" | "areas">("seating");
@@ -573,10 +594,10 @@ export default function LayoutEditor({
     if (!activeRoomId) return;
     setAddLayoutError(null);
     try {
-      if (!newLayout.date) return;
+      if (!newLayout.eventId) return;
       await onAddLayout(
         activeRoomId,
-        newLayout.date,
+        newLayout.eventId,
         undefined,
         newLayout.copyFromLayoutId || undefined,
         {
@@ -595,8 +616,8 @@ export default function LayoutEditor({
   // Keep the add-layout form's date valid as dayOptions loads or changes.
   // Adjusted during render rather than in an effect — idempotent once the
   // date is valid, same as the room/layout selection above.
-  if (dayOptions.length > 0 && !dayOptions.some((day) => day.date === newLayout.date)) {
-    setNewLayout((current) => ({ ...current, date: dayOptions[0]!.date }));
+  if (dayOptions.length > 0 && !dayOptions.some((day) => day.eventId === newLayout.eventId)) {
+    setNewLayout((current) => ({ ...current, eventId: dayOptions[0]!.eventId }));
   }
 
   const handleDeleteLayout = useCallback(
@@ -626,6 +647,10 @@ export default function LayoutEditor({
 
   const [confirmDeleteTableId, setConfirmDeleteTableId] = useState<string | null>(null);
   const [updateTableError, setUpdateTableError] = useState<string | null>(null);
+  const [allocationError, setAllocationError] = useState<string | null>(null);
+  const [allocationPending, setAllocationPending] = useState(false);
+  const [bookingToAssign, setBookingToAssign] = useState("");
+  const [guestsToAssign, setGuestsToAssign] = useState(1);
   // Add Area modal
   const [showAddArea, setShowAddArea] = useState(false);
   const [newArea, setNewArea] = useState({
@@ -715,9 +740,44 @@ export default function LayoutEditor({
     : [];
 
   const activeLayout = layouts.find((l) => l.id === activeLayoutId);
+  const eventLayoutIds = new Set(
+    layouts.filter((layout) => layout.eventId === activeLayout?.eventId).map((layout) => layout.id),
+  );
+  const eventTables = tables.filter((table) => eventLayoutIds.has(table.layoutId));
+  const assignableRegistrations = registrations.filter((registration) => {
+    if (registration.status === "cancelled" || registration.eventId !== activeLayout?.eventId)
+      return false;
+    if (
+      registration.allocations?.some((allocation) => allocation.tableId === selectedTableData?.id)
+    )
+      return false;
+    const used = registration.bookedTableQuantity
+      ? (registration.allocations?.length ?? 0)
+      : (registration.allocations?.reduce((sum, allocation) => sum + allocation.guestCount, 0) ??
+        0);
+    return used < (registration.bookedTableQuantity || registration.guestCount);
+  });
+  const selectedBookingToAssign = assignableRegistrations.find(
+    (item) => item.id === bookingToAssign,
+  );
+
+  const savePlanAllocations = async (
+    registration: Registration,
+    allocations: TableAllocation[],
+  ) => {
+    setAllocationError(null);
+    setAllocationPending(true);
+    try {
+      await onSaveAllocations(registration.id, allocations);
+    } catch (error) {
+      setAllocationError(error instanceof Error ? error.message : m.admin_error_assign_table());
+    } finally {
+      setAllocationPending(false);
+    }
+  };
   const activeLayoutDateLabel = useMemo(
-    () => getDayLabel(activeLayout?.date ?? null, dayOptions, activeLayout?.label ?? ""),
-    [activeLayout?.date, activeLayout?.label, dayOptions],
+    () => getDayLabel(activeLayout?.eventId ?? null, dayOptions, activeLayout?.label ?? ""),
+    [activeLayout?.eventId, activeLayout?.label, dayOptions],
   );
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
   const roomLayouts = layouts
@@ -888,7 +948,7 @@ export default function LayoutEditor({
                           }}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                         >
-                          {getDayLabel(layout.date, dayOptions, layout.label)}
+                          {getDayLabel(layout.eventId, dayOptions, layout.label)}
                         </Button>
                         <Button
                           size="sm"
@@ -922,6 +982,17 @@ export default function LayoutEditor({
                       <i className="bi bi-plus-lg me-1" aria-hidden="true" />
                       {m.admin_add_layout()}
                     </Button>
+                    {roomLayouts.length > 1 && (
+                      <Button
+                        size="sm"
+                        variant="outline-info"
+                        onClick={() => setShowCompareLayouts(true)}
+                        title={m.admin_layout_compare_title()}
+                      >
+                        <i className="bi bi-arrow-left-right me-1" aria-hidden="true" />
+                        {m.admin_layout_compare_title()}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1031,6 +1102,11 @@ export default function LayoutEditor({
                 {updateTableError}
               </Alert>
             )}
+            {allocationError && (
+              <Alert role="alert" variant="danger" className="py-1 mb-2 small">
+                {allocationError}
+              </Alert>
+            )}
             <Form.Group className="mb-3" controlId="table-name-edit">
               <Form.Label className="text-secondary small">{m.admin_table_name()}</Form.Label>
               <Form.Control
@@ -1091,17 +1167,163 @@ export default function LayoutEditor({
             {selectedRegistrations.length === 0 ? (
               <p className="text-secondary mb-0">{m.admin_unassigned()}</p>
             ) : (
-              <ListGroup variant="flush">
+              <ListGroup variant="flush" className="mb-3">
                 {selectedRegistrations.map((r) => (
                   <ListGroup.Item key={r.id} className="bg-dark text-light border-secondary">
-                    <span className="fw-semibold">{r.person.name}</span>
-                    <span className="text-secondary ms-2 small">
-                      ({r.guestCount} {m.admin_guests_count()})
-                    </span>
+                    <div className="d-flex flex-wrap align-items-center gap-2">
+                      <span className="fw-semibold me-auto">{r.person.name}</span>
+                      {(() => {
+                        const allocation = r.allocations?.find(
+                          (item) => item.tableId === selectedTableData.id,
+                        );
+                        if (!allocation) return null;
+                        return (
+                          <>
+                            <Form.Control
+                              aria-label={`${m.admin_guests_count()} ${r.person.name}`}
+                              type="number"
+                              min={allocation.exclusive ? 0 : 1}
+                              max={20}
+                              defaultValue={allocation.guestCount}
+                              disabled={allocationPending || allocation.exclusive}
+                              className="bg-dark text-light border-secondary"
+                              style={{ width: "5rem" }}
+                              onBlur={(event) => {
+                                const guestCount = Number(event.currentTarget.value);
+                                if (
+                                  Number.isInteger(guestCount) &&
+                                  guestCount >= 1 &&
+                                  guestCount !== allocation.guestCount
+                                ) {
+                                  void savePlanAllocations(
+                                    r,
+                                    (r.allocations ?? []).map((item) =>
+                                      item.tableId === selectedTableData.id
+                                        ? { ...item, guestCount }
+                                        : item,
+                                    ),
+                                  );
+                                }
+                              }}
+                            />
+                            <Form.Select
+                              aria-label={`${m.admin_layout_move_booking()} ${r.person.name}`}
+                              size="sm"
+                              value={selectedTableData.id}
+                              disabled={allocationPending}
+                              onChange={(event) =>
+                                void savePlanAllocations(
+                                  r,
+                                  (r.allocations ?? []).map((item) =>
+                                    item.tableId === selectedTableData.id
+                                      ? { ...item, tableId: event.target.value }
+                                      : item,
+                                  ),
+                                )
+                              }
+                            >
+                              {eventTables
+                                .filter(
+                                  (table) =>
+                                    table.id === selectedTableData.id ||
+                                    !(r.allocations ?? []).some(
+                                      (item) => item.tableId === table.id,
+                                    ),
+                                )
+                                .map((table) => (
+                                  <option key={table.id} value={table.id}>
+                                    {table.name}
+                                  </option>
+                                ))}
+                            </Form.Select>
+                            <Button
+                              size="sm"
+                              variant="outline-danger"
+                              disabled={allocationPending}
+                              onClick={() =>
+                                void savePlanAllocations(
+                                  r,
+                                  (r.allocations ?? []).filter(
+                                    (item) => item.tableId !== selectedTableData.id,
+                                  ),
+                                )
+                              }
+                            >
+                              {m.admin_layout_remove_booking()}
+                            </Button>
+                          </>
+                        );
+                      })()}
+                    </div>
                   </ListGroup.Item>
                 ))}
               </ListGroup>
             )}
+            <div className="border-top border-secondary pt-3 mt-3">
+              <Form.Label className="text-secondary small">
+                {m.admin_layout_assign_booking()}
+              </Form.Label>
+              <div className="d-flex flex-wrap gap-2">
+                <Form.Select
+                  aria-label={m.admin_layout_assign_booking()}
+                  value={bookingToAssign}
+                  disabled={allocationPending || assignableRegistrations.length === 0}
+                  onChange={(event) => {
+                    const id = event.target.value;
+                    const booking = assignableRegistrations.find((item) => item.id === id);
+                    const alreadyAssigned =
+                      booking?.allocations?.reduce((sum, item) => sum + item.guestCount, 0) ?? 0;
+                    setBookingToAssign(id);
+                    setGuestsToAssign(
+                      booking?.bookedTableQuantity
+                        ? 0
+                        : Math.max(1, (booking?.guestCount ?? 1) - alreadyAssigned),
+                    );
+                  }}
+                >
+                  <option value="">{m.admin_layout_choose_booking()}</option>
+                  {assignableRegistrations.map((registration) => (
+                    <option key={registration.id} value={registration.id}>
+                      {registration.person.name} · {registration.id}
+                    </option>
+                  ))}
+                </Form.Select>
+                <Form.Control
+                  aria-label={m.admin_guests_count()}
+                  type="number"
+                  min={selectedBookingToAssign?.bookedTableQuantity ? 0 : 1}
+                  max={20}
+                  value={guestsToAssign}
+                  disabled={
+                    allocationPending ||
+                    !bookingToAssign ||
+                    Boolean(selectedBookingToAssign?.bookedTableQuantity)
+                  }
+                  onChange={(event) => setGuestsToAssign(Number(event.target.value))}
+                  style={{ width: "6rem" }}
+                />
+                <Button
+                  variant="warning"
+                  disabled={allocationPending || !selectedBookingToAssign}
+                  onClick={async () => {
+                    if (!selectedBookingToAssign) return;
+                    await savePlanAllocations(selectedBookingToAssign, [
+                      ...(selectedBookingToAssign.allocations ?? []),
+                      {
+                        tableId: selectedTableData.id,
+                        guestCount: selectedBookingToAssign.bookedTableQuantity
+                          ? 0
+                          : guestsToAssign,
+                        exclusive: Boolean(selectedBookingToAssign.bookedTableQuantity),
+                      },
+                    ]);
+                    setBookingToAssign("");
+                  }}
+                >
+                  {m.admin_layout_assign_booking()}
+                </Button>
+              </div>
+            </div>
           </Card.Body>
         </Card>
       )}
@@ -1383,12 +1605,12 @@ export default function LayoutEditor({
           <Form.Group className="mb-3" controlId="layout-day">
             <Form.Label>{m.admin_layout_day_label()}</Form.Label>
             <Form.Select
-              value={newLayout.date}
-              onChange={(e) => setNewLayout((p) => ({ ...p, date: e.target.value }))}
+              value={newLayout.eventId}
+              onChange={(e) => setNewLayout((p) => ({ ...p, eventId: e.target.value }))}
               className="bg-dark text-light border-secondary"
             >
               {dayOptions.map((day) => (
-                <option key={day.date} value={day.date}>
+                <option key={day.eventId} value={day.eventId}>
                   {day.label}
                 </option>
               ))}
@@ -1404,7 +1626,7 @@ export default function LayoutEditor({
               <option value="">{m.admin_layout_copy_from_empty()}</option>
               {roomLayouts.map((layout) => (
                 <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout.date, dayOptions, layout.label)}
+                  {getDayLabel(layout.eventId, dayOptions, layout.label)}
                 </option>
               ))}
             </Form.Select>
@@ -1662,6 +1884,15 @@ export default function LayoutEditor({
           onHide={() => setConfirmDeleteAreaId(null)}
         />
       )}
+      <LayoutCompareModal
+        show={showCompareLayouts}
+        onHide={() => setShowCompareLayouts(false)}
+        roomLayouts={roomLayouts}
+        tables={tables}
+        areas={areas}
+        tableTypes={tableTypes}
+        dayOptions={dayOptions}
+      />
     </div>
   );
 }

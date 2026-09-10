@@ -2,6 +2,7 @@ import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
 
 export interface VenuePlanTable {
+  exclusive?: boolean;
   id: string;
   name: string;
   capacity: number;
@@ -13,6 +14,8 @@ export interface VenuePlanTable {
 }
 
 export interface VenuePlanLayout {
+  event_id: string;
+  event_title: string;
   id: string;
   date: string | null;
   label: string;

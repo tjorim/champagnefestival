@@ -14,7 +14,7 @@ import pytest
 from sqlalchemy import select
 
 from app.models import IdempotencyKey, Layout, Room, Table, TableType
-from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VENUE_PAYLOAD
+from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VENUE_PAYLOAD, event_for_room
 
 
 async def _create_venue(client) -> str:
@@ -305,7 +305,11 @@ async def _create_table_type(client, venue_id: str) -> str:
 
 
 async def _create_layout(client, room_id: str, day_id: int = 1) -> str:
-    r = await client.post("/api/layouts", json={"room_id": room_id, "day_id": day_id}, headers=ADMIN_HEADERS)
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, day_id)},
+        headers=ADMIN_HEADERS,
+    )
     assert r.status_code == 201
     return r.json()["id"]
 
@@ -379,7 +383,10 @@ async def test_bulk_create_layouts_happy_path(client):
     room_a = await _create_room(client, venue_id)
     room_b = await _create_room(client, venue_id)
 
-    items = [{"room_id": room_a, "day_id": 1}, {"room_id": room_b, "day_id": 1}]
+    items = [
+        {"room_id": room_a, "event_id": await event_for_room(client, room_a, 1)},
+        {"room_id": room_b, "event_id": await event_for_room(client, room_b, 1)},
+    ]
     r = await client.post("/api/layouts/bulk", json={"items": items}, headers=ADMIN_HEADERS)
     assert r.status_code == 201
     assert {lay["room_id"] for lay in r.json()["items"]} == {room_a, room_b}
@@ -393,7 +400,10 @@ async def test_bulk_create_layouts_rolls_back_on_partial_failure(client, db_sess
     venue_id = await _create_venue(client)
     room_id = await _create_room(client, venue_id)
 
-    items = [{"room_id": room_id, "day_id": 1}, {"room_id": "room-missing", "day_id": 1}]
+    items = [
+        {"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        {"room_id": "room-missing", "event_id": await event_for_room(client, "room-missing", 1)},
+    ]
     r = await client.post("/api/layouts/bulk", json={"items": items}, headers=ADMIN_HEADERS)
     assert r.status_code == 404
 
@@ -406,7 +416,10 @@ async def test_bulk_create_layouts_rejects_duplicate_within_batch(client, db_ses
     venue_id = await _create_venue(client)
     room_id = await _create_room(client, venue_id)
 
-    items = [{"room_id": room_id, "day_id": 1}, {"room_id": room_id, "day_id": 1}]
+    items = [
+        {"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        {"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+    ]
     r = await client.post("/api/layouts/bulk", json={"items": items}, headers=ADMIN_HEADERS)
     assert r.status_code == 409
 
@@ -420,7 +433,10 @@ async def test_bulk_create_layouts_rejects_duplicate_against_existing(client, db
     room_id = await _create_room(client, venue_id)
     await _create_layout(client, room_id, day_id=1)
 
-    items = [{"room_id": room_id, "day_id": 2}, {"room_id": room_id, "day_id": 1}]
+    items = [
+        {"room_id": room_id, "event_id": await event_for_room(client, room_id, 2)},
+        {"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+    ]
     r = await client.post("/api/layouts/bulk", json={"items": items}, headers=ADMIN_HEADERS)
     assert r.status_code == 409
 
@@ -434,7 +450,10 @@ async def test_bulk_create_layouts_idempotency_key_replays_result(client):
     venue_id = await _create_venue(client)
     room_id = await _create_room(client, venue_id)
 
-    body = {"items": [{"room_id": room_id, "day_id": 1}], "idempotency_key": "layout-retry-key"}
+    body = {
+        "items": [{"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)}],
+        "idempotency_key": "layout-retry-key",
+    }
     r1 = await client.post("/api/layouts/bulk", json=body, headers=ADMIN_HEADERS)
     assert r1.status_code == 201
 

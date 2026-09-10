@@ -154,10 +154,11 @@ describe("EventProductsModal", () => {
       target: { value: "200" },
     });
     fireEvent.click(screen.getByLabelText("admin_products_required_label"));
+    fireEvent.click(screen.getByRole("button", { name: "admin_inventory_add_inclusion" }));
     fireEvent.change(screen.getByLabelText("admin_products_bundle_target"), {
       target: { value: "prod-bottle" },
     });
-    fireEvent.change(screen.getByLabelText("admin_products_bundle_ratio"), {
+    fireEvent.change(screen.getByLabelText("admin_inventory_per_quantity"), {
       target: { value: "2" },
     });
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
@@ -169,8 +170,7 @@ describe("EventProductsModal", () => {
       name: "VIP Table",
       price: 200,
       required: true,
-      included_product_id: "prod-bottle",
-      included_per_guests: 2,
+      inclusions: [{ product_id: "prod-bottle", quantity: 1, per_quantity: 2, rounding: "down" }],
     });
   });
 
@@ -193,9 +193,66 @@ describe("EventProductsModal", () => {
     await screen.findByText("Champagne Bottle");
 
     fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
+    fireEvent.click(screen.getByRole("button", { name: "admin_inventory_add_inclusion" }));
     const select = screen.getByLabelText("admin_products_bundle_target") as HTMLSelectElement;
     const optionLabels = Array.from(select.options).map((o) => o.textContent);
     expect(optionLabels).not.toContain("Champagne Bottle");
+  });
+
+  it("requires reviewing stock shortages before saving an edit", async () => {
+    renderModal([
+      {
+        id: "stocked",
+        event_id: event.id,
+        name: "Tables",
+        price: 50,
+        category: "other",
+        active: true,
+        required: false,
+        unit: "table",
+        stock: 10,
+        inclusions: [],
+        reserved_quantity: 3,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    let saved: Record<string, unknown> | null = null;
+    server.use(
+      http.post("/api/products/stocked/preview", () =>
+        HttpResponse.json({
+          preview_token: "reviewed-state",
+          bookings: [],
+          price_changed: false,
+          contents_changed: false,
+          shortages: [
+            { product_id: "stocked", name: "Tables", stock: 1, reserved: 3, shortage: 2 },
+          ],
+        }),
+      ),
+      http.put("/api/products/stocked", async ({ request }) => {
+        saved = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ...saved, id: "stocked", event_id: event.id });
+      }),
+    );
+    await screen.findByText("Tables");
+    fireEvent.click(screen.getByLabelText("Edit Tables"));
+    fireEvent.change(screen.getByLabelText("admin_inventory_stock"), { target: { value: "1" } });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await screen.findByText("admin_inventory_review");
+    expect(saved).toBeNull();
+    expect(screen.getByRole("button", { name: "admin_save" })).toBeDisabled();
+    fireEvent.click(screen.getByLabelText("admin_inventory_confirm_shortage"));
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await waitFor(() =>
+      expect(saved).toMatchObject({
+        stock: 1,
+        preview_token: "reviewed-state",
+        confirm_shortage: true,
+        update_existing_contents: false,
+        update_existing_prices: false,
+      }),
+    );
   });
 
   it("rejects a blank price instead of silently saving it as free", async () => {

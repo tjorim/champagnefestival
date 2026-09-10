@@ -219,10 +219,12 @@ def registration_base_dict(reg: Registration, person: Person, *, role: str) -> d
         "person": person_dict(person, role=role),
         "guest_count": reg.guest_count,
         "table_id": reg.table_id,
+        "allocations": [
+            {"table_id": a.table_id, "guest_count": a.guest_count, "exclusive": a.exclusive} for a in reg.allocations
+        ],
         "status": reg.status,
         "payment_status": reg.payment_status,
         "checked_in": reg.checked_in,
         "checked_in_at": reg.checked_in_at.isoformat() if reg.checked_in_at else None,
         "strap_issued": reg.strap_issued,
-        "accessibility_note": reg.accessibility_note,
     }

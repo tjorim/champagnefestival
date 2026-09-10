@@ -38,7 +38,9 @@ export default function VenuePlanPage() {
       {query.data.layouts.map((layout) => (
         <Card bg="dark" text="white" className="mb-4" key={layout.id}>
           <Card.Header className="d-flex justify-content-between">
-            <strong>{layout.room?.name ?? layout.label}</strong>
+            <strong>
+              {layout.room?.name ?? layout.label} — {layout.event_title}
+            </strong>
             {layout.date && <Badge bg="secondary">{layout.date}</Badge>}
           </Card.Header>
           <Card.Body>
@@ -74,7 +76,7 @@ export default function VenuePlanPage() {
                 const occupancyClass =
                   occupied > item.capacity
                     ? "border-danger bg-danger bg-opacity-10 text-danger"
-                    : occupied === item.capacity
+                    : item.exclusive || occupied === item.capacity
                       ? "border-warning bg-warning bg-opacity-10 text-warning"
                       : occupied
                         ? "border-success bg-dark text-success"

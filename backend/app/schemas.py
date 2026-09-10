@@ -57,6 +57,9 @@ class OrderItemBase(BaseModel):
     """How many of `quantity` came free via a product bundle (see
     Product.included_product_id) — only `quantity - included_quantity` is
     billed at `price` per unit."""
+    visible: bool = True
+    """Whether this line should be shown in the visitor-facing order summary
+    (see ProductInclusion.visible) — always counted for stock/prep regardless."""
 
     @model_validator(mode="after")
     def validate_delivery_quantities(self) -> Self:
@@ -87,7 +90,7 @@ class OrderItemRequest(RequestModel):
     """
 
     product_id: str = Field(min_length=1)
-    quantity: int = Field(ge=1, le=100)
+    quantity: int = Field(ge=1, le=1000000)
 
 
 class RegistrationDeliveryUpdate(RequestModel):
@@ -254,9 +257,27 @@ class EventOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class ProductInclusion(RequestModel):
+    product_id: str = Field(min_length=1, max_length=64)
+    quantity: int = Field(default=1, ge=1, le=1000000)
+    per_quantity: int = Field(default=1, ge=1, le=1000000)
+    rounding: Literal["up", "down"] = "down"
+    visible: bool = Field(
+        default=True,
+        description=(
+            "Whether this inclusion appears in the visitor-facing order summary. "
+            "It always counts toward stock and preparation totals either way."
+        ),
+    )
+
+
 class ProductCreate(RequestModel):
+    unit: Literal["item", "table", "person"] = "item"
+    stock: int | None = Field(default=None, ge=0, le=2147483647)
+    inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
     name: str = Field(min_length=1, max_length=200)
+    description: str = Field(default="", max_length=300)
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory
     active: bool = True
@@ -272,7 +293,15 @@ class ProductCreate(RequestModel):
 
 
 class ProductUpdate(RequestModel):
+    unit: Literal["item", "table", "person"] | None = None
+    stock: int | None = Field(default=None, ge=0, le=2147483647)
+    inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
+    update_existing_contents: bool = False
+    update_existing_prices: bool = False
+    confirm_shortage: bool = False
+    preview_token: str | None = None
     name: str | None = Field(default=None, min_length=1, max_length=200)
+    description: str | None = Field(default=None, max_length=300)
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory | None = None
     active: bool | None = None
@@ -285,9 +314,16 @@ class ProductUpdate(RequestModel):
 
 
 class ProductOut(BaseModel):
+    unit: str = "item"
+    stock: int | None = None
+    reserved_quantity: int = 0
+    available_quantity: int | None = None
+    shortage: int = 0
+    inclusions: list[ProductInclusion] | None = None
     id: str
     event_id: str
     name: str
+    description: str = ""
     price: Decimal
     category: OrderItemCategory
     active: bool
@@ -314,7 +350,43 @@ class EventCheckInStats(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class RegistrationCreate(RequestModel):
+_MAX_REQUESTED_ORDER_LINE_QUANTITY = 1000
+"""Ceiling on a client-requested (not yet package-expanded) order line quantity.
+
+Far above any real booking (guest_count is capped at 20), but well below
+OrderItemRequest.quantity's own 1,000,000 field bound, which stays high because
+it also re-validates already-persisted order items when reconstructed
+internally (see app.services.product_inventory.purchased_requests)."""
+
+
+class RegistrationNotesRequest(RequestModel):
+    @model_validator(mode="before")
+    @classmethod
+    def merge_legacy_accessibility_note(cls, value):
+        # Accept older REST/MCP callers while storing one notes field.
+        if isinstance(value, dict) and "accessibility_note" in value:
+            value = dict(value)
+            accessibility = value.pop("accessibility_note")
+            if accessibility is not None and not isinstance(accessibility, str):
+                raise ValueError("accessibility_note must be text")
+            if value.get("notes") is not None and not isinstance(value["notes"], str):
+                raise ValueError("notes must be text")
+            if accessibility:
+                value["notes"] = "\n\n".join(
+                    dict.fromkeys(part for part in (value.get("notes"), accessibility) if part)
+                )
+        return value
+
+    @field_validator("order_items", check_fields=False)
+    @classmethod
+    def cap_requested_order_quantities(cls, items: list[OrderItemRequest] | None) -> list[OrderItemRequest] | None:
+        for item in items or []:
+            if item.quantity > _MAX_REQUESTED_ORDER_LINE_QUANTITY:
+                raise ValueError(f"quantity cannot exceed {_MAX_REQUESTED_ORDER_LINE_QUANTITY} per order line.")
+        return items
+
+
+class RegistrationCreate(RegistrationNotesRequest):
     name: str = Field(min_length=1, max_length=200)
     email: EmailStr
     phone: str = Field(min_length=1, max_length=50)
@@ -322,8 +394,7 @@ class RegistrationCreate(RequestModel):
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
-    notes: str = Field(default="", max_length=2000)
-    accessibility_note: str = Field(default="", max_length=2000)
+    notes: str = Field(default="", max_length=4000)
     marketing_opt_in: bool = Field(
         default=False,
         description=(
@@ -334,28 +405,43 @@ class RegistrationCreate(RequestModel):
     honeypot: str = Field(default="", exclude=True)
     form_start_time: str = Field(default="", exclude=True)
 
-    @field_validator("name", "phone", "event_id", "notes", "accessibility_note", mode="before")
+    @field_validator("name", "phone", "event_id", "notes", mode="before")
     @classmethod
     def strip_whitespace(cls, v: str) -> str:
         return v.strip() if isinstance(v, str) else v
 
 
-class RegistrationUpdate(RequestModel):
+class TableAllocation(RequestModel):
+    table_id: str = Field(min_length=1, max_length=64)
+    guest_count: int = Field(ge=0, le=20)
+    exclusive: bool = False
+
+
+class RegistrationUpdate(RegistrationNotesRequest):
+    allocations: list[TableAllocation] | None = Field(default=None, max_length=1000)
     guest_count: int | None = Field(default=None, ge=1, le=20)
     status: RegistrationStatus | None = None
     payment_status: PaymentStatus | None = None
+    amount_paid: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
+    payment_reason: Literal["payment", "refund", "correction"] | None = None
+    """Why `amount_paid` changed — recorded on the resulting audit entry so a
+    payment history can distinguish a normal payment from a refund/correction.
+    Ignored unless `amount_paid` actually changes."""
+    payment_transaction_date: dt_date | None = None
+    """When the money actually moved (a bank transfer date), which may predate
+    when this edit is made. Defaults to the edit time if omitted."""
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
-    table_id: str | None = None
     confirm_over_capacity: bool = False
     order_items: list[OrderItemRequest] | None = Field(default=None, max_length=50)
-    notes: str | None = None
-    accessibility_note: str | None = None
+    notes: str | None = Field(default=None, max_length=4000)
     person_id: str | None = Field(default=None, min_length=1)
     checked_in: bool | None = None
     strap_issued: bool | None = None
 
 
 class RegistrationOut(BaseModel):
+    booked_table_quantity: int = 0
+    allocations: list[TableAllocation] = Field(default_factory=list)
     id: str
     person_id: str
     person: PersonSummaryOut
@@ -364,11 +450,12 @@ class RegistrationOut(BaseModel):
     guest_count: int
     order_items: list[OrderItemOut]
     notes: str
-    accessibility_note: str
     table_id: str | None
     status: RegistrationStatus
     payment_status: PaymentStatus
     amount_due: Decimal | None
+    amount_paid: Decimal = Decimal(0)
+    refund_due: Decimal | None = Decimal(0)
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -386,6 +473,8 @@ class RegistrationOutWithToken(RegistrationOut):
 
 
 class RegistrationListOut(BaseModel):
+    booked_table_quantity: int = 0
+    allocations: list[TableAllocation] = Field(default_factory=list)
     """Registration item returned in the list endpoint.
     check_in_token is intentionally excluded here."""
 
@@ -396,11 +485,13 @@ class RegistrationListOut(BaseModel):
     event: EventOut
     guest_count: int
     order_items: list[OrderItemOut]
-    accessibility_note: str
+    notes: str
     table_id: str | None
     status: RegistrationStatus
     payment_status: PaymentStatus
     amount_due: Decimal | None
+    amount_paid: Decimal = Decimal(0)
+    refund_due: Decimal | None = Decimal(0)
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -439,6 +530,8 @@ class RegistrationGuestOut(BaseModel):
     status: RegistrationStatus
     payment_status: PaymentStatus
     amount_due: Decimal | None
+    amount_paid: Decimal = Decimal(0)
+    refund_due: Decimal | None = Decimal(0)
     checked_in: bool
     checked_in_at: datetime | None
     strap_issued: bool
@@ -502,15 +595,14 @@ class VisitorSessionStatus(BaseModel):
     expires_at: datetime | None = None
 
 
-class RegistrationAdminCreate(RequestModel):
+class RegistrationAdminCreate(RegistrationNotesRequest):
     """Admin-only registration creation — skips spam checks, accepts person_id directly."""
 
     person_id: str = Field(min_length=1, max_length=64)
     event_id: str = Field(min_length=1, max_length=64)
     guest_count: int = Field(ge=1, le=20)
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
-    notes: str = Field(default="", max_length=2000)
-    accessibility_note: str = Field(default="", max_length=2000)
+    notes: str = Field(default="", max_length=4000)
     status: RegistrationStatus = "confirmed"
 
     @field_validator("event_id", "notes", mode="before")
@@ -730,17 +822,9 @@ class ExhibitorOut(BaseModel):
 
 
 class LayoutCreate(RequestModel):
-    edition_id: str | None = Field(default=None, max_length=100)
-    room_id: str = Field(max_length=64)
-    day_id: int | None = Field(default=None, ge=1)
-    date: dt_date | None = None
+    event_id: str = Field(min_length=1, max_length=64)
+    room_id: str = Field(min_length=1, max_length=64)
     label: str = Field(default="", max_length=200)
-
-    @model_validator(mode="after")
-    def validate_day_reference(self) -> Self:
-        if self.day_id is None and self.date is None:
-            raise ValueError("Either day_id or date is required.")
-        return self
 
 
 class LayoutCopyCreate(LayoutCreate):
@@ -749,10 +833,10 @@ class LayoutCopyCreate(LayoutCreate):
 
 
 class LayoutOut(BaseModel):
+    event_id: str
     id: str
     edition_id: str | None
     room_id: str
-    day_id: int
     date: dt_date | None
     label: str
     created_at: datetime
@@ -765,7 +849,7 @@ class LayoutBulkCreate(RequestModel):
     """Create several layouts in one atomic transaction (#837).
 
     All items are validated and, within the batch, checked against each other
-    for the same room+day+edition duplication ``create_layout`` already
+    for the same room+event duplication ``create_layout`` already
     rejects — a failure partway through leaves no layout created. Pass
     ``idempotency_key`` to safely retry after a timeout or partial failure
     without risking duplicates.
@@ -890,6 +974,7 @@ class TableUpdate(RequestModel):
 
 
 class TableOut(BaseModel):
+    event_id: str
     id: str
     name: str
     capacity: int
@@ -988,6 +1073,7 @@ class VenuePlanRoomOut(BaseModel):
 
 
 class VenuePlanTableOut(BaseModel):
+    exclusive: bool = False
     id: str
     name: str
     capacity: int
@@ -1012,8 +1098,9 @@ class VenuePlanAreaOut(BaseModel):
 
 
 class VenuePlanLayoutOut(BaseModel):
+    event_title: str
     id: str
-    day_id: int
+    event_id: str
     date: dt_date | None
     label: str
     room: VenuePlanRoomOut | None
@@ -1521,6 +1608,8 @@ class EditionAttendanceStats(BaseModel):
     total_registrations: int
     total_guests: int
     total_checked_in: int
+    total_paid: Decimal
+    total_due: Decimal
 
 
 # ---------------------------------------------------------------------------
