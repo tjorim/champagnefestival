@@ -273,13 +273,20 @@ def _resolve_exhibitors(edition: Edition, exhibitor_map: dict[int, dict]) -> tup
     return producers, sponsors, vendors
 
 
-async def edition_payloads(db: AsyncSession, editions: list[Edition], *, active_only: bool) -> list[dict]:
+async def edition_payloads(
+    db: AsyncSession, editions: list[Edition], *, active_only: bool, public: bool = False
+) -> list[dict]:
     """Build edition response payloads.
 
     `active_only` controls whether inactive events are dropped from the serialized
     `events`/`dates` fields. Public endpoints (`/active`, `/upcoming`) pass `True` so
     inactive (draft/cancelled) events never appear in unauthenticated responses;
     admin endpoints pass `False` so event management keeps seeing everything.
+
+    `public` controls each event's `products` — see `event_to_summary_dict`.
+    Public endpoints pass `True`; the caller must also use a response_model
+    built from `ProductPublicOut` (see `app.schemas.EditionPublicOut`), since
+    the two shapes are incompatible.
     """
     venues = await _load_venues_by_ids(db, {edition.venue_id for edition in editions})
     exhibitor_map = await _load_exhibitors_by_ids(
@@ -305,7 +312,7 @@ async def edition_payloads(db: AsyncSession, editions: list[Edition], *, active_
                 edition,
                 venue=venues[edition.venue_id],
                 dates=_edition_dates(events),
-                events=[event_to_summary_dict(event) for event in events],
+                events=[event_to_summary_dict(event, public=public) for event in events],
                 producers=producers,
                 sponsors=sponsors,
                 vendors=vendors,
@@ -317,8 +324,8 @@ async def edition_payloads(db: AsyncSession, editions: list[Edition], *, active_
     return payloads
 
 
-async def edition_payload(db: AsyncSession, edition: Edition, *, active_only: bool) -> dict:
-    payloads = await edition_payloads(db, [edition], active_only=active_only)
+async def edition_payload(db: AsyncSession, edition: Edition, *, active_only: bool, public: bool = False) -> dict:
+    payloads = await edition_payloads(db, [edition], active_only=active_only, public=public)
     if not payloads:
         raise HTTPException(status_code=404, detail="Edition not found.")
     return payloads[0]

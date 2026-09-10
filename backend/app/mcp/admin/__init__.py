@@ -29,7 +29,7 @@ for the shared exception convention). Both this module and its REST router
 become thin adapters around the service.
 
 Migrated so far: ``layouts``, ``tables``, ``areas``, ``venues``, ``rooms``,
-``table_types``.
+``table_types``, ``products``.
 
 Not yet migrated (still duplicated between this package and
 ``app.routers``): ``editions``, ``events``, ``exhibitors``, ``faq``,

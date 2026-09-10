@@ -23,12 +23,24 @@ export interface ProductInclusion {
   visible: boolean;
 }
 
+/**
+ * "purchasable": visible in the registration form and orderable standalone.
+ * "included_visible": unavailable standalone but shown when a package
+ * includes it (subject to that inclusion's own `visible` flag).
+ * "internal": unavailable standalone and never shown to visitors, though it
+ * still counts toward stock and preparation totals.
+ * "disabled": kept for later reuse; unavailable for new sales or packages.
+ */
+export type ProductMode = "purchasable" | "included_visible" | "internal" | "disabled";
+
 export interface Product {
   unit?: "item" | "table" | "person";
   stock?: number | null;
   reservedQuantity?: number;
   availableQuantity?: number | null;
   shortage?: number;
+  /** A purchasable product with no remaining stock — distinct from `mode`. */
+  soldOut?: boolean;
   inclusions?: ProductInclusion[] | null;
   id: string;
   eventId: string;
@@ -37,7 +49,7 @@ export interface Product {
   description: string;
   price: number;
   category: OrderItemCategory;
-  active: boolean;
+  mode: ProductMode;
   /**
    * A prerequisite product for this event (e.g. an entry ticket). An order
    * that includes any non-required product for an event with required
@@ -74,8 +86,11 @@ export interface Event {
   updatedAt: string;
   edition?: EventEditionSummary | null;
   /**
-   * Active products only. Whether guests can order anything for this event
-   * is answered by whether this list is non-empty, not by a separate flag.
+   * Selectable ("purchasable") products, plus the name/description of any
+   * "included_visible" product bundled into one of them (`mode` reflects
+   * this — see `Product`). "internal"/"disabled" products never appear
+   * here. Whether guests can order anything for this event is answered by
+   * whether any entry has `mode === "purchasable"`, not by a separate flag.
    */
   products: Product[];
 }
@@ -100,6 +115,26 @@ function isOrderItemCategory(value: unknown): value is OrderItemCategory {
   return value === "champagne" || value === "food" || value === "other";
 }
 
+function isProductMode(value: unknown): value is ProductMode {
+  return (
+    value === "purchasable" ||
+    value === "included_visible" ||
+    value === "internal" ||
+    value === "disabled"
+  );
+}
+
+/**
+ * The admin API returns a `mode` on every product. The public API (visitor
+ * registration flow) never exposes `mode` or internal/disabled products —
+ * only a `purchasable` boolean, so a product present in that response is
+ * either purchasable or (the only other possibility) included_visible.
+ */
+function resolveProductMode(data: Record<string, unknown>): ProductMode {
+  if (isProductMode(data.mode)) return data.mode;
+  return data.purchasable ? "purchasable" : "included_visible";
+}
+
 export function apiToProduct(data: Record<string, unknown>): Product {
   return {
     id: String(data.id ?? ""),
@@ -108,7 +143,8 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     description: String(data.description ?? ""),
     price: Number(data.price ?? 0),
     category: isOrderItemCategory(data.category) ? data.category : "other",
-    active: Boolean(data.active),
+    mode: resolveProductMode(data),
+    soldOut: Boolean(data.sold_out),
     required: Boolean(data.required),
     unit: data.unit === "table" || data.unit === "person" ? data.unit : "item",
     stock: typeof data.stock === "number" ? data.stock : null,

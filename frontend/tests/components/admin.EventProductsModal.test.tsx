@@ -56,7 +56,7 @@ describe("EventProductsModal", () => {
         name: "VIP Entry",
         price: 50,
         category: "other",
-        active: true,
+        mode: "purchasable",
         required: true,
         included_product_id: null,
         included_per_guests: null,
@@ -69,6 +69,153 @@ describe("EventProductsModal", () => {
     expect(screen.getByText("admin_products_required_badge")).toBeInTheDocument();
   });
 
+  it("shows a mode badge and a sold-out badge for a sold-out purchasable product", async () => {
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: 65,
+        category: "champagne",
+        mode: "purchasable",
+        required: false,
+        stock: 0,
+        reserved_quantity: 0,
+        sold_out: true,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+
+    await screen.findByText("Champagne Bottle");
+    expect(screen.getByText("admin_products_mode_purchasable")).toBeInTheDocument();
+    expect(screen.getByText("admin_products_sold_out")).toBeInTheDocument();
+  });
+
+  it("shows a mode badge without a sold-out badge for an internal product", async () => {
+    renderModal([
+      {
+        id: "prod-supply",
+        event_id: "event-01",
+        name: "Kitchen Supply",
+        price: 1,
+        category: "other",
+        mode: "internal",
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+
+    await screen.findByText("Kitchen Supply");
+    expect(screen.getByText("admin_products_mode_internal")).toBeInTheDocument();
+    expect(screen.queryByText("admin_products_sold_out")).not.toBeInTheDocument();
+  });
+
+  it("submits the selected mode when editing a product", async () => {
+    let saved: Record<string, unknown> | null = null;
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: 65,
+        category: "champagne",
+        mode: "purchasable",
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    server.use(
+      http.post("/api/products/prod-bottle/preview", () =>
+        HttpResponse.json({
+          preview_token: "token-1",
+          bookings: [],
+          price_changed: false,
+          contents_changed: true,
+          shortages: [],
+        }),
+      ),
+      http.put("/api/products/prod-bottle", async ({ request }) => {
+        saved = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ...saved, id: "prod-bottle", event_id: "event-01" });
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
+    fireEvent.change(screen.getByLabelText("admin_products_mode"), {
+      target: { value: "internal" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await screen.findByText("admin_inventory_review");
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => expect(saved).not.toBeNull());
+    expect(saved).toMatchObject({ mode: "internal", preview_token: "token-1" });
+  });
+
+  it("previews whether a mode change would show or hide this line in a bundling package", async () => {
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: 65,
+        category: "champagne",
+        mode: "included_visible",
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+      {
+        id: "prod-table",
+        event_id: "event-01",
+        name: "VIP Table",
+        price: 200,
+        category: "other",
+        mode: "purchasable",
+        required: true,
+        inclusions: [
+          {
+            product_id: "prod-bottle",
+            quantity: 1,
+            per_quantity: 1,
+            rounding: "down",
+            visible: true,
+          },
+        ],
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
+    expect(
+      screen.getByText('admin_products_mode_preview_shows({"package":"VIP Table"})'),
+    ).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("admin_products_mode"), {
+      target: { value: "internal" },
+    });
+    expect(
+      screen.getByText('admin_products_mode_preview_hides({"package":"VIP Table"})'),
+    ).toBeInTheDocument();
+  });
+
   it("shows the bundle note for a product that includes another", async () => {
     renderModal([
       {
@@ -77,7 +224,7 @@ describe("EventProductsModal", () => {
         name: "VIP Table",
         price: 200,
         category: "other",
-        active: true,
+        mode: "purchasable",
         required: true,
         included_product_id: "prod-bottle",
         included_per_guests: 2,
@@ -90,7 +237,7 @@ describe("EventProductsModal", () => {
         name: "Champagne Bottle",
         price: 65,
         category: "champagne",
-        active: true,
+        mode: "purchasable",
         required: false,
         included_product_id: null,
         included_per_guests: null,
@@ -113,7 +260,7 @@ describe("EventProductsModal", () => {
         name: "Champagne Bottle",
         price: 65,
         category: "champagne",
-        active: true,
+        mode: "purchasable",
         required: false,
         included_product_id: null,
         included_per_guests: null,
@@ -134,7 +281,7 @@ describe("EventProductsModal", () => {
             name: capturedBody.name,
             price: capturedBody.price,
             category: capturedBody.category,
-            active: true,
+            mode: "purchasable",
             required: capturedBody.required,
             included_product_id: capturedBody.included_product_id,
             included_per_guests: capturedBody.included_per_guests,
@@ -182,7 +329,7 @@ describe("EventProductsModal", () => {
         name: "Champagne Bottle",
         price: 65,
         category: "champagne",
-        active: true,
+        mode: "purchasable",
         required: false,
         included_product_id: null,
         included_per_guests: null,
@@ -207,7 +354,7 @@ describe("EventProductsModal", () => {
         name: "Tables",
         price: 50,
         category: "other",
-        active: true,
+        mode: "purchasable",
         required: false,
         unit: "table",
         stock: 10,

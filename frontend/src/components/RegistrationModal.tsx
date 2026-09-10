@@ -47,10 +47,18 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   });
 
   const isSubmitting = submitRegistrationMutation.isPending;
+  // The full list, including "included_visible" package inclusions — needed
+  // to walk the bundle graph below. Only "purchasable" entries get a buy
+  // control; the rest exist here purely so their name/description can be
+  // shown as part of a package (see Event.products).
   const products = useMemo(() => event?.products ?? [], [event]);
-  // Whether guests can order anything is answered by the event actually
-  // having products, not by a separate flag — see Event.products.
-  const showOrderItems = products.length > 0;
+  const purchasableProducts = useMemo(
+    () => products.filter((p) => p.mode === "purchasable"),
+    [products],
+  );
+  // Whether guests can order anything is answered by there being a
+  // purchasable product, not by a separate flag.
+  const showOrderItems = purchasableProducts.length > 0;
 
   const form = useForm({
     defaultValues: {
@@ -123,7 +131,10 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
   const guestCount = useStore(form.store, (s) => s.values.guestCount);
 
-  const requiredProducts = useMemo(() => products.filter((p) => p.required), [products]);
+  const requiredProducts = useMemo(
+    () => purchasableProducts.filter((p) => p.required),
+    [purchasableProducts],
+  );
   const hasRequiredSelected = useMemo(
     () => orderItems.some((o) => requiredProducts.some((rp) => rp.id === o.productId)),
     [orderItems, requiredProducts],
@@ -432,7 +443,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   </p>
                 )}
 
-                {products.map((product) => {
+                {purchasableProducts.map((product) => {
                   const currentItem = orderItems.find((o) => o.productId === product.id);
                   const qty = currentItem?.quantity ?? 0;
                   const label = `${product.name} - €${product.price}`;
@@ -445,6 +456,11 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       <div className="d-flex align-items-center justify-content-between">
                         <span className="text-light small">
                           {label}
+                          {product.soldOut && (
+                            <span className="badge bg-danger ms-2">
+                              {m.registration_order_sold_out()}
+                            </span>
+                          )}
                           {product.description && (
                             <span
                               className="text-secondary d-block"
@@ -476,6 +492,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                             onClick={() => handleQuantityChange(product.id, qty + 1)}
                             disabled={
                               isLockedOptional ||
+                              product.soldOut ||
                               (product.availableQuantity != null &&
                                 qty + (included?.quantity ?? 0) >= product.availableQuantity)
                             }

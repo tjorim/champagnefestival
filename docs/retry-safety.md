@@ -187,6 +187,36 @@ dropped or left dependent on the client retrying the request. A request never
 changes booking status, quantities, allocations or payment state.
 
 
+# Product availability and visibility modes (#1020)
+
+Replacing `Product.active` with `mode` (`purchasable` | `included_visible` |
+`internal` | `disabled`) adds no new write endpoint: it is one more field on
+the same `POST /api/products`, `PUT /api/products/{id}`, and
+`POST /api/products/{id}/preview` writes the #802 section above already
+covers, plus the equivalent MCP tools (`create_product`/`update_product`/
+`delete_product`, following the same no-retry-key convention as the other
+admin MCP CRUD tools). The retry-safety decision is unchanged: **not
+automatically retry-safe** — reload after an ambiguous response rather than
+resubmitting a create or update.
+
+A mode change is now treated as a contents change for the existing preview
+flow: `change_product` compares `mode` before/after alongside
+`inclusions`/`included_product_id`/`included_per_guests`, so a mode edit that
+would show or hide this product's line in another package's visitor-facing
+summary for an *existing* booking requires the same fresh-preview-fingerprint
+round trip as an inclusion or price edit — `update_existing_contents` must be
+set and the save must carry the `preview_token` from a preview computed after
+the mode change, or the save 409s as stale. This is the same freshness check
+described above, not a new idempotency mechanism: after an uncertain save,
+reload and preview again rather than resubmitting the prior request.
+
+Enforcement of the resulting mode (only `purchasable` products are newly
+orderable standalone; a `disabled` product cannot be newly bundled) happens
+inside the same locked, transactional write as before — a repeated identical
+request either commits once or is rejected consistently, but is still not
+advertised as safe to retry automatically.
+
+
 # Event plans and physical allocations (#802, second increment)
 
 Layout create/copy now require an event and room; `(room_id, event_id)` is unique.

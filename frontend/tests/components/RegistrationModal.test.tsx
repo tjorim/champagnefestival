@@ -32,6 +32,7 @@ vi.mock("@/paraglide/messages", () => ({
       `Add ${products} first to unlock the optional items below.`,
     registration_order_included_note: ({ count, source }: { count: number; source: string }) =>
       `Includes ${count} free with your ${source}`,
+    registration_order_sold_out: () => "Sold out",
     registration_notes: () => "Notes",
     registration_notes_placeholder: () => "Any special requests...",
     registration_submit: () => "Place Registration",
@@ -65,7 +66,7 @@ const champagneProduct: Product = {
   description: "",
   price: 65,
   category: "champagne",
-  active: true,
+  mode: "purchasable" as const,
   required: false,
   createdAt: "",
   updatedAt: "",
@@ -207,6 +208,45 @@ describe("RegistrationModal component", () => {
     expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
   });
 
+  it("does not render a buy control for an included_visible product", () => {
+    const includedVisibleProduct: Product = {
+      ...champagneProduct,
+      id: "included-champagne",
+      mode: "included_visible",
+    };
+    renderModal({
+      event: { ...vipEvent, products: [champagneProduct, includedVisibleProduct] },
+    });
+    expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
+    // Only one buy row exists — the purchasable product's — not a second one
+    // for the included_visible entry sharing the same name/price.
+    expect(
+      screen.getAllByRole("button", {
+        name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+      }),
+    ).toHaveLength(1);
+  });
+
+  it("hides order products when the event has only an included_visible product", () => {
+    const includedVisibleProduct: Product = {
+      ...champagneProduct,
+      mode: "included_visible",
+    };
+    renderModal({ event: { ...vipEvent, products: [includedVisibleProduct] } });
+    expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
+  });
+
+  it("shows a sold-out badge and disables increasing quantity for a sold-out product", () => {
+    const soldOutProduct: Product = { ...champagneProduct, soldOut: true };
+    renderModal({ event: { ...vipEvent, products: [soldOutProduct] } });
+
+    expect(screen.getByText("Sold out")).toBeInTheDocument();
+    const increaseButton = screen.getByRole("button", {
+      name: /Increase quantity of Champagne Bottle \(Standard\)/i,
+    });
+    expect(increaseButton).toBeDisabled();
+  });
+
   it("shows order products for a non-vip category, as long as it has products", () => {
     // A Sunday-morning capsule exchange during the festival is not "vip", but can
     // still sell things — the category label must not gate this.
@@ -314,7 +354,7 @@ describe("RegistrationModal component", () => {
       description: "",
       price: 50,
       category: "other",
-      active: true,
+      mode: "purchasable" as const,
       required: true,
       createdAt: "",
       updatedAt: "",
@@ -368,7 +408,7 @@ describe("RegistrationModal component", () => {
       description: "",
       price: 65,
       category: "champagne",
-      active: true,
+      mode: "purchasable" as const,
       required: false,
       createdAt: "",
       updatedAt: "",
@@ -380,7 +420,7 @@ describe("RegistrationModal component", () => {
       description: "",
       price: 200,
       category: "other",
-      active: true,
+      mode: "purchasable" as const,
       required: true,
       includedProductId: "bottle",
       includedPerGuests: 2,

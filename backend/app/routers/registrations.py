@@ -48,6 +48,7 @@ from app.schemas import (
     RegistrationLookupRequestAccepted,
     RegistrationOut,
     RegistrationOutWithToken,
+    RegistrationPublicOut,
     RegistrationUpdate,
 )
 from app.services import events_service, payments_service, registrations_service
@@ -89,7 +90,7 @@ _SORT_COLUMNS: dict[RegistrationSortKey, Any] = {
 }
 
 
-@router.post("", response_model=RegistrationOut, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RegistrationPublicOut, status_code=status.HTTP_201_CREATED)
 async def create_registration(
     body: RegistrationCreate,
     request: Request,
@@ -184,7 +185,7 @@ async def create_registration(
     await db.commit()
 
     registration = await registrations_service.get_registration_or_404(db, registration.id)
-    return registration_to_dict(registration, person, event)
+    return registration_to_dict(registration, person, event, public=True)
 
 
 @router.post(
@@ -725,7 +726,7 @@ async def _ensure_public_registration_allowed(
     # and optional-but-offered for walk-in events that still have something to
     # order (e.g. a VIP package) — anyone else can just show up. An event with
     # neither accepts no registrations at all.
-    if not event.registration_required and not any(p.active for p in event.products):
+    if not event.registration_required and not any(p.mode == "purchasable" for p in event.products):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This event does not accept registrations.",

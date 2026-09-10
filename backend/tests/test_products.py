@@ -30,7 +30,8 @@ async def test_product_crud(client):
     assert product["name"] == "Bottle of Champagne"
     assert product["price"] == "25.00"
     assert product["event_id"] == event["id"]
-    assert product["active"] is True
+    assert product["mode"] == "purchasable"
+    assert product["sold_out"] is False
     product_id = product["id"]
 
     r = await client.get("/api/products", params={"event_id": event["id"]}, headers=ADMIN_HEADERS)
@@ -107,26 +108,60 @@ async def test_product_update_not_found(client):
 
 
 @pytest.mark.anyio
-async def test_product_archive_via_active_toggle(client):
+async def test_product_mode_can_be_changed_to_disabled(client):
     event = await _create_event(client)
     product = await _create_product(client, event["id"])
 
-    r = await client.put(f"/api/products/{product['id']}", json={"active": False}, headers=ADMIN_HEADERS)
+    r = await client.put(f"/api/products/{product['id']}", json={"mode": "disabled"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert r.json()["active"] is False
+    assert r.json()["mode"] == "disabled"
 
 
 @pytest.mark.anyio
-async def test_event_out_embeds_only_active_products(client):
+async def test_product_mode_rejects_invalid_value(client):
     event = await _create_event(client)
-    active_product = await _create_product(client, event["id"], name="Active Bottle")
-    inactive_product = await _create_product(client, event["id"], name="Archived Bottle", active=False)
+    r = await client.post(
+        "/api/products",
+        json={**PRODUCT_PAYLOAD, "event_id": event["id"], "mode": "archived"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_zero_stock_purchasable_product_is_sold_out_but_stays_visible_and_unorderable(client):
+    """A sold-out product stays "purchasable" and visible — stock is a
+    separate axis from mode (#1020) — but a fresh order for it is rejected."""
+    event = await _create_event(client)
+    product = await _create_product(client, event["id"], stock=0)
+    assert product["mode"] == "purchasable"
+    assert product["sold_out"] is True
+
+    r = await client.get(f"/api/events/{event['id']}", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert any(p["id"] == product["id"] for p in r.json()["products"])
+
+    r = await _register(client, event["id"], [{"product_id": product["id"], "quantity": 1}])
+    assert r.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_event_out_embeds_only_purchasable_products(client):
+    event = await _create_event(client)
+    purchasable = await _create_product(client, event["id"], name="Purchasable Bottle")
+    included_visible = await _create_product(
+        client, event["id"], name="Included Visible Bottle", mode="included_visible"
+    )
+    internal = await _create_product(client, event["id"], name="Internal Supply", mode="internal")
+    disabled = await _create_product(client, event["id"], name="Disabled Bottle", mode="disabled")
 
     r = await client.get(f"/api/events/{event['id']}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
     product_ids = [p["id"] for p in r.json()["products"]]
-    assert active_product["id"] in product_ids
-    assert inactive_product["id"] not in product_ids
+    assert purchasable["id"] in product_ids
+    assert included_visible["id"] not in product_ids
+    assert internal["id"] not in product_ids
+    assert disabled["id"] not in product_ids
 
 
 @pytest.mark.anyio
@@ -205,9 +240,9 @@ async def test_registration_rejects_unknown_product_id(client):
 
 
 @pytest.mark.anyio
-async def test_registration_rejects_archived_product(client):
+async def test_registration_rejects_disabled_product(client):
     event = await _create_event(client)
-    product = await _create_product(client, event["id"], active=False)
+    product = await _create_product(client, event["id"], mode="disabled")
 
     r = await client.post(
         "/api/registrations",
@@ -222,6 +257,47 @@ async def test_registration_rejects_archived_product(client):
             "honeypot": "",
             "form_start_time": "",
         },
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.parametrize("mode", ["included_visible", "internal", "disabled"])
+@pytest.mark.anyio
+async def test_registration_rejects_non_purchasable_product_standalone(client, mode):
+    """included_visible/internal/disabled products can never be ordered
+    directly — only "purchasable" products may, even via a direct API
+    request that bypasses the registration form entirely (#1020)."""
+    event = await _create_event(client)
+    product = await _create_product(client, event["id"], mode=mode)
+
+    r = await _register(client, event["id"], [{"product_id": product["id"], "quantity": 1}])
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_admin_registration_creation_rejects_non_purchasable_product(client):
+    """Same enforcement applies to the admin-create endpoint, not just the
+    public registration form."""
+    event = await _create_event(client)
+    product = await _create_product(client, event["id"], mode="internal")
+
+    r = await client.post(
+        "/api/people",
+        json={"name": "Admin Person", "email": "ap-internal@example.com", "phone": "+32499111113"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+    person_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/registrations/admin",
+        json={
+            "person_id": person_id,
+            "event_id": event["id"],
+            "guest_count": 1,
+            "order_items": [{"product_id": product["id"], "quantity": 1}],
+        },
+        headers=ADMIN_HEADERS,
     )
     assert r.status_code == 400
 
@@ -350,7 +426,7 @@ async def test_admin_registration_update_rejects_unknown_product(client):
 
 
 @pytest.mark.anyio
-async def test_registration_allowed_for_walkin_event_with_active_product(client):
+async def test_registration_allowed_for_walkin_event_with_purchasable_product(client):
     """An event that doesn't require registration (walk-in) should still accept a
     registration from someone who wants to order something — e.g. a VIP package —
     even though showing up for the event itself needs no RSVP."""
@@ -375,11 +451,12 @@ async def test_registration_allowed_for_walkin_event_with_active_product(client)
 
 
 @pytest.mark.anyio
-async def test_registration_rejected_for_walkin_event_with_only_archived_products(client):
-    """A walk-in event whose only products are archived has nothing left to offer,
-    so it should reject registration the same as one with no products at all."""
+async def test_registration_rejected_for_walkin_event_with_only_disabled_products(client):
+    """A walk-in event whose only products are disabled has nothing left to
+    offer, so it should reject registration the same as one with no products
+    at all."""
     event = await _create_event(client, registration_required=False)
-    await _create_product(client, event["id"], active=False)
+    await _create_product(client, event["id"], mode="disabled")
 
     r = await client.post(
         "/api/registrations",
@@ -480,6 +557,19 @@ async def test_events_without_required_products_are_unaffected(client):
 
 
 @pytest.mark.anyio
+async def test_required_rule_applies_only_to_purchasable_products(client):
+    """A "required" product that isn't "purchasable" no longer gates optional
+    purchases — required-product enforcement only considers purchasable,
+    required products (#1020)."""
+    event = await _create_event(client)
+    await _create_product(client, event["id"], name="VIP Entry", price="50.00", required=True, mode="internal")
+    extra_bottle = await _create_product(client, event["id"], name="Extra Bottle", price="30.00")
+
+    r = await _register(client, event["id"], [{"product_id": extra_bottle["id"], "quantity": 1}])
+    assert r.status_code == 201, r.text
+
+
+@pytest.mark.anyio
 async def test_admin_registration_creation_also_enforces_required_product(client):
     event = await _create_event(client)
     await _create_product(client, event["id"], name="VIP Entry", price="50.00", required=True)
@@ -557,6 +647,64 @@ async def test_product_bundle_rejects_cross_event_target(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_product_bundle_rejects_disabled_target_via_legacy_field(client):
+    event = await _create_event(client)
+    disabled = await _create_product(client, event["id"], name="Disabled Bottle", mode="disabled")
+
+    r = await client.post(
+        "/api/products",
+        json={
+            **PRODUCT_PAYLOAD,
+            "event_id": event["id"],
+            "name": "VIP Table",
+            "included_product_id": disabled["id"],
+            "included_per_guests": 2,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_product_bundle_rejects_disabled_target_via_inclusions_list(client):
+    event = await _create_event(client)
+    disabled = await _create_product(client, event["id"], name="Disabled Bottle", mode="disabled")
+
+    r = await client.post(
+        "/api/products",
+        json={
+            **PRODUCT_PAYLOAD,
+            "event_id": event["id"],
+            "name": "VIP Table",
+            "inclusions": [{"product_id": disabled["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_product_bundle_disabled_target_grandfathered_on_unrelated_update(client):
+    """A product already bundling a since-disabled target keeps that
+    inclusion — the "cannot be newly included" rule only blocks adding a new
+    edge to a disabled product, not an edit that leaves an existing one alone."""
+    event = await _create_event(client)
+    bottle = await _create_product(client, event["id"], name="Bottle")
+    table = await _create_product(
+        client,
+        event["id"],
+        name="VIP Table",
+        inclusions=[{"product_id": bottle["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
+    )
+    r = await client.put(f"/api/products/{bottle['id']}", json={"mode": "disabled"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    r = await client.put(f"/api/products/{table['id']}", json={"required": True}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["inclusions"][0]["product_id"] == bottle["id"]
 
 
 @pytest.mark.anyio
@@ -642,6 +790,38 @@ async def test_registration_marks_hidden_inclusion_not_visible(client):
     coffee_item = next(item for item in order_items if item["product_id"] == coffee["id"])
     assert napkin_item["visible"] is False
     assert coffee_item["visible"] is True
+
+
+@pytest.mark.anyio
+async def test_internal_inclusion_never_visible_even_when_edge_marked_visible(client):
+    """An "internal" product's line is never visible in the order summary,
+    regardless of the including edge's own visible=True — mode overrides the
+    per-inclusion flag (#1020). It still reserves stock and reaches the
+    order_items used for preparation totals."""
+    event = await _create_event(client)
+    kitchen_supply = await _create_product(client, event["id"], name="Kitchen Supply", price="1.00", mode="internal")
+    champagne = await _create_product(client, event["id"], name="Champagne", price="10.00", mode="included_visible")
+    table = await _create_product(
+        client,
+        event["id"],
+        name="VIP Table",
+        price="200.00",
+        required=True,
+        inclusions=[
+            {"product_id": kitchen_supply["id"], "quantity": 1, "per_quantity": 1, "rounding": "down", "visible": True},
+            {"product_id": champagne["id"], "quantity": 1, "per_quantity": 1, "rounding": "down", "visible": True},
+        ],
+    )
+
+    r = await _register(client, event["id"], [{"product_id": table["id"], "quantity": 1}])
+    assert r.status_code == 201, r.text
+    order_items = r.json()["order_items"]
+    supply_item = next(item for item in order_items if item["product_id"] == kitchen_supply["id"])
+    champagne_item = next(item for item in order_items if item["product_id"] == champagne["id"])
+    assert supply_item["quantity"] == 1  # still reserved/counted for preparation
+    assert supply_item["visible"] is False  # never shown to the visitor
+    assert champagne_item["quantity"] == 1
+    assert champagne_item["visible"] is True
 
 
 @pytest.mark.anyio

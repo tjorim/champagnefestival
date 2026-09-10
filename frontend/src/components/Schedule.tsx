@@ -141,7 +141,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                                 {m.schedule_registration()}
                               </Badge>
                             ) : (
-                              event.products.length > 0 && (
+                              event.products.some((p) => p.mode === "purchasable") && (
                                 <Badge bg="info" text="dark" className="mb-2 ms-2">
                                   {m.schedule_order_available()}
                                 </Badge>

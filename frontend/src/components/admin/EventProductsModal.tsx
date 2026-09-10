@@ -17,7 +17,7 @@ import {
   type ProductChangePreview,
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
-import type { Event, Product, ProductInclusion } from "@/types/event";
+import type { Event, Product, ProductInclusion, ProductMode } from "@/types/event";
 import type { OrderItemCategory } from "@/types/registration";
 
 interface EventProductsModalProps {
@@ -33,6 +33,7 @@ interface ProductFormState {
   description: string;
   price: string;
   category: OrderItemCategory;
+  mode: ProductMode;
   required: boolean;
   /** Empty string means "no bundle". */
   includedProductId: string;
@@ -49,6 +50,7 @@ const EMPTY_FORM: ProductFormState = {
   description: "",
   price: "",
   category: "champagne",
+  mode: "purchasable",
   required: false,
   includedProductId: "",
   includedPerGuests: "",
@@ -59,6 +61,8 @@ const EMPTY_FORM: ProductFormState = {
   updateExistingPrices: false,
 };
 
+const PRODUCT_MODES: ProductMode[] = ["purchasable", "included_visible", "internal", "disabled"];
+
 function categoryLabel(category: OrderItemCategory): string {
   switch (category) {
     case "champagne":
@@ -67,6 +71,45 @@ function categoryLabel(category: OrderItemCategory): string {
       return m.admin_products_category_food();
     default:
       return m.admin_products_category_other();
+  }
+}
+
+function modeLabel(mode: ProductMode): string {
+  switch (mode) {
+    case "purchasable":
+      return m.admin_products_mode_purchasable();
+    case "included_visible":
+      return m.admin_products_mode_included_visible();
+    case "internal":
+      return m.admin_products_mode_internal();
+    default:
+      return m.admin_products_mode_disabled();
+  }
+}
+
+function modeHelp(mode: ProductMode): string {
+  switch (mode) {
+    case "purchasable":
+      return m.admin_products_mode_purchasable_help();
+    case "included_visible":
+      return m.admin_products_mode_included_visible_help();
+    case "internal":
+      return m.admin_products_mode_internal_help();
+    default:
+      return m.admin_products_mode_disabled_help();
+  }
+}
+
+function modeVariant(mode: ProductMode): string {
+  switch (mode) {
+    case "purchasable":
+      return "success";
+    case "included_visible":
+      return "info";
+    case "internal":
+      return "secondary";
+    default:
+      return "dark";
   }
 }
 
@@ -128,10 +171,27 @@ export default function EventProductsModal({
     () => [...(productsQuery.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
     [productsQuery.data],
   );
-  const activeProducts = products.filter((p) => p.active);
-  const archivedProducts = products.filter((p) => !p.active);
-  // The server checks the complete graph for cycles.
-  const bundleCandidates = activeProducts.filter((p) => p.id !== editingId);
+  // The server checks the complete graph for cycles; a disabled product just
+  // can't be newly bundled (existing inclusions of one are grandfathered).
+  const bundleCandidates = products.filter((p) => p.mode !== "disabled" && p.id !== editingId);
+
+  // Packages that currently bundle the product being edited, and whether
+  // this session's selected mode would show or hide that line in their
+  // visitor-facing summary — a preview of the mode change's effect (#1020).
+  const modeChangePreview = useMemo(() => {
+    if (!editingId) return [];
+    const willShow = form.mode === "purchasable" || form.mode === "included_visible";
+    return products
+      .filter((p) => p.id !== editingId)
+      .flatMap((p) => {
+        const edges =
+          p.inclusions ??
+          (p.includedProductId ? [{ product_id: p.includedProductId, visible: true }] : []);
+        const edge = edges.find((e) => e.product_id === editingId);
+        if (!edge) return [];
+        return [{ packageName: p.name, shown: willShow && (edge.visible ?? true) }];
+      });
+  }, [products, editingId, form.mode]);
 
   function openAdd() {
     setPreview(null);
@@ -149,6 +209,7 @@ export default function EventProductsModal({
       description: product.description,
       price: String(product.price),
       category: product.category,
+      mode: product.mode,
       required: product.required,
       includedProductId: product.includedProductId ?? "",
       includedPerGuests: product.includedPerGuests != null ? String(product.includedPerGuests) : "",
@@ -199,7 +260,6 @@ export default function EventProductsModal({
       setError(m.admin_inventory_stock_invalid());
       return;
     }
-    const existing = editingId ? activeProducts.find((p) => p.id === editingId) : undefined;
     try {
       const payload: ProductWrite = {
         eventId,
@@ -208,7 +268,7 @@ export default function EventProductsModal({
         description: form.description.trim(),
         price,
         category: form.category,
-        active: existing?.active ?? true,
+        mode: form.mode,
         required: form.required,
         unit: form.unit,
         stock,
@@ -236,27 +296,6 @@ export default function EventProductsModal({
     }
   }
 
-  async function handleToggleActive(product: Product) {
-    setError("");
-    try {
-      const saved = await saveMutation.mutateAsync({
-        id: product.id,
-        eventId,
-        name: product.name,
-        price: product.price,
-        category: product.category,
-        active: !product.active,
-        required: product.required,
-        includedProductId: product.includedProductId,
-        includedPerGuests: product.includedPerGuests,
-      });
-      updateQueryData(saved);
-      onProductsChanged?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : m.admin_content_error_save());
-    }
-  }
-
   async function handleDelete(productId: string) {
     setError("");
     try {
@@ -270,20 +309,19 @@ export default function EventProductsModal({
     }
   }
 
-  function renderRow(product: Product, isArchived: boolean) {
+  function renderRow(product: Product) {
     const includedTarget = product.includedProductId
       ? products.find((p) => p.id === product.includedProductId)
       : undefined;
+    const soldOut = product.mode === "purchasable" && product.soldOut;
     return (
       <ListGroup.Item
         key={product.id}
-        className={`bg-dark border-secondary d-flex flex-column gap-1 py-1 px-0 ${
-          isArchived ? "opacity-50" : "text-light"
-        }`}
+        className="bg-dark border-secondary d-flex flex-column gap-1 py-1 px-0 text-light"
       >
         <div className="d-flex justify-content-between align-items-center gap-2">
-          <span className="d-flex align-items-center gap-2 text-truncate">
-            <span className={isArchived ? "text-secondary" : "text-light"}>
+          <span className="d-flex align-items-center gap-2 text-truncate flex-wrap">
+            <span className="text-light">
               {product.name}
               <span className="d-block small text-secondary">
                 {m.admin_inventory_reserved()} {product.reservedQuantity ?? 0} /{" "}
@@ -293,6 +331,14 @@ export default function EventProductsModal({
                   : ""}
               </span>
             </span>
+            <Badge bg={modeVariant(product.mode)} className="fs-3xs">
+              {modeLabel(product.mode)}
+            </Badge>
+            {soldOut && (
+              <Badge bg="danger" className="fs-3xs">
+                {m.admin_products_sold_out()}
+              </Badge>
+            )}
             <Badge bg="secondary" className="fs-3xs text-capitalize">
               {categoryLabel(product.category)}
             </Badge>
@@ -304,47 +350,22 @@ export default function EventProductsModal({
             <span className="text-secondary small">€{product.price.toFixed(2)}</span>
           </span>
           <span className="d-flex gap-1 flex-shrink-0">
-            {!isArchived && (
-              <Button
-                size="sm"
-                variant="outline-secondary"
-                onClick={() => openEdit(product)}
-                aria-label={`Edit ${product.name}`}
-              >
-                <i className="bi bi-pencil" aria-hidden="true" />
-              </Button>
-            )}
-            {isArchived ? (
-              <>
-                <Button
-                  size="sm"
-                  variant="outline-success"
-                  onClick={() => handleToggleActive(product)}
-                  aria-label={`${m.admin_content_restore()} ${product.name}`}
-                  title={m.admin_content_restore()}
-                >
-                  <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline-danger"
-                  onClick={() => handleDelete(product.id)}
-                  aria-label={`${m.admin_delete()} ${product.name}`}
-                >
-                  <i className="bi bi-trash" aria-hidden="true" />
-                </Button>
-              </>
-            ) : (
-              <Button
-                size="sm"
-                variant="outline-secondary"
-                onClick={() => handleToggleActive(product)}
-                aria-label={`${m.admin_content_archive()} ${product.name}`}
-                title={m.admin_content_archive()}
-              >
-                <i className="bi bi-archive" aria-hidden="true" />
-              </Button>
-            )}
+            <Button
+              size="sm"
+              variant="outline-secondary"
+              onClick={() => openEdit(product)}
+              aria-label={`Edit ${product.name}`}
+            >
+              <i className="bi bi-pencil" aria-hidden="true" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-danger"
+              onClick={() => handleDelete(product.id)}
+              aria-label={`${m.admin_delete()} ${product.name}`}
+            >
+              <i className="bi bi-trash" aria-hidden="true" />
+            </Button>
           </span>
         </div>
         {includedTarget && product.includedPerGuests && (
@@ -454,23 +475,12 @@ export default function EventProductsModal({
           </Alert>
         ) : (
           <>
-            {activeProducts.length === 0 && archivedProducts.length === 0 ? (
+            {products.length === 0 ? (
               <p className="text-secondary fst-italic small">{m.admin_products_empty()}</p>
             ) : (
               <ListGroup variant="flush" className="mb-2">
-                {activeProducts.map((product) => renderRow(product, false))}
+                {products.map((product) => renderRow(product))}
               </ListGroup>
-            )}
-
-            {archivedProducts.length > 0 && (
-              <div className="mb-2">
-                <div className="text-secondary small mb-1">
-                  {m.admin_content_archived_section()}
-                </div>
-                <ListGroup variant="flush">
-                  {archivedProducts.map((product) => renderRow(product, true))}
-                </ListGroup>
-              </div>
             )}
           </>
         )}
@@ -541,6 +551,45 @@ export default function EventProductsModal({
                 </Form.Select>
               </Form.Group>
             </div>
+
+            <Form.Group controlId="product-mode" className="mb-2" style={{ maxWidth: "320px" }}>
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_products_mode()}
+              </Form.Label>
+              <Form.Select
+                size="sm"
+                className="bg-dark text-light border-secondary"
+                value={form.mode}
+                onChange={(e) => setForm((f) => ({ ...f, mode: e.target.value as ProductMode }))}
+              >
+                {PRODUCT_MODES.map((mode) => (
+                  <option value={mode} key={mode}>
+                    {modeLabel(mode)}
+                  </option>
+                ))}
+              </Form.Select>
+              <Form.Text className="d-block">{modeHelp(form.mode)}</Form.Text>
+            </Form.Group>
+
+            {modeChangePreview.length > 0 && (
+              <section
+                className="border rounded p-2 mb-2 small"
+                aria-label={m.admin_products_mode_preview_title()}
+              >
+                <div className="text-secondary fw-semibold mb-1">
+                  {m.admin_products_mode_preview_title()}
+                </div>
+                <ul className="mb-0 ps-3">
+                  {modeChangePreview.map(({ packageName, shown }, i) => (
+                    <li key={i} className={shown ? "text-light" : "text-secondary"}>
+                      {shown
+                        ? m.admin_products_mode_preview_shows({ package: packageName })
+                        : m.admin_products_mode_preview_hides({ package: packageName })}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
             <Form.Check
               type="checkbox"

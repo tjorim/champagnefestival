@@ -319,7 +319,7 @@ export interface ProductWrite {
   description?: string;
   price: number;
   category: OrderItemCategory;
-  active: boolean;
+  mode: import("@/types/event").ProductMode;
   required: boolean;
   includedProductId?: string;
   includedPerGuests?: number;
@@ -353,7 +353,7 @@ function productWriteBody(payload: ProductWrite) {
     ...(payload.description !== undefined ? { description: payload.description } : {}),
     price: payload.price,
     category: payload.category,
-    active: payload.active,
+    mode: payload.mode,
     required: payload.required,
     included_product_id: payload.includedProductId ?? null,
     included_per_guests: payload.includedPerGuests ?? null,

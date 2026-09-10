@@ -52,6 +52,7 @@ from app.mcp.admin import layouts as mcp_admin_layouts
 from app.mcp.admin import members as mcp_admin_members
 from app.mcp.admin import payments as mcp_admin_payments
 from app.mcp.admin import people as mcp_admin_people
+from app.mcp.admin import products as mcp_admin_products
 from app.mcp.admin import registrations as mcp_admin_registrations
 from app.mcp.admin import rooms as mcp_admin_rooms
 from app.mcp.admin import settings as mcp_admin_settings
@@ -73,6 +74,7 @@ from app.schemas import (
     Y_POSITION_DESCRIPTION,
     EditionType,
     LayoutCreate,
+    ProductMode,
     RoomCreate,
     TableCreate,
     TableTypeCreate,
@@ -1094,6 +1096,128 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_events.delete_event(self.session_factory, self._actor(), event_id)
 
+    # -- Products ------------------------------------------------------
+
+    async def create_product(
+        self,
+        event_id: str,
+        name: str,
+        price: float,
+        category: str,
+        description: str = "",
+        mode: ProductMode = "purchasable",
+        required: bool = False,
+        unit: str = "item",
+        stock: int | None = None,
+        inclusions: list[dict] | None = None,
+        included_product_id: str | None = None,
+        included_per_guests: int | None = None,
+    ) -> dict:
+        """Create a product for an event. Requires the ``admin`` role.
+
+        ``mode`` is one of "purchasable" (visitor-selectable), "included_visible"
+        (only supplied through a package, but its name may appear in that
+        package's visitor-facing summary), "internal" (only supplied through a
+        package, never shown to visitors, still counted for stock/preparation),
+        or "disabled" (kept for later reuse; unavailable for new sales or
+        packages). ``stock`` is ``null``/omitted for unlimited, ``0`` for
+        sold out. ``inclusions`` bundles a quantity of other products on this
+        event into this one (see ``app.models.Product``).
+        """
+        self._require_admin()
+        return await mcp_admin_products.create_product(
+            self.session_factory,
+            self._actor(),
+            event_id=event_id,
+            name=name,
+            description=description,
+            price=price,
+            category=category,
+            mode=mode,
+            required=required,
+            unit=unit,
+            stock=stock,
+            inclusions=inclusions,
+            included_product_id=included_product_id,
+            included_per_guests=included_per_guests,
+        )
+
+    async def get_product(self, product_id: str) -> dict:
+        """Return full admin detail for a single product. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_products.get_product(self.session_factory, product_id)
+
+    async def list_products(self, event_id: str | None = None) -> list[dict]:
+        """List products, optionally filtered by event. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_products.list_products(self.session_factory, event_id)
+
+    async def update_product(
+        self,
+        product_id: str,
+        name: str | None = None,
+        description: str | None = None,
+        price: float | None = None,
+        category: str | None = None,
+        mode: ProductMode | None = None,
+        required: bool | None = None,
+        unit: str | None = None,
+        stock: int | None = None,
+        inclusions: list[dict] | None = None,
+        included_product_id: str | None = None,
+        included_per_guests: int | None = None,
+        clear_stock: bool = False,
+        clear_inclusions: bool = False,
+        clear_included_product_id: bool = False,
+        clear_included_per_guests: bool = False,
+        update_existing_contents: bool = False,
+        update_existing_prices: bool = False,
+        confirm_shortage: bool = False,
+        preview_token: str | None = None,
+    ) -> dict:
+        """Partially update a product; omitted fields are left unchanged.
+
+        ``stock``/``inclusions``/``included_product_id``/``included_per_guests``
+        have no natural "clear" value, so pass ``clear_stock=True`` /
+        ``clear_inclusions=True`` / ``clear_included_product_id=True`` /
+        ``clear_included_per_guests=True`` to unset them instead of providing
+        a value. A change affecting existing bookings' contents or prices
+        needs a fresh ``preview_token``: call once with
+        ``update_existing_contents``/``update_existing_prices`` set to preview
+        (the result carries ``preview_token``), then again with that token to
+        save. Requires the ``admin`` role.
+        """
+        self._require_admin()
+        return await mcp_admin_products.update_product(
+            self.session_factory,
+            self._actor(),
+            product_id,
+            name=name,
+            description=description,
+            price=price,
+            category=category,
+            mode=mode,
+            required=required,
+            unit=unit,
+            stock=stock,
+            inclusions=inclusions,
+            included_product_id=included_product_id,
+            included_per_guests=included_per_guests,
+            clear_stock=clear_stock,
+            clear_inclusions=clear_inclusions,
+            clear_included_product_id=clear_included_product_id,
+            clear_included_per_guests=clear_included_per_guests,
+            update_existing_contents=update_existing_contents,
+            update_existing_prices=update_existing_prices,
+            confirm_shortage=confirm_shortage,
+            preview_token=preview_token,
+        )
+
+    async def delete_product(self, product_id: str) -> dict:
+        """Delete a product. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_products.delete_product(self.session_factory, self._actor(), product_id)
+
     # -- FAQ -----------------------------------------------------------
 
     async def create_faq_item(
@@ -1878,6 +2002,11 @@ def create_mcp_server(
     register_tool(backend.get_event)
     register_tool(backend.update_event)
     register_tool(backend.delete_event)
+    register_tool(backend.create_product)
+    register_tool(backend.get_product)
+    register_tool(backend.list_products)
+    register_tool(backend.update_product)
+    register_tool(backend.delete_product)
     register_tool(backend.create_faq_item)
     register_tool(backend.list_faq_items)
     register_tool(backend.update_faq_item)

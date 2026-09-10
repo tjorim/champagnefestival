@@ -17,6 +17,7 @@ from app.composer_content import LOCALES, build_composer_payload, pick_locale_te
 # ---------------------------------------------------------------------------
 
 OrderItemCategory = Literal["champagne", "food", "other"]
+ProductMode = Literal["purchasable", "included_visible", "internal", "disabled"]
 EditionType = Literal["festival", "bourse", "capsule_exchange"]
 RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
 PaymentStatus = Literal["unpaid", "partial", "paid"]
@@ -264,7 +265,31 @@ class EventOut(BaseModel):
     active: bool
     edition: EditionSummaryOut | None = None
     products: list[ProductOut] = Field(default_factory=list)
-    """Active products only — see ProductOut. Empty means nothing to order."""
+    """Purchasable products only — see ProductOut. Empty means nothing to order."""
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class EventPublicOut(BaseModel):
+    """Visitor-facing event shape — see ProductPublicOut for why `products`
+    differs from `EventOut.products`."""
+
+    id: str
+    edition_id: str
+    title: str
+    description: str
+    date: dt_date
+    start_time: str
+    end_time: str | None
+    category: str
+    registration_required: bool
+    registrations_open_from: datetime | None
+    registrations_close_at: datetime | None
+    max_capacity: int | None
+    active: bool
+    products: list[ProductPublicOut] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 
@@ -294,7 +319,7 @@ class ProductCreate(RequestModel):
     description: str = Field(default="", max_length=300)
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory
-    active: bool = True
+    mode: ProductMode = "purchasable"
     required: bool = False
     included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
     included_per_guests: int | None = Field(default=None, ge=1)
@@ -318,7 +343,7 @@ class ProductUpdate(RequestModel):
     description: str | None = Field(default=None, max_length=300)
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory | None = None
-    active: bool | None = None
+    mode: ProductMode | None = None
     required: bool | None = None
     # Nullable and independently settable, so the router (not this schema) decides
     # what "both or neither" means against the product's *resulting* state —
@@ -333,6 +358,9 @@ class ProductOut(BaseModel):
     reserved_quantity: int = 0
     available_quantity: int | None = None
     shortage: int = 0
+    sold_out: bool = False
+    """A purchasable product with no remaining stock. Distinct from `mode` —
+    a sold-out product stays "purchasable" and visible, just unorderable."""
     inclusions: list[ProductInclusion] | None = None
     id: str
     event_id: str
@@ -340,12 +368,35 @@ class ProductOut(BaseModel):
     description: str = ""
     price: Decimal
     category: OrderItemCategory
-    active: bool
+    mode: ProductMode
     required: bool
     included_product_id: str | None
     included_per_guests: int | None
     created_at: datetime
     updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ProductPublicOut(BaseModel):
+    """The visitor-facing shape of a product: a selectable ("purchasable")
+    product, or the name/description of an "included_visible" product that is
+    a package inclusion target. Never exposes `mode`, `stock`, or any
+    "internal"/"disabled" product — see app.utils.event_to_summary_dict."""
+
+    id: str
+    name: str
+    description: str = ""
+    price: Decimal
+    category: OrderItemCategory
+    unit: str = "item"
+    required: bool
+    purchasable: bool
+    available_quantity: int | None = None
+    sold_out: bool = False
+    inclusions: list[ProductInclusion] | None = None
+    included_product_id: str | None = None
+    included_per_guests: int | None = None
 
     model_config = {"from_attributes": True}
 
@@ -452,6 +503,36 @@ class RegistrationOut(BaseModel):
     person: PersonSummaryOut
     event_id: str
     event: EventOut
+    guest_count: int
+    order_items: list[OrderItemOut]
+    notes: str
+    table_id: str | None
+    status: RegistrationStatus
+    payment_status: PaymentStatus
+    amount_due: Decimal | None
+    amount_paid: Decimal = Decimal(0)
+    refund_due: Decimal | None = Decimal(0)
+    checked_in: bool
+    checked_in_at: datetime | None
+    strap_issued: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class RegistrationPublicOut(BaseModel):
+    """Returned by the unauthenticated POST /api/registrations endpoint — the
+    visitor's own just-created booking, but with `event` carrying the public
+    product shape rather than the admin one RegistrationOut exposes."""
+
+    booked_table_quantity: int = 0
+    allocations: list[TableAllocation] = Field(default_factory=list)
+    id: str
+    person_id: str
+    person: PersonSummaryOut
+    event_id: str
+    event: EventPublicOut
     guest_count: int
     order_items: list[OrderItemOut]
     notes: str
@@ -1328,6 +1409,28 @@ class EditionOut(BaseModel):
     dates: list[dt_date] = Field(default_factory=list)
     venue: VenueOut
     events: list[EventOut]
+    producers: list[EditionItemOut]
+    sponsors: list[EditionItemOut]
+    vendors: list[EditionItemOut]
+    co_organizer: EditionItemOut | None = None
+    active: bool
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class EditionPublicOut(BaseModel):
+    """Returned by the unauthenticated /api/editions/active and /upcoming
+    endpoints — events carry EventPublicOut, never the admin product shape."""
+
+    id: str
+    year: int
+    month: str
+    edition_type: EditionType
+    dates: list[dt_date] = Field(default_factory=list)
+    venue: VenueOut
+    events: list[EventPublicOut]
     producers: list[EditionItemOut]
     sponsors: list[EditionItemOut]
     vendors: list[EditionItemOut]

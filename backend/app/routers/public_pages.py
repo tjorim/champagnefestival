@@ -108,8 +108,8 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
     # editions never regresses to a bare site name.
     description = jsonld_service.WELCOME_SUBTITLE[locale]
     if edition is not None:
-        payload = await editions_service.edition_payload(db, edition, active_only=True)
-        events = [event_to_summary_dict(e) for e in editions_service.active_events(edition)]
+        payload = await editions_service.edition_payload(db, edition, active_only=True, public=True)
+        events = [event_to_summary_dict(e, public=True) for e in editions_service.active_events(edition)]
         json_ld = jsonld_service.build_event_json_ld(payload, base_url=settings.public_url, locale=locale)
 
     html_out = rewrite_head_meta(

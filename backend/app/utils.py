@@ -105,7 +105,10 @@ def make_id(prefix: str) -> str:
     return f"{prefix}_{ts}_{rand}"
 
 
-def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
+_VISITOR_VISIBLE_MODES = frozenset({"purchasable", "included_visible"})
+
+
+def event_to_summary_dict(event: Event, include_edition: bool = False, *, public: bool = False) -> dict:
     data = {
         "id": event.id,
         "edition_id": event.edition_id,
@@ -123,10 +126,22 @@ def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
         "created_at": event.created_at,
         "updated_at": event.updated_at,
         "edition": None,
-        # Active only: an archived product should stop being offered without
-        # rewriting the order_items already placed against it (a name/price/category
-        # snapshot, not a live reference — see Product's docstring).
-        "products": [product_to_dict(p) for p in event.products if p.active],
+        # `public=True` (an unauthenticated response — see #1020): only
+        # "purchasable" products (selectable) plus "included_visible" ones
+        # (their name/description may appear in a package's visitor-facing
+        # summary), each serialised through the slim visitor-safe shape.
+        # "internal"/"disabled" products never reach this list, and neither
+        # does the admin-only mode/stock data on the products that do.
+        #
+        # `public=False`: "purchasable" only, matching the pre-#1020 "active
+        # products only" behaviour this list has always had — it answers
+        # "what's still offered", not "everything in the catalogue" (see
+        # `app.routers.products.list_products` for the latter).
+        "products": (
+            [product_to_public_dict(p) for p in event.products if p.mode in _VISITOR_VISIBLE_MODES]
+            if public
+            else [product_to_dict(p) for p in event.products if p.mode == "purchasable"]
+        ),
     }
     edition: Edition | None = getattr(event, "edition", None)
     if include_edition and edition is not None:
@@ -134,7 +149,16 @@ def event_to_summary_dict(event: Event, include_edition: bool = False) -> dict:
     return data
 
 
+def _product_available_quantity(p: Product) -> int | None:
+    return max(0, p.stock - p.reserved_quantity) if p.stock is not None else None
+
+
+def _product_sold_out(p: Product, available_quantity: int | None) -> bool:
+    return p.mode == "purchasable" and available_quantity is not None and available_quantity <= 0
+
+
 def product_to_dict(p: Product) -> dict:
+    available_quantity = _product_available_quantity(p)
     return {
         "id": p.id,
         "event_id": p.event_id,
@@ -142,7 +166,7 @@ def product_to_dict(p: Product) -> dict:
         "description": p.description,
         "price": p.price,
         "category": p.category,
-        "active": p.active,
+        "mode": p.mode,
         "required": p.required,
         "included_product_id": p.included_product_id,
         "included_per_guests": p.included_per_guests,
@@ -150,22 +174,49 @@ def product_to_dict(p: Product) -> dict:
         "stock": p.stock,
         "inclusions": p.inclusions,
         "reserved_quantity": p.reserved_quantity,
-        "available_quantity": max(0, p.stock - p.reserved_quantity) if p.stock is not None else None,
+        "available_quantity": available_quantity,
         "shortage": max(0, p.reserved_quantity - p.stock) if p.stock is not None else 0,
+        "sold_out": _product_sold_out(p, available_quantity),
         "created_at": p.created_at,
         "updated_at": p.updated_at,
     }
 
 
-def registration_to_dict(r: Registration, person: Person, event: Event) -> dict:
-    """Serialise a Registration ORM row to a plain dict (no check_in_token)."""
+def product_to_public_dict(p: Product) -> dict:
+    """The visitor-safe shape of a product — never exposes `mode` or `stock`,
+    only what a visitor needs to select a purchasable product or see the name
+    of a visible package inclusion. See app.schemas.ProductPublicOut."""
+    available_quantity = _product_available_quantity(p)
+    return {
+        "id": p.id,
+        "name": p.name,
+        "description": p.description,
+        "price": p.price,
+        "category": p.category,
+        "unit": p.unit,
+        "required": p.required,
+        "purchasable": p.mode == "purchasable",
+        "available_quantity": available_quantity,
+        "sold_out": _product_sold_out(p, available_quantity),
+        "inclusions": p.inclusions,
+        "included_product_id": p.included_product_id,
+        "included_per_guests": p.included_per_guests,
+    }
+
+
+def registration_to_dict(r: Registration, person: Person, event: Event, *, public: bool = False) -> dict:
+    """Serialise a Registration ORM row to a plain dict (no check_in_token).
+
+    `public=True` for the unauthenticated booking response (POST
+    /api/registrations) — see `event_to_summary_dict`.
+    """
     return {
         "id": r.id,
         "person_id": r.person_id,
         "person": person_summary_to_dict(person),
         "event_id": r.event_id,
         "edition_id": event.edition_id,
-        "event": event_to_summary_dict(event, include_edition=True),
+        "event": event_to_summary_dict(event, include_edition=True, public=public),
         "guest_count": r.guest_count,
         "order_items": r.order_items,
         "notes": r.notes,

@@ -719,9 +719,22 @@ class Product(Base):
     __table_args__ = (
         CheckConstraint("stock IS NULL OR stock >= 0", name="ck_product_stock"),
         CheckConstraint("unit IN ('item', 'table', 'person')", name="ck_product_unit"),
+        CheckConstraint("mode IN ('purchasable', 'included_visible', 'internal', 'disabled')", name="ck_products_mode"),
     )
 
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    mode: Mapped[str] = mapped_column(String(20), default="purchasable")
+    """"purchasable" | "included_visible" | "internal" | "disabled" — see #1020.
+
+    Only "purchasable" products can be ordered standalone. "included_visible"
+    and "internal" products are never orderable directly and only ever reach a
+    booking through a package inclusion (see `inclusions` below); the
+    difference is that an "included_visible" product's name/description may
+    still reach visitors (subject to the including edge's own `visible` flag),
+    while "internal" never does, even as an inclusion line. "disabled" is
+    withdrawn from sale and cannot be newly bundled into a package, but is
+    retained (and stays orderable in bookings placed before it was disabled)
+    for possible later re-enabling — it is not a stock state.
+    """
     required: Mapped[bool] = mapped_column(Boolean, default=False)
     """A prerequisite product for this event (e.g. an entry ticket). An order
     that includes any non-required product for an event with required products

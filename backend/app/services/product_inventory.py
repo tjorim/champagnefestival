@@ -14,6 +14,23 @@ from sqlalchemy.orm import selectinload
 from app.models import Event, Registration
 from app.schemas import OrderItemBase, OrderItemRequest
 
+# A product's mode controls whether its name/description may ever reach a
+# visitor — "internal" and "disabled" never do, even as a package inclusion
+# line, regardless of that inclusion edge's own `visible` flag (#1020).
+_VISITOR_VISIBLE_MODES = frozenset({"purchasable", "included_visible"})
+
+
+def node_mode(node: dict) -> str:
+    """A graph node's mode, tolerating a `Registration.product_snapshot` node
+    frozen before #1020 — those carry the `active` boolean `mode` replaced,
+    not `mode` itself. `current_snapshot()` always sets `mode` on live nodes;
+    this fallback only ever fires for such a pre-existing frozen snapshot
+    merged into the graph via `resolve_booking`'s `previous_snapshot`."""
+    mode = node.get("mode")
+    if mode is not None:
+        return mode
+    return "purchasable" if node.get("active", True) else "disabled"
+
 
 async def lock_event(db: AsyncSession, event_id: str) -> Event:
     # Every inventory writer takes this lock before any registration locks.
@@ -39,7 +56,7 @@ def current_snapshot(event: Event) -> dict:
             "price": str(p.price),
             "category": p.category,
             "unit": p.unit or "item",
-            "active": p.active,
+            "mode": p.mode,
             "required": p.required,
             "inclusions": deepcopy(p.inclusions),
             "included_product_id": p.included_product_id,
@@ -83,6 +100,24 @@ def validate_graph(snapshot: dict) -> None:
         visit(key)
 
 
+def inclusion_targets(node: dict) -> set[str]:
+    edges = node.get("inclusions")
+    if edges is None:
+        target = node.get("included_product_id")
+        return {target} if target else set()
+    return {edge["product_id"] for edge in edges}
+
+
+def assert_inclusion_targets_available(graph: dict, product_id: str, previous_targets: set[str]) -> None:
+    """A disabled product cannot be newly bundled into a package (#1020) — a
+    target already present in `previous_targets` before this change is
+    grandfathered in, since it was valid when it was originally added."""
+    for target in inclusion_targets(graph[product_id]) - previous_targets:
+        target_node = graph.get(target)
+        if target_node is not None and target_node["mode"] == "disabled":
+            raise HTTPException(400, "A disabled product cannot be newly included in a package.")
+
+
 def resolve_booking(
     event: Event,
     requests: list[OrderItemRequest],
@@ -109,10 +144,18 @@ def resolve_booking(
     ordered: dict[str, int] = defaultdict(int)
     for req in requests:
         node = graph.get(req.product_id)
-        if node is None or (not current.get(req.product_id, {}).get("active") and req.product_id not in old_items):
+        # Only a "purchasable" product may be newly requested standalone —
+        # "included_visible"/"internal" products are only ever reachable
+        # through a package inclusion, and "disabled" is withdrawn from sale.
+        # A product already present in old_items (an existing booking being
+        # re-resolved after its mode changed) keeps its previously ordered
+        # quantity regardless of its current mode.
+        if node is None or (
+            current.get(req.product_id, {}).get("mode") != "purchasable" and req.product_id not in old_items
+        ):
             raise HTTPException(400, f"Product '{req.product_id}' is not available for this event.")
         ordered[req.product_id] += req.quantity
-    required = {key for key, node in current.items() if node["active"] and node["required"]}
+    required = {key for key, node in current.items() if node["mode"] == "purchasable" and node["required"]}
     if required and set(ordered) - required and not set(ordered) & required:
         raise HTTPException(400, "This event requires a required product before optional products can be ordered.")
 
@@ -131,13 +174,17 @@ def resolve_booking(
         edges = node.get("inclusions")
         if edges is None:
             # Preserve legacy bundle semantics for products not edited yet.
+            # Expansion happens regardless of the target's mode — a hidden
+            # (included_visible/internal) or disabled bundle target still
+            # receives its bundled quantity and reserves stock.
             target = node.get("included_product_id")
             per = node.get("included_per_guests")
-            if target and per and target in graph and graph[target]["active"]:
+            if target and per and target in graph:
                 qty = guest_count // per
                 if qty:
                     included[target] += qty
-                    visible_included[target] += qty
+                    if node_mode(graph[target]) in _VISITOR_VISIBLE_MODES:
+                        visible_included[target] += qty
                     expand(target, qty)
             return
         for edge in edges:
@@ -147,7 +194,7 @@ def resolve_booking(
             qty = (numerator + denominator - 1) // denominator if edge["rounding"] == "up" else numerator // denominator
             if qty:
                 included[target] += qty
-                if edge.get("visible", True):
+                if edge.get("visible", True) and node_mode(graph[target]) in _VISITOR_VISIBLE_MODES:
                     visible_included[target] += qty
                 if included[target] > 1000000:
                     raise HTTPException(400, "Expanded package quantity is too large.")
