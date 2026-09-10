@@ -23,7 +23,8 @@ from typing import Any
 
 import pytest
 from fastapi import HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.mcp.admin import payments as mcp_payments
@@ -214,6 +215,35 @@ async def test_deleting_a_booking_with_ledger_entries_is_rejected(client):
 
     r = await client.delete(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 409, r.text
+
+
+@pytest.mark.anyio
+async def test_append_only_trigger_rejects_direct_update_and_delete(client, db_session):
+    """The application never issues UPDATE/DELETE against payment_transactions,
+    but a PostgreSQL trigger rejects them too — a bug, a future migration, or a
+    direct psql session must not be able to rewrite ledger history."""
+    registration_id = await _registration(client, amount_due="10.00")
+    r = await client.post(
+        f"/api/registrations/{registration_id}/transactions",
+        json={"amount": "10.00", "effective_date": "2026-01-01"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    transaction_id = r.json()["id"]
+
+    with pytest.raises(DBAPIError, match="append-only"):
+        await db_session.execute(
+            text("UPDATE payment_transactions SET amount = 5.00 WHERE id = :id"),
+            {"id": transaction_id},
+        )
+    await db_session.rollback()
+
+    with pytest.raises(DBAPIError, match="append-only"):
+        await db_session.execute(
+            text("DELETE FROM payment_transactions WHERE id = :id"),
+            {"id": transaction_id},
+        )
+    await db_session.rollback()
 
 
 # ---------------------------------------------------------------------------
@@ -515,17 +545,25 @@ async def test_concurrent_first_use_of_same_idempotency_key_records_exactly_one_
     import app.services.payments_service as payments_service_module
 
     first_checked = asyncio.Event()
+    second_checked = asyncio.Event()
     release_first = asyncio.Event()
     original_check = payments_service_module.check_idempotency_key
-    paused = False
+    call_count = 0
 
     async def pause_first_check(*args, **kwargs):
-        nonlocal paused
+        nonlocal call_count
+        call_count += 1
+        this_call = call_count
         result = await original_check(*args, **kwargs)
-        if not paused:
-            paused = True
+        if this_call == 1:
             first_checked.set()
             await release_first.wait()
+        elif this_call == 2:
+            # Confirms the second task reached its own check while the first
+            # is still paused before it — i.e. a genuine race over the same
+            # not-yet-committed state, not a delayed second call that would
+            # just replay the first's already-committed result.
+            second_checked.set()
         return result
 
     monkeypatch.setattr(payments_service_module, "check_idempotency_key", pause_first_check)
@@ -549,7 +587,7 @@ async def test_concurrent_first_use_of_same_idempotency_key_records_exactly_one_
     first_task = asyncio.create_task(attempt())
     await asyncio.wait_for(first_checked.wait(), timeout=2)
     second_task = asyncio.create_task(attempt())
-    await asyncio.sleep(0.05)
+    await asyncio.wait_for(second_checked.wait(), timeout=2)
     release_first.set()
     outcomes = await asyncio.wait_for(asyncio.gather(first_task, second_task), timeout=2)
 

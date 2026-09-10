@@ -56,6 +56,12 @@ export function useRegistrationAdminMutations({
       void invalidateAdmin(queryClient, [
         registrationsQueryKey,
         queryKeys.admin.paymentTransactions(variables.registrationId),
+        // Prefix matches: refreshes every person's payment-summary/
+        // registrations view and every edition/person ledger drill-down,
+        // since this mutation doesn't know which person's totals changed
+        // without an extra registration lookup.
+        ["admin", "people"],
+        ["admin", "registrations", "transactions"],
       ]);
     },
     // A failed submission must surface the error so the caller can decide

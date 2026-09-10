@@ -233,7 +233,14 @@ a payment or refund — against a booking. There is no `kind` field: a
 positive amount is a payment, a negative one is a refund, and that sign is
 the only distinction stored. A refund never rewrites a prior entry; it's a
 new row, optionally linked via `reversed_transaction_id` to the entry it
-reverses. Every append recomputes
+reverses. A PostgreSQL trigger (`payment_transactions_append_only`,
+`app.payment_ledger_schema`) rejects UPDATE/DELETE against the table
+unconditionally — the append-only contract holds even against a bug, a
+future migration, or a direct psql session, not just against
+`payments_service`'s own code path. The one bypass is `SET LOCAL
+champagnefestival.allow_ledger_mutation = 'on'`, scoped to one transaction,
+for administrative full-table resets (the test suite's between-test
+cleanup) rather than a second database role. Every append recomputes
 and stores `Registration.amount_paid`/`payment_status` from the ledger's sum
 (`app.services.payments_service.sync_registration_payment_fields`), which also
 runs whenever `amount_due` changes, so those two columns — and everything that

@@ -493,8 +493,36 @@ def upgrade() -> None:
     )
     op.create_index("ix_payment_transactions_registration_id", "payment_transactions", ["registration_id"])
 
+    # Enforce append-only at the database level too, not just in
+    # payments_service: a bug, a future migration, or a direct psql session
+    # must not be able to edit or delete ledger history. A correction is a
+    # new payment/refund row, never an edit to an existing one. The one
+    # legitimate exception — wiping tables entirely for a full data reset,
+    # with no second database role to route through — opts out one
+    # transaction at a time via `SET LOCAL champagnefestival.allow_ledger_mutation = 'on'`.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION reject_payment_transaction_mutation() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+            IF current_setting('champagnefestival.allow_ledger_mutation', true) = 'on' THEN
+                RETURN COALESCE(NEW, OLD);
+            END IF;
+            RAISE EXCEPTION
+                'payment_transactions is append-only: % is not permitted (insert a correcting payment/refund row instead)',
+                TG_OP;
+        END;
+        $$;
+    """)
+    op.execute("""
+        CREATE TRIGGER payment_transactions_append_only
+        BEFORE UPDATE OR DELETE ON payment_transactions
+        FOR EACH ROW EXECUTE FUNCTION reject_payment_transaction_mutation()
+    """)
+
 
 def downgrade() -> None:
+    op.execute("DROP TRIGGER IF EXISTS payment_transactions_append_only ON payment_transactions")
+    op.execute("DROP FUNCTION IF EXISTS reject_payment_transaction_mutation()")
     op.drop_index("ix_payment_transactions_registration_id", table_name="payment_transactions")
     op.drop_table("payment_transactions")
     op.drop_column("products", "description")

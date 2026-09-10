@@ -571,6 +571,23 @@ export default function RegistrationList({
     [onIssueStrap, processingIds],
   );
 
+  const handleRecordPayment = useCallback(
+    async (id: string) => {
+      if (processingIds.has(id)) return;
+      setProcessingIds((prev) => new Set(prev).add(id));
+      try {
+        await onRecordPayment(id);
+      } finally {
+        setProcessingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+      }
+    },
+    [onRecordPayment, processingIds],
+  );
+
   const dataColumns = useMemo(
     () =>
       columnHelper.columns([
@@ -776,7 +793,10 @@ export default function RegistrationList({
                         </Dropdown.Item>
                       )}
                       {reg.paymentStatus !== "paid" && (
-                        <Dropdown.Item onClick={() => onRecordPayment(reg.id)}>
+                        <Dropdown.Item
+                          disabled={processingIds.has(reg.id)}
+                          onClick={() => void handleRecordPayment(reg.id)}
+                        >
                           <i className="bi bi-currency-euro me-2" aria-hidden="true" />
                           {m.admin_action_mark_paid()}
                         </Dropdown.Item>
@@ -796,9 +816,9 @@ export default function RegistrationList({
       handleAssignTable,
       onViewDetail,
       onUpdateStatus,
-      onRecordPayment,
       handleCheckIn,
       handleIssueStrap,
+      handleRecordPayment,
       processingIds,
     ],
   );

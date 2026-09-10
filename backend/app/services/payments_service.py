@@ -49,11 +49,15 @@ PAYMENT_TRANSACTION_SCOPE = "payments.record_transaction"
 def derive_payment_status(net_paid: Decimal, amount_due: Decimal | None) -> str:
     """Mirror the pre-ledger status rule that lived in ``apply_registration_update``:
     paid once ``net_paid`` reaches ``amount_due`` (a null due counts as zero),
-    partial once something has been paid short of that, else unpaid."""
+    partial once something has been paid short of that, else unpaid. A
+    refund can drive ``net_paid`` negative; that's still "unpaid", not
+    "partial" — a negative Decimal is truthy, so this must check the sign
+    rather than truthiness.
+    """
     due = amount_due or Decimal(0)
     if net_paid >= due:
         return "paid"
-    if net_paid:
+    if net_paid > 0:
         return "partial"
     return "unpaid"
 
@@ -260,8 +264,13 @@ async def record_payment_transaction(
     # transactions committing around the same time could each compute
     # net_paid from a sum that doesn't yet see the other's (uncommitted)
     # insert, leaving amount_paid/payment_status reflecting only one of the
-    # two appended entries instead of both.
+    # two appended entries instead of both. Refreshing afterwards guards a
+    # second race: if amount_due changed (and committed) on this booking
+    # between when the caller loaded `registration` and this lock being
+    # granted, sync_registration_payment_fields below must derive
+    # payment_status from that current value, not the caller's stale copy.
     await db.execute(select(Registration.id).where(Registration.id == registration.id).with_for_update())
+    await db.refresh(registration, attribute_names=["amount_due"])
 
     transaction = PaymentTransaction(
         id=make_id("paytxn"),

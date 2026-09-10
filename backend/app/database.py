@@ -13,6 +13,7 @@ from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
 from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
+from app.payment_ledger_schema import PAYMENT_LEDGER_SCHEMA_STATEMENTS
 
 logger = logging.getLogger(__name__)
 
@@ -44,4 +45,6 @@ async def create_tables() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         for statement in OPERATIONAL_SEARCH_SCHEMA_STATEMENTS:
+            await conn.execute(text(statement))
+        for statement in PAYMENT_LEDGER_SCHEMA_STATEMENTS:
             await conn.execute(text(statement))

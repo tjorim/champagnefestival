@@ -16,6 +16,7 @@ from app.auth import get_current_claims, require_admin, require_volunteer
 from app.database import Base, get_db
 from app.main import app
 from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
+from app.payment_ledger_schema import PAYMENT_LEDGER_SCHEMA_STATEMENTS
 from app.services.public_render_cache import public_render_cache
 from app.services.users_service import get_or_create_user
 from app.visitor_session import get_current_user
@@ -95,6 +96,8 @@ async def engine():
         await conn.run_sync(Base.metadata.create_all)
         for statement in OPERATIONAL_SEARCH_SCHEMA_STATEMENTS:
             await conn.execute(text(statement))
+        for statement in PAYMENT_LEDGER_SCHEMA_STATEMENTS:
+            await conn.execute(text(statement))
     yield _engine
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -136,6 +139,10 @@ async def db_session(engine):
     async with factory() as session:
         yield session
     async with engine.begin() as conn:
+        # Opt this transaction out of the payment_transactions append-only
+        # trigger (#1019) — this blanket between-test cleanup is exactly the
+        # administrative exception that trigger's bypass exists for.
+        await conn.execute(text("SET LOCAL champagnefestival.allow_ledger_mutation = 'on'"))
         for table in reversed(Base.metadata.sorted_tables):
             await conn.execute(table.delete())
 

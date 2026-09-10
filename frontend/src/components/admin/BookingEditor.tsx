@@ -16,11 +16,8 @@ import type {
 import { fetchPaymentTransactions } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
+import { toLocalDateKey } from "@/utils/dateUtils";
 import { m } from "@/paraglide/messages";
-
-function todayDateInputValue(): string {
-  return new Date().toISOString().slice(0, 10);
-}
 
 export default function BookingEditor({
   registration,
@@ -94,7 +91,7 @@ export default function BookingEditor({
   const [showLedger, setShowLedger] = useState(false);
 
   const [transactionAmount, setTransactionAmount] = useState("");
-  const [transactionDate, setTransactionDate] = useState(todayDateInputValue());
+  const [transactionDate, setTransactionDate] = useState(toLocalDateKey(new Date()));
   const [transactionReference, setTransactionReference] = useState("");
   const [transactionNote, setTransactionNote] = useState("");
   const [transactionPending, setTransactionPending] = useState(false);
@@ -390,6 +387,7 @@ export default function BookingEditor({
                   <Form.Control
                     size="sm"
                     type="date"
+                    required
                     aria-label={m.admin_payment_transaction_date()}
                     value={transactionDate}
                     onChange={(event) => setTransactionDate(event.target.value)}
@@ -421,7 +419,9 @@ export default function BookingEditor({
                 </Form.Group>
                 <Button
                   size="sm"
-                  disabled={transactionPending || transactionAmountInvalid}
+                  disabled={
+                    transactionPending || transactionAmountInvalid || transactionDate === ""
+                  }
                   onClick={async () => {
                     setTransactionPending(true);
                     setTransactionError("");

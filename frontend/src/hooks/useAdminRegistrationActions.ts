@@ -12,6 +12,7 @@ import type {
 import { apiToPaymentTransaction, apiToRegistration } from "@/types/registrationMapper";
 import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
+import { toLocalDateKey } from "@/utils/dateUtils";
 import { devError } from "@/utils/devLog";
 
 interface UseAdminRegistrationActionsOptions {
@@ -161,8 +162,9 @@ export function useAdminRegistrationActions({
 
   const handleAddTransaction = useCallback(
     async (registrationId: string, payload: PaymentTransactionCreate) => {
+      let transaction;
       try {
-        const transaction = apiToPaymentTransaction(
+        transaction = apiToPaymentTransaction(
           await createPaymentTransactionMutation.mutateAsync({
             registrationId,
             payload: {
@@ -178,9 +180,18 @@ export function useAdminRegistrationActions({
             fallbackMessage: m.admin_error_record_payment(),
           }),
         );
-        // The endpoint returns the new ledger entry, not the registration —
-        // refetch so amountPaid/paymentStatus/refundDue (derived server-side
-        // from the ledger, #1019) reflect this append everywhere it's shown.
+      } catch (err) {
+        devError("Failed to record payment transaction", err);
+        setRegistrationError(err instanceof Error ? err.message : m.admin_error_record_payment());
+        throw err;
+      }
+
+      // The transaction is recorded at this point — a failure below is a
+      // refresh problem, not a payment problem, and must not surface as one:
+      // the caller clears its form and stops offering a retry only on a
+      // clean return, and a retry after a thrown error reuses a fresh
+      // idempotency key, which would record this same payment a second time.
+      try {
         const data = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
           `/api/registrations/${registrationId}`,
           { headers: authHeaders() },
@@ -193,12 +204,11 @@ export function useAdminRegistrationActions({
           ),
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
-        return transaction;
       } catch (err) {
-        devError("Failed to record payment transaction", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_record_payment());
-        throw err;
+        devError("Payment recorded, but failed to refresh the registration", err);
+        setRegistrationError(m.admin_error_load_data());
       }
+      return transaction;
     },
     [
       authHeaders,
@@ -222,7 +232,7 @@ export function useAdminRegistrationActions({
       if (outstanding <= 0) return;
       await handleAddTransaction(id, {
         amount: outstanding,
-        effectiveDate: new Date().toISOString().slice(0, 10),
+        effectiveDate: toLocalDateKey(new Date()),
         idempotencyKey: crypto.randomUUID(),
       });
     },
