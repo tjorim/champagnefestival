@@ -231,9 +231,15 @@ describe("EventProductsModal", () => {
 
     const nameField = screen.getByLabelText("admin_products_name") as HTMLInputElement;
     expect(nameField.value).toBe("Champagne Bottle");
-    // The form sits inside the same row as the product it edits.
+    // The form sits inside the same row as the product it edits — after
+    // Champagne Bottle's own text, but before the next row (Cheese Platter),
+    // not pinned below the whole list.
     expect(
       screen.getByText("Champagne Bottle").compareDocumentPosition(nameField) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      nameField.compareDocumentPosition(screen.getByText("Cheese Platter")) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
