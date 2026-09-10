@@ -174,6 +174,20 @@ class PersonAdminSummaryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PersonPaymentSummary(BaseModel):
+    """Received/refunded/net paid/due/outstanding/refund-liability across one
+    person's non-cancelled bookings (#1019) — traceable to their payment
+    ledger entries, the person-level counterpart to ``EditionAttendanceStats``.
+    """
+
+    received: Decimal
+    refunded: Decimal
+    net_paid: Decimal
+    due: Decimal
+    outstanding: Decimal
+    refund_liability: Decimal
+
+
 class PersonListEnvelope(BaseModel):
     """Paginated response for the admin people/members lists.
 

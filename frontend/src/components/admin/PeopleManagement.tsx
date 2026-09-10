@@ -17,8 +17,12 @@ import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 import { queryKeys } from "@/utils/queryKeys";
-import { fetchAdminPersonRegistrations } from "@/utils/adminRegistrationApi";
-import { fetchPeopleSearch } from "@/utils/adminFetch";
+import {
+  fetchAdminPersonRegistrations,
+  fetchPersonPaymentSummary,
+} from "@/utils/adminRegistrationApi";
+import { fetchPeopleSearch, downloadPaymentTransactionsCsv } from "@/utils/adminFetch";
+import { devError } from "@/utils/devLog";
 import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
 import { AdminTablePagination } from "./AdminTablePagination";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
@@ -94,6 +98,8 @@ export default function PeopleManagement({
   const [copySuccess, setCopySuccess] = useState(false);
   const [viewRegistrationsPerson, setViewRegistrationsPerson] = useState<Person | null>(null);
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
+  const [exportingLedger, setExportingLedger] = useState(false);
+  const [ledgerExportError, setLedgerExportError] = useState("");
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
@@ -203,6 +209,7 @@ export default function PeopleManagement({
 
   const closePersonRegistrations = useCallback(() => {
     setViewRegistrationsPerson(null);
+    setLedgerExportError("");
   }, []);
 
   const personRegistrationsQuery = useQuery({
@@ -217,6 +224,32 @@ export default function PeopleManagement({
   const personRegistrations = personRegistrationsQuery.data ?? [];
   const loadingPersonRegistrations = personRegistrationsQuery.isPending;
   const personRegistrationsError = personRegistrationsQuery.isError;
+
+  const personPaymentSummaryQuery = useQuery({
+    queryKey: queryKeys.admin.peoplePaymentSummary(viewRegistrationsPerson?.id ?? ""),
+    queryFn: ({ signal }) =>
+      fetchPersonPaymentSummary(viewRegistrationsPerson!.id, authHeaders, signal),
+    enabled: viewRegistrationsPerson !== null,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
+  const personPaymentSummary = personPaymentSummaryQuery.data ?? null;
+
+  const handleExportLedger = useCallback(async () => {
+    if (!viewRegistrationsPerson) return;
+    setLedgerExportError("");
+    setExportingLedger(true);
+    try {
+      await downloadPaymentTransactionsCsv(authHeaders, { personId: viewRegistrationsPerson.id });
+    } catch (err) {
+      devError("Failed to export payment ledger", err);
+      setLedgerExportError(
+        err instanceof Error ? err.message : m.admin_people_export_ledger_error(),
+      );
+    } finally {
+      setExportingLedger(false);
+    }
+  }, [authHeaders, viewRegistrationsPerson]);
   const personPaymentTotals = useMemo(() => {
     const nonCancelled = (personRegistrationsQuery.data ?? []).filter(
       (r) => r.status !== "cancelled",
@@ -823,6 +856,20 @@ export default function PeopleManagement({
                       amount: personPaymentTotals.outstandingTotal.toFixed(2),
                     })}
                   </div>
+                  {personPaymentSummary && (
+                    <>
+                      <div>
+                        {m.admin_people_total_received({
+                          amount: personPaymentSummary.received.toFixed(2),
+                        })}
+                      </div>
+                      <div>
+                        {m.admin_people_total_refunded({
+                          amount: personPaymentSummary.refunded.toFixed(2),
+                        })}
+                      </div>
+                    </>
+                  )}
                   {personPaymentTotals.byEdition.length > 1 &&
                     personPaymentTotals.byEdition.map((edition) => (
                       <div key={edition.label} className="ms-2">
@@ -893,10 +940,31 @@ export default function PeopleManagement({
                 </ListGroup>
               )}
           </Modal.Body>
-          <Modal.Footer className="bg-dark border-secondary">
-            <Button variant="outline-secondary" size="sm" onClick={closePersonRegistrations}>
-              {m.close()}
-            </Button>
+          <Modal.Footer className="bg-dark border-secondary flex-column align-items-stretch">
+            {ledgerExportError && (
+              <Alert role="alert" aria-live="assertive" variant="danger" className="py-2 mb-2">
+                {ledgerExportError}
+              </Alert>
+            )}
+            <div className="d-flex justify-content-between gap-2">
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                disabled={exportingLedger || personRegistrations.length === 0}
+                onClick={() => void handleExportLedger()}
+                title={m.admin_people_export_ledger()}
+              >
+                {exportingLedger ? (
+                  <Spinner as="span" animation="border" size="sm" className="me-1" />
+                ) : (
+                  <i className="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true" />
+                )}
+                {m.admin_people_export_ledger()}
+              </Button>
+              <Button variant="outline-secondary" size="sm" onClick={closePersonRegistrations}>
+                {m.close()}
+              </Button>
+            </div>
           </Modal.Footer>
         </Modal>
       )}

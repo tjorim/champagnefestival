@@ -92,6 +92,58 @@ async def list_transactions(db: AsyncSession, registration_id: str) -> list[Paym
     return list(result.scalars().all())
 
 
+async def person_payment_summary(db: AsyncSession, person_id: str) -> dict:
+    """Received/refunded/net paid/due/outstanding/refund-liability across one
+    person's non-cancelled bookings — the person-level counterpart to the
+    edition stats endpoint's aggregation (#1019). Every figure is traceable
+    to ledger entries: received/refunded come from summing
+    ``PaymentTransaction`` rows by kind, and due/outstanding/refund-liability
+    from the ``amount_due``/``amount_paid`` columns that
+    ``sync_registration_payment_fields`` keeps derived from the same ledger.
+    """
+    totals_stmt = select(
+        func.coalesce(func.sum(Registration.amount_paid), 0).label("net_paid"),
+        func.coalesce(func.sum(Registration.amount_due), 0).label("due"),
+        # Per-booking max()s: a partly-paid booking's shortfall and an
+        # overpaid one's excess can't both cancel out in a single group SUM,
+        # so each is clamped with GREATEST(..., 0) before being summed —
+        # mirrors the edition stats query in app.routers.editions.
+        func.coalesce(
+            func.sum(func.greatest(func.coalesce(Registration.amount_due, 0) - Registration.amount_paid, 0)),
+            0,
+        ).label("outstanding"),
+        func.coalesce(
+            func.sum(func.greatest(Registration.amount_paid - func.coalesce(Registration.amount_due, 0), 0)),
+            0,
+        ).label("refund_liability"),
+    ).where(Registration.person_id == person_id, Registration.status != "cancelled")
+    totals = (await db.execute(totals_stmt)).one()
+
+    txn_stmt = (
+        select(
+            func.coalesce(func.sum(PaymentTransaction.amount).filter(PaymentTransaction.kind == "payment"), 0).label(
+                "received"
+            ),
+            func.coalesce(
+                func.sum(PaymentTransaction.amount).filter(PaymentTransaction.kind == "refund") * -1, 0
+            ).label("refunded"),
+        )
+        .select_from(PaymentTransaction)
+        .join(Registration, Registration.id == PaymentTransaction.registration_id)
+        .where(Registration.person_id == person_id, Registration.status != "cancelled")
+    )
+    txn_totals = (await db.execute(txn_stmt)).one()
+
+    return {
+        "received": txn_totals.received,
+        "refunded": txn_totals.refunded,
+        "net_paid": totals.net_paid,
+        "due": totals.due,
+        "outstanding": totals.outstanding,
+        "refund_liability": totals.refund_liability,
+    }
+
+
 def payment_transaction_to_dict(t: PaymentTransaction) -> dict:
     return {
         "id": t.id,

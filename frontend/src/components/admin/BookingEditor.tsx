@@ -109,6 +109,7 @@ export default function BookingEditor({
   const [transactionDate, setTransactionDate] = useState(todayDateInputValue());
   const [transactionReference, setTransactionReference] = useState("");
   const [transactionNote, setTransactionNote] = useState("");
+  const [transactionReversedId, setTransactionReversedId] = useState("");
   const [transactionPending, setTransactionPending] = useState(false);
   const [transactionError, setTransactionError] = useState("");
 
@@ -390,9 +391,11 @@ export default function BookingEditor({
                     size="sm"
                     aria-label={m.admin_payment_reason_label()}
                     value={transactionKind}
-                    onChange={(event) =>
-                      setTransactionKind(event.target.value as PaymentTransactionKind)
-                    }
+                    onChange={(event) => {
+                      const kind = event.target.value as PaymentTransactionKind;
+                      setTransactionKind(kind);
+                      if (kind === "payment") setTransactionReversedId("");
+                    }}
                   >
                     <option value="payment">{m.admin_payment_reason_payment()}</option>
                     <option value="refund">{m.admin_payment_reason_refund()}</option>
@@ -412,6 +415,28 @@ export default function BookingEditor({
                     onChange={(event) => setTransactionAmount(event.target.value)}
                   />
                 </Form.Group>
+                {transactionKind !== "payment" && (
+                  <Form.Group>
+                    <Form.Label className="small mb-1">
+                      {m.admin_payment_reversal_label()}
+                    </Form.Label>
+                    <Form.Select
+                      size="sm"
+                      style={{ maxWidth: "12rem" }}
+                      aria-label={m.admin_payment_reversal_label()}
+                      value={transactionReversedId}
+                      onChange={(event) => setTransactionReversedId(event.target.value)}
+                    >
+                      <option value="">{m.admin_payment_reversal_none()}</option>
+                      {(ledgerQuery.data ?? []).map((entry) => (
+                        <option key={entry.id} value={entry.id}>
+                          {transactionKindLabel(entry.kind)} {entry.amount >= 0 ? "+" : ""}€
+                          {entry.amount.toFixed(2)} · {entry.effectiveDate}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  </Form.Group>
+                )}
                 <Form.Group>
                   <Form.Label className="small mb-1">
                     {m.admin_payment_transaction_date()}
@@ -463,11 +488,13 @@ export default function BookingEditor({
                         effectiveDate: transactionDate,
                         reference: transactionReference.trim() || undefined,
                         note: transactionNote.trim() || undefined,
+                        reversedTransactionId: transactionReversedId || undefined,
                         idempotencyKey: crypto.randomUUID(),
                       });
                       setTransactionAmount("");
                       setTransactionReference("");
                       setTransactionNote("");
+                      setTransactionReversedId("");
                     } catch (err) {
                       setTransactionError(
                         err instanceof Error ? err.message : m.admin_error_record_payment(),

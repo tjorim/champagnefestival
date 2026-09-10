@@ -442,3 +442,20 @@ export async function downloadVolunteersCsv(
     "volunteers-insurance-list.csv",
   );
 }
+
+/** Export the payment ledger, filtered by edition and/or person (#1019). */
+export async function downloadPaymentTransactionsCsv(
+  authHeaders: () => Record<string, string>,
+  filters: { editionId?: string; personId?: string },
+): Promise<void> {
+  const params = new URLSearchParams();
+  if (filters.editionId) params.set("edition_id", filters.editionId);
+  if (filters.personId) params.set("person_id", filters.personId);
+  const query = params.toString();
+  await downloadFileOrThrow(
+    `/api/registrations/transactions/export${query ? `?${query}` : ""}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    "payment-transactions.csv",
+  );
+}

@@ -50,7 +50,7 @@ def _normalize(value: Any) -> Any:
 _edition_counter = 0
 
 
-async def _registration(client, *, amount_due: str | None = None) -> str:
+async def _registration(client, *, amount_due: str | None = None, person_id: str | None = None) -> str:
     global _edition_counter
     _edition_counter += 1
     edition_id = f"ledger-2026-{_edition_counter}"
@@ -87,8 +87,9 @@ async def _registration(client, *, amount_due: str | None = None) -> str:
     assert r.status_code == 201, r.text
     event_id = r.json()["id"]
 
-    r = await client.post("/api/people", json={"name": "Ledger Guest"}, headers=ADMIN_HEADERS)
-    person_id = r.json()["id"]
+    if person_id is None:
+        r = await client.post("/api/people", json={"name": "Ledger Guest"}, headers=ADMIN_HEADERS)
+        person_id = r.json()["id"]
     r = await client.post(
         "/api/registrations/admin",
         json={"person_id": person_id, "event_id": event_id, "guest_count": 1},
@@ -253,6 +254,99 @@ async def test_export_prefixes_formula_injection_reference_and_filters_by_editio
     )
     assert r.status_code == 200
     assert "cmd" not in r.text
+
+
+# ---------------------------------------------------------------------------
+# Person-level payment summary and export filter (#1019)
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_person_payment_summary_aggregates_across_bookings_and_excludes_cancelled(client):
+    r = await client.post("/api/people", json={"name": "Summary Person"}, headers=ADMIN_HEADERS)
+    person_id = r.json()["id"]
+
+    reg1 = await _registration(client, amount_due="100.00", person_id=person_id)
+    reg2 = await _registration(client, amount_due="50.00", person_id=person_id)
+    cancelled_reg = await _registration(client, amount_due="200.00", person_id=person_id)
+
+    r = await client.post(
+        f"/api/registrations/{reg1}/transactions",
+        json={"kind": "payment", "amount": "100.00", "effective_date": "2026-01-01"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+
+    r = await client.post(
+        f"/api/registrations/{reg2}/transactions",
+        json={"kind": "payment", "amount": "60.00", "effective_date": "2026-01-02"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    r = await client.post(
+        f"/api/registrations/{reg2}/transactions",
+        json={"kind": "refund", "amount": "-10.00", "effective_date": "2026-01-03"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+
+    # Fully paid on a booking that's since been cancelled: excluded from the
+    # summary entirely, matching the edition stats' non-cancelled filter.
+    r = await client.post(
+        f"/api/registrations/{cancelled_reg}/transactions",
+        json={"kind": "payment", "amount": "200.00", "effective_date": "2026-01-04"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    r = await client.put(
+        f"/api/registrations/{cancelled_reg}",
+        json={"status": "cancelled"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+
+    r = await client.get(f"/api/people/{person_id}/payment-summary", headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    summary = r.json()
+
+    # reg1: paid 100 on a 100 due (exact). reg2: paid 60, refunded 10 -> net
+    # 50 on a 50 due (also exact, since the refund brought it back down).
+    assert Decimal(summary["received"]) == Decimal("160.00")
+    assert Decimal(summary["refunded"]) == Decimal("10.00")
+    assert Decimal(summary["net_paid"]) == Decimal("150.00")
+    assert Decimal(summary["due"]) == Decimal("150.00")
+    assert Decimal(summary["outstanding"]) == Decimal("0.00")
+    assert Decimal(summary["refund_liability"]) == Decimal("0.00")
+
+
+@pytest.mark.anyio
+async def test_export_filters_by_person_id(client):
+    r = await client.post("/api/people", json={"name": "Export Filter Person"}, headers=ADMIN_HEADERS)
+    person_id = r.json()["id"]
+    own_registration_id = await _registration(client, amount_due="10.00", person_id=person_id)
+    other_registration_id = await _registration(client, amount_due="10.00")
+
+    r = await client.post(
+        f"/api/registrations/{own_registration_id}/transactions",
+        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01", "reference": "OWN-REF"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    r = await client.post(
+        f"/api/registrations/{other_registration_id}/transactions",
+        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01", "reference": "OTHER-REF"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+
+    r = await client.get(
+        "/api/registrations/transactions/export",
+        params={"person_id": person_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200
+    assert "OWN-REF" in r.text
+    assert "OTHER-REF" not in r.text
 
 
 # ---------------------------------------------------------------------------

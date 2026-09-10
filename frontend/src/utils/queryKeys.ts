@@ -64,6 +64,9 @@ export const queryKeys = {
     itemModalPeople: (query: string) => ["admin", "item-modal", "people", query] as const,
     peopleRegistrations: (personId: string) =>
       ["admin", "people", personId, "registrations"] as const,
+    /** One person's ledger-derived received/refunded totals (#1019). */
+    peoplePaymentSummary: (personId: string) =>
+      ["admin", "people", personId, "payment-summary"] as const,
     /** One booking's payment ledger (#1019); nested under `registrations` so
      * list-level invalidation also refreshes any open ledger view. */
     paymentTransactions: (registrationId: string) =>

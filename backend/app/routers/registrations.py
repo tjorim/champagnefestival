@@ -372,6 +372,7 @@ async def export_registrations_csv(
 async def export_payment_transactions_csv(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None, description="Filter by edition ID"),
+    person_id: str | None = Query(default=None, description="Filter by person ID"),
     effective_date_from: date | None = Query(
         default=None, description="Filter by effective (bank-transfer) date, inclusive"
     ),
@@ -379,7 +380,7 @@ async def export_payment_transactions_csv(
         default=None, description="Filter by effective (bank-transfer) date, inclusive"
     ),
 ) -> StreamingResponse:
-    """Export ledger entries as CSV, filtered by edition and effective-date range (#1019).
+    """Export ledger entries as CSV, filtered by edition, person, and effective-date range (#1019).
 
     ``effective_date`` is when the money actually moved (e.g. a bank
     transfer), which can differ from the booking's event date — both are
@@ -395,6 +396,8 @@ async def export_payment_transactions_csv(
     )
     if edition_id:
         stmt = stmt.where(Event.edition_id == edition_id)
+    if person_id:
+        stmt = stmt.where(Registration.person_id == person_id)
     if effective_date_from:
         stmt = stmt.where(PaymentTransaction.effective_date >= effective_date_from)
     if effective_date_to:

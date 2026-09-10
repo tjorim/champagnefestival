@@ -6,14 +6,14 @@
  * A table view of the same data is always available alongside it.
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
-import { fetchEditionStats } from "@/utils/adminFetch";
+import { downloadPaymentTransactionsCsv, fetchEditionStats } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { devError } from "@/utils/devLog";
 import "./analyticsDashboard.css";
@@ -40,6 +40,26 @@ function niceCeiling(max: number): number {
 export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardProps) {
   const [showTable, setShowTable] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [exportingEditionId, setExportingEditionId] = useState<string | null>(null);
+  const [ledgerExportError, setLedgerExportError] = useState("");
+
+  const handleExportLedger = useCallback(
+    async (editionId: string) => {
+      setLedgerExportError("");
+      setExportingEditionId(editionId);
+      try {
+        await downloadPaymentTransactionsCsv(authHeaders, { editionId });
+      } catch (err) {
+        devError("Failed to export payment ledger", err);
+        setLedgerExportError(
+          err instanceof Error ? err.message : m.admin_analytics_export_ledger_error(),
+        );
+      } finally {
+        setExportingEditionId(null);
+      }
+    },
+    [authHeaders],
+  );
 
   const statsQuery = useQuery({
     queryKey: queryKeys.admin.editionStats,
@@ -82,6 +102,12 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         </Alert>
       )}
 
+      {ledgerExportError && (
+        <Alert role="alert" aria-live="assertive" variant="danger" className="mb-3">
+          {ledgerExportError}
+        </Alert>
+      )}
+
       {statsQuery.isPending ? (
         <div className="text-center py-5">
           <Spinner animation="border" variant="primary" role="status">
@@ -107,6 +133,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
               <th scope="col">{m.admin_analytics_column_total_refunded()}</th>
               <th scope="col">{m.admin_analytics_column_total_outstanding()}</th>
               <th scope="col">{m.admin_analytics_column_total_refund_liability()}</th>
+              <th scope="col">{m.admin_actions_label()}</th>
             </tr>
           </thead>
           <tbody>
@@ -130,6 +157,25 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                 <td>€{edition.totalRefunded.toFixed(2)}</td>
                 <td>€{edition.totalOutstanding.toFixed(2)}</td>
                 <td>€{edition.totalRefundLiability.toFixed(2)}</td>
+                <td>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    className="py-0 px-1"
+                    disabled={exportingEditionId === edition.editionId}
+                    onClick={() => void handleExportLedger(edition.editionId)}
+                    title={m.admin_analytics_export_ledger()}
+                    aria-label={m.admin_analytics_export_ledger_for({
+                      edition: `${edition.year} ${edition.month}`,
+                    })}
+                  >
+                    {exportingEditionId === edition.editionId ? (
+                      <Spinner as="span" animation="border" size="sm" />
+                    ) : (
+                      <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" />
+                    )}
+                  </Button>
+                </td>
               </tr>
             ))}
           </tbody>
