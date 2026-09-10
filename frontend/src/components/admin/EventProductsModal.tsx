@@ -249,11 +249,259 @@ export default function EventProductsModal({
     }
   }
 
+  function renderForm() {
+    return (
+      <Form onSubmit={handleSubmit} noValidate className="border-top border-secondary pt-3 mt-2">
+        <div className="d-flex gap-2 flex-wrap mb-2">
+          <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }} controlId="product-name">
+            <Form.Label className="text-secondary small mb-1">{m.admin_products_name()}</Form.Label>
+            <Form.Control
+              size="sm"
+              className="bg-dark text-light border-secondary"
+              autoFocus
+              value={form.name}
+              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+            />
+          </Form.Group>
+          <Form.Group
+            style={{ minWidth: "200px", flex: "2 1 200px" }}
+            controlId="product-description"
+          >
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_products_description()}
+            </Form.Label>
+            <Form.Control
+              size="sm"
+              className="bg-dark text-light border-secondary"
+              maxLength={300}
+              value={form.description}
+              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+            />
+          </Form.Group>
+          <Form.Group style={{ maxWidth: "120px" }} controlId="product-price">
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_products_price()}
+            </Form.Label>
+            <Form.Control
+              type="number"
+              min={0}
+              step="0.01"
+              size="sm"
+              className="bg-dark text-light border-secondary"
+              value={form.price}
+              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
+            />
+          </Form.Group>
+          <Form.Group style={{ maxWidth: "160px" }} controlId="product-category">
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_products_category()}
+            </Form.Label>
+            <Form.Select
+              size="sm"
+              className="bg-dark text-light border-secondary"
+              value={form.category}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, category: e.target.value as OrderItemCategory }))
+              }
+            >
+              <option value="champagne">{m.admin_products_category_champagne()}</option>
+              <option value="food">{m.admin_products_category_food()}</option>
+              <option value="other">{m.admin_products_category_other()}</option>
+            </Form.Select>
+          </Form.Group>
+        </div>
+
+        <Form.Check
+          type="checkbox"
+          id="product-purchasable"
+          className="mb-1"
+          label={m.admin_products_purchasable_label()}
+          checked={form.purchasable}
+          onChange={(e) => {
+            const purchasable = e.target.checked;
+            setForm((f) => ({ ...f, purchasable, required: purchasable ? f.required : false }));
+          }}
+        />
+        <div className="text-secondary small mb-2">{m.admin_products_purchasable_help()}</div>
+
+        <Form.Check
+          type="checkbox"
+          id="product-required"
+          className="mb-2"
+          label={m.admin_products_required_label()}
+          checked={form.required}
+          disabled={!form.purchasable}
+          onChange={(e) => setForm((f) => ({ ...f, required: e.target.checked }))}
+        />
+        <div className="text-secondary small mb-2">
+          {form.purchasable
+            ? m.admin_products_required_help()
+            : m.admin_products_required_needs_purchasable()}
+        </div>
+
+        <Form.Group controlId="product-unit" className="mb-2">
+          <Form.Label>{m.admin_inventory_unit()}</Form.Label>
+          <Form.Select
+            value={form.unit}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, unit: e.target.value as ProductFormState["unit"] }))
+            }
+          >
+            <option value="item">{m.admin_inventory_unit_item()}</option>
+            <option value="person">{m.admin_inventory_unit_person()}</option>
+            <option value="table">{m.admin_inventory_unit_table()}</option>
+          </Form.Select>
+        </Form.Group>
+        <Form.Group controlId="product-stock" className="mb-2">
+          <Form.Label>{m.admin_inventory_stock()}</Form.Label>
+          <Form.Control
+            type="number"
+            min={0}
+            step={1}
+            value={form.stock}
+            onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+          />
+          <Form.Text>{m.admin_inventory_unlimited_help()}</Form.Text>
+        </Form.Group>
+        <fieldset className="mb-3">
+          <legend className="h6">{m.admin_inventory_inclusions()}</legend>
+          {form.inclusions.map((edge, index) => (
+            <div className="d-flex flex-wrap gap-2 mb-2" key={index}>
+              <Form.Select
+                aria-label={m.admin_products_bundle_target()}
+                value={edge.product_id}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    inclusions: f.inclusions.map((x, i) =>
+                      i === index ? { ...x, product_id: e.target.value } : x,
+                    ),
+                  }))
+                }
+              >
+                <option value="">{m.admin_products_bundle_none()}</option>
+                {bundleCandidates.map((p) => (
+                  <option value={p.id} key={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </Form.Select>
+              <Form.Control
+                type="number"
+                min={1}
+                step={1}
+                aria-label={m.admin_inventory_included_quantity()}
+                value={edge.quantity}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    inclusions: f.inclusions.map((x, i) =>
+                      i === index ? { ...x, quantity: Number(e.target.value) } : x,
+                    ),
+                  }))
+                }
+              />
+              <Form.Control
+                type="number"
+                min={1}
+                step={1}
+                aria-label={m.admin_inventory_per_quantity()}
+                value={edge.per_quantity}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    inclusions: f.inclusions.map((x, i) =>
+                      i === index ? { ...x, per_quantity: Number(e.target.value) } : x,
+                    ),
+                  }))
+                }
+              />
+              <Form.Select
+                aria-label={m.admin_inventory_rounding()}
+                value={edge.rounding}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    inclusions: f.inclusions.map((x, i) =>
+                      i === index ? { ...x, rounding: e.target.value as "up" | "down" } : x,
+                    ),
+                  }))
+                }
+              >
+                <option value="down">{m.admin_inventory_round_down()}</option>
+                <option value="up">{m.admin_inventory_round_up()}</option>
+              </Form.Select>
+              <Button
+                type="button"
+                variant="outline-danger"
+                onClick={() =>
+                  setForm((f) => ({ ...f, inclusions: f.inclusions.filter((_, i) => i !== index) }))
+                }
+              >
+                {m.admin_inventory_remove()}
+              </Button>
+            </div>
+          ))}
+          <Form.Text className="d-block mb-2">{m.admin_inventory_ratio_help()}</Form.Text>
+          <Form.Text className="d-block mb-2">{m.admin_inventory_hidden_target_help()}</Form.Text>
+          <Button
+            type="button"
+            onClick={() =>
+              setForm((f) => ({
+                ...f,
+                inclusions: [
+                  ...f.inclusions,
+                  { product_id: "", quantity: 1, per_quantity: 1, rounding: "down" },
+                ],
+              }))
+            }
+          >
+            {m.admin_inventory_add_inclusion()}
+          </Button>
+        </fieldset>
+        {editingId && (
+          <fieldset className="mb-3">
+            <legend className="h6">{m.admin_inventory_existing_bookings()}</legend>
+            <Form.Check
+              id="update-booked-contents"
+              label={m.admin_inventory_update_contents()}
+              checked={form.updateExistingContents}
+              onChange={(e) => setForm((f) => ({ ...f, updateExistingContents: e.target.checked }))}
+            />
+            <Form.Check
+              id="update-booked-prices"
+              label={m.admin_inventory_update_prices()}
+              checked={form.updateExistingPrices}
+              onChange={(e) => setForm((f) => ({ ...f, updateExistingPrices: e.target.checked }))}
+            />
+            <Form.Text>{m.admin_inventory_keep_help()}</Form.Text>
+          </fieldset>
+        )}
+
+        <div className="d-flex gap-2 justify-content-end">
+          <Button variant="outline-secondary" size="sm" onClick={() => setFormOpen(false)}>
+            {m.close()}
+          </Button>
+          <Button
+            type="submit"
+            variant="warning"
+            size="sm"
+            disabled={saveMutation.isPending || previewPending}
+          >
+            <i className="bi bi-floppy me-1" aria-hidden="true" />
+            {m.admin_save()}
+          </Button>
+        </div>
+      </Form>
+    );
+  }
+
   function renderRow(product: Product) {
     const includedTarget = product.includedProductId
       ? products.find((p) => p.id === product.includedProductId)
       : undefined;
     const soldOut = product.purchasable && product.soldOut;
+    const isBeingEdited = formOpen && editingId === product.id;
     return (
       <ListGroup.Item
         key={product.id}
@@ -294,6 +542,7 @@ export default function EventProductsModal({
               size="sm"
               variant="outline-secondary"
               onClick={() => openEdit(product)}
+              disabled={formOpen && !isBeingEdited}
               aria-label={`Edit ${product.name}`}
             >
               <i className="bi bi-pencil" aria-hidden="true" />
@@ -302,6 +551,7 @@ export default function EventProductsModal({
               size="sm"
               variant="outline-danger"
               onClick={() => handleDelete(product.id)}
+              disabled={formOpen}
               aria-label={`${m.admin_delete()} ${product.name}`}
             >
               <i className="bi bi-trash" aria-hidden="true" />
@@ -316,6 +566,7 @@ export default function EventProductsModal({
             })}
           </div>
         )}
+        {isBeingEdited && !preview && renderForm()}
       </ListGroup.Item>
     );
   }
@@ -425,270 +676,14 @@ export default function EventProductsModal({
           </>
         )}
 
-        {formOpen && !preview ? (
-          <Form
-            onSubmit={handleSubmit}
-            noValidate
-            className="border-top border-secondary pt-3 mt-2"
-          >
-            <div className="d-flex gap-2 flex-wrap mb-2">
-              <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }} controlId="product-name">
-                <Form.Label className="text-secondary small mb-1">
-                  {m.admin_products_name()}
-                </Form.Label>
-                <Form.Control
-                  size="sm"
-                  className="bg-dark text-light border-secondary"
-                  autoFocus
-                  value={form.name}
-                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                />
-              </Form.Group>
-              <Form.Group
-                style={{ minWidth: "200px", flex: "2 1 200px" }}
-                controlId="product-description"
-              >
-                <Form.Label className="text-secondary small mb-1">
-                  {m.admin_products_description()}
-                </Form.Label>
-                <Form.Control
-                  size="sm"
-                  className="bg-dark text-light border-secondary"
-                  maxLength={300}
-                  value={form.description}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                />
-              </Form.Group>
-              <Form.Group style={{ maxWidth: "120px" }} controlId="product-price">
-                <Form.Label className="text-secondary small mb-1">
-                  {m.admin_products_price()}
-                </Form.Label>
-                <Form.Control
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  size="sm"
-                  className="bg-dark text-light border-secondary"
-                  value={form.price}
-                  onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-                />
-              </Form.Group>
-              <Form.Group style={{ maxWidth: "160px" }} controlId="product-category">
-                <Form.Label className="text-secondary small mb-1">
-                  {m.admin_products_category()}
-                </Form.Label>
-                <Form.Select
-                  size="sm"
-                  className="bg-dark text-light border-secondary"
-                  value={form.category}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, category: e.target.value as OrderItemCategory }))
-                  }
-                >
-                  <option value="champagne">{m.admin_products_category_champagne()}</option>
-                  <option value="food">{m.admin_products_category_food()}</option>
-                  <option value="other">{m.admin_products_category_other()}</option>
-                </Form.Select>
-              </Form.Group>
-            </div>
-
-            <Form.Check
-              type="checkbox"
-              id="product-purchasable"
-              className="mb-1"
-              label={m.admin_products_purchasable_label()}
-              checked={form.purchasable}
-              onChange={(e) => {
-                const purchasable = e.target.checked;
-                setForm((f) => ({ ...f, purchasable, required: purchasable ? f.required : false }));
-              }}
-            />
-            <div className="text-secondary small mb-2">{m.admin_products_purchasable_help()}</div>
-
-            <Form.Check
-              type="checkbox"
-              id="product-required"
-              className="mb-2"
-              label={m.admin_products_required_label()}
-              checked={form.required}
-              disabled={!form.purchasable}
-              onChange={(e) => setForm((f) => ({ ...f, required: e.target.checked }))}
-            />
-            <div className="text-secondary small mb-2">
-              {form.purchasable
-                ? m.admin_products_required_help()
-                : m.admin_products_required_needs_purchasable()}
-            </div>
-
-            <Form.Group controlId="product-unit" className="mb-2">
-              <Form.Label>{m.admin_inventory_unit()}</Form.Label>
-              <Form.Select
-                value={form.unit}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, unit: e.target.value as ProductFormState["unit"] }))
-                }
-              >
-                <option value="item">{m.admin_inventory_unit_item()}</option>
-                <option value="person">{m.admin_inventory_unit_person()}</option>
-                <option value="table">{m.admin_inventory_unit_table()}</option>
-              </Form.Select>
-            </Form.Group>
-            <Form.Group controlId="product-stock" className="mb-2">
-              <Form.Label>{m.admin_inventory_stock()}</Form.Label>
-              <Form.Control
-                type="number"
-                min={0}
-                step={1}
-                value={form.stock}
-                onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-              />
-              <Form.Text>{m.admin_inventory_unlimited_help()}</Form.Text>
-            </Form.Group>
-            <fieldset className="mb-3">
-              <legend className="h6">{m.admin_inventory_inclusions()}</legend>
-              {form.inclusions.map((edge, index) => (
-                <div className="d-flex flex-wrap gap-2 mb-2" key={index}>
-                  <Form.Select
-                    aria-label={m.admin_products_bundle_target()}
-                    value={edge.product_id}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        inclusions: f.inclusions.map((x, i) =>
-                          i === index ? { ...x, product_id: e.target.value } : x,
-                        ),
-                      }))
-                    }
-                  >
-                    <option value="">{m.admin_products_bundle_none()}</option>
-                    {bundleCandidates.map((p) => (
-                      <option value={p.id} key={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </Form.Select>
-                  <Form.Control
-                    type="number"
-                    min={1}
-                    step={1}
-                    aria-label={m.admin_inventory_included_quantity()}
-                    value={edge.quantity}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        inclusions: f.inclusions.map((x, i) =>
-                          i === index ? { ...x, quantity: Number(e.target.value) } : x,
-                        ),
-                      }))
-                    }
-                  />
-                  <Form.Control
-                    type="number"
-                    min={1}
-                    step={1}
-                    aria-label={m.admin_inventory_per_quantity()}
-                    value={edge.per_quantity}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        inclusions: f.inclusions.map((x, i) =>
-                          i === index ? { ...x, per_quantity: Number(e.target.value) } : x,
-                        ),
-                      }))
-                    }
-                  />
-                  <Form.Select
-                    aria-label={m.admin_inventory_rounding()}
-                    value={edge.rounding}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        inclusions: f.inclusions.map((x, i) =>
-                          i === index ? { ...x, rounding: e.target.value as "up" | "down" } : x,
-                        ),
-                      }))
-                    }
-                  >
-                    <option value="down">{m.admin_inventory_round_down()}</option>
-                    <option value="up">{m.admin_inventory_round_up()}</option>
-                  </Form.Select>
-                  <Button
-                    type="button"
-                    variant="outline-danger"
-                    onClick={() =>
-                      setForm((f) => ({
-                        ...f,
-                        inclusions: f.inclusions.filter((_, i) => i !== index),
-                      }))
-                    }
-                  >
-                    {m.admin_inventory_remove()}
-                  </Button>
-                </div>
-              ))}
-              <Form.Text className="d-block mb-2">{m.admin_inventory_ratio_help()}</Form.Text>
-              <Form.Text className="d-block mb-2">
-                {m.admin_inventory_hidden_target_help()}
-              </Form.Text>
-              <Button
-                type="button"
-                onClick={() =>
-                  setForm((f) => ({
-                    ...f,
-                    inclusions: [
-                      ...f.inclusions,
-                      { product_id: "", quantity: 1, per_quantity: 1, rounding: "down" },
-                    ],
-                  }))
-                }
-              >
-                {m.admin_inventory_add_inclusion()}
-              </Button>
-            </fieldset>
-            {editingId && (
-              <fieldset className="mb-3">
-                <legend className="h6">{m.admin_inventory_existing_bookings()}</legend>
-                <Form.Check
-                  id="update-booked-contents"
-                  label={m.admin_inventory_update_contents()}
-                  checked={form.updateExistingContents}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, updateExistingContents: e.target.checked }))
-                  }
-                />
-                <Form.Check
-                  id="update-booked-prices"
-                  label={m.admin_inventory_update_prices()}
-                  checked={form.updateExistingPrices}
-                  onChange={(e) =>
-                    setForm((f) => ({ ...f, updateExistingPrices: e.target.checked }))
-                  }
-                />
-                <Form.Text>{m.admin_inventory_keep_help()}</Form.Text>
-              </fieldset>
-            )}
-
-            <div className="d-flex gap-2 justify-content-end">
-              <Button variant="outline-secondary" size="sm" onClick={() => setFormOpen(false)}>
-                {m.close()}
-              </Button>
-              <Button
-                type="submit"
-                variant="warning"
-                size="sm"
-                disabled={saveMutation.isPending || previewPending}
-              >
-                <i className="bi bi-floppy me-1" aria-hidden="true" />
-                {m.admin_save()}
-              </Button>
-            </div>
-          </Form>
+        {formOpen && editingId === null && !preview ? (
+          renderForm()
         ) : (
           <Button
             variant="outline-secondary"
             size="sm"
             onClick={openAdd}
-            disabled={productsQuery.isPending || productsQuery.isError}
+            disabled={productsQuery.isPending || productsQuery.isError || formOpen}
           >
             <i className="bi bi-plus-lg me-1" aria-hidden="true" />
             {m.admin_products_add()}

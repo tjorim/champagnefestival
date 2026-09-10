@@ -999,6 +999,7 @@
   "registration_notes_help": "Indiquez vos besoins d’accessibilité ou vos préférences de placement, par exemple à côté d’une autre réservation. Les demandes de placement ne sont pas garanties.",
   "admin_inventory_price_difference": "Prix unitaire réservé → actuel. Contactez le visiteur ci-dessous si nécessaire.",
   "admin_allocation_progress": "{assigned} sur {total} {unit} attribués",
+  "admin_allocation_unit_person": "Personne",
   "admin_allocation_add": "Ajouter une table",
   "admin_booking_editor": "Réservation, paiement et placement",
   "admin_booking_quantity": "Quantité achetée",

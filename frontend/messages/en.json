@@ -999,6 +999,7 @@
   "registration_notes_help": "Tell us about accessibility needs or placement preferences, such as being next to another booking. Placement requests are not guaranteed.",
   "admin_inventory_price_difference": "Booked → current unit price. Use Contact visitor below if needed.",
   "admin_allocation_progress": "{assigned} of {total} {unit} assigned",
+  "admin_allocation_unit_person": "Person",
   "admin_allocation_add": "Add table",
   "admin_booking_editor": "Booking, payment and seating",
   "admin_booking_quantity": "Purchased quantity",

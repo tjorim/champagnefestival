@@ -999,6 +999,7 @@
   "registration_notes_help": "Vermeld toegankelijkheidsbehoeften of plaatsingsvoorkeuren, bijvoorbeeld naast een andere boeking. Plaatsingsverzoeken zijn niet gegarandeerd.",
   "admin_inventory_price_difference": "Geboekte → huidige eenheidsprijs. Gebruik indien nodig hieronder Contact opnemen.",
   "admin_allocation_progress": "{assigned} van {total} {unit} toegewezen",
+  "admin_allocation_unit_person": "Persoon",
   "admin_allocation_add": "Tafel toevoegen",
   "admin_booking_editor": "Boeking, betaling en tafelindeling",
   "admin_booking_quantity": "Gekochte hoeveelheid",

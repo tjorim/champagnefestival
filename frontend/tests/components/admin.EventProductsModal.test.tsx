@@ -192,6 +192,56 @@ describe("EventProductsModal", () => {
     expect(screen.getByText("admin_products_required_needs_purchasable")).toBeInTheDocument();
   });
 
+  it("opens the edit form next to the row being edited and locks other rows against it", async () => {
+    // Editing a product no longer opens a form pinned below the whole list —
+    // it appears inline under that product's own row, and every other row's
+    // Edit/Delete is disabled so a second click can't silently discard the
+    // in-progress edit.
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: 65,
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+      {
+        id: "prod-cheese",
+        event_id: "event-01",
+        name: "Cheese Platter",
+        price: 25,
+        category: "food",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
+
+    const nameField = screen.getByLabelText("admin_products_name") as HTMLInputElement;
+    expect(nameField.value).toBe("Champagne Bottle");
+    // The form sits inside the same row as the product it edits.
+    expect(
+      screen.getByText("Champagne Bottle").compareDocumentPosition(nameField) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    expect(screen.getByLabelText("Edit Cheese Platter")).toBeDisabled();
+    expect(screen.getByLabelText("admin_delete Cheese Platter")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "admin_products_add" })).toBeDisabled();
+  });
+
   it("shows the bundle note for a product that includes another", async () => {
     renderModal([
       {

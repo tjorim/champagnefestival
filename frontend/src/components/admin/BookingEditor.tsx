@@ -238,7 +238,7 @@ export default function BookingEditor({
           {m.admin_allocation_progress({
             assigned,
             total: allocationTotal,
-            unit: tableQuantity ? m.admin_inventory_unit_table() : m.admin_inventory_unit_person(),
+            unit: tableQuantity ? m.admin_inventory_unit_table() : m.admin_allocation_unit_person(),
           })}
         </p>
         {allocationShortage && tableQuantity > 0 && (
