@@ -453,6 +453,53 @@ describe("EventProductsModal", () => {
     expect(postCalled).toBe(false);
   });
 
+  it("asks for confirmation before deleting a product, and cancelling keeps it", async () => {
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: 65,
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    let deleteCalled = false;
+    server.use(
+      http.delete("/api/products/prod-bottle", () => {
+        deleteCalled = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText("admin_delete Champagne Bottle"));
+    await screen.findByText("admin_products_delete_title");
+    expect(
+      screen.getByText('admin_products_delete_confirm({"name":"Champagne Bottle"})'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_action_cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByText("admin_products_delete_title")).not.toBeInTheDocument(),
+    );
+    expect(deleteCalled).toBe(false);
+    expect(screen.getByText("Champagne Bottle")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("admin_delete Champagne Bottle"));
+    await screen.findByText("admin_products_delete_title");
+    fireEvent.click(screen.getByRole("button", { name: "admin_action_confirm" }));
+
+    await waitFor(() => expect(deleteCalled).toBe(true));
+    await waitFor(() => expect(screen.queryByText("Champagne Bottle")).not.toBeInTheDocument());
+  });
+
   it("shows an error state and disables adding when the products query fails", async () => {
     server.use(
       http.get("/api/products", () => HttpResponse.json({ detail: "boom" }, { status: 500 })),

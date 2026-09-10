@@ -8,6 +8,7 @@ import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
+import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
   deleteEventProduct,
   fetchEventProducts,
@@ -80,6 +81,7 @@ export default function EventProductsModal({
   onProductsChanged,
 }: EventProductsModalProps) {
   const queryClient = useQueryClient();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
@@ -236,12 +238,18 @@ export default function EventProductsModal({
     }
   }
 
-  async function handleDelete(productId: string) {
+  async function handleDelete(product: Product) {
+    const confirmed = await confirm({
+      title: m.admin_products_delete_title(),
+      body: m.admin_products_delete_confirm({ name: product.name }),
+      errorFallback: m.admin_error_delete_product(),
+    });
+    if (!confirmed) return;
     setError("");
     try {
-      await deleteMutation.mutateAsync(productId);
+      await deleteMutation.mutateAsync(product.id);
       queryClient.setQueryData<Product[]>(productsQueryKey, (prev = []) =>
-        prev.filter((p) => p.id !== productId),
+        prev.filter((p) => p.id !== product.id),
       );
       onProductsChanged?.();
     } catch (err) {
@@ -301,7 +309,10 @@ export default function EventProductsModal({
               className="bg-dark text-light border-secondary"
               value={form.category}
               onChange={(e) =>
-                setForm((f) => ({ ...f, category: e.target.value as OrderItemCategory }))
+                setForm((f) => ({
+                  ...f,
+                  category: e.target.value as OrderItemCategory,
+                }))
               }
             >
               <option value="champagne">{m.admin_products_category_champagne()}</option>
@@ -319,7 +330,11 @@ export default function EventProductsModal({
             checked={form.purchasable}
             onChange={(e) => {
               const purchasable = e.target.checked;
-              setForm((f) => ({ ...f, purchasable, required: purchasable ? f.required : false }));
+              setForm((f) => ({
+                ...f,
+                purchasable,
+                required: purchasable ? f.required : false,
+              }));
             }}
           />
           <Form.Check
@@ -348,7 +363,10 @@ export default function EventProductsModal({
               className="bg-dark text-light border-secondary"
               value={form.unit}
               onChange={(e) =>
-                setForm((f) => ({ ...f, unit: e.target.value as ProductFormState["unit"] }))
+                setForm((f) => ({
+                  ...f,
+                  unit: e.target.value as ProductFormState["unit"],
+                }))
               }
             >
               <option value="item">{m.admin_inventory_unit_item()}</option>
@@ -457,7 +475,10 @@ export default function EventProductsModal({
                 size="sm"
                 variant="outline-danger"
                 onClick={() =>
-                  setForm((f) => ({ ...f, inclusions: f.inclusions.filter((_, i) => i !== index) }))
+                  setForm((f) => ({
+                    ...f,
+                    inclusions: f.inclusions.filter((_, i) => i !== index),
+                  }))
                 }
               >
                 {m.admin_inventory_remove()}
@@ -473,7 +494,12 @@ export default function EventProductsModal({
                 ...f,
                 inclusions: [
                   ...f.inclusions,
-                  { product_id: "", quantity: 1, per_quantity: 1, rounding: "down" },
+                  {
+                    product_id: "",
+                    quantity: 1,
+                    per_quantity: 1,
+                    rounding: "down",
+                  },
                 ],
               }))
             }
@@ -488,13 +514,23 @@ export default function EventProductsModal({
               id="update-booked-contents"
               label={m.admin_inventory_update_contents()}
               checked={form.updateExistingContents}
-              onChange={(e) => setForm((f) => ({ ...f, updateExistingContents: e.target.checked }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  updateExistingContents: e.target.checked,
+                }))
+              }
             />
             <Form.Check
               id="update-booked-prices"
               label={m.admin_inventory_update_prices()}
               checked={form.updateExistingPrices}
-              onChange={(e) => setForm((f) => ({ ...f, updateExistingPrices: e.target.checked }))}
+              onChange={(e) =>
+                setForm((f) => ({
+                  ...f,
+                  updateExistingPrices: e.target.checked,
+                }))
+              }
             />
             <Form.Text>{m.admin_inventory_keep_help()}</Form.Text>
           </fieldset>
@@ -572,7 +608,7 @@ export default function EventProductsModal({
             <Button
               size="sm"
               variant="outline-danger"
-              onClick={() => handleDelete(product.id)}
+              onClick={() => handleDelete(product)}
               disabled={formOpen}
               aria-label={`${m.admin_delete()} ${product.name}`}
             >
@@ -594,129 +630,134 @@ export default function EventProductsModal({
   }
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="lg"
-      data-bs-theme="dark"
-      dialogClassName="admin-dialog"
-    >
-      <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="text-warning fs-6">
-          {m.admin_products_title({ event: event?.title ?? "" })}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body className="bg-dark">
-        {preview && (
-          <section className="border rounded p-3 mb-3" aria-label={m.admin_inventory_review()}>
-            <h3 className="h6">{m.admin_inventory_review()}</h3>
-            <p>
-              {preview.payload.name}: €{preview.payload.price.toFixed(2)};{" "}
-              {m.admin_inventory_stock()}: {preview.payload.stock ?? m.admin_inventory_unlimited()}
-            </p>
-            {preview.result.bookings.map((b) => (
-              <div key={b.id} className="mb-2">
-                <strong>{b.id}</strong>: €{b.before_total} → €{b.after_total};{" "}
-                {m.admin_inventory_paid()} €{b.amount_paid}; {m.admin_inventory_refund()} €
-                {b.refund_due}
-                <div>
-                  {b.before_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")} →{" "}
-                  {b.after_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")}
+    <>
+      <Modal
+        show={show}
+        onHide={onHide}
+        centered
+        size="lg"
+        data-bs-theme="dark"
+        dialogClassName="admin-dialog"
+      >
+        <Modal.Header closeButton className="bg-dark border-secondary">
+          <Modal.Title className="text-warning fs-6">
+            {m.admin_products_title({ event: event?.title ?? "" })}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className="bg-dark">
+          {preview && (
+            <section className="border rounded p-3 mb-3" aria-label={m.admin_inventory_review()}>
+              <h3 className="h6">{m.admin_inventory_review()}</h3>
+              <p>
+                {preview.payload.name}: €{preview.payload.price.toFixed(2)};{" "}
+                {m.admin_inventory_stock()}:{" "}
+                {preview.payload.stock ?? m.admin_inventory_unlimited()}
+              </p>
+              {preview.result.bookings.map((b) => (
+                <div key={b.id} className="mb-2">
+                  <strong>{b.id}</strong>: €{b.before_total} → €{b.after_total};{" "}
+                  {m.admin_inventory_paid()} €{b.amount_paid}; {m.admin_inventory_refund()} €
+                  {b.refund_due}
+                  <div>
+                    {b.before_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")} →{" "}
+                    {b.after_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {preview.result.shortages.map((s, i) => (
-              <Alert variant="warning" key={i}>
-                {s.name}: {m.admin_inventory_reserved()} {s.reserved} / {s.stock};{" "}
-                {m.admin_inventory_shortage()} {s.shortage}
-              </Alert>
-            ))}
-            {preview.result.shortages.length > 0 && (
-              <Form.Check
-                id="confirm-stock-shortage"
-                label={m.admin_inventory_confirm_shortage()}
-                checked={confirmShortage}
-                onChange={(e) => setConfirmShortage(e.target.checked)}
-              />
-            )}
-            <Button
-              disabled={
-                saveMutation.isPending || (preview.result.shortages.length > 0 && !confirmShortage)
-              }
-              onClick={async () => {
-                try {
-                  const saved = await saveMutation.mutateAsync({
-                    ...preview.payload,
-                    previewToken: preview.result.preview_token,
-                    confirmShortage,
-                  });
-                  updateQueryData(saved);
-                  setPreview(null);
-                  setFormOpen(false);
-                  setEditingId(null);
-                  onProductsChanged?.();
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : m.admin_content_error_save());
-                  setPreview(null);
+              ))}
+              {preview.result.shortages.map((s, i) => (
+                <Alert variant="warning" key={i}>
+                  {s.name}: {m.admin_inventory_reserved()} {s.reserved} / {s.stock};{" "}
+                  {m.admin_inventory_shortage()} {s.shortage}
+                </Alert>
+              ))}
+              {preview.result.shortages.length > 0 && (
+                <Form.Check
+                  id="confirm-stock-shortage"
+                  label={m.admin_inventory_confirm_shortage()}
+                  checked={confirmShortage}
+                  onChange={(e) => setConfirmShortage(e.target.checked)}
+                />
+              )}
+              <Button
+                disabled={
+                  saveMutation.isPending ||
+                  (preview.result.shortages.length > 0 && !confirmShortage)
                 }
-              }}
+                onClick={async () => {
+                  try {
+                    const saved = await saveMutation.mutateAsync({
+                      ...preview.payload,
+                      previewToken: preview.result.preview_token,
+                      confirmShortage,
+                    });
+                    updateQueryData(saved);
+                    setPreview(null);
+                    setFormOpen(false);
+                    setEditingId(null);
+                    onProductsChanged?.();
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : m.admin_content_error_save());
+                    setPreview(null);
+                  }
+                }}
+              >
+                {m.admin_save()}
+              </Button>
+              <Button variant="outline-secondary" onClick={() => setPreview(null)}>
+                {m.close()}
+              </Button>
+            </section>
+          )}
+
+          <p className="text-secondary small mb-3">{m.admin_products_help()}</p>
+
+          {error && (
+            <Alert variant="danger" className="py-1 mb-2">
+              {error}
+            </Alert>
+          )}
+
+          {productsQuery.isPending ? (
+            <div className="text-center py-3">
+              <Spinner animation="border" size="sm" variant="warning" />
+            </div>
+          ) : productsQuery.isError ? (
+            <Alert variant="danger" className="py-1 mb-2">
+              {m.admin_content_error_load()}
+            </Alert>
+          ) : (
+            <>
+              {products.length === 0 ? (
+                <p className="text-secondary fst-italic small">{m.admin_products_empty()}</p>
+              ) : (
+                <ListGroup variant="flush" className="mb-2">
+                  {products.map((product) => renderRow(product))}
+                </ListGroup>
+              )}
+            </>
+          )}
+
+          {formOpen && editingId === null && !preview ? (
+            renderForm()
+          ) : (
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              onClick={openAdd}
+              disabled={productsQuery.isPending || productsQuery.isError || formOpen}
             >
-              {m.admin_save()}
+              <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+              {m.admin_products_add()}
             </Button>
-            <Button variant="outline-secondary" onClick={() => setPreview(null)}>
-              {m.close()}
-            </Button>
-          </section>
-        )}
-
-        <p className="text-secondary small mb-3">{m.admin_products_help()}</p>
-
-        {error && (
-          <Alert variant="danger" className="py-1 mb-2">
-            {error}
-          </Alert>
-        )}
-
-        {productsQuery.isPending ? (
-          <div className="text-center py-3">
-            <Spinner animation="border" size="sm" variant="warning" />
-          </div>
-        ) : productsQuery.isError ? (
-          <Alert variant="danger" className="py-1 mb-2">
-            {m.admin_content_error_load()}
-          </Alert>
-        ) : (
-          <>
-            {products.length === 0 ? (
-              <p className="text-secondary fst-italic small">{m.admin_products_empty()}</p>
-            ) : (
-              <ListGroup variant="flush" className="mb-2">
-                {products.map((product) => renderRow(product))}
-              </ListGroup>
-            )}
-          </>
-        )}
-
-        {formOpen && editingId === null && !preview ? (
-          renderForm()
-        ) : (
-          <Button
-            variant="outline-secondary"
-            size="sm"
-            onClick={openAdd}
-            disabled={productsQuery.isPending || productsQuery.isError || formOpen}
-          >
-            <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-            {m.admin_products_add()}
+          )}
+        </Modal.Body>
+        <Modal.Footer className="bg-dark border-secondary">
+          <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            {m.close()}
           </Button>
-        )}
-      </Modal.Body>
-      <Modal.Footer className="bg-dark border-secondary">
-        <Button variant="outline-secondary" size="sm" onClick={onHide}>
-          {m.close()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        </Modal.Footer>
+      </Modal>
+      {confirmDialog}
+    </>
   );
 }
