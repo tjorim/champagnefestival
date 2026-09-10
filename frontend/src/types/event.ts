@@ -115,7 +115,12 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     reservedQuantity: Number(data.reserved_quantity ?? 0),
     availableQuantity: typeof data.available_quantity === "number" ? data.available_quantity : null,
     shortage: Number(data.shortage ?? 0),
-    inclusions: Array.isArray(data.inclusions) ? (data.inclusions as ProductInclusion[]) : null,
+    inclusions: Array.isArray(data.inclusions)
+      ? (data.inclusions as ProductInclusion[]).map((inclusion) => ({
+          ...inclusion,
+          visible: inclusion.visible ?? true,
+        }))
+      : null,
     includedProductId:
       typeof data.included_product_id === "string" ? data.included_product_id : undefined,
     includedPerGuests:

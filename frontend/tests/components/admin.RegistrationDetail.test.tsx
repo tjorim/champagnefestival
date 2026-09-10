@@ -284,7 +284,11 @@ describe("RegistrationDetail", () => {
       within(select)
         .getAllByRole("option")
         .map((option) => option.textContent),
-    ).toEqual(["admin_unassigned", "Table 2 (6)", "Table 10 (8)"]);
+    ).toEqual([
+      "admin_unassigned",
+      'Table 2 (admin_table_capacity_remaining({"count":6}))',
+      'Table 10 (admin_table_capacity_remaining({"count":8}))',
+    ]);
 
     fireEvent.change(select, { target: { value: "table-1" } });
 
@@ -296,6 +300,35 @@ describe("RegistrationDetail", () => {
         allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
       }),
     );
+  });
+
+  it("shows remaining seats, not total capacity, when another booking already occupies a table", () => {
+    const otherRegistration = buildRegistration({
+      id: "reg-2",
+      allocations: [{ tableId: "table-1", guestCount: 3, exclusive: false }],
+    });
+    renderDetail({
+      onSaveBooking: vi.fn().mockResolvedValue(undefined),
+      registration: buildRegistration({
+        allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
+      }),
+      registrations: [
+        buildRegistration({ allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }] }),
+        otherRegistration,
+      ],
+    });
+
+    const select = screen.getByRole("combobox", { name: "admin_inventory_unit_table" });
+    expect(
+      within(select)
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual([
+      "admin_unassigned",
+      'Table 2 (admin_table_capacity_remaining({"count":6}))',
+      // Table 10 has capacity 8; reg-2 (a different registration) occupies 3 of them.
+      'Table 10 (admin_table_capacity_remaining({"count":5}))',
+    ]);
   });
 
   it("previews a table quantity reduction and saves the chosen release with payment", () => {

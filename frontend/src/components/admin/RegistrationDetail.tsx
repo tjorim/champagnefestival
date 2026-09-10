@@ -19,6 +19,8 @@ import EmailComposeModal from "./EmailComposeModal";
 
 interface RegistrationDetailProps {
   registration: Registration | null;
+  /** Every currently-known registration, used to compute remaining table capacity in the booking editor. */
+  registrations?: Registration[];
   authHeaders: () => Record<string, string>;
   /** Full origin + router basename (e.g. `https://example.com`). Used to build the check-in QR code URL. */
   baseUrl: string;
@@ -42,6 +44,7 @@ function isSimpleRsvp(registration: Registration) {
 
 export default function RegistrationDetail({
   registration,
+  registrations = [],
   authHeaders,
   baseUrl,
   emailDuplicates = [],
@@ -273,6 +276,7 @@ export default function RegistrationDetail({
               <BookingEditor
                 key={`${registration.id}:${registration.updatedAt}`}
                 registration={registration}
+                registrations={registrations}
                 authHeaders={authHeaders}
                 tables={sortedTables}
                 onSave={onSaveBooking}

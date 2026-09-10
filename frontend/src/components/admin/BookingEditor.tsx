@@ -31,15 +31,30 @@ function paymentReasonLabel(reason: unknown): string {
 
 export default function BookingEditor({
   registration,
+  registrations = [],
   authHeaders,
   tables,
   onSave,
 }: {
   registration: Registration;
+  registrations?: Registration[];
   authHeaders: () => Record<string, string>;
   tables: FloorTable[];
   onSave: (id: string, update: BookingUpdate) => Promise<void>;
 }) {
+  const tableOccupancy = useMemo(() => {
+    const occupied = new Map<string, number>();
+    for (const r of registrations) {
+      if (r.status === "cancelled" || r.id === registration.id) continue;
+      for (const allocation of r.allocations ?? []) {
+        occupied.set(
+          allocation.tableId,
+          (occupied.get(allocation.tableId) ?? 0) + allocation.guestCount,
+        );
+      }
+    }
+    return occupied;
+  }, [registrations, registration.id]);
   const purchased = useMemo(
     () =>
       Object.fromEntries(
@@ -285,7 +300,11 @@ export default function BookingEditor({
                 )
                 .map((table) => (
                   <option key={table.id} value={table.id}>
-                    {table.name} ({table.capacity})
+                    {table.name} (
+                    {m.admin_table_capacity_remaining({
+                      count: Math.max(0, table.capacity - (tableOccupancy.get(table.id) ?? 0)),
+                    })}
+                    )
                   </option>
                 ))}
             </Form.Select>
@@ -366,6 +385,11 @@ export default function BookingEditor({
         {showPaymentHistory && (
           <>
             {paymentHistoryQuery.isLoading && <p className="small">{m.loading()}</p>}
+            {paymentHistoryQuery.isError && (
+              <Alert variant="danger" className="mb-2">
+                {m.admin_payment_history_error()}
+              </Alert>
+            )}
             {paymentHistoryQuery.data && paymentHistoryQuery.data.length === 0 && (
               <p className="small text-secondary">{m.admin_payment_history_empty()}</p>
             )}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
@@ -134,6 +134,15 @@ export default function LayoutCompareModal({
   const [currentId, setCurrentId] = useState<string>(
     roomLayouts[1]?.id ?? roomLayouts[0]?.id ?? "",
   );
+
+  useEffect(() => {
+    const baselineFallback = roomLayouts[0]?.id ?? "";
+    const currentFallback = roomLayouts[1]?.id ?? baselineFallback;
+    const hasLayout = (id: string) => roomLayouts.some((layout) => layout.id === id);
+
+    setBaselineId((id) => (hasLayout(id) ? id : baselineFallback));
+    setCurrentId((id) => (hasLayout(id) ? id : currentFallback));
+  }, [roomLayouts]);
 
   const baselineTables = useMemo(
     () => tables.filter((t) => t.layoutId === baselineId),

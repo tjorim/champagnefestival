@@ -682,6 +682,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       {detailRegistration && (
         <RegistrationDetail
           registration={detailRegistration}
+          registrations={registrations}
           authHeaders={authHeaders}
           baseUrl={window.location.origin + import.meta.env.BASE_URL.replace(/\/$/, "")}
           emailDuplicates={emailDuplicates}

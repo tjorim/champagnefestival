@@ -467,20 +467,54 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_column("products", "description")
-    op.drop_table("registration_allocations")
+
+    # The legacy schema can store only one table per registration. Preserve a
+    # deterministic allocation before dropping the richer allocation rows.
     op.add_column(
         "registrations",
         sa.Column("table_id", sa.String(64), sa.ForeignKey("tables.id", ondelete="SET NULL"), nullable=True),
     )
+    bind = op.get_bind()
+    bind.execute(
+        sa.text("""
+            UPDATE registrations r
+            SET table_id = (
+                SELECT ra.table_id
+                FROM registration_allocations ra
+                WHERE ra.registration_id = r.id
+                ORDER BY ra.table_id
+                LIMIT 1
+            )
+        """)
+    )
     op.create_index("ix_registrations_table_id", "registrations", ["table_id"])
-    op.drop_constraint("uq_layout_room_event", "layouts")
-    op.drop_index("ix_layouts_event_id", "layouts")
-    op.drop_column("layouts", "event_id")
+    op.drop_table("registration_allocations")
+
+    # Recover the legacy edition/day representation from the event that now
+    # owns each layout. This is the inverse of the date-to-event mapping in
+    # upgrade(), where a day meant the ordinal distinct event date per edition.
     op.add_column(
         "layouts",
         sa.Column("edition_id", sa.String(100), sa.ForeignKey("editions.id", ondelete="SET NULL"), nullable=True),
     )
-    op.add_column("layouts", sa.Column("day_id", sa.Integer(), nullable=False, server_default="1"))
+    op.add_column("layouts", sa.Column("day_id", sa.Integer(), nullable=True))
+    bind.execute(
+        sa.text("""
+            WITH edition_dates AS (
+                SELECT edition_id, date, row_number() OVER (PARTITION BY edition_id ORDER BY date) AS day_id
+                FROM (SELECT DISTINCT edition_id, date FROM events) AS d
+            )
+            UPDATE layouts l
+            SET edition_id = e.edition_id, day_id = ed.day_id
+            FROM events e
+            JOIN edition_dates ed ON ed.edition_id = e.edition_id AND ed.date = e.date
+            WHERE e.id = l.event_id
+        """)
+    )
+    op.alter_column("layouts", "day_id", nullable=False)
+    op.drop_constraint("uq_layout_room_event", "layouts")
+    op.drop_index("ix_layouts_event_id", "layouts")
+    op.drop_column("layouts", "event_id")
     op.drop_constraint("ck_product_unit", "products")
     op.drop_constraint("ck_product_stock", "products")
     for column in ("unit", "stock", "inclusions"):
@@ -496,7 +530,6 @@ def downgrade() -> None:
     # than silently deleting those accounts and their registration ownership,
     # or letting Postgres abort mid-migration with a raw constraint error
     # (PR #1012 review).
-    bind = op.get_bind()
     visitor_user_count = bind.execute(sa.text("SELECT COUNT(*) FROM users WHERE oidc_subject IS NULL")).scalar()
     if visitor_user_count:
         raise RuntimeError(

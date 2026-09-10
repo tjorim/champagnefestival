@@ -308,7 +308,7 @@ async def apply_registration_update(
             request_id=request_id,
             details=details,
         )
-    if body.amount_paid is not None or body.order_items is not None:
+    if body.amount_paid is not None or body.order_items is not None or registration.amount_due != pre_amount_due:
         registration.payment_status = (
             "paid"
             if (registration.amount_paid or 0) >= (registration.amount_due or 0)
