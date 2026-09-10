@@ -12,21 +12,21 @@ export interface BookingUpdate {
   status: RegistrationStatus;
 }
 
-export type PaymentTransactionKind = "payment" | "refund" | "correction";
-
-/** One append-only payment-ledger entry against a booking (#1019). */
+/** One append-only payment-ledger entry against a booking (#1019).
+ *
+ * There is no `kind`: a positive `amount` is a payment, a negative one is a
+ * refund — that sign is the only distinction the system stores. */
 export interface PaymentTransaction {
   id: string;
   registrationId: string;
   amount: number;
-  kind: PaymentTransactionKind;
   /** When the money actually moved (e.g. a bank-transfer date), YYYY-MM-DD. */
   effectiveDate: string;
   recordedAt: string;
   recordedBy: string;
   reference?: string | null;
   note?: string | null;
-  /** The entry this refund/correction reverses, if any. */
+  /** The entry this refund reverses, if any. */
   reversedTransactionId?: string | null;
 }
 
@@ -40,7 +40,6 @@ export interface LedgerTransaction extends PaymentTransaction {
 
 /** Payload for recording one new ledger entry — never edits or deletes a prior one. */
 export interface PaymentTransactionCreate {
-  kind: PaymentTransactionKind;
   amount: number;
   effectiveDate: string;
   reference?: string;

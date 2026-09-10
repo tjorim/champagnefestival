@@ -221,17 +221,19 @@ more tables remain allocated than purchased; the administrator chooses the
 released allocation first. The backend validates and commits the quantity,
 derived stock reservation, and allocation replacement in one transaction. After
 an ambiguous response, reload the booking before editing or submitting again.
-Recording a payment, refund, or correction is a separate, ledger-append write
-(#1019, see the inventory entry above) rather than part of this absolute
-update — see the next section.
+Recording a payment or refund is a separate, ledger-append write (#1019, see
+the inventory entry above) rather than part of this absolute update — see the
+next section.
 
 # Payment ledger (#1019)
 
 `POST /api/registrations/{id}/transactions` (mirrored by the MCP tool
 `create_payment_transaction`) appends one immutable `PaymentTransaction` row —
-a payment, refund, or correction — against a booking. Refunds and corrections
-never rewrite a prior entry; they are new rows, optionally linked via
-`reversed_transaction_id` to the entry they reverse. Every append recomputes
+a payment or refund — against a booking. There is no `kind` field: a
+positive amount is a payment, a negative one is a refund, and that sign is
+the only distinction stored. A refund never rewrites a prior entry; it's a
+new row, optionally linked via `reversed_transaction_id` to the entry it
+reverses. Every append recomputes
 and stores `Registration.amount_paid`/`payment_status` from the ledger's sum
 (`app.services.payments_service.sync_registration_payment_fields`), which also
 runs whenever `amount_due` changes, so those two columns — and everything that

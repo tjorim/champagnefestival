@@ -166,7 +166,6 @@ export function useAdminRegistrationActions({
           await createPaymentTransactionMutation.mutateAsync({
             registrationId,
             payload: {
-              kind: payload.kind,
               amount: payload.amount,
               effective_date: payload.effectiveDate,
               ...(payload.reference ? { reference: payload.reference } : {}),
@@ -222,7 +221,6 @@ export function useAdminRegistrationActions({
       );
       if (outstanding <= 0) return;
       await handleAddTransaction(id, {
-        kind: "payment",
         amount: outstanding,
         effectiveDate: new Date().toISOString().slice(0, 10),
         idempotencyKey: crypto.randomUUID(),

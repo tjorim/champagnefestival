@@ -5,6 +5,9 @@ The append-only payment_transactions table is created directly in migration
 001 alongside the rest of the schema, with no separate backfill migration
 (see docs/retry-safety.md) — nothing migration-specific to test here.
 
+There is no ``kind`` field: a positive amount is a payment, a negative one
+is a refund, and that sign is the only distinction the system stores.
+
 Mirrors the retry-safety test matrix in ``test_mcp_admin_bulk_create.py``
 (replay, payload-mismatch conflict, actor isolation) for the
 ``payments.record_transaction`` scope, and the genuine two-session race in
@@ -110,17 +113,17 @@ async def _registration(client, *, amount_due: str | None = None, person_id: str
 
 
 # ---------------------------------------------------------------------------
-# Recording payments/refunds/corrections and reconciliation
+# Recording payments and refunds, and reconciliation
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-async def test_multiple_payments_refund_and_correction_reconcile_and_stay_immutable(client):
+async def test_multiple_payments_and_refund_reconcile_and_stay_immutable(client):
     registration_id = await _registration(client, amount_due="100.00")
 
     r1 = await client.post(
         f"/api/registrations/{registration_id}/transactions",
-        json={"kind": "payment", "amount": "60.00", "effective_date": "2026-01-01", "reference": "TX-1"},
+        json={"amount": "60.00", "effective_date": "2026-01-01", "reference": "TX-1"},
         headers=ADMIN_HEADERS,
     )
     assert r1.status_code == 201, r1.text
@@ -128,7 +131,7 @@ async def test_multiple_payments_refund_and_correction_reconcile_and_stay_immuta
 
     r2 = await client.post(
         f"/api/registrations/{registration_id}/transactions",
-        json={"kind": "payment", "amount": "40.00", "effective_date": "2026-01-15"},
+        json={"amount": "40.00", "effective_date": "2026-01-15"},
         headers=ADMIN_HEADERS,
     )
     assert r2.status_code == 201, r2.text
@@ -136,7 +139,6 @@ async def test_multiple_payments_refund_and_correction_reconcile_and_stay_immuta
     r3 = await client.post(
         f"/api/registrations/{registration_id}/transactions",
         json={
-            "kind": "refund",
             "amount": "-20.00",
             "effective_date": "2026-02-01",
             "reversed_transaction_id": first_id,
@@ -146,26 +148,19 @@ async def test_multiple_payments_refund_and_correction_reconcile_and_stay_immuta
     )
     assert r3.status_code == 201, r3.text
 
-    r4 = await client.post(
-        f"/api/registrations/{registration_id}/transactions",
-        json={"kind": "correction", "amount": "5.00", "effective_date": "2026-02-02", "note": "Bank fee adjustment"},
-        headers=ADMIN_HEADERS,
-    )
-    assert r4.status_code == 201, r4.text
-
     ledger = (await client.get(f"/api/registrations/{registration_id}/transactions", headers=ADMIN_HEADERS)).json()
-    assert [t["kind"] for t in ledger] == ["payment", "payment", "refund", "correction"]
+    assert [Decimal(t["amount"]) for t in ledger] == [Decimal("60.00"), Decimal("40.00"), Decimal("-20.00")]
 
     # The original payment remains, unedited, alongside its reversal.
     original = next(t for t in ledger if t["id"] == first_id)
     assert original["amount"] == "60.00"
     assert original["reversed_transaction_id"] is None
-    refund = next(t for t in ledger if t["kind"] == "refund")
+    refund = next(t for t in ledger if Decimal(t["amount"]) < 0)
     assert refund["reversed_transaction_id"] == first_id
 
     registration = (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).json()
     ledger_sum = sum(Decimal(t["amount"]) for t in ledger)
-    assert ledger_sum == Decimal("85.00")
+    assert ledger_sum == Decimal("80.00")
     # Every reported total is traceable to the ledger: amount_paid is exactly
     # the sum of these entries.
     assert Decimal(registration["amount_paid"]) == ledger_sum
@@ -173,16 +168,15 @@ async def test_multiple_payments_refund_and_correction_reconcile_and_stay_immuta
 
 
 @pytest.mark.anyio
-async def test_transaction_kind_amount_sign_is_validated(client):
+async def test_zero_amount_is_rejected(client):
     registration_id = await _registration(client, amount_due="10.00")
 
-    for kind, amount in (("payment", "-5.00"), ("payment", "0.00"), ("refund", "5.00"), ("correction", "0.00")):
-        r = await client.post(
-            f"/api/registrations/{registration_id}/transactions",
-            json={"kind": kind, "amount": amount, "effective_date": "2026-01-01"},
-            headers=ADMIN_HEADERS,
-        )
-        assert r.status_code == 400, (kind, amount, r.text)
+    r = await client.post(
+        f"/api/registrations/{registration_id}/transactions",
+        json={"amount": "0.00", "effective_date": "2026-01-01"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400, r.text
 
 
 @pytest.mark.anyio
@@ -190,7 +184,7 @@ async def test_reversed_transaction_id_must_belong_to_same_booking(client):
     other_registration_id = await _registration(client, amount_due="10.00")
     r = await client.post(
         f"/api/registrations/{other_registration_id}/transactions",
-        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01"},
+        json={"amount": "10.00", "effective_date": "2026-01-01"},
         headers=ADMIN_HEADERS,
     )
     other_transaction_id = r.json()["id"]
@@ -199,7 +193,6 @@ async def test_reversed_transaction_id_must_belong_to_same_booking(client):
     r = await client.post(
         f"/api/registrations/{registration_id}/transactions",
         json={
-            "kind": "refund",
             "amount": "-5.00",
             "effective_date": "2026-01-02",
             "reversed_transaction_id": other_transaction_id,
@@ -214,7 +207,7 @@ async def test_deleting_a_booking_with_ledger_entries_is_rejected(client):
     registration_id = await _registration(client, amount_due="10.00")
     r = await client.post(
         f"/api/registrations/{registration_id}/transactions",
-        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01"},
+        json={"amount": "10.00", "effective_date": "2026-01-01"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -234,7 +227,6 @@ async def test_export_prefixes_formula_injection_reference_and_filters_by_editio
     r = await client.post(
         f"/api/registrations/{registration_id}/transactions",
         json={
-            "kind": "payment",
             "amount": "10.00",
             "effective_date": "2026-03-01",
             "reference": "=cmd|'/c calc'!A1",
@@ -270,13 +262,13 @@ async def test_list_transactions_filters_by_edition_and_person_with_booking_cont
 
     r = await client.post(
         f"/api/registrations/{own_registration_id}/transactions",
-        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01", "reference": "OWN-REF"},
+        json={"amount": "10.00", "effective_date": "2026-01-01", "reference": "OWN-REF"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
     r = await client.post(
         f"/api/registrations/{other_registration_id}/transactions",
-        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01", "reference": "OTHER-REF"},
+        json={"amount": "10.00", "effective_date": "2026-01-01", "reference": "OTHER-REF"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -320,20 +312,20 @@ async def test_person_payment_summary_aggregates_across_bookings_and_excludes_ca
 
     r = await client.post(
         f"/api/registrations/{reg1}/transactions",
-        json={"kind": "payment", "amount": "100.00", "effective_date": "2026-01-01"},
+        json={"amount": "100.00", "effective_date": "2026-01-01"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
 
     r = await client.post(
         f"/api/registrations/{reg2}/transactions",
-        json={"kind": "payment", "amount": "60.00", "effective_date": "2026-01-02"},
+        json={"amount": "60.00", "effective_date": "2026-01-02"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
     r = await client.post(
         f"/api/registrations/{reg2}/transactions",
-        json={"kind": "refund", "amount": "-10.00", "effective_date": "2026-01-03"},
+        json={"amount": "-10.00", "effective_date": "2026-01-03"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -342,7 +334,7 @@ async def test_person_payment_summary_aggregates_across_bookings_and_excludes_ca
     # summary entirely, matching the edition stats' non-cancelled filter.
     r = await client.post(
         f"/api/registrations/{cancelled_reg}/transactions",
-        json={"kind": "payment", "amount": "200.00", "effective_date": "2026-01-04"},
+        json={"amount": "200.00", "effective_date": "2026-01-04"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -376,13 +368,13 @@ async def test_export_filters_by_person_id(client):
 
     r = await client.post(
         f"/api/registrations/{own_registration_id}/transactions",
-        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01", "reference": "OWN-REF"},
+        json={"amount": "10.00", "effective_date": "2026-01-01", "reference": "OWN-REF"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
     r = await client.post(
         f"/api/registrations/{other_registration_id}/transactions",
-        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01", "reference": "OTHER-REF"},
+        json={"amount": "10.00", "effective_date": "2026-01-01", "reference": "OTHER-REF"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -411,7 +403,6 @@ async def test_create_payment_transaction_idempotency_key_replays_result(client,
         factory,
         "admin-1",
         registration_id,
-        kind="payment",
         amount=25.0,
         effective_date="2026-01-01",
         idempotency_key="pay-retry-key",
@@ -420,7 +411,6 @@ async def test_create_payment_transaction_idempotency_key_replays_result(client,
         factory,
         "admin-1",
         registration_id,
-        kind="payment",
         amount=25.0,
         effective_date="2026-01-01",
         idempotency_key="pay-retry-key",
@@ -448,7 +438,6 @@ async def test_create_payment_transaction_idempotency_key_reused_with_different_
         factory,
         "admin-1",
         registration_id,
-        kind="payment",
         amount=25.0,
         effective_date="2026-01-01",
         idempotency_key="shared-key",
@@ -458,7 +447,6 @@ async def test_create_payment_transaction_idempotency_key_reused_with_different_
             factory,
             "admin-1",
             registration_id,
-            kind="payment",
             amount=30.0,
             effective_date="2026-01-01",
             idempotency_key="shared-key",
@@ -485,7 +473,6 @@ async def test_create_payment_transaction_idempotency_key_reused_by_different_ac
         factory,
         "admin-a",
         registration_id,
-        kind="payment",
         amount=25.0,
         effective_date="2026-01-01",
         idempotency_key="actor-scoped-key",
@@ -495,7 +482,6 @@ async def test_create_payment_transaction_idempotency_key_reused_by_different_ac
             factory,
             "admin-b",
             registration_id,
-            kind="payment",
             amount=25.0,
             effective_date="2026-01-01",
             idempotency_key="actor-scoped-key",
@@ -511,7 +497,6 @@ async def test_create_payment_transaction_stores_idempotency_key_scoped_to_payme
         factory,
         "admin-1",
         registration_id,
-        kind="payment",
         amount=25.0,
         effective_date="2026-01-01",
         idempotency_key="scope-check-key",
@@ -553,7 +538,6 @@ async def test_concurrent_first_use_of_same_idempotency_key_records_exactly_one_
                 return await payments_service.record_payment_transaction(
                     session,
                     registration,
-                    kind="payment",
                     amount=Decimal("25.00"),
                     effective_date=datetime(2026, 1, 1, tzinfo=UTC).date(),
                     actor="admin-race",

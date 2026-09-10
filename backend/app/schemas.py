@@ -477,20 +477,17 @@ class RegistrationOutWithToken(RegistrationOut):
     check_in_token: str
 
 
-PaymentTransactionKind = Literal["payment", "refund", "correction"]
-
-
 class PaymentTransactionCreate(RequestModel):
     """One append-only ledger entry against a booking (#1019).
 
-    Never edits or deletes a prior entry — a refund or correction is always a
-    new row, optionally linked to the entry it reverses via
-    ``reversed_transaction_id``. Sign is validated against ``kind`` in
-    ``app.services.payments_service`` (payment > 0, refund < 0, correction
-    != 0) rather than here, so REST and MCP share one rule.
+    There's no ``kind``: a positive ``amount`` is a payment, a negative one
+    is a refund — that sign is the only distinction the system needs.
+    ``amount != 0`` is validated in ``app.services.payments_service`` rather
+    than here, so REST and MCP share one rule. Never edits or deletes a
+    prior entry — a refund is always a new row, optionally linked to the
+    entry it reverses via ``reversed_transaction_id``.
     """
 
-    kind: PaymentTransactionKind
     amount: Decimal = Field(decimal_places=2, max_digits=10)
     effective_date: dt_date
     """When the money actually moved (e.g. a bank-transfer date), which may
@@ -515,7 +512,6 @@ class PaymentTransactionOut(BaseModel):
     id: str
     registration_id: str
     amount: Decimal
-    kind: PaymentTransactionKind
     effective_date: dt_date
     recorded_at: datetime
     recorded_by: str
@@ -1677,7 +1673,7 @@ class EditionAttendanceStats(BaseModel):
     total_due: Decimal
     total_received: Decimal = Decimal(0)
     """Sum of `payment`-kind ledger entries (#1019) — gross money taken in,
-    before refunds/corrections; compare with `total_refunded`."""
+    before refunds; compare with `total_refunded`."""
     total_refunded: Decimal = Decimal(0)
     """Sum of `refund`-kind ledger entries, as a positive amount."""
     total_outstanding: Decimal = Decimal(0)

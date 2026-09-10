@@ -77,7 +77,7 @@ async def test_admin_records_a_table_fee_and_marks_it_paid(client):
     # Payment itself is a ledger entry (#1019), not a direct field write.
     r = await client.post(
         f"/api/registrations/{registration_id}/transactions",
-        json={"kind": "payment", "amount": "25.00", "effective_date": "2026-06-01"},
+        json={"amount": "25.00", "effective_date": "2026-06-01"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -101,7 +101,7 @@ async def test_amount_due_change_recomputes_payment_status(client):
 
     r = await client.post(
         f"/api/registrations/{registration_id}/transactions",
-        json={"kind": "payment", "amount": "25.00", "effective_date": "2026-06-01"},
+        json={"amount": "25.00", "effective_date": "2026-06-01"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text

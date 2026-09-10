@@ -142,7 +142,7 @@ export interface EditionAttendanceStats {
   totalCheckedIn: number;
   totalPaid: number;
   totalDue: number;
-  /** Sum of `payment`-kind ledger entries (#1019) — gross received, before refunds/corrections. */
+  /** Sum of `payment`-kind ledger entries (#1019) — gross received, before refunds. */
   totalReceived: number;
   /** Sum of `refund`-kind ledger entries, as a positive amount. */
   totalRefunded: number;

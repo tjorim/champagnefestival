@@ -478,7 +478,6 @@ def upgrade() -> None:
             nullable=False,
         ),
         sa.Column("amount", sa.Numeric(10, 2), nullable=False),
-        sa.Column("kind", sa.String(20), nullable=False),
         sa.Column("effective_date", sa.Date(), nullable=False),
         sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("recorded_by", sa.String(255), nullable=False),
@@ -490,7 +489,7 @@ def upgrade() -> None:
             sa.ForeignKey("payment_transactions.id", ondelete="SET NULL"),
             nullable=True,
         ),
-        sa.CheckConstraint("kind IN ('payment', 'refund', 'correction')", name="ck_payment_transactions_kind"),
+        sa.CheckConstraint("amount <> 0", name="ck_payment_transactions_amount_nonzero"),
     )
     op.create_index("ix_payment_transactions_registration_id", "payment_transactions", ["registration_id"])
 

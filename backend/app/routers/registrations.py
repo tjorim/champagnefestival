@@ -444,7 +444,7 @@ async def export_payment_transactions_csv(
                 [
                     txn.reference or "",
                     txn.effective_date.isoformat(),
-                    txn.kind,
+                    "payment" if txn.amount > 0 else "refund",
                     registration.id,
                     event.title,
                     f"{edition.year} {edition.month}" if edition else "",
@@ -588,12 +588,11 @@ async def create_payment_transaction(
     actor: str = Depends(get_actor_id),
 ) -> dict:
     """Append one ledger entry (#1019). Never edits or deletes a prior entry —
-    a refund or correction is always a separate, new row."""
+    a refund is always a separate, new row."""
     registration = await registrations_service.get_registration_or_404(db, registration_id)
     return await payments_service.record_payment_transaction(
         db,
         registration,
-        kind=body.kind,
         amount=body.amount,
         effective_date=body.effective_date,
         reference=body.reference,

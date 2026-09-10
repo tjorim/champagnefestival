@@ -422,7 +422,6 @@ describe("RegistrationDetail", () => {
     expect(onAddTransaction).toHaveBeenCalledWith(
       "reg-1",
       expect.objectContaining({
-        kind: "payment",
         amount: 42,
         idempotencyKey: expect.any(String),
       }),

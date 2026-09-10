@@ -1078,7 +1078,7 @@ async def test_edition_stats_aggregates_payments(client):
     assert r.status_code == 200
     r = await client.post(
         f"/api/registrations/{reg1_id}/transactions",
-        json={"kind": "payment", "amount": "60.00", "effective_date": "2099-04-01"},
+        json={"amount": "60.00", "effective_date": "2099-04-01"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -1090,7 +1090,7 @@ async def test_edition_stats_aggregates_payments(client):
     assert r.status_code == 200
     r = await client.post(
         f"/api/registrations/{reg2_id}/transactions",
-        json={"kind": "payment", "amount": "40.00", "effective_date": "2099-04-01"},
+        json={"amount": "40.00", "effective_date": "2099-04-01"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -1102,7 +1102,7 @@ async def test_edition_stats_aggregates_payments(client):
     assert r.status_code == 200
     r = await client.post(
         f"/api/registrations/{reg3_id}/transactions",
-        json={"kind": "payment", "amount": "500.00", "effective_date": "2099-04-01"},
+        json={"amount": "500.00", "effective_date": "2099-04-01"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201

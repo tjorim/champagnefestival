@@ -73,7 +73,6 @@ from app.schemas import (
     Y_POSITION_DESCRIPTION,
     EditionType,
     LayoutCreate,
-    PaymentTransactionKind,
     RoomCreate,
     TableCreate,
     TableTypeCreate,
@@ -1596,7 +1595,7 @@ class ChampagneFestivalMcpBackend:
         product details are resolved server-side. ``allocations`` replaces the
         complete table allocation list. ``payment_status``/paid total are
         ledger-derived (#1019) — use ``create_payment_transaction`` to record
-        a payment, refund or correction instead. Requires the ``admin`` role.
+        a payment or refund instead. Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_registrations.update_registration(
@@ -1625,7 +1624,6 @@ class ChampagneFestivalMcpBackend:
     async def create_payment_transaction(
         self,
         registration_id: str,
-        kind: PaymentTransactionKind,
         amount: float,
         effective_date: str,
         reference: str | None = None,
@@ -1635,20 +1633,19 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Append one payment-ledger entry against a booking. Requires the ``admin`` role.
 
-        ``kind`` is ``payment``, ``refund`` or ``correction``; ``amount``'s
-        sign must match (payment > 0, refund < 0, correction != 0). Never
-        edits or deletes a prior entry — a refund/correction is always a new,
-        separate row, optionally linked via ``reversed_transaction_id`` to the
-        entry it reverses. Pass the same ``idempotency_key`` on a retry (e.g.
-        after a timeout) to safely replay the same result instead of
-        recording the money twice — see docs/retry-safety.md.
+        There's no ``kind``: a positive ``amount`` is a payment, a negative
+        one is a refund. Never edits or deletes a prior entry — a refund is
+        always a new, separate row, optionally linked via
+        ``reversed_transaction_id`` to the entry it reverses. Pass the same
+        ``idempotency_key`` on a retry (e.g. after a timeout) to safely
+        replay the same result instead of recording the money twice — see
+        docs/retry-safety.md.
         """
         self._require_admin()
         return await mcp_admin_payments.create_payment_transaction(
             self.session_factory,
             self._actor(),
             registration_id,
-            kind=kind,
             amount=amount,
             effective_date=effective_date,
             reference=reference,

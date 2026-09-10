@@ -52,7 +52,7 @@ async def test_booked_prices_and_payment_survive_quantity_reduction(client):
     registration = (await book(client, event, table, 3)).json()
     response = await client.post(
         f"/api/registrations/{registration['id']}/transactions",
-        json={"kind": "payment", "amount": "150.00", "effective_date": "2026-01-01"},
+        json={"amount": "150.00", "effective_date": "2026-01-01"},
     )
     assert response.status_code == 201, response.text
     assert (await client.put(f"/api/products/{table['id']}", json={"price": "80"})).status_code == 200

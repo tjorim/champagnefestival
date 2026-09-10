@@ -9,14 +9,13 @@ import type { Product } from "@/types/event";
 import type {
   BookingUpdate,
   PaymentTransactionCreate,
-  PaymentTransactionKind,
   Registration,
   RegistrationStatus,
   TableAllocation,
 } from "@/types/registration";
 import { fetchPaymentTransactions } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
-import { transactionKindLabel } from "@/utils/paymentTransactionLabels";
+import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
 import { m } from "@/paraglide/messages";
 
 function todayDateInputValue(): string {
@@ -94,7 +93,6 @@ export default function BookingEditor({
   const [pending, setPending] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
 
-  const [transactionKind, setTransactionKind] = useState<PaymentTransactionKind>("payment");
   const [transactionAmount, setTransactionAmount] = useState("");
   const [transactionDate, setTransactionDate] = useState(todayDateInputValue());
   const [transactionReference, setTransactionReference] = useState("");
@@ -161,11 +159,9 @@ export default function BookingEditor({
 
   const parsedTransactionAmount = Number(transactionAmount);
   const transactionAmountInvalid =
-    transactionAmount.trim() === "" || !Number.isFinite(parsedTransactionAmount);
-  const signedTransactionAmount =
-    transactionKind === "refund"
-      ? -Math.abs(parsedTransactionAmount)
-      : Math.abs(parsedTransactionAmount);
+    transactionAmount.trim() === "" ||
+    !Number.isFinite(parsedTransactionAmount) ||
+    parsedTransactionAmount === 0;
 
   return (
     <section aria-labelledby="booking-editor-heading">
@@ -359,7 +355,7 @@ export default function BookingEditor({
                   <ListGroup.Item key={entry.id} className="px-0 py-1">
                     <div className="small d-flex justify-content-between flex-wrap gap-2">
                       <span>
-                        <strong>{transactionKindLabel(entry.kind)}</strong>{" "}
+                        <strong>{transactionAmountLabel(entry.amount)}</strong>{" "}
                         {entry.amount >= 0 ? "+" : ""}€{entry.amount.toFixed(2)}
                         {entry.reference ? ` · ${entry.reference}` : ""}
                         {entry.note ? ` · ${entry.note}` : ""}
@@ -375,32 +371,17 @@ export default function BookingEditor({
             {onAddTransaction && (
               <div className="d-flex flex-wrap gap-2 align-items-end">
                 <Form.Group>
-                  <Form.Label className="small mb-1">{m.admin_payment_reason_label()}</Form.Label>
-                  <Form.Select
-                    size="sm"
-                    aria-label={m.admin_payment_reason_label()}
-                    value={transactionKind}
-                    onChange={(event) =>
-                      setTransactionKind(event.target.value as PaymentTransactionKind)
-                    }
-                  >
-                    <option value="payment">{m.admin_payment_reason_payment()}</option>
-                    <option value="refund">{m.admin_payment_reason_refund()}</option>
-                    <option value="correction">{m.admin_payment_reason_correction()}</option>
-                  </Form.Select>
-                </Form.Group>
-                <Form.Group>
                   <Form.Label className="small mb-1">{m.admin_payment_amount_label()}</Form.Label>
                   <Form.Control
                     size="sm"
                     type="number"
-                    min={0}
                     step="0.01"
                     style={{ maxWidth: "8rem" }}
                     aria-label={m.admin_payment_amount_label()}
                     value={transactionAmount}
                     onChange={(event) => setTransactionAmount(event.target.value)}
                   />
+                  <Form.Text className="small">{m.admin_payment_amount_help()}</Form.Text>
                 </Form.Group>
                 <Form.Group>
                   <Form.Label className="small mb-1">
@@ -440,16 +421,13 @@ export default function BookingEditor({
                 </Form.Group>
                 <Button
                   size="sm"
-                  disabled={
-                    transactionPending || transactionAmountInvalid || signedTransactionAmount === 0
-                  }
+                  disabled={transactionPending || transactionAmountInvalid}
                   onClick={async () => {
                     setTransactionPending(true);
                     setTransactionError("");
                     try {
                       await onAddTransaction(registration.id, {
-                        kind: transactionKind,
-                        amount: signedTransactionAmount,
+                        amount: parsedTransactionAmount,
                         effectiveDate: transactionDate,
                         reference: transactionReference.trim() || undefined,
                         note: transactionNote.trim() || undefined,

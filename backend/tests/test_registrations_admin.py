@@ -557,14 +557,13 @@ async def test_admin_create_reservation_person_not_found(client):
 
 
 @pytest.mark.anyio
-async def test_payment_transaction_is_audited_with_kind_and_effective_date(client):
+async def test_payment_transaction_is_audited_with_amount_and_effective_date(client):
     created = await _post_registration(client)
     registration_id = created.json()["id"]
 
     r = await client.post(
         f"/api/registrations/{registration_id}/transactions",
         json={
-            "kind": "refund",
             "amount": "-42.00",
             "effective_date": "2026-06-01",
         },
@@ -584,7 +583,6 @@ async def test_payment_transaction_is_audited_with_kind_and_effective_date(clien
     assert r.status_code == 200
     entries = r.json()
     assert len(entries) == 1
-    assert entries[0]["details"]["kind"] == "refund"
     assert entries[0]["details"]["amount"] == "-42.00"
     assert entries[0]["details"]["effective_date"] == "2026-06-01"
 
@@ -596,7 +594,7 @@ async def test_payment_transaction_without_reference_or_note_omits_them_from_aud
 
     r = await client.post(
         f"/api/registrations/{registration_id}/transactions",
-        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-06-01"},
+        json={"amount": "10.00", "effective_date": "2026-06-01"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201

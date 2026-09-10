@@ -125,12 +125,12 @@ async def list_edition_attendance_stats(
     txn_stmt = (
         select(
             Event.edition_id,
-            func.coalesce(func.sum(PaymentTransaction.amount).filter(PaymentTransaction.kind == "payment"), 0).label(
+            func.coalesce(func.sum(PaymentTransaction.amount).filter(PaymentTransaction.amount > 0), 0).label(
                 "total_received"
             ),
-            func.coalesce(
-                func.sum(PaymentTransaction.amount).filter(PaymentTransaction.kind == "refund") * -1, 0
-            ).label("total_refunded"),
+            func.coalesce(func.sum(PaymentTransaction.amount).filter(PaymentTransaction.amount < 0) * -1, 0).label(
+                "total_refunded"
+            ),
         )
         .select_from(PaymentTransaction)
         .join(Registration, Registration.id == PaymentTransaction.registration_id)

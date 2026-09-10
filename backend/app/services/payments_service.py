@@ -45,8 +45,6 @@ from app.utils import make_id
 
 PAYMENT_TRANSACTION_SCOPE = "payments.record_transaction"
 
-TRANSACTION_KINDS = ("payment", "refund", "correction")
-
 
 def derive_payment_status(net_paid: Decimal, amount_due: Decimal | None) -> str:
     """Mirror the pre-ledger status rule that lived in ``apply_registration_update``:
@@ -139,7 +137,8 @@ async def person_payment_summary(db: AsyncSession, person_id: str) -> dict:
     person's non-cancelled bookings — the person-level counterpart to the
     edition stats endpoint's aggregation (#1019). Every figure is traceable
     to ledger entries: received/refunded come from summing
-    ``PaymentTransaction`` rows by kind, and due/outstanding/refund-liability
+    ``PaymentTransaction`` rows by sign (positive = payment, negative =
+    refund — there's no stored ``kind``), and due/outstanding/refund-liability
     from the ``amount_due``/``amount_paid`` columns that
     ``sync_registration_payment_fields`` keeps derived from the same ledger.
     """
@@ -163,12 +162,12 @@ async def person_payment_summary(db: AsyncSession, person_id: str) -> dict:
 
     txn_stmt = (
         select(
-            func.coalesce(func.sum(PaymentTransaction.amount).filter(PaymentTransaction.kind == "payment"), 0).label(
+            func.coalesce(func.sum(PaymentTransaction.amount).filter(PaymentTransaction.amount > 0), 0).label(
                 "received"
             ),
-            func.coalesce(
-                func.sum(PaymentTransaction.amount).filter(PaymentTransaction.kind == "refund") * -1, 0
-            ).label("refunded"),
+            func.coalesce(func.sum(PaymentTransaction.amount).filter(PaymentTransaction.amount < 0) * -1, 0).label(
+                "refunded"
+            ),
         )
         .select_from(PaymentTransaction)
         .join(Registration, Registration.id == PaymentTransaction.registration_id)
@@ -195,7 +194,6 @@ def payment_transaction_to_dict(t: PaymentTransaction) -> dict:
         # IdempotencyKey.response_body JSON column can't serialise a Decimal
         # directly — PaymentTransactionOut parses the string back to Decimal.
         "amount": str(t.amount),
-        "kind": t.kind,
         "effective_date": t.effective_date,
         "recorded_at": t.recorded_at,
         "recorded_by": t.recorded_by,
@@ -209,7 +207,6 @@ async def record_payment_transaction(
     db: AsyncSession,
     registration: Registration,
     *,
-    kind: str,
     amount: Decimal,
     effective_date: dt_date,
     reference: str | None = None,
@@ -221,27 +218,19 @@ async def record_payment_transaction(
 ) -> dict:
     """Append one immutable ledger entry and resync the booking's derived totals.
 
-    Refunds and corrections never rewrite a prior payment — this always
-    inserts a new row, optionally linked to the entry it reverses via
+    There is no ``kind``: a positive ``amount`` is a payment, a negative one
+    is a refund — the sign is the only distinction, so nothing else is
+    validated or stored. A refund never rewrites a prior payment — this
+    always inserts a new row, optionally linked to the entry it reverses via
     ``reversed_transaction_id``. Idempotent under (scope, ``idempotency_key``)
     like every other bulk/import write — see ``app.services.idempotency``.
     """
-    if kind not in TRANSACTION_KINDS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"kind must be one of {', '.join(TRANSACTION_KINDS)}.",
-        )
-    if kind == "payment" and amount <= 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A payment amount must be positive.")
-    if kind == "refund" and amount >= 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A refund amount must be negative.")
-    if kind == "correction" and amount == 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A correction amount must not be zero.")
+    if amount == 0:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="amount must not be zero.")
 
     request_hash = hash_request(
         {
             "registration_id": registration.id,
-            "kind": kind,
             "amount": str(amount),
             "effective_date": effective_date.isoformat(),
             "reference": reference,
@@ -278,7 +267,6 @@ async def record_payment_transaction(
         id=make_id("paytxn"),
         registration_id=registration.id,
         amount=amount,
-        kind=kind,
         effective_date=effective_date,
         recorded_by=actor,
         reference=reference,
@@ -299,7 +287,6 @@ async def record_payment_transaction(
         request_id=request_id,
         details={
             "transaction_id": transaction.id,
-            "kind": kind,
             "amount": str(amount),
             "effective_date": effective_date.isoformat(),
             "reference": reference,

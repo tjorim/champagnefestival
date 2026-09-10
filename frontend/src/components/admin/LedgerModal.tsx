@@ -5,7 +5,7 @@ import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
 import { m } from "@/paraglide/messages";
 import type { LedgerTransaction } from "@/types/registration";
-import { transactionKindLabel } from "@/utils/paymentTransactionLabels";
+import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
 
 /** Read-only drill-down into the filtered ledger rows behind an edition or
  * person payment summary (#1019) — the same rows as the CSV export, viewed
@@ -59,7 +59,7 @@ export default function LedgerModal({
               <ListGroup.Item key={entry.id} className="bg-dark border-secondary text-light py-2">
                 <div className="d-flex justify-content-between flex-wrap gap-2 small">
                   <span>
-                    <strong>{transactionKindLabel(entry.kind)}</strong>{" "}
+                    <strong>{transactionAmountLabel(entry.amount)}</strong>{" "}
                     {entry.amount >= 0 ? "+" : ""}€{entry.amount.toFixed(2)}
                     {entry.reference ? ` · ${entry.reference}` : ""}
                     {entry.note ? ` · ${entry.note}` : ""}

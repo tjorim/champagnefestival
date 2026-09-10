@@ -258,7 +258,7 @@ async def test_quantity_reduction_and_chosen_table_release_commit_together(clien
     assert (
         await client.post(
             f"{url}/transactions",
-            json={"kind": "payment", "amount": "100.00", "effective_date": "2026-01-01"},
+            json={"amount": "100.00", "effective_date": "2026-01-01"},
         )
     ).status_code == 201
     change = {"order_items": [{"product_id": product["id"], "quantity": 1}]}

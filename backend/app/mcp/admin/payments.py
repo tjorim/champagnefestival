@@ -20,7 +20,6 @@ async def create_payment_transaction(
     actor: str,
     registration_id: str,
     *,
-    kind: str,
     amount: float,
     effective_date: str,
     reference: str | None = None,
@@ -30,16 +29,15 @@ async def create_payment_transaction(
 ) -> dict:
     """Append one ledger entry (admin equivalent of ``POST /api/registrations/{id}/transactions``).
 
-    Never edits or deletes a prior entry — a refund or correction is always a
+    There's no ``kind``: a positive ``amount`` is a payment, a negative one
+    is a refund. Never edits or deletes a prior entry — a refund is always a
     new, separate row, optionally linked via ``reversed_transaction_id`` to
-    the entry it reverses. ``amount`` sign must match ``kind`` (payment > 0,
-    refund < 0, correction != 0). Pass the same ``idempotency_key`` on a
-    retry (e.g. after a timeout) to safely replay the same result instead of
-    recording the money twice — see docs/retry-safety.md.
+    the entry it reverses. Pass the same ``idempotency_key`` on a retry (e.g.
+    after a timeout) to safely replay the same result instead of recording
+    the money twice — see docs/retry-safety.md.
     """
     body = validate_with_schema(
         PaymentTransactionCreate,
-        kind=kind,
         amount=amount,
         effective_date=effective_date,
         reference=reference,
@@ -53,7 +51,6 @@ async def create_payment_transaction(
             return await payments_service.record_payment_transaction(
                 db,
                 registration,
-                kind=body.kind,
                 amount=body.amount,
                 effective_date=body.effective_date,
                 reference=body.reference,

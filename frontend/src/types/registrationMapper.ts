@@ -4,7 +4,6 @@ import type {
   OrderItemCategory,
   PaymentStatus,
   PaymentTransaction,
-  PaymentTransactionKind,
   Registration,
   RegistrationStatus,
 } from "./registration";
@@ -15,7 +14,6 @@ export function apiToPaymentTransaction(d: Record<string, unknown>): PaymentTran
     id: d.id as string,
     registrationId: d.registration_id as string,
     amount: Number(d.amount ?? 0),
-    kind: (d.kind ?? "payment") as PaymentTransactionKind,
     effectiveDate: (d.effective_date ?? "") as string,
     recordedAt: (d.recorded_at ?? "") as string,
     recordedBy: (d.recorded_by ?? "") as string,
