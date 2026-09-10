@@ -17,7 +17,6 @@ from app.composer_content import LOCALES, build_composer_payload, pick_locale_te
 # ---------------------------------------------------------------------------
 
 OrderItemCategory = Literal["champagne", "food", "other"]
-ProductMode = Literal["purchasable", "included_visible", "internal", "disabled"]
 EditionType = Literal["festival", "bourse", "capsule_exchange"]
 RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
 PaymentStatus = Literal["unpaid", "partial", "paid"]
@@ -59,8 +58,10 @@ class OrderItemBase(BaseModel):
     Product.included_product_id) — only `quantity - included_quantity` is
     billed at `price` per unit."""
     visible: bool = True
-    """Whether this line should be shown in the visitor-facing order summary
-    (see ProductInclusion.visible) — always counted for stock/prep regardless."""
+    """Whether this line should be shown in the visitor-facing order summary —
+    true when explicitly ordered, or when included via a bundle whose target
+    product is itself `purchasable` (see Product.purchasable). Always counted
+    for stock/prep regardless."""
 
     @model_validator(mode="after")
     def validate_delivery_quantities(self) -> Self:
@@ -301,13 +302,6 @@ class ProductInclusion(RequestModel):
     quantity: int = Field(default=1, ge=1, le=1000000)
     per_quantity: int = Field(default=1, ge=1, le=1000000)
     rounding: Literal["up", "down"] = "down"
-    visible: bool = Field(
-        default=True,
-        description=(
-            "Whether this inclusion appears in the visitor-facing order summary. "
-            "It always counts toward stock and preparation totals either way."
-        ),
-    )
 
 
 class ProductCreate(RequestModel):
@@ -319,7 +313,7 @@ class ProductCreate(RequestModel):
     description: str = Field(default="", max_length=300)
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory
-    mode: ProductMode = "purchasable"
+    purchasable: bool = True
     required: bool = False
     included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
     included_per_guests: int | None = Field(default=None, ge=1)
@@ -328,6 +322,12 @@ class ProductCreate(RequestModel):
     def validate_inclusion_pair(self) -> Self:
         if (self.included_product_id is None) != (self.included_per_guests is None):
             raise ValueError("included_product_id and included_per_guests must be set together.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_required_implies_purchasable(self) -> Self:
+        if self.required and not self.purchasable:
+            raise ValueError("A required product must be purchasable.")
         return self
 
 
@@ -343,11 +343,13 @@ class ProductUpdate(RequestModel):
     description: str | None = Field(default=None, max_length=300)
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory | None = None
-    mode: ProductMode | None = None
+    purchasable: bool | None = None
     required: bool | None = None
     # Nullable and independently settable, so the router (not this schema) decides
     # what "both or neither" means against the product's *resulting* state —
     # a PATCH may touch only one field while leaving the other as already stored.
+    # `purchasable`/`required` are validated against the *resulting* state too
+    # (see app.services.product_changes.change_product), for the same reason.
     included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
     included_per_guests: int | None = Field(default=None, ge=1)
 
@@ -359,8 +361,9 @@ class ProductOut(BaseModel):
     available_quantity: int | None = None
     shortage: int = 0
     sold_out: bool = False
-    """A purchasable product with no remaining stock. Distinct from `mode` —
-    a sold-out product stays "purchasable" and visible, just unorderable."""
+    """A purchasable product with no remaining stock. Distinct from
+    `purchasable` — a sold-out product stays purchasable (and visible), just
+    unorderable until restocked."""
     inclusions: list[ProductInclusion] | None = None
     id: str
     event_id: str
@@ -368,7 +371,7 @@ class ProductOut(BaseModel):
     description: str = ""
     price: Decimal
     category: OrderItemCategory
-    mode: ProductMode
+    purchasable: bool
     required: bool
     included_product_id: str | None
     included_per_guests: int | None
@@ -379,10 +382,10 @@ class ProductOut(BaseModel):
 
 
 class ProductPublicOut(BaseModel):
-    """The visitor-facing shape of a product: a selectable ("purchasable")
-    product, or the name/description of an "included_visible" product that is
-    a package inclusion target. Never exposes `mode`, `stock`, or any
-    "internal"/"disabled" product — see app.utils.event_to_summary_dict."""
+    """The visitor-facing shape of a product: always `purchasable=True` —
+    see app.utils.event_to_summary_dict, which excludes every hidden
+    (`purchasable=False`) product from the public response entirely, and
+    strips any `inclusions`/`included_product_id` edge that targets one."""
 
     id: str
     name: str

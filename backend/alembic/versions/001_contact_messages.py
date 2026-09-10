@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, a short product description, the append-only payment transaction ledger, and product availability/visibility modes.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, a short product description, the append-only payment transaction ledger, and a single purchasable flag covering both standalone product availability and visitor visibility.
 
 Revision ID: 001
 Revises: 000
@@ -519,28 +519,26 @@ def upgrade() -> None:
         FOR EACH ROW EXECUTE FUNCTION reject_payment_transaction_mutation()
     """)
 
-    # #1020: replace products.active with a single mode covering both standalone
-    # availability and visitor visibility. Add nullable first so the backfill
-    # below can populate it from the boolean it replaces, then constrain.
-    op.add_column("products", sa.Column("mode", sa.String(20), nullable=True))
-    op.execute("UPDATE products SET mode = CASE WHEN active THEN 'purchasable' ELSE 'disabled' END")
-    op.alter_column("products", "mode", nullable=False)
-    op.create_check_constraint(
-        "ck_products_mode", "products", "mode IN ('purchasable', 'included_visible', 'internal', 'disabled')"
-    )
-    op.drop_column("products", "active")
+    # #1020: rename products.active to purchasable — it now also decides
+    # whether an inclusion line reaches the visitor-facing order summary
+    # (previously a separate per-inclusion `visible` JSON key, dropped
+    # entirely: a hidden product's name is never shown to a visitor, so
+    # there is nothing left for a per-package override to control). A
+    # required product must be purchasable — clear `required` on any row
+    # that would otherwise violate the new constraint (it was already inert
+    # there, since the pre-existing required-product check only ever
+    # considered active/purchasable products).
+    op.alter_column("products", "active", new_column_name="purchasable")
+    op.execute("UPDATE products SET required = false WHERE required AND NOT purchasable")
+    op.create_check_constraint("ck_products_required_implies_purchasable", "products", "NOT required OR purchasable")
 
 
 def downgrade() -> None:
-    # #1020: exact inverse of the mode backfill above — only "purchasable"
-    # maps back to active=true, matching how it was derived from active=true
-    # on the way up. "included_visible"/"internal" become inactive here,
-    # since neither has a boolean equivalent.
-    op.add_column("products", sa.Column("active", sa.Boolean(), nullable=True))
-    op.execute("UPDATE products SET active = (mode = 'purchasable')")
-    op.alter_column("products", "active", nullable=False)
-    op.drop_constraint("ck_products_mode", "products")
-    op.drop_column("products", "mode")
+    # #1020: exact inverse of the rename above. The `required` backfill is
+    # not reversed — it only cleared a combination that was already inert
+    # pre-upgrade, so there is nothing to restore.
+    op.drop_constraint("ck_products_required_implies_purchasable", "products")
+    op.alter_column("products", "purchasable", new_column_name="active")
 
     op.execute("DROP TRIGGER IF EXISTS payment_transactions_append_only ON payment_transactions")
     op.execute("DROP FUNCTION IF EXISTS reject_payment_transaction_mutation()")

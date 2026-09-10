@@ -74,7 +74,6 @@ from app.schemas import (
     Y_POSITION_DESCRIPTION,
     EditionType,
     LayoutCreate,
-    ProductMode,
     RoomCreate,
     TableCreate,
     TableTypeCreate,
@@ -1105,7 +1104,7 @@ class ChampagneFestivalMcpBackend:
         price: float,
         category: str,
         description: str = "",
-        mode: ProductMode = "purchasable",
+        purchasable: bool = True,
         required: bool = False,
         unit: str = "item",
         stock: int | None = None,
@@ -1115,14 +1114,18 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Create a product for an event. Requires the ``admin`` role.
 
-        ``mode`` is one of "purchasable" (visitor-selectable), "included_visible"
-        (only supplied through a package, but its name may appear in that
-        package's visitor-facing summary), "internal" (only supplied through a
-        package, never shown to visitors, still counted for stock/preparation),
-        or "disabled" (kept for later reuse; unavailable for new sales or
-        packages). ``stock`` is ``null``/omitted for unlimited, ``0`` for
-        sold out. ``inclusions`` bundles a quantity of other products on this
-        event into this one (see ``app.models.Product``).
+        ``purchasable`` (default ``true``) decides both standalone order
+        availability and visitor visibility: a purchasable product can be
+        ordered directly and is shown wherever it appears, including as a
+        package inclusion line. A ``purchasable=false`` ("hidden") product is
+        never orderable directly and never named to a visitor, but can still
+        be an inclusion target of another product and still counts toward
+        stock/preparation totals — there is no separate "disabled" state; a
+        withdrawn product is simply set to ``purchasable=false``. A
+        ``required`` product must be purchasable. ``stock`` is
+        ``null``/omitted for unlimited, ``0`` for sold out. ``inclusions``
+        bundles a quantity of other products on this event into this one
+        (see ``app.models.Product``).
         """
         self._require_admin()
         return await mcp_admin_products.create_product(
@@ -1133,7 +1136,7 @@ class ChampagneFestivalMcpBackend:
             description=description,
             price=price,
             category=category,
-            mode=mode,
+            purchasable=purchasable,
             required=required,
             unit=unit,
             stock=stock,
@@ -1159,7 +1162,7 @@ class ChampagneFestivalMcpBackend:
         description: str | None = None,
         price: float | None = None,
         category: str | None = None,
-        mode: ProductMode | None = None,
+        purchasable: bool | None = None,
         required: bool | None = None,
         unit: str | None = None,
         stock: int | None = None,
@@ -1196,7 +1199,7 @@ class ChampagneFestivalMcpBackend:
             description=description,
             price=price,
             category=category,
-            mode=mode,
+            purchasable=purchasable,
             required=required,
             unit=unit,
             stock=stock,

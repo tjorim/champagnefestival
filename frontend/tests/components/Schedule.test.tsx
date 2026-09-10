@@ -105,7 +105,7 @@ describe("Schedule component", () => {
             description: "",
             price: 50,
             category: "other" as const,
-            mode: "purchasable" as const,
+            purchasable: true,
             required: false,
             createdAt: "",
             updatedAt: "",

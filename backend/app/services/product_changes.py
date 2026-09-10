@@ -69,18 +69,17 @@ async def change_product(
         product.included_per_guests = None
     elif (product.included_product_id is None) != (product.included_per_guests is None):
         raise HTTPException(400, "included_product_id and included_per_guests must be set together.")
+    if product.required and not product.purchasable:
+        raise HTTPException(400, "A required product must be purchasable.")
     after = inventory.current_snapshot(event)
     inventory.validate_graph(after)
-    inventory.assert_inclusion_targets_available(
-        after, product_id, previous_targets=inventory.inclusion_targets(before[product_id])
-    )
     price_changed = Decimal(before[product_id]["price"]) != Decimal(after[product_id]["price"])
-    # "mode" counts as a contents change too (#1020): it decides whether this
-    # product's line is even orderable/visible, which is exactly what a
-    # package summary shows — the same as an inclusion edit would.
+    # "purchasable" counts as a contents change too (#1020): it decides
+    # whether this product's line is even orderable/visible, which is
+    # exactly what a package summary shows — the same as an inclusion edit.
     contents_changed = any(
         before[product_id][key] != after[product_id][key]
-        for key in ("inclusions", "included_product_id", "included_per_guests", "mode")
+        for key in ("inclusions", "included_product_id", "included_per_guests", "purchasable")
     )
     changed_rows = []
     projected = []
@@ -109,7 +108,7 @@ async def change_product(
             node.update(
                 {
                     key: after[product_id][key]
-                    for key in ("inclusions", "included_product_id", "included_per_guests", "mode")
+                    for key in ("inclusions", "included_product_id", "included_per_guests", "purchasable")
                 }
             )
         if price_changed and body.update_existing_prices:

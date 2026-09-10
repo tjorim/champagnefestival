@@ -61,25 +61,6 @@ class TestEditionTypeEnum:
         ]
 
 
-class TestProductModeEnum:
-    """#1020: `mode` replaces the `active` boolean and must be an enum-shaped
-    schema field, not a plain unconstrained string, for the same reason as
-    `edition_type` above (#835)."""
-
-    async def test_create_product_exposes_mode_enum(self, tool_schemas):
-        props = tool_schemas["create_product"]["properties"]
-        assert props["mode"]["enum"] == ["purchasable", "included_visible", "internal", "disabled"]
-
-    async def test_update_product_exposes_mode_enum(self, tool_schemas):
-        props = tool_schemas["update_product"]["properties"]
-        assert _optional_variants(props["mode"])[0]["enum"] == [
-            "purchasable",
-            "included_visible",
-            "internal",
-            "disabled",
-        ]
-
-
 class TestRequiredPhysicalDimensions:
     """No defensible generic default exists for a room's or table type's real
     measured dimensions, so both must be required rather than silently filled

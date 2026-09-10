@@ -726,7 +726,7 @@ async def _ensure_public_registration_allowed(
     # and optional-but-offered for walk-in events that still have something to
     # order (e.g. a VIP package) — anyone else can just show up. An event with
     # neither accepts no registrations at all.
-    if not event.registration_required and not any(p.mode == "purchasable" for p in event.products):
+    if not event.registration_required and not any(p.purchasable for p in event.products):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="This event does not accept registrations.",

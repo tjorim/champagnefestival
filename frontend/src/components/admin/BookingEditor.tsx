@@ -71,7 +71,7 @@ export default function BookingEditor({
         description: "",
         price: item.price,
         category: item.category,
-        mode: "disabled" as const,
+        purchasable: false,
         required: false,
         createdAt: "",
         updatedAt: "",
@@ -215,7 +215,7 @@ export default function BookingEditor({
               type="number"
               min={0}
               max={1000}
-              disabled={product.mode !== "purchasable" && !(product.id in purchased)}
+              disabled={!product.purchasable && !(product.id in purchased)}
               value={quantities[product.id] ?? 0}
               onChange={(event) => setProductQuantity(product.id, Number(event.target.value))}
             />

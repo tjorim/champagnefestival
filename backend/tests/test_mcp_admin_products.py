@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 from datetime import date
-from typing import cast
 
 import pytest
 
 from app.mcp.admin import products as mcp_products
 from app.models import Edition, Event, Venue
-from app.schemas import ProductMode
 from tests.helpers import mcp_session_factory
 
 
@@ -48,7 +46,7 @@ async def test_create_get_product(db_session):
     )
     assert created["name"] == "Champagne Bottle"
     assert created["event_id"] == event_id
-    assert created["mode"] == "purchasable"
+    assert created["purchasable"] is True
     assert created["sold_out"] is False
 
     fetched = await mcp_products.get_product(factory, created["id"])
@@ -56,7 +54,7 @@ async def test_create_get_product(db_session):
     assert fetched["name"] == "Champagne Bottle"
 
 
-async def test_create_product_with_explicit_mode(db_session):
+async def test_create_product_with_explicit_purchasable_false(db_session):
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
 
@@ -67,16 +65,16 @@ async def test_create_product_with_explicit_mode(db_session):
         name="Kitchen Supply",
         price=1.0,
         category="other",
-        mode="internal",
+        purchasable=False,
     )
-    assert created["mode"] == "internal"
+    assert created["purchasable"] is False
 
 
-async def test_create_product_rejects_invalid_mode(db_session):
+async def test_create_product_rejects_required_product_that_is_not_purchasable(db_session):
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
 
-    with pytest.raises(ValueError, match="mode"):
+    with pytest.raises(ValueError, match="purchasable"):
         await mcp_products.create_product(
             factory,
             "admin-1",
@@ -84,7 +82,8 @@ async def test_create_product_rejects_invalid_mode(db_session):
             name="Bad Product",
             price=1.0,
             category="other",
-            mode=cast(ProductMode, "archived"),
+            purchasable=False,
+            required=True,
         )
 
 
@@ -134,15 +133,15 @@ async def test_update_product_partial(db_session):
         factory, "admin-1", event_id=event_id, name="Champagne Bottle", price=25.0, category="champagne"
     )
 
-    updated = await mcp_products.update_product(factory, "admin-1", created["id"], mode="disabled")
-    assert updated["mode"] == "disabled"
+    updated = await mcp_products.update_product(factory, "admin-1", created["id"], purchasable=False)
+    assert updated["purchasable"] is False
     assert updated["name"] == "Champagne Bottle"  # untouched fields survive a partial update
 
 
 async def test_update_product_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_products.update_product(factory, "admin-1", "nonexistent", mode="disabled")
+        await mcp_products.update_product(factory, "admin-1", "nonexistent", purchasable=False)
 
 
 async def test_update_product_stock_and_clear_stock(db_session):
@@ -161,23 +160,34 @@ async def test_update_product_stock_and_clear_stock(db_session):
     assert unlimited["sold_out"] is False
 
 
-async def test_update_product_rejects_bundling_a_disabled_target(db_session):
+async def test_update_product_allows_bundling_a_hidden_target(db_session):
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
-    disabled = await mcp_products.create_product(
-        factory, "admin-1", event_id=event_id, name="Disabled Bottle", price=25.0, category="champagne", mode="disabled"
+    hidden = await mcp_products.create_product(
+        factory, "admin-1", event_id=event_id, name="Hidden Bottle", price=25.0, category="champagne", purchasable=False
     )
     table = await mcp_products.create_product(
         factory, "admin-1", event_id=event_id, name="VIP Table", price=200.0, category="other"
     )
 
-    with pytest.raises(ValueError, match="disabled"):
-        await mcp_products.update_product(
-            factory,
-            "admin-1",
-            table["id"],
-            inclusions=[{"product_id": disabled["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
-        )
+    updated = await mcp_products.update_product(
+        factory,
+        "admin-1",
+        table["id"],
+        inclusions=[{"product_id": hidden["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
+    )
+    assert updated["inclusions"][0]["product_id"] == hidden["id"]
+
+
+async def test_update_product_rejects_making_a_required_product_hidden(db_session):
+    factory = mcp_session_factory(db_session)
+    event_id = await _create_event(db_session)
+    created = await mcp_products.create_product(
+        factory, "admin-1", event_id=event_id, name="Champagne Bottle", price=25.0, category="champagne", required=True
+    )
+
+    with pytest.raises(ValueError, match="purchasable"):
+        await mcp_products.update_product(factory, "admin-1", created["id"], purchasable=False)
 
 
 async def test_update_product_clears_inclusions(db_session):

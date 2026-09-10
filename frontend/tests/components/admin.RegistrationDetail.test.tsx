@@ -349,7 +349,7 @@ describe("RegistrationDetail", () => {
       price: 50,
       category: "other" as const,
       unit: "table" as const,
-      mode: "purchasable" as const,
+      purchasable: true,
       required: false,
       createdAt: "",
       updatedAt: "",

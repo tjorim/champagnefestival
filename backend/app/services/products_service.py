@@ -1,10 +1,10 @@
 """Shared application-service operations for products.
 
 Used by both ``app.routers.products`` (REST) and ``app.mcp.admin.products``
-(MCP) so bundle-target validation, the mode/stock/inclusion CRUD rules, and
-audit-detail assembly live in exactly one place instead of two copies —
-following the same convention as ``app.services.events_service``. Raises
-``HTTPException`` directly; the MCP adapter translates it into
+(MCP) so bundle-target validation, the purchasable/stock/inclusion CRUD
+rules, and audit-detail assembly live in exactly one place instead of two
+copies — following the same convention as ``app.services.events_service``.
+Raises ``HTTPException`` directly; the MCP adapter translates it into
 ``MCPToolError`` at its own boundary (``app.mcp.utils.as_value_error``).
 """
 
@@ -50,11 +50,6 @@ async def validate_inclusion_target(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Included product cannot itself bundle another product.",
         )
-    if target.mode == "disabled":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="A disabled product cannot be newly included in a package.",
-        )
 
 
 async def get_product_or_404(db: AsyncSession, product_id: str) -> Product:
@@ -82,7 +77,7 @@ async def create_product(
         description=body.description,
         price=body.price,
         category=body.category,
-        mode=body.mode,
+        purchasable=body.purchasable,
         required=body.required,
         included_product_id=body.included_product_id,
         included_per_guests=body.included_per_guests,
@@ -93,7 +88,6 @@ async def create_product(
     graph = inventory.current_snapshot(event)
     graph[product.id] = {"inclusions": product.inclusions, "included_product_id": product.included_product_id}
     inventory.validate_graph(graph)
-    inventory.assert_inclusion_targets_available(graph, product.id, previous_targets=set())
     db.add(product)
     await write_audit_entry(
         db,

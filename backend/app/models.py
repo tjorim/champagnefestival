@@ -708,10 +708,11 @@ class Product(Base):
     unit: Mapped[str] = mapped_column(String(10), default="item")
     stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
     inclusions: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)
-    """Included product, numerator/denominator, rounding and visibility per parent
-    quantity. Each edge's ``visible`` key (default ``True`` when absent, for rows
-    predating it) controls whether that inclusion appears in the *visitor-facing*
-    order summary — it always still counts toward stock/preparation totals.
+    """Included product, numerator/denominator and rounding per parent quantity.
+    Always counts toward stock/preparation totals. Whether an inclusion line
+    reaches the visitor-facing order summary is decided entirely by the
+    included product's own `purchasable` flag (see below) — there is no
+    separate per-inclusion visibility switch.
 
     Null retains the legacy single inclusion until an administrator edits it.
     An explicit empty list means no included products.
@@ -719,27 +720,27 @@ class Product(Base):
     __table_args__ = (
         CheckConstraint("stock IS NULL OR stock >= 0", name="ck_product_stock"),
         CheckConstraint("unit IN ('item', 'table', 'person')", name="ck_product_unit"),
-        CheckConstraint("mode IN ('purchasable', 'included_visible', 'internal', 'disabled')", name="ck_products_mode"),
+        CheckConstraint("NOT required OR purchasable", name="ck_products_required_implies_purchasable"),
     )
 
-    mode: Mapped[str] = mapped_column(String(20), default="purchasable")
-    """"purchasable" | "included_visible" | "internal" | "disabled" — see #1020.
-
-    Only "purchasable" products can be ordered standalone. "included_visible"
-    and "internal" products are never orderable directly and only ever reach a
-    booking through a package inclusion (see `inclusions` below); the
-    difference is that an "included_visible" product's name/description may
-    still reach visitors (subject to the including edge's own `visible` flag),
-    while "internal" never does, even as an inclusion line. "disabled" is
-    withdrawn from sale and cannot be newly bundled into a package, but is
-    retained (and stays orderable in bookings placed before it was disabled)
-    for possible later re-enabling — it is not a stock state.
+    purchasable: Mapped[bool] = mapped_column(Boolean, default=True)
+    """Whether this product can be ordered standalone and is ever named to a
+    visitor — see #1020. A `purchasable=False` ("hidden") product can still be
+    an inclusion target of another product (bundled quantity, stock and
+    preparation totals are unaffected either way), but it is never orderable
+    directly, never shown to a visitor as a standalone option, and never named
+    in a package's visitor-facing summary line — only its own purchasable
+    inclusion targets ever appear there. There is no separate "disabled" state:
+    a hidden product can always be newly bundled, and a no-longer-offered
+    product is simply set to `purchasable=False` rather than deleted.
     """
     required: Mapped[bool] = mapped_column(Boolean, default=False)
     """A prerequisite product for this event (e.g. an entry ticket). An order
     that includes any non-required product for an event with required products
     must also include at least one required one — see
-    app.services.registrations_service.resolve_order_items."""
+    app.services.registrations_service.resolve_order_items. A required product
+    must be purchasable (`ck_products_required_implies_purchasable`) — a
+    hidden product can never be the thing an order is required to contain."""
     included_product_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("products.id", ondelete="SET NULL"), nullable=True
     )

@@ -105,9 +105,6 @@ def make_id(prefix: str) -> str:
     return f"{prefix}_{ts}_{rand}"
 
 
-_VISITOR_VISIBLE_MODES = frozenset({"purchasable", "included_visible"})
-
-
 def event_to_summary_dict(event: Event, include_edition: bool = False, *, public: bool = False) -> dict:
     data = {
         "id": event.id,
@@ -126,21 +123,18 @@ def event_to_summary_dict(event: Event, include_edition: bool = False, *, public
         "created_at": event.created_at,
         "updated_at": event.updated_at,
         "edition": None,
-        # `public=True` (an unauthenticated response — see #1020): only
-        # "purchasable" products (selectable) plus "included_visible" ones
-        # (their name/description may appear in a package's visitor-facing
-        # summary), each serialised through the slim visitor-safe shape.
-        # "internal"/"disabled" products never reach this list, and neither
-        # does the admin-only mode/stock data on the products that do.
-        #
-        # `public=False`: "purchasable" only, matching the pre-#1020 "active
-        # products only" behaviour this list has always had — it answers
-        # "what's still offered", not "everything in the catalogue" (see
-        # `app.routers.products.list_products` for the latter).
+        # Purchasable products only, both branches — it answers "what's still
+        # offered", not "everything in the catalogue" (see
+        # `app.routers.products.list_products` for the latter). `public=True`
+        # (an unauthenticated response — see #1020) additionally serialises
+        # through the slim visitor-safe shape, which strips any inclusion
+        # edge pointing at a hidden (non-purchasable) product — a hidden
+        # product's id/name/stock/etc. must never reach an unauthenticated
+        # caller, not even indirectly as a bundle-target reference.
         "products": (
-            [product_to_public_dict(p) for p in event.products if p.mode in _VISITOR_VISIBLE_MODES]
+            _public_products(event.products)
             if public
-            else [product_to_dict(p) for p in event.products if p.mode == "purchasable"]
+            else [product_to_dict(p) for p in event.products if p.purchasable]
         ),
     }
     edition: Edition | None = getattr(event, "edition", None)
@@ -149,12 +143,17 @@ def event_to_summary_dict(event: Event, include_edition: bool = False, *, public
     return data
 
 
+def _public_products(products: Sequence[Product]) -> list[dict]:
+    purchasable_ids = {p.id for p in products if p.purchasable}
+    return [product_to_public_dict(p, purchasable_ids) for p in products if p.id in purchasable_ids]
+
+
 def _product_available_quantity(p: Product) -> int | None:
     return max(0, p.stock - p.reserved_quantity) if p.stock is not None else None
 
 
 def _product_sold_out(p: Product, available_quantity: int | None) -> bool:
-    return p.mode == "purchasable" and available_quantity is not None and available_quantity <= 0
+    return p.purchasable and available_quantity is not None and available_quantity <= 0
 
 
 def product_to_dict(p: Product) -> dict:
@@ -166,7 +165,7 @@ def product_to_dict(p: Product) -> dict:
         "description": p.description,
         "price": p.price,
         "category": p.category,
-        "mode": p.mode,
+        "purchasable": p.purchasable,
         "required": p.required,
         "included_product_id": p.included_product_id,
         "included_per_guests": p.included_per_guests,
@@ -182,11 +181,24 @@ def product_to_dict(p: Product) -> dict:
     }
 
 
-def product_to_public_dict(p: Product) -> dict:
-    """The visitor-safe shape of a product — never exposes `mode` or `stock`,
-    only what a visitor needs to select a purchasable product or see the name
-    of a visible package inclusion. See app.schemas.ProductPublicOut."""
+def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None) -> dict:
+    """The visitor-safe shape of a product — never exposes `stock`, and never
+    named unless `p.purchasable`. `purchasable_ids`, when given, is the set
+    of this event's purchasable product ids: any inclusion edge (or the
+    legacy `included_product_id`) pointing outside that set targets a hidden
+    product and is stripped, so a hidden product's id never reaches an
+    unauthenticated caller even as a bare bundle-target reference. See
+    app.schemas.ProductPublicOut."""
     available_quantity = _product_available_quantity(p)
+    inclusions = p.inclusions
+    included_product_id = p.included_product_id
+    included_per_guests = p.included_per_guests
+    if purchasable_ids is not None:
+        if inclusions is not None:
+            inclusions = [edge for edge in inclusions if edge["product_id"] in purchasable_ids]
+        if included_product_id is not None and included_product_id not in purchasable_ids:
+            included_product_id = None
+            included_per_guests = None
     return {
         "id": p.id,
         "name": p.name,
@@ -195,12 +207,12 @@ def product_to_public_dict(p: Product) -> dict:
         "category": p.category,
         "unit": p.unit,
         "required": p.required,
-        "purchasable": p.mode == "purchasable",
+        "purchasable": p.purchasable,
         "available_quantity": available_quantity,
         "sold_out": _product_sold_out(p, available_quantity),
-        "inclusions": p.inclusions,
-        "included_product_id": p.included_product_id,
-        "included_per_guests": p.included_per_guests,
+        "inclusions": inclusions,
+        "included_product_id": included_product_id,
+        "included_per_guests": included_per_guests,
     }
 
 

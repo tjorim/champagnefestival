@@ -35,8 +35,8 @@ async def test_create_reservation(client, db_session):
 @pytest.mark.anyio
 async def test_create_reservation_checkout_summary_hides_admin_product_data(client):
     """The just-created booking's echoed `event.products` (#1020) exposes only
-    the purchasable product the visitor could pick, with no `mode`/`stock`,
-    and never the internal/disabled products also configured on this event."""
+    the purchasable product the visitor could pick, with no `stock`, and
+    never a hidden product also configured on this event."""
     event = await _create_event(client)
     purchasable = (
         await client.post(
@@ -45,7 +45,7 @@ async def test_create_reservation_checkout_summary_hides_admin_product_data(clie
             headers=ADMIN_HEADERS,
         )
     ).json()
-    internal = (
+    hidden = (
         await client.post(
             "/api/products",
             json={
@@ -53,7 +53,7 @@ async def test_create_reservation_checkout_summary_hides_admin_product_data(clie
                 "name": "Kitchen Supply",
                 "price": "1.00",
                 "category": "other",
-                "mode": "internal",
+                "purchasable": False,
             },
             headers=ADMIN_HEADERS,
         )
@@ -63,9 +63,8 @@ async def test_create_reservation_checkout_summary_hides_admin_product_data(clie
     assert r.status_code == 201, r.text
     products = {p["id"]: p for p in r.json()["event"]["products"]}
     assert purchasable["id"] in products
-    assert "mode" not in products[purchasable["id"]]
     assert "stock" not in products[purchasable["id"]]
-    assert internal["id"] not in products
+    assert hidden["id"] not in products
 
 
 @pytest.mark.anyio

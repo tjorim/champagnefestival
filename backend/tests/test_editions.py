@@ -494,55 +494,58 @@ async def test_inactive_events_excluded_from_active_edition_response(client):
 
 
 @pytest.mark.anyio
-async def test_active_edition_product_disclosure_by_mode(client):
+async def test_active_edition_product_disclosure_by_purchasable(client):
     """The unauthenticated /api/editions/active response (#1020): a
-    purchasable product is selectable and exposes no admin-only mode/stock
-    data; an included_visible product's name/description reach the visitor
-    but it isn't purchasable; internal/disabled products never appear."""
+    purchasable product is selectable and exposes no admin-only stock data;
+    a hidden (purchasable=False) product never appears at all, and its id
+    is stripped from a purchasable sibling's public `inclusions` array too —
+    a hidden product's id never reaches an unauthenticated caller even as a
+    bare bundle-target reference."""
     event = await _create_event(client)
 
-    products = {}
-    for name, mode in [
-        ("Purchasable Bottle", "purchasable"),
-        ("Included Visible Bottle", "included_visible"),
-        ("Internal Supply", "internal"),
-        ("Disabled Bottle", "disabled"),
-    ]:
-        r = await client.post(
-            "/api/products",
-            json={
-                "event_id": event["id"],
-                "name": name,
-                "price": "10.00",
-                "category": "champagne",
-                "mode": mode,
-                "description": f"{name} description",
-            },
-            headers=ADMIN_HEADERS,
-        )
-        assert r.status_code == 201, r.text
-        products[mode] = r.json()
+    r = await client.post(
+        "/api/products",
+        json={
+            "event_id": event["id"],
+            "name": "Hidden Supply",
+            "price": "10.00",
+            "category": "champagne",
+            "purchasable": False,
+            "description": "Hidden Supply description",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    hidden = r.json()
+
+    r = await client.post(
+        "/api/products",
+        json={
+            "event_id": event["id"],
+            "name": "Purchasable Bottle",
+            "price": "10.00",
+            "category": "champagne",
+            "purchasable": True,
+            "description": "Purchasable Bottle description",
+            "inclusions": [{"product_id": hidden["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    purchasable = r.json()
 
     r = await client.get("/api/editions/active")
     assert r.status_code == 200
     public_products = {p["id"]: p for p in r.json()["events"][0]["products"]}
 
-    assert products["purchasable"]["id"] in public_products
-    assert products["included_visible"]["id"] in public_products
-    assert products["internal"]["id"] not in public_products
-    assert products["disabled"]["id"] not in public_products
+    assert purchasable["id"] in public_products
+    assert hidden["id"] not in public_products
 
-    purchasable_public = public_products[products["purchasable"]["id"]]
+    purchasable_public = public_products[purchasable["id"]]
     assert purchasable_public["purchasable"] is True
     assert purchasable_public["name"] == "Purchasable Bottle"
-    assert "mode" not in purchasable_public
     assert "stock" not in purchasable_public
-
-    included_public = public_products[products["included_visible"]["id"]]
-    assert included_public["purchasable"] is False
-    assert included_public["name"] == "Included Visible Bottle"
-    assert "mode" not in included_public
-    assert "stock" not in included_public
+    assert purchasable_public["inclusions"] == []
 
 
 # ---------------------------------------------------------------------------

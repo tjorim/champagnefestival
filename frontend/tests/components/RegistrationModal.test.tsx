@@ -66,7 +66,7 @@ const champagneProduct: Product = {
   description: "",
   price: 65,
   category: "champagne",
-  mode: "purchasable" as const,
+  purchasable: true,
   required: false,
   createdAt: "",
   updatedAt: "",
@@ -208,18 +208,21 @@ describe("RegistrationModal component", () => {
     expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
   });
 
-  it("does not render a buy control for an included_visible product", () => {
-    const includedVisibleProduct: Product = {
+  it("does not render a buy control for a hidden product", () => {
+    // Defense in depth: the public API never actually returns a hidden
+    // product, but the component must not offer a buy control for one if it
+    // somehow appeared in the payload.
+    const hiddenProduct: Product = {
       ...champagneProduct,
-      id: "included-champagne",
-      mode: "included_visible",
+      id: "hidden-champagne",
+      purchasable: false,
     };
     renderModal({
-      event: { ...vipEvent, products: [champagneProduct, includedVisibleProduct] },
+      event: { ...vipEvent, products: [champagneProduct, hiddenProduct] },
     });
     expect(screen.getByText("Champagne Bottle (Standard) - €65")).toBeInTheDocument();
     // Only one buy row exists — the purchasable product's — not a second one
-    // for the included_visible entry sharing the same name/price.
+    // for the hidden entry sharing the same name/price.
     expect(
       screen.getAllByRole("button", {
         name: /Increase quantity of Champagne Bottle \(Standard\)/i,
@@ -227,12 +230,12 @@ describe("RegistrationModal component", () => {
     ).toHaveLength(1);
   });
 
-  it("hides order products when the event has only an included_visible product", () => {
-    const includedVisibleProduct: Product = {
+  it("hides order products when the event has only a hidden product", () => {
+    const hiddenProduct: Product = {
       ...champagneProduct,
-      mode: "included_visible",
+      purchasable: false,
     };
-    renderModal({ event: { ...vipEvent, products: [includedVisibleProduct] } });
+    renderModal({ event: { ...vipEvent, products: [hiddenProduct] } });
     expect(screen.queryByText("Champagne Bottle (Standard) - €65")).not.toBeInTheDocument();
   });
 
@@ -354,7 +357,7 @@ describe("RegistrationModal component", () => {
       description: "",
       price: 50,
       category: "other",
-      mode: "purchasable" as const,
+      purchasable: true,
       required: true,
       createdAt: "",
       updatedAt: "",
@@ -408,7 +411,7 @@ describe("RegistrationModal component", () => {
       description: "",
       price: 65,
       category: "champagne",
-      mode: "purchasable" as const,
+      purchasable: true,
       required: false,
       createdAt: "",
       updatedAt: "",
@@ -420,7 +423,7 @@ describe("RegistrationModal component", () => {
       description: "",
       price: 200,
       category: "other",
-      mode: "purchasable" as const,
+      purchasable: true,
       required: true,
       includedProductId: "bottle",
       includedPerGuests: 2,

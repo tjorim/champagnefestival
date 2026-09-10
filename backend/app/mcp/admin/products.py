@@ -14,7 +14,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.mcp.utils import as_value_error, validate_with_schema
-from app.schemas import ProductCreate, ProductInclusion, ProductMode, ProductUpdate
+from app.schemas import ProductCreate, ProductInclusion, ProductUpdate
 from app.services import products_service
 from app.utils import product_to_dict
 
@@ -28,7 +28,7 @@ async def create_product(
     price: float,
     category: str,
     description: str = "",
-    mode: ProductMode = "purchasable",
+    purchasable: bool = True,
     required: bool = False,
     unit: str = "item",
     stock: int | None = None,
@@ -43,7 +43,7 @@ async def create_product(
         description=description,
         price=price,
         category=category,
-        mode=mode,
+        purchasable=purchasable,
         required=required,
         unit=unit,
         stock=stock,
@@ -83,7 +83,7 @@ async def update_product(
     description: str | None = None,
     price: float | None = None,
     category: str | None = None,
-    mode: ProductMode | None = None,
+    purchasable: bool | None = None,
     required: bool | None = None,
     unit: str | None = None,
     stock: int | None = None,
@@ -120,7 +120,7 @@ async def update_product(
             "description": description,
             "price": price,
             "category": category,
-            "mode": mode,
+            "purchasable": purchasable,
             "required": required,
             "unit": unit,
             "stock": stock,

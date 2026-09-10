@@ -19,19 +19,7 @@ export interface ProductInclusion {
   quantity: number;
   per_quantity: number;
   rounding: "up" | "down";
-  /** Whether this inclusion appears in the visitor-facing order summary. */
-  visible: boolean;
 }
-
-/**
- * "purchasable": visible in the registration form and orderable standalone.
- * "included_visible": unavailable standalone but shown when a package
- * includes it (subject to that inclusion's own `visible` flag).
- * "internal": unavailable standalone and never shown to visitors, though it
- * still counts toward stock and preparation totals.
- * "disabled": kept for later reuse; unavailable for new sales or packages.
- */
-export type ProductMode = "purchasable" | "included_visible" | "internal" | "disabled";
 
 export interface Product {
   unit?: "item" | "table" | "person";
@@ -39,7 +27,7 @@ export interface Product {
   reservedQuantity?: number;
   availableQuantity?: number | null;
   shortage?: number;
-  /** A purchasable product with no remaining stock — distinct from `mode`. */
+  /** A purchasable product with no remaining stock — distinct from `purchasable`. */
   soldOut?: boolean;
   inclusions?: ProductInclusion[] | null;
   id: string;
@@ -49,11 +37,19 @@ export interface Product {
   description: string;
   price: number;
   category: OrderItemCategory;
-  mode: ProductMode;
+  /**
+   * Whether this product can be ordered standalone and is ever named to a
+   * visitor — see #1020. A `purchasable: false` ("hidden") product can still
+   * be an inclusion target of another product (bundled quantity, stock and
+   * preparation totals are unaffected either way), but it is never orderable
+   * directly and never named to a visitor, standalone or bundled.
+   */
+  purchasable: boolean;
   /**
    * A prerequisite product for this event (e.g. an entry ticket). An order
    * that includes any non-required product for an event with required
-   * products must also include at least one required one.
+   * products must also include at least one required one. A required
+   * product must be purchasable.
    */
   required: boolean;
   /**
@@ -86,11 +82,10 @@ export interface Event {
   updatedAt: string;
   edition?: EventEditionSummary | null;
   /**
-   * Selectable ("purchasable") products, plus the name/description of any
-   * "included_visible" product bundled into one of them (`mode` reflects
-   * this — see `Product`). "internal"/"disabled" products never appear
-   * here. Whether guests can order anything for this event is answered by
-   * whether any entry has `mode === "purchasable"`, not by a separate flag.
+   * Purchasable products only — a hidden (`purchasable: false`) product
+   * never appears here, even as a bundle target (see `Product.purchasable`).
+   * Whether guests can order anything for this event is answered by whether
+   * any entry exists at all, not by a separate flag.
    */
   products: Product[];
 }
@@ -115,26 +110,6 @@ function isOrderItemCategory(value: unknown): value is OrderItemCategory {
   return value === "champagne" || value === "food" || value === "other";
 }
 
-function isProductMode(value: unknown): value is ProductMode {
-  return (
-    value === "purchasable" ||
-    value === "included_visible" ||
-    value === "internal" ||
-    value === "disabled"
-  );
-}
-
-/**
- * The admin API returns a `mode` on every product. The public API (visitor
- * registration flow) never exposes `mode` or internal/disabled products —
- * only a `purchasable` boolean, so a product present in that response is
- * either purchasable or (the only other possibility) included_visible.
- */
-function resolveProductMode(data: Record<string, unknown>): ProductMode {
-  if (isProductMode(data.mode)) return data.mode;
-  return data.purchasable ? "purchasable" : "included_visible";
-}
-
 export function apiToProduct(data: Record<string, unknown>): Product {
   return {
     id: String(data.id ?? ""),
@@ -143,7 +118,7 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     description: String(data.description ?? ""),
     price: Number(data.price ?? 0),
     category: isOrderItemCategory(data.category) ? data.category : "other",
-    mode: resolveProductMode(data),
+    purchasable: Boolean(data.purchasable),
     soldOut: Boolean(data.sold_out),
     required: Boolean(data.required),
     unit: data.unit === "table" || data.unit === "person" ? data.unit : "item",
@@ -151,12 +126,7 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     reservedQuantity: Number(data.reserved_quantity ?? 0),
     availableQuantity: typeof data.available_quantity === "number" ? data.available_quantity : null,
     shortage: Number(data.shortage ?? 0),
-    inclusions: Array.isArray(data.inclusions)
-      ? (data.inclusions as ProductInclusion[]).map((inclusion) => ({
-          ...inclusion,
-          visible: inclusion.visible ?? true,
-        }))
-      : null,
+    inclusions: Array.isArray(data.inclusions) ? (data.inclusions as ProductInclusion[]) : null,
     includedProductId:
       typeof data.included_product_id === "string" ? data.included_product_id : undefined,
     includedPerGuests:

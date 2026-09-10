@@ -17,7 +17,7 @@ import {
   type ProductChangePreview,
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
-import type { Event, Product, ProductInclusion, ProductMode } from "@/types/event";
+import type { Event, Product, ProductInclusion } from "@/types/event";
 import type { OrderItemCategory } from "@/types/registration";
 
 interface EventProductsModalProps {
@@ -33,7 +33,7 @@ interface ProductFormState {
   description: string;
   price: string;
   category: OrderItemCategory;
-  mode: ProductMode;
+  purchasable: boolean;
   required: boolean;
   /** Empty string means "no bundle". */
   includedProductId: string;
@@ -50,7 +50,7 @@ const EMPTY_FORM: ProductFormState = {
   description: "",
   price: "",
   category: "champagne",
-  mode: "purchasable",
+  purchasable: true,
   required: false,
   includedProductId: "",
   includedPerGuests: "",
@@ -61,8 +61,6 @@ const EMPTY_FORM: ProductFormState = {
   updateExistingPrices: false,
 };
 
-const PRODUCT_MODES: ProductMode[] = ["purchasable", "included_visible", "internal", "disabled"];
-
 function categoryLabel(category: OrderItemCategory): string {
   switch (category) {
     case "champagne":
@@ -71,45 +69,6 @@ function categoryLabel(category: OrderItemCategory): string {
       return m.admin_products_category_food();
     default:
       return m.admin_products_category_other();
-  }
-}
-
-function modeLabel(mode: ProductMode): string {
-  switch (mode) {
-    case "purchasable":
-      return m.admin_products_mode_purchasable();
-    case "included_visible":
-      return m.admin_products_mode_included_visible();
-    case "internal":
-      return m.admin_products_mode_internal();
-    default:
-      return m.admin_products_mode_disabled();
-  }
-}
-
-function modeHelp(mode: ProductMode): string {
-  switch (mode) {
-    case "purchasable":
-      return m.admin_products_mode_purchasable_help();
-    case "included_visible":
-      return m.admin_products_mode_included_visible_help();
-    case "internal":
-      return m.admin_products_mode_internal_help();
-    default:
-      return m.admin_products_mode_disabled_help();
-  }
-}
-
-function modeVariant(mode: ProductMode): string {
-  switch (mode) {
-    case "purchasable":
-      return "success";
-    case "included_visible":
-      return "info";
-    case "internal":
-      return "secondary";
-    default:
-      return "dark";
   }
 }
 
@@ -171,27 +130,9 @@ export default function EventProductsModal({
     () => [...(productsQuery.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
     [productsQuery.data],
   );
-  // The server checks the complete graph for cycles; a disabled product just
-  // can't be newly bundled (existing inclusions of one are grandfathered).
-  const bundleCandidates = products.filter((p) => p.mode !== "disabled" && p.id !== editingId);
-
-  // Packages that currently bundle the product being edited, and whether
-  // this session's selected mode would show or hide that line in their
-  // visitor-facing summary — a preview of the mode change's effect (#1020).
-  const modeChangePreview = useMemo(() => {
-    if (!editingId) return [];
-    const willShow = form.mode === "purchasable" || form.mode === "included_visible";
-    return products
-      .filter((p) => p.id !== editingId)
-      .flatMap((p) => {
-        const edges =
-          p.inclusions ??
-          (p.includedProductId ? [{ product_id: p.includedProductId, visible: true }] : []);
-        const edge = edges.find((e) => e.product_id === editingId);
-        if (!edge) return [];
-        return [{ packageName: p.name, shown: willShow && (edge.visible ?? true) }];
-      });
-  }, [products, editingId, form.mode]);
+  // Any product can be a bundle target, purchasable or hidden — the server
+  // only checks the complete graph for cycles.
+  const bundleCandidates = products.filter((p) => p.id !== editingId);
 
   function openAdd() {
     setPreview(null);
@@ -209,7 +150,7 @@ export default function EventProductsModal({
       description: product.description,
       price: String(product.price),
       category: product.category,
-      mode: product.mode,
+      purchasable: product.purchasable,
       required: product.required,
       includedProductId: product.includedProductId ?? "",
       includedPerGuests: product.includedPerGuests != null ? String(product.includedPerGuests) : "",
@@ -224,7 +165,6 @@ export default function EventProductsModal({
                 quantity: 1,
                 per_quantity: product.includedPerGuests ?? 1,
                 rounding: "down",
-                visible: true,
               },
             ]
           : []),
@@ -268,7 +208,7 @@ export default function EventProductsModal({
         description: form.description.trim(),
         price,
         category: form.category,
-        mode: form.mode,
+        purchasable: form.purchasable,
         required: form.required,
         unit: form.unit,
         stock,
@@ -313,7 +253,7 @@ export default function EventProductsModal({
     const includedTarget = product.includedProductId
       ? products.find((p) => p.id === product.includedProductId)
       : undefined;
-    const soldOut = product.mode === "purchasable" && product.soldOut;
+    const soldOut = product.purchasable && product.soldOut;
     return (
       <ListGroup.Item
         key={product.id}
@@ -331,8 +271,8 @@ export default function EventProductsModal({
                   : ""}
               </span>
             </span>
-            <Badge bg={modeVariant(product.mode)} className="fs-3xs">
-              {modeLabel(product.mode)}
+            <Badge bg={product.purchasable ? "success" : "secondary"} className="fs-3xs">
+              {product.purchasable ? m.admin_products_purchasable() : m.admin_products_hidden()}
             </Badge>
             {soldOut && (
               <Badge bg="danger" className="fs-3xs">
@@ -552,44 +492,18 @@ export default function EventProductsModal({
               </Form.Group>
             </div>
 
-            <Form.Group controlId="product-mode" className="mb-2" style={{ maxWidth: "320px" }}>
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_products_mode()}
-              </Form.Label>
-              <Form.Select
-                size="sm"
-                className="bg-dark text-light border-secondary"
-                value={form.mode}
-                onChange={(e) => setForm((f) => ({ ...f, mode: e.target.value as ProductMode }))}
-              >
-                {PRODUCT_MODES.map((mode) => (
-                  <option value={mode} key={mode}>
-                    {modeLabel(mode)}
-                  </option>
-                ))}
-              </Form.Select>
-              <Form.Text className="d-block">{modeHelp(form.mode)}</Form.Text>
-            </Form.Group>
-
-            {modeChangePreview.length > 0 && (
-              <section
-                className="border rounded p-2 mb-2 small"
-                aria-label={m.admin_products_mode_preview_title()}
-              >
-                <div className="text-secondary fw-semibold mb-1">
-                  {m.admin_products_mode_preview_title()}
-                </div>
-                <ul className="mb-0 ps-3">
-                  {modeChangePreview.map(({ packageName, shown }, i) => (
-                    <li key={i} className={shown ? "text-light" : "text-secondary"}>
-                      {shown
-                        ? m.admin_products_mode_preview_shows({ package: packageName })
-                        : m.admin_products_mode_preview_hides({ package: packageName })}
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            )}
+            <Form.Check
+              type="checkbox"
+              id="product-purchasable"
+              className="mb-1"
+              label={m.admin_products_purchasable_label()}
+              checked={form.purchasable}
+              onChange={(e) => {
+                const purchasable = e.target.checked;
+                setForm((f) => ({ ...f, purchasable, required: purchasable ? f.required : false }));
+              }}
+            />
+            <div className="text-secondary small mb-2">{m.admin_products_purchasable_help()}</div>
 
             <Form.Check
               type="checkbox"
@@ -597,9 +511,14 @@ export default function EventProductsModal({
               className="mb-2"
               label={m.admin_products_required_label()}
               checked={form.required}
+              disabled={!form.purchasable}
               onChange={(e) => setForm((f) => ({ ...f, required: e.target.checked }))}
             />
-            <div className="text-secondary small mb-2">{m.admin_products_required_help()}</div>
+            <div className="text-secondary small mb-2">
+              {form.purchasable
+                ? m.admin_products_required_help()
+                : m.admin_products_required_needs_purchasable()}
+            </div>
 
             <Form.Group controlId="product-unit" className="mb-2">
               <Form.Label>{m.admin_inventory_unit()}</Form.Label>
@@ -693,21 +612,6 @@ export default function EventProductsModal({
                     <option value="down">{m.admin_inventory_round_down()}</option>
                     <option value="up">{m.admin_inventory_round_up()}</option>
                   </Form.Select>
-                  <Form.Check
-                    type="checkbox"
-                    id={`inclusion-visible-${index}`}
-                    className="align-self-center"
-                    label={m.admin_inventory_inclusion_visible()}
-                    checked={edge.visible}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        inclusions: f.inclusions.map((x, i) =>
-                          i === index ? { ...x, visible: e.target.checked } : x,
-                        ),
-                      }))
-                    }
-                  />
                   <Button
                     type="button"
                     variant="outline-danger"
@@ -724,7 +628,7 @@ export default function EventProductsModal({
               ))}
               <Form.Text className="d-block mb-2">{m.admin_inventory_ratio_help()}</Form.Text>
               <Form.Text className="d-block mb-2">
-                {m.admin_inventory_inclusion_visible_help()}
+                {m.admin_inventory_hidden_target_help()}
               </Form.Text>
               <Button
                 type="button"
@@ -733,13 +637,7 @@ export default function EventProductsModal({
                     ...f,
                     inclusions: [
                       ...f.inclusions,
-                      {
-                        product_id: "",
-                        quantity: 1,
-                        per_quantity: 1,
-                        rounding: "down",
-                        visible: true,
-                      },
+                      { product_id: "", quantity: 1, per_quantity: 1, rounding: "down" },
                     ],
                   }))
                 }
