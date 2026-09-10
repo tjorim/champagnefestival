@@ -311,63 +311,75 @@ export default function EventProductsModal({
           </Form.Group>
         </div>
 
-        <Form.Check
-          type="checkbox"
-          id="product-purchasable"
-          className="mb-1"
-          label={m.admin_products_purchasable_label()}
-          checked={form.purchasable}
-          onChange={(e) => {
-            const purchasable = e.target.checked;
-            setForm((f) => ({ ...f, purchasable, required: purchasable ? f.required : false }));
-          }}
-        />
-        <div className="text-secondary small mb-2">{m.admin_products_purchasable_help()}</div>
-
-        <Form.Check
-          type="checkbox"
-          id="product-required"
-          className="mb-2"
-          label={m.admin_products_required_label()}
-          checked={form.required}
-          disabled={!form.purchasable}
-          onChange={(e) => setForm((f) => ({ ...f, required: e.target.checked }))}
-        />
+        <div className="d-flex flex-wrap gap-4 mb-1">
+          <Form.Check
+            type="checkbox"
+            id="product-purchasable"
+            label={m.admin_products_purchasable_label()}
+            checked={form.purchasable}
+            onChange={(e) => {
+              const purchasable = e.target.checked;
+              setForm((f) => ({ ...f, purchasable, required: purchasable ? f.required : false }));
+            }}
+          />
+          <Form.Check
+            type="checkbox"
+            id="product-required"
+            label={m.admin_products_required_label()}
+            checked={form.required}
+            disabled={!form.purchasable}
+            onChange={(e) => setForm((f) => ({ ...f, required: e.target.checked }))}
+          />
+        </div>
+        <div className="text-secondary small mb-1">{m.admin_products_purchasable_help()}</div>
         <div className="text-secondary small mb-2">
           {form.purchasable
             ? m.admin_products_required_help()
             : m.admin_products_required_needs_purchasable()}
         </div>
 
-        <Form.Group controlId="product-unit" className="mb-2">
-          <Form.Label>{m.admin_inventory_unit()}</Form.Label>
-          <Form.Select
-            value={form.unit}
-            onChange={(e) =>
-              setForm((f) => ({ ...f, unit: e.target.value as ProductFormState["unit"] }))
-            }
-          >
-            <option value="item">{m.admin_inventory_unit_item()}</option>
-            <option value="person">{m.admin_inventory_unit_person()}</option>
-            <option value="table">{m.admin_inventory_unit_table()}</option>
-          </Form.Select>
-        </Form.Group>
-        <Form.Group controlId="product-stock" className="mb-2">
-          <Form.Label>{m.admin_inventory_stock()}</Form.Label>
-          <Form.Control
-            type="number"
-            min={0}
-            step={1}
-            value={form.stock}
-            onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-          />
-          <Form.Text>{m.admin_inventory_unlimited_help()}</Form.Text>
-        </Form.Group>
+        <div className="d-flex gap-2 flex-wrap mb-2">
+          <Form.Group style={{ maxWidth: "160px" }} controlId="product-unit">
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_inventory_unit()}
+            </Form.Label>
+            <Form.Select
+              size="sm"
+              className="bg-dark text-light border-secondary"
+              value={form.unit}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, unit: e.target.value as ProductFormState["unit"] }))
+              }
+            >
+              <option value="item">{m.admin_inventory_unit_item()}</option>
+              <option value="person">{m.admin_inventory_unit_person()}</option>
+              <option value="table">{m.admin_inventory_unit_table()}</option>
+            </Form.Select>
+          </Form.Group>
+          <Form.Group style={{ maxWidth: "160px" }} controlId="product-stock">
+            <Form.Label className="text-secondary small mb-1">
+              {m.admin_inventory_stock()}
+            </Form.Label>
+            <Form.Control
+              type="number"
+              min={0}
+              step={1}
+              size="sm"
+              className="bg-dark text-light border-secondary"
+              value={form.stock}
+              onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
+            />
+          </Form.Group>
+        </div>
+        <Form.Text className="d-block mb-2">{m.admin_inventory_unlimited_help()}</Form.Text>
         <fieldset className="mb-3">
           <legend className="h6">{m.admin_inventory_inclusions()}</legend>
           {form.inclusions.map((edge, index) => (
-            <div className="d-flex flex-wrap gap-2 mb-2" key={index}>
+            <div className="d-flex flex-wrap gap-2 mb-2 align-items-start" key={index}>
               <Form.Select
+                size="sm"
+                className="bg-dark text-light border-secondary"
+                style={{ minWidth: "180px", flex: "2 1 180px" }}
                 aria-label={m.admin_products_bundle_target()}
                 value={edge.product_id}
                 onChange={(e) =>
@@ -390,6 +402,9 @@ export default function EventProductsModal({
                 type="number"
                 min={1}
                 step={1}
+                size="sm"
+                className="bg-dark text-light border-secondary"
+                style={{ maxWidth: "90px" }}
                 aria-label={m.admin_inventory_included_quantity()}
                 value={edge.quantity}
                 onChange={(e) =>
@@ -405,6 +420,9 @@ export default function EventProductsModal({
                 type="number"
                 min={1}
                 step={1}
+                size="sm"
+                className="bg-dark text-light border-secondary"
+                style={{ maxWidth: "90px" }}
                 aria-label={m.admin_inventory_per_quantity()}
                 value={edge.per_quantity}
                 onChange={(e) =>
@@ -417,6 +435,9 @@ export default function EventProductsModal({
                 }
               />
               <Form.Select
+                size="sm"
+                className="bg-dark text-light border-secondary"
+                style={{ maxWidth: "140px" }}
                 aria-label={m.admin_inventory_rounding()}
                 value={edge.rounding}
                 onChange={(e) =>
@@ -433,6 +454,7 @@ export default function EventProductsModal({
               </Form.Select>
               <Button
                 type="button"
+                size="sm"
                 variant="outline-danger"
                 onClick={() =>
                   setForm((f) => ({ ...f, inclusions: f.inclusions.filter((_, i) => i !== index) }))
