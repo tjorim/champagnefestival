@@ -70,6 +70,42 @@ async def test_create_product_with_explicit_purchasable_false(db_session):
     assert created["purchasable"] is False
 
 
+async def test_create_product_rejects_malformed_inclusion_with_a_translated_error(db_session):
+    """A malformed inclusion dict must fail through `validate_with_schema`'s
+    translated-error path, not escape as a raw Pydantic `ValidationError` —
+    it has to reach the outer `ProductCreate` schema unconstructed so nested
+    validation runs inside the same try/except."""
+    factory = mcp_session_factory(db_session)
+    event_id = await _create_event(db_session)
+
+    with pytest.raises(ValueError, match="inclusions"):
+        await mcp_products.create_product(
+            factory,
+            "admin-1",
+            event_id=event_id,
+            name="Bad Bundle",
+            price=1.0,
+            category="other",
+            inclusions=[{"product_id": "target", "rounding": "sideways"}],
+        )
+
+
+async def test_update_product_rejects_malformed_inclusion_with_a_translated_error(db_session):
+    factory = mcp_session_factory(db_session)
+    event_id = await _create_event(db_session)
+    created = await mcp_products.create_product(
+        factory, "admin-1", event_id=event_id, name="Champagne Bottle", price=25.0, category="champagne"
+    )
+
+    with pytest.raises(ValueError, match="inclusions"):
+        await mcp_products.update_product(
+            factory,
+            "admin-1",
+            created["id"],
+            inclusions=[{"product_id": "target", "rounding": "sideways"}],
+        )
+
+
 async def test_create_product_rejects_required_product_that_is_not_purchasable(db_session):
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)

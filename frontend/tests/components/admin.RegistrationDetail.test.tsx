@@ -339,6 +339,64 @@ describe("RegistrationDetail", () => {
     ]);
   });
 
+  it("disables a hidden product's quantity input when it was only ever included, never purchased standalone", () => {
+    // A hidden product never appears in `event.products` (the admin API
+    // filters those out too — see product_to_dict/event_to_summary_dict),
+    // so BookingEditor synthesizes a `purchasable: false` stand-in for it
+    // from the order item itself. Reached only through a package bundle,
+    // that order item has quantity === includedQuantity — its input must
+    // stay disabled, or an admin could turn it into a genuine standalone
+    // order the server would then (incorrectly, absent this guard) accept
+    // because the product id already appears in the booking's prior items.
+    renderDetail({
+      onSaveBooking: vi.fn().mockResolvedValue(undefined),
+      registration: buildRegistration({
+        orderItems: [
+          {
+            productId: "napkin",
+            name: "Napkin",
+            quantity: 1,
+            includedQuantity: 1,
+            deliveredQuantity: 0,
+            remainingQuantity: 1,
+            delivered: false,
+            price: 0.5,
+            category: "other",
+            visible: false,
+          },
+        ],
+      }),
+    });
+    expect(
+      screen.getByRole("spinbutton", { name: "admin_booking_quantity Napkin" }),
+    ).toBeDisabled();
+  });
+
+  it("keeps a hidden product's quantity input editable when it has a genuine prior standalone quantity", () => {
+    renderDetail({
+      onSaveBooking: vi.fn().mockResolvedValue(undefined),
+      registration: buildRegistration({
+        orderItems: [
+          {
+            productId: "snack",
+            name: "Snack",
+            quantity: 2,
+            includedQuantity: 0,
+            deliveredQuantity: 0,
+            remainingQuantity: 2,
+            delivered: false,
+            price: 2,
+            category: "other",
+            visible: true,
+          },
+        ],
+      }),
+    });
+    expect(
+      screen.getByRole("spinbutton", { name: "admin_booking_quantity Snack" }),
+    ).not.toBeDisabled();
+  });
+
   it("previews a table quantity reduction and saves the chosen release", () => {
     const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     const tableProduct = {

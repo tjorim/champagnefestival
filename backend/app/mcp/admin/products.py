@@ -14,7 +14,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.mcp.utils import as_value_error, validate_with_schema
-from app.schemas import ProductCreate, ProductInclusion, ProductUpdate
+from app.schemas import ProductCreate, ProductUpdate
 from app.services import products_service
 from app.utils import product_to_dict
 
@@ -47,7 +47,7 @@ async def create_product(
         required=required,
         unit=unit,
         stock=stock,
-        inclusions=[ProductInclusion(**edge) for edge in inclusions] if inclusions is not None else None,
+        inclusions=inclusions,
         included_product_id=included_product_id,
         included_per_guests=included_per_guests,
     )
@@ -124,7 +124,7 @@ async def update_product(
             "required": required,
             "unit": unit,
             "stock": stock,
-            "inclusions": [ProductInclusion(**edge) for edge in inclusions] if inclusions is not None else None,
+            "inclusions": inclusions,
             "included_product_id": included_product_id,
             "included_per_guests": included_per_guests,
         }.items()

@@ -216,11 +216,20 @@ def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None) 
     }
 
 
+def _visible_order_items(items: list[dict]) -> list[dict]:
+    """Order items a visitor may be shown — a hidden line's `visible=False`
+    is only advisory to the admin UI; a visitor-facing response must actually
+    drop the line rather than merely flag it, or its name/product_id leaks."""
+    return [i for i in items if i.get("visible", True)]
+
+
 def registration_to_dict(r: Registration, person: Person, event: Event, *, public: bool = False) -> dict:
     """Serialise a Registration ORM row to a plain dict (no check_in_token).
 
     `public=True` for the unauthenticated booking response (POST
-    /api/registrations) — see `event_to_summary_dict`.
+    /api/registrations) — see `event_to_summary_dict`. Also strips any
+    non-`visible` order item from the returned `order_items`, since this is
+    the visitor's own view of the booking, not an admin one.
     """
     return {
         "id": r.id,
@@ -230,7 +239,7 @@ def registration_to_dict(r: Registration, person: Person, event: Event, *, publi
         "edition_id": event.edition_id,
         "event": event_to_summary_dict(event, include_edition=True, public=public),
         "guest_count": r.guest_count,
-        "order_items": r.order_items,
+        "order_items": _visible_order_items(r.order_items) if public else r.order_items,
         "notes": r.notes,
         "table_id": (r.allocations[0].table_id if r.allocations else None),
         "booked_table_quantity": sum(
@@ -300,7 +309,9 @@ def registration_to_list_dict(r: Registration, person: Person, event: Event) -> 
 
 
 def registration_to_guest_dict(r: Registration, person: Person, event: Event) -> dict:
-    """Serialise a Registration for the visitor self-lookup endpoint."""
+    """Serialise a Registration for the visitor self-lookup endpoint — always
+    strips non-`visible` order items, same as `registration_to_dict`'s
+    `public=True` path; this function has no admin caller."""
     return {
         "id": r.id,
         "name": person.name,
@@ -309,7 +320,7 @@ def registration_to_guest_dict(r: Registration, person: Person, event: Event) ->
         "event_date": event.date,
         "check_in_token": r.check_in_token,
         "guest_count": r.guest_count,
-        "order_items": r.order_items,
+        "order_items": _visible_order_items(r.order_items),
         "status": r.status,
         "payment_status": r.payment_status,
         "amount_due": r.amount_due,

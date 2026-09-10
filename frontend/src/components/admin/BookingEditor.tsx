@@ -215,7 +215,7 @@ export default function BookingEditor({
               type="number"
               min={0}
               max={1000}
-              disabled={!product.purchasable && !(product.id in purchased)}
+              disabled={!product.purchasable && (purchased[product.id] ?? 0) <= 0}
               value={quantities[product.id] ?? 0}
               onChange={(event) => setProductQuantity(product.id, Number(event.target.value))}
             />

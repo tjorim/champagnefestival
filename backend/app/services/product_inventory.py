@@ -124,10 +124,16 @@ def resolve_booking(
         node = graph.get(req.product_id)
         # Only a purchasable product may be newly requested standalone — a
         # hidden product is only ever reachable through a package inclusion.
-        # A product already present in old_items (an existing booking being
-        # re-resolved after its purchasable flag changed) keeps its
-        # previously ordered quantity regardless of its current flag.
-        if node is None or (not current.get(req.product_id, {}).get("purchasable") and req.product_id not in old_items):
+        # A product with a genuine prior *standalone* quantity in old_items
+        # (it was purchasable when originally ordered, then turned hidden)
+        # keeps that grandfathered request path regardless of its current
+        # flag. Mere presence in old_items is not enough — a hidden product
+        # that was only ever reached through a bundle has an old item with
+        # quantity == included_quantity, and must not become newly orderable
+        # just because a re-resolve happens to see it there.
+        old_item = old_items.get(req.product_id)
+        old_purchased_quantity = (old_item["quantity"] - old_item.get("included_quantity", 0)) if old_item else 0
+        if node is None or (not current.get(req.product_id, {}).get("purchasable") and old_purchased_quantity <= 0):
             raise HTTPException(400, f"Product '{req.product_id}' is not available for this event.")
         ordered[req.product_id] += req.quantity
     required = {key for key, node in current.items() if node["purchasable"] and node["required"]}
