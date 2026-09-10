@@ -1042,8 +1042,6 @@
   "admin_payment_view_ledger_for": "Bekijk het betalingsgrootboek voor {edition}",
   "admin_ledger_modal_title": "Betalingsgrootboek",
   "admin_payment_amount_label": "Bedrag",
-  "admin_payment_reversal_label": "Keert terug",
-  "admin_payment_reversal_none": "Geen",
   "admin_payment_reference_label": "Referentie",
   "admin_payment_note_label": "Notitie",
   "admin_payment_record": "Registreren",

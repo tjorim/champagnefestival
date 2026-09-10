@@ -1042,8 +1042,6 @@
   "admin_payment_view_ledger_for": "View the payment ledger for {edition}",
   "admin_ledger_modal_title": "Payment ledger",
   "admin_payment_amount_label": "Amount",
-  "admin_payment_reversal_label": "Reverses",
-  "admin_payment_reversal_none": "None",
   "admin_payment_reference_label": "Reference",
   "admin_payment_note_label": "Note",
   "admin_payment_record": "Record",

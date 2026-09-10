@@ -1042,8 +1042,6 @@
   "admin_payment_view_ledger_for": "Voir le grand livre des paiements pour {edition}",
   "admin_ledger_modal_title": "Grand livre des paiements",
   "admin_payment_amount_label": "Montant",
-  "admin_payment_reversal_label": "Annule",
-  "admin_payment_reversal_none": "Aucune",
   "admin_payment_reference_label": "Référence",
   "admin_payment_note_label": "Note",
   "admin_payment_record": "Enregistrer",
