@@ -21,12 +21,17 @@ import {
   fetchAdminPersonRegistrations,
   fetchPersonPaymentSummary,
 } from "@/utils/adminRegistrationApi";
-import { fetchPeopleSearch, downloadPaymentTransactionsCsv } from "@/utils/adminFetch";
+import {
+  fetchPeopleSearch,
+  downloadPaymentTransactionsCsv,
+  fetchPaymentTransactionsLedger,
+} from "@/utils/adminFetch";
 import { devError } from "@/utils/devLog";
 import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
 import { AdminTablePagination } from "./AdminTablePagination";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
+import LedgerModal from "./LedgerModal";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
 import EmailComposeModal from "./EmailComposeModal";
@@ -100,6 +105,7 @@ export default function PeopleManagement({
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [exportingLedger, setExportingLedger] = useState(false);
   const [ledgerExportError, setLedgerExportError] = useState("");
+  const [showLedgerModal, setShowLedgerModal] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
@@ -210,6 +216,7 @@ export default function PeopleManagement({
   const closePersonRegistrations = useCallback(() => {
     setViewRegistrationsPerson(null);
     setLedgerExportError("");
+    setShowLedgerModal(false);
   }, []);
 
   const personRegistrationsQuery = useQuery({
@@ -234,6 +241,17 @@ export default function PeopleManagement({
     retry: false,
   });
   const personPaymentSummary = personPaymentSummaryQuery.data ?? null;
+
+  const personLedgerQuery = useQuery({
+    queryKey: queryKeys.admin.paymentTransactionsLedger({
+      personId: viewRegistrationsPerson?.id ?? "",
+    }),
+    queryFn: () =>
+      fetchPaymentTransactionsLedger(authHeaders, { personId: viewRegistrationsPerson!.id }),
+    enabled: showLedgerModal && viewRegistrationsPerson !== null,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
 
   const handleExportLedger = useCallback(async () => {
     if (!viewRegistrationsPerson) return;
@@ -947,26 +965,50 @@ export default function PeopleManagement({
               </Alert>
             )}
             <div className="d-flex justify-content-between gap-2">
-              <Button
-                variant="outline-secondary"
-                size="sm"
-                disabled={exportingLedger || personRegistrations.length === 0}
-                onClick={() => void handleExportLedger()}
-                title={m.admin_people_export_ledger()}
-              >
-                {exportingLedger ? (
-                  <Spinner as="span" animation="border" size="sm" className="me-1" />
-                ) : (
-                  <i className="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true" />
-                )}
-                {m.admin_people_export_ledger()}
-              </Button>
+              <div className="d-flex gap-2">
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  disabled={personRegistrations.length === 0}
+                  onClick={() => setShowLedgerModal(true)}
+                  title={m.admin_payment_view_ledger()}
+                >
+                  <i className="bi bi-journal-text me-1" aria-hidden="true" />
+                  {m.admin_payment_view_ledger()}
+                </Button>
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  disabled={exportingLedger || personRegistrations.length === 0}
+                  onClick={() => void handleExportLedger()}
+                  title={m.admin_people_export_ledger()}
+                >
+                  {exportingLedger ? (
+                    <Spinner as="span" animation="border" size="sm" className="me-1" />
+                  ) : (
+                    <i className="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true" />
+                  )}
+                  {m.admin_people_export_ledger()}
+                </Button>
+              </div>
               <Button variant="outline-secondary" size="sm" onClick={closePersonRegistrations}>
                 {m.close()}
               </Button>
             </div>
           </Modal.Footer>
         </Modal>
+      )}
+
+      {viewRegistrationsPerson && (
+        <LedgerModal
+          show={showLedgerModal}
+          title={`${m.admin_ledger_modal_title()} — ${viewRegistrationsPerson.name}`}
+          rows={personLedgerQuery.data ?? []}
+          loading={personLedgerQuery.isPending}
+          error={personLedgerQuery.isError}
+          showPerson={false}
+          onHide={() => setShowLedgerModal(false)}
+        />
       )}
     </>
   );

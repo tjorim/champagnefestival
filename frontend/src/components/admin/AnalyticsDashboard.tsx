@@ -13,9 +13,14 @@ import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
-import { downloadPaymentTransactionsCsv, fetchEditionStats } from "@/utils/adminFetch";
+import {
+  downloadPaymentTransactionsCsv,
+  fetchEditionStats,
+  fetchPaymentTransactionsLedger,
+} from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { devError } from "@/utils/devLog";
+import LedgerModal from "./LedgerModal";
 import "./analyticsDashboard.css";
 
 interface AnalyticsDashboardProps {
@@ -42,6 +47,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [exportingEditionId, setExportingEditionId] = useState<string | null>(null);
   const [ledgerExportError, setLedgerExportError] = useState("");
+  const [ledgerEdition, setLedgerEdition] = useState<{ id: string; label: string } | null>(null);
 
   const handleExportLedger = useCallback(
     async (editionId: string) => {
@@ -60,6 +66,14 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
     },
     [authHeaders],
   );
+
+  const editionLedgerQuery = useQuery({
+    queryKey: queryKeys.admin.paymentTransactionsLedger({ editionId: ledgerEdition?.id ?? "" }),
+    queryFn: () => fetchPaymentTransactionsLedger(authHeaders, { editionId: ledgerEdition!.id }),
+    enabled: ledgerEdition !== null,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
 
   const statsQuery = useQuery({
     queryKey: queryKeys.admin.editionStats,
@@ -157,7 +171,24 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                 <td>€{edition.totalRefunded.toFixed(2)}</td>
                 <td>€{edition.totalOutstanding.toFixed(2)}</td>
                 <td>€{edition.totalRefundLiability.toFixed(2)}</td>
-                <td>
+                <td className="d-flex gap-1">
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    className="py-0 px-1"
+                    onClick={() =>
+                      setLedgerEdition({
+                        id: edition.editionId,
+                        label: `${edition.year} ${edition.month}`,
+                      })
+                    }
+                    title={m.admin_payment_view_ledger()}
+                    aria-label={m.admin_payment_view_ledger_for({
+                      edition: `${edition.year} ${edition.month}`,
+                    })}
+                  >
+                    <i className="bi bi-journal-text" aria-hidden="true" />
+                  </Button>
                   <Button
                     variant="outline-secondary"
                     size="sm"
@@ -322,6 +353,17 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
             )}
           </div>
         </>
+      )}
+
+      {ledgerEdition && (
+        <LedgerModal
+          show
+          title={`${m.admin_ledger_modal_title()} — ${ledgerEdition.label}`}
+          rows={editionLedgerQuery.data ?? []}
+          loading={editionLedgerQuery.isPending}
+          error={editionLedgerQuery.isError}
+          onHide={() => setLedgerEdition(null)}
+        />
       )}
     </div>
   );

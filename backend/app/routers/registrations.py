@@ -33,10 +33,11 @@ from app.dependencies import Pagination
 from app.email import send_guest_access_email
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
-from app.models import Edition, Event, PaymentTransaction, Person, Registration, ReservationAccessToken, Table
+from app.models import Edition, Event, Person, Registration, ReservationAccessToken, Table
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
     PaymentTransactionCreate,
+    PaymentTransactionLedgerRow,
     PaymentTransactionOut,
     RegistrationAccessLookupRequest,
     RegistrationAdminCreate,
@@ -368,6 +369,29 @@ async def export_registrations_csv(
     )
 
 
+@router.get(
+    "/transactions",
+    response_model=list[PaymentTransactionLedgerRow],
+    dependencies=[Depends(require_admin)],
+)
+async def list_payment_transactions_filtered(
+    db: AsyncSession = Depends(get_db),
+    edition_id: str | None = Query(default=None, description="Filter by edition ID"),
+    person_id: str | None = Query(default=None, description="Filter by person ID"),
+) -> list[dict]:
+    """List ledger entries with booking context, filtered by edition and/or
+    person (#1019) — the in-app drill-down behind the edition/person payment
+    summaries; ``/transactions/export`` covers the CSV download of the same
+    filtered set.
+    """
+    stmt = payments_service.build_ledger_query(edition_id=edition_id, person_id=person_id)
+    rows = (await db.execute(stmt)).all()
+    return [
+        payments_service.ledger_row_to_dict(txn, registration, person, event)
+        for txn, registration, person, event in rows
+    ]
+
+
 @router.get("/transactions/export", dependencies=[Depends(require_admin)])
 async def export_payment_transactions_csv(
     db: AsyncSession = Depends(get_db),
@@ -386,23 +410,12 @@ async def export_payment_transactions_csv(
     transfer), which can differ from the booking's event date — both are
     included as separate columns so a reconciliation doesn't conflate them.
     """
-    stmt = (
-        select(PaymentTransaction, Registration, Person, Event)
-        .join(Registration, Registration.id == PaymentTransaction.registration_id)
-        .join(Person, Person.id == Registration.person_id)
-        .join(Event, Event.id == Registration.event_id)
-        .options(selectinload(Event.edition))
-        .order_by(PaymentTransaction.effective_date, PaymentTransaction.recorded_at)
+    stmt = payments_service.build_ledger_query(
+        edition_id=edition_id,
+        person_id=person_id,
+        effective_date_from=effective_date_from,
+        effective_date_to=effective_date_to,
     )
-    if edition_id:
-        stmt = stmt.where(Event.edition_id == edition_id)
-    if person_id:
-        stmt = stmt.where(Registration.person_id == person_id)
-    if effective_date_from:
-        stmt = stmt.where(PaymentTransaction.effective_date >= effective_date_from)
-    if effective_date_to:
-        stmt = stmt.where(PaymentTransaction.effective_date <= effective_date_to)
-
     rows = (await db.execute(stmt)).all()
 
     buffer = io.StringIO()

@@ -1,5 +1,6 @@
 import { apiToEvent } from "./event";
 import type {
+  LedgerTransaction,
   OrderItemCategory,
   PaymentStatus,
   PaymentTransaction,
@@ -21,6 +22,16 @@ export function apiToPaymentTransaction(d: Record<string, unknown>): PaymentTran
     reference: (d.reference as string | null | undefined) ?? null,
     note: (d.note as string | null | undefined) ?? null,
     reversedTransactionId: (d.reversed_transaction_id as string | null | undefined) ?? null,
+  };
+}
+
+/** Map a FastAPI snake_case ledger-drill-down row (#1019) to the frontend camelCase type. */
+export function apiToLedgerTransaction(d: Record<string, unknown>): LedgerTransaction {
+  return {
+    ...apiToPaymentTransaction(d),
+    personName: (d.person_name ?? "") as string,
+    eventTitle: (d.event_title ?? "") as string,
+    editionLabel: (d.edition_label ?? "") as string,
   };
 }
 

@@ -526,6 +526,17 @@ class PaymentTransactionOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PaymentTransactionLedgerRow(PaymentTransactionOut):
+    """One ledger entry with the booking context needed to render an
+    edition- or person-level ledger view (#1019), so the admin UI doesn't
+    need a round trip per row to resolve which booking/person it belongs to.
+    """
+
+    person_name: str
+    event_title: str
+    edition_label: str
+
+
 class RegistrationListOut(BaseModel):
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)

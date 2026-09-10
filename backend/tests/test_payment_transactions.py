@@ -257,6 +257,54 @@ async def test_export_prefixes_formula_injection_reference_and_filters_by_editio
 
 
 # ---------------------------------------------------------------------------
+# In-app ledger drill-down (#1019): GET /transactions, filtered and joined
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.anyio
+async def test_list_transactions_filters_by_edition_and_person_with_booking_context(client):
+    r = await client.post("/api/people", json={"name": "Drilldown Person"}, headers=ADMIN_HEADERS)
+    person_id = r.json()["id"]
+    own_registration_id = await _registration(client, amount_due="10.00", person_id=person_id)
+    other_registration_id = await _registration(client, amount_due="10.00")
+
+    r = await client.post(
+        f"/api/registrations/{own_registration_id}/transactions",
+        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01", "reference": "OWN-REF"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    r = await client.post(
+        f"/api/registrations/{other_registration_id}/transactions",
+        json={"kind": "payment", "amount": "10.00", "effective_date": "2026-01-01", "reference": "OTHER-REF"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"person_id": person_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    rows = r.json()
+    assert [row["reference"] for row in rows] == ["OWN-REF"]
+    row = rows[0]
+    assert row["person_name"] == "Drilldown Person"
+    assert row["event_title"] == "Ledger Bourse"
+    assert row["registration_id"] == own_registration_id
+    assert row["edition_label"]
+
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"edition_id": "does-not-exist"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json() == []
+
+
+# ---------------------------------------------------------------------------
 # Person-level payment summary and export filter (#1019)
 # ---------------------------------------------------------------------------
 

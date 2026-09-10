@@ -26,13 +26,14 @@ from datetime import date as dt_date
 from decimal import Decimal
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
-from app.models import PaymentTransaction, Registration
+from app.models import Event, PaymentTransaction, Person, Registration
 from app.services.errors import ConflictError, to_http_exception
 from app.services.idempotency import (
     check_idempotency_key,
@@ -90,6 +91,47 @@ async def list_transactions(db: AsyncSession, registration_id: str) -> list[Paym
         .order_by(PaymentTransaction.effective_date, PaymentTransaction.recorded_at, PaymentTransaction.id)
     )
     return list(result.scalars().all())
+
+
+def build_ledger_query(
+    *,
+    edition_id: str | None = None,
+    person_id: str | None = None,
+    effective_date_from: dt_date | None = None,
+    effective_date_to: dt_date | None = None,
+) -> Select:
+    """Shared filtered ledger query behind both the CSV export and the
+    edition/person-level drill-down view (#1019): joins each transaction to
+    the booking/person/event it belongs to, oldest first."""
+    stmt = (
+        select(PaymentTransaction, Registration, Person, Event)
+        .join(Registration, Registration.id == PaymentTransaction.registration_id)
+        .join(Person, Person.id == Registration.person_id)
+        .join(Event, Event.id == Registration.event_id)
+        .options(selectinload(Event.edition))
+        .order_by(PaymentTransaction.effective_date, PaymentTransaction.recorded_at)
+    )
+    if edition_id:
+        stmt = stmt.where(Event.edition_id == edition_id)
+    if person_id:
+        stmt = stmt.where(Registration.person_id == person_id)
+    if effective_date_from:
+        stmt = stmt.where(PaymentTransaction.effective_date >= effective_date_from)
+    if effective_date_to:
+        stmt = stmt.where(PaymentTransaction.effective_date <= effective_date_to)
+    return stmt
+
+
+def ledger_row_to_dict(txn: PaymentTransaction, registration: Registration, person: Person, event: Event) -> dict:
+    """One joined ledger row as returned by ``build_ledger_query``, shaped for
+    ``PaymentTransactionLedgerRow`` (#1019)."""
+    edition = event.edition
+    return {
+        **payment_transaction_to_dict(txn),
+        "person_name": person.name,
+        "event_title": event.title,
+        "edition_label": f"{edition.year} {edition.month}" if edition else "",
+    }
 
 
 async def person_payment_summary(db: AsyncSession, person_id: str) -> dict:

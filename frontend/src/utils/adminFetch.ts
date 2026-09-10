@@ -10,8 +10,12 @@ import type {
   EventCheckInStats,
   FaqItem,
 } from "@/types/admin";
-import { apiToPaymentTransaction, apiToRegistration } from "@/types/registrationMapper";
-import type { PaymentTransaction, Registration } from "@/types/registration";
+import {
+  apiToLedgerTransaction,
+  apiToPaymentTransaction,
+  apiToRegistration,
+} from "@/types/registrationMapper";
+import type { LedgerTransaction, PaymentTransaction, Registration } from "@/types/registration";
 import { type Person, apiToPerson } from "@/types/person";
 import {
   downloadFileOrThrow,
@@ -440,6 +444,25 @@ export async function downloadVolunteersCsv(
     { headers: authHeaders() },
     m.admin_error_load_data(),
     "volunteers-insurance-list.csv",
+  );
+}
+
+/** List the payment ledger with booking context, filtered by edition and/or
+ * person (#1019) — the in-app drill-down behind the edition/person payment
+ * summaries. */
+export async function fetchPaymentTransactionsLedger(
+  authHeaders: () => Record<string, string>,
+  filters: { editionId?: string; personId?: string },
+): Promise<LedgerTransaction[]> {
+  const params = new URLSearchParams();
+  if (filters.editionId) params.set("edition_id", filters.editionId);
+  if (filters.personId) params.set("person_id", filters.personId);
+  const query = params.toString();
+  return fetchArrayOrThrow(
+    `/api/registrations/transactions${query ? `?${query}` : ""}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiToLedgerTransaction,
   );
 }
 

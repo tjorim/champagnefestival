@@ -30,6 +30,14 @@ export interface PaymentTransaction {
   reversedTransactionId?: string | null;
 }
 
+/** One ledger entry with booking context, as returned by the edition/person
+ * ledger drill-down (#1019). */
+export interface LedgerTransaction extends PaymentTransaction {
+  personName: string;
+  eventTitle: string;
+  editionLabel: string;
+}
+
 /** Payload for recording one new ledger entry — never edits or deletes a prior one. */
 export interface PaymentTransactionCreate {
   kind: PaymentTransactionKind;

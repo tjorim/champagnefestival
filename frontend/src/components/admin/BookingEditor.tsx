@@ -16,18 +16,8 @@ import type {
 } from "@/types/registration";
 import { fetchPaymentTransactions } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
+import { transactionKindLabel } from "@/utils/paymentTransactionLabels";
 import { m } from "@/paraglide/messages";
-
-function transactionKindLabel(kind: PaymentTransactionKind): string {
-  switch (kind) {
-    case "refund":
-      return m.admin_payment_reason_refund();
-    case "correction":
-      return m.admin_payment_reason_correction();
-    default:
-      return m.admin_payment_reason_payment();
-  }
-}
 
 function todayDateInputValue(): string {
   return new Date().toISOString().slice(0, 10);
