@@ -71,7 +71,8 @@ interface RegistrationListProps {
   filter: "all" | RegistrationStatus;
   onFilterChange: (filter: "all" | RegistrationStatus) => void;
   onUpdateStatus: (id: string, status: RegistrationStatus) => Promise<void>;
-  onUpdatePayment: (id: string, paymentStatus: PaymentStatus) => Promise<void>;
+  /** Records a `payment` ledger transaction for the booking's outstanding balance (#1019). */
+  onRecordPayment: (id: string) => Promise<void>;
   onAssignTable: (registrationId: string, tableId: string | undefined) => void;
   onViewDetail: (registration: Registration) => void;
   onCheckIn: (registrationId: string) => Promise<void>;
@@ -142,7 +143,7 @@ export default function RegistrationList({
   filter,
   onFilterChange,
   onUpdateStatus,
-  onUpdatePayment,
+  onRecordPayment,
   onAssignTable,
   onViewDetail,
   onCheckIn,
@@ -775,7 +776,7 @@ export default function RegistrationList({
                         </Dropdown.Item>
                       )}
                       {reg.paymentStatus !== "paid" && (
-                        <Dropdown.Item onClick={() => onUpdatePayment(reg.id, "paid")}>
+                        <Dropdown.Item onClick={() => onRecordPayment(reg.id)}>
                           <i className="bi bi-currency-euro me-2" aria-hidden="true" />
                           {m.admin_action_mark_paid()}
                         </Dropdown.Item>
@@ -795,7 +796,7 @@ export default function RegistrationList({
       handleAssignTable,
       onViewDetail,
       onUpdateStatus,
-      onUpdatePayment,
+      onRecordPayment,
       handleCheckIn,
       handleIssueStrap,
       processingIds,
@@ -989,7 +990,7 @@ export default function RegistrationList({
         batch.map((id) => {
           if (bulkAction === "confirm") return Promise.resolve(onUpdateStatus(id, "confirmed"));
           if (bulkAction === "cancel") return Promise.resolve(onUpdateStatus(id, "cancelled"));
-          if (bulkAction === "paid") return Promise.resolve(onUpdatePayment(id, "paid"));
+          if (bulkAction === "paid") return Promise.resolve(onRecordPayment(id));
           return Promise.resolve();
         }),
       );
@@ -1004,7 +1005,7 @@ export default function RegistrationList({
     } else {
       clearSelection();
     }
-  }, [bulkAction, onUpdatePayment, onUpdateStatus, selectedIds, clearSelection]);
+  }, [bulkAction, onRecordPayment, onUpdateStatus, selectedIds, clearSelection]);
 
   return (
     <>

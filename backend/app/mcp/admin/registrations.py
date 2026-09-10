@@ -140,7 +140,6 @@ async def update_registration(
     *,
     guest_count: int | None = None,
     status: str | None = None,
-    payment_status: str | None = None,
     amount_due: float | None = None,
     clear_amount_due: bool = False,
     allocations: list[dict] | None = None,
@@ -159,13 +158,14 @@ async def update_registration(
     otherwise the list replaces the complete allocation. ``order_items`` accepts only
     ``product_id``/``quantity`` pairs. Product metadata is resolved from the
     event and existing delivery counts are preserved (clamped to quantity).
+    ``payment_status``/paid total are ledger-derived (#1019) — record a
+    payment transaction via ``create_payment_transaction`` instead.
     """
     provided = {
         k: v
         for k, v in {
             "guest_count": guest_count,
             "status": status,
-            "payment_status": payment_status,
             "amount_due": amount_due,
             "allocations": allocations,
             "confirm_over_capacity": confirm_over_capacity if confirm_over_capacity else None,

@@ -2,9 +2,27 @@ import { apiToEvent } from "./event";
 import type {
   OrderItemCategory,
   PaymentStatus,
+  PaymentTransaction,
+  PaymentTransactionKind,
   Registration,
   RegistrationStatus,
 } from "./registration";
+
+/** Map a FastAPI snake_case payment-transaction response to the frontend camelCase type. */
+export function apiToPaymentTransaction(d: Record<string, unknown>): PaymentTransaction {
+  return {
+    id: d.id as string,
+    registrationId: d.registration_id as string,
+    amount: Number(d.amount ?? 0),
+    kind: (d.kind ?? "payment") as PaymentTransactionKind,
+    effectiveDate: (d.effective_date ?? "") as string,
+    recordedAt: (d.recorded_at ?? "") as string,
+    recordedBy: (d.recorded_by ?? "") as string,
+    reference: (d.reference as string | null | undefined) ?? null,
+    note: (d.note as string | null | undefined) ?? null,
+    reversedTransactionId: (d.reversed_transaction_id as string | null | undefined) ?? null,
+  };
+}
 
 /** Map a FastAPI snake_case registration response to the frontend camelCase Registration type. */
 export function apiToRegistration(d: Record<string, unknown>): Registration {

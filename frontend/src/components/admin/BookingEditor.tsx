@@ -8,18 +8,18 @@ import type { FloorTable } from "@/types/admin";
 import type { Product } from "@/types/event";
 import type {
   BookingUpdate,
+  PaymentTransactionCreate,
+  PaymentTransactionKind,
   Registration,
   RegistrationStatus,
   TableAllocation,
 } from "@/types/registration";
-import { fetchAuditEntries } from "@/utils/adminFetch";
+import { fetchPaymentTransactions } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { m } from "@/paraglide/messages";
 
-type PaymentReason = "payment" | "refund" | "correction";
-
-function paymentReasonLabel(reason: unknown): string {
-  switch (reason) {
+function transactionKindLabel(kind: PaymentTransactionKind): string {
+  switch (kind) {
     case "refund":
       return m.admin_payment_reason_refund();
     case "correction":
@@ -29,18 +29,27 @@ function paymentReasonLabel(reason: unknown): string {
   }
 }
 
+function todayDateInputValue(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 export default function BookingEditor({
   registration,
   registrations = [],
   authHeaders,
   tables,
   onSave,
+  onAddTransaction,
 }: {
   registration: Registration;
   registrations?: Registration[];
   authHeaders: () => Record<string, string>;
   tables: FloorTable[];
   onSave: (id: string, update: BookingUpdate) => Promise<void>;
+  onAddTransaction?: (
+    registrationId: string,
+    payload: PaymentTransactionCreate,
+  ) => Promise<unknown>;
 }) {
   const tableOccupancy = useMemo(() => {
     const occupied = new Map<string, number>();
@@ -90,34 +99,25 @@ export default function BookingEditor({
   const [guestCount, setGuestCount] = useState(registration.guestCount);
   const [quantities, setQuantities] = useState<Record<string, number>>(purchased);
   const [allocations, setAllocations] = useState<TableAllocation[]>(registration.allocations ?? []);
-  const [amountPaid, setAmountPaid] = useState(registration.amountPaid ?? 0);
-  const [paymentReason, setPaymentReason] = useState<PaymentReason>("payment");
-  const [paymentTransactionDate, setPaymentTransactionDate] = useState("");
   const [notes, setNotes] = useState(registration.notes);
   const [status, setStatus] = useState(registration.status);
   const [pending, setPending] = useState(false);
-  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
-  const amountPaidChanged = amountPaid !== (registration.amountPaid ?? 0);
+  const [showLedger, setShowLedger] = useState(false);
 
-  const paymentHistoryQuery = useQuery({
-    queryKey: queryKeys.admin.auditEntries({
-      resourceType: "registration",
-      resourceId: registration.id,
-      actor: "",
-      action: "amount_paid_updated",
-      since: "",
-      until: "",
-      page: 1,
-    }),
-    queryFn: () =>
-      fetchAuditEntries(authHeaders, {
-        resourceType: "registration",
-        resourceId: registration.id,
-        action: "amount_paid_updated",
-        limit: 20,
-      }),
-    enabled: showPaymentHistory,
+  const [transactionKind, setTransactionKind] = useState<PaymentTransactionKind>("payment");
+  const [transactionAmount, setTransactionAmount] = useState("");
+  const [transactionDate, setTransactionDate] = useState(todayDateInputValue());
+  const [transactionReference, setTransactionReference] = useState("");
+  const [transactionNote, setTransactionNote] = useState("");
+  const [transactionPending, setTransactionPending] = useState(false);
+  const [transactionError, setTransactionError] = useState("");
+
+  const ledgerQuery = useQuery({
+    queryKey: queryKeys.admin.paymentTransactions(registration.id),
+    queryFn: () => fetchPaymentTransactions(authHeaders, registration.id),
+    enabled: showLedger,
   });
+
   const amountDue = products.length
     ? products.reduce(
         (sum, product) =>
@@ -125,6 +125,7 @@ export default function BookingEditor({
         0,
       )
     : (registration.amountDue ?? 0);
+  const amountPaid = registration.amountPaid ?? 0;
   const calculatedTableQuantity = products.reduce(
     (sum, product) => (product.unit === "table" ? sum + (quantities[product.id] ?? 0) : sum),
     0,
@@ -168,6 +169,14 @@ export default function BookingEditor({
     setQuantities(next);
   };
 
+  const parsedTransactionAmount = Number(transactionAmount);
+  const transactionAmountInvalid =
+    transactionAmount.trim() === "" || !Number.isFinite(parsedTransactionAmount);
+  const signedTransactionAmount =
+    transactionKind === "refund"
+      ? -Math.abs(parsedTransactionAmount)
+      : Math.abs(parsedTransactionAmount);
+
   return (
     <section aria-labelledby="booking-editor-heading">
       <h6 id="booking-editor-heading" className="text-warning">
@@ -197,42 +206,12 @@ export default function BookingEditor({
             <option value="cancelled">{m.admin_status_cancelled()}</option>
           </Form.Select>
         </Form.Group>
-        <Form.Group className="col-sm-4">
-          <Form.Label>{m.admin_inventory_paid()}</Form.Label>
-          <Form.Control
-            aria-label={m.admin_inventory_paid()}
-            type="number"
-            min={0}
-            step="0.01"
-            value={amountPaid}
-            onChange={(event) => setAmountPaid(Number(event.target.value))}
-          />
-          {amountPaidChanged && (
-            <div className="d-flex gap-2 mt-2">
-              <Form.Select
-                size="sm"
-                aria-label={m.admin_payment_reason_label()}
-                value={paymentReason}
-                onChange={(event) => setPaymentReason(event.target.value as PaymentReason)}
-              >
-                <option value="payment">{m.admin_payment_reason_payment()}</option>
-                <option value="refund">{m.admin_payment_reason_refund()}</option>
-                <option value="correction">{m.admin_payment_reason_correction()}</option>
-              </Form.Select>
-              <Form.Control
-                size="sm"
-                type="date"
-                aria-label={m.admin_payment_transaction_date()}
-                value={paymentTransactionDate}
-                onChange={(event) => setPaymentTransactionDate(event.target.value)}
-              />
-            </div>
-          )}
-          {amountPaidChanged && <Form.Text>{m.admin_payment_transaction_date_help()}</Form.Text>}
-        </Form.Group>
         <div className="col-sm-4 small align-self-end">
           <div>
             {m.admin_booking_total()}: €{amountDue.toFixed(2)}
+          </div>
+          <div>
+            {m.admin_inventory_paid()}: €{amountPaid.toFixed(2)}
           </div>
           <div>
             {m.admin_inventory_refund()}: €{Math.max(0, amountPaid - amountDue).toFixed(2)}
@@ -348,8 +327,7 @@ export default function BookingEditor({
             invalidQuantity ||
             !Number.isInteger(guestCount) ||
             guestCount < 1 ||
-            guestCount > 20 ||
-            !Number.isFinite(amountPaid)
+            guestCount > 20
           }
           onClick={async () => {
             setPending(true);
@@ -358,9 +336,6 @@ export default function BookingEditor({
                 guestCount,
                 quantities,
                 allocations,
-                amountPaid,
-                ...(amountPaidChanged ? { paymentReason } : {}),
-                ...(amountPaidChanged && paymentTransactionDate ? { paymentTransactionDate } : {}),
                 notes,
                 status,
               });
@@ -374,48 +349,142 @@ export default function BookingEditor({
       </fieldset>
 
       <fieldset className="mt-3">
-        <Button
-          variant="link"
-          size="sm"
-          className="px-0"
-          onClick={() => setShowPaymentHistory((v) => !v)}
-        >
-          {showPaymentHistory ? m.admin_payment_history_hide() : m.admin_payment_history_show()}
+        <Button variant="link" size="sm" className="px-0" onClick={() => setShowLedger((v) => !v)}>
+          {showLedger ? m.admin_payment_history_hide() : m.admin_payment_history_show()}
         </Button>
-        {showPaymentHistory && (
+        {showLedger && (
           <>
-            {paymentHistoryQuery.isLoading && <p className="small">{m.loading()}</p>}
-            {paymentHistoryQuery.isError && (
+            {ledgerQuery.isLoading && <p className="small">{m.loading()}</p>}
+            {ledgerQuery.isError && (
               <Alert variant="danger" className="mb-2">
                 {m.admin_payment_history_error()}
               </Alert>
             )}
-            {paymentHistoryQuery.data && paymentHistoryQuery.data.length === 0 && (
+            {ledgerQuery.data && ledgerQuery.data.length === 0 && (
               <p className="small text-secondary">{m.admin_payment_history_empty()}</p>
             )}
-            {paymentHistoryQuery.data && paymentHistoryQuery.data.length > 0 && (
-              <ListGroup variant="flush">
-                {paymentHistoryQuery.data.map((entry) => (
+            {ledgerQuery.data && ledgerQuery.data.length > 0 && (
+              <ListGroup variant="flush" className="mb-3">
+                {ledgerQuery.data.map((entry) => (
                   <ListGroup.Item key={entry.id} className="px-0 py-1">
                     <div className="small d-flex justify-content-between flex-wrap gap-2">
                       <span>
-                        <strong>{paymentReasonLabel(entry.details.reason)}</strong>{" "}
-                        {m.admin_payment_history_change({
-                          before: String(entry.details.previous_amount_paid ?? ""),
-                          after: String(entry.details.amount_paid ?? ""),
-                        })}
+                        <strong>{transactionKindLabel(entry.kind)}</strong>{" "}
+                        {entry.amount >= 0 ? "+" : ""}€{entry.amount.toFixed(2)}
+                        {entry.reference ? ` · ${entry.reference}` : ""}
+                        {entry.note ? ` · ${entry.note}` : ""}
                       </span>
                       <span className="text-secondary">
-                        {typeof entry.details.transaction_date === "string"
-                          ? entry.details.transaction_date
-                          : entry.timestamp.slice(0, 10)}
-                        {" · "}
-                        {entry.actor}
+                        {entry.effectiveDate} · {entry.recordedBy}
                       </span>
                     </div>
                   </ListGroup.Item>
                 ))}
               </ListGroup>
+            )}
+            {onAddTransaction && (
+              <div className="d-flex flex-wrap gap-2 align-items-end">
+                <Form.Group>
+                  <Form.Label className="small mb-1">{m.admin_payment_reason_label()}</Form.Label>
+                  <Form.Select
+                    size="sm"
+                    aria-label={m.admin_payment_reason_label()}
+                    value={transactionKind}
+                    onChange={(event) =>
+                      setTransactionKind(event.target.value as PaymentTransactionKind)
+                    }
+                  >
+                    <option value="payment">{m.admin_payment_reason_payment()}</option>
+                    <option value="refund">{m.admin_payment_reason_refund()}</option>
+                    <option value="correction">{m.admin_payment_reason_correction()}</option>
+                  </Form.Select>
+                </Form.Group>
+                <Form.Group>
+                  <Form.Label className="small mb-1">{m.admin_payment_amount_label()}</Form.Label>
+                  <Form.Control
+                    size="sm"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    style={{ maxWidth: "8rem" }}
+                    aria-label={m.admin_payment_amount_label()}
+                    value={transactionAmount}
+                    onChange={(event) => setTransactionAmount(event.target.value)}
+                  />
+                </Form.Group>
+                <Form.Group>
+                  <Form.Label className="small mb-1">
+                    {m.admin_payment_transaction_date()}
+                  </Form.Label>
+                  <Form.Control
+                    size="sm"
+                    type="date"
+                    aria-label={m.admin_payment_transaction_date()}
+                    value={transactionDate}
+                    onChange={(event) => setTransactionDate(event.target.value)}
+                  />
+                </Form.Group>
+                <Form.Group>
+                  <Form.Label className="small mb-1">
+                    {m.admin_payment_reference_label()}
+                  </Form.Label>
+                  <Form.Control
+                    size="sm"
+                    type="text"
+                    style={{ maxWidth: "10rem" }}
+                    aria-label={m.admin_payment_reference_label()}
+                    value={transactionReference}
+                    onChange={(event) => setTransactionReference(event.target.value)}
+                  />
+                </Form.Group>
+                <Form.Group>
+                  <Form.Label className="small mb-1">{m.admin_payment_note_label()}</Form.Label>
+                  <Form.Control
+                    size="sm"
+                    type="text"
+                    style={{ maxWidth: "12rem" }}
+                    aria-label={m.admin_payment_note_label()}
+                    value={transactionNote}
+                    onChange={(event) => setTransactionNote(event.target.value)}
+                  />
+                </Form.Group>
+                <Button
+                  size="sm"
+                  disabled={
+                    transactionPending || transactionAmountInvalid || signedTransactionAmount === 0
+                  }
+                  onClick={async () => {
+                    setTransactionPending(true);
+                    setTransactionError("");
+                    try {
+                      await onAddTransaction(registration.id, {
+                        kind: transactionKind,
+                        amount: signedTransactionAmount,
+                        effectiveDate: transactionDate,
+                        reference: transactionReference.trim() || undefined,
+                        note: transactionNote.trim() || undefined,
+                        idempotencyKey: crypto.randomUUID(),
+                      });
+                      setTransactionAmount("");
+                      setTransactionReference("");
+                      setTransactionNote("");
+                    } catch (err) {
+                      setTransactionError(
+                        err instanceof Error ? err.message : m.admin_error_record_payment(),
+                      );
+                    } finally {
+                      setTransactionPending(false);
+                    }
+                  }}
+                >
+                  {m.admin_payment_record()}
+                </Button>
+              </div>
+            )}
+            {transactionError && (
+              <Alert variant="danger" className="mt-2 mb-0">
+                {transactionError}
+              </Alert>
             )}
           </>
         )}

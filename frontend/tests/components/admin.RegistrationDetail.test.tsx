@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationDetail from "@/components/admin/RegistrationDetail";
 import type { FloorTable } from "@/types/admin";
@@ -12,6 +12,12 @@ vi.mock("@/paraglide/messages", () => ({
     },
   }),
 }));
+
+const { fetchPaymentTransactions } = vi.hoisted(() => ({
+  fetchPaymentTransactions: vi.fn(),
+}));
+
+vi.mock("@/utils/adminFetch", () => ({ fetchPaymentTransactions }));
 
 const tables: FloorTable[] = [
   {
@@ -333,7 +339,7 @@ describe("RegistrationDetail", () => {
     ]);
   });
 
-  it("previews a table quantity reduction and saves the chosen release with payment", () => {
+  it("previews a table quantity reduction and saves the chosen release", () => {
     const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     const tableProduct = {
       id: "table-product",
@@ -389,8 +395,36 @@ describe("RegistrationDetail", () => {
       "reg-1",
       expect.objectContaining({
         quantities: { "table-product": 1 },
-        amountPaid: 100,
         allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
+      }),
+    );
+  });
+
+  it("records a payment transaction from the ledger's add-transaction form", async () => {
+    fetchPaymentTransactions.mockResolvedValue([]);
+    const onAddTransaction = vi.fn().mockResolvedValue(undefined);
+    renderDetail({ onSaveBooking: vi.fn(), onAddTransaction });
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_payment_history_show" }));
+    await waitFor(() =>
+      expect(fetchPaymentTransactions).toHaveBeenCalledWith(expect.any(Function), "reg-1"),
+    );
+    await waitFor(() =>
+      expect(screen.getByText("admin_payment_history_empty")).toBeInTheDocument(),
+    );
+
+    fireEvent.change(screen.getByRole("spinbutton", { name: "admin_payment_amount_label" }), {
+      target: { value: "42" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "admin_payment_record" }));
+
+    await waitFor(() => expect(onAddTransaction).toHaveBeenCalledTimes(1));
+    expect(onAddTransaction).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({
+        kind: "payment",
+        amount: 42,
+        idempotencyKey: expect.any(String),
       }),
     );
   });

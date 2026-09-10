@@ -103,6 +103,10 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
               <th scope="col">{m.admin_analytics_column_checkin_rate()}</th>
               <th scope="col">{m.admin_analytics_column_total_paid()}</th>
               <th scope="col">{m.admin_analytics_column_total_due()}</th>
+              <th scope="col">{m.admin_analytics_column_total_received()}</th>
+              <th scope="col">{m.admin_analytics_column_total_refunded()}</th>
+              <th scope="col">{m.admin_analytics_column_total_outstanding()}</th>
+              <th scope="col">{m.admin_analytics_column_total_refund_liability()}</th>
             </tr>
           </thead>
           <tbody>
@@ -122,6 +126,10 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                 </td>
                 <td>€{edition.totalPaid.toFixed(2)}</td>
                 <td>€{edition.totalDue.toFixed(2)}</td>
+                <td>€{edition.totalReceived.toFixed(2)}</td>
+                <td>€{edition.totalRefunded.toFixed(2)}</td>
+                <td>€{edition.totalOutstanding.toFixed(2)}</td>
+                <td>€{edition.totalRefundLiability.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>

@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import Event, Registration
+from app.models import Event, PaymentTransaction, Registration
 from app.schemas import EditionAttendanceStats, EditionCreate, EditionOut, EditionType, EditionUpdate
 from app.services import editions_service
 
@@ -100,6 +100,18 @@ async def list_edition_attendance_stats(
             ),
             func.coalesce(func.sum(Registration.amount_paid), 0).label("total_paid"),
             func.coalesce(func.sum(Registration.amount_due), 0).label("total_due"),
+            # #1019: outstanding/refund-liability are per-booking max()s (a
+            # partly-paid booking's shortfall and an overpaid one's excess
+            # can't both cancel out in a single group SUM), so each is
+            # clamped with GREATEST(..., 0) before being summed.
+            func.coalesce(
+                func.sum(func.greatest(func.coalesce(Registration.amount_due, 0) - Registration.amount_paid, 0)),
+                0,
+            ).label("total_outstanding"),
+            func.coalesce(
+                func.sum(func.greatest(Registration.amount_paid - func.coalesce(Registration.amount_due, 0), 0)),
+                0,
+            ).label("total_refund_liability"),
         )
         .join(Event, Event.id == Registration.event_id)
         .where(Registration.status != "cancelled")
@@ -107,9 +119,31 @@ async def list_edition_attendance_stats(
     )
     stats_by_edition = {row.edition_id: row for row in (await db.execute(stmt)).all()}
 
+    # Received/refunded come from the ledger itself (not the synced
+    # amount_paid column) so a booking's gross payments and gross refunds are
+    # reported separately instead of netted together.
+    txn_stmt = (
+        select(
+            Event.edition_id,
+            func.coalesce(func.sum(PaymentTransaction.amount).filter(PaymentTransaction.kind == "payment"), 0).label(
+                "total_received"
+            ),
+            func.coalesce(
+                func.sum(PaymentTransaction.amount).filter(PaymentTransaction.kind == "refund") * -1, 0
+            ).label("total_refunded"),
+        )
+        .select_from(PaymentTransaction)
+        .join(Registration, Registration.id == PaymentTransaction.registration_id)
+        .join(Event, Event.id == Registration.event_id)
+        .where(Registration.status != "cancelled")
+        .group_by(Event.edition_id)
+    )
+    txn_stats_by_edition = {row.edition_id: row for row in (await db.execute(txn_stmt)).all()}
+
     payloads = []
     for edition in editions:
         stats = stats_by_edition.get(edition.id)
+        txn_stats = txn_stats_by_edition.get(edition.id)
         payloads.append(
             {
                 "edition_id": edition.id,
@@ -123,6 +157,10 @@ async def list_edition_attendance_stats(
                 "total_checked_in": stats.total_checked_in if stats else 0,
                 "total_paid": stats.total_paid if stats else 0,
                 "total_due": stats.total_due if stats else 0,
+                "total_outstanding": stats.total_outstanding if stats else 0,
+                "total_refund_liability": stats.total_refund_liability if stats else 0,
+                "total_received": txn_stats.total_received if txn_stats else 0,
+                "total_refunded": txn_stats.total_refunded if txn_stats else 0,
             }
         )
     return payloads

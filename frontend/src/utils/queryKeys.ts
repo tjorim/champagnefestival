@@ -64,6 +64,10 @@ export const queryKeys = {
     itemModalPeople: (query: string) => ["admin", "item-modal", "people", query] as const,
     peopleRegistrations: (personId: string) =>
       ["admin", "people", personId, "registrations"] as const,
+    /** One booking's payment ledger (#1019); nested under `registrations` so
+     * list-level invalidation also refreshes any open ledger view. */
+    paymentTransactions: (registrationId: string) =>
+      ["admin", "registrations", registrationId, "transactions"] as const,
     auditResourceTypes: ["admin", "audit", "resource-types"] as const,
     auditEntries: (filters: {
       resourceType: string;

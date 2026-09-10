@@ -8,13 +8,38 @@ export interface BookingUpdate {
   guestCount: number;
   quantities: Record<string, number>;
   allocations: TableAllocation[];
-  amountPaid: number;
   notes: string;
   status: RegistrationStatus;
-  /** Why `amountPaid` changed — ignored unless it actually changes. */
-  paymentReason?: "payment" | "refund" | "correction";
-  /** When the money actually moved (YYYY-MM-DD); defaults to the edit time if omitted. */
-  paymentTransactionDate?: string;
+}
+
+export type PaymentTransactionKind = "payment" | "refund" | "correction";
+
+/** One append-only payment-ledger entry against a booking (#1019). */
+export interface PaymentTransaction {
+  id: string;
+  registrationId: string;
+  amount: number;
+  kind: PaymentTransactionKind;
+  /** When the money actually moved (e.g. a bank-transfer date), YYYY-MM-DD. */
+  effectiveDate: string;
+  recordedAt: string;
+  recordedBy: string;
+  reference?: string | null;
+  note?: string | null;
+  /** The entry this refund/correction reverses, if any. */
+  reversedTransactionId?: string | null;
+}
+
+/** Payload for recording one new ledger entry — never edits or deletes a prior one. */
+export interface PaymentTransactionCreate {
+  kind: PaymentTransactionKind;
+  amount: number;
+  effectiveDate: string;
+  reference?: string;
+  note?: string;
+  reversedTransactionId?: string;
+  /** Client-generated key so a retried submission cannot book/refund money twice. */
+  idempotencyKey: string;
 }
 
 /**

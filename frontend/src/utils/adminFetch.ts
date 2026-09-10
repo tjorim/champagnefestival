@@ -10,8 +10,8 @@ import type {
   EventCheckInStats,
   FaqItem,
 } from "@/types/admin";
-import { apiToRegistration } from "@/types/registrationMapper";
-import type { Registration } from "@/types/registration";
+import { apiToPaymentTransaction, apiToRegistration } from "@/types/registrationMapper";
+import type { PaymentTransaction, Registration } from "@/types/registration";
 import { type Person, apiToPerson } from "@/types/person";
 import {
   downloadFileOrThrow,
@@ -353,6 +353,20 @@ export async function fetchAuditEntries(
     { headers: authHeaders() },
     m.admin_error_load_data(),
     apiAuditEntryToAuditEntry,
+  );
+}
+
+/** The chronological payment ledger for one booking (#1019) — the accounting
+ * source of truth behind its amountPaid/paymentStatus/refundDue fields. */
+export async function fetchPaymentTransactions(
+  authHeaders: () => Record<string, string>,
+  registrationId: string,
+): Promise<PaymentTransaction[]> {
+  return fetchArrayOrThrow(
+    `/api/registrations/${encodeURIComponent(registrationId)}/transactions`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiToPaymentTransaction,
   );
 }
 

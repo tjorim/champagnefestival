@@ -232,6 +232,12 @@ export default function PeopleManagement({
     }
     return {
       grandTotal: nonCancelled.reduce((sum, r) => sum + r.amountPaid, 0),
+      // Traceable to each booking's own amount_due/amount_paid (#1019), which
+      // in turn derive from that booking's payment ledger.
+      outstandingTotal: nonCancelled.reduce(
+        (sum, r) => sum + Math.max(0, (r.amountDue ?? 0) - r.amountPaid),
+        0,
+      ),
       byEdition: [...byEdition.values()],
     };
   }, [personRegistrationsQuery.data]);
@@ -810,6 +816,11 @@ export default function PeopleManagement({
                   <div>
                     {m.admin_people_total_paid({
                       amount: personPaymentTotals.grandTotal.toFixed(2),
+                    })}
+                  </div>
+                  <div>
+                    {m.admin_people_total_outstanding({
+                      amount: personPaymentTotals.outstandingTotal.toFixed(2),
                     })}
                   </div>
                   {personPaymentTotals.byEdition.length > 1 &&

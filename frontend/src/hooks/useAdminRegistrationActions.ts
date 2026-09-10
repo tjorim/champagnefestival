@@ -5,11 +5,11 @@ import type {
   TableAllocation,
   BookingUpdate,
   OrderItem,
-  PaymentStatus,
+  PaymentTransactionCreate,
   Registration,
   RegistrationStatus,
 } from "@/types/registration";
-import { apiToRegistration } from "@/types/registrationMapper";
+import { apiToPaymentTransaction, apiToRegistration } from "@/types/registrationMapper";
 import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { devError } from "@/utils/devLog";
@@ -50,11 +50,6 @@ export function bookingUpdatePayload(update: BookingUpdate, confirmOverCapacity 
       guest_count: allocation.guestCount,
       exclusive: allocation.exclusive,
     })),
-    amount_paid: update.amountPaid,
-    ...(update.paymentReason !== undefined ? { payment_reason: update.paymentReason } : {}),
-    ...(update.paymentTransactionDate !== undefined
-      ? { payment_transaction_date: update.paymentTransactionDate }
-      : {}),
     notes: update.notes,
     status: update.status,
     confirm_over_capacity: confirmOverCapacity,
@@ -70,12 +65,13 @@ export function useAdminRegistrationActions({
   setRegistrationError,
   confirmOverCapacity,
 }: UseAdminRegistrationActionsOptions) {
-  const { updateRegistrationMutation } = useRegistrationAdminMutations({
-    queryClient,
-    authHeaders,
-    registrationsQueryKey,
-    tablesQueryKey,
-  });
+  const { updateRegistrationMutation, createPaymentTransactionMutation } =
+    useRegistrationAdminMutations({
+      queryClient,
+      authHeaders,
+      registrationsQueryKey,
+      tablesQueryKey,
+    });
 
   const handleUpdateStatus = useCallback(
     async (id: string, status: RegistrationStatus) => {
@@ -163,47 +159,76 @@ export function useAdminRegistrationActions({
     ],
   );
 
-  const handleUpdatePayment = useCallback(
-    async (id: string, paymentStatus: PaymentStatus) => {
+  const handleAddTransaction = useCallback(
+    async (registrationId: string, payload: PaymentTransactionCreate) => {
       try {
-        const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
-            id,
-            payload: { payment_status: paymentStatus },
-            fallbackMessage: m.admin_error_update_payment(),
+        const transaction = apiToPaymentTransaction(
+          await createPaymentTransactionMutation.mutateAsync({
+            registrationId,
+            payload: {
+              kind: payload.kind,
+              amount: payload.amount,
+              effective_date: payload.effectiveDate,
+              ...(payload.reference ? { reference: payload.reference } : {}),
+              ...(payload.note ? { note: payload.note } : {}),
+              ...(payload.reversedTransactionId
+                ? { reversed_transaction_id: payload.reversedTransactionId }
+                : {}),
+              idempotency_key: payload.idempotencyKey,
+            },
+            fallbackMessage: m.admin_error_record_payment(),
           }),
         );
+        // The endpoint returns the new ledger entry, not the registration —
+        // refetch so amountPaid/paymentStatus/refundDue (derived server-side
+        // from the ledger, #1019) reflect this append everywhere it's shown.
+        const data = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+          `/api/registrations/${registrationId}`,
+          { headers: authHeaders() },
+          m.admin_error_load_data(),
+        );
+        const updated = apiToRegistration(data);
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-          prev
-            ? prev.map((registration) =>
-                registration.id === id
-                  ? {
-                      ...registration,
-                      paymentStatus: updated.paymentStatus,
-                      updatedAt: updated.updatedAt,
-                    }
-                  : registration,
-              )
-            : prev,
+          prev?.map((registration) =>
+            registration.id === registrationId ? updated : registration,
+          ),
         );
-        setDetailRegistration((prev) =>
-          prev?.id === id
-            ? { ...prev, paymentStatus: updated.paymentStatus, updatedAt: updated.updatedAt }
-            : prev,
-        );
+        setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
+        return transaction;
       } catch (err) {
-        devError("Failed to update payment status", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_update_payment());
+        devError("Failed to record payment transaction", err);
+        setRegistrationError(err instanceof Error ? err.message : m.admin_error_record_payment());
         throw err;
       }
     },
     [
+      authHeaders,
+      createPaymentTransactionMutation,
       queryClient,
       registrationsQueryKey,
       setDetailRegistration,
       setRegistrationError,
-      updateRegistrationMutation,
     ],
+  );
+
+  const handleRecordPayment = useCallback(
+    async (id: string) => {
+      const registration = queryClient
+        .getQueryData<Registration[]>(registrationsQueryKey)
+        ?.find((r) => r.id === id);
+      const outstanding = Math.max(
+        0,
+        (registration?.amountDue ?? 0) - (registration?.amountPaid ?? 0),
+      );
+      if (outstanding <= 0) return;
+      await handleAddTransaction(id, {
+        kind: "payment",
+        amount: outstanding,
+        effectiveDate: new Date().toISOString().slice(0, 10),
+        idempotencyKey: crypto.randomUUID(),
+      });
+    },
+    [handleAddTransaction, queryClient, registrationsQueryKey],
   );
 
   const handleSaveAllocations = useCallback(
@@ -453,13 +478,14 @@ export function useAdminRegistrationActions({
 
   return {
     handleAddRegistration,
+    handleAddTransaction,
     handleAssignTable,
     handleSaveAllocations,
     handleSaveBooking,
     handleCheckIn,
     handleIssueStrap,
     handleToggleDelivered,
-    handleUpdatePayment,
+    handleRecordPayment,
     handleUpdateGuestCount,
     handleUpdateStatus,
     handleViewDetail,

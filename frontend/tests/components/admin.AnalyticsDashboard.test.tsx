@@ -55,6 +55,10 @@ describe("AnalyticsDashboard", () => {
         totalCheckedIn: 18,
         totalPaid: 500,
         totalDue: 600,
+        totalReceived: 500,
+        totalRefunded: 0,
+        totalOutstanding: 100,
+        totalRefundLiability: 0,
       },
     ]);
     renderAnalyticsDashboard();
@@ -80,6 +84,10 @@ describe("AnalyticsDashboard", () => {
         totalCheckedIn: 18,
         totalPaid: 500,
         totalDue: 600,
+        totalReceived: 500,
+        totalRefunded: 0,
+        totalOutstanding: 100,
+        totalRefundLiability: 0,
       },
     ]);
     renderAnalyticsDashboard();

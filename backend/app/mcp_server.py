@@ -50,6 +50,7 @@ from app.mcp.admin import faq as mcp_admin_faq
 from app.mcp.admin import integration_clients as mcp_admin_integration_clients
 from app.mcp.admin import layouts as mcp_admin_layouts
 from app.mcp.admin import members as mcp_admin_members
+from app.mcp.admin import payments as mcp_admin_payments
 from app.mcp.admin import people as mcp_admin_people
 from app.mcp.admin import registrations as mcp_admin_registrations
 from app.mcp.admin import rooms as mcp_admin_rooms
@@ -72,6 +73,7 @@ from app.schemas import (
     Y_POSITION_DESCRIPTION,
     EditionType,
     LayoutCreate,
+    PaymentTransactionKind,
     RoomCreate,
     TableCreate,
     TableTypeCreate,
@@ -1575,7 +1577,6 @@ class ChampagneFestivalMcpBackend:
         registration_id: str,
         guest_count: int | None = None,
         status: str | None = None,
-        payment_status: str | None = None,
         amount_due: float | None = None,
         clear_amount_due: bool = False,
         allocations: list[dict] | None = None,
@@ -1593,7 +1594,9 @@ class ChampagneFestivalMcpBackend:
         parameter (0.0 is a valid amount_due) — pass ``clear_amount_due=True``
         to null it out. ``order_items`` takes ``product_id``/``quantity`` pairs;
         product details are resolved server-side. ``allocations`` replaces the
-        complete table allocation list. Requires the ``admin`` role.
+        complete table allocation list. ``payment_status``/paid total are
+        ledger-derived (#1019) — use ``create_payment_transaction`` to record
+        a payment, refund or correction instead. Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_registrations.update_registration(
@@ -1602,7 +1605,6 @@ class ChampagneFestivalMcpBackend:
             registration_id,
             guest_count=guest_count,
             status=status,
-            payment_status=payment_status,
             amount_due=amount_due,
             clear_amount_due=clear_amount_due,
             allocations=allocations,
@@ -1619,6 +1621,50 @@ class ChampagneFestivalMcpBackend:
         """Delete a registration. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_registrations.delete_registration(self.session_factory, self._actor(), registration_id)
+
+    async def create_payment_transaction(
+        self,
+        registration_id: str,
+        kind: PaymentTransactionKind,
+        amount: float,
+        effective_date: str,
+        reference: str | None = None,
+        note: str | None = None,
+        reversed_transaction_id: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> dict:
+        """Append one payment-ledger entry against a booking. Requires the ``admin`` role.
+
+        ``kind`` is ``payment``, ``refund`` or ``correction``; ``amount``'s
+        sign must match (payment > 0, refund < 0, correction != 0). Never
+        edits or deletes a prior entry — a refund/correction is always a new,
+        separate row, optionally linked via ``reversed_transaction_id`` to the
+        entry it reverses. Pass the same ``idempotency_key`` on a retry (e.g.
+        after a timeout) to safely replay the same result instead of
+        recording the money twice — see docs/retry-safety.md.
+        """
+        self._require_admin()
+        return await mcp_admin_payments.create_payment_transaction(
+            self.session_factory,
+            self._actor(),
+            registration_id,
+            kind=kind,
+            amount=amount,
+            effective_date=effective_date,
+            reference=reference,
+            note=note,
+            reversed_transaction_id=reversed_transaction_id,
+            idempotency_key=idempotency_key,
+        )
+
+    async def list_payment_transactions(self, registration_id: str) -> dict:
+        """List one booking's chronological payment ledger. Requires the ``admin`` role.
+
+        The accounting source of truth behind that booking's
+        ``amount_paid``/``payment_status``/``refund_due`` fields.
+        """
+        self._require_admin()
+        return await mcp_admin_payments.list_payment_transactions(self.session_factory, registration_id)
 
     # -- Audit trail (read) ----------------------------------------------
 
@@ -1866,6 +1912,8 @@ def create_mcp_server(
     register_tool(backend.create_registration)
     register_tool(backend.update_registration)
     register_tool(backend.delete_registration)
+    register_tool(backend.create_payment_transaction)
+    register_tool(backend.list_payment_transactions)
     register_tool(backend.list_audit_entries)
     register_tool(backend.list_audit_resource_types)
     register_tool(backend.create_integration_client)

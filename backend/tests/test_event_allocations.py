@@ -254,7 +254,13 @@ async def test_quantity_reduction_and_chosen_table_release_commit_together(clien
     booking = (await book(client, event, product, 2)).json()
     url = f"/api/registrations/{booking['id']}"
     allocations = [{"table_id": t["id"], "guest_count": 0, "exclusive": True} for t in (first, second)]
-    assert (await client.put(url, json={"allocations": allocations, "amount_paid": "100"})).status_code == 200
+    assert (await client.put(url, json={"allocations": allocations})).status_code == 200
+    assert (
+        await client.post(
+            f"{url}/transactions",
+            json={"kind": "payment", "amount": "100.00", "effective_date": "2026-01-01"},
+        )
+    ).status_code == 201
     change = {"order_items": [{"product_id": product["id"], "quantity": 1}]}
     assert (await client.put(url, json=change)).status_code == 409
     # The fixture shares one session; mirror request teardown after rejection.
