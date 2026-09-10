@@ -313,7 +313,9 @@ describe("RegistrationDetail", () => {
         allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
       }),
       registrations: [
-        buildRegistration({ allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }] }),
+        buildRegistration({
+          allocations: [{ tableId: "table-2", guestCount: 2, exclusive: false }],
+        }),
         otherRegistration,
       ],
     });
