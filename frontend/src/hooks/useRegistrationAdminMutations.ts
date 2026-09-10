@@ -1,6 +1,7 @@
 import { useMutation, type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
+import { queryKeys } from "@/utils/queryKeys";
 
 interface UseRegistrationAdminMutationsOptions {
   queryClient: QueryClient;
@@ -36,5 +37,37 @@ export function useRegistrationAdminMutations({
     retry: false,
   });
 
-  return { updateRegistrationMutation };
+  const createPaymentTransactionMutation = useMutation({
+    mutationFn: ({
+      registrationId,
+      payload,
+      fallbackMessage,
+    }: {
+      registrationId: string;
+      payload: Record<string, unknown>;
+      fallbackMessage: string;
+    }) =>
+      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+        `/api/registrations/${registrationId}/transactions`,
+        { method: "POST", headers: authHeaders(), body: JSON.stringify(payload) },
+        fallbackMessage,
+      ),
+    onSettled: (_data, _error, variables) => {
+      void invalidateAdmin(queryClient, [
+        registrationsQueryKey,
+        queryKeys.admin.paymentTransactions(variables.registrationId),
+        // Prefix matches: refreshes every person's payment-summary/
+        // registrations view and every edition/person ledger drill-down,
+        // since this mutation doesn't know which person's totals changed
+        // without an extra registration lookup.
+        ["admin", "people"],
+        ["admin", "registrations", "transactions"],
+      ]);
+    },
+    // A failed submission must surface the error so the caller can decide
+    // whether to retry with the same idempotencyKey — never retried silently.
+    retry: false,
+  });
+
+  return { updateRegistrationMutation, createPaymentTransactionMutation };
 }

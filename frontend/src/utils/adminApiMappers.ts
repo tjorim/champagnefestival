@@ -53,6 +53,10 @@ export function apiEditionStatsToEditionAttendanceStats(
     totalCheckedIn: d.total_checked_in as number,
     totalPaid: Number(d.total_paid ?? 0),
     totalDue: Number(d.total_due ?? 0),
+    totalReceived: Number(d.total_received ?? 0),
+    totalRefunded: Number(d.total_refunded ?? 0),
+    totalOutstanding: Number(d.total_outstanding ?? 0),
+    totalRefundLiability: Number(d.total_refund_liability ?? 0),
   };
 }
 

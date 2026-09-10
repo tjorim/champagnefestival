@@ -16,8 +16,15 @@ from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, get_request_id
 from app.models import Event, Person, Registration
-from app.schemas import PersonAdminSummaryOut, PersonCreate, PersonListEnvelope, PersonOut, PersonUpdate
-from app.services import people_service
+from app.schemas import (
+    PersonAdminSummaryOut,
+    PersonCreate,
+    PersonListEnvelope,
+    PersonOut,
+    PersonPaymentSummary,
+    PersonUpdate,
+)
+from app.services import payments_service, people_service
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.utils import person_to_dict, registration_to_list_dict, roles_contains
 
@@ -177,6 +184,14 @@ async def list_person_registrations(
     )
     rows = result.scalars().all()
     return [registration_to_list_dict(r, person, r.event) for r in rows]
+
+
+@router.get("/{person_id}/payment-summary", response_model=PersonPaymentSummary)
+async def get_person_payment_summary(person_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+    """Received/refunded/net paid/due/outstanding/refund-liability across one
+    person's non-cancelled bookings. See ``payments_service.person_payment_summary``."""
+    await people_service.get_person_or_404(db, person_id)
+    return await payments_service.person_payment_summary(db, person_id)
 
 
 @router.post("/{person_id}/merge/{duplicate_id}", response_model=PersonOut)

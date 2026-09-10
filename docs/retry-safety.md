@@ -28,6 +28,7 @@ deliberate decision, not an implicit idempotency guarantee.
 | Operations | Callers | Decision |
 | --- | --- | --- |
 | Bulk create rooms, table types, tables, and layouts (`POST /api/*/bulk`; MCP `bulk_create_*`) | REST and MCP automation | **Server-side replay.** The REST routers and MCP adapters call the same service functions and accept the same `idempotency_key`. |
+| Record a payment transaction (`POST /api/registrations/{id}/transactions`; MCP `create_payment_transaction`) (#1019) | Admin browser and MCP automation | **Server-side replay**, scope `payments.record_transaction`, same `check_idempotency_key`/`record_idempotency_key`/`commit_with_idempotency_guard` primitive as the bulk-create operations above, with the same 72-hour replay window, actor isolation, payload-hash conflict, and concurrent-first-use serialization via the unique `(scope, key)` constraint. A client-generated `idempotency_key` is required to make a retry after a timeout safe — without one, an ambiguous submission could book or refund the same money twice, since each call always appends a new, immutable ledger row rather than converging on an existing one. |
 | Public and volunteer registration check-in | Event-day Android, browser, and volunteer clients | **Natural-key upsert.** Registration ID is the stable key; checked-in and strap-issued flags only converge from false to true. A repeat returns the current registration and reports that it was already checked in. The strict bucket is per registration, so one guest's retries do not consume another registration's allowance; a separate shared-IP abuse ceiling can still reject unrelated registrations when the venue-wide ceiling is exceeded. |
 | Updates (`PUT`), including registration party-size/table assignment/over-capacity confirmations, table-type capacity changes, registration order/delivery updates, application settings, venue details/coordinates, and FAQ reorder | Browser, volunteer, and MCP admin clients | **Not retry safe.** They currently have no version precondition; clients must read and reconcile after an ambiguous result. Seating and event-capacity writes use row locks to preserve capacity decisions, and an over-capacity confirmation is separately audited, but replay can still produce a second audit entry or overwrite newer state. Registration party-size/order updates re-resolve authoritative product data and preserve delivery counts, while volunteer delivery updates change only delivery counts. Clients must reconcile before retrying; optimistic concurrency is preferred if automatic retries are added. |
 | Deletes, account/token revocation, and integration-client revocation | Browser and MCP admin clients | **Natural resource key, convergent state only.** Repeating reaches the same absent/revoked state, although the response can change to not-found. Callers needing the original response must reconcile. |
@@ -169,10 +170,11 @@ its fingerprint.
 
 Registration notes are replaced as one value. Legacy `accessibility_note` request
 input merges into notes for older callers; the response contains only notes.
-`amount_paid` is an absolute recorded total, not an increment or a payment charge;
-changes retain previous/new values in the audit log. Order reductions preserve
-that amount and expose overpayment for manual refunds. Tests cover recorded
-payment preservation and booked-price quantity changes.
+`amount_paid`/`payment_status` are derived from the payment ledger (#1019, see
+below) rather than settable directly; order reductions preserve the booking's
+net paid total and expose overpayment as `refund_due` for a manual refund
+transaction. Tests cover recorded payment preservation and booked-price
+quantity changes.
 
 Visitor booking change/cancellation requests use a client-generated submission
 UUID. Replaying the same `POST /api/me/registrations/{id}/request` returns success
@@ -213,10 +215,45 @@ partial assignment with unchanged stock, cancellation, copy isolation, atomic
 rejection and concurrent claims on the last available seats.
 
 The combined admin booking editor submits guest count, status, purchased
-quantities, recorded payment, notes and the complete allocation list in the same
-absolute update. It has no automatic retry. A table-quantity reduction cannot be
-submitted while more tables remain allocated than purchased; the administrator
-chooses the released allocation first. The backend validates and commits the
-quantity, derived stock reservation, payment total and allocation replacement in
-one transaction. After an ambiguous response, reload the booking before editing
-or submitting again.
+quantities, notes and the complete allocation list in the same absolute update.
+It has no automatic retry. A table-quantity reduction cannot be submitted while
+more tables remain allocated than purchased; the administrator chooses the
+released allocation first. The backend validates and commits the quantity,
+derived stock reservation, and allocation replacement in one transaction. After
+an ambiguous response, reload the booking before editing or submitting again.
+Recording a payment or refund is a separate, ledger-append write (#1019, see
+the inventory entry above) rather than part of this absolute update — see the
+next section.
+
+# Payment ledger (#1019)
+
+`POST /api/registrations/{id}/transactions` (mirrored by the MCP tool
+`create_payment_transaction`) appends one immutable `PaymentTransaction` row —
+a payment or refund — against a booking. There is no `kind` field: a
+positive amount is a payment, a negative one is a refund, and that sign is
+the only distinction stored. A refund never rewrites a prior entry; it's a
+new row, optionally linked via `reversed_transaction_id` to the entry it
+reverses. A PostgreSQL trigger (`payment_transactions_append_only`,
+`app.payment_ledger_schema`) rejects UPDATE/DELETE against the table
+unconditionally — the append-only contract holds even against a bug, a
+future migration, or a direct psql session, not just against
+`payments_service`'s own code path. The one bypass is `SET LOCAL
+champagnefestival.allow_ledger_mutation = 'on'`, scoped to one transaction,
+for administrative full-table resets (the test suite's between-test
+cleanup) rather than a second database role. Every append recomputes
+and stores `Registration.amount_paid`/`payment_status` from the ledger's sum
+(`app.services.payments_service.sync_registration_payment_fields`), which also
+runs whenever `amount_due` changes, so those two columns — and everything that
+reads them (CSV exports, edition/person totals, the `RegistrationOut` schema)
+— stay in sync with the ledger without every reader needing to join it
+directly. `GET /api/registrations/{id}/transactions` returns the full
+chronological ledger; every reported total (booking, edition, or person) is
+traceable back to these rows.
+
+Deleting a booking with recorded ledger entries is rejected (409):
+`payment_transactions.registration_id` is `ON DELETE RESTRICT`, so a booking's
+payment history cannot be silently lost by deleting the booking.
+
+`payment_transactions` is created directly in migration 001 (no production
+data predates it, so there was nothing to backfill from a prior mutable
+`amount_paid` total — every booking's ledger simply starts empty).

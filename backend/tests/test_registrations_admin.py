@@ -550,57 +550,65 @@ async def test_admin_create_reservation_person_not_found(client):
 
 
 # ---------------------------------------------------------------------------
-# Payment reason / transaction date (recorded on the amount_paid_updated audit entry)
+# Payment ledger entries (#1019) — recorded on the payment_transaction_recorded
+# audit entry, appended via app.services.payments_service rather than a
+# direct field write.
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.anyio
-async def test_amount_paid_update_records_reason_and_transaction_date(client):
+async def test_payment_transaction_is_audited_with_amount_and_effective_date(client):
     created = await _post_registration(client)
     registration_id = created.json()["id"]
 
-    r = await client.put(
-        f"/api/registrations/{registration_id}",
+    r = await client.post(
+        f"/api/registrations/{registration_id}/transactions",
         json={
-            "amount_paid": "42.00",
-            "payment_reason": "refund",
-            "payment_transaction_date": "2026-06-01",
+            "amount": "-42.00",
+            "effective_date": "2026-06-01",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201
+
+    r = await client.get(
+        "/api/audit",
+        params={
+            "resource_type": "registration",
+            "resource_id": registration_id,
+            "action": "payment_transaction_recorded",
         },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
-
-    r = await client.get(
-        "/api/audit",
-        params={"resource_type": "registration", "resource_id": registration_id, "action": "amount_paid_updated"},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 200
     entries = r.json()
     assert len(entries) == 1
-    assert entries[0]["details"]["reason"] == "refund"
-    assert entries[0]["details"]["transaction_date"] == "2026-06-01"
-    assert entries[0]["details"]["amount_paid"] == "42.00"
+    assert entries[0]["details"]["amount"] == "-42.00"
+    assert entries[0]["details"]["effective_date"] == "2026-06-01"
 
 
 @pytest.mark.anyio
-async def test_amount_paid_update_without_reason_omits_it_from_audit_details(client):
+async def test_payment_transaction_without_reference_or_note_omits_them_from_audit_details(client):
     created = await _post_registration(client)
     registration_id = created.json()["id"]
 
-    r = await client.put(
-        f"/api/registrations/{registration_id}",
-        json={"amount_paid": "10.00"},
+    r = await client.post(
+        f"/api/registrations/{registration_id}/transactions",
+        json={"amount": "10.00", "effective_date": "2026-06-01"},
         headers=ADMIN_HEADERS,
     )
-    assert r.status_code == 200
+    assert r.status_code == 201
 
     r = await client.get(
         "/api/audit",
-        params={"resource_type": "registration", "resource_id": registration_id, "action": "amount_paid_updated"},
+        params={
+            "resource_type": "registration",
+            "resource_id": registration_id,
+            "action": "payment_transaction_recorded",
+        },
         headers=ADMIN_HEADERS,
     )
     entries = r.json()
     assert len(entries) == 1
-    assert "reason" not in entries[0]["details"]
-    assert "transaction_date" not in entries[0]["details"]
+    assert entries[0]["details"]["reference"] is None
+    assert entries[0]["details"]["reversed_transaction_id"] is None

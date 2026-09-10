@@ -74,12 +74,15 @@ async def test_admin_records_a_table_fee_and_marks_it_paid(client):
     assert r.status_code == 200, r.text
     assert float(r.json()["amount_due"]) == 25.00
 
-    # Payment itself stays a manual, offline-settled flag.
-    r = await client.put(
-        f"/api/registrations/{registration_id}",
-        json={"payment_status": "paid"},
+    # Payment itself is a ledger entry (#1019), not a direct field write.
+    r = await client.post(
+        f"/api/registrations/{registration_id}/transactions",
+        json={"amount": "25.00", "effective_date": "2026-06-01"},
         headers=ADMIN_HEADERS,
     )
+    assert r.status_code == 201, r.text
+
+    r = await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200, r.text
     assert r.json()["payment_status"] == "paid"
     assert float(r.json()["amount_due"]) == 25.00
@@ -91,9 +94,19 @@ async def test_amount_due_change_recomputes_payment_status(client):
 
     r = await client.put(
         f"/api/registrations/{registration_id}",
-        json={"amount_due": "25.00", "amount_paid": "25.00"},
+        json={"amount_due": "25.00"},
         headers=ADMIN_HEADERS,
     )
+    assert r.status_code == 200, r.text
+
+    r = await client.post(
+        f"/api/registrations/{registration_id}/transactions",
+        json={"amount": "25.00", "effective_date": "2026-06-01"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+
+    r = await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200, r.text
     assert r.json()["payment_status"] == "paid"
 

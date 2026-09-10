@@ -174,6 +174,20 @@ class PersonAdminSummaryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PersonPaymentSummary(BaseModel):
+    """Received/refunded/net paid/due/outstanding/refund-liability across one
+    person's non-cancelled bookings (#1019) — traceable to their payment
+    ledger entries, the person-level counterpart to ``EditionAttendanceStats``.
+    """
+
+    received: Decimal
+    refunded: Decimal
+    net_paid: Decimal
+    due: Decimal
+    outstanding: Decimal
+    refund_liability: Decimal
+
+
 class PersonListEnvelope(BaseModel):
     """Paginated response for the admin people/members lists.
 
@@ -421,15 +435,6 @@ class RegistrationUpdate(RegistrationNotesRequest):
     allocations: list[TableAllocation] | None = Field(default=None, max_length=1000)
     guest_count: int | None = Field(default=None, ge=1, le=20)
     status: RegistrationStatus | None = None
-    payment_status: PaymentStatus | None = None
-    amount_paid: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
-    payment_reason: Literal["payment", "refund", "correction"] | None = None
-    """Why `amount_paid` changed — recorded on the resulting audit entry so a
-    payment history can distinguish a normal payment from a refund/correction.
-    Ignored unless `amount_paid` actually changes."""
-    payment_transaction_date: dt_date | None = None
-    """When the money actually moved (a bank transfer date), which may predate
-    when this edit is made. Defaults to the edit time if omitted."""
     amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     confirm_over_capacity: bool = False
     order_items: list[OrderItemRequest] | None = Field(default=None, max_length=50)
@@ -470,6 +475,62 @@ class RegistrationOutWithToken(RegistrationOut):
     Only returned by the admin detail endpoint."""
 
     check_in_token: str
+
+
+class PaymentTransactionCreate(RequestModel):
+    """One append-only ledger entry against a booking (#1019).
+
+    There's no ``kind``: a positive ``amount`` is a payment, a negative one
+    is a refund — that sign is the only distinction the system needs.
+    ``amount != 0`` is validated in ``app.services.payments_service`` rather
+    than here, so REST and MCP share one rule. Never edits or deletes a
+    prior entry — a refund is always a new row, optionally linked to the
+    entry it reverses via ``reversed_transaction_id``.
+    """
+
+    amount: Decimal = Field(decimal_places=2, max_digits=10)
+    effective_date: dt_date
+    """When the money actually moved (e.g. a bank-transfer date), which may
+    predate when this entry is recorded."""
+    reference: str | None = Field(default=None, max_length=200)
+    note: str | None = Field(default=None, max_length=2000)
+    reversed_transaction_id: str | None = Field(default=None, min_length=1, max_length=64)
+    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+    """Client-generated key so a retried/ambiguous submission cannot book or
+    refund money twice — see docs/retry-safety.md."""
+
+    @field_validator("reference", "note", mode="before")
+    @classmethod
+    def strip_optional_text(cls, v: str | None) -> str | None:
+        if not isinstance(v, str):
+            return v
+        stripped = v.strip()
+        return stripped or None
+
+
+class PaymentTransactionOut(BaseModel):
+    id: str
+    registration_id: str
+    amount: Decimal
+    effective_date: dt_date
+    recorded_at: datetime
+    recorded_by: str
+    reference: str | None
+    note: str | None
+    reversed_transaction_id: str | None
+
+    model_config = {"from_attributes": True}
+
+
+class PaymentTransactionLedgerRow(PaymentTransactionOut):
+    """One ledger entry with the booking context needed to render an
+    edition- or person-level ledger view (#1019), so the admin UI doesn't
+    need a round trip per row to resolve which booking/person it belongs to.
+    """
+
+    person_name: str
+    event_title: str
+    edition_label: str
 
 
 class RegistrationListOut(BaseModel):
@@ -1610,6 +1671,16 @@ class EditionAttendanceStats(BaseModel):
     total_checked_in: int
     total_paid: Decimal
     total_due: Decimal
+    total_received: Decimal = Decimal(0)
+    """Sum of `payment`-kind ledger entries (#1019) — gross money taken in,
+    before refunds; compare with `total_refunded`."""
+    total_refunded: Decimal = Decimal(0)
+    """Sum of `refund`-kind ledger entries, as a positive amount."""
+    total_outstanding: Decimal = Decimal(0)
+    """Sum, per booking, of max(amount_due - net paid, 0) — money still owed."""
+    total_refund_liability: Decimal = Decimal(0)
+    """Sum, per booking, of max(net paid - amount_due, 0) — overpaid amounts
+    a refund may be owed against."""
 
 
 # ---------------------------------------------------------------------------

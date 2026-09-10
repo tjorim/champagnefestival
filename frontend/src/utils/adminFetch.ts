@@ -10,8 +10,12 @@ import type {
   EventCheckInStats,
   FaqItem,
 } from "@/types/admin";
-import { apiToRegistration } from "@/types/registrationMapper";
-import type { Registration } from "@/types/registration";
+import {
+  apiToLedgerTransaction,
+  apiToPaymentTransaction,
+  apiToRegistration,
+} from "@/types/registrationMapper";
+import type { LedgerTransaction, PaymentTransaction, Registration } from "@/types/registration";
 import { type Person, apiToPerson } from "@/types/person";
 import {
   downloadFileOrThrow,
@@ -356,6 +360,20 @@ export async function fetchAuditEntries(
   );
 }
 
+/** The chronological payment ledger for one booking (#1019) — the accounting
+ * source of truth behind its amountPaid/paymentStatus/refundDue fields. */
+export async function fetchPaymentTransactions(
+  authHeaders: () => Record<string, string>,
+  registrationId: string,
+): Promise<PaymentTransaction[]> {
+  return fetchArrayOrThrow(
+    `/api/registrations/${encodeURIComponent(registrationId)}/transactions`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiToPaymentTransaction,
+  );
+}
+
 export async function fetchAuditResourceTypes(
   authHeaders: () => Record<string, string>,
 ): Promise<string[]> {
@@ -426,5 +444,41 @@ export async function downloadVolunteersCsv(
     { headers: authHeaders() },
     m.admin_error_load_data(),
     "volunteers-insurance-list.csv",
+  );
+}
+
+/** List the payment ledger with booking context, filtered by edition and/or
+ * person (#1019) — the in-app drill-down behind the edition/person payment
+ * summaries. */
+export async function fetchPaymentTransactionsLedger(
+  authHeaders: () => Record<string, string>,
+  filters: { editionId?: string; personId?: string },
+): Promise<LedgerTransaction[]> {
+  const params = new URLSearchParams();
+  if (filters.editionId) params.set("edition_id", filters.editionId);
+  if (filters.personId) params.set("person_id", filters.personId);
+  const query = params.toString();
+  return fetchArrayOrThrow(
+    `/api/registrations/transactions${query ? `?${query}` : ""}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    apiToLedgerTransaction,
+  );
+}
+
+/** Export the payment ledger, filtered by edition and/or person (#1019). */
+export async function downloadPaymentTransactionsCsv(
+  authHeaders: () => Record<string, string>,
+  filters: { editionId?: string; personId?: string },
+): Promise<void> {
+  const params = new URLSearchParams();
+  if (filters.editionId) params.set("edition_id", filters.editionId);
+  if (filters.personId) params.set("person_id", filters.personId);
+  const query = params.toString();
+  await downloadFileOrThrow(
+    `/api/registrations/transactions/export${query ? `?${query}` : ""}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+    "payment-transactions.csv",
   );
 }

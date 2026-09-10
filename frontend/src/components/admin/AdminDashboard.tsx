@@ -205,13 +205,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const {
     handleAddRegistration,
+    handleAddTransaction,
     handleAssignTable,
     handleSaveAllocations,
     handleSaveBooking,
     handleCheckIn,
     handleIssueStrap,
     handleToggleDelivered,
-    handleUpdatePayment,
+    handleRecordPayment,
     handleUpdateStatus,
     handleViewDetail,
   } = useAdminRegistrationActions({
@@ -517,7 +518,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     filter={filter}
                     onFilterChange={setFilter}
                     onUpdateStatus={handleUpdateStatus}
-                    onUpdatePayment={handleUpdatePayment}
+                    onRecordPayment={handleRecordPayment}
                     onAssignTable={handleAssignTable}
                     onViewDetail={handleViewDetail}
                     onCheckIn={handleCheckIn}
@@ -690,6 +691,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             layouts.some((l) => l.id === t.layoutId && l.eventId === detailRegistration.eventId),
           )}
           onSaveBooking={handleSaveBooking}
+          onAddTransaction={handleAddTransaction}
           onClose={() => {
             setDetailRegistration(null);
             setRegistrationError("");

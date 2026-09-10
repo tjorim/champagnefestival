@@ -134,7 +134,7 @@ function renderRegistrationList() {
         filter="all"
         onFilterChange={vi.fn()}
         onUpdateStatus={onUpdateStatus}
-        onUpdatePayment={vi.fn().mockResolvedValue(undefined)}
+        onRecordPayment={vi.fn().mockResolvedValue(undefined)}
         onAssignTable={vi.fn()}
         onViewDetail={vi.fn()}
         onCheckIn={vi.fn()}

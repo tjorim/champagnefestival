@@ -36,6 +36,9 @@ from app.live import notify_live_event
 from app.models import Edition, Event, Person, Registration, ReservationAccessToken, Table
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
+    PaymentTransactionCreate,
+    PaymentTransactionLedgerRow,
+    PaymentTransactionOut,
     RegistrationAccessLookupRequest,
     RegistrationAdminCreate,
     RegistrationCreate,
@@ -47,7 +50,7 @@ from app.schemas import (
     RegistrationOutWithToken,
     RegistrationUpdate,
 )
-from app.services import events_service, registrations_service
+from app.services import events_service, payments_service, registrations_service
 from app.services.allocations_service import allocated_registration_filter
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.services.outbox_service import enqueue_registration_confirmation
@@ -366,6 +369,99 @@ async def export_registrations_csv(
     )
 
 
+@router.get(
+    "/transactions",
+    response_model=list[PaymentTransactionLedgerRow],
+    dependencies=[Depends(require_admin)],
+)
+async def list_payment_transactions_filtered(
+    db: AsyncSession = Depends(get_db),
+    edition_id: str | None = Query(default=None, description="Filter by edition ID"),
+    person_id: str | None = Query(default=None, description="Filter by person ID"),
+) -> list[dict]:
+    """List ledger entries with booking context, filtered by edition and/or
+    person (#1019) — the in-app drill-down behind the edition/person payment
+    summaries; ``/transactions/export`` covers the CSV download of the same
+    filtered set.
+    """
+    stmt = payments_service.build_ledger_query(edition_id=edition_id, person_id=person_id)
+    rows = (await db.execute(stmt)).all()
+    return [
+        payments_service.ledger_row_to_dict(txn, registration, person, event)
+        for txn, registration, person, event in rows
+    ]
+
+
+@router.get("/transactions/export", dependencies=[Depends(require_admin)])
+async def export_payment_transactions_csv(
+    db: AsyncSession = Depends(get_db),
+    edition_id: str | None = Query(default=None, description="Filter by edition ID"),
+    person_id: str | None = Query(default=None, description="Filter by person ID"),
+    effective_date_from: date | None = Query(
+        default=None, description="Filter by effective (bank-transfer) date, inclusive"
+    ),
+    effective_date_to: date | None = Query(
+        default=None, description="Filter by effective (bank-transfer) date, inclusive"
+    ),
+) -> StreamingResponse:
+    """Export ledger entries as CSV, filtered by edition, person, and effective-date range (#1019).
+
+    ``effective_date`` is when the money actually moved (e.g. a bank
+    transfer), which can differ from the booking's event date — both are
+    included as separate columns so a reconciliation doesn't conflate them.
+    """
+    stmt = payments_service.build_ledger_query(
+        edition_id=edition_id,
+        person_id=person_id,
+        effective_date_from=effective_date_from,
+        effective_date_to=effective_date_to,
+    )
+    rows = (await db.execute(stmt)).all()
+
+    buffer = io.StringIO()
+    writer = csv.writer(buffer)
+    writer.writerow(
+        map(
+            csv_safe,
+            [
+                "Reference",
+                "Effective Date",
+                "Type",
+                "Booking",
+                "Event",
+                "Edition",
+                "Person",
+                "Amount",
+                "Recorded By",
+            ],
+        )
+    )
+    for txn, registration, person, event in rows:
+        edition = event.edition
+        writer.writerow(
+            map(
+                csv_safe,
+                [
+                    txn.reference or "",
+                    txn.effective_date.isoformat(),
+                    "payment" if txn.amount > 0 else "refund",
+                    registration.id,
+                    event.title,
+                    f"{edition.year} {edition.month}" if edition else "",
+                    person.name,
+                    str(txn.amount),
+                    txn.recorded_by,
+                ],
+            )
+        )
+    buffer.seek(0)
+    return StreamingResponse(
+        iter([buffer.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="payment-transactions.csv"'},
+    )
+
+
 @router.post(
     "/my/request",
     response_model=RegistrationLookupRequestAccepted,
@@ -476,6 +572,52 @@ async def get_registration(
     registration = await registrations_service.get_registration_or_404(db, registration_id)
     person_map = await registrations_service.fetch_person_map(db, [registration])
     return registration_to_dict_with_token(registration, person_map[registration.person_id], registration.event)
+
+
+@router.post(
+    "/{registration_id}/transactions",
+    response_model=PaymentTransactionOut,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(require_admin)],
+)
+async def create_payment_transaction(
+    registration_id: str,
+    body: PaymentTransactionCreate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    """Append one ledger entry (#1019). Never edits or deletes a prior entry —
+    a refund is always a separate, new row."""
+    registration = await registrations_service.get_registration_or_404(db, registration_id)
+    return await payments_service.record_payment_transaction(
+        db,
+        registration,
+        amount=body.amount,
+        effective_date=body.effective_date,
+        reference=body.reference,
+        note=body.note,
+        reversed_transaction_id=body.reversed_transaction_id,
+        actor=actor,
+        idempotency_key=body.idempotency_key,
+        request_id=getattr(request.state, "request_id", None),
+    )
+
+
+@router.get(
+    "/{registration_id}/transactions",
+    response_model=list[PaymentTransactionOut],
+    dependencies=[Depends(require_admin)],
+)
+async def list_payment_transactions(
+    registration_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """The booking's chronological ledger — the accounting source of truth
+    behind its `amount_paid`/`payment_status`/`refund_due` fields."""
+    await registrations_service.get_registration_or_404(db, registration_id)
+    rows = await payments_service.list_transactions(db, registration_id)
+    return [payments_service.payment_transaction_to_dict(t) for t in rows]
 
 
 @router.put(

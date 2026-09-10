@@ -148,6 +148,37 @@ export async function fetchAdminPersonRegistrations(
   });
 }
 
+export interface PersonPaymentSummary {
+  received: number;
+  refunded: number;
+  netPaid: number;
+  due: number;
+  outstanding: number;
+  refundLiability: number;
+}
+
+export async function fetchPersonPaymentSummary(
+  personId: string,
+  authHeaders: () => Record<string, string>,
+  signal?: AbortSignal,
+): Promise<PersonPaymentSummary> {
+  const response = await fetch(`/api/people/${encodeURIComponent(personId)}/payment-summary`, {
+    signal,
+    headers: authHeaders(),
+  });
+  if (!response.ok) throw new Error(`Failed to load payment summary: ${response.status}`);
+
+  const data = (await response.json()) as Record<string, unknown>;
+  return {
+    received: Number(data.received ?? 0),
+    refunded: Number(data.refunded ?? 0),
+    netPaid: Number(data.net_paid ?? 0),
+    due: Number(data.due ?? 0),
+    outstanding: Number(data.outstanding ?? 0),
+    refundLiability: Number(data.refund_liability ?? 0),
+  };
+}
+
 export async function createAdminRegistration(
   payload: CreateRegistrationPayload,
   authHeaders: () => Record<string, string>,

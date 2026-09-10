@@ -47,7 +47,7 @@ function renderRegistrationList({
         filter="all"
         onFilterChange={vi.fn()}
         onUpdateStatus={vi.fn()}
-        onUpdatePayment={vi.fn()}
+        onRecordPayment={vi.fn()}
         onAssignTable={vi.fn()}
         onViewDetail={vi.fn()}
         onCheckIn={vi.fn()}

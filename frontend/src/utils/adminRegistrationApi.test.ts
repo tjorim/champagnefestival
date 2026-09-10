@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchAdminPersonRegistrations } from "./adminRegistrationApi";
+import { fetchAdminPersonRegistrations, fetchPersonPaymentSummary } from "./adminRegistrationApi";
 
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
 
@@ -77,6 +77,44 @@ describe("fetchAdminPersonRegistrations", () => {
 
     await expect(fetchAdminPersonRegistrations("person-1", authHeaders)).rejects.toThrow(
       "Invalid registrations payload for person person-1.",
+    );
+  });
+});
+
+describe("fetchPersonPaymentSummary", () => {
+  it("maps the ledger-derived totals from the person payment-summary response", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            received: "160.00",
+            refunded: "10.00",
+            net_paid: "150.00",
+            due: "150.00",
+            outstanding: "0.00",
+            refund_liability: "0.00",
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        ),
+      ),
+    );
+
+    await expect(fetchPersonPaymentSummary("person-1", authHeaders)).resolves.toEqual({
+      received: 160,
+      refunded: 10,
+      netPaid: 150,
+      due: 150,
+      outstanding: 0,
+      refundLiability: 0,
+    });
+  });
+
+  it("rejects a non-ok response", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("", { status: 404 })));
+
+    await expect(fetchPersonPaymentSummary("person-1", authHeaders)).rejects.toThrow(
+      "Failed to load payment summary: 404",
     );
   });
 });

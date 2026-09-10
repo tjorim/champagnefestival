@@ -8,7 +8,12 @@ import Modal from "react-bootstrap/Modal";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
-import type { BookingUpdate, OrderItem, Registration } from "@/types/registration";
+import type {
+  BookingUpdate,
+  OrderItem,
+  PaymentTransactionCreate,
+  Registration,
+} from "@/types/registration";
 import {
   buildRegistrationEmailDraft,
   type EmailDraft,
@@ -32,6 +37,10 @@ interface RegistrationDetailProps {
   onCheckIn: (registrationId: string) => void;
   onIssueStrap: (registrationId: string) => void;
   onSaveBooking?: (registrationId: string, update: BookingUpdate) => Promise<void>;
+  onAddTransaction?: (
+    registrationId: string,
+    payload: PaymentTransactionCreate,
+  ) => Promise<unknown>;
   onMergeDuplicate?: (canonicalId: string, duplicateId: string) => void;
   actionError?: string;
   onClearActionError?: () => void;
@@ -54,6 +63,7 @@ export default function RegistrationDetail({
   onCheckIn,
   onIssueStrap,
   onSaveBooking,
+  onAddTransaction,
   onMergeDuplicate,
   actionError,
   onClearActionError,
@@ -280,6 +290,7 @@ export default function RegistrationDetail({
                 authHeaders={authHeaders}
                 tables={sortedTables}
                 onSave={onSaveBooking}
+                onAddTransaction={onAddTransaction}
               />
             </ListGroup.Item>
           )}

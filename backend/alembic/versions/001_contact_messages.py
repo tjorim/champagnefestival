@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, and a short product description.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, a short product description, and the append-only payment transaction ledger.
 
 Revision ID: 001
 Revises: 000
@@ -464,8 +464,67 @@ def upgrade() -> None:
 
     op.add_column("products", sa.Column("description", sa.String(300), nullable=False, server_default=""))
 
+    # #1019: append-only payment ledger. A booking's amount_paid/payment_status
+    # (above) are derived from this table's sums (see
+    # app.services.payments_service.sync_registration_payment_fields) rather
+    # than being mutable themselves.
+    op.create_table(
+        "payment_transactions",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column(
+            "registration_id",
+            sa.String(64),
+            sa.ForeignKey("registrations.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column("amount", sa.Numeric(10, 2), nullable=False),
+        sa.Column("effective_date", sa.Date(), nullable=False),
+        sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("recorded_by", sa.String(255), nullable=False),
+        sa.Column("reference", sa.String(200), nullable=True),
+        sa.Column("note", sa.Text(), nullable=True),
+        sa.Column(
+            "reversed_transaction_id",
+            sa.String(64),
+            sa.ForeignKey("payment_transactions.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.CheckConstraint("amount <> 0", name="ck_payment_transactions_amount_nonzero"),
+    )
+    op.create_index("ix_payment_transactions_registration_id", "payment_transactions", ["registration_id"])
+
+    # Enforce append-only at the database level too, not just in
+    # payments_service: a bug, a future migration, or a direct psql session
+    # must not be able to edit or delete ledger history. A correction is a
+    # new payment/refund row, never an edit to an existing one. The one
+    # legitimate exception — wiping tables entirely for a full data reset,
+    # with no second database role to route through — opts out one
+    # transaction at a time via `SET LOCAL champagnefestival.allow_ledger_mutation = 'on'`.
+    op.execute("""
+        CREATE OR REPLACE FUNCTION reject_payment_transaction_mutation() RETURNS trigger
+        LANGUAGE plpgsql AS $$
+        BEGIN
+            IF current_setting('champagnefestival.allow_ledger_mutation', true) = 'on' THEN
+                RETURN COALESCE(NEW, OLD);
+            END IF;
+            RAISE EXCEPTION
+                'payment_transactions is append-only: % is not permitted (insert a correcting payment/refund row instead)',
+                TG_OP;
+        END;
+        $$;
+    """)
+    op.execute("""
+        CREATE TRIGGER payment_transactions_append_only
+        BEFORE UPDATE OR DELETE ON payment_transactions
+        FOR EACH ROW EXECUTE FUNCTION reject_payment_transaction_mutation()
+    """)
+
 
 def downgrade() -> None:
+    op.execute("DROP TRIGGER IF EXISTS payment_transactions_append_only ON payment_transactions")
+    op.execute("DROP FUNCTION IF EXISTS reject_payment_transaction_mutation()")
+    op.drop_index("ix_payment_transactions_registration_id", table_name="payment_transactions")
+    op.drop_table("payment_transactions")
     op.drop_column("products", "description")
 
     # The legacy schema can store only one table per registration. Preserve a

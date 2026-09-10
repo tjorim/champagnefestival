@@ -22,10 +22,10 @@ from __future__ import annotations
 import logging
 import secrets
 from datetime import UTC, datetime
-from decimal import Decimal
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -40,7 +40,7 @@ from app.schemas import (
     RegistrationUpdate,
     TableAllocation,
 )
-from app.services import allocations_service, people_service
+from app.services import allocations_service, payments_service, people_service
 from app.services import product_inventory as inventory
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.utils import make_id, registration_to_dict
@@ -203,7 +203,6 @@ async def apply_registration_update(
     pre_status = registration.status
     pre_payment_status = registration.payment_status
     pre_amount_due = registration.amount_due
-    pre_amount_paid = registration.amount_paid
     event_id = registration.event_id
     edition_id = registration.event.edition_id
 
@@ -236,8 +235,6 @@ async def apply_registration_update(
         registration.status = body.status
         if body.status == "cancelled" and pre_status != "cancelled":
             registration.check_in_token = secrets.token_urlsafe(32)
-    if body.payment_status is not None:
-        registration.payment_status = body.payment_status
     if clear_amount_due:
         registration.amount_due = None
     elif "amount_due" in body.model_fields_set:
@@ -287,35 +284,12 @@ async def apply_registration_update(
         if allocation_entries is not None:
             allocations_service.replace_allocations(registration, selected)
         capacity_override_used |= bool(body.confirm_over_capacity and selected)
-    if body.amount_paid is not None:
-        registration.amount_paid = body.amount_paid
-    elif body.payment_status == "paid":
-        registration.amount_paid = max(registration.amount_paid or Decimal(0), registration.amount_due or Decimal(0))
-    elif body.payment_status == "unpaid":
-        registration.amount_paid = Decimal(0)
-    if registration.amount_paid != pre_amount_paid:
-        details = {"previous_amount_paid": str(pre_amount_paid), "amount_paid": str(registration.amount_paid)}
-        if body.payment_reason is not None:
-            details["reason"] = body.payment_reason
-        if body.payment_transaction_date is not None:
-            details["transaction_date"] = body.payment_transaction_date.isoformat()
-        await write_audit_entry(
-            db,
-            actor=actor,
-            action="amount_paid_updated",
-            resource_type="registration",
-            resource_id=registration.id,
-            request_id=request_id,
-            details=details,
-        )
-    if body.amount_paid is not None or body.order_items is not None or registration.amount_due != pre_amount_due:
-        registration.payment_status = (
-            "paid"
-            if (registration.amount_paid or 0) >= (registration.amount_due or 0)
-            else "partial"
-            if registration.amount_paid
-            else "unpaid"
-        )
+    if registration.amount_due != pre_amount_due:
+        # amount_paid/payment_status are ledger-derived (#1019, see
+        # payments_service) — this booking's paid total doesn't change just
+        # because amount_due did, but payment_status can (e.g. a partly-paid
+        # booking becomes "paid" once its due amount is lowered to match).
+        await payments_service.sync_registration_payment_fields(db, registration)
     if body.checked_in is not None:
         if body.checked_in and not registration.checked_in:
             registration.checked_in_at = datetime.now(UTC)
@@ -405,9 +379,7 @@ async def apply_registration_update(
     metadata_fields = {
         "guest_count",
         "status",
-        "payment_status",
         "amount_due",
-        "amount_paid",
         "notes",
         "person_id",
     }
@@ -447,5 +419,14 @@ async def delete_registration(
             edition_id=edition_id,
         ),
     )
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        # payment_transactions.registration_id is ondelete="RESTRICT" (#1019):
+        # a booking with recorded ledger entries must not silently lose them.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="This booking has recorded payment transactions and cannot be deleted.",
+        ) from exc
     return {"deleted": True, "id": reg_id}

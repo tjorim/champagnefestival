@@ -6,16 +6,21 @@
  * A table view of the same data is always available alongside it.
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
-import { fetchEditionStats } from "@/utils/adminFetch";
+import {
+  downloadPaymentTransactionsCsv,
+  fetchEditionStats,
+  fetchPaymentTransactionsLedger,
+} from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { devError } from "@/utils/devLog";
+import LedgerModal from "./LedgerModal";
 import "./analyticsDashboard.css";
 
 interface AnalyticsDashboardProps {
@@ -40,6 +45,35 @@ function niceCeiling(max: number): number {
 export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardProps) {
   const [showTable, setShowTable] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const [exportingEditionId, setExportingEditionId] = useState<string | null>(null);
+  const [ledgerExportError, setLedgerExportError] = useState("");
+  const [ledgerEdition, setLedgerEdition] = useState<{ id: string; label: string } | null>(null);
+
+  const handleExportLedger = useCallback(
+    async (editionId: string) => {
+      setLedgerExportError("");
+      setExportingEditionId(editionId);
+      try {
+        await downloadPaymentTransactionsCsv(authHeaders, { editionId });
+      } catch (err) {
+        devError("Failed to export payment ledger", err);
+        setLedgerExportError(
+          err instanceof Error ? err.message : m.admin_analytics_export_ledger_error(),
+        );
+      } finally {
+        setExportingEditionId(null);
+      }
+    },
+    [authHeaders],
+  );
+
+  const editionLedgerQuery = useQuery({
+    queryKey: queryKeys.admin.paymentTransactionsLedger({ editionId: ledgerEdition?.id ?? "" }),
+    queryFn: () => fetchPaymentTransactionsLedger(authHeaders, { editionId: ledgerEdition!.id }),
+    enabled: ledgerEdition !== null,
+    staleTime: 30 * 1000,
+    retry: false,
+  });
 
   const statsQuery = useQuery({
     queryKey: queryKeys.admin.editionStats,
@@ -82,6 +116,12 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         </Alert>
       )}
 
+      {ledgerExportError && (
+        <Alert role="alert" aria-live="assertive" variant="danger" className="mb-3">
+          {ledgerExportError}
+        </Alert>
+      )}
+
       {statsQuery.isPending ? (
         <div className="text-center py-5">
           <Spinner animation="border" variant="primary" role="status">
@@ -103,6 +143,11 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
               <th scope="col">{m.admin_analytics_column_checkin_rate()}</th>
               <th scope="col">{m.admin_analytics_column_total_paid()}</th>
               <th scope="col">{m.admin_analytics_column_total_due()}</th>
+              <th scope="col">{m.admin_analytics_column_total_received()}</th>
+              <th scope="col">{m.admin_analytics_column_total_refunded()}</th>
+              <th scope="col">{m.admin_analytics_column_total_outstanding()}</th>
+              <th scope="col">{m.admin_analytics_column_total_refund_liability()}</th>
+              <th scope="col">{m.admin_actions_label()}</th>
             </tr>
           </thead>
           <tbody>
@@ -122,6 +167,46 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                 </td>
                 <td>€{edition.totalPaid.toFixed(2)}</td>
                 <td>€{edition.totalDue.toFixed(2)}</td>
+                <td>€{edition.totalReceived.toFixed(2)}</td>
+                <td>€{edition.totalRefunded.toFixed(2)}</td>
+                <td>€{edition.totalOutstanding.toFixed(2)}</td>
+                <td>€{edition.totalRefundLiability.toFixed(2)}</td>
+                <td className="d-flex gap-1">
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    className="py-0 px-1"
+                    onClick={() =>
+                      setLedgerEdition({
+                        id: edition.editionId,
+                        label: `${edition.year} ${edition.month}`,
+                      })
+                    }
+                    title={m.admin_payment_view_ledger()}
+                    aria-label={m.admin_payment_view_ledger_for({
+                      edition: `${edition.year} ${edition.month}`,
+                    })}
+                  >
+                    <i className="bi bi-journal-text" aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    className="py-0 px-1"
+                    disabled={exportingEditionId === edition.editionId}
+                    onClick={() => void handleExportLedger(edition.editionId)}
+                    title={m.admin_analytics_export_ledger()}
+                    aria-label={m.admin_analytics_export_ledger_for({
+                      edition: `${edition.year} ${edition.month}`,
+                    })}
+                  >
+                    {exportingEditionId === edition.editionId ? (
+                      <Spinner as="span" animation="border" size="sm" />
+                    ) : (
+                      <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" />
+                    )}
+                  </Button>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -268,6 +353,17 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
             )}
           </div>
         </>
+      )}
+
+      {ledgerEdition && (
+        <LedgerModal
+          show
+          title={`${m.admin_ledger_modal_title()} — ${ledgerEdition.label}`}
+          rows={editionLedgerQuery.data ?? []}
+          loading={editionLedgerQuery.isPending}
+          error={editionLedgerQuery.isError}
+          onHide={() => setLedgerEdition(null)}
+        />
       )}
     </div>
   );

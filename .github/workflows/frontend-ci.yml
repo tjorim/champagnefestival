@@ -73,9 +73,12 @@ jobs:
           # section (measured 709 kB) — real admin-feature growth, not bloat;
           # keeps headroom for the next admin section rather than tracking
           # actual size exactly.
+          # AdminDashboard raised 750 -> 780 for #1019's payment-ledger follow-up
+          # (person payment summary, edition/person ledger CSV export links, and
+          # a refund/correction reversal picker) — measured 752 kB.
           TOTAL_MAX_KB=2200
           INDEX_MAX_KB=1050
-          ADMIN_MAX_KB=750
+          ADMIN_MAX_KB=780
 
           total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
           index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')

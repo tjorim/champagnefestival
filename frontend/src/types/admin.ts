@@ -142,4 +142,12 @@ export interface EditionAttendanceStats {
   totalCheckedIn: number;
   totalPaid: number;
   totalDue: number;
+  /** Sum of `payment`-kind ledger entries (#1019) — gross received, before refunds. */
+  totalReceived: number;
+  /** Sum of `refund`-kind ledger entries, as a positive amount. */
+  totalRefunded: number;
+  /** Sum, per booking, of max(amountDue - net paid, 0) — money still owed. */
+  totalOutstanding: number;
+  /** Sum, per booking, of max(net paid - amountDue, 0) — a refund may be owed. */
+  totalRefundLiability: number;
 }

@@ -1,10 +1,37 @@
 import { apiToEvent } from "./event";
 import type {
+  LedgerTransaction,
   OrderItemCategory,
   PaymentStatus,
+  PaymentTransaction,
   Registration,
   RegistrationStatus,
 } from "./registration";
+
+/** Map a FastAPI snake_case payment-transaction response to the frontend camelCase type. */
+export function apiToPaymentTransaction(d: Record<string, unknown>): PaymentTransaction {
+  return {
+    id: d.id as string,
+    registrationId: d.registration_id as string,
+    amount: Number(d.amount ?? 0),
+    effectiveDate: (d.effective_date ?? "") as string,
+    recordedAt: (d.recorded_at ?? "") as string,
+    recordedBy: (d.recorded_by ?? "") as string,
+    reference: (d.reference as string | null | undefined) ?? null,
+    note: (d.note as string | null | undefined) ?? null,
+    reversedTransactionId: (d.reversed_transaction_id as string | null | undefined) ?? null,
+  };
+}
+
+/** Map a FastAPI snake_case ledger-drill-down row (#1019) to the frontend camelCase type. */
+export function apiToLedgerTransaction(d: Record<string, unknown>): LedgerTransaction {
+  return {
+    ...apiToPaymentTransaction(d),
+    personName: (d.person_name ?? "") as string,
+    eventTitle: (d.event_title ?? "") as string,
+    editionLabel: (d.edition_label ?? "") as string,
+  };
+}
 
 /** Map a FastAPI snake_case registration response to the frontend camelCase Registration type. */
 export function apiToRegistration(d: Record<string, unknown>): Registration {

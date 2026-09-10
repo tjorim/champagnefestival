@@ -50,8 +50,11 @@ async def test_booked_prices_and_payment_survive_quantity_reduction(client):
     event = await _create_event(client)
     table = await _create_product(client, event["id"], price="50", stock=10)
     registration = (await book(client, event, table, 3)).json()
-    response = await client.put(f"/api/registrations/{registration['id']}", json={"amount_paid": "150"})
-    assert response.status_code == 200, response.text
+    response = await client.post(
+        f"/api/registrations/{registration['id']}/transactions",
+        json={"amount": "150.00", "effective_date": "2026-01-01"},
+    )
+    assert response.status_code == 201, response.text
     assert (await client.put(f"/api/products/{table['id']}", json={"price": "80"})).status_code == 200
     response = await client.put(
         f"/api/registrations/{registration['id']}", json={"order_items": [{"product_id": table["id"], "quantity": 1}]}

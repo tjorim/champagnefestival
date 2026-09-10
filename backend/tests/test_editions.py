@@ -1074,31 +1074,39 @@ async def test_edition_stats_aggregates_payments(client):
     r1 = await _post_registration(client, event=event, name="Guest One", email="paid-one@example.com")
     assert r1.status_code == 201
     reg1_id = r1.json()["id"]
-    r = await client.put(
-        f"/api/registrations/{reg1_id}",
-        json={"amount_due": "100.00", "amount_paid": "60.00"},
+    r = await client.put(f"/api/registrations/{reg1_id}", json={"amount_due": "100.00"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    r = await client.post(
+        f"/api/registrations/{reg1_id}/transactions",
+        json={"amount": "60.00", "effective_date": "2099-04-01"},
         headers=ADMIN_HEADERS,
     )
-    assert r.status_code == 200
+    assert r.status_code == 201
 
     r2 = await _post_registration(client, event=event, name="Guest Two", email="paid-two@example.com")
     assert r2.status_code == 201
     reg2_id = r2.json()["id"]
-    r = await client.put(
-        f"/api/registrations/{reg2_id}",
-        json={"amount_due": "40.00", "amount_paid": "40.00"},
+    r = await client.put(f"/api/registrations/{reg2_id}", json={"amount_due": "40.00"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    r = await client.post(
+        f"/api/registrations/{reg2_id}/transactions",
+        json={"amount": "40.00", "effective_date": "2099-04-01"},
         headers=ADMIN_HEADERS,
     )
-    assert r.status_code == 200
+    assert r.status_code == 201
 
     # A cancelled registration's amounts must not count.
     r3 = await _post_registration(client, event=event, name="Guest Three", email="paid-three@example.com")
     reg3_id = r3.json()["id"]
-    r = await client.put(
-        f"/api/registrations/{reg3_id}",
-        json={"amount_due": "500.00", "amount_paid": "500.00", "status": "cancelled"},
+    r = await client.put(f"/api/registrations/{reg3_id}", json={"amount_due": "500.00"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    r = await client.post(
+        f"/api/registrations/{reg3_id}/transactions",
+        json={"amount": "500.00", "effective_date": "2099-04-01"},
         headers=ADMIN_HEADERS,
     )
+    assert r.status_code == 201
+    r = await client.put(f"/api/registrations/{reg3_id}", json={"status": "cancelled"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
 
     r = await client.get("/api/editions/stats", headers=ADMIN_HEADERS)
@@ -1106,6 +1114,8 @@ async def test_edition_stats_aggregates_payments(client):
     entry = next(e for e in r.json() if e["edition_id"] == "edition-payments")
     assert entry["total_paid"] == "100.00"
     assert entry["total_due"] == "140.00"
+    assert entry["total_received"] == "100.00"
+    assert entry["total_outstanding"] == "40.00"
 
 
 @pytest.mark.anyio
