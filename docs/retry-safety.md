@@ -245,12 +245,6 @@ Deleting a booking with recorded ledger entries is rejected (409):
 `payment_transactions.registration_id` is `ON DELETE RESTRICT`, so a booking's
 payment history cannot be silently lost by deleting the booking.
 
-The migration that introduced the ledger (`002_payment_transactions`)
-backfilled one opening-balance `payment` entry, equal to the then-current
-`amount_paid`, for every booking that already had a non-zero recorded total —
-so existing bookings kept their recorded paid total once balance/status moved
-to deriving from ledger sums. `amount_paid` could not be negative under the
-pre-ledger schema, so every backfilled row is a `payment`, never a
-`refund`/`correction`; a booking that was only ever `partial`/`unpaid` (never
-had a non-zero `amount_paid`) has no backfilled entry and starts its ledger
-empty.
+`payment_transactions` is created directly in migration 001 (no production
+data predates it, so there was nothing to backfill from a prior mutable
+`amount_paid` total — every booking's ledger simply starts empty).

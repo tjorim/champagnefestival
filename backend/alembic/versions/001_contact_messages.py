@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, and a short product description.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, a short product description, and the append-only payment transaction ledger.
 
 Revision ID: 001
 Revises: 000
@@ -464,8 +464,40 @@ def upgrade() -> None:
 
     op.add_column("products", sa.Column("description", sa.String(300), nullable=False, server_default=""))
 
+    # #1019: append-only payment ledger. A booking's amount_paid/payment_status
+    # (above) are derived from this table's sums (see
+    # app.services.payments_service.sync_registration_payment_fields) rather
+    # than being mutable themselves.
+    op.create_table(
+        "payment_transactions",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column(
+            "registration_id",
+            sa.String(64),
+            sa.ForeignKey("registrations.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column("amount", sa.Numeric(10, 2), nullable=False),
+        sa.Column("kind", sa.String(20), nullable=False),
+        sa.Column("effective_date", sa.Date(), nullable=False),
+        sa.Column("recorded_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("recorded_by", sa.String(255), nullable=False),
+        sa.Column("reference", sa.String(200), nullable=True),
+        sa.Column("note", sa.Text(), nullable=True),
+        sa.Column(
+            "reversed_transaction_id",
+            sa.String(64),
+            sa.ForeignKey("payment_transactions.id", ondelete="SET NULL"),
+            nullable=True,
+        ),
+        sa.CheckConstraint("kind IN ('payment', 'refund', 'correction')", name="ck_payment_transactions_kind"),
+    )
+    op.create_index("ix_payment_transactions_registration_id", "payment_transactions", ["registration_id"])
+
 
 def downgrade() -> None:
+    op.drop_index("ix_payment_transactions_registration_id", table_name="payment_transactions")
+    op.drop_table("payment_transactions")
     op.drop_column("products", "description")
 
     # The legacy schema can store only one table per registration. Preserve a

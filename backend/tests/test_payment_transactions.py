@@ -1,6 +1,9 @@
 """Payment ledger tests (#1019): recording, reconciliation, idempotent
-replay/conflict, genuine concurrency, migration backfill, and the filtered
-CSV export.
+replay/conflict, genuine concurrency, and the filtered CSV export.
+
+The append-only payment_transactions table is created directly in migration
+001 alongside the rest of the schema, with no separate backfill migration
+(see docs/retry-safety.md) — nothing migration-specific to test here.
 
 Mirrors the retry-safety test matrix in ``test_mcp_admin_bulk_create.py``
 (replay, payload-mismatch conflict, actor isolation) for the
@@ -11,10 +14,8 @@ Mirrors the retry-safety test matrix in ``test_mcp_admin_bulk_create.py``
 from __future__ import annotations
 
 import asyncio
-import importlib.util
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from pathlib import Path
 from typing import Any
 
 import pytest
@@ -24,7 +25,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.mcp.admin import payments as mcp_payments
 from app.mcp.utils import MCPToolError
-from app.models import IdempotencyKey, PaymentTransaction, Registration
+from app.models import IdempotencyKey, PaymentTransaction
 from app.services import payments_service, registrations_service
 from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, mcp_session_factory
 
@@ -45,8 +46,6 @@ def _normalize(value: Any) -> Any:
         return value.isoformat()
     return value
 
-
-_MIGRATION_PATH = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "002_payment_transactions.py"
 
 _edition_counter = 0
 
@@ -441,79 +440,3 @@ async def test_concurrent_first_use_of_same_idempotency_key_records_exactly_one_
         .all()
     )
     assert len(rows) == 1
-
-
-# ---------------------------------------------------------------------------
-# Migration backfill (#1019 acceptance criteria: existing bookings preserve
-# their recorded paid total after migration)
-# ---------------------------------------------------------------------------
-
-
-def _load_migration_002():
-    spec = importlib.util.spec_from_file_location("migration_002_payment_transactions", _MIGRATION_PATH)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-@pytest.mark.anyio
-async def test_migration_backfill_preserves_amount_paid_as_opening_balance(client, db_session):
-    """Runs the real migration's backfill function (not a reimplementation)
-    against a booking left in the pre-#1019 mutable-amount_paid state."""
-    registration_id = await _registration(client, amount_due="42.00")
-    registration = await db_session.get(Registration, registration_id)
-    registration.amount_paid = Decimal("42.00")
-    registration.payment_status = "paid"
-    await db_session.commit()
-
-    module = _load_migration_002()
-    now = datetime.now(UTC)
-
-    def run_backfill(sync_conn):
-        module._backfill_opening_balances(sync_conn, now)
-
-    conn = await db_session.connection()
-    await conn.run_sync(run_backfill)
-    await db_session.commit()
-
-    rows = (
-        (
-            await db_session.execute(
-                select(PaymentTransaction).where(PaymentTransaction.registration_id == registration_id)
-            )
-        )
-        .scalars()
-        .all()
-    )
-    assert len(rows) == 1
-    assert rows[0].amount == Decimal("42.00")
-    assert rows[0].kind == "payment"
-    assert rows[0].recorded_by == "migration:002_payment_transactions"
-
-    # Totals reconcile after migration: syncing from the now-backfilled
-    # ledger reproduces the exact pre-migration amount_paid/payment_status.
-    await payments_service.sync_registration_payment_fields(db_session, registration)
-    assert registration.amount_paid == Decimal("42.00")
-    assert registration.payment_status == "paid"
-
-
-@pytest.mark.anyio
-async def test_migration_backfill_skips_bookings_with_zero_amount_paid(client, db_session):
-    registration_id = await _registration(client, amount_due="42.00")
-
-    module = _load_migration_002()
-    conn = await db_session.connection()
-    await conn.run_sync(lambda sync_conn: module._backfill_opening_balances(sync_conn, datetime.now(UTC)))
-    await db_session.commit()
-
-    rows = (
-        (
-            await db_session.execute(
-                select(PaymentTransaction).where(PaymentTransaction.registration_id == registration_id)
-            )
-        )
-        .scalars()
-        .all()
-    )
-    assert rows == []
