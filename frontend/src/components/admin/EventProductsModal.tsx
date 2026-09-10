@@ -309,10 +309,7 @@ export default function EventProductsModal({
               className="bg-dark text-light border-secondary"
               value={form.category}
               onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  category: e.target.value as OrderItemCategory,
-                }))
+                setForm((f) => ({ ...f, category: e.target.value as OrderItemCategory }))
               }
             >
               <option value="champagne">{m.admin_products_category_champagne()}</option>
@@ -330,11 +327,7 @@ export default function EventProductsModal({
             checked={form.purchasable}
             onChange={(e) => {
               const purchasable = e.target.checked;
-              setForm((f) => ({
-                ...f,
-                purchasable,
-                required: purchasable ? f.required : false,
-              }));
+              setForm((f) => ({ ...f, purchasable, required: purchasable ? f.required : false }));
             }}
           />
           <Form.Check
@@ -363,10 +356,7 @@ export default function EventProductsModal({
               className="bg-dark text-light border-secondary"
               value={form.unit}
               onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  unit: e.target.value as ProductFormState["unit"],
-                }))
+                setForm((f) => ({ ...f, unit: e.target.value as ProductFormState["unit"] }))
               }
             >
               <option value="item">{m.admin_inventory_unit_item()}</option>
@@ -475,10 +465,7 @@ export default function EventProductsModal({
                 size="sm"
                 variant="outline-danger"
                 onClick={() =>
-                  setForm((f) => ({
-                    ...f,
-                    inclusions: f.inclusions.filter((_, i) => i !== index),
-                  }))
+                  setForm((f) => ({ ...f, inclusions: f.inclusions.filter((_, i) => i !== index) }))
                 }
               >
                 {m.admin_inventory_remove()}
@@ -494,12 +481,7 @@ export default function EventProductsModal({
                 ...f,
                 inclusions: [
                   ...f.inclusions,
-                  {
-                    product_id: "",
-                    quantity: 1,
-                    per_quantity: 1,
-                    rounding: "down",
-                  },
+                  { product_id: "", quantity: 1, per_quantity: 1, rounding: "down" },
                 ],
               }))
             }
@@ -514,23 +496,13 @@ export default function EventProductsModal({
               id="update-booked-contents"
               label={m.admin_inventory_update_contents()}
               checked={form.updateExistingContents}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  updateExistingContents: e.target.checked,
-                }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, updateExistingContents: e.target.checked }))}
             />
             <Form.Check
               id="update-booked-prices"
               label={m.admin_inventory_update_prices()}
               checked={form.updateExistingPrices}
-              onChange={(e) =>
-                setForm((f) => ({
-                  ...f,
-                  updateExistingPrices: e.target.checked,
-                }))
-              }
+              onChange={(e) => setForm((f) => ({ ...f, updateExistingPrices: e.target.checked }))}
             />
             <Form.Text>{m.admin_inventory_keep_help()}</Form.Text>
           </fieldset>
