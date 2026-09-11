@@ -845,7 +845,17 @@ class Person(Base):
     roles: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     national_register_number: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
+    """Belgium's National Register Number (NISS) — fixed and lifelong; this is
+    what would be used to re-identify the person later. Volunteer-only (see
+    docs/decisions/934-data-retention-and-erasure.md)."""
     eid_document_number: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
+    """The physical eID card's own document number, captured once at volunteer
+    sign-up to support an insurance claim referencing that specific document.
+    A point-in-time record, not a live one: the card (and this number) is
+    typically renewed or replaced every 5-10 years, and nothing here
+    re-verifies or re-prompts for an update when that happens. Self-service
+    viewing/correction and identity-linking to an authenticated volunteer
+    remain undesigned — see #1006."""
     visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     club_name: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
