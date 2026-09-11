@@ -25,6 +25,7 @@ import {
   fetchPeopleSearch,
   downloadPaymentTransactionsCsv,
   fetchPaymentTransactionsLedger,
+  LEDGER_PAGE_SIZE,
 } from "@/utils/adminFetch";
 import { devError } from "@/utils/devLog";
 import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
@@ -106,6 +107,7 @@ export default function PeopleManagement({
   const [exportingLedger, setExportingLedger] = useState(false);
   const [ledgerExportError, setLedgerExportError] = useState("");
   const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [ledgerPage, setLedgerPage] = useState(1);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
@@ -245,9 +247,13 @@ export default function PeopleManagement({
   const personLedgerQuery = useQuery({
     queryKey: queryKeys.admin.paymentTransactionsLedger({
       personId: viewRegistrationsPerson?.id ?? "",
+      page: ledgerPage,
     }),
     queryFn: () =>
-      fetchPaymentTransactionsLedger(authHeaders, { personId: viewRegistrationsPerson!.id }),
+      fetchPaymentTransactionsLedger(authHeaders, {
+        personId: viewRegistrationsPerson!.id,
+        page: ledgerPage,
+      }),
     enabled: showLedgerModal && viewRegistrationsPerson !== null,
     staleTime: 30 * 1000,
     retry: false,
@@ -970,7 +976,10 @@ export default function PeopleManagement({
                   variant="outline-secondary"
                   size="sm"
                   disabled={personRegistrations.length === 0}
-                  onClick={() => setShowLedgerModal(true)}
+                  onClick={() => {
+                    setLedgerPage(1);
+                    setShowLedgerModal(true);
+                  }}
                   title={m.admin_payment_view_ledger()}
                 >
                   <i className="bi bi-journal-text me-1" aria-hidden="true" />
@@ -1007,6 +1016,10 @@ export default function PeopleManagement({
           loading={personLedgerQuery.isPending}
           error={personLedgerQuery.isError}
           showPerson={false}
+          page={ledgerPage}
+          pageSize={LEDGER_PAGE_SIZE}
+          onPreviousPage={() => setLedgerPage((p) => Math.max(1, p - 1))}
+          onNextPage={() => setLedgerPage((p) => p + 1)}
           onHide={() => setShowLedgerModal(false)}
         />
       )}

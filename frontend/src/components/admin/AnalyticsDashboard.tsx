@@ -17,6 +17,7 @@ import {
   downloadPaymentTransactionsCsv,
   fetchEditionStats,
   fetchPaymentTransactionsLedger,
+  LEDGER_PAGE_SIZE,
 } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { devError } from "@/utils/devLog";
@@ -48,6 +49,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
   const [exportingEditionId, setExportingEditionId] = useState<string | null>(null);
   const [ledgerExportError, setLedgerExportError] = useState("");
   const [ledgerEdition, setLedgerEdition] = useState<{ id: string; label: string } | null>(null);
+  const [ledgerPage, setLedgerPage] = useState(1);
 
   const handleExportLedger = useCallback(
     async (editionId: string) => {
@@ -68,8 +70,15 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
   );
 
   const editionLedgerQuery = useQuery({
-    queryKey: queryKeys.admin.paymentTransactionsLedger({ editionId: ledgerEdition?.id ?? "" }),
-    queryFn: () => fetchPaymentTransactionsLedger(authHeaders, { editionId: ledgerEdition!.id }),
+    queryKey: queryKeys.admin.paymentTransactionsLedger({
+      editionId: ledgerEdition?.id ?? "",
+      page: ledgerPage,
+    }),
+    queryFn: () =>
+      fetchPaymentTransactionsLedger(authHeaders, {
+        editionId: ledgerEdition!.id,
+        page: ledgerPage,
+      }),
     enabled: ledgerEdition !== null,
     staleTime: 30 * 1000,
     retry: false,
@@ -176,12 +185,13 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                     variant="outline-secondary"
                     size="sm"
                     className="py-0 px-1"
-                    onClick={() =>
+                    onClick={() => {
+                      setLedgerPage(1);
                       setLedgerEdition({
                         id: edition.editionId,
                         label: `${edition.year} ${edition.month}`,
-                      })
-                    }
+                      });
+                    }}
                     title={m.admin_payment_view_ledger()}
                     aria-label={m.admin_payment_view_ledger_for({
                       edition: `${edition.year} ${edition.month}`,
@@ -362,6 +372,10 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
           rows={editionLedgerQuery.data ?? []}
           loading={editionLedgerQuery.isPending}
           error={editionLedgerQuery.isError}
+          page={ledgerPage}
+          pageSize={LEDGER_PAGE_SIZE}
+          onPreviousPage={() => setLedgerPage((p) => Math.max(1, p - 1))}
+          onNextPage={() => setLedgerPage((p) => p + 1)}
           onHide={() => setLedgerEdition(null)}
         />
       )}

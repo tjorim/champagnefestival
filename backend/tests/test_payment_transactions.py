@@ -17,6 +17,8 @@ Mirrors the retry-safety test matrix in ``test_mcp_admin_bulk_create.py``
 from __future__ import annotations
 
 import asyncio
+import csv
+import io
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
@@ -278,6 +280,36 @@ async def test_export_prefixes_formula_injection_reference_and_filters_by_editio
     assert "cmd" not in r.text
 
 
+@pytest.mark.anyio
+async def test_export_streams_across_batches_without_dropping_or_duplicating_rows(client, monkeypatch):
+    """The CSV export fetches ledger rows in bounded batches rather than one
+    unbounded query (#1032); force a tiny batch size so a handful of rows
+    already exercises more than one batch, and check every row still comes
+    through exactly once, in order.
+    """
+    import app.routers.registrations as registrations_module
+
+    monkeypatch.setattr(registrations_module, "_LEDGER_CSV_BATCH_SIZE", 2)
+
+    registration_id = await _registration(client, amount_due="50.00")
+    for day in range(1, 6):
+        r = await client.post(
+            f"/api/registrations/{registration_id}/transactions",
+            json={
+                "amount": "10.00",
+                "effective_date": f"2026-04-0{day}",
+                "reference": f"BATCH-{day}",
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201, r.text
+
+    r = await client.get("/api/registrations/transactions/export", headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    rows = list(csv.reader(io.StringIO(r.text)))
+    assert [row[0] for row in rows[1:]] == [f"BATCH-{day}" for day in range(1, 6)]
+
+
 # ---------------------------------------------------------------------------
 # In-app ledger drill-down (#1019): GET /transactions, filtered and joined
 # ---------------------------------------------------------------------------
@@ -324,6 +356,63 @@ async def test_list_transactions_filters_by_edition_and_person_with_booking_cont
     )
     assert r.status_code == 200, r.text
     assert r.json() == []
+
+
+@pytest.mark.anyio
+async def test_list_transactions_paginates_with_page_and_limit(client):
+    """Bounded like ``audit.list_audit_entries`` (#1032): a ``limit`` slices
+    the (oldest-first) filtered set into stable pages via ``page``, and
+    appending a new entry doesn't shift rows already paged through, since
+    new rows land at the end of the ascending order rather than the front.
+    """
+    r = await client.post("/api/people", json={"name": "Paginated Person"}, headers=ADMIN_HEADERS)
+    person_id = r.json()["id"]
+    registration_id = await _registration(client, amount_due="50.00", person_id=person_id)
+    for day in range(1, 6):
+        r = await client.post(
+            f"/api/registrations/{registration_id}/transactions",
+            json={
+                "amount": "10.00",
+                "effective_date": f"2026-05-0{day}",
+                "reference": f"PAGE-{day}",
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201, r.text
+
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"person_id": person_id, "limit": 2, "page": 1},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert [row["reference"] for row in r.json()] == ["PAGE-1", "PAGE-2"]
+
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"person_id": person_id, "limit": 2, "page": 2},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert [row["reference"] for row in r.json()] == ["PAGE-3", "PAGE-4"]
+
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"person_id": person_id, "limit": 2, "page": 3},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert [row["reference"] for row in r.json()] == ["PAGE-5"]
+
+    # No limit given: still bounded, defaulting to a page of 100 (#1032) —
+    # well above these 5 rows, so the unfiltered call is unaffected.
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"person_id": person_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert len(r.json()) == 5
 
 
 # ---------------------------------------------------------------------------

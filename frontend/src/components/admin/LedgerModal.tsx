@@ -11,7 +11,12 @@ import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
  * person payment summary (#1019) — the same rows as the CSV export, viewed
  * in-app. `showPerson`/`showEvent` hide whichever column is redundant with
  * the modal's own scope (the person view doesn't need a person column; the
- * edition view doesn't need an edition column). */
+ * edition view doesn't need an edition column).
+ *
+ * The underlying list endpoint is paginated (#1032); `page`/`pageSize` and
+ * `onPreviousPage`/`onNextPage` are only rendered as Prev/Next controls when
+ * the caller passes them — omit them to keep showing an unpaginated `rows`
+ * as before. */
 export default function LedgerModal({
   show,
   title,
@@ -20,6 +25,10 @@ export default function LedgerModal({
   error,
   showPerson = true,
   showEvent = true,
+  page,
+  pageSize,
+  onPreviousPage,
+  onNextPage,
   onHide,
 }: {
   show: boolean;
@@ -29,8 +38,13 @@ export default function LedgerModal({
   error: boolean;
   showPerson?: boolean;
   showEvent?: boolean;
+  page?: number;
+  pageSize?: number;
+  onPreviousPage?: () => void;
+  onNextPage?: () => void;
   onHide: () => void;
 }) {
+  const paginated = page !== undefined && pageSize !== undefined;
   return (
     <Modal show={show} onHide={onHide} centered data-bs-theme="dark">
       <Modal.Header closeButton className="bg-dark border-secondary">
@@ -79,6 +93,29 @@ export default function LedgerModal({
         )}
       </Modal.Body>
       <Modal.Footer className="bg-dark border-secondary">
+        {paginated && (
+          <div className="d-flex align-items-center gap-2 me-auto">
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              disabled={loading || page === 1}
+              onClick={onPreviousPage}
+            >
+              {m.admin_ledger_previous_page()}
+            </Button>
+            <span className="text-secondary small">
+              {m.admin_ledger_page_label({ page: page as number })}
+            </span>
+            <Button
+              variant="outline-secondary"
+              size="sm"
+              disabled={loading || rows.length < (pageSize as number)}
+              onClick={onNextPage}
+            >
+              {m.admin_ledger_next_page()}
+            </Button>
+          </div>
+        )}
         <Button variant="outline-secondary" size="sm" onClick={onHide}>
           {m.close()}
         </Button>

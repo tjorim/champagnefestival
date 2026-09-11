@@ -540,19 +540,31 @@ export async function downloadVolunteersCsv(
   );
 }
 
+/** Page size used by the ledger drill-down modal (#1032) — mirrors the
+ * server's own default when a caller doesn't specify a limit. */
+export const LEDGER_PAGE_SIZE = 50;
+
+export interface PaymentTransactionsLedgerFilters {
+  editionId?: string;
+  personId?: string;
+  limit?: number;
+  page?: number;
+}
+
 /** List the payment ledger with booking context, filtered by edition and/or
  * person (#1019) — the in-app drill-down behind the edition/person payment
- * summaries. */
+ * summaries. Bounded and paginated (#1032), mirroring ``fetchAuditEntries``. */
 export async function fetchPaymentTransactionsLedger(
   authHeaders: () => Record<string, string>,
-  filters: { editionId?: string; personId?: string },
+  filters: PaymentTransactionsLedgerFilters,
 ): Promise<LedgerTransaction[]> {
   const params = new URLSearchParams();
   if (filters.editionId) params.set("edition_id", filters.editionId);
   if (filters.personId) params.set("person_id", filters.personId);
-  const query = params.toString();
+  params.set("limit", String(filters.limit ?? LEDGER_PAGE_SIZE));
+  params.set("page", String(filters.page ?? 1));
   return fetchArrayOrThrow(
-    `/api/registrations/transactions${query ? `?${query}` : ""}`,
+    `/api/registrations/transactions?${params.toString()}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
     apiToLedgerTransaction,

@@ -16,6 +16,7 @@ import io
 import logging
 import re
 import secrets
+from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime, timedelta
 from typing import Any, Literal
 
@@ -29,7 +30,7 @@ from starlette.responses import StreamingResponse
 from app.auth import get_actor_id, get_optional_claims, require_admin
 from app.config import settings
 from app.database import get_db
-from app.dependencies import Pagination
+from app.dependencies import Pagination, apply_pagination
 from app.email import send_guest_access_email
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
@@ -379,18 +380,107 @@ async def list_payment_transactions_filtered(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None, description="Filter by edition ID"),
     person_id: str | None = Query(default=None, description="Filter by person ID"),
+    pagination: Pagination = Depends(),
 ) -> list[dict]:
     """List ledger entries with booking context, filtered by edition and/or
     person (#1019) — the in-app drill-down behind the edition/person payment
     summaries; ``/transactions/export`` covers the CSV download of the same
     filtered set.
+
+    Bounded the same way ``audit.list_audit_entries`` is (#1032): defaults to
+    a page of 100 when the caller doesn't specify a limit. Unlike the audit
+    log this query orders oldest-first, so newly appended rows land after
+    whatever a client has already paged through rather than in front of it —
+    plain offset pagination stays stable across appends here, with no keyset
+    cursor needed.
     """
     stmt = payments_service.build_ledger_query(edition_id=edition_id, person_id=person_id)
+    effective_pagination = Pagination(page=pagination.page, limit=pagination.limit or 100)
+    stmt = apply_pagination(stmt, effective_pagination)
     rows = (await db.execute(stmt)).all()
     return [
         payments_service.ledger_row_to_dict(txn, registration, person, event)
         for txn, registration, person, event in rows
     ]
+
+
+_LEDGER_CSV_BATCH_SIZE = 500
+_LEDGER_CSV_HEADER = [
+    "Reference",
+    "Effective Date",
+    "Type",
+    "Booking",
+    "Event",
+    "Edition",
+    "Person",
+    "Amount",
+    "Recorded By",
+]
+
+
+class _CsvEcho:
+    """Fake file object whose ``write`` just returns what it was given,
+    letting ``csv.writer`` be driven one row at a time for streaming instead
+    of buffering the whole file into a ``StringIO`` (#1032)."""
+
+    def write(self, value: str) -> str:
+        return value
+
+
+async def _stream_ledger_csv(
+    db: AsyncSession,
+    *,
+    edition_id: str | None,
+    person_id: str | None,
+    effective_date_from: date | None,
+    effective_date_to: date | None,
+) -> AsyncIterator[str]:
+    """Yield the CSV export a row at a time, fetching ledger rows from the
+    database in bounded batches rather than materializing the whole filtered
+    set at once (#1032).
+
+    Takes the request-scoped session from ``Depends(get_db)`` rather than
+    opening its own: FastAPI keeps yield-dependencies (this session included)
+    open until the response has actually been sent, which covers a
+    ``StreamingResponse`` body being read by the client.
+    """
+    writer = csv.writer(_CsvEcho())
+    yield writer.writerow(map(csv_safe, _LEDGER_CSV_HEADER))
+
+    offset = 0
+    while True:
+        stmt = (
+            payments_service.build_ledger_query(
+                edition_id=edition_id,
+                person_id=person_id,
+                effective_date_from=effective_date_from,
+                effective_date_to=effective_date_to,
+            )
+            .offset(offset)
+            .limit(_LEDGER_CSV_BATCH_SIZE)
+        )
+        rows = (await db.execute(stmt)).all()
+        for txn, registration, person, event in rows:
+            edition = event.edition
+            yield writer.writerow(
+                map(
+                    csv_safe,
+                    [
+                        txn.reference or "",
+                        txn.effective_date.isoformat(),
+                        "payment" if txn.amount > 0 else "refund",
+                        registration.id,
+                        event.title,
+                        f"{edition.year} {edition.month}" if edition else "",
+                        person.name,
+                        str(txn.amount),
+                        txn.recorded_by,
+                    ],
+                )
+            )
+        if len(rows) < _LEDGER_CSV_BATCH_SIZE:
+            return
+        offset += _LEDGER_CSV_BATCH_SIZE
 
 
 @router.get("/transactions/export", dependencies=[Depends(require_admin)])
@@ -410,54 +500,18 @@ async def export_payment_transactions_csv(
     ``effective_date`` is when the money actually moved (e.g. a bank
     transfer), which can differ from the booking's event date — both are
     included as separate columns so a reconciliation doesn't conflate them.
-    """
-    stmt = payments_service.build_ledger_query(
-        edition_id=edition_id,
-        person_id=person_id,
-        effective_date_from=effective_date_from,
-        effective_date_to=effective_date_to,
-    )
-    rows = (await db.execute(stmt)).all()
 
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(
-        map(
-            csv_safe,
-            [
-                "Reference",
-                "Effective Date",
-                "Type",
-                "Booking",
-                "Event",
-                "Edition",
-                "Person",
-                "Amount",
-                "Recorded By",
-            ],
-        )
-    )
-    for txn, registration, person, event in rows:
-        edition = event.edition
-        writer.writerow(
-            map(
-                csv_safe,
-                [
-                    txn.reference or "",
-                    txn.effective_date.isoformat(),
-                    "payment" if txn.amount > 0 else "refund",
-                    registration.id,
-                    event.title,
-                    f"{edition.year} {edition.month}" if edition else "",
-                    person.name,
-                    str(txn.amount),
-                    txn.recorded_by,
-                ],
-            )
-        )
-    buffer.seek(0)
+    Streams rows in bounded batches rather than materializing the whole
+    filtered set in memory (#1032).
+    """
     return StreamingResponse(
-        iter([buffer.getvalue()]),
+        _stream_ledger_csv(
+            db,
+            edition_id=edition_id,
+            person_id=person_id,
+            effective_date_from=effective_date_from,
+            effective_date_to=effective_date_to,
+        ),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="payment-transactions.csv"'},
     )

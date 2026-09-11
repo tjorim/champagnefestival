@@ -111,7 +111,7 @@ def build_ledger_query(
         .join(Person, Person.id == Registration.person_id)
         .join(Event, Event.id == Registration.event_id)
         .options(selectinload(Event.edition))
-        .order_by(PaymentTransaction.effective_date, PaymentTransaction.recorded_at)
+        .order_by(PaymentTransaction.effective_date, PaymentTransaction.recorded_at, PaymentTransaction.id)
     )
     if edition_id:
         stmt = stmt.where(Event.edition_id == edition_id)
