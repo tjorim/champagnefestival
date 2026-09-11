@@ -67,6 +67,7 @@ const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
 const MyAccountPage = lazy(() => import("./components/MyAccountPage"));
+const MyEidPage = lazy(() => import("./components/MyEidPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -251,6 +252,24 @@ function MyAccountRoute() {
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.my_account_delete_error()}>
           <MyAccountPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+/** Route component for /my-eid — unlinked, direct-URL-only self-service page. */
+function MyEidRoute() {
+  useNoIndex();
+  return (
+    <div className="App standalone-app">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar iconClass="bi bi-person-vcard" title={m.my_eid_title()} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={m.my_eid_load_error()}>
+          <MyEidPage />
         </AppSuspense>
       </main>
     </div>
@@ -718,6 +737,7 @@ const router = createAppRouter({
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,
+  MyEidRoute,
   VenuePlanRoute,
 });
 

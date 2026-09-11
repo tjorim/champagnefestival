@@ -50,6 +50,7 @@ from app.routers import (
     venues,
     visitor_auth,
     volunteer_ops,
+    volunteer_self,
     volunteers,
 )
 from app.routers import (
@@ -197,6 +198,7 @@ app.include_router(products.router)
 app.include_router(push.router)
 app.include_router(volunteers.router)
 app.include_router(volunteer_ops.router)
+app.include_router(volunteer_self.router)
 app.include_router(areas.router)
 app.include_router(venue_plan.router)
 app.include_router(me.router)

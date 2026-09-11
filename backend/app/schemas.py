@@ -800,8 +800,13 @@ class VolunteerUpdate(RequestModel):
     eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
     active: bool | None = None
     help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
+    oidc_subject: str | None = Field(default=None, max_length=255)
+    """Admin-only override for the self-service identity link (#1006) — e.g.
+    to unlink a mistaken claim (explicit ``null``) or hand-link a volunteer
+    who cannot self-claim (no NISS on file yet). Normally established by the
+    volunteer themselves via ``POST /api/me/volunteer/claim``."""
 
-    @field_validator("name", "national_register_number", "eid_document_number", mode="before")
+    @field_validator("name", "national_register_number", "eid_document_number", "oidc_subject", mode="before")
     @classmethod
     def strip_optional_strings(cls, value: str | None) -> str | None:
         if not isinstance(value, str):
@@ -826,6 +831,7 @@ class VolunteerOut(BaseModel):
     eid_document_number: str | None
     active: bool
     help_periods: list[VolunteerPeriodOut]
+    oidc_subject: str | None
     created_at: datetime
     updated_at: datetime
 

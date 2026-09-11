@@ -1670,10 +1670,15 @@ class ChampagneFestivalMcpBackend:
         eid_document_number: str | None = None,
         active: bool | None = None,
         help_periods: list[dict] | None = None,
+        oidc_subject: str | None = None,
     ) -> dict:
         """Partially update a volunteer; omitted fields are left unchanged.
 
-        Passing ``help_periods`` replaces the full set of help periods. Requires the ``admin`` role.
+        Passing ``help_periods`` replaces the full set of help periods.
+        ``oidc_subject`` is the self-service identity link (#1006) — normally
+        established by the volunteer themselves; set it here only to hand-link
+        a volunteer who can't self-claim (no NISS on file yet). Requires the
+        ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_volunteers.update_volunteer(
@@ -1686,6 +1691,7 @@ class ChampagneFestivalMcpBackend:
             eid_document_number=eid_document_number,
             active=active,
             help_periods=help_periods,
+            oidc_subject=oidc_subject,
         )
 
     async def delete_volunteer(self, volunteer_id: str) -> dict:

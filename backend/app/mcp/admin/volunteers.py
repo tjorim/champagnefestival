@@ -72,6 +72,7 @@ async def update_volunteer(
     eid_document_number: str | None = None,
     active: bool | None = None,
     help_periods: list[dict] | None = None,
+    oidc_subject: str | None = None,
 ) -> dict:
     provided = {
         k: v
@@ -82,6 +83,7 @@ async def update_volunteer(
             "eid_document_number": eid_document_number,
             "active": active,
             "help_periods": help_periods,
+            "oidc_subject": oidc_subject,
         }.items()
         if v is not None
     }

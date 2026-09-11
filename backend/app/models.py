@@ -853,9 +853,19 @@ class Person(Base):
     sign-up to support an insurance claim referencing that specific document.
     A point-in-time record, not a live one: the card (and this number) is
     typically renewed or replaced every 5-10 years, and nothing here
-    re-verifies or re-prompts for an update when that happens. Self-service
-    viewing/correction and identity-linking to an authenticated volunteer
-    remain undesigned — see #1006."""
+    re-verifies or re-prompts for an update when that happens — a volunteer
+    can flag a renewal themselves via `POST /api/me/volunteer/eid-correction`
+    (see `oidc_subject` below and docs/decisions/1006-volunteer-identity-self-service.md)."""
+
+    oidc_subject: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    """The `sub` claim of the OIDC-authenticated volunteer this Person record
+    is linked to, if any — established by the volunteer themselves (matching
+    their own NISS against an unlinked volunteer-role record on first use of
+    `/api/me/volunteer`) or set directly by an admin. Unlike `Person.roles`,
+    this is independent of the OIDC `volunteer`/`admin` realm role used by
+    `require_volunteer` for event-day access — it identifies *which* Person a
+    token belongs to, not *whether* the token may act as a volunteer. See
+    docs/decisions/1006-volunteer-identity-self-service.md."""
     visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     club_name: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
