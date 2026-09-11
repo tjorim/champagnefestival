@@ -6,6 +6,7 @@ import {
   type SeedEdition,
   type SeedEvent,
   type SeedProduct,
+  type SeedProductInclusion,
 } from "../data/editionStore";
 import { seedExhibitors } from "../data/exhibitors";
 import { seedPeople } from "../data/people";
@@ -858,8 +859,11 @@ export const adminHandlers = [
       name: String(body.name ?? ""),
       price: Number(body.price ?? 0),
       category: String(body.category ?? "other"),
-      active: body.active !== false,
+      purchasable: body.purchasable !== false,
       required: body.required === true,
+      inclusions: Array.isArray(body.inclusions)
+        ? (body.inclusions as SeedProductInclusion[])
+        : null,
       included_product_id:
         typeof body.included_product_id === "string" ? body.included_product_id : null,
       included_per_guests:

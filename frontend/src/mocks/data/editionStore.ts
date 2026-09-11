@@ -22,14 +22,22 @@ interface SeedEventEditionSummary {
   active: boolean;
 }
 
+export interface SeedProductInclusion {
+  product_id: string;
+  quantity: number;
+  per_quantity: number;
+  rounding: "up" | "down";
+}
+
 export interface SeedProduct {
   id: string;
   event_id: string;
   name: string;
   price: number;
   category: string;
-  active: boolean;
+  purchasable: boolean;
   required: boolean;
+  inclusions?: SeedProductInclusion[] | null;
   included_product_id: string | null;
   included_per_guests: number | null;
   created_at: string;

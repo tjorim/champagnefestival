@@ -56,7 +56,7 @@ describe("EventProductsModal", () => {
         name: "VIP Entry",
         price: 50,
         category: "other",
-        active: true,
+        purchasable: true,
         required: true,
         included_product_id: null,
         included_per_guests: null,
@@ -69,6 +69,185 @@ describe("EventProductsModal", () => {
     expect(screen.getByText("admin_products_required_badge")).toBeInTheDocument();
   });
 
+  it("shows a purchasable badge and a sold-out badge for a sold-out purchasable product", async () => {
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: 65,
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        stock: 0,
+        reserved_quantity: 0,
+        sold_out: true,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+
+    await screen.findByText("Champagne Bottle");
+    expect(screen.getByText("admin_products_purchasable")).toBeInTheDocument();
+    expect(screen.getByText("admin_products_sold_out")).toBeInTheDocument();
+  });
+
+  it("shows a hidden badge without a sold-out badge for a hidden product", async () => {
+    renderModal([
+      {
+        id: "prod-supply",
+        event_id: "event-01",
+        name: "Kitchen Supply",
+        price: 1,
+        category: "other",
+        purchasable: false,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+
+    await screen.findByText("Kitchen Supply");
+    expect(screen.getByText("admin_products_hidden")).toBeInTheDocument();
+    expect(screen.queryByText("admin_products_sold_out")).not.toBeInTheDocument();
+  });
+
+  it("submits purchasable=false when editing a product to hidden", async () => {
+    let saved: Record<string, unknown> | null = null;
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: 65,
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    server.use(
+      http.post("/api/products/prod-bottle/preview", () =>
+        HttpResponse.json({
+          preview_token: "token-1",
+          bookings: [],
+          price_changed: false,
+          contents_changed: true,
+          shortages: [],
+        }),
+      ),
+      http.put("/api/products/prod-bottle", async ({ request }) => {
+        saved = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ...saved, id: "prod-bottle", event_id: "event-01" });
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
+    fireEvent.click(screen.getByLabelText("admin_products_purchasable_label"));
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await screen.findByText("admin_inventory_review");
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => expect(saved).not.toBeNull());
+    expect(saved).toMatchObject({ purchasable: false, preview_token: "token-1" });
+  });
+
+  it("unticking purchasable forces required off and disables its checkbox", async () => {
+    renderModal([
+      {
+        id: "prod-entry",
+        event_id: "event-01",
+        name: "VIP Entry",
+        price: 50,
+        category: "other",
+        purchasable: true,
+        required: true,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    await screen.findByText("VIP Entry");
+
+    fireEvent.click(screen.getByLabelText("Edit VIP Entry"));
+    const requiredCheckbox = screen.getByLabelText(
+      "admin_products_required_label",
+    ) as HTMLInputElement;
+    expect(requiredCheckbox.checked).toBe(true);
+
+    fireEvent.click(screen.getByLabelText("admin_products_purchasable_label"));
+
+    expect(requiredCheckbox.checked).toBe(false);
+    expect(requiredCheckbox).toBeDisabled();
+    expect(screen.getByText("admin_products_required_needs_purchasable")).toBeInTheDocument();
+  });
+
+  it("opens the edit form next to the row being edited and locks other rows against it", async () => {
+    // Editing a product no longer opens a form pinned below the whole list —
+    // it appears inline under that product's own row, and every other row's
+    // Edit/Delete is disabled so a second click can't silently discard the
+    // in-progress edit.
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: 65,
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+      {
+        id: "prod-cheese",
+        event_id: "event-01",
+        name: "Cheese Platter",
+        price: 25,
+        category: "food",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
+
+    const nameField = screen.getByLabelText("admin_products_name") as HTMLInputElement;
+    expect(nameField.value).toBe("Champagne Bottle");
+    // The form sits inside the same row as the product it edits — after
+    // Champagne Bottle's own text, but before the next row (Cheese Platter),
+    // not pinned below the whole list.
+    expect(
+      screen.getByText("Champagne Bottle").compareDocumentPosition(nameField) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      nameField.compareDocumentPosition(screen.getByText("Cheese Platter")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+
+    expect(screen.getByLabelText("Edit Cheese Platter")).toBeDisabled();
+    expect(screen.getByLabelText("admin_delete Cheese Platter")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "admin_products_add" })).toBeDisabled();
+  });
+
   it("shows the bundle note for a product that includes another", async () => {
     renderModal([
       {
@@ -77,7 +256,7 @@ describe("EventProductsModal", () => {
         name: "VIP Table",
         price: 200,
         category: "other",
-        active: true,
+        purchasable: true,
         required: true,
         included_product_id: "prod-bottle",
         included_per_guests: 2,
@@ -90,7 +269,7 @@ describe("EventProductsModal", () => {
         name: "Champagne Bottle",
         price: 65,
         category: "champagne",
-        active: true,
+        purchasable: true,
         required: false,
         included_product_id: null,
         included_per_guests: null,
@@ -113,7 +292,7 @@ describe("EventProductsModal", () => {
         name: "Champagne Bottle",
         price: 65,
         category: "champagne",
-        active: true,
+        purchasable: true,
         required: false,
         included_product_id: null,
         included_per_guests: null,
@@ -134,7 +313,7 @@ describe("EventProductsModal", () => {
             name: capturedBody.name,
             price: capturedBody.price,
             category: capturedBody.category,
-            active: true,
+            purchasable: true,
             required: capturedBody.required,
             included_product_id: capturedBody.included_product_id,
             included_per_guests: capturedBody.included_per_guests,
@@ -182,7 +361,7 @@ describe("EventProductsModal", () => {
         name: "Champagne Bottle",
         price: 65,
         category: "champagne",
-        active: true,
+        purchasable: true,
         required: false,
         included_product_id: null,
         included_per_guests: null,
@@ -207,7 +386,7 @@ describe("EventProductsModal", () => {
         name: "Tables",
         price: 50,
         category: "other",
-        active: true,
+        purchasable: true,
         required: false,
         unit: "table",
         stock: 10,
@@ -278,6 +457,53 @@ describe("EventProductsModal", () => {
 
     await screen.findByText("admin_products_price_invalid");
     expect(postCalled).toBe(false);
+  });
+
+  it("asks for confirmation before deleting a product, and cancelling keeps it", async () => {
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Champagne Bottle",
+        price: 65,
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        included_product_id: null,
+        included_per_guests: null,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    await screen.findByText("Champagne Bottle");
+
+    let deleteCalled = false;
+    server.use(
+      http.delete("/api/products/prod-bottle", () => {
+        deleteCalled = true;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText("admin_delete Champagne Bottle"));
+    await screen.findByText("admin_products_delete_title");
+    expect(
+      screen.getByText('admin_products_delete_confirm({"name":"Champagne Bottle"})'),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_action_cancel" }));
+    await waitFor(() =>
+      expect(screen.queryByText("admin_products_delete_title")).not.toBeInTheDocument(),
+    );
+    expect(deleteCalled).toBe(false);
+    expect(screen.getByText("Champagne Bottle")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByLabelText("admin_delete Champagne Bottle"));
+    await screen.findByText("admin_products_delete_title");
+    fireEvent.click(screen.getByRole("button", { name: "admin_action_confirm" }));
+
+    await waitFor(() => expect(deleteCalled).toBe(true));
+    await waitFor(() => expect(screen.queryByText("Champagne Bottle")).not.toBeInTheDocument());
   });
 
   it("shows an error state and disables adding when the products query fails", async () => {

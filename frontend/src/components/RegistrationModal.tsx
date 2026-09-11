@@ -47,10 +47,15 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   });
 
   const isSubmitting = submitRegistrationMutation.isPending;
+  // The public API only ever returns purchasable products, and strips any
+  // inclusion edge pointing at a hidden one, before this reaches the client
+  // (see Event.products) — the `purchasable` filter here is defense in depth
+  // only, not something a real payload should ever need.
   const products = useMemo(() => event?.products ?? [], [event]);
-  // Whether guests can order anything is answered by the event actually
-  // having products, not by a separate flag — see Event.products.
-  const showOrderItems = products.length > 0;
+  const purchasableProducts = useMemo(() => products.filter((p) => p.purchasable), [products]);
+  // Whether guests can order anything is answered by there being a
+  // purchasable product, not by a separate flag.
+  const showOrderItems = purchasableProducts.length > 0;
 
   const form = useForm({
     defaultValues: {
@@ -123,18 +128,20 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
   const guestCount = useStore(form.store, (s) => s.values.guestCount);
 
-  const requiredProducts = useMemo(() => products.filter((p) => p.required), [products]);
+  const requiredProducts = useMemo(
+    () => purchasableProducts.filter((p) => p.required),
+    [purchasableProducts],
+  );
   const hasRequiredSelected = useMemo(
     () => orderItems.some((o) => requiredProducts.some((rp) => rp.id === o.productId)),
     [orderItems, requiredProducts],
   );
 
   const includedQuantities = useMemo(() => {
+    // Every product here is purchasable, and the server strips any inclusion
+    // edge targeting a hidden product before it reaches this payload — so an
+    // edge present below is always safe to name to the visitor.
     const included = new Map<string, { quantity: number; sourceName: string }>();
-    // Tracks products reached via at least one *visible* inclusion edge —
-    // gates the "Includes X free" note only. Stock accounting above still
-    // uses `included` unfiltered, since a hidden inclusion still reserves stock.
-    const visibleIncluded = new Set<string>();
     let visits = 0;
     const expand = (id: string, quantity: number, sourceName: string, path: Set<string>) => {
       if (path.has(id) || ++visits > 10000) return;
@@ -150,7 +157,6 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 quantity: Math.floor((guestCount || 0) / product.includedPerGuests),
                 per_quantity: quantity,
                 rounding: "down" as const,
-                visible: true,
               },
             ]
           : []);
@@ -163,7 +169,6 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
           quantity: (old?.quantity ?? 0) + count,
           sourceName: old ? `${old.sourceName}, ${sourceName}` : sourceName,
         });
-        if (edge.visible) visibleIncluded.add(edge.product_id);
         expand(edge.product_id, count, sourceName, nextPath);
       }
     };
@@ -175,7 +180,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         new Set(),
       );
     }
-    return { included, visibleIncluded };
+    return included;
   }, [guestCount, orderItems, products]);
 
   const handleClose = useCallback(() => {
@@ -432,19 +437,23 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   </p>
                 )}
 
-                {products.map((product) => {
+                {purchasableProducts.map((product) => {
                   const currentItem = orderItems.find((o) => o.productId === product.id);
                   const qty = currentItem?.quantity ?? 0;
                   const label = `${product.name} - €${product.price}`;
                   const isLockedOptional =
                     !product.required && requiredProducts.length > 0 && !hasRequiredSelected;
-                  const included = includedQuantities.included.get(product.id);
-                  const includedVisible = includedQuantities.visibleIncluded.has(product.id);
+                  const included = includedQuantities.get(product.id);
                   return (
                     <div key={product.id} className="mb-2">
                       <div className="d-flex align-items-center justify-content-between">
                         <span className="text-light small">
                           {label}
+                          {product.soldOut && (
+                            <span className="badge bg-danger ms-2">
+                              {m.registration_order_sold_out()}
+                            </span>
+                          )}
                           {product.description && (
                             <span
                               className="text-secondary d-block"
@@ -476,6 +485,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                             onClick={() => handleQuantityChange(product.id, qty + 1)}
                             disabled={
                               isLockedOptional ||
+                              product.soldOut ||
                               (product.availableQuantity != null &&
                                 qty + (included?.quantity ?? 0) >= product.availableQuantity)
                             }
@@ -490,7 +500,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                           {m.registration_order_available()}: {product.availableQuantity}
                         </div>
                       )}
-                      {included && includedVisible && (
+                      {included && (
                         <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
                           {m.registration_order_included_note({
                             count: included.quantity,

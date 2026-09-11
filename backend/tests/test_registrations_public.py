@@ -33,6 +33,41 @@ async def test_create_reservation(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_create_reservation_checkout_summary_hides_admin_product_data(client):
+    """The just-created booking's echoed `event.products` (#1020) exposes only
+    the purchasable product the visitor could pick, with no `stock`, and
+    never a hidden product also configured on this event."""
+    event = await _create_event(client)
+    purchasable = (
+        await client.post(
+            "/api/products",
+            json={"event_id": event["id"], "name": "Bottle", "price": "25.00", "category": "champagne"},
+            headers=ADMIN_HEADERS,
+        )
+    ).json()
+    hidden = (
+        await client.post(
+            "/api/products",
+            json={
+                "event_id": event["id"],
+                "name": "Kitchen Supply",
+                "price": "1.00",
+                "category": "other",
+                "purchasable": False,
+            },
+            headers=ADMIN_HEADERS,
+        )
+    ).json()
+
+    r = await _post_registration(client, event=event, order_items=[{"product_id": purchasable["id"], "quantity": 1}])
+    assert r.status_code == 201, r.text
+    products = {p["id"]: p for p in r.json()["event"]["products"]}
+    assert purchasable["id"] in products
+    assert "stock" not in products[purchasable["id"]]
+    assert hidden["id"] not in products
+
+
+@pytest.mark.anyio
 async def test_authenticated_create_assigns_registration_owner(client, db_session):
     app.dependency_overrides[get_optional_claims] = lambda: {"sub": "booking-owner"}
     try:

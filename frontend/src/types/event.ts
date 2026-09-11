@@ -19,8 +19,6 @@ export interface ProductInclusion {
   quantity: number;
   per_quantity: number;
   rounding: "up" | "down";
-  /** Whether this inclusion appears in the visitor-facing order summary. */
-  visible: boolean;
 }
 
 export interface Product {
@@ -29,6 +27,8 @@ export interface Product {
   reservedQuantity?: number;
   availableQuantity?: number | null;
   shortage?: number;
+  /** A purchasable product with no remaining stock — distinct from `purchasable`. */
+  soldOut?: boolean;
   inclusions?: ProductInclusion[] | null;
   id: string;
   eventId: string;
@@ -37,11 +37,19 @@ export interface Product {
   description: string;
   price: number;
   category: OrderItemCategory;
-  active: boolean;
+  /**
+   * Whether this product can be ordered standalone and is ever named to a
+   * visitor — see #1020. A `purchasable: false` ("hidden") product can still
+   * be an inclusion target of another product (bundled quantity, stock and
+   * preparation totals are unaffected either way), but it is never orderable
+   * directly and never named to a visitor, standalone or bundled.
+   */
+  purchasable: boolean;
   /**
    * A prerequisite product for this event (e.g. an entry ticket). An order
    * that includes any non-required product for an event with required
-   * products must also include at least one required one.
+   * products must also include at least one required one. A required
+   * product must be purchasable.
    */
   required: boolean;
   /**
@@ -74,8 +82,10 @@ export interface Event {
   updatedAt: string;
   edition?: EventEditionSummary | null;
   /**
-   * Active products only. Whether guests can order anything for this event
-   * is answered by whether this list is non-empty, not by a separate flag.
+   * Purchasable products only — a hidden (`purchasable: false`) product
+   * never appears here, even as a bundle target (see `Product.purchasable`).
+   * Whether guests can order anything for this event is answered by whether
+   * any entry exists at all, not by a separate flag.
    */
   products: Product[];
 }
@@ -108,19 +118,15 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     description: String(data.description ?? ""),
     price: Number(data.price ?? 0),
     category: isOrderItemCategory(data.category) ? data.category : "other",
-    active: Boolean(data.active),
+    purchasable: Boolean(data.purchasable),
+    soldOut: Boolean(data.sold_out),
     required: Boolean(data.required),
     unit: data.unit === "table" || data.unit === "person" ? data.unit : "item",
     stock: typeof data.stock === "number" ? data.stock : null,
     reservedQuantity: Number(data.reserved_quantity ?? 0),
     availableQuantity: typeof data.available_quantity === "number" ? data.available_quantity : null,
     shortage: Number(data.shortage ?? 0),
-    inclusions: Array.isArray(data.inclusions)
-      ? (data.inclusions as ProductInclusion[]).map((inclusion) => ({
-          ...inclusion,
-          visible: inclusion.visible ?? true,
-        }))
-      : null,
+    inclusions: Array.isArray(data.inclusions) ? (data.inclusions as ProductInclusion[]) : null,
     includedProductId:
       typeof data.included_product_id === "string" ? data.included_product_id : undefined,
     includedPerGuests:

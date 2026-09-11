@@ -66,3 +66,17 @@ def test_registration_to_guest_dict_includes_check_in_fields():
     result = registration_to_guest_dict(_make_registration(), _make_person(), event)
     assert result["event_date"] == event.date
     assert result["check_in_token"] == "check-in-secret"
+
+
+def test_registration_to_guest_dict_strips_hidden_order_items():
+    """This function has no admin caller — every reader is the visitor
+    looking at their own booking (guest access token, magic link, `/me`), so
+    a hidden line's name/product_id must never appear here, matching the
+    `public=True` path of `registration_to_dict` (#1020)."""
+    r = _make_registration()
+    r.order_items = [
+        {"product_id": "napkin", "name": "Napkin", "quantity": 1, "visible": False},
+        {"product_id": "coffee", "name": "Coffee", "quantity": 1, "visible": True},
+    ]
+    result = registration_to_guest_dict(r, _make_person(), _make_event())
+    assert [i["product_id"] for i in result["order_items"]] == ["coffee"]

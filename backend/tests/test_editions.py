@@ -493,6 +493,61 @@ async def test_inactive_events_excluded_from_active_edition_response(client):
     assert admin_data["dates"] == ["2099-03-20", "2099-03-21"]
 
 
+@pytest.mark.anyio
+async def test_active_edition_product_disclosure_by_purchasable(client):
+    """The unauthenticated /api/editions/active response (#1020): a
+    purchasable product is selectable and exposes no admin-only stock data;
+    a hidden (purchasable=False) product never appears at all, and its id
+    is stripped from a purchasable sibling's public `inclusions` array too —
+    a hidden product's id never reaches an unauthenticated caller even as a
+    bare bundle-target reference."""
+    event = await _create_event(client)
+
+    r = await client.post(
+        "/api/products",
+        json={
+            "event_id": event["id"],
+            "name": "Hidden Supply",
+            "price": "10.00",
+            "category": "champagne",
+            "purchasable": False,
+            "description": "Hidden Supply description",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    hidden = r.json()
+
+    r = await client.post(
+        "/api/products",
+        json={
+            "event_id": event["id"],
+            "name": "Purchasable Bottle",
+            "price": "10.00",
+            "category": "champagne",
+            "purchasable": True,
+            "description": "Purchasable Bottle description",
+            "inclusions": [{"product_id": hidden["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    purchasable = r.json()
+
+    r = await client.get("/api/editions/active")
+    assert r.status_code == 200
+    public_products = {p["id"]: p for p in r.json()["events"][0]["products"]}
+
+    assert purchasable["id"] in public_products
+    assert hidden["id"] not in public_products
+
+    purchasable_public = public_products[purchasable["id"]]
+    assert purchasable_public["purchasable"] is True
+    assert purchasable_public["name"] == "Purchasable Bottle"
+    assert "stock" not in purchasable_public
+    assert purchasable_public["inclusions"] == []
+
+
 # ---------------------------------------------------------------------------
 # GET /api/editions/upcoming — public contract
 # ---------------------------------------------------------------------------

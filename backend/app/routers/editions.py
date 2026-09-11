@@ -19,14 +19,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import Event, PaymentTransaction, Registration
-from app.schemas import EditionAttendanceStats, EditionCreate, EditionOut, EditionType, EditionUpdate
+from app.schemas import EditionAttendanceStats, EditionCreate, EditionOut, EditionPublicOut, EditionType, EditionUpdate
 from app.services import editions_service
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
 logger = logging.getLogger(__name__)
 
 
-@router.get("/active", response_model=EditionOut)
+@router.get("/active", response_model=EditionPublicOut)
 async def get_active_edition(
     db: AsyncSession = Depends(get_db),
     edition_type: EditionType | None = Query(default=None),
@@ -35,15 +35,16 @@ async def get_active_edition(
 
     Only the edition's *active* events are considered: an inactive (draft/cancelled)
     event neither keeps an otherwise-finished edition classified as upcoming, nor
-    appears in the response.
+    appears in the response. Unauthenticated — products are the visitor-safe
+    shape (see `EditionPublicOut`), not the admin one `EditionOut` carries.
     """
     active = await editions_service.find_active_edition(db, edition_type=edition_type)
     if active is None:
         raise HTTPException(status_code=404, detail="No active or upcoming editions found.")
-    return await editions_service.edition_payload(db, active, active_only=True)
+    return await editions_service.edition_payload(db, active, active_only=True, public=True)
 
 
-@router.get("/upcoming", response_model=list[EditionOut])
+@router.get("/upcoming", response_model=list[EditionPublicOut])
 async def list_upcoming_editions(
     db: AsyncSession = Depends(get_db),
     edition_type: EditionType | None = Query(default=None),
@@ -61,7 +62,7 @@ async def list_upcoming_editions(
         if (editions_service.edition_end_date(editions_service.active_events(edition)) or date.min) >= today
     ]
     return await editions_service.edition_payloads(
-        db, editions_service.sorted_editions(upcoming, active_only=True), active_only=True
+        db, editions_service.sorted_editions(upcoming, active_only=True), active_only=True, public=True
     )
 
 
