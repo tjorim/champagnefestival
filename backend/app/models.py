@@ -484,6 +484,7 @@ class Layout(Base):
     room: Mapped[Room] = relationship()
     tables: Mapped[list[Table]] = relationship(order_by="Table.created_at, Table.id")
     areas: Mapped[list[Area]] = relationship(order_by="Area.created_at, Area.id")
+    revisions: Mapped[list[LayoutRevision]] = relationship(order_by="LayoutRevision.revision_number")
 
 
 class TableType(Base):
@@ -584,6 +585,37 @@ class Area(Base):
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class LayoutRevision(Base):
+    """An immutable, named geometry snapshot of one ``Layout`` (#1021).
+
+    Follows the ``PolicyVersion`` numbering pattern: ``revision_number``
+    increases per ``layout_id`` under a row lock on the parent ``Layout``
+    (see ``app.services.layouts_service.save_layout_revision``), and a row
+    here is never mutated or deleted once written — restoring an old
+    revision applies its snapshot back onto the live ``Layout``/``Table``/
+    ``Area`` rows rather than resurrecting this row. ``snapshot`` captures
+    each table/area's stable ``id`` plus geometry (matching the ``id`` is
+    what lets compare/restore align objects across a rename — see
+    ``LayoutRevisionSnapshot``); it deliberately excludes allocations
+    (``exhibitor_id``, registration links), which remain live operational
+    data outside any revision's scope.
+    """
+
+    __tablename__ = "layout_revisions"
+    __table_args__ = (UniqueConstraint("layout_id", "revision_number", name="uq_layout_revisions_number"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    layout_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("layouts.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    revision_number: Mapped[int] = mapped_column(Integer, nullable=False)
+    label: Mapped[str] = mapped_column(String(200), default="")
+    change_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_by: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    snapshot: Mapped[dict] = mapped_column(JSON, nullable=False)
 
 
 class Edition(Base):

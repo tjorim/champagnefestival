@@ -9,6 +9,9 @@ import type {
   EditionAttendanceStats,
   EventCheckInStats,
   FaqItem,
+  LayoutRevision,
+  LayoutRevisionDiff,
+  LayoutRestorePreview,
 } from "@/types/admin";
 import {
   apiToLedgerTransaction,
@@ -35,6 +38,9 @@ import {
   apiEditionStatsToEditionAttendanceStats,
   apiEventCheckInStatsToEventCheckInStats,
   apiFaqItemToFaqItem,
+  apiLayoutRevisionToLayoutRevision,
+  apiLayoutRevisionDiffToLayoutRevisionDiff,
+  apiLayoutRestorePreviewToLayoutRestorePreview,
   mergePeopleWithVolunteers,
 } from "@/utils/adminApiMappers";
 
@@ -209,6 +215,93 @@ export async function fetchLayouts(authHeaders: () => Record<string, string>): P
     m.admin_error_load_data(),
   );
   return Array.isArray(payload) ? payload.map(apiLayoutToLayout) : [];
+}
+
+/** List one layout's saved revisions, newest first (#1021). */
+export async function fetchLayoutRevisions(
+  authHeaders: () => Record<string, string>,
+  layoutId: string,
+): Promise<LayoutRevision[]> {
+  return fetchArrayOrThrow(
+    `/api/layouts/${encodeURIComponent(layoutId)}/revisions`,
+    { headers: authHeaders() },
+    m.admin_error_load_layout_revisions(),
+    apiLayoutRevisionToLayoutRevision,
+  );
+}
+
+/** Save an immutable, named snapshot of a layout's current tables/areas (#1021). */
+export async function saveLayoutRevision(
+  authHeaders: () => Record<string, string>,
+  layoutId: string,
+  label: string,
+  changeNote?: string,
+): Promise<LayoutRevision> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/layouts/${encodeURIComponent(layoutId)}/revisions`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        label,
+        ...(changeNote?.trim() ? { change_note: changeNote.trim() } : {}),
+      }),
+    },
+    m.admin_error_save_layout_revision(),
+  );
+  return apiLayoutRevisionToLayoutRevision(payload);
+}
+
+/** Compare two snapshots of one layout — each a revision number or the
+ * reserved token "current" — matched by stable table/area id (#1021). */
+export async function compareLayoutRevisions(
+  authHeaders: () => Record<string, string>,
+  layoutId: string,
+  fromRef: string,
+  toRef: string,
+): Promise<LayoutRevisionDiff> {
+  const params = new URLSearchParams({ from: fromRef, to: toRef });
+  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/layouts/${encodeURIComponent(layoutId)}/revisions/compare?${params.toString()}`,
+    { headers: authHeaders() },
+    m.admin_error_compare_layout_revisions(),
+  );
+  return apiLayoutRevisionDiffToLayoutRevisionDiff(payload);
+}
+
+/** Preview what restoring a revision would change, including any live
+ * allocations it would delete or move (#1021). */
+export async function previewLayoutRestore(
+  authHeaders: () => Record<string, string>,
+  layoutId: string,
+  revisionNumber: number,
+): Promise<LayoutRestorePreview> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/layouts/${encodeURIComponent(layoutId)}/revisions/${revisionNumber}/restore/preview`,
+    { method: "POST", headers: authHeaders() },
+    m.admin_error_preview_layout_restore(),
+  );
+  return apiLayoutRestorePreviewToLayoutRestorePreview(payload);
+}
+
+/** Apply a saved revision's snapshot back onto the layout's tables/areas
+ * (#1021). Requires `resolveAllocations` when the preview reports live
+ * allocations the restore would delete or move. */
+export async function restoreLayoutRevision(
+  authHeaders: () => Record<string, string>,
+  layoutId: string,
+  revisionNumber: number,
+  resolveAllocations = false,
+): Promise<Record<string, unknown>> {
+  return fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/layouts/${encodeURIComponent(layoutId)}/revisions/${revisionNumber}/restore`,
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ resolve_allocations: resolveAllocations }),
+    },
+    m.admin_error_restore_layout_revision(),
+  );
 }
 
 export async function fetchExhibitors(

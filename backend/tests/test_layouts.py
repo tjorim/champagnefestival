@@ -2,9 +2,26 @@
 
 from __future__ import annotations
 
-import pytest
+import asyncio
 
-from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VENUE_PAYLOAD, event_for_room
+import pytest
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from app.models import AuditEntry, Layout, RegistrationAllocation, Room, Venue
+from app.schemas import LayoutRevisionSaveRequest
+from app.services import layouts_service
+from tests.helpers import (
+    ADMIN_HEADERS,
+    ROOM_PAYLOAD,
+    TABLE_TYPE_PAYLOAD,
+    VALID_RESERVATION,
+    VENUE_PAYLOAD,
+    _create_event,
+    _create_layout_prerequisites,
+    event_for_room,
+    seed_layout_event,
+)
 
 
 @pytest.mark.anyio
@@ -385,3 +402,324 @@ async def test_copy_layout_no_tables_when_flags_false(client):
     r = await client.get("/api/tables", headers=ADMIN_HEADERS)
     tables_in_new = [t for t in r.json() if t["layout_id"] == new_layout_id]
     assert tables_in_new == []
+
+
+# ---------------------------------------------------------------------------
+# Layout revisions (#1021)
+# ---------------------------------------------------------------------------
+
+
+async def _seed_layout(client) -> tuple[str, str, str, str]:
+    """venue -> room -> layout -> table type. Returns (venue_id, room_id, layout_id, table_type_id)."""
+    r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
+    venue_id = r.json()["id"]
+    r = await client.post("/api/rooms", json={**ROOM_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    room_id = r.json()["id"]
+    r = await client.post(
+        "/api/layouts",
+        json={"room_id": room_id, "event_id": await event_for_room(client, room_id, 1)},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    layout_id = r.json()["id"]
+    r = await client.post("/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": venue_id}, headers=ADMIN_HEADERS)
+    tt_id = r.json()["id"]
+    return venue_id, room_id, layout_id, tt_id
+
+
+@pytest.mark.anyio
+async def test_save_layout_revision_snapshot_immutable_after_later_edit(client, db_session):
+    """Saving a revision snapshots current geometry; a later edit to the live
+    table must not retroactively change what the earlier revision reports."""
+    _, _, layout_id, tt_id = await _seed_layout(client)
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": layout_id},
+        headers=ADMIN_HEADERS,
+    )
+    table_id = r.json()["id"]
+
+    r = await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "Opening plan"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, r.text
+    revision = r.json()
+    assert revision["revision_number"] == 1
+    assert revision["label"] == "Opening plan"
+    assert [t["id"] for t in revision["snapshot"]["tables"]] == [table_id]
+    assert revision["snapshot"]["tables"][0]["x"] == 10.0
+
+    r = await client.put(f"/api/tables/{table_id}", json={"x": 80.0}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+
+    r = await client.get(f"/api/layouts/{layout_id}/revisions/1", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    assert r.json()["snapshot"]["tables"][0]["x"] == 10.0
+
+    actions = set((await db_session.execute(select(AuditEntry.action))).scalars())
+    assert "layout_revision_saved" in actions
+
+
+@pytest.mark.anyio
+async def test_save_layout_revision_404_unknown_layout(client):
+    r = await client.post("/api/layouts/nonexistent/revisions", json={"label": "x"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_list_layout_revisions_orders_newest_first(client):
+    _, _, layout_id, _ = await _seed_layout(client)
+    for label in ("first", "second"):
+        r = await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": label}, headers=ADMIN_HEADERS)
+        assert r.status_code == 201, r.text
+    r = await client.get(f"/api/layouts/{layout_id}/revisions", headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+    body = r.json()
+    assert [rev["revision_number"] for rev in body] == [2, 1]
+    assert [rev["label"] for rev in body] == ["second", "first"]
+
+
+@pytest.mark.anyio
+async def test_compare_layout_revisions_matches_by_stable_id_not_name(client):
+    """A rename between two revisions is reported as a changed field, not as
+    one table removed and a different one added."""
+    _, _, layout_id, tt_id = await _seed_layout(client)
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": layout_id},
+        headers=ADMIN_HEADERS,
+    )
+    table_id = r.json()["id"]
+    assert (
+        await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "v1"}, headers=ADMIN_HEADERS)
+    ).status_code == 201
+
+    r = await client.put(f"/api/tables/{table_id}", json={"name": "T1 renamed", "x": 50.0}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T2", "table_type_id": tt_id, "layout_id": layout_id},
+        headers=ADMIN_HEADERS,
+    )
+    new_table_id = r.json()["id"]
+    assert (
+        await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "v2"}, headers=ADMIN_HEADERS)
+    ).status_code == 201
+
+    r = await client.get(
+        f"/api/layouts/{layout_id}/revisions/compare", params={"from": "1", "to": "2"}, headers=ADMIN_HEADERS
+    )
+    assert r.status_code == 200, r.text
+    diff = r.json()
+    assert [t["id"] for t in diff["added_tables"]] == [new_table_id]
+    assert diff["removed_tables"] == []
+    assert [t["id"] for t in diff["changed_tables"]] == [table_id]
+    changed_fields = {c["field"] for c in diff["changed_tables"][0]["changes"]}
+    assert changed_fields == {"name", "x"}
+
+
+@pytest.mark.anyio
+async def test_compare_revision_against_current_draft(client):
+    _, _, layout_id, tt_id = await _seed_layout(client)
+    assert (
+        await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "v1"}, headers=ADMIN_HEADERS)
+    ).status_code == 201
+
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "table_type_id": tt_id, "layout_id": layout_id},
+        headers=ADMIN_HEADERS,
+    )
+    table_id = r.json()["id"]
+
+    r = await client.get(
+        f"/api/layouts/{layout_id}/revisions/compare",
+        params={"from": "1", "to": "current"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert [t["id"] for t in r.json()["added_tables"]] == [table_id]
+
+
+@pytest.mark.anyio
+async def test_compare_layout_revisions_invalid_ref(client):
+    _, _, layout_id, _ = await _seed_layout(client)
+    r = await client.get(
+        f"/api/layouts/{layout_id}/revisions/compare",
+        params={"from": "not-a-number", "to": "current"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
+async def test_restore_preview_reports_geometry_changes_without_conflicts(client):
+    _, _, layout_id, tt_id = await _seed_layout(client)
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "x": 10.0, "y": 10.0, "table_type_id": tt_id, "layout_id": layout_id},
+        headers=ADMIN_HEADERS,
+    )
+    table_id = r.json()["id"]
+    assert (
+        await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "v1"}, headers=ADMIN_HEADERS)
+    ).status_code == 201
+
+    r = await client.put(f"/api/tables/{table_id}", json={"x": 90.0}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200
+
+    r = await client.post(f"/api/layouts/{layout_id}/revisions/1/restore/preview", headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    preview = r.json()
+    assert preview["has_conflicts"] is False
+    assert preview["allocation_conflicts"] == []
+    assert [t["id"] for t in preview["tables_to_update"]] == [table_id]
+
+    r = await client.post(f"/api/layouts/{layout_id}/revisions/1/restore", json={}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    restored_table = next(t for t in r.json()["tables"] if t["id"] == table_id)
+    assert restored_table["x"] == 10.0
+
+
+@pytest.mark.anyio
+async def test_restore_preview_404_unknown_revision(client):
+    _, _, layout_id, _ = await _seed_layout(client)
+    r = await client.post(f"/api/layouts/{layout_id}/revisions/99/restore/preview", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_restore_blocked_by_allocation_conflict_then_resolved(client, db_session):
+    """Restoring a revision that would delete a table holding a live
+    (non-cancelled) registration is refused unless resolve_allocations=true,
+    and even then the registration/allocation rows themselves are never
+    touched by the restore (#1021 acceptance criteria)."""
+    # event_for_room's edition is inactive (registration would 400), so this
+    # test needs its own active-edition event via _create_event instead.
+    event = await _create_event(client)
+    layout_id = await _create_layout_prerequisites(client, event["id"])
+    layout = (await client.get(f"/api/layouts/{layout_id}", headers=ADMIN_HEADERS)).json()
+    room = (await client.get(f"/api/rooms/{layout['room_id']}", headers=ADMIN_HEADERS)).json()
+    r = await client.post(
+        "/api/table-types", json={**TABLE_TYPE_PAYLOAD, "venue_id": room["venue_id"]}, headers=ADMIN_HEADERS
+    )
+    tt_id = r.json()["id"]
+
+    # Revision 1 has no tables at all.
+    assert (
+        await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "empty"}, headers=ADMIN_HEADERS)
+    ).status_code == 201
+
+    r = await client.post(
+        "/api/tables",
+        json={"name": "T1", "table_type_id": tt_id, "layout_id": layout_id},
+        headers=ADMIN_HEADERS,
+    )
+    table_id = r.json()["id"]
+
+    reg_resp = await client.post(
+        "/api/registrations", json={**VALID_RESERVATION, "event_id": event["id"], "guest_count": 2}
+    )
+    assert reg_resp.status_code == 201, reg_resp.text
+    registration_id = reg_resp.json()["id"]
+    alloc_resp = await client.put(
+        f"/api/registrations/{registration_id}",
+        json={"allocations": [{"table_id": table_id, "guest_count": 2}]},
+    )
+    assert alloc_resp.status_code == 200, alloc_resp.text
+
+    r = await client.post(f"/api/layouts/{layout_id}/revisions/1/restore/preview", headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    preview = r.json()
+    assert preview["has_conflicts"] is True
+    assert preview["allocation_conflicts"] == [
+        {
+            "kind": "table",
+            "id": table_id,
+            "name": "T1",
+            "reason": "deleted",
+            "registration_ids": [registration_id],
+            "exhibitor_id": None,
+        }
+    ]
+
+    r = await client.post(f"/api/layouts/{layout_id}/revisions/1/restore", json={}, headers=ADMIN_HEADERS)
+    assert r.status_code == 409, r.text
+
+    allocations = (
+        (await db_session.execute(select(RegistrationAllocation).where(RegistrationAllocation.table_id == table_id)))
+        .scalars()
+        .all()
+    )
+    assert len(allocations) == 1
+
+    r = await client.post(
+        f"/api/layouts/{layout_id}/revisions/1/restore",
+        json={"resolve_allocations": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert r.json()["tables"] == []
+
+    r = await client.get(f"/api/tables/{table_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 404
+
+    # The registration itself is never touched by the restore — only its
+    # now-dangling allocation on the deleted table is cleared (required to
+    # satisfy RegistrationAllocation.table_id's ON DELETE RESTRICT).
+    reg_check = await client.put(f"/api/registrations/{registration_id}", json={}, headers=ADMIN_HEADERS)
+    assert reg_check.status_code == 200, reg_check.text
+    assert reg_check.json()["status"] != "cancelled"
+    assert reg_check.json()["allocations"] == []
+
+
+@pytest.mark.anyio
+async def test_revision_snapshot_excludes_allocations(client):
+    """A saved revision never captures exhibitor assignments or registration
+    links — both remain live operational data outside any revision's scope."""
+    _, _, layout_id, tt_id = await _seed_layout(client)
+    r = await client.post("/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
+    exhibitor_id = r.json()["id"]
+    r = await client.post(
+        "/api/areas",
+        json={"layout_id": layout_id, "label": "Zone A", "exhibitor_id": exhibitor_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+
+    r = await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "v1"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, r.text
+    area_snapshot = r.json()["snapshot"]["areas"][0]
+    assert "exhibitor_id" not in area_snapshot
+    for table_snapshot in r.json()["snapshot"]["tables"]:
+        assert "registration_ids" not in table_snapshot
+
+
+@pytest.mark.anyio
+async def test_concurrent_revision_saves_do_not_reuse_a_revision_number(engine):
+    """Two concurrent save-revision calls for the same layout must not compute
+    the same MAX(revision_number)+1 — the row lock on the parent Layout
+    (mirroring policies_service._get_policy_locked) serializes them instead."""
+    sessions = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with sessions() as setup:
+        venue = Venue(id="venue-rev-race", name="Venue")
+        setup.add(venue)
+        await setup.flush()
+        room = Room(id="room-rev-race", venue_id=venue.id, name="Hall", width_m=20.0, length_m=15.0)
+        setup.add(room)
+        await setup.flush()
+        event_id = await seed_layout_event(setup, room_id=room.id)
+        layout = Layout(id="lay-rev-race", event_id=event_id, room_id=room.id)
+        setup.add(layout)
+        await setup.commit()
+
+    async def attempt(label: str):
+        async with sessions() as session:
+            return await layouts_service.save_layout_revision(
+                session,
+                actor="admin",
+                layout_id="lay-rev-race",
+                body=LayoutRevisionSaveRequest(label=label),
+            )
+
+    results = await asyncio.gather(attempt("a"), attempt("b"))
+    assert sorted(r["revision_number"] for r in results) == [1, 2]

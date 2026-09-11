@@ -6,7 +6,17 @@ import pytest
 from sqlalchemy import select
 
 from app.mcp.admin import layouts as mcp_layouts
-from app.models import Area, Exhibitor, Room, Table, TableType, Venue
+from app.models import (
+    Area,
+    Exhibitor,
+    Person,
+    Registration,
+    RegistrationAllocation,
+    Room,
+    Table,
+    TableType,
+    Venue,
+)
 from tests.helpers import mcp_session_factory, seed_layout_event
 
 
@@ -348,3 +358,134 @@ async def test_copy_layout_copy_areas_true_without_tables(db_session):
     new_areas = (await db_session.execute(select(Area).where(Area.layout_id == new_layout_id))).scalars().all()
     assert len(new_areas) == 1
     assert new_areas[0].label == "Zone A"
+
+
+# ---------------------------------------------------------------------------
+# Layout revisions (#1021)
+# ---------------------------------------------------------------------------
+
+
+async def test_save_list_get_layout_revision(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_room(db_session)
+    layout = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
+    await db_session.flush()
+    db_session.add(Table(id="tbl-1", name="T1", table_type_id="ttype-1", layout_id=layout["id"]))
+    await db_session.commit()
+
+    saved = await mcp_layouts.save_layout_revision(factory, "admin-1", layout["id"], label="Opening")
+    assert saved["revision_number"] == 1
+    assert saved["label"] == "Opening"
+    assert [t["id"] for t in saved["snapshot"]["tables"]] == ["tbl-1"]
+
+    listed = await mcp_layouts.list_layout_revisions(factory, layout["id"])
+    assert [r["revision_number"] for r in listed["revisions"]] == [1]
+
+    fetched = await mcp_layouts.get_layout_revision(factory, layout["id"], 1)
+    assert fetched["id"] == saved["id"]
+
+    with pytest.raises(ValueError, match="has no revision"):
+        await mcp_layouts.get_layout_revision(factory, layout["id"], 2)
+
+
+async def test_save_layout_revision_not_found(db_session):
+    factory = mcp_session_factory(db_session)
+    with pytest.raises(ValueError, match="not found"):
+        await mcp_layouts.save_layout_revision(factory, "admin-1", "nonexistent", label="x")
+
+
+async def test_compare_layout_revisions_matches_current_and_rejects_bad_ref(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_room(db_session)
+    layout = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
+    await db_session.flush()
+    db_session.add(Table(id="tbl-1", name="T1", table_type_id="ttype-1", layout_id=layout["id"], x=10.0))
+    await db_session.commit()
+    await mcp_layouts.save_layout_revision(factory, "admin-1", layout["id"], label="v1")
+
+    table = await db_session.get(Table, "tbl-1")
+    table.x = 50.0
+    await db_session.commit()
+
+    diff = await mcp_layouts.compare_layout_revisions(factory, layout["id"], "1", "current")
+    assert [t["id"] for t in diff["changed_tables"]] == ["tbl-1"]
+    assert {c["field"] for c in diff["changed_tables"][0]["changes"]} == {"x"}
+
+    with pytest.raises(ValueError, match="Invalid revision reference"):
+        await mcp_layouts.compare_layout_revisions(factory, layout["id"], "nope", "current")
+
+
+async def test_preview_and_restore_layout_revision(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_room(db_session)
+    layout = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
+    await db_session.flush()
+    db_session.add(Table(id="tbl-1", name="T1", table_type_id="ttype-1", layout_id=layout["id"], x=10.0))
+    await db_session.commit()
+    await mcp_layouts.save_layout_revision(factory, "admin-1", layout["id"], label="v1")
+
+    table = await db_session.get(Table, "tbl-1")
+    table.x = 90.0
+    await db_session.commit()
+
+    preview = await mcp_layouts.preview_layout_restore(factory, layout["id"], 1)
+    assert preview["has_conflicts"] is False
+    assert [t["id"] for t in preview["tables_to_update"]] == ["tbl-1"]
+
+    with pytest.raises(ValueError, match="has no revision"):
+        await mcp_layouts.preview_layout_restore(factory, layout["id"], 99)
+
+    restored = await mcp_layouts.restore_layout_revision(factory, "admin-1", layout["id"], 1)
+    restored_table = next(t for t in restored["tables"] if t["id"] == "tbl-1")
+    assert restored_table["x"] == 10.0
+
+
+async def test_restore_layout_revision_blocked_by_conflict_then_resolved(db_session):
+    factory = mcp_session_factory(db_session)
+    await _seed_room(db_session)
+    layout = await mcp_layouts.create_layout(
+        factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
+    )
+    await mcp_layouts.save_layout_revision(factory, "admin-1", layout["id"], label="empty")
+
+    db_session.add(TableType(id="ttype-1", name="Standard", venue_id="venue-1", capacity=6))
+    await db_session.flush()
+    db_session.add(Table(id="tbl-1", name="T1", table_type_id="ttype-1", layout_id=layout["id"]))
+    db_session.add(Person(id="person-1", name="Alice"))
+    await db_session.flush()
+    db_session.add(
+        Registration(
+            id="reg-1", event_id=layout["event_id"], person_id="person-1", guest_count=2, check_in_token="tok-1"
+        )
+    )
+    await db_session.flush()
+    db_session.add(RegistrationAllocation(registration_id="reg-1", table_id="tbl-1", guest_count=2))
+    await db_session.commit()
+
+    preview = await mcp_layouts.preview_layout_restore(factory, layout["id"], 1)
+    assert preview["has_conflicts"] is True
+    assert preview["allocation_conflicts"][0]["registration_ids"] == ["reg-1"]
+    assert preview["allocation_conflicts"][0]["reason"] == "deleted"
+
+    with pytest.raises(ValueError, match="live allocations"):
+        await mcp_layouts.restore_layout_revision(factory, "admin-1", layout["id"], 1)
+
+    restored = await mcp_layouts.restore_layout_revision(factory, "admin-1", layout["id"], 1, resolve_allocations=True)
+    assert restored["tables"] == []
+
+    remaining_allocations = (
+        (await db_session.execute(select(RegistrationAllocation).where(RegistrationAllocation.table_id == "tbl-1")))
+        .scalars()
+        .all()
+    )
+    assert remaining_allocations == []
+    assert await db_session.get(Registration, "reg-1") is not None

@@ -9,6 +9,15 @@ import type {
   EditionAttendanceStats,
   EventCheckInStats,
   FaqItem,
+  LayoutRevision,
+  LayoutRevisionAreaChange,
+  LayoutRevisionDiff,
+  LayoutRevisionFieldChange,
+  LayoutRevisionSnapshotArea,
+  LayoutRevisionSnapshotTable,
+  LayoutRevisionTableChange,
+  LayoutRestoreAllocationConflict,
+  LayoutRestorePreview,
 } from "@/types/admin";
 import type { Person } from "@/types/person";
 
@@ -161,6 +170,157 @@ export function apiAreaToArea(d: Record<string, unknown>): FloorArea {
     rotation: (d.rotation ?? 0) as number,
     widthM: (d.width_m ?? 1.5) as number,
     lengthM: (d.length_m ?? 1.0) as number,
+  };
+}
+
+function apiLayoutRevisionSnapshotTable(d: Record<string, unknown>): LayoutRevisionSnapshotTable {
+  return {
+    id: d.id as string,
+    name: d.name as string,
+    x: d.x as number,
+    y: d.y as number,
+    rotation: d.rotation as number,
+    tableTypeId: d.table_type_id as string,
+    tableTypeName: d.table_type_name as string,
+    capacity: d.capacity as number,
+    widthM: d.width_m as number,
+    lengthM: d.length_m as number,
+  };
+}
+
+function apiLayoutRevisionSnapshotArea(d: Record<string, unknown>): LayoutRevisionSnapshotArea {
+  return {
+    id: d.id as string,
+    label: d.label as string,
+    icon: d.icon as string,
+    x: d.x as number,
+    y: d.y as number,
+    rotation: d.rotation as number,
+    widthM: d.width_m as number,
+    lengthM: d.length_m as number,
+  };
+}
+
+function apiLayoutRevisionFieldChange(d: Record<string, unknown>): LayoutRevisionFieldChange {
+  return { field: d.field as string, before: d.before, after: d.after };
+}
+
+function apiLayoutRevisionTableChange(d: Record<string, unknown>): LayoutRevisionTableChange {
+  return {
+    id: d.id as string,
+    before: apiLayoutRevisionSnapshotTable(d.before as Record<string, unknown>),
+    after: apiLayoutRevisionSnapshotTable(d.after as Record<string, unknown>),
+    changes: ((d.changes as Record<string, unknown>[]) ?? []).map(apiLayoutRevisionFieldChange),
+  };
+}
+
+function apiLayoutRevisionAreaChange(d: Record<string, unknown>): LayoutRevisionAreaChange {
+  return {
+    id: d.id as string,
+    before: apiLayoutRevisionSnapshotArea(d.before as Record<string, unknown>),
+    after: apiLayoutRevisionSnapshotArea(d.after as Record<string, unknown>),
+    changes: ((d.changes as Record<string, unknown>[]) ?? []).map(apiLayoutRevisionFieldChange),
+  };
+}
+
+function apiLayoutRestoreAllocationConflict(
+  d: Record<string, unknown>,
+): LayoutRestoreAllocationConflict {
+  return {
+    kind: d.kind as "table" | "area",
+    id: d.id as string,
+    name: d.name as string,
+    reason: d.reason as "deleted" | "moved",
+    registrationIds: (d.registration_ids as string[]) ?? [],
+    exhibitorId: (d.exhibitor_id as number | null) ?? null,
+  };
+}
+
+/** Map FastAPI snake_case layout revision response to frontend camelCase LayoutRevision type */
+export function apiLayoutRevisionToLayoutRevision(d: Record<string, unknown>): LayoutRevision {
+  const snapshot = (d.snapshot ?? {}) as Record<string, unknown>;
+  const room = (snapshot.room ?? {}) as Record<string, unknown>;
+  return {
+    id: d.id as string,
+    layoutId: d.layout_id as string,
+    revisionNumber: d.revision_number as number,
+    label: (d.label ?? "") as string,
+    changeNote: (d.change_note ?? null) as string | null,
+    createdBy: d.created_by as string,
+    createdAt: d.created_at as string,
+    snapshot: {
+      tables: ((snapshot.tables as Record<string, unknown>[]) ?? []).map(
+        apiLayoutRevisionSnapshotTable,
+      ),
+      areas: ((snapshot.areas as Record<string, unknown>[]) ?? []).map(
+        apiLayoutRevisionSnapshotArea,
+      ),
+      room: {
+        widthM: (room.width_m ?? 0) as number,
+        lengthM: (room.length_m ?? 0) as number,
+      },
+    },
+  };
+}
+
+/** Map FastAPI snake_case revision-compare response to frontend camelCase LayoutRevisionDiff type */
+export function apiLayoutRevisionDiffToLayoutRevisionDiff(
+  d: Record<string, unknown>,
+): LayoutRevisionDiff {
+  return {
+    layoutId: d.layout_id as string,
+    fromRef: d.from_ref as string,
+    toRef: d.to_ref as string,
+    addedTables: ((d.added_tables as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionSnapshotTable,
+    ),
+    removedTables: ((d.removed_tables as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionSnapshotTable,
+    ),
+    changedTables: ((d.changed_tables as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionTableChange,
+    ),
+    addedAreas: ((d.added_areas as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionSnapshotArea,
+    ),
+    removedAreas: ((d.removed_areas as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionSnapshotArea,
+    ),
+    changedAreas: ((d.changed_areas as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionAreaChange,
+    ),
+  };
+}
+
+/** Map FastAPI snake_case restore-preview response to frontend camelCase LayoutRestorePreview type */
+export function apiLayoutRestorePreviewToLayoutRestorePreview(
+  d: Record<string, unknown>,
+): LayoutRestorePreview {
+  return {
+    layoutId: d.layout_id as string,
+    revisionNumber: d.revision_number as number,
+    tablesToAdd: ((d.tables_to_add as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionSnapshotTable,
+    ),
+    tablesToUpdate: ((d.tables_to_update as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionTableChange,
+    ),
+    tablesToRemove: ((d.tables_to_remove as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionSnapshotTable,
+    ),
+    areasToAdd: ((d.areas_to_add as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionSnapshotArea,
+    ),
+    areasToUpdate: ((d.areas_to_update as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionAreaChange,
+    ),
+    areasToRemove: ((d.areas_to_remove as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRevisionSnapshotArea,
+    ),
+    allocationConflicts: ((d.allocation_conflicts as Record<string, unknown>[]) ?? []).map(
+      apiLayoutRestoreAllocationConflict,
+    ),
+    hasConflicts: (d.has_conflicts ?? false) as boolean,
   };
 }
 

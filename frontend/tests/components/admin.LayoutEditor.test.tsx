@@ -13,6 +13,18 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
+const { fetchLayoutRevisions, compareLayoutRevisions, previewLayoutRestore } = vi.hoisted(() => ({
+  fetchLayoutRevisions: vi.fn(),
+  compareLayoutRevisions: vi.fn(),
+  previewLayoutRestore: vi.fn(),
+}));
+
+vi.mock("@/utils/adminFetch", () => ({
+  fetchLayoutRevisions,
+  compareLayoutRevisions,
+  previewLayoutRestore,
+}));
+
 // ---------------------------------------------------------------------------
 // Fixtures
 // ---------------------------------------------------------------------------
@@ -150,6 +162,18 @@ function renderLayoutEditor(overrides: RenderOverrides = {}) {
     onUpdateTable: vi.fn().mockResolvedValue(undefined),
     onResizeArea: vi.fn().mockResolvedValue(undefined),
     onSaveAllocations: vi.fn().mockResolvedValue(undefined),
+    authHeaders: vi.fn().mockReturnValue({}),
+    onSaveRevision: vi.fn().mockResolvedValue({
+      id: "layrev-1",
+      layoutId: "layout-1",
+      revisionNumber: 1,
+      label: "Revision",
+      changeNote: null,
+      createdBy: "admin",
+      createdAt: "2026-01-01T00:00:00Z",
+      snapshot: { tables: [], areas: [], room: { widthM: 10, lengthM: 8 } },
+    }),
+    onRestoreRevision: vi.fn().mockResolvedValue(undefined),
   };
 
   const utils = render(
@@ -205,6 +229,9 @@ describe("LayoutEditor", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();
+    fetchLayoutRevisions.mockReset().mockResolvedValue([]);
+    compareLayoutRevisions.mockReset();
+    previewLayoutRestore.mockReset();
   });
 
   it("renders the empty state when there are no rooms", () => {
@@ -479,5 +506,178 @@ describe("LayoutEditor", () => {
 
     const results = await axe(container);
     expect(results).toHaveNoViolations();
+  });
+
+  describe("layout revisions (#1021)", () => {
+    it("opens the revisions modal, lists revisions, and saves a new one", async () => {
+      fetchLayoutRevisions.mockResolvedValue([]);
+      const fixture = realisticFixture();
+      const { callbacks } = renderLayoutEditor(fixture);
+
+      fireEvent.click(screen.getByRole("button", { name: "admin_layout_revisions_button" }));
+
+      const dialog = within(await screen.findByRole("dialog"));
+      expect(await dialog.findByText("admin_layout_revisions_empty")).toBeInTheDocument();
+      expect(fetchLayoutRevisions).toHaveBeenCalledWith(expect.any(Function), "layout-1");
+
+      fireEvent.change(dialog.getByPlaceholderText("admin_layout_revisions_label_placeholder"), {
+        target: { value: "Opening night" },
+      });
+      fireEvent.click(dialog.getByRole("button", { name: "admin_layout_revisions_save" }));
+
+      await waitFor(() =>
+        expect(callbacks.onSaveRevision).toHaveBeenCalledWith(
+          "layout-1",
+          "Opening night",
+          undefined,
+        ),
+      );
+    });
+
+    it("lists saved revisions and compares one against the current draft", async () => {
+      const revisionA = {
+        id: "layrev-1",
+        layoutId: "layout-1",
+        revisionNumber: 1,
+        label: "Opening",
+        changeNote: null,
+        createdBy: "admin-a",
+        createdAt: "2026-01-01T00:00:00Z",
+        snapshot: { tables: [], areas: [], room: { widthM: 10, lengthM: 8 } },
+      };
+      fetchLayoutRevisions.mockResolvedValue([revisionA]);
+      compareLayoutRevisions.mockResolvedValue({
+        layoutId: "layout-1",
+        fromRef: "1",
+        toRef: "current",
+        addedTables: [
+          {
+            id: "table-2",
+            name: "Table B",
+            x: 40,
+            y: 40,
+            rotation: 0,
+            tableTypeId: "tt-1",
+            tableTypeName: "Round 8",
+            capacity: 6,
+            widthM: 1.5,
+            lengthM: 1.5,
+          },
+        ],
+        removedTables: [],
+        changedTables: [],
+        addedAreas: [],
+        removedAreas: [],
+        changedAreas: [],
+      });
+
+      const fixture = realisticFixture();
+      renderLayoutEditor(fixture);
+      fireEvent.click(screen.getByRole("button", { name: "admin_layout_revisions_button" }));
+      const dialog = within(await screen.findByRole("dialog"));
+
+      await waitFor(() =>
+        expect(
+          dialog.getByRole("combobox", { name: "admin_layout_revisions_compare_from" }),
+        ).toBeInTheDocument(),
+      );
+
+      fireEvent.change(
+        dialog.getByRole("combobox", { name: "admin_layout_revisions_compare_from" }),
+        {
+          target: { value: "1" },
+        },
+      );
+
+      await waitFor(() =>
+        expect(compareLayoutRevisions).toHaveBeenCalledWith(
+          expect.any(Function),
+          "layout-1",
+          "1",
+          "current",
+        ),
+      );
+      expect(await dialog.findByText("Table B")).toBeInTheDocument();
+    });
+
+    it("blocks restoring a revision with live allocation conflicts until the override is checked", async () => {
+      const revisionA = {
+        id: "layrev-1",
+        layoutId: "layout-1",
+        revisionNumber: 1,
+        label: "Empty",
+        changeNote: null,
+        createdBy: "admin-a",
+        createdAt: "2026-01-01T00:00:00Z",
+        snapshot: { tables: [], areas: [], room: { widthM: 10, lengthM: 8 } },
+      };
+      fetchLayoutRevisions.mockResolvedValue([revisionA]);
+      previewLayoutRestore.mockResolvedValue({
+        layoutId: "layout-1",
+        revisionNumber: 1,
+        tablesToAdd: [],
+        tablesToUpdate: [],
+        tablesToRemove: [
+          {
+            id: "table-1",
+            name: "Table A",
+            x: 10,
+            y: 10,
+            rotation: 0,
+            tableTypeId: "tt-1",
+            tableTypeName: "Round 8",
+            capacity: 8,
+            widthM: 1.5,
+            lengthM: 1.5,
+          },
+        ],
+        areasToAdd: [],
+        areasToUpdate: [],
+        areasToRemove: [],
+        allocationConflicts: [
+          {
+            kind: "table",
+            id: "table-1",
+            name: "Table A",
+            reason: "deleted",
+            registrationIds: ["reg-1"],
+            exhibitorId: null,
+          },
+        ],
+        hasConflicts: true,
+      });
+
+      const fixture = realisticFixture();
+      const { callbacks } = renderLayoutEditor(fixture);
+      fireEvent.click(screen.getByRole("button", { name: "admin_layout_revisions_button" }));
+      const dialog = within(await screen.findByRole("dialog"));
+      const restoreButton = await dialog.findByRole("button", {
+        name: "admin_layout_revisions_restore",
+      });
+
+      fireEvent.click(restoreButton);
+
+      await waitFor(() =>
+        expect(previewLayoutRestore).toHaveBeenCalledWith(expect.any(Function), "layout-1", 1),
+      );
+      expect(
+        await dialog.findByText("admin_layout_revisions_restore_conflicts_title"),
+      ).toBeInTheDocument();
+
+      const confirmButton = dialog.getByRole("button", {
+        name: "admin_layout_revisions_restore_confirm",
+      });
+      expect(confirmButton).toBeDisabled();
+
+      fireEvent.click(
+        dialog.getByRole("checkbox", { name: "admin_layout_revisions_restore_override_checkbox" }),
+      );
+      expect(confirmButton).not.toBeDisabled();
+
+      fireEvent.click(confirmButton);
+      await waitFor(() =>
+        expect(callbacks.onRestoreRevision).toHaveBeenCalledWith("layout-1", 1, true),
+      );
+    });
   });
 });

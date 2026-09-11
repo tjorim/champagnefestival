@@ -16,6 +16,11 @@ from app.schemas import (
     LayoutCopyCreate,
     LayoutCreate,
     LayoutOut,
+    LayoutRestorePreview,
+    LayoutRestoreRequest,
+    LayoutRevisionDiff,
+    LayoutRevisionOut,
+    LayoutRevisionSaveRequest,
     LayoutWithTablesOut,
 )
 from app.services import layouts_service
@@ -118,6 +123,88 @@ async def delete_layout(
     try:
         await layouts_service.delete_layout(
             db, actor=actor, layout_id=layout_id, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+# ---------------------------------------------------------------------------
+# Layout revisions (#1021)
+# ---------------------------------------------------------------------------
+
+
+@router.post("/{layout_id}/revisions", response_model=LayoutRevisionOut, status_code=status.HTTP_201_CREATED)
+async def save_layout_revision(
+    layout_id: str,
+    body: LayoutRevisionSaveRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    try:
+        return await layouts_service.save_layout_revision(
+            db, actor=actor, layout_id=layout_id, body=body, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.get("/{layout_id}/revisions", response_model=list[LayoutRevisionOut])
+async def list_layout_revisions(layout_id: str, db: AsyncSession = Depends(get_db)) -> list[dict]:
+    try:
+        return await layouts_service.list_layout_revisions(db, layout_id)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+# Registered before `/{layout_id}/revisions/{revision_number}` so "compare"
+# isn't swallowed as a (non-integer, 422-failing) revision_number path param.
+@router.get("/{layout_id}/revisions/compare", response_model=LayoutRevisionDiff)
+async def compare_layout_revisions(
+    layout_id: str,
+    from_ref: str = Query(alias="from", description="A revision number or 'current'."),
+    to_ref: str = Query(alias="to", description="A revision number or 'current'."),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    try:
+        return await layouts_service.compare_layout_revisions(db, layout_id, from_ref, to_ref)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.get("/{layout_id}/revisions/{revision_number}", response_model=LayoutRevisionOut)
+async def get_layout_revision(layout_id: str, revision_number: int, db: AsyncSession = Depends(get_db)) -> dict:
+    try:
+        return await layouts_service.get_layout_revision(db, layout_id, revision_number)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.post("/{layout_id}/revisions/{revision_number}/restore/preview", response_model=LayoutRestorePreview)
+async def preview_layout_restore(layout_id: str, revision_number: int, db: AsyncSession = Depends(get_db)) -> dict:
+    try:
+        return await layouts_service.preview_layout_restore(db, layout_id, revision_number)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.post("/{layout_id}/revisions/{revision_number}/restore", response_model=LayoutWithTablesOut)
+async def restore_layout_revision(
+    layout_id: str,
+    revision_number: int,
+    body: LayoutRestoreRequest,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    try:
+        return await layouts_service.restore_layout_revision(
+            db,
+            actor=actor,
+            layout_id=layout_id,
+            revision_number=revision_number,
+            resolve_allocations=body.resolve_allocations,
+            request_id=getattr(request.state, "request_id", None),
         )
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
