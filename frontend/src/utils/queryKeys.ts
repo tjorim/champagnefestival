@@ -72,11 +72,14 @@ export const queryKeys = {
     paymentTransactions: (registrationId: string) =>
       ["admin", "registrations", registrationId, "transactions"] as const,
     /** The edition/person ledger drill-down (#1019): the same filtered rows
-     * as the CSV export, viewed in-app. Paginated (#1032): `page` is part of
-     * the key so each page is cached and refetched independently. */
+     * as the CSV export, viewed in-app. Paginated and sortable (#1032):
+     * `page`/`sort`/`sortDir` are part of the key so each combination is
+     * cached and refetched independently. */
     paymentTransactionsLedger: (filters: {
       editionId?: string;
       personId?: string;
+      sort?: string;
+      sortDir?: string;
       page?: number;
     }) => ["admin", "registrations", "transactions", filters] as const,
     auditResourceTypes: ["admin", "audit", "resource-types"] as const,

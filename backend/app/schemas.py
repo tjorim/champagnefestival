@@ -617,6 +617,18 @@ class PaymentTransactionLedgerRow(PaymentTransactionOut):
     edition_label: str
 
 
+class PaymentTransactionLedgerEnvelope(BaseModel):
+    """Paginated response for the edition/person ledger drill-down (#1032),
+    mirroring ``RegistrationListEnvelope``: ``total`` counts every row
+    matching the current filters, not just this page.
+    """
+
+    items: list[PaymentTransactionLedgerRow]
+    total: int
+    limit: int
+    page: int
+
+
 class RegistrationListOut(BaseModel):
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)

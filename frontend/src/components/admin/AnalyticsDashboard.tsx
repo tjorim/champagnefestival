@@ -7,7 +7,8 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { type SortingState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
@@ -21,7 +22,7 @@ import {
 } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { devError } from "@/utils/devLog";
-import LedgerModal from "./LedgerModal";
+import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
 import "./analyticsDashboard.css";
 
 interface AnalyticsDashboardProps {
@@ -50,6 +51,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
   const [ledgerExportError, setLedgerExportError] = useState("");
   const [ledgerEdition, setLedgerEdition] = useState<{ id: string; label: string } | null>(null);
   const [ledgerPage, setLedgerPage] = useState(1);
+  const [ledgerSorting, setLedgerSorting] = useState<SortingState>([]);
 
   const handleExportLedger = useCallback(
     async (editionId: string) => {
@@ -69,17 +71,28 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
     [authHeaders],
   );
 
+  const ledgerActiveSort = ledgerSorting[0];
+  const ledgerBackendSort = ledgerActiveSort
+    ? LEDGER_SORT_KEY_BY_COLUMN[ledgerActiveSort.id]
+    : undefined;
+  const ledgerBackendSortDir: "asc" | "desc" = ledgerActiveSort?.desc ? "desc" : "asc";
+
   const editionLedgerQuery = useQuery({
     queryKey: queryKeys.admin.paymentTransactionsLedger({
       editionId: ledgerEdition?.id ?? "",
+      sort: ledgerBackendSort,
+      sortDir: ledgerBackendSort ? ledgerBackendSortDir : undefined,
       page: ledgerPage,
     }),
     queryFn: () =>
       fetchPaymentTransactionsLedger(authHeaders, {
         editionId: ledgerEdition!.id,
+        sort: ledgerBackendSort,
+        sortDir: ledgerBackendSort ? ledgerBackendSortDir : undefined,
         page: ledgerPage,
       }),
     enabled: ledgerEdition !== null,
+    placeholderData: keepPreviousData,
     staleTime: 30 * 1000,
     retry: false,
   });
@@ -187,6 +200,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                     className="py-0 px-1"
                     onClick={() => {
                       setLedgerPage(1);
+                      setLedgerSorting([]);
                       setLedgerEdition({
                         id: edition.editionId,
                         label: `${edition.year} ${edition.month}`,
@@ -369,11 +383,19 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         <LedgerModal
           show
           title={`${m.admin_ledger_modal_title()} — ${ledgerEdition.label}`}
-          rows={editionLedgerQuery.data ?? []}
+          transactions={editionLedgerQuery.data?.transactions ?? []}
+          total={editionLedgerQuery.data?.total ?? 0}
+          limit={editionLedgerQuery.data?.limit ?? LEDGER_PAGE_SIZE}
           loading={editionLedgerQuery.isPending}
+          isFetching={editionLedgerQuery.isFetching}
           error={editionLedgerQuery.isError}
           page={ledgerPage}
-          pageSize={LEDGER_PAGE_SIZE}
+          sorting={ledgerSorting}
+          onSortingChange={(updater) => {
+            const next = typeof updater === "function" ? updater(ledgerSorting) : updater;
+            setLedgerSorting(next);
+            setLedgerPage(1);
+          }}
           onPreviousPage={() => setLedgerPage((p) => Math.max(1, p - 1))}
           onNextPage={() => setLedgerPage((p) => p + 1)}
           onHide={() => setLedgerEdition(null)}

@@ -341,7 +341,9 @@ async def test_list_transactions_filters_by_edition_and_person_with_booking_cont
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200, r.text
-    rows = r.json()
+    body = r.json()
+    assert body["total"] == 1
+    rows = body["items"]
     assert [row["reference"] for row in rows] == ["OWN-REF"]
     row = rows[0]
     assert row["person_name"] == "Drilldown Person"
@@ -355,15 +357,15 @@ async def test_list_transactions_filters_by_edition_and_person_with_booking_cont
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200, r.text
-    assert r.json() == []
+    assert r.json()["items"] == []
+    assert r.json()["total"] == 0
 
 
 @pytest.mark.anyio
 async def test_list_transactions_paginates_with_page_and_limit(client):
-    """Bounded like ``audit.list_audit_entries`` (#1032): a ``limit`` slices
-    the (oldest-first) filtered set into stable pages via ``page``, and
-    appending a new entry doesn't shift rows already paged through, since
-    new rows land at the end of the ascending order rather than the front.
+    """Bounded and paginated like ``list_registrations`` (#1032): a ``limit``
+    slices the filtered set into pages via ``page``, and a real ``COUNT(*)``
+    backs ``total`` across every page, not just the one returned.
     """
     r = await client.post("/api/people", json={"name": "Paginated Person"}, headers=ADMIN_HEADERS)
     person_id = r.json()["id"]
@@ -386,7 +388,11 @@ async def test_list_transactions_paginates_with_page_and_limit(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200, r.text
-    assert [row["reference"] for row in r.json()] == ["PAGE-1", "PAGE-2"]
+    body = r.json()
+    assert body["total"] == 5
+    assert body["limit"] == 2
+    assert body["page"] == 1
+    assert [row["reference"] for row in body["items"]] == ["PAGE-1", "PAGE-2"]
 
     r = await client.get(
         "/api/registrations/transactions",
@@ -394,7 +400,7 @@ async def test_list_transactions_paginates_with_page_and_limit(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200, r.text
-    assert [row["reference"] for row in r.json()] == ["PAGE-3", "PAGE-4"]
+    assert [row["reference"] for row in r.json()["items"]] == ["PAGE-3", "PAGE-4"]
 
     r = await client.get(
         "/api/registrations/transactions",
@@ -402,7 +408,7 @@ async def test_list_transactions_paginates_with_page_and_limit(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200, r.text
-    assert [row["reference"] for row in r.json()] == ["PAGE-5"]
+    assert [row["reference"] for row in r.json()["items"]] == ["PAGE-5"]
 
     # No limit given: still bounded, defaulting to a page of 100 (#1032) —
     # well above these 5 rows, so the unfiltered call is unaffected.
@@ -412,7 +418,78 @@ async def test_list_transactions_paginates_with_page_and_limit(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200, r.text
-    assert len(r.json()) == 5
+    body = r.json()
+    assert len(body["items"]) == 5
+    assert body["total"] == 5
+    assert body["limit"] == 100
+
+
+@pytest.mark.anyio
+async def test_list_transactions_sorts_by_requested_column_and_direction(client):
+    """An admin can flip the default chronological order (#1032) — e.g. to
+    see the most recent activity first, or to rank by amount — instead of
+    being stuck with a single hardcoded order.
+    """
+    r = await client.post("/api/people", json={"name": "Sorted Person"}, headers=ADMIN_HEADERS)
+    person_id = r.json()["id"]
+    registration_id = await _registration(client, amount_due="100.00", person_id=person_id)
+    for day, amount in [(1, "30.00"), (2, "10.00"), (3, "20.00")]:
+        r = await client.post(
+            f"/api/registrations/{registration_id}/transactions",
+            json={
+                "amount": amount,
+                "effective_date": f"2026-06-0{day}",
+                "reference": f"SORT-{day}",
+            },
+            headers=ADMIN_HEADERS,
+        )
+        assert r.status_code == 201, r.text
+
+    # Default (no `sort`): chronological, oldest first.
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"person_id": person_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert [row["reference"] for row in r.json()["items"]] == ["SORT-1", "SORT-2", "SORT-3"]
+
+    # Newest first.
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"person_id": person_id, "sort": "effective_date", "sort_dir": "desc"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert [row["reference"] for row in r.json()["items"]] == ["SORT-3", "SORT-2", "SORT-1"]
+
+    # By amount, ascending and descending.
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"person_id": person_id, "sort": "amount", "sort_dir": "asc"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert [row["reference"] for row in r.json()["items"]] == ["SORT-2", "SORT-3", "SORT-1"]
+
+    r = await client.get(
+        "/api/registrations/transactions",
+        params={"person_id": person_id, "sort": "amount", "sort_dir": "desc"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    assert [row["reference"] for row in r.json()["items"]] == ["SORT-1", "SORT-3", "SORT-2"]
+
+    # The CSV export is unaffected by `sort` — it doesn't accept the param
+    # at all and always stays chronological (accounting convention).
+    r = await client.get(
+        "/api/registrations/transactions/export",
+        params={"person_id": person_id},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    rows = list(csv.reader(io.StringIO(r.text)))
+    assert [row[0] for row in rows[1:]] == ["SORT-1", "SORT-2", "SORT-3"]
 
 
 # ---------------------------------------------------------------------------

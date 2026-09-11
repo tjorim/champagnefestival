@@ -544,31 +544,72 @@ export async function downloadVolunteersCsv(
  * server's own default when a caller doesn't specify a limit. */
 export const LEDGER_PAGE_SIZE = 50;
 
+export type LedgerSortKey = "effective_date" | "amount";
+
 export interface PaymentTransactionsLedgerFilters {
   editionId?: string;
   personId?: string;
+  sort?: LedgerSortKey;
+  sortDir?: "asc" | "desc";
   limit?: number;
   page?: number;
 }
 
-/** List the payment ledger with booking context, filtered by edition and/or
- * person (#1019) — the in-app drill-down behind the edition/person payment
- * summaries. Bounded and paginated (#1032), mirroring ``fetchAuditEntries``. */
+export interface PaymentTransactionsLedgerPage {
+  transactions: LedgerTransaction[];
+  total: number;
+  limit: number;
+  page: number;
+}
+
+interface PaymentTransactionLedgerEnvelope {
+  items?: Record<string, unknown>[];
+  total?: number;
+  limit?: number;
+  page?: number;
+}
+
+/**
+ * Fetch one page of the payment ledger with booking context, filtered by
+ * edition and/or person (#1019) — the in-app drill-down behind the
+ * edition/person payment summaries. Bounded, paginated, and sortable
+ * (#1032), mirroring ``fetchRegistrationsPage``: a real ``total`` backs
+ * server-side paging instead of holding the full filtered set.
+ */
 export async function fetchPaymentTransactionsLedger(
   authHeaders: () => Record<string, string>,
   filters: PaymentTransactionsLedgerFilters,
-): Promise<LedgerTransaction[]> {
+): Promise<PaymentTransactionsLedgerPage> {
   const params = new URLSearchParams();
   if (filters.editionId) params.set("edition_id", filters.editionId);
   if (filters.personId) params.set("person_id", filters.personId);
+  if (filters.sort) params.set("sort", filters.sort);
+  if (filters.sortDir) params.set("sort_dir", filters.sortDir);
   params.set("limit", String(filters.limit ?? LEDGER_PAGE_SIZE));
   params.set("page", String(filters.page ?? 1));
-  return fetchArrayOrThrow(
+  const payload = await fetchJsonOrThrowWithUnauthorized<PaymentTransactionLedgerEnvelope>(
     `/api/registrations/transactions?${params.toString()}`,
     { headers: authHeaders() },
     m.admin_error_load_data(),
-    apiToLedgerTransaction,
   );
+  if (
+    !Array.isArray(payload.items) ||
+    typeof payload.total !== "number" ||
+    typeof payload.limit !== "number" ||
+    typeof payload.page !== "number"
+  ) {
+    // A bare array (the pre-#1032 shape) or any other malformed response must
+    // not be swallowed into an empty/zero-valued page — see fetchRegistrationsPage.
+    throw new Error(
+      "Invalid /api/registrations/transactions response: expected {items, total, limit, page}.",
+    );
+  }
+  return {
+    transactions: payload.items.map(apiToLedgerTransaction),
+    total: payload.total,
+    limit: payload.limit,
+    page: payload.page,
+  };
 }
 
 /** Export the payment ledger, filtered by edition and/or person (#1019). */

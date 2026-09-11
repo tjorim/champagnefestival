@@ -38,7 +38,7 @@ from app.models import Edition, Event, Person, Registration, ReservationAccessTo
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
     PaymentTransactionCreate,
-    PaymentTransactionLedgerRow,
+    PaymentTransactionLedgerEnvelope,
     PaymentTransactionOut,
     RegistrationAccessLookupRequest,
     RegistrationAdminCreate,
@@ -373,35 +373,52 @@ async def export_registrations_csv(
 
 @router.get(
     "/transactions",
-    response_model=list[PaymentTransactionLedgerRow],
+    response_model=PaymentTransactionLedgerEnvelope,
     dependencies=[Depends(require_admin)],
 )
 async def list_payment_transactions_filtered(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None, description="Filter by edition ID"),
     person_id: str | None = Query(default=None, description="Filter by person ID"),
+    sort: payments_service.LedgerSortKey | None = Query(
+        default=None,
+        description="Sort column; overrides the default chronological (effective date, then "
+        "recorded time) order. Applies across the whole filtered set, not just the current page.",
+    ),
+    sort_dir: Literal["asc", "desc"] = Query(default="asc", description="Sort direction, used only with `sort`"),
     pagination: Pagination = Depends(),
-) -> list[dict]:
+) -> dict:
     """List ledger entries with booking context, filtered by edition and/or
     person (#1019) — the in-app drill-down behind the edition/person payment
     summaries; ``/transactions/export`` covers the CSV download of the same
-    filtered set.
+    filtered set (always chronological, regardless of `sort`).
 
-    Bounded the same way ``audit.list_audit_entries`` is (#1032): defaults to
-    a page of 100 when the caller doesn't specify a limit. Unlike the audit
-    log this query orders oldest-first, so newly appended rows land after
-    whatever a client has already paged through rather than in front of it —
-    plain offset pagination stays stable across appends here, with no keyset
-    cursor needed.
+    Paginated and sortable (#1032), mirroring ``list_registrations``: a real
+    ``COUNT(*)`` backs `total` (cheap at this table's realistic scale — "low
+    thousands per year" per #1032, unlike the unbounded row fetch this
+    replaced), and `sort`/`sort_dir` let an admin pick newest-first (or by
+    amount) instead of the fixed oldest-first order a plain offset-paginated
+    list without a keyset cursor (see `build_ledger_query`) would otherwise
+    be stuck with.
     """
-    stmt = payments_service.build_ledger_query(edition_id=edition_id, person_id=person_id)
+    total = (
+        await db.execute(payments_service.count_ledger_entries(edition_id=edition_id, person_id=person_id))
+    ).scalar_one()
+
+    stmt = payments_service.build_ledger_query(edition_id=edition_id, person_id=person_id, sort=sort, sort_dir=sort_dir)
     effective_pagination = Pagination(page=pagination.page, limit=pagination.limit or 100)
     stmt = apply_pagination(stmt, effective_pagination)
     rows = (await db.execute(stmt)).all()
-    return [
+    items = [
         payments_service.ledger_row_to_dict(txn, registration, person, event)
         for txn, registration, person, event in rows
     ]
+    return {
+        "items": items,
+        "total": total,
+        "limit": effective_pagination.limit,
+        "page": effective_pagination.page,
+    }
 
 
 _LEDGER_CSV_BATCH_SIZE = 500

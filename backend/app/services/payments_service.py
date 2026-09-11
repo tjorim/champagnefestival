@@ -24,6 +24,7 @@ from __future__ import annotations
 
 from datetime import date as dt_date
 from decimal import Decimal
+from typing import Any, Literal
 
 from fastapi import HTTPException, status
 from sqlalchemy import Select, func, select
@@ -95,26 +96,74 @@ async def list_transactions(db: AsyncSession, registration_id: str) -> list[Paym
     return list(result.scalars().all())
 
 
+LedgerSortKey = Literal["effective_date", "amount"]
+_LEDGER_SORT_COLUMNS: dict[LedgerSortKey, Any] = {
+    "effective_date": PaymentTransaction.effective_date,
+    "amount": PaymentTransaction.amount,
+}
+
+
 def build_ledger_query(
     *,
     edition_id: str | None = None,
     person_id: str | None = None,
     effective_date_from: dt_date | None = None,
     effective_date_to: dt_date | None = None,
+    sort: LedgerSortKey | None = None,
+    sort_dir: Literal["asc", "desc"] = "asc",
 ) -> Select:
     """Shared filtered ledger query behind both the CSV export and the
     edition/person-level drill-down view (#1019): joins each transaction to
-    the booking/person/event it belongs to, oldest first."""
+    the booking/person/event it belongs to.
+
+    ``sort``/``sort_dir`` are for the in-app drill-down only (#1032) — the
+    CSV export never passes them, so it keeps the same fixed chronological
+    (oldest-first) order it always has, matching bank-statement/reconciliation
+    convention. A ``PaymentTransaction.id`` tiebreaker (mirroring
+    ``list_registrations``'s use of ``Registration.id``) keeps either order
+    stable across ties and across batched/paginated reads.
+    """
     stmt = (
         select(PaymentTransaction, Registration, Person, Event)
         .join(Registration, Registration.id == PaymentTransaction.registration_id)
         .join(Person, Person.id == Registration.person_id)
         .join(Event, Event.id == Registration.event_id)
         .options(selectinload(Event.edition))
-        .order_by(PaymentTransaction.effective_date, PaymentTransaction.recorded_at, PaymentTransaction.id)
     )
     if edition_id:
         stmt = stmt.where(Event.edition_id == edition_id)
+    if person_id:
+        stmt = stmt.where(Registration.person_id == person_id)
+    if effective_date_from:
+        stmt = stmt.where(PaymentTransaction.effective_date >= effective_date_from)
+    if effective_date_to:
+        stmt = stmt.where(PaymentTransaction.effective_date <= effective_date_to)
+
+    if sort is not None:
+        sort_column = _LEDGER_SORT_COLUMNS[sort]
+        order_expr = sort_column.desc() if sort_dir == "desc" else sort_column.asc()
+        stmt = stmt.order_by(order_expr, PaymentTransaction.id.desc())
+    else:
+        stmt = stmt.order_by(PaymentTransaction.effective_date, PaymentTransaction.recorded_at, PaymentTransaction.id)
+    return stmt
+
+
+def count_ledger_entries(
+    *,
+    edition_id: str | None = None,
+    person_id: str | None = None,
+    effective_date_from: dt_date | None = None,
+    effective_date_to: dt_date | None = None,
+) -> Select:
+    """Row count behind ``build_ledger_query``'s same filters (#1032), built
+    directly against ``PaymentTransaction``/``Registration``/``Event``
+    rather than reusing ``build_ledger_query``'s full ``Person``-joined,
+    ``selectinload``'d, ordered select — a count needs none of that."""
+    stmt = select(func.count()).select_from(PaymentTransaction)
+    if edition_id or person_id:
+        stmt = stmt.join(Registration, Registration.id == PaymentTransaction.registration_id)
+    if edition_id:
+        stmt = stmt.join(Event, Event.id == Registration.event_id).where(Event.edition_id == edition_id)
     if person_id:
         stmt = stmt.where(Registration.person_id == person_id)
     if effective_date_from:
