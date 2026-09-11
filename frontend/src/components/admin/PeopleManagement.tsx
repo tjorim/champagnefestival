@@ -4,7 +4,7 @@ import {
   type SortingState,
   type ColumnVisibilityState,
 } from "@tanstack/react-table";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -25,13 +25,14 @@ import {
   fetchPeopleSearch,
   downloadPaymentTransactionsCsv,
   fetchPaymentTransactionsLedger,
+  LEDGER_PAGE_SIZE,
 } from "@/utils/adminFetch";
 import { devError } from "@/utils/devLog";
 import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
 import { AdminTablePagination } from "./AdminTablePagination";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
-import LedgerModal from "./LedgerModal";
+import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
 import EmailComposeModal from "./EmailComposeModal";
@@ -106,6 +107,8 @@ export default function PeopleManagement({
   const [exportingLedger, setExportingLedger] = useState(false);
   const [ledgerExportError, setLedgerExportError] = useState("");
   const [showLedgerModal, setShowLedgerModal] = useState(false);
+  const [ledgerPage, setLedgerPage] = useState(1);
+  const [ledgerSorting, setLedgerSorting] = useState<SortingState>([]);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
@@ -242,13 +245,28 @@ export default function PeopleManagement({
   });
   const personPaymentSummary = personPaymentSummaryQuery.data ?? null;
 
+  const ledgerActiveSort = ledgerSorting[0];
+  const ledgerBackendSort = ledgerActiveSort
+    ? LEDGER_SORT_KEY_BY_COLUMN[ledgerActiveSort.id]
+    : undefined;
+  const ledgerBackendSortDir: "asc" | "desc" = ledgerActiveSort?.desc ? "desc" : "asc";
+
   const personLedgerQuery = useQuery({
     queryKey: queryKeys.admin.paymentTransactionsLedger({
       personId: viewRegistrationsPerson?.id ?? "",
+      sort: ledgerBackendSort,
+      sortDir: ledgerBackendSort ? ledgerBackendSortDir : undefined,
+      page: ledgerPage,
     }),
     queryFn: () =>
-      fetchPaymentTransactionsLedger(authHeaders, { personId: viewRegistrationsPerson!.id }),
+      fetchPaymentTransactionsLedger(authHeaders, {
+        personId: viewRegistrationsPerson!.id,
+        sort: ledgerBackendSort,
+        sortDir: ledgerBackendSort ? ledgerBackendSortDir : undefined,
+        page: ledgerPage,
+      }),
     enabled: showLedgerModal && viewRegistrationsPerson !== null,
+    placeholderData: keepPreviousData,
     staleTime: 30 * 1000,
     retry: false,
   });
@@ -970,7 +988,11 @@ export default function PeopleManagement({
                   variant="outline-secondary"
                   size="sm"
                   disabled={personRegistrations.length === 0}
-                  onClick={() => setShowLedgerModal(true)}
+                  onClick={() => {
+                    setLedgerPage(1);
+                    setLedgerSorting([]);
+                    setShowLedgerModal(true);
+                  }}
                   title={m.admin_payment_view_ledger()}
                 >
                   <i className="bi bi-journal-text me-1" aria-hidden="true" />
@@ -1003,10 +1025,22 @@ export default function PeopleManagement({
         <LedgerModal
           show={showLedgerModal}
           title={`${m.admin_ledger_modal_title()} — ${viewRegistrationsPerson.name}`}
-          rows={personLedgerQuery.data ?? []}
+          transactions={personLedgerQuery.data?.transactions ?? []}
+          total={personLedgerQuery.data?.total ?? 0}
+          limit={personLedgerQuery.data?.limit ?? LEDGER_PAGE_SIZE}
           loading={personLedgerQuery.isPending}
+          isFetching={personLedgerQuery.isFetching}
           error={personLedgerQuery.isError}
           showPerson={false}
+          page={ledgerPage}
+          sorting={ledgerSorting}
+          onSortingChange={(updater) => {
+            const next = typeof updater === "function" ? updater(ledgerSorting) : updater;
+            setLedgerSorting(next);
+            setLedgerPage(1);
+          }}
+          onPreviousPage={() => setLedgerPage((p) => Math.max(1, p - 1))}
+          onNextPage={() => setLedgerPage((p) => p + 1)}
           onHide={() => setShowLedgerModal(false)}
         />
       )}
