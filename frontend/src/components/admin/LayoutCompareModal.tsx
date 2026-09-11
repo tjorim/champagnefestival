@@ -179,6 +179,7 @@ export default function LayoutCompareModal({
         <Modal.Title>{m.admin_layout_compare_title()}</Modal.Title>
       </Modal.Header>
       <Modal.Body>
+        <p className="text-secondary small">{m.admin_layout_compare_scope_note()}</p>
         <div className="d-flex gap-3 flex-wrap mb-3">
           <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
             <Form.Label className="small text-secondary">
@@ -187,7 +188,7 @@ export default function LayoutCompareModal({
             <Form.Select value={baselineId} onChange={(e) => setBaselineId(e.target.value)}>
               {roomLayouts.map((layout) => (
                 <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout.eventId, dayOptions, layout.label)}
+                  {getDayLabel(layout, dayOptions)}
                 </option>
               ))}
             </Form.Select>
@@ -199,7 +200,7 @@ export default function LayoutCompareModal({
             <Form.Select value={currentId} onChange={(e) => setCurrentId(e.target.value)}>
               {roomLayouts.map((layout) => (
                 <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout.eventId, dayOptions, layout.label)}
+                  {getDayLabel(layout, dayOptions)}
                 </option>
               ))}
             </Form.Select>

@@ -22,11 +22,12 @@ import Nav from "react-bootstrap/Nav";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
 import type { TableAllocation } from "@/types/registration";
-import type { Room, FloorTable, FloorArea, TableType, Layout } from "@/types/admin";
+import type { Room, FloorTable, FloorArea, TableType, Layout, LayoutRevision } from "@/types/admin";
 import { getAreaSizePx, getCanvasSizePx, getTableSizePx } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
 import LayoutCompareModal from "./LayoutCompareModal";
+import LayoutRevisionsModal from "./LayoutRevisionsModal";
 import ConfirmModal from "@/components/ConfirmModal";
 
 // Preset icons available for floor areas — labels resolved at render time for i18n
@@ -71,12 +72,23 @@ function getInitialNewLayoutState(dayOptions: DayOption[]) {
 }
 
 export function getDayLabel(
-  eventId: string | null,
+  layout: { eventId: string | null; eventTitle?: string; date?: string | null; label?: string },
   dayOptions: DayOption[],
-  fallbackLabel = "",
 ): string {
-  if (!eventId) return fallbackLabel;
-  return dayOptions.find((day) => day.eventId === eventId)?.label ?? fallbackLabel;
+  const { eventId, eventTitle, date, label = "" } = layout;
+  if (eventId) {
+    const fromDayOptions = dayOptions.find((day) => day.eventId === eventId)?.label;
+    if (fromDayOptions) return fromDayOptions;
+  }
+  // The event isn't in the active edition's day options — most likely a
+  // layout from a different edition (e.g. "last year's breakfast" in the
+  // cross-date compare picker). Fall back to the layout's own event title
+  // rather than showing blank.
+  if (eventTitle) {
+    const formattedDate = date ? new Date(`${date}T00:00:00`).toLocaleDateString() : "";
+    return formattedDate ? `${eventTitle} — ${formattedDate}` : eventTitle;
+  }
+  return label;
 }
 
 interface ItemRef {
@@ -131,6 +143,13 @@ interface LayoutEditorProps {
   onUpdateTable: (tableId: string, name: string) => Promise<void>;
   onResizeArea: (areaId: string, widthM: number, lengthM: number) => Promise<void>;
   onSaveAllocations: (registrationId: string, allocations: TableAllocation[]) => Promise<void>;
+  authHeaders: () => Record<string, string>;
+  onSaveRevision: (layoutId: string, label: string, changeNote?: string) => Promise<LayoutRevision>;
+  onRestoreRevision: (
+    layoutId: string,
+    revisionNumber: number,
+    resolveAllocations?: boolean,
+  ) => Promise<void>;
 }
 
 // ---------------------------------------------------------------------------
@@ -557,10 +576,14 @@ export default function LayoutEditor({
   onUpdateTable,
   onResizeArea,
   onSaveAllocations,
+  authHeaders,
+  onSaveRevision,
+  onRestoreRevision,
 }: LayoutEditorProps) {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeLayoutId, setActiveLayoutId] = useState<string | null>(null);
   const [showCompareLayouts, setShowCompareLayouts] = useState(false);
+  const [showRevisions, setShowRevisions] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [layer, setLayer] = useState<"seating" | "areas">("seating");
@@ -776,8 +799,8 @@ export default function LayoutEditor({
     }
   };
   const activeLayoutDateLabel = useMemo(
-    () => getDayLabel(activeLayout?.eventId ?? null, dayOptions, activeLayout?.label ?? ""),
-    [activeLayout?.eventId, activeLayout?.label, dayOptions],
+    () => (activeLayout ? getDayLabel(activeLayout, dayOptions) : ""),
+    [activeLayout, dayOptions],
   );
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
   const roomLayouts = layouts
@@ -948,7 +971,7 @@ export default function LayoutEditor({
                           }}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                         >
-                          {getDayLabel(layout.eventId, dayOptions, layout.label)}
+                          {getDayLabel(layout, dayOptions)}
                         </Button>
                         <Button
                           size="sm"
@@ -991,6 +1014,17 @@ export default function LayoutEditor({
                       >
                         <i className="bi bi-arrow-left-right me-1" aria-hidden="true" />
                         {m.admin_layout_compare_title()}
+                      </Button>
+                    )}
+                    {activeLayoutId && (
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => setShowRevisions(true)}
+                        title={m.admin_layout_revisions_button()}
+                      >
+                        <i className="bi bi-clock-history me-1" aria-hidden="true" />
+                        {m.admin_layout_revisions_button()}
                       </Button>
                     )}
                   </div>
@@ -1626,7 +1660,7 @@ export default function LayoutEditor({
               <option value="">{m.admin_layout_copy_from_empty()}</option>
               {roomLayouts.map((layout) => (
                 <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout.eventId, dayOptions, layout.label)}
+                  {getDayLabel(layout, dayOptions)}
                 </option>
               ))}
             </Form.Select>
@@ -1893,6 +1927,16 @@ export default function LayoutEditor({
         tableTypes={tableTypes}
         dayOptions={dayOptions}
       />
+      {activeLayoutId && (
+        <LayoutRevisionsModal
+          show={showRevisions}
+          onHide={() => setShowRevisions(false)}
+          layoutId={activeLayoutId}
+          authHeaders={authHeaders}
+          onSaveRevision={onSaveRevision}
+          onRestoreRevision={onRestoreRevision}
+        />
+      )}
     </div>
   );
 }

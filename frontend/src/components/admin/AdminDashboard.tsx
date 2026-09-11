@@ -247,11 +247,13 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleMoveArea,
     handleMoveTable,
     handleResizeArea,
+    handleRestoreRevision,
     handleRestoreRoom,
     handleRestoreTableType,
     handleRestoreVenue,
     handleRotateArea,
     handleRotateTable,
+    handleSaveRevision,
     handleUpdateAreaLabel,
     handleUpdateRoom,
     handleUpdateTable,
@@ -572,6 +574,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     rooms={rooms}
                     exhibitors={exhibitors}
                     areas={areas}
+                    authHeaders={authHeaders}
                     onAddTable={handleAddTable}
                     onMoveTable={handleMoveTable}
                     onDeleteTable={handleDeleteTable}
@@ -588,6 +591,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onUpdateTable={handleUpdateTable}
                     onResizeArea={handleResizeArea}
                     onSaveAllocations={handleSaveAllocations}
+                    onSaveRevision={handleSaveRevision}
+                    onRestoreRevision={handleRestoreRevision}
                   />
                 )}
                 {canManageAdminSections && activeKey === "venues" && (

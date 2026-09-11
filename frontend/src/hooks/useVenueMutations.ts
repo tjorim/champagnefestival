@@ -5,6 +5,7 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { apiAreaToArea } from "@/utils/adminApiMappers";
+import { saveLayoutRevision, restoreLayoutRevision } from "@/utils/adminFetch";
 import { devError } from "@/utils/devLog";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { m } from "@/paraglide/messages";
@@ -401,6 +402,38 @@ export function useVenueMutations({
     retry: false,
   });
 
+  // Layout revisions (#1021): save is geometry-only and doesn't touch the
+  // live tables/areas caches, so it needs no invalidation. Restore does —
+  // it applies the snapshot back onto the layout's tables/areas.
+  const saveLayoutRevisionMutation = useMutation({
+    mutationFn: ({
+      layoutId,
+      label,
+      changeNote,
+    }: {
+      layoutId: string;
+      label: string;
+      changeNote?: string;
+    }) => saveLayoutRevision(authHeaders, layoutId, label, changeNote),
+    retry: false,
+  });
+
+  const restoreLayoutRevisionMutation = useMutation({
+    mutationFn: ({
+      layoutId,
+      revisionNumber,
+      resolveAllocations,
+    }: {
+      layoutId: string;
+      revisionNumber: number;
+      resolveAllocations?: boolean;
+    }) => restoreLayoutRevision(authHeaders, layoutId, revisionNumber, resolveAllocations),
+    onSettled: () => {
+      void invalidateAdmin(queryClient, [layoutsQueryKey, tablesQueryKey, areasQueryKey]);
+    },
+    retry: false,
+  });
+
   const createAreaMutation = useMutation({
     mutationFn: ({
       label,
@@ -681,6 +714,8 @@ export function useVenueMutations({
     updateRoomMutation,
     createLayoutMutation,
     deleteLayoutMutation,
+    saveLayoutRevisionMutation,
+    restoreLayoutRevisionMutation,
     createAreaMutation,
     updateAreaLabelMutation,
     resizeAreaMutation,

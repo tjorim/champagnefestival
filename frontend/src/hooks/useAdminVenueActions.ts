@@ -54,8 +54,10 @@ export function useAdminVenueActions({
     moveAreaMutation,
     moveTableMutation,
     resizeAreaMutation,
+    restoreLayoutRevisionMutation,
     rotateAreaMutation,
     rotateTableMutation,
+    saveLayoutRevisionMutation,
     updateAreaLabelMutation,
     updateRoomMutation,
     updateTableNameMutation,
@@ -319,6 +321,43 @@ export function useAdminVenueActions({
     [areasQueryKey, deleteLayoutMutation, layoutsQueryKey, queryClient, tablesQueryKey],
   );
 
+  // Layout revisions (#1021): save takes an immutable geometry snapshot;
+  // restore applies a saved snapshot back onto the layout's live tables/areas
+  // (never touching registrations/exhibitor assignments themselves — see
+  // preview_layout_restore/restore_layout_revision on the backend).
+  const handleSaveRevision = useCallback(
+    (layoutId: string, label: string, changeNote?: string) =>
+      saveLayoutRevisionMutation.mutateAsync({ layoutId, label, changeNote }),
+    [saveLayoutRevisionMutation],
+  );
+
+  const handleRestoreRevision = useCallback(
+    async (layoutId: string, revisionNumber: number, resolveAllocations?: boolean) => {
+      const data = await restoreLayoutRevisionMutation.mutateAsync({
+        layoutId,
+        revisionNumber,
+        resolveAllocations,
+      });
+      const restoredTables = data.tables as Record<string, unknown>[] | undefined;
+      const restoredAreas = data.areas as Record<string, unknown>[] | undefined;
+      if (Array.isArray(restoredTables)) {
+        const mapped = restoredTables.map(apiTableToTable);
+        queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) => [
+          ...(prev ?? []).filter((t) => t.layoutId !== layoutId),
+          ...mapped,
+        ]);
+      }
+      if (Array.isArray(restoredAreas)) {
+        const mapped = restoredAreas.map(apiAreaToArea);
+        queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) => [
+          ...(prev ?? []).filter((a) => a.layoutId !== layoutId),
+          ...mapped,
+        ]);
+      }
+    },
+    [areasQueryKey, queryClient, restoreLayoutRevisionMutation, tablesQueryKey],
+  );
+
   const handleAddArea = useCallback(
     async (
       label: string,
@@ -472,11 +511,13 @@ export function useAdminVenueActions({
     handleMoveArea,
     handleMoveTable,
     handleResizeArea,
+    handleRestoreRevision,
     handleRestoreRoom,
     handleRestoreTableType,
     handleRestoreVenue,
     handleRotateArea,
     handleRotateTable,
+    handleSaveRevision,
     handleUpdateAreaLabel,
     handleUpdateRoom,
     handleUpdateTable,

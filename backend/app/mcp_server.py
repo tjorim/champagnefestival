@@ -833,6 +833,64 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_layouts.delete_layout(self.session_factory, self._actor(), layout_id)
 
+    # -- Layout revisions (#1021) -----------------------------------------
+
+    async def save_layout_revision(self, layout_id: str, label: str, change_note: str | None = None) -> dict:
+        """Save an immutable, named snapshot of a layout's current tables and areas.
+
+        Requires the ``admin`` role. Allocations (registrations, exhibitor
+        assignments) are never captured — a revision is geometry only.
+        """
+        self._require_admin()
+        return await mcp_admin_layouts.save_layout_revision(
+            self.session_factory, self._actor(), layout_id, label=label, change_note=change_note
+        )
+
+    async def list_layout_revisions(self, layout_id: str) -> dict:
+        """List a layout's saved revisions, newest first. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_layouts.list_layout_revisions(self.session_factory, layout_id)
+
+    async def get_layout_revision(self, layout_id: str, revision_number: int) -> dict:
+        """Return one saved revision, including its geometry snapshot. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_layouts.get_layout_revision(self.session_factory, layout_id, revision_number)
+
+    async def compare_layout_revisions(self, layout_id: str, from_ref: str, to_ref: str) -> dict:
+        """Compare two snapshots of one layout, matched by stable table/area id.
+
+        Requires the ``admin`` role. ``from_ref``/``to_ref`` are each either a
+        revision number (as a string) or the literal ``"current"`` for the
+        live draft arrangement.
+        """
+        self._require_admin()
+        return await mcp_admin_layouts.compare_layout_revisions(self.session_factory, layout_id, from_ref, to_ref)
+
+    async def preview_layout_restore(self, layout_id: str, revision_number: int) -> dict:
+        """Preview what restoring a revision would change, including any live
+        allocations it would delete or move. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_layouts.preview_layout_restore(self.session_factory, layout_id, revision_number)
+
+    async def restore_layout_revision(
+        self, layout_id: str, revision_number: int, resolve_allocations: bool = False
+    ) -> dict:
+        """Apply a saved revision's snapshot back onto the layout's tables and areas.
+
+        Requires the ``admin`` role. Refuses (see ``preview_layout_restore``)
+        when the restore would delete or move a table/area with a live
+        registration or exhibitor assignment, unless ``resolve_allocations`` is
+        set. Never modifies registrations or exhibitor assignments itself.
+        """
+        self._require_admin()
+        return await mcp_admin_layouts.restore_layout_revision(
+            self.session_factory,
+            self._actor(),
+            layout_id,
+            revision_number,
+            resolve_allocations=resolve_allocations,
+        )
+
     # -- Areas -----------------------------------------------------------
 
     async def create_area(
@@ -1992,6 +2050,12 @@ def create_mcp_server(
     register_tool(backend.list_layouts)
     register_tool(backend.get_layout)
     register_tool(backend.delete_layout)
+    register_tool(backend.save_layout_revision)
+    register_tool(backend.list_layout_revisions)
+    register_tool(backend.get_layout_revision)
+    register_tool(backend.compare_layout_revisions)
+    register_tool(backend.preview_layout_restore)
+    register_tool(backend.restore_layout_revision)
     register_tool(backend.create_area)
     register_tool(backend.list_areas)
     register_tool(backend.get_area)

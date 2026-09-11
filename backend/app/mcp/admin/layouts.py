@@ -11,7 +11,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.mcp.utils import MCPToolError, validate_with_schema
-from app.schemas import LayoutBulkCreate, LayoutCopyCreate, LayoutCreate
+from app.schemas import LayoutBulkCreate, LayoutCopyCreate, LayoutCreate, LayoutRevisionSaveRequest
 from app.services import layouts_service
 from app.services.errors import ServiceError
 
@@ -104,5 +104,74 @@ async def delete_layout(session_factory: Any, actor: str, layout_id: str) -> dic
     async with session_factory() as db:
         try:
             return await layouts_service.delete_layout(db, actor=actor, layout_id=layout_id)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def save_layout_revision(
+    session_factory: Any,
+    actor: str,
+    layout_id: str,
+    *,
+    label: str,
+    change_note: str | None = None,
+) -> dict:
+    body = validate_with_schema(LayoutRevisionSaveRequest, label=label, change_note=change_note)
+    async with session_factory() as db:
+        try:
+            return await layouts_service.save_layout_revision(db, actor=actor, layout_id=layout_id, body=body)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def list_layout_revisions(session_factory: Any, layout_id: str) -> dict:
+    async with session_factory() as db:
+        try:
+            return {"revisions": await layouts_service.list_layout_revisions(db, layout_id)}
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def get_layout_revision(session_factory: Any, layout_id: str, revision_number: int) -> dict:
+    async with session_factory() as db:
+        try:
+            return await layouts_service.get_layout_revision(db, layout_id, revision_number)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def compare_layout_revisions(session_factory: Any, layout_id: str, from_ref: str, to_ref: str) -> dict:
+    async with session_factory() as db:
+        try:
+            return await layouts_service.compare_layout_revisions(db, layout_id, from_ref, to_ref)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def preview_layout_restore(session_factory: Any, layout_id: str, revision_number: int) -> dict:
+    async with session_factory() as db:
+        try:
+            return await layouts_service.preview_layout_restore(db, layout_id, revision_number)
+        except ServiceError as exc:
+            raise MCPToolError(str(exc)) from exc
+
+
+async def restore_layout_revision(
+    session_factory: Any,
+    actor: str,
+    layout_id: str,
+    revision_number: int,
+    *,
+    resolve_allocations: bool = False,
+) -> dict:
+    async with session_factory() as db:
+        try:
+            return await layouts_service.restore_layout_revision(
+                db,
+                actor=actor,
+                layout_id=layout_id,
+                revision_number=revision_number,
+                resolve_allocations=resolve_allocations,
+            )
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc

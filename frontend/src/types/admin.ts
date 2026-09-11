@@ -53,6 +53,10 @@ export interface FloorArea {
 export interface Layout {
   id: string;
   eventId: string;
+  /** The event's own title, independent of which edition is currently active —
+   * lets a layout from a past edition still show a meaningful label (e.g. in
+   * the cross-date compare picker) instead of falling back to blank. */
+  eventTitle: string;
   editionId: string | null;
   /** Room this layout applies to */
   roomId: string;
@@ -115,6 +119,115 @@ export interface AuditEntry {
   resourceId: string;
   requestId: string | null;
   details: Record<string, unknown>;
+}
+
+/** One table's stable identity and geometry, captured at save-revision time
+ * (or read live for the "current" side of a compare/restore preview). `id`
+ * is the source FloorTable.id — the stable identity compare/restore match
+ * on, never the mutable `name` (#1021). */
+export interface LayoutRevisionSnapshotTable {
+  id: string;
+  name: string;
+  x: number;
+  y: number;
+  rotation: number;
+  tableTypeId: string;
+  tableTypeName: string;
+  capacity: number;
+  widthM: number;
+  lengthM: number;
+}
+
+/** One area's stable identity and geometry — same contract as
+ * LayoutRevisionSnapshotTable. Deliberately excludes exhibitorId: exhibitor
+ * assignments are live operational data, never part of a revision. */
+export interface LayoutRevisionSnapshotArea {
+  id: string;
+  label: string;
+  icon: string;
+  x: number;
+  y: number;
+  rotation: number;
+  widthM: number;
+  lengthM: number;
+}
+
+export interface LayoutRevisionSnapshot {
+  tables: LayoutRevisionSnapshotTable[];
+  areas: LayoutRevisionSnapshotArea[];
+  room: { widthM: number; lengthM: number };
+}
+
+/** An immutable, named geometry snapshot of one event-room plan (#1021). */
+export interface LayoutRevision {
+  id: string;
+  layoutId: string;
+  revisionNumber: number;
+  label: string;
+  changeNote: string | null;
+  createdBy: string;
+  createdAt: string;
+  snapshot: LayoutRevisionSnapshot;
+}
+
+export interface LayoutRevisionFieldChange {
+  field: string;
+  before: unknown;
+  after: unknown;
+}
+
+export interface LayoutRevisionTableChange {
+  id: string;
+  before: LayoutRevisionSnapshotTable;
+  after: LayoutRevisionSnapshotTable;
+  changes: LayoutRevisionFieldChange[];
+}
+
+export interface LayoutRevisionAreaChange {
+  id: string;
+  before: LayoutRevisionSnapshotArea;
+  after: LayoutRevisionSnapshotArea;
+  changes: LayoutRevisionFieldChange[];
+}
+
+/** Result of comparing two snapshots of one layout — a revision or the live
+ * "current" draft — matched by stable table/area id, never by name/label. */
+export interface LayoutRevisionDiff {
+  layoutId: string;
+  fromRef: string;
+  toRef: string;
+  addedTables: LayoutRevisionSnapshotTable[];
+  removedTables: LayoutRevisionSnapshotTable[];
+  changedTables: LayoutRevisionTableChange[];
+  addedAreas: LayoutRevisionSnapshotArea[];
+  removedAreas: LayoutRevisionSnapshotArea[];
+  changedAreas: LayoutRevisionAreaChange[];
+}
+
+/** One live allocation a restore would silently orphan by deleting or moving
+ * its table, or deleting an exhibitor-assigned area. Restoring never touches
+ * the registration/exhibitor assignment itself — this only flags the
+ * conflict so the caller can make a deliberate resolveAllocations call. */
+export interface LayoutRestoreAllocationConflict {
+  kind: "table" | "area";
+  id: string;
+  name: string;
+  reason: "deleted" | "moved";
+  registrationIds: string[];
+  exhibitorId: number | null;
+}
+
+export interface LayoutRestorePreview {
+  layoutId: string;
+  revisionNumber: number;
+  tablesToAdd: LayoutRevisionSnapshotTable[];
+  tablesToUpdate: LayoutRevisionTableChange[];
+  tablesToRemove: LayoutRevisionSnapshotTable[];
+  areasToAdd: LayoutRevisionSnapshotArea[];
+  areasToUpdate: LayoutRevisionAreaChange[];
+  areasToRemove: LayoutRevisionSnapshotArea[];
+  allocationConflicts: LayoutRestoreAllocationConflict[];
+  hasConflicts: boolean;
 }
 
 /**

@@ -532,8 +532,30 @@ def upgrade() -> None:
     op.execute("UPDATE products SET required = false WHERE required AND NOT purchasable")
     op.create_check_constraint("ck_products_required_implies_purchasable", "products", "NOT required OR purchasable")
 
+    # #1021: immutable named geometry snapshots of a Layout. Mirrors the
+    # policy_versions numbering pattern above — revision_number increases per
+    # layout_id under a row lock on the parent layout, and a row here is
+    # never mutated or deleted once written.
+    op.create_table(
+        "layout_revisions",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("layout_id", sa.String(64), sa.ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("revision_number", sa.Integer(), nullable=False),
+        sa.Column("label", sa.String(200), nullable=False, server_default=""),
+        sa.Column("change_note", sa.Text(), nullable=True),
+        sa.Column("created_by", sa.String(255), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("snapshot", sa.JSON(), nullable=False),
+    )
+    op.create_index("ix_layout_revisions_layout_id", "layout_revisions", ["layout_id"])
+    op.create_unique_constraint("uq_layout_revisions_number", "layout_revisions", ["layout_id", "revision_number"])
+
 
 def downgrade() -> None:
+    op.drop_constraint("uq_layout_revisions_number", "layout_revisions", type_="unique")
+    op.drop_index("ix_layout_revisions_layout_id", table_name="layout_revisions")
+    op.drop_table("layout_revisions")
+
     # #1020: exact inverse of the rename above. The `required` backfill is
     # not reversed — it only cleared a combination that was already inert
     # pre-upgrade, so there is nothing to restore.
