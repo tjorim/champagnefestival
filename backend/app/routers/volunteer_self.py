@@ -19,7 +19,11 @@ from app.auth import get_actor_id, require_volunteer
 from app.database import get_db
 from app.dependencies import get_request_id
 from app.models import Person
-from app.ratelimit import check_volunteer_identity_claim_rate_limit, get_client_ip
+from app.ratelimit import (
+    check_volunteer_eid_correction_rate_limit,
+    check_volunteer_identity_claim_rate_limit,
+    get_client_ip,
+)
 from app.schemas import RequestModel
 from app.services import volunteer_self_service
 
@@ -70,6 +74,7 @@ async def get_my_volunteer_identity(
 @router.post("/claim", response_model=VolunteerIdentityOut)
 async def claim_my_volunteer_identity(
     body: VolunteerIdentityClaimRequest,
+    request: Request,
     subject: str = Depends(get_actor_id),
     db: AsyncSession = Depends(get_db),
     request_id: str | None = Depends(get_request_id),
@@ -89,6 +94,7 @@ async def claim_my_volunteer_identity(
         db,
         subject=subject,
         national_register_number=body.national_register_number,
+        client_ip=get_client_ip(request),
         actor=subject,
         request_id=request_id,
     )
@@ -108,6 +114,16 @@ async def request_eid_correction(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Your account isn't linked to a volunteer record yet.",
+        )
+    # Commit the bucket increment before the write itself, same ordering as
+    # the claim endpoint above, so a rejected request is still durably
+    # counted rather than rolling back with the uncommitted transaction.
+    allowed = await check_volunteer_eid_correction_rate_limit(db, subject)
+    await db.commit()
+    if not allowed:
+        raise HTTPException(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            detail="Too many requests. Please try again later.",
         )
     await volunteer_self_service.submit_eid_correction_request(
         db,

@@ -264,9 +264,11 @@ def volunteer_client_as(db_session):
         app.dependency_overrides[require_admin] = reject_admin
         app.dependency_overrides[get_actor_id] = lambda: subject
         transport = ASGITransport(app=app)
-        async with AsyncClient(transport=transport, base_url="http://test") as c:
-            yield c
-        app.dependency_overrides.clear()
+        try:
+            async with AsyncClient(transport=transport, base_url="http://test") as c:
+                yield c
+        finally:
+            app.dependency_overrides.clear()
 
     return _make
 

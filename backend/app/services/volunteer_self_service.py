@@ -17,7 +17,7 @@ docs/decisions/1006-volunteer-identity-self-service.md.
 
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import HTTPException
 from sqlalchemy import select, update
@@ -42,6 +42,7 @@ async def claim_volunteer_identity(
     *,
     subject: str,
     national_register_number: str,
+    client_ip: str,
     actor: str,
     request_id: str | None = None,
 ) -> Person:
@@ -53,6 +54,15 @@ async def claim_volunteer_identity(
     that is currently unlinked (``oidc_subject IS NULL``), so a concurrent
     claim of the same record from two different subjects can only let one of
     them win — the loser gets 404, as if the record had never matched.
+
+    Knowing a volunteer's NISS is what this claim requires — the per-subject
+    rate limit only slows guessing, it doesn't prove ownership (#1037
+    review). Rather than gating every claim on an admin or a verified
+    channel volunteers may not have (no email on file — see the module
+    docstring), a successful claim also raises an admin-visible
+    ``ContactMessage`` notification, so a wrongful claim is *noticed*
+    quickly rather than silently going undetected — an admin can reverse it
+    via ``VolunteerUpdate.oidc_subject=None``.
     """
     already_linked = await get_linked_volunteer(db, subject)
     normalised = normalise_optional_identity(national_register_number)
@@ -97,6 +107,27 @@ async def claim_volunteer_identity(
         request_id=request_id,
         details={},
     )
+    person = (await db.execute(select(Person).where(Person.id == person_id))).scalar_one()
+    notification_id = str(uuid4())
+    await db.execute(
+        insert(ContactMessage).values(
+            id=notification_id,
+            name=person.name,
+            email=person.email,
+            message=(
+                "Volunteer identity self-linked\n"
+                f"Person: {person.name} (ID {person.id})\n"
+                "A volunteer just linked their own sign-in to this record via "
+                "self-service (POST /api/me/volunteer/claim), by submitting the "
+                "matching national register number.\n\n"
+                "If this doesn't look right, clear the link (set oidc_subject to "
+                "null on this volunteer) and follow up with them directly."
+            ),
+            client_ip=client_ip,
+            request_id=request_id,
+        )
+    )
+    await enqueue_contact_notification(db, notification_id, actor=actor, request_id=request_id)
     try:
         await db.commit()
     except IntegrityError as exc:
@@ -106,7 +137,6 @@ async def claim_volunteer_identity(
             detail="Your account is already linked to a volunteer record.",
         ) from exc
 
-    person = (await db.execute(select(Person).where(Person.id == person_id))).scalar_one()
     return person
 
 
@@ -131,6 +161,14 @@ async def submit_eid_correction_request(
     ``ON CONFLICT DO NOTHING``) and an outbox notification is enqueued in the
     same transaction so an admin sees it and applies the change themselves
     through the existing ``PUT /api/volunteers/{id}``.
+
+    Unlike a plain client-generated-ID replay, the frontend keeps the same
+    ``submission_id`` across a failed attempt even if the volunteer edits the
+    form before retrying (it only rotates the id on success) — so a reused id
+    with a *different* payload is a distinct correction, not a replay, and
+    must not be silently swallowed by ``ON CONFLICT DO NOTHING`` (#1037
+    review). Raises 409 in that case; the client must submit a fresh
+    ``submission_id``.
     """
     new_eid = normalise_optional_identity(new_eid_document_number)
     message_text = (
@@ -154,6 +192,13 @@ async def submit_eid_correction_request(
         .on_conflict_do_nothing(index_elements=[ContactMessage.id])
         .returning(ContactMessage.id)
     )
+    if inserted is None:
+        existing = await db.get(ContactMessage, message_id)
+        if existing is not None and existing.message != message_text:
+            raise HTTPException(
+                status_code=409,
+                detail="This request was already submitted with different details. Please try again.",
+            )
     if inserted is not None:
         # Intentionally omits the actual eID values — audit details are not a
         # place to duplicate PII already captured in the ContactMessage above

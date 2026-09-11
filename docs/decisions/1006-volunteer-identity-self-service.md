@@ -10,7 +10,7 @@
 
 ## Context
 
-#1006 identified two gaps: `Person.eid_document_number` goes stale on eID
+Issue #1006 identified two gaps: `Person.eid_document_number` goes stale on eID
 card renewal with nothing to notice or correct it, and volunteers have no
 way to view or correct their own NISS/eID — only an admin editing the
 record on their behalf can. The issue deliberately stopped short of a
@@ -27,13 +27,13 @@ existing naming from #953), set via `POST /api/me/volunteer/claim` where the
 volunteer submits their own NISS and it's matched against an *unlinked*
 `Person` with the `volunteer` role.**
 
-#1006's own proposed scope suggested "matching on the OIDC subject/email at
+Issue #1006's own proposed scope suggested "matching on the OIDC subject/email at
 first login, or an admin-assigned link." Email doesn't work as the matching
 key here: `VolunteerCreate`/`VolunteerUpdate` (the dedicated
 `POST /api/volunteers` admin flow) have no `email` field at all — a
 volunteer's `Person.email` is `""` unless they happened to be created
 through the generic `/api/people` endpoint instead. Matching on OIDC subject
-alone is circular (the subject is exactly what's being linked). NISS is the
+alone is circular (the subject is what's being linked). NISS is the
 one identifier a volunteer already has and already gave the festival at
 sign-up, so a self-claim endpoint where the volunteer submits it is the only
 reliable match key that doesn't depend on optional data.
@@ -55,6 +55,23 @@ admin hand-link a volunteer who can't self-claim (e.g. no NISS on file yet)
 or clear a mistaken link (explicit `null`), covering #1006's "or an
 admin-assigned link" alternative for the cases self-claim can't reach.
 
+**Known residual risk, accepted rather than closed (raised in #1037's
+review):** knowing a volunteer's NISS is what this claim requires — the
+per-subject rate limit slows guessing, it does not prove the caller *is*
+that volunteer. Requiring administrator approval or a one-time code over a
+verified channel for every claim was considered and declined: volunteers
+created via `POST /api/volunteers` have no email on file (see above), so a
+verified-channel OTP isn't reliably available, and gating every first
+sign-in on an admin reintroduces exactly the friction self-service was
+meant to remove — at that point admin-assigned linking (already available)
+is the whole mechanism, and NISS self-claim adds nothing. Instead, a
+successful claim raises an admin-visible `ContactMessage`/outbox
+notification (see `claim_volunteer_identity`), so a wrongful claim is
+*noticed* promptly — an admin can clear it via `VolunteerUpdate.oidc_subject
+= null` — rather than accepted as an acceptable but silent outcome. This
+is a detection control, not a prevention control; if abuse in practice
+proves this insufficient, tightening to admin-gated claims is the fallback.
+
 ## Decision 2 — a correction is admin-reviewed, not a direct write
 
 **Chosen: `POST /api/me/volunteer/eid-correction` never writes
@@ -66,7 +83,7 @@ change/cancellation-request pattern. An admin reviews it in the existing
 contact inbox and applies the change themselves through
 `PUT /api/volunteers/{id}`.**
 
-#1006 called this out explicitly: `eid_document_number` backs an insurance
+Issue #1006 called this out explicitly: `eid_document_number` backs an insurance
 claim referencing a specific physical document, so a volunteer's own
 unverified assertion that "my card was renewed" shouldn't silently become
 the record of truth. Reusing the booking-change-request mechanism (rather
@@ -113,13 +130,23 @@ narrower scope would add complexity without a matching security need.
 3. `POST /api/me/volunteer/claim`, `GET /api/me/volunteer`,
    `POST /api/me/volunteer/eid-correction` — new router
    `app.routers.volunteer_self`.
-4. `app.ratelimit.check_volunteer_identity_claim_rate_limit`.
-5. Admin `VolunteerUpdate.oidc_subject` (REST and MCP `update_volunteer`),
-   surfaced on `VolunteerOut`.
+4. `app.ratelimit.check_volunteer_identity_claim_rate_limit` and
+   `check_volunteer_eid_correction_rate_limit` (the latter added in #1037's
+   review — a client-generated `submission_id` only dedupes a replay of the
+   same id, not repeated new ones).
+5. Admin `VolunteerUpdate.oidc_subject` (REST and MCP `update_volunteer`,
+   the latter also gaining an explicit `clear_oidc_subject` flag since MCP
+   drops omitted-vs-null distinction — #1037 review), surfaced on
+   `VolunteerOut`.
 6. `docs/retry-safety.md` entries for the claim and correction-request
    writes and their outbox enqueue.
 7. Frontend: `/my-eid` self-service page (direct-link-only, same pattern as
    `/me`), reachable only by a volunteer signed in via OIDC.
+8. From #1037's review: an admin-visible notification on every successful
+   claim (see Decision 1's residual-risk note); a 409 instead of a silently
+   dropped update when an eID-correction `submission_id` is reused with a
+   different payload; `volunteer_client_as`'s dependency overrides now clear
+   in a `finally` block so a raising test can't leak state into the next one.
 
 ## References
 

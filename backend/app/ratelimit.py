@@ -30,6 +30,8 @@ _PUSH_SUBSCRIPTION_MAX_REQUESTS = 20
 _PUSH_SUBSCRIPTION_WINDOW_SECONDS = 600
 _VOLUNTEER_IDENTITY_CLAIM_MAX_REQUESTS = 5
 _VOLUNTEER_IDENTITY_CLAIM_WINDOW_SECONDS = 600
+_VOLUNTEER_EID_CORRECTION_MAX_REQUESTS = 5
+_VOLUNTEER_EID_CORRECTION_WINDOW_SECONDS = 600
 _RATE_LIMIT_BUCKET_CAP = 10_000
 _rate_limit_buckets: dict[tuple[str, str], collections.deque[datetime]] = {}
 
@@ -226,6 +228,27 @@ async def check_volunteer_identity_claim_rate_limit(db: AsyncSession, subject: s
         scope="volunteer-identity-claim",
         max_requests=_VOLUNTEER_IDENTITY_CLAIM_MAX_REQUESTS,
         window_seconds=_VOLUNTEER_IDENTITY_CLAIM_WINDOW_SECONDS,
+    )
+
+
+async def check_volunteer_eid_correction_rate_limit(db: AsyncSession, subject: str) -> bool:
+    """Limit eID correction requests per OIDC subject (#1006, #1037 review).
+
+    Each request uses a client-generated ``submission_id``, so a linked
+    volunteer's session could otherwise create an unbounded number of
+    distinct ``ContactMessage``/outbox-notification pairs by submitting a
+    fresh id each time — the per-submission idempotency dedupes a *replay*
+    of the same id, not repeated *new* ones. Postgres-backed (see module
+    docstring) so the limit holds across worker processes. A genuine eID
+    renewal happens at most once every several years, so this is generous
+    for legitimate use.
+    """
+    return await check_rate_limit_pg(
+        db,
+        subject,
+        scope="volunteer-eid-correction",
+        max_requests=_VOLUNTEER_EID_CORRECTION_MAX_REQUESTS,
+        window_seconds=_VOLUNTEER_EID_CORRECTION_WINDOW_SECONDS,
     )
 
 

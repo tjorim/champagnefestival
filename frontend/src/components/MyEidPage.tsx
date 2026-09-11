@@ -54,19 +54,26 @@ export default function MyEidPage() {
     mutationFn: () => getMyVolunteerIdentity(getAccessToken() ?? ""),
     retry: false,
   });
-  const loadedIdentity = useRef(false);
-  useEffect(() => {
-    if (!isAuthenticated || loadedIdentity.current) return;
-    loadedIdentity.current = true;
-    identityMutation.mutate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
 
   const claimMutation = useMutation({
     mutationFn: (niss: string) => claimMyVolunteerIdentity(getAccessToken() ?? "", niss),
     retry: false,
     onSuccess: () => setNationalRegisterNumber(""),
   });
+
+  // getAccessToken is only a new reference when the underlying OIDC user
+  // object changes (login, silent renewal, or a different account), so this
+  // re-runs exactly on those transitions rather than once on mount — a
+  // loaded-once ref would otherwise keep showing a previous account's
+  // NISS/eID after the OIDC user changes underneath this still-mounted page
+  // (#1037 review).
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    identityMutation.reset();
+    claimMutation.reset();
+    identityMutation.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, getAccessToken]);
 
   const correctionMutation = useMutation({
     mutationFn: () =>

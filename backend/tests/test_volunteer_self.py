@@ -70,6 +70,35 @@ async def test_claim_links_matching_volunteer_by_niss(client, volunteer_client_a
 
 
 @pytest.mark.anyio
+async def test_claim_raises_an_admin_visible_notification(client, volunteer_client_as, db_session):
+    """A successful claim can't be verified as the true owner (#1037 review) — an
+    admin notification is the detection control that makes a wrongful claim noticeable."""
+    volunteer = await _create_volunteer(client)
+
+    async with volunteer_client_as("subject-a") as vclient:
+        r = await vclient.post(
+            "/api/me/volunteer/claim", json={"national_register_number": volunteer["national_register_number"]}
+        )
+        assert r.status_code == 200
+
+    notifications = (
+        await db_session.scalars(
+            select(ContactMessage).where(ContactMessage.message.contains("Volunteer identity self-linked"))
+        )
+    ).all()
+    assert len(notifications) == 1
+    assert volunteer["id"] in notifications[0].message
+
+    jobs = (
+        await db_session.scalars(
+            select(OutboxJob).where(OutboxJob.deduplication_key == f"contact-notification:{notifications[0].id}")
+        )
+    ).all()
+    assert len(jobs) == 1
+    assert jobs[0].job_type == CONTACT_NOTIFICATION
+
+
+@pytest.mark.anyio
 async def test_claim_retry_with_same_subject_and_niss_is_idempotent(client, volunteer_client_as):
     volunteer = await _create_volunteer(client)
 
@@ -195,6 +224,62 @@ async def test_eid_correction_creates_contact_message_and_is_idempotent(client, 
     ).all()
     assert len(jobs) == 1
     assert jobs[0].job_type == CONTACT_NOTIFICATION
+
+
+@pytest.mark.anyio
+async def test_eid_correction_reused_submission_id_with_different_payload_is_409(
+    client, volunteer_client_as, db_session
+):
+    """The frontend keeps submission_id fixed across a failed attempt even if the
+    volunteer edits the form before retrying, so a reused id with different content
+    is a distinct correction, not a replay — it must not be silently dropped (#1037 review)."""
+    volunteer = await _create_volunteer(client)
+    submission_id = "1b1b1b1b-2c2c-3d3d-4e4e-5f5f5f5f5f5f"
+
+    async with volunteer_client_as("subject-a") as vclient:
+        claim = await vclient.post(
+            "/api/me/volunteer/claim", json={"national_register_number": volunteer["national_register_number"]}
+        )
+        assert claim.status_code == 200
+
+        first = await vclient.post(
+            "/api/me/volunteer/eid-correction",
+            json={"submission_id": submission_id, "new_eid_document_number": "BEX111111", "note": "First try."},
+        )
+        assert first.status_code == 202
+
+        mismatched = await vclient.post(
+            "/api/me/volunteer/eid-correction",
+            json={"submission_id": submission_id, "new_eid_document_number": "BEX222222", "note": "Edited try."},
+        )
+        assert mismatched.status_code == 409
+
+    stored = await db_session.get(ContactMessage, submission_id)
+    assert "BEX111111" in stored.message
+    assert "BEX222222" not in stored.message
+
+
+@pytest.mark.anyio
+async def test_eid_correction_is_rate_limited_per_subject(client, volunteer_client_as):
+    volunteer = await _create_volunteer(client)
+
+    async with volunteer_client_as("subject-rl") as vclient:
+        claim = await vclient.post(
+            "/api/me/volunteer/claim", json={"national_register_number": volunteer["national_register_number"]}
+        )
+        assert claim.status_code == 200
+
+        for i in range(5):
+            r = await vclient.post(
+                "/api/me/volunteer/eid-correction",
+                json={"submission_id": f"2b2b2b2b-3c3c-4d4d-5e5e-6f6f6f6f6f6{i}", "new_eid_document_number": "BEX1"},
+            )
+            assert r.status_code == 202
+        limited = await vclient.post(
+            "/api/me/volunteer/eid-correction",
+            json={"submission_id": "2b2b2b2b-3c3c-4d4d-5e5e-6f6f6f6f6fff", "new_eid_document_number": "BEX1"},
+        )
+        assert limited.status_code == 429
 
 
 @pytest.mark.anyio
