@@ -859,10 +859,11 @@ class Person(Base):
 
     oidc_subject: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     """The `sub` claim of the OIDC-authenticated volunteer this Person record
-    is linked to, if any — established by the volunteer themselves (matching
-    their own NISS against an unlinked volunteer-role record on first use of
-    `/api/me/volunteer`) or set directly by an admin. Unlike `Person.roles`,
-    this is independent of the OIDC `volunteer`/`admin` realm role used by
+    is linked to, if any — established by the volunteer themselves via
+    `POST /api/me/volunteer/register` (which creates this Person row from
+    their submitted name/NISS/eID, or links to a pre-existing unlinked exact
+    match) or set directly by an admin. Unlike `Person.roles`, this is
+    independent of the OIDC `volunteer`/`admin` realm role used by
     `require_volunteer` for event-day access — it identifies *which* Person a
     token belongs to, not *whether* the token may act as a volunteer. See
     docs/decisions/1006-volunteer-identity-self-service.md."""
