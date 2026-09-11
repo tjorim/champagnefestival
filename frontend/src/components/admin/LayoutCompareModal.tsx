@@ -188,7 +188,7 @@ export default function LayoutCompareModal({
             <Form.Select value={baselineId} onChange={(e) => setBaselineId(e.target.value)}>
               {roomLayouts.map((layout) => (
                 <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout.eventId, dayOptions, layout.label)}
+                  {getDayLabel(layout, dayOptions)}
                 </option>
               ))}
             </Form.Select>
@@ -200,7 +200,7 @@ export default function LayoutCompareModal({
             <Form.Select value={currentId} onChange={(e) => setCurrentId(e.target.value)}>
               {roomLayouts.map((layout) => (
                 <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout.eventId, dayOptions, layout.label)}
+                  {getDayLabel(layout, dayOptions)}
                 </option>
               ))}
             </Form.Select>

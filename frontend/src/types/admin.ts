@@ -53,6 +53,10 @@ export interface FloorArea {
 export interface Layout {
   id: string;
   eventId: string;
+  /** The event's own title, independent of which edition is currently active —
+   * lets a layout from a past edition still show a meaningful label (e.g. in
+   * the cross-date compare picker) instead of falling back to blank. */
+  eventTitle: string;
   editionId: string | null;
   /** Room this layout applies to */
   roomId: string;

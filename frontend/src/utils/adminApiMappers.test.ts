@@ -291,6 +291,7 @@ describe("apiLayoutToLayout", () => {
   const full = {
     id: "ly2",
     event_id: "event-2",
+    event_title: "Breakfast tasting",
     edition_id: "ed1",
     room_id: "r2",
     date: "2025-06-01",
@@ -302,6 +303,7 @@ describe("apiLayoutToLayout", () => {
     expect(apiLayoutToLayout(full)).toEqual<Layout>({
       id: "ly2",
       eventId: "event-2",
+      eventTitle: "Breakfast tasting",
       editionId: "ed1",
       roomId: "r2",
       date: "2025-06-01",
@@ -336,6 +338,10 @@ describe("apiLayoutToLayout", () => {
 
   it("defaults label to empty string when absent", () => {
     expect(apiLayoutToLayout(minimal).label).toBe("");
+  });
+
+  it("defaults eventTitle to empty string when absent", () => {
+    expect(apiLayoutToLayout(minimal).eventTitle).toBe("");
   });
 
   it("maps edition_id to editionId", () => {

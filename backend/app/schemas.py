@@ -979,6 +979,7 @@ class LayoutCopyCreate(LayoutCreate):
 
 class LayoutOut(BaseModel):
     event_id: str
+    event_title: str
     id: str
     edition_id: str | None
     room_id: str

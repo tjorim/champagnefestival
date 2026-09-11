@@ -400,6 +400,7 @@ def table_type_to_dict(tt: TableType) -> dict:
 def layout_to_dict(lay: Layout, date: date | None = None) -> dict:
     return {
         "event_id": lay.event_id,
+        "event_title": lay.event.title,
         "id": lay.id,
         "edition_id": lay.edition_id,
         "room_id": lay.room_id,

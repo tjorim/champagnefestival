@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import LayoutEditor from "@/components/admin/LayoutEditor";
+import LayoutEditor, { getDayLabel } from "@/components/admin/LayoutEditor";
 import type { FloorArea, FloorTable, Layout, Room, TableType } from "@/types/admin";
 import type { Registration } from "@/types/registration";
 
@@ -66,6 +66,7 @@ function makeLayout(overrides: Partial<Layout> = {}): Layout {
   return {
     id: "layout-1",
     eventId: "event-1",
+    eventTitle: "Saturday",
     editionId: "edition-1",
     roomId: "room-1",
     date: "2026-08-01",
@@ -224,6 +225,35 @@ function realisticFixture(): Required<
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe("getDayLabel", () => {
+  const dayOptions = [{ eventId: "event-1", date: "2026-08-01", label: "Saturday — 08:00" }];
+
+  it("prefers the active edition's day-option label when the event is found", () => {
+    expect(getDayLabel(makeLayout({ eventId: "event-1" }), dayOptions)).toBe("Saturday — 08:00");
+  });
+
+  it("falls back to the layout's own event title and date when the event belongs to a different edition", () => {
+    const lastYear = makeLayout({
+      eventId: "event-old",
+      eventTitle: "Breakfast tasting",
+      date: "2025-08-01",
+    });
+    expect(getDayLabel(lastYear, dayOptions)).toBe(
+      `Breakfast tasting — ${new Date("2025-08-01T00:00:00").toLocaleDateString()}`,
+    );
+  });
+
+  it("falls back to the layout's own label when neither the day option nor an event title is available", () => {
+    const noTitle = makeLayout({
+      eventId: "event-old",
+      eventTitle: "",
+      date: null,
+      label: "pre-event",
+    });
+    expect(getDayLabel(noTitle, dayOptions)).toBe("pre-event");
+  });
+});
 
 describe("LayoutEditor", () => {
   afterEach(() => {

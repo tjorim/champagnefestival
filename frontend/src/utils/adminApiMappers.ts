@@ -103,6 +103,7 @@ export function apiFaqItemToFaqItem(d: Record<string, unknown>): FaqItem {
 export function apiLayoutToLayout(d: Record<string, unknown>): Layout {
   return {
     eventId: d.event_id as string,
+    eventTitle: (d.event_title ?? "") as string,
     id: d.id as string,
     editionId: (d.edition_id as string | null) ?? null,
     roomId: d.room_id as string,

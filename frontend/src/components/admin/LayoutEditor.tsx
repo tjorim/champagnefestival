@@ -72,12 +72,23 @@ function getInitialNewLayoutState(dayOptions: DayOption[]) {
 }
 
 export function getDayLabel(
-  eventId: string | null,
+  layout: { eventId: string | null; eventTitle?: string; date?: string | null; label?: string },
   dayOptions: DayOption[],
-  fallbackLabel = "",
 ): string {
-  if (!eventId) return fallbackLabel;
-  return dayOptions.find((day) => day.eventId === eventId)?.label ?? fallbackLabel;
+  const { eventId, eventTitle, date, label = "" } = layout;
+  if (eventId) {
+    const fromDayOptions = dayOptions.find((day) => day.eventId === eventId)?.label;
+    if (fromDayOptions) return fromDayOptions;
+  }
+  // The event isn't in the active edition's day options — most likely a
+  // layout from a different edition (e.g. "last year's breakfast" in the
+  // cross-date compare picker). Fall back to the layout's own event title
+  // rather than showing blank.
+  if (eventTitle) {
+    const formattedDate = date ? new Date(`${date}T00:00:00`).toLocaleDateString() : "";
+    return formattedDate ? `${eventTitle} — ${formattedDate}` : eventTitle;
+  }
+  return label;
 }
 
 interface ItemRef {
@@ -788,8 +799,8 @@ export default function LayoutEditor({
     }
   };
   const activeLayoutDateLabel = useMemo(
-    () => getDayLabel(activeLayout?.eventId ?? null, dayOptions, activeLayout?.label ?? ""),
-    [activeLayout?.eventId, activeLayout?.label, dayOptions],
+    () => (activeLayout ? getDayLabel(activeLayout, dayOptions) : ""),
+    [activeLayout, dayOptions],
   );
   const activeRoom = rooms.find((r) => r.id === (activeLayout?.roomId ?? activeRoomId));
   const roomLayouts = layouts
@@ -960,7 +971,7 @@ export default function LayoutEditor({
                           }}
                           style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                         >
-                          {getDayLabel(layout.eventId, dayOptions, layout.label)}
+                          {getDayLabel(layout, dayOptions)}
                         </Button>
                         <Button
                           size="sm"
@@ -1649,7 +1660,7 @@ export default function LayoutEditor({
               <option value="">{m.admin_layout_copy_from_empty()}</option>
               {roomLayouts.map((layout) => (
                 <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout.eventId, dayOptions, layout.label)}
+                  {getDayLabel(layout, dayOptions)}
                 </option>
               ))}
             </Form.Select>
