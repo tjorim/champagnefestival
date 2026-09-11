@@ -49,19 +49,19 @@ _BULK_SCOPE = "layouts.bulk_create"
 # (see _diff_objects). Geometry/type fields also decide whether a restore
 # would "move" a table for allocation-conflict purposes — see
 # _GEOMETRY_TABLE_FIELDS below.
-_TABLE_DIFF_FIELDS = (
-    "name",
-    "x",
-    "y",
-    "rotation",
-    "table_type_id",
-    "table_type_name",
-    "capacity",
-    "width_m",
-    "length_m",
-)
+#
+# Deliberately excludes table_type_name/capacity/width_m/length_m: those are
+# derived from the referenced TableType row, not owned by Table itself, and
+# restore only ever writes Table.table_type_id (never mutates a shared
+# TableType). Comparing the derived fields directly would report a "changed"
+# table whenever someone edits a TableType's own attributes elsewhere — a
+# difference restore can't actually fix — instead of only real per-table
+# changes. table_type_id alone still surfaces a type/capacity change, since
+# capacity/dimensions follow the type.
+_TABLE_DIFF_FIELDS = ("name", "x", "y", "rotation", "table_type_id")
 _AREA_DIFF_FIELDS = ("label", "icon", "x", "y", "rotation", "width_m", "length_m")
 _GEOMETRY_TABLE_FIELDS = frozenset({"x", "y", "rotation", "table_type_id"})
+_GEOMETRY_AREA_FIELDS = frozenset({"x", "y", "rotation", "width_m", "length_m"})
 
 # Mirror the rendering constants from frontend/src/utils/layoutUtils.ts so that
 # the backend containment check matches the frontend's hit-testing exactly.
@@ -709,6 +709,7 @@ async def _allocation_conflicts(
     tables_to_remove: list[dict],
     tables_to_update: list[dict],
     areas_to_remove: list[dict],
+    areas_to_update: list[dict],
 ) -> list[dict]:
     """Live allocations a restore would silently orphan: a table being deleted
     or having its geometry/type changed, or an area being deleted, while still
@@ -745,18 +746,28 @@ async def _allocation_conflicts(
                 }
             )
 
-    removed_area_ids = [a["id"] for a in areas_to_remove]
-    if removed_area_ids:
+    removed_area_ids = {a["id"] for a in areas_to_remove}
+    moved_area_ids = {
+        a["id"] for a in areas_to_update if any(c["field"] in _GEOMETRY_AREA_FIELDS for c in a["changes"])
+    }
+    at_risk_area_ids = removed_area_ids | moved_area_ids
+    if at_risk_area_ids:
         rows = (
             await db.execute(
                 select(Area.id, Area.exhibitor_id, Area.label).where(
-                    Area.id.in_(removed_area_ids), Area.exhibitor_id.isnot(None)
+                    Area.id.in_(at_risk_area_ids), Area.exhibitor_id.isnot(None)
                 )
             )
         ).all()
         for area_id, exhibitor_id, label in rows:
             conflicts.append(
-                {"kind": "area", "id": area_id, "name": label, "reason": "deleted", "exhibitor_id": exhibitor_id}
+                {
+                    "kind": "area",
+                    "id": area_id,
+                    "name": label,
+                    "reason": "deleted" if area_id in removed_area_ids else "moved",
+                    "exhibitor_id": exhibitor_id,
+                }
             )
     return conflicts
 
@@ -777,6 +788,7 @@ async def _build_restore_plan(db: AsyncSession, layout: Layout, revision: Layout
         tables_to_remove=tables_to_remove,
         tables_to_update=tables_to_update,
         areas_to_remove=areas_to_remove,
+        areas_to_update=areas_to_update,
     )
     return {
         "layout_id": layout.id,
@@ -831,13 +843,14 @@ async def restore_layout_revision(
                 f"Cannot restore: table type(s) {sorted(missing_type_ids)} referenced by this revision no longer exist."
             )
 
-    plan = await _build_restore_plan(db, layout, revision)
-    if plan["allocation_conflicts"] and not resolve_allocations:
-        raise ConflictError(
-            "Restoring this revision would delete or move table(s)/area(s) with live "
-            "allocations. Pass resolve_allocations=true to restore anyway."
-        )
-
+    # Lock every current table/area for this layout *before* computing the
+    # restore plan below. A concurrent write to one of these rows (a new
+    # table allocation — see allocations_service.validate_allocations's own
+    # explicit lock — or a plain UPDATE from areas_service assigning an
+    # exhibitor) contends for the same Postgres row lock either way, so
+    # acquiring it first guarantees the conflict check and the mutations
+    # further down see one consistent, serialized state — nothing can commit
+    # a new allocation between "we decided this is safe" and "we changed it".
     current_tables = {
         t.id: t
         for t in (await db.execute(select(Table).where(Table.layout_id == layout_id).with_for_update())).scalars().all()
@@ -846,6 +859,14 @@ async def restore_layout_revision(
         a.id: a
         for a in (await db.execute(select(Area).where(Area.layout_id == layout_id).with_for_update())).scalars().all()
     }
+
+    plan = await _build_restore_plan(db, layout, revision)
+    if plan["allocation_conflicts"] and not resolve_allocations:
+        raise ConflictError(
+            "Restoring this revision would delete or move table(s)/area(s) with live "
+            "allocations. Pass resolve_allocations=true to restore anyway."
+        )
+
     snapshot_table_ids = {t["id"] for t in snapshot["tables"]}
     snapshot_area_ids = {a["id"] for a in snapshot["areas"]}
 

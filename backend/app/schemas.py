@@ -1307,6 +1307,13 @@ class LayoutRevisionSaveRequest(RequestModel):
     label: str = Field(min_length=1, max_length=200)
     change_note: str | None = Field(default=None, max_length=2000)
 
+    @field_validator("label", mode="before")
+    @classmethod
+    def strip_label(cls, value: str) -> str:
+        # Stripped before min_length is enforced so a whitespace-only label
+        # (e.g. "   ") is rejected rather than silently persisted as "".
+        return value.strip() if isinstance(value, str) else value
+
 
 class LayoutRevisionFieldChange(BaseModel):
     field: str

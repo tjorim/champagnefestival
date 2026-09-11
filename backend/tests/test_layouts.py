@@ -465,6 +465,38 @@ async def test_save_layout_revision_404_unknown_layout(client):
 
 
 @pytest.mark.anyio
+async def test_save_layout_revision_rejects_whitespace_only_label(client):
+    _, _, layout_id, _ = await _seed_layout(client)
+    r = await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "   "}, headers=ADMIN_HEADERS)
+    assert r.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_deleting_a_layout_with_a_saved_revision_cascades(client, db_session):
+    """A LayoutRevision references its Layout with a NOT NULL, ON DELETE
+    CASCADE foreign key (see the migration). Layout.revisions must be mapped
+    with passive_deletes so SQLAlchemy defers to that DB-level cascade
+    instead of trying to null out the non-nullable layout_id column first."""
+    _, _, layout_id, _ = await _seed_layout(client)
+    r = await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "v1"}, headers=ADMIN_HEADERS)
+    assert r.status_code == 201, r.text
+    revision_id = r.json()["id"]
+
+    r = await client.delete(f"/api/layouts/{layout_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 204, r.text
+
+    from app.models import LayoutRevision
+
+    # A plain select (rather than db.get, which would happily return the
+    # stale identity-mapped object from the earlier POST without a DB
+    # round-trip) confirms the DB-level ON DELETE CASCADE actually ran.
+    remaining = (
+        await db_session.execute(select(LayoutRevision.id).where(LayoutRevision.id == revision_id))
+    ).scalar_one_or_none()
+    assert remaining is None
+
+
+@pytest.mark.anyio
 async def test_list_layout_revisions_orders_newest_first(client):
     _, _, layout_id, _ = await _seed_layout(client)
     for label in ("first", "second"):
@@ -669,6 +701,58 @@ async def test_restore_blocked_by_allocation_conflict_then_resolved(client, db_s
     assert reg_check.status_code == 200, reg_check.text
     assert reg_check.json()["status"] != "cancelled"
     assert reg_check.json()["allocations"] == []
+
+
+@pytest.mark.anyio
+async def test_restore_blocked_by_moving_an_exhibitor_assigned_area(client):
+    """An assigned area (live Area.exhibitor_id) that a restore would move —
+    not just delete — must also require resolve_allocations, mirroring how a
+    table that would only move (not be deleted) still needs the override."""
+    _, _, layout_id, _ = await _seed_layout(client)
+    r = await client.post("/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
+    exhibitor_id = r.json()["id"]
+    r = await client.post(
+        "/api/areas",
+        json={"layout_id": layout_id, "label": "Zone A", "exhibitor_id": exhibitor_id, "x": 10.0, "y": 10.0},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    area_id = r.json()["id"]
+
+    assert (
+        await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "v1"}, headers=ADMIN_HEADERS)
+    ).status_code == 201
+
+    r = await client.put(f"/api/areas/{area_id}", json={"x": 90.0}, headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+
+    r = await client.post(f"/api/layouts/{layout_id}/revisions/1/restore/preview", headers=ADMIN_HEADERS)
+    assert r.status_code == 200, r.text
+    preview = r.json()
+    assert preview["has_conflicts"] is True
+    assert preview["allocation_conflicts"] == [
+        {
+            "kind": "area",
+            "id": area_id,
+            "name": "Zone A",
+            "reason": "moved",
+            "registration_ids": [],
+            "exhibitor_id": exhibitor_id,
+        }
+    ]
+
+    r = await client.post(f"/api/layouts/{layout_id}/revisions/1/restore", json={}, headers=ADMIN_HEADERS)
+    assert r.status_code == 409, r.text
+
+    r = await client.post(
+        f"/api/layouts/{layout_id}/revisions/1/restore",
+        json={"resolve_allocations": True},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 200, r.text
+    restored_area = next(a for a in r.json()["areas"] if a["id"] == area_id)
+    assert restored_area["x"] == 10.0
+    assert restored_area["exhibitor_id"] == exhibitor_id
 
 
 @pytest.mark.anyio

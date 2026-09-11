@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -182,6 +182,11 @@ export default function LayoutRevisionsModal({
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
 
+  // Guards against a stale response overwriting a newer one when the
+  // selected refs change faster than the network round-trip: only the most
+  // recently issued compare request is allowed to apply its result.
+  const compareRequestRef = useRef(0);
+
   const loadRevisions = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
@@ -206,6 +211,11 @@ export default function LayoutRevisionsModal({
     setResolveAllocations(false);
     setRestoreError(null);
     void loadRevisions();
+    // Invalidate any compare request still in flight from a previous time
+    // this modal was open, so it can never overwrite the fresh state above.
+    return () => {
+      compareRequestRef.current += 1;
+    };
   }, [show, loadRevisions]);
 
   const revisionOptions = useMemo(
@@ -231,15 +241,19 @@ export default function LayoutRevisionsModal({
 
   const runCompare = useCallback(
     async (fromRef: string, toRef: string) => {
+      const requestId = ++compareRequestRef.current;
       setDiffLoading(true);
       setDiffError(null);
       try {
-        setDiff(await compareLayoutRevisions(authHeaders, layoutId, fromRef, toRef));
+        const result = await compareLayoutRevisions(authHeaders, layoutId, fromRef, toRef);
+        if (compareRequestRef.current !== requestId) return;
+        setDiff(result);
       } catch (error) {
+        if (compareRequestRef.current !== requestId) return;
         setDiffError(error instanceof Error ? error.message : String(error));
         setDiff(null);
       } finally {
-        setDiffLoading(false);
+        if (compareRequestRef.current === requestId) setDiffLoading(false);
       }
     },
     [authHeaders, layoutId],
@@ -248,6 +262,7 @@ export default function LayoutRevisionsModal({
   useEffect(() => {
     if (!show || revisions.length === 0) return;
     if (compareFrom === compareTo) {
+      compareRequestRef.current += 1;
       setDiff(null);
       return;
     }

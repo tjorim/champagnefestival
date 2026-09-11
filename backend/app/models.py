@@ -484,7 +484,14 @@ class Layout(Base):
     room: Mapped[Room] = relationship()
     tables: Mapped[list[Table]] = relationship(order_by="Table.created_at, Table.id")
     areas: Mapped[list[Area]] = relationship(order_by="Area.created_at, Area.id")
-    revisions: Mapped[list[LayoutRevision]] = relationship(order_by="LayoutRevision.revision_number")
+    # passive_deletes="all": layout_revisions.layout_id is NOT NULL with
+    # ON DELETE CASCADE at the DB level (see the migration). Without this,
+    # SQLAlchemy's default delete handling would try to load every revision
+    # and null out its layout_id before issuing the DELETE, which fails
+    # against a NOT NULL column — defer entirely to the DB's own cascade.
+    revisions: Mapped[list[LayoutRevision]] = relationship(
+        order_by="LayoutRevision.revision_number", passive_deletes="all"
+    )
 
 
 class TableType(Base):
