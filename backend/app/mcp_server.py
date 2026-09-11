@@ -1678,11 +1678,11 @@ class ChampagneFestivalMcpBackend:
         Passing ``help_periods`` replaces the full set of help periods.
         ``oidc_subject`` is the self-service identity link (#1006) — normally
         established by the volunteer themselves; set it here only to hand-link
-        a volunteer who can't self-claim (no NISS on file yet). Since an
-        omitted MCP parameter is indistinguishable from an explicit ``null``,
-        pass ``clear_oidc_subject=True`` to unlink a mistaken claim instead of
-        passing ``oidc_subject=None`` (which does nothing). Requires the
-        ``admin`` role.
+        a volunteer who can't or won't complete self-registration themselves.
+        Since an omitted MCP parameter is indistinguishable from an explicit
+        ``null``, pass ``clear_oidc_subject=True`` to unlink a mistaken
+        registration instead of passing ``oidc_subject=None`` (which does
+        nothing). Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_volunteers.update_volunteer(

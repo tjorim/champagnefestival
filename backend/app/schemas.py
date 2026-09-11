@@ -802,9 +802,9 @@ class VolunteerUpdate(RequestModel):
     help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
     oidc_subject: str | None = Field(default=None, max_length=255)
     """Admin-only override for the self-service identity link (#1006) — e.g.
-    to unlink a mistaken claim (explicit ``null``) or hand-link a volunteer
-    who cannot self-claim (no NISS on file yet). Normally established by the
-    volunteer themselves via ``POST /api/me/volunteer/claim``."""
+    to unlink a mistaken registration (explicit ``null``) or hand-link a
+    volunteer who can't or won't complete self-registration themselves.
+    Normally established by the volunteer via ``POST /api/me/volunteer/register``."""
 
     @field_validator("name", "national_register_number", "eid_document_number", "oidc_subject", mode="before")
     @classmethod

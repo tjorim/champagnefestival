@@ -20,57 +20,65 @@ form today), whether a correction should be a direct write or
 admin-reviewed, and whether this needs its own auth scope or can sit behind
 the existing `require_volunteer` dependency.
 
-## Decision 1 — link by volunteer-submitted NISS, not by OIDC subject/email at first login
+## Decision 1 — self-registration with checksum-validated identifiers, not matching against a pre-entered record
 
 **Chosen: `Person.oidc_subject` (nullable, unique, mirrors `User.oidc_subject`'s
-existing naming from #953), set via `POST /api/me/volunteer/claim` where the
-volunteer submits their own NISS and it's matched against an *unlinked*
-`Person` with the `volunteer` role.**
+existing naming from #953), set via `POST /api/me/volunteer/register` where
+the volunteer submits their own name, NISS, and eID document number and this
+*creates their own `Person` row* (role `volunteer`) — there is no
+pre-existing admin-entered record to match against.**
 
-Issue #1006's own proposed scope suggested "matching on the OIDC subject/email at
-first login, or an admin-assigned link." Email doesn't work as the matching
-key here: `VolunteerCreate`/`VolunteerUpdate` (the dedicated
-`POST /api/volunteers` admin flow) have no `email` field at all — a
-volunteer's `Person.email` is `""` unless they happened to be created
-through the generic `/api/people` endpoint instead. Matching on OIDC subject
-alone is circular (the subject is what's being linked). NISS is the
-one identifier a volunteer already has and already gave the festival at
-sign-up, so a self-claim endpoint where the volunteer submits it is the only
-reliable match key that doesn't depend on optional data.
+This supersedes an earlier version of this decision (see git history) that
+had the volunteer submit only their NISS to claim a *pre-existing*,
+admin-entered `Person` row. That design required an admin to have already
+bulk-created the record (name, NISS, eID, help periods) before the volunteer
+could ever self-serve — real work duplicated between admin and volunteer —
+and, because matching accepted any syntactically-plausible NISS, a session
+that merely *knew* another volunteer's NISS could claim their record. #1037's
+review flagged that gap (CWE-639, IDOR) and the fix considered at the time
+(admin approval or a verified-channel one-time code for every claim) was
+rejected as reintroducing the exact admin friction self-service was meant to
+remove.
 
-The claim is a plain `UPDATE ... WHERE national_register_number = :nrr AND
-roles_contains('volunteer') AND oidc_subject IS NULL`: convergent (a retry
-with the same NISS from the same already-linked subject just confirms the
-existing link) and race-safe (only one of two concurrent claims for the same
-NISS can win; the loser gets 404, as if it had never matched, rather than
-silently overwriting the winner's link). Rate-limited per subject
-(`app.ratelimit.check_volunteer_identity_claim_rate_limit`, 5/10 min) since
-an authenticated volunteer session could otherwise use unlimited guesses to
-brute-force someone else's NISS against unlinked records — the same
-posture as the check-in/push-subscription Postgres-backed limiters, not a
-public unauthenticated surface.
+The actual precondition for self-service was never "does a matching record
+exist" — it's "has an admin granted this OIDC account the `volunteer` realm
+role," which `require_volunteer` already checks on every request to this
+router. Once that's true, there is nothing left to verify by matching: the
+volunteer can simply provide their own identity data directly, the same way
+any other self-reported form field is trusted. What closes the IDOR gap
+instead of just mitigating it is validating that data locally rather than
+searching for it:
 
-**Also added: an admin override.** `VolunteerUpdate.oidc_subject` lets an
-admin hand-link a volunteer who can't self-claim (e.g. no NISS on file yet)
-or clear a mistaken link (explicit `null`), covering #1006's "or an
-admin-assigned link" alternative for the cases self-claim can't reach.
+- **Both the NISS and the eID document number are self-checking modulo-97
+  numbers** (`app.services.identity_checksum`). A submission that doesn't
+  pass its checksum is rejected (422) before anything is written — this
+  catches typos the same way matching used to, without needing a database
+  lookup to do it, and confirms the volunteer's submission is *a* valid
+  identity number even though it can't confirm whose.
+- There is no "brute-force someone else's NISS" attack surface anymore: an
+  attacker who doesn't already know a real, checksum-valid NISS/eID pair
+  gains nothing by trying (they'd just be registering an unrelated but
+  syntactically valid number, which is indistinguishable from a legitimate
+  new volunteer to the system), and an attacker who *does* already know a
+  real pair already had that PII independent of this feature. The
+  rate-limiter and admin-notification-on-claim mitigations from the earlier
+  design existed specifically to blunt a guessing attack that this design no
+  longer has, so both were removed rather than kept as unnecessary
+  complexity.
+- **A pre-existing admin-imported record is still respected, not
+  duplicated:** if a `Person` with the exact submitted NISS *and* eID
+  already exists (e.g. an admin bulk-imported historical volunteers before
+  this feature existed) and isn't linked to anyone yet, registration links
+  to it instead of creating a second row — preserving its help-period
+  history. A *partial* match (one field matching a different, unrelated
+  person) or a match already linked to someone else 409s rather than
+  guessing which record is "right."
 
-**Known residual risk, accepted rather than closed (raised in #1037's
-review):** knowing a volunteer's NISS is what this claim requires — the
-per-subject rate limit slows guessing, it does not prove the caller *is*
-that volunteer. Requiring administrator approval or a one-time code over a
-verified channel for every claim was considered and declined: volunteers
-created via `POST /api/volunteers` have no email on file (see above), so a
-verified-channel OTP isn't reliably available, and gating every first
-sign-in on an admin reintroduces exactly the friction self-service was
-meant to remove — at that point admin-assigned linking (already available)
-is the whole mechanism, and NISS self-claim adds nothing. Instead, a
-successful claim raises an admin-visible `ContactMessage`/outbox
-notification (see `claim_volunteer_identity`), so a wrongful claim is
-*noticed* promptly — an admin can clear it via `VolunteerUpdate.oidc_subject
-= null` — rather than accepted as an acceptable but silent outcome. This
-is a detection control, not a prevention control; if abuse in practice
-proves this insufficient, tightening to admin-gated claims is the fallback.
+**Also kept: an admin override.** `VolunteerUpdate.oidc_subject` still lets
+an admin hand-link a volunteer who can't or won't complete self-registration
+(e.g. an edge-case identity number this checksum can't handle) or clear a
+mistaken link (explicit `null`) — covering #1006's "admin-assigned link"
+alternative for the cases self-registration can't reach.
 
 ## Decision 2 — a correction is admin-reviewed, not a direct write
 
@@ -110,9 +118,9 @@ narrower scope would add complexity without a matching security need.
 
 ## What this does not do
 
-- No bulk/admin-facing "linking dashboard" — an admin resolves a stuck claim
-  (no NISS on file, ambiguous data) by editing the volunteer record directly,
-  same as any other admin correction.
+- No bulk/admin-facing "linking dashboard" — an admin resolves a stuck
+  registration (an edge-case identity number, a partial-match conflict) by
+  editing the volunteer record directly, same as any other admin correction.
 - No re-verification prompt or expiry on `eid_document_number` — it remains,
   as `934-data-retention-and-erasure.md` already stated, a point-in-time
   record. This only adds a way for a volunteer to *flag* that it's gone
@@ -125,28 +133,37 @@ narrower scope would add complexity without a matching security need.
 ## Implemented (2026-09-11)
 
 1. `Person.oidc_subject` (nullable, unique) — migration `002`.
-2. `app.services.volunteer_self_service`: `get_linked_volunteer`,
-   `claim_volunteer_identity`, `submit_eid_correction_request`.
-3. `POST /api/me/volunteer/claim`, `GET /api/me/volunteer`,
-   `POST /api/me/volunteer/eid-correction` — new router
+2. `app.services.identity_checksum`: `validate_niss_checksum`,
+   `validate_eid_checksum` (mod 97; the NISS variant retries with
+   `+2_000_000_000` for post-2000 birth dates).
+3. `app.services.volunteer_self_service`: `get_linked_volunteer`,
+   `register_volunteer_identity` (self-registration, absorbing an unlinked
+   pre-existing exact match), `submit_eid_correction_request`.
+4. `POST /api/me/volunteer/register`, `GET /api/me/volunteer`,
+   `POST /api/me/volunteer/eid-correction` — router
    `app.routers.volunteer_self`.
-4. `app.ratelimit.check_volunteer_identity_claim_rate_limit` and
-   `check_volunteer_eid_correction_rate_limit` (the latter added in #1037's
-   review — a client-generated `submission_id` only dedupes a replay of the
-   same id, not repeated new ones).
-5. Admin `VolunteerUpdate.oidc_subject` (REST and MCP `update_volunteer`,
+5. `app.ratelimit.check_volunteer_eid_correction_rate_limit` — a
+   client-generated `submission_id` only dedupes a replay of the same id,
+   not repeated new ones. (The identity-claim rate limiter and the
+   admin-notification-on-claim from the superseded matching-based design
+   were removed — see Decision 1 — since they mitigated a guessing attack
+   that no longer applies.)
+6. Admin `VolunteerUpdate.oidc_subject` (REST and MCP `update_volunteer`,
    the latter also gaining an explicit `clear_oidc_subject` flag since MCP
-   drops omitted-vs-null distinction — #1037 review), surfaced on
-   `VolunteerOut`.
-6. `docs/retry-safety.md` entries for the claim and correction-request
-   writes and their outbox enqueue.
-7. Frontend: `/my-eid` self-service page (direct-link-only, same pattern as
-   `/me`), reachable only by a volunteer signed in via OIDC.
-8. From #1037's review: an admin-visible notification on every successful
-   claim (see Decision 1's residual-risk note); a 409 instead of a silently
-   dropped update when an eID-correction `submission_id` is reused with a
-   different payload; `volunteer_client_as`'s dependency overrides now clear
-   in a `finally` block so a raising test can't leak state into the next one.
+   drops omitted-vs-null distinction), surfaced on `VolunteerOut`.
+7. `docs/retry-safety.md` entries for the registration and
+   correction-request writes and their outbox enqueue.
+8. Frontend: `/my-eid` self-service page (direct-link-only, same pattern as
+   `/me`), reachable only by a volunteer signed in via OIDC. Collects name,
+   NISS, and eID with client-side checksum validation for instant feedback
+   (`frontend/src/utils/belgianIdentityNumbers.ts`) and formats both for
+   display (`95.12.14-237.64`, `595-6570208-28`) while storing them
+   digits-only, matching the existing `normalise_optional_identity`
+   convention.
+9. A 409 instead of a silently dropped update when an eID-correction
+   `submission_id` is reused with a different payload;
+   `volunteer_client_as`'s dependency overrides clear in a `finally` block
+   so a raising test can't leak state into the next one.
 
 ## References
 

@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  claimMyVolunteerIdentity,
   getMyVolunteerIdentity,
+  registerMyVolunteerIdentity,
   submitEidCorrection,
 } from "./myVolunteerApi";
 
@@ -66,24 +66,32 @@ describe("getMyVolunteerIdentity", () => {
   });
 });
 
-describe("claimMyVolunteerIdentity", () => {
-  it("posts the NISS and returns the linked identity", async () => {
+describe("registerMyVolunteerIdentity", () => {
+  it("posts name/NISS/eID and returns the linked identity", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       jsonResponse({
         linked: true,
         name: "Sofie De Smet",
-        national_register_number: "91010112345",
-        eid_document_number: "BEX123456",
+        national_register_number: "91010112319",
+        eid_document_number: "123456789002",
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const identity = await claimMyVolunteerIdentity("token-1", "91010112345");
+    const identity = await registerMyVolunteerIdentity("token-1", {
+      name: "Sofie De Smet",
+      nationalRegisterNumber: "91010112319",
+      eidDocumentNumber: "123456789002",
+    });
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/me/volunteer/claim", {
+    expect(fetchMock).toHaveBeenCalledWith("/api/me/volunteer/register", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer token-1" },
-      body: JSON.stringify({ national_register_number: "91010112345" }),
+      body: JSON.stringify({
+        name: "Sofie De Smet",
+        national_register_number: "91010112319",
+        eid_document_number: "123456789002",
+      }),
     });
     expect(identity.linked).toBe(true);
   });
@@ -94,22 +102,29 @@ describe("claimMyVolunteerIdentity", () => {
       vi
         .fn()
         .mockResolvedValue(
-          jsonResponse(
-            { detail: "Your account is already linked to a different volunteer record." },
-            409,
-          ),
+          jsonResponse({ detail: "This identity is already linked to another account." }, 409),
         ),
     );
 
-    await expect(claimMyVolunteerIdentity("token-1", "00000000000")).rejects.toThrow(
-      "Your account is already linked to a different volunteer record.",
-    );
+    await expect(
+      registerMyVolunteerIdentity("token-1", {
+        name: "Someone",
+        nationalRegisterNumber: "00000000000",
+        eidDocumentNumber: "000000000000",
+      }),
+    ).rejects.toThrow("This identity is already linked to another account.");
   });
 
   it("falls back to a generic error when the response has no detail", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({}, 404)));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({}, 422)));
 
-    await expect(claimMyVolunteerIdentity("token-1", "00000000000")).rejects.toThrow();
+    await expect(
+      registerMyVolunteerIdentity("token-1", {
+        name: "Someone",
+        nationalRegisterNumber: "00000000000",
+        eidDocumentNumber: "000000000000",
+      }),
+    ).rejects.toThrow();
   });
 });
 

@@ -28,8 +28,6 @@ _CHECK_IN_IP_MAX_REQUESTS = 300
 _CHECK_IN_WINDOW_SECONDS = 600
 _PUSH_SUBSCRIPTION_MAX_REQUESTS = 20
 _PUSH_SUBSCRIPTION_WINDOW_SECONDS = 600
-_VOLUNTEER_IDENTITY_CLAIM_MAX_REQUESTS = 5
-_VOLUNTEER_IDENTITY_CLAIM_WINDOW_SECONDS = 600
 _VOLUNTEER_EID_CORRECTION_MAX_REQUESTS = 5
 _VOLUNTEER_EID_CORRECTION_WINDOW_SECONDS = 600
 _RATE_LIMIT_BUCKET_CAP = 10_000
@@ -209,25 +207,6 @@ async def check_push_subscription_rate_limit(db: AsyncSession, client_ip: str) -
         scope="push-subscription-mutation",
         max_requests=_PUSH_SUBSCRIPTION_MAX_REQUESTS,
         window_seconds=_PUSH_SUBSCRIPTION_WINDOW_SECONDS,
-    )
-
-
-async def check_volunteer_identity_claim_rate_limit(db: AsyncSession, subject: str) -> bool:
-    """Limit self-claim attempts per OIDC subject (#1006).
-
-    The caller already holds a valid ``volunteer``/``admin`` token — this
-    isn't a public, unauthenticated endpoint — but a compromised or
-    malicious volunteer session could still use unlimited attempts to
-    brute-force another person's NISS against unlinked volunteer records.
-    Postgres-backed (see module docstring) so the limit holds across worker
-    processes.
-    """
-    return await check_rate_limit_pg(
-        db,
-        subject,
-        scope="volunteer-identity-claim",
-        max_requests=_VOLUNTEER_IDENTITY_CLAIM_MAX_REQUESTS,
-        window_seconds=_VOLUNTEER_IDENTITY_CLAIM_WINDOW_SECONDS,
     )
 
 

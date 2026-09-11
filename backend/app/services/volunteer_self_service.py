@@ -7,29 +7,35 @@ belongs to. ``Person.oidc_subject`` (nullable, unique) is that link, and this
 module is the only place that establishes or reads it outside admin edits
 (``app.services.volunteers_service.apply_volunteer_update``).
 
-Linking is volunteer-initiated (``claim_volunteer_identity``, matching the
-caller's own NISS against an unlinked volunteer-role record) rather than
-email-matched at first login: volunteers created via the dedicated
-``/api/volunteers`` flow have no email on file at all (``VolunteerCreate`` has
-no ``email`` field), so email can't be relied on as the matching key. See
+Registration is volunteer-initiated and self-contained: an admin grants the
+``volunteer`` realm role in the identity provider (already a prerequisite
+for reaching any of these endpoints via ``require_volunteer``), and the
+volunteer then submits their own NISS/eID, checksum-validated locally, to
+create their own ``Person`` row. There is no "does this match an existing
+admin-entered record" step and nothing to guess: knowing the realm role
+already means the identity provider vouches for this being a real
+volunteer, and a checksum-valid submission is trusted as their own data,
+the same way any self-reported form field is. See
 docs/decisions/1006-volunteer-identity-self-service.md.
 """
 
 from __future__ import annotations
 
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import or_, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import ContactMessage, Person
+from app.services.identity_checksum import validate_eid_checksum, validate_niss_checksum
 from app.services.outbox_service import enqueue_contact_notification
 from app.services.people_service import normalise_optional_identity
-from app.utils import roles_contains
+from app.services.volunteers_service import ensure_volunteer_role
+from app.utils import make_id
 
 
 async def get_linked_volunteer(db: AsyncSession, subject: str) -> Person | None:
@@ -37,106 +43,107 @@ async def get_linked_volunteer(db: AsyncSession, subject: str) -> Person | None:
     return (await db.execute(select(Person).where(Person.oidc_subject == subject))).scalar_one_or_none()
 
 
-async def claim_volunteer_identity(
+async def register_volunteer_identity(
     db: AsyncSession,
     *,
     subject: str,
+    name: str,
     national_register_number: str,
-    client_ip: str,
+    eid_document_number: str,
     actor: str,
     request_id: str | None = None,
 ) -> Person:
-    """Link the calling OIDC subject to the volunteer record matching this NISS.
+    """Create (or link) the calling OIDC subject's own volunteer record.
 
-    Convergent and safe to retry: a repeat with the same NISS from the same
-    subject, after the first attempt already linked it, returns the same
-    record rather than erroring. The write itself only ever touches a row
-    that is currently unlinked (``oidc_subject IS NULL``), so a concurrent
-    claim of the same record from two different subjects can only let one of
-    them win — the loser gets 404, as if the record had never matched.
+    Convergent and safe to retry: a subject that's already linked just
+    returns its existing record rather than erroring, regardless of what's
+    resubmitted. Both identifiers must pass their checksum before anything
+    is written — that's what lets this trust the volunteer's own input
+    instead of matching against a pre-existing admin-entered record (see
+    module docstring).
 
-    Knowing a volunteer's NISS is what this claim requires — the per-subject
-    rate limit only slows guessing, it doesn't prove ownership (#1037
-    review). Rather than gating every claim on an admin or a verified
-    channel volunteers may not have (no email on file — see the module
-    docstring), a successful claim also raises an admin-visible
-    ``ContactMessage`` notification, so a wrongful claim is *noticed*
-    quickly rather than silently going undetected — an admin can reverse it
-    via ``VolunteerUpdate.oidc_subject=None``.
+    If a `Person` with this exact NISS *and* eID already exists (e.g.
+    imported by an admin before this volunteer ever signed in) and isn't
+    linked to anyone yet, this links to it instead of creating a duplicate —
+    preserving whatever help-period history it already has. A *partial*
+    match (one field matching a different, unrelated person's record) or a
+    match already linked to someone else is a conflict, not a duplicate to
+    silently paper over.
     """
     already_linked = await get_linked_volunteer(db, subject)
-    normalised = normalise_optional_identity(national_register_number)
-
     if already_linked is not None:
-        if normalised is not None and already_linked.national_register_number == normalised:
-            return already_linked
+        return already_linked
+
+    nrr = normalise_optional_identity(national_register_number)
+    eid = normalise_optional_identity(eid_document_number)
+    if nrr is None or not validate_niss_checksum(nrr):
+        raise HTTPException(
+            status_code=422,
+            detail="That national register number doesn't look valid. Please check it and try again.",
+        )
+    if eid is None or not validate_eid_checksum(eid):
+        raise HTTPException(
+            status_code=422,
+            detail="That eID document number doesn't look valid. Please check it and try again.",
+        )
+
+    matches = (
+        (
+            await db.execute(
+                select(Person).where(or_(Person.national_register_number == nrr, Person.eid_document_number == eid))
+            )
+        )
+        .scalars()
+        .all()
+    )
+    exact_match = next(
+        (p for p in matches if p.national_register_number == nrr and p.eid_document_number == eid),
+        None,
+    )
+    if exact_match is None and matches:
         raise HTTPException(
             status_code=409,
-            detail="Your account is already linked to a different volunteer record.",
+            detail="These details conflict with an existing record. Ask an administrator for help.",
         )
 
-    if normalised is None:
-        raise HTTPException(status_code=404, detail="No matching volunteer record found.")
-
-    result = await db.execute(
-        update(Person)
-        .where(
-            Person.national_register_number == normalised,
-            roles_contains("volunteer"),
-            Person.oidc_subject.is_(None),
+    if exact_match is not None:
+        if exact_match.oidc_subject is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="This identity is already linked to another account. Ask an administrator for help.",
+            )
+        exact_match.oidc_subject = subject
+        ensure_volunteer_role(exact_match)
+        person = exact_match
+    else:
+        person = Person(
+            id=make_id("per"),
+            name=name,
+            national_register_number=nrr,
+            eid_document_number=eid,
+            oidc_subject=subject,
         )
-        .values(oidc_subject=subject)
-        .returning(Person.id)
-    )
-    person_id = result.scalar_one_or_none()
-    if person_id is None:
-        raise HTTPException(
-            status_code=404,
-            detail=(
-                "No matching, unlinked volunteer record found for that national register "
-                "number. Ask an administrator to check or link your account."
-            ),
-        )
+        ensure_volunteer_role(person)
+        db.add(person)
 
     await write_audit_entry(
         db,
         actor=actor,
-        action="volunteer_identity_claimed",
+        action="volunteer_identity_registered",
         resource_type="person",
-        resource_id=person_id,
+        resource_id=person.id,
         request_id=request_id,
-        details={},
+        details={"linked_existing_record": exact_match is not None},
     )
-    person = (await db.execute(select(Person).where(Person.id == person_id))).scalar_one()
-    notification_id = str(uuid4())
-    await db.execute(
-        insert(ContactMessage).values(
-            id=notification_id,
-            name=person.name,
-            email=person.email,
-            message=(
-                "Volunteer identity self-linked\n"
-                f"Person: {person.name} (ID {person.id})\n"
-                "A volunteer just linked their own sign-in to this record via "
-                "self-service (POST /api/me/volunteer/claim), by submitting the "
-                "matching national register number.\n\n"
-                "If this doesn't look right, clear the link (set oidc_subject to "
-                "null on this volunteer) and follow up with them directly."
-            ),
-            client_ip=client_ip,
-            request_id=request_id,
-        )
-    )
-    await enqueue_contact_notification(db, notification_id, actor=actor, request_id=request_id)
     try:
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
         raise HTTPException(
             status_code=409,
-            detail="Your account is already linked to a volunteer record.",
+            detail="This information is already associated with another account.",
         ) from exc
-
+    await db.refresh(person)
     return person
 
 

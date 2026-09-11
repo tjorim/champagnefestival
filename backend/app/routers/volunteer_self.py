@@ -2,9 +2,9 @@
 
 There is no built-in link between an OIDC token and the ``Person`` row
 holding a volunteer's NISS/eID — see ``app.services.volunteer_self_service``
-for why linking is a volunteer-initiated NISS claim rather than an
-email-match at first login, and docs/decisions/1006-volunteer-identity-self-service.md
-for the full design.
+for why registration is volunteer-initiated and self-contained rather than
+matched against a pre-existing admin-entered record, and
+docs/decisions/1006-volunteer-identity-self-service.md for the full design.
 """
 
 from __future__ import annotations
@@ -19,19 +19,17 @@ from app.auth import get_actor_id, require_volunteer
 from app.database import get_db
 from app.dependencies import get_request_id
 from app.models import Person
-from app.ratelimit import (
-    check_volunteer_eid_correction_rate_limit,
-    check_volunteer_identity_claim_rate_limit,
-    get_client_ip,
-)
+from app.ratelimit import check_volunteer_eid_correction_rate_limit, get_client_ip
 from app.schemas import RequestModel
 from app.services import volunteer_self_service
 
 router = APIRouter(prefix="/api/me/volunteer", tags=["me", "volunteers"], dependencies=[Depends(require_volunteer)])
 
 
-class VolunteerIdentityClaimRequest(RequestModel):
+class VolunteerIdentityRegisterRequest(RequestModel):
+    name: str = Field(min_length=1, max_length=200)
     national_register_number: str = Field(min_length=1, max_length=20)
+    eid_document_number: str = Field(min_length=1, max_length=50)
 
 
 class VolunteerEidCorrectionRequest(RequestModel):
@@ -71,30 +69,19 @@ async def get_my_volunteer_identity(
     return _identity_out(person)
 
 
-@router.post("/claim", response_model=VolunteerIdentityOut)
-async def claim_my_volunteer_identity(
-    body: VolunteerIdentityClaimRequest,
-    request: Request,
+@router.post("/register", response_model=VolunteerIdentityOut)
+async def register_my_volunteer_identity(
+    body: VolunteerIdentityRegisterRequest,
     subject: str = Depends(get_actor_id),
     db: AsyncSession = Depends(get_db),
     request_id: str | None = Depends(get_request_id),
 ) -> VolunteerIdentityOut:
-    # Commit the bucket increment before the claim itself, matching
-    # app.routers.check_in/push's fix: otherwise a rejected claim (e.g. wrong
-    # NISS) rolls back with the rest of this request's uncommitted
-    # transaction and is never actually counted.
-    allowed = await check_volunteer_identity_claim_rate_limit(db, subject)
-    await db.commit()
-    if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many attempts. Please try again later.",
-        )
-    person = await volunteer_self_service.claim_volunteer_identity(
+    person = await volunteer_self_service.register_volunteer_identity(
         db,
         subject=subject,
+        name=body.name,
         national_register_number=body.national_register_number,
-        client_ip=get_client_ip(request),
+        eid_document_number=body.eid_document_number,
         actor=subject,
         request_id=request_id,
     )
@@ -115,9 +102,10 @@ async def request_eid_correction(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Your account isn't linked to a volunteer record yet.",
         )
-    # Commit the bucket increment before the write itself, same ordering as
-    # the claim endpoint above, so a rejected request is still durably
-    # counted rather than rolling back with the uncommitted transaction.
+    # Commit the bucket increment before the write itself, matching
+    # app.routers.check_in/push's fix: otherwise a rejected request rolls
+    # back with the rest of this request's uncommitted transaction and is
+    # never actually counted.
     allowed = await check_volunteer_eid_correction_rate_limit(db, subject)
     await db.commit()
     if not allowed:

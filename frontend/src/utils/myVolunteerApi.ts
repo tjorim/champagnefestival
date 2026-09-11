@@ -38,17 +38,24 @@ export async function getMyVolunteerIdentity(accessToken: string): Promise<MyVol
   return parseIdentity(await response.json());
 }
 
-/** Link the signed-in volunteer to their record by NISS (POST /api/me/volunteer/claim). */
-export async function claimMyVolunteerIdentity(
+/**
+ * Create the signed-in volunteer's own record (POST /api/me/volunteer/register).
+ * Idempotent once linked — a repeat just returns the existing identity.
+ */
+export async function registerMyVolunteerIdentity(
   accessToken: string,
-  nationalRegisterNumber: string,
+  params: { name: string; nationalRegisterNumber: string; eidDocumentNumber: string },
 ): Promise<MyVolunteerIdentity> {
-  const response = await fetch("/api/me/volunteer/claim", {
+  const response = await fetch("/api/me/volunteer/register", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({ national_register_number: nationalRegisterNumber }),
+    body: JSON.stringify({
+      name: params.name,
+      national_register_number: params.nationalRegisterNumber,
+      eid_document_number: params.eidDocumentNumber,
+    }),
   });
-  if (!response.ok) return throwDetailOrFallback(response, m.my_eid_claim_error());
+  if (!response.ok) return throwDetailOrFallback(response, m.my_eid_register_error());
   return parseIdentity(await response.json());
 }
 
