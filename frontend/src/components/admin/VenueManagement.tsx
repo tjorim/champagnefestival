@@ -138,26 +138,12 @@ export default function VenueManagement({
   // Room add/edit (shared modal)
   const [showRoomModal, setShowRoomModal] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
-  // Dimensions as loaded into the edit form, so `handleSaveRoom` can tell whether the
-  // admin actually changed width/length — see its comment for why that distinction matters.
-  const [editingRoomOriginalDims, setEditingRoomOriginalDims] = useState<{
-    widthM: number;
-    lengthM: number;
-  } | null>(null);
   const [addRoomError, setAddRoomError] = useState<string | null>(null);
   const [deleteRoomError, setDeleteRoomError] = useState<string | null>(null);
 
   // Table type add/edit (shared modal)
   const [showTableTypeModal, setShowTableTypeModal] = useState(false);
   const [editingTableTypeId, setEditingTableTypeId] = useState<string | null>(null);
-  // Shape/dimensions as loaded into the edit form, so `handleSaveTableType` can tell
-  // whether the admin actually changed the reshape-risky fields — see its comment for
-  // why that distinction matters (#858).
-  const [editingTableTypeOriginalShape, setEditingTableTypeOriginalShape] = useState<{
-    shape: "rectangle" | "round";
-    widthM: number;
-    lengthM: number;
-  } | null>(null);
   const [addTableTypeError, setAddTableTypeError] = useState<string | null>(null);
   const [deleteTableTypeError, setDeleteTableTypeError] = useState<string | null>(null);
 
@@ -306,15 +292,18 @@ export default function VenueManagement({
       setAddRoomError(null);
       try {
         if (editingRoomId) {
-          // Omit widthM/lengthM entirely when they match what the form was opened with —
+          // Omit widthM/lengthM entirely when they match the room's current (live) values —
           // the backend clears a room's `dimensionsPlaceholder` flag whenever either field
           // is present in the update, so sending them unchanged on an unrelated edit (e.g.
           // renaming or recolouring) would wrongly mark an unverified legacy 20x15 room as
-          // a confirmed, measured one.
+          // a confirmed, measured one. Compared against the live `editingRoom` record
+          // (rather than a snapshot frozen when the modal opened) so a background refetch
+          // that updates both the form's defaults and this comparison in lockstep can't
+          // make an untouched save look like a dimension change.
           const dimensionsChanged =
-            editingRoomOriginalDims === null ||
-            editingRoomOriginalDims.widthM !== value.widthM ||
-            editingRoomOriginalDims.lengthM !== value.lengthM;
+            editingRoom === null ||
+            editingRoom.widthM !== value.widthM ||
+            editingRoom.lengthM !== value.lengthM;
           await onUpdateRoom(editingRoomId, {
             venueId: value.venueId,
             name: value.name.trim(),
@@ -330,7 +319,6 @@ export default function VenueManagement({
             value.color,
           );
         }
-        setEditingRoomOriginalDims(null);
         setShowRoomModal(false);
       } catch (err) {
         setAddRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
@@ -359,7 +347,6 @@ export default function VenueManagement({
 
   const openAddRoom = (venueId: string) => {
     setEditingRoomId(null);
-    setEditingRoomOriginalDims(null);
     setAddRoomVenueId(venueId);
     setAddRoomError(null);
     setShowRoomModal(true);
@@ -367,7 +354,6 @@ export default function VenueManagement({
 
   const openEditRoom = (room: Room) => {
     setEditingRoomId(room.id);
-    setEditingRoomOriginalDims({ widthM: room.widthM, lengthM: room.lengthM });
     setAddRoomError(null);
     setShowRoomModal(true);
   };
@@ -482,10 +468,10 @@ export default function VenueManagement({
       // back out before that happens; a name/capacity/venue-only edit is unaffected.
       if (
         editingTableTypeId &&
-        editingTableTypeOriginalShape &&
-        (value.shape !== editingTableTypeOriginalShape.shape ||
-          widthM !== editingTableTypeOriginalShape.widthM ||
-          lengthM !== editingTableTypeOriginalShape.lengthM)
+        editingTableType &&
+        (value.shape !== editingTableType.shape ||
+          widthM !== editingTableType.widthM ||
+          lengthM !== editingTableType.lengthM)
       ) {
         const affectedTableLayoutIds = tables
           .filter((t) => t.tableTypeId === editingTableTypeId)
@@ -525,7 +511,6 @@ export default function VenueManagement({
     } else {
       await onAddTableType(payload);
     }
-    setEditingTableTypeOriginalShape(null);
     setShowTableTypeModal(false);
   };
 
@@ -538,7 +523,6 @@ export default function VenueManagement({
 
   const openAddTableType = (venueId: string) => {
     setEditingTableTypeId(null);
-    setEditingTableTypeOriginalShape(null);
     setAddTableTypeVenueId(venueId);
     setAddTableTypeError(null);
     setShowTableTypeModal(true);
@@ -546,7 +530,6 @@ export default function VenueManagement({
 
   const openEditTableType = (tt: TableType) => {
     setEditingTableTypeId(tt.id);
-    setEditingTableTypeOriginalShape({ shape: tt.shape, widthM: tt.widthM, lengthM: tt.lengthM });
     setAddTableTypeError(null);
     setShowTableTypeModal(true);
   };
