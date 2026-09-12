@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -123,16 +124,36 @@ export default function PolicyManagement({
   );
 
   const [locale, setLocale] = useState<Locale>("nl");
-  const [contentByLocale, setContentByLocale] = useState<Record<Locale, string>>({
-    nl: "",
-    en: "",
-    fr: "",
-  });
-  const [changeSummary, setChangeSummary] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState("");
   const { confirm, confirmDialog } = useConfirmDialog();
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EditionModal for the details.
+  const emptyDraftForm = useMemo(() => ({ nl: "", en: "", fr: "", changeSummary: "" }), []);
+  const draftDefaultValues = useMemo(
+    () =>
+      draft
+        ? {
+            nl: draft.content_nl ?? "",
+            en: draft.content_en ?? "",
+            fr: draft.content_fr ?? "",
+            changeSummary: draft.change_summary ?? "",
+          }
+        : emptyDraftForm,
+    [draft, emptyDraftForm],
+  );
+
+  const form = useForm({
+    defaultValues: draftDefaultValues,
+    onSubmit: async ({ value }) => {
+      setError("");
+      saveDraft.mutate(value, { onError: (reason) => setError(String(reason)) });
+    },
+  });
+  const values = useStore(form.store, (s) => s.values);
 
   // Load the open draft's content into the editor whenever it (re)appears.
   // Reset during render rather than in an effect (the "adjusting state when a
@@ -142,19 +163,14 @@ export default function PolicyManagement({
   const [lastDraftId, setLastDraftId] = useState(draft?.id);
   if (draft?.id !== lastDraftId) {
     setLastDraftId(draft?.id);
-    setContentByLocale({
-      nl: draft?.content_nl ?? "",
-      en: draft?.content_en ?? "",
-      fr: draft?.content_fr ?? "",
-    });
-    setChangeSummary(draft?.change_summary ?? "");
+    form.reset(draftDefaultValues);
   }
 
   // Live preview: render the currently-edited locale's content through the
   // same backend renderer/sanitizer used for public output (#944), debounced
   // so every keystroke doesn't round-trip to the server.
   useEffect(() => {
-    const markdown = contentByLocale[locale];
+    const markdown = values[locale];
     if (!markdown.trim()) {
       return;
     }
@@ -176,7 +192,7 @@ export default function PolicyManagement({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [contentByLocale, locale, authHeaders]);
+  }, [values, locale, authHeaders]);
 
   const createDraft = useMutation({
     mutationFn: (sourceVersionNumber?: number) =>
@@ -194,17 +210,17 @@ export default function PolicyManagement({
   });
 
   const saveDraft = useMutation({
-    mutationFn: () =>
+    mutationFn: (payload: typeof emptyDraftForm) =>
       fetchJsonOrThrowWithUnauthorized<PolicyVersion>(
         `/api/policies/${POLICY_KEY}/draft`,
         {
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({
-            content_nl: contentByLocale.nl || null,
-            content_en: contentByLocale.en || null,
-            content_fr: contentByLocale.fr || null,
-            change_summary: changeSummary || null,
+            content_nl: payload.nl || null,
+            content_en: payload.en || null,
+            content_fr: payload.fr || null,
+            change_summary: payload.changeSummary || null,
           }),
         },
         m.admin_error_save_draft(),
@@ -240,8 +256,7 @@ export default function PolicyManagement({
     createDraft.mutate(sourceVersionNumber, { onError: (reason) => setError(String(reason)) });
   };
   const handleSaveDraft = () => {
-    setError("");
-    saveDraft.mutate(undefined, { onError: (reason) => setError(String(reason)) });
+    void form.handleSubmit();
   };
   const handleDiscardDraft = async () => {
     const confirmed = await confirm({
@@ -272,7 +287,7 @@ export default function PolicyManagement({
     const textarea = textareaRef.current;
     if (!textarea) return;
     const next = applyMarkdownSnippet(textarea, before, after, placeholder);
-    setContentByLocale((prev) => ({ ...prev, [locale]: next }));
+    form.setFieldValue(locale, next);
   };
 
   if (query.isLoading) return null;
@@ -327,7 +342,7 @@ export default function PolicyManagement({
                   {LOCALES.map((l) => (
                     <Badge
                       key={l}
-                      bg={contentByLocale[l]?.trim() ? "success" : "secondary"}
+                      bg={values[l]?.trim() ? "success" : "secondary"}
                       className="me-1"
                     >
                       {l}
@@ -420,16 +435,19 @@ export default function PolicyManagement({
                       {m.admin_policy_markdown_list()}
                     </Button>
                   </ButtonGroup>
-                  <Form.Control
-                    ref={textareaRef}
-                    as="textarea"
-                    rows={12}
-                    className="font-monospace"
-                    value={contentByLocale[locale]}
-                    onChange={(event) =>
-                      setContentByLocale((prev) => ({ ...prev, [locale]: event.target.value }))
-                    }
-                  />
+                  <form.Field name={locale}>
+                    {(field) => (
+                      <Form.Control
+                        ref={textareaRef}
+                        as="textarea"
+                        rows={12}
+                        className="font-monospace"
+                        value={field.state.value}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                    )}
+                  </form.Field>
                   <div className="row mt-3">
                     <div className="col-md-6">
                       <Form.Label className="small text-secondary">
@@ -444,7 +462,7 @@ export default function PolicyManagement({
                         // markdown is empty, so clearing the box doesn't wait
                         // on the debounce timer.
                         dangerouslySetInnerHTML={{
-                          __html: contentByLocale[locale].trim() ? preview : "",
+                          __html: values[locale].trim() ? preview : "",
                         }}
                       />
                     </div>
@@ -452,13 +470,18 @@ export default function PolicyManagement({
                       <Form.Label className="small text-secondary">
                         {m.admin_policy_change_summary_label()}
                       </Form.Label>
-                      <Form.Control
-                        as="textarea"
-                        rows={4}
-                        value={changeSummary}
-                        onChange={(event) => setChangeSummary(event.target.value)}
-                        placeholder={m.admin_policy_change_summary_placeholder()}
-                      />
+                      <form.Field name="changeSummary">
+                        {(field) => (
+                          <Form.Control
+                            as="textarea"
+                            rows={4}
+                            value={field.state.value}
+                            onChange={(event) => field.handleChange(event.target.value)}
+                            onBlur={field.handleBlur}
+                            placeholder={m.admin_policy_change_summary_placeholder()}
+                          />
+                        )}
+                      </form.Field>
                     </div>
                   </div>
                   <div className="d-flex gap-2 mt-3">

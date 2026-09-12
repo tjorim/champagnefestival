@@ -279,7 +279,9 @@ describe("VenueManagement", () => {
     expect(saveButton).not.toBeDisabled();
     fireEvent.click(saveButton);
 
-    expect(onAdd).toHaveBeenCalledWith("New Venue", "", "Antwerp", "", "", 51.2194, 4.4025);
+    await waitFor(() =>
+      expect(onAdd).toHaveBeenCalledWith("New Venue", "", "Antwerp", "", "", 51.2194, 4.4025),
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
@@ -296,9 +298,11 @@ describe("VenueManagement", () => {
       target: { value: "4.3517" },
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
-    expect(onUpdate).toHaveBeenCalledWith(
-      "venue-1",
-      expect.objectContaining({ lat: 50.8503, lng: 4.3517 }),
+    await waitFor(() =>
+      expect(onUpdate).toHaveBeenCalledWith(
+        "venue-1",
+        expect.objectContaining({ lat: 50.8503, lng: 4.3517 }),
+      ),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
@@ -402,7 +406,9 @@ describe("VenueManagement", () => {
 
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    expect(onAddRoom).toHaveBeenCalledWith("venue-1", "New Room", 12, 8, "#ffc107");
+    await waitFor(() =>
+      expect(onAddRoom).toHaveBeenCalledWith("venue-1", "New Room", 12, 8, "#ffc107"),
+    );
   });
 
   it("deletes an archived room and surfaces the API's refusal", async () => {
@@ -434,7 +440,9 @@ describe("VenueManagement", () => {
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
     expect(dialogScope.getByText("admin_edit_room")).toBeInTheDocument();
-    expect(dialogScope.getByLabelText("admin_room_name_label")).toHaveValue("Room A");
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_room_name_label")).toHaveValue("Room A"),
+    );
     expect(dialogScope.getByLabelText("admin_room_width_label")).toHaveValue(20);
     expect(dialogScope.getByLabelText("admin_room_length_label")).toHaveValue(15);
 
@@ -447,13 +455,15 @@ describe("VenueManagement", () => {
 
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
-      venueId: "venue-1",
-      name: "Room A (renamed)",
-      widthM: 22,
-      lengthM: 15,
-      color: "#ffc107",
-    });
+    await waitFor(() =>
+      expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
+        venueId: "venue-1",
+        name: "Room A (renamed)",
+        widthM: 22,
+        lengthM: 15,
+        color: "#ffc107",
+      }),
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
@@ -466,17 +476,22 @@ describe("VenueManagement", () => {
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_room_name_label")).toHaveValue("Room A"),
+    );
     fireEvent.change(dialogScope.getByLabelText("admin_room_name_label"), {
       target: { value: "Room A (renamed)" },
     });
 
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
-      venueId: "venue-1",
-      name: "Room A (renamed)",
-      color: "#ffc107",
-    });
+    await waitFor(() =>
+      expect(onUpdateRoom).toHaveBeenCalledWith("room-1", {
+        venueId: "venue-1",
+        name: "Room A (renamed)",
+        color: "#ffc107",
+      }),
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
@@ -511,7 +526,9 @@ describe("VenueManagement", () => {
     const dialogScope = within(dialog);
     const saveButton = dialogScope.getByRole("button", { name: "admin_save" });
     expect(saveButton).toBeDisabled();
-    expect(dialogScope.getByLabelText("admin_room_venue_label")).toHaveValue("venue-1");
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_room_venue_label")).toHaveValue("venue-1"),
+    );
 
     fireEvent.change(dialogScope.getByLabelText("admin_table_type_name_label"), {
       target: { value: "Banquet Rect" },
@@ -528,16 +545,18 @@ describe("VenueManagement", () => {
 
     fireEvent.click(saveButton);
 
-    expect(onAddTableType).toHaveBeenCalledWith({
-      venueId: "venue-1",
-      name: "Banquet Rect",
-      shape: "rectangle",
-      widthM: 0.8,
-      lengthM: 2,
-      heightType: "low",
-      capacity: 4,
-      active: true,
-    });
+    await waitFor(() =>
+      expect(onAddTableType).toHaveBeenCalledWith({
+        venueId: "venue-1",
+        name: "Banquet Rect",
+        shape: "rectangle",
+        widthM: 0.8,
+        lengthM: 2,
+        heightType: "low",
+        capacity: 4,
+        active: true,
+      }),
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
@@ -575,20 +594,22 @@ describe("VenueManagement", () => {
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
     const nameInput = dialogScope.getByLabelText("admin_table_type_name_label") as HTMLInputElement;
-    expect(nameInput.value).toBe("Standard Rectangle");
+    await waitFor(() => expect(nameInput.value).toBe("Standard Rectangle"));
 
     fireEvent.change(nameInput, { target: { value: "Renamed Rectangle" } });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    expect(onUpdateTableType).toHaveBeenCalledWith("tt-1", {
-      venueId: "venue-1",
-      name: "Renamed Rectangle",
-      shape: "rectangle",
-      widthM: 0.7,
-      lengthM: 1.8,
-      heightType: "low",
-      capacity: 4,
-    });
+    await waitFor(() =>
+      expect(onUpdateTableType).toHaveBeenCalledWith("tt-1", {
+        venueId: "venue-1",
+        name: "Renamed Rectangle",
+        shape: "rectangle",
+        widthM: 0.7,
+        lengthM: 1.8,
+        heightType: "low",
+        capacity: 4,
+      }),
+    );
     const callArgs = vi.mocked(onUpdateTableType).mock.calls[0]?.[1] as Record<string, unknown>;
     expect(callArgs).not.toHaveProperty("active");
   });
@@ -602,6 +623,9 @@ describe("VenueManagement", () => {
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_table_width_label")).toHaveValue(0.7),
+    );
     fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
       target: { value: "0.9" },
     });
@@ -628,6 +652,9 @@ describe("VenueManagement", () => {
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_table_width_label")).toHaveValue(0.7),
+    );
     fireEvent.change(dialogScope.getByLabelText("admin_table_shape_label"), {
       target: { value: "round" },
     });
@@ -638,6 +665,7 @@ describe("VenueManagement", () => {
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2));
     const confirmDialog = within(latestDialog());
     expect(
       confirmDialog.getByText(
@@ -658,11 +686,15 @@ describe("VenueManagement", () => {
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_table_width_label")).toHaveValue(0.7),
+    );
     fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
       target: { value: "0.9" },
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
+    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2));
     const confirmDialog = within(latestDialog());
     fireEvent.click(confirmDialog.getByRole("button", { name: "admin_action_cancel" }));
 
@@ -681,6 +713,9 @@ describe("VenueManagement", () => {
 
     const dialog = await screen.findByRole("dialog");
     const dialogScope = within(dialog);
+    await waitFor(() =>
+      expect(dialogScope.getByLabelText("admin_table_width_label")).toHaveValue(0.7),
+    );
     fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
       target: { value: "0.9" },
     });
