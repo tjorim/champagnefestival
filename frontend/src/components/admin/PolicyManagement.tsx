@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
@@ -17,6 +17,7 @@ import {
 import { queryKeys } from "@/utils/queryKeys";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 type Locale = "nl" | "en" | "fr";
 const LOCALES: Locale[] = ["nl", "en", "fr"];
@@ -47,6 +48,8 @@ interface Policy {
 }
 
 const POLICY_KEY = "privacy";
+
+const historyColumnHelper = createAppColumnHelper<PolicyVersion>();
 
 function contentFor(version: PolicyVersion | undefined, locale: Locale): string {
   if (!version) return "";
@@ -251,10 +254,13 @@ export default function PolicyManagement({
     retry: false,
   });
 
-  const handleCreateDraft = (sourceVersionNumber?: number) => {
-    setError("");
-    createDraft.mutate(sourceVersionNumber, { onError: (reason) => setError(String(reason)) });
-  };
+  const handleCreateDraft = useCallback(
+    (sourceVersionNumber?: number) => {
+      setError("");
+      createDraft.mutate(sourceVersionNumber, { onError: (reason) => setError(String(reason)) });
+    },
+    [createDraft],
+  );
   const handleSaveDraft = () => {
     void form.handleSubmit();
   };
@@ -289,6 +295,67 @@ export default function PolicyManagement({
     const next = applyMarkdownSnippet(textarea, before, after, placeholder);
     form.setFieldValue(locale, next);
   };
+
+  const historyColumns = useMemo(
+    () =>
+      historyColumnHelper.columns([
+        historyColumnHelper.accessor("version_number", {
+          header: m.admin_policy_version_column(),
+          enableSorting: false,
+        }),
+        historyColumnHelper.display({
+          id: "status",
+          header: m.admin_status_label(),
+          enableSorting: false,
+          cell: ({ row }) => (
+            <Badge bg={statusVariant(row.original.status)}>
+              {statusLabel(row.original.status)}
+            </Badge>
+          ),
+        }),
+        historyColumnHelper.display({
+          id: "published",
+          header: m.admin_policy_published_column(),
+          enableSorting: false,
+          cell: ({ row }) =>
+            row.original.published_at ? new Date(row.original.published_at).toLocaleString() : "—",
+        }),
+        historyColumnHelper.display({
+          id: "by",
+          header: m.admin_policy_by_column(),
+          enableSorting: false,
+          cell: ({ row }) => row.original.published_by ?? row.original.created_by,
+        }),
+        historyColumnHelper.display({
+          id: "changeSummary",
+          header: m.admin_policy_change_summary_column(),
+          enableSorting: false,
+          cell: ({ row }) => row.original.change_summary ?? "—",
+        }),
+        historyColumnHelper.display({
+          id: "actions",
+          header: m.admin_actions_label(),
+          enableSorting: false,
+          cell: ({ row }) =>
+            row.original.status === "superseded" &&
+            !draft && (
+              <Button
+                size="sm"
+                variant="outline-warning"
+                onClick={() => handleCreateDraft(row.original.version_number)}
+              >
+                {m.admin_policy_rollback_action()}
+              </Button>
+            ),
+        }),
+      ]),
+    [draft, handleCreateDraft],
+  );
+
+  const historyTable = useAppTable(
+    { data: history, columns: historyColumns, getRowId: (row) => row.id },
+    () => ({}),
+  );
 
   if (query.isLoading) return null;
 
@@ -511,46 +578,32 @@ export default function PolicyManagement({
 
             <hr />
             <h3 className="h6">{m.admin_policy_version_history_heading()}</h3>
-            <Table responsive size="sm">
-              <thead>
-                <tr>
-                  <th>{m.admin_policy_version_column()}</th>
-                  <th>{m.admin_status_label()}</th>
-                  <th>{m.admin_policy_published_column()}</th>
-                  <th>{m.admin_policy_by_column()}</th>
-                  <th>{m.admin_policy_change_summary_column()}</th>
-                  <th>{m.admin_actions_label()}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((version) => (
-                  <tr key={version.id}>
-                    <td>{version.version_number}</td>
-                    <td>
-                      <Badge bg={statusVariant(version.status)}>
-                        {statusLabel(version.status)}
-                      </Badge>
-                    </td>
-                    <td>
-                      {version.published_at ? new Date(version.published_at).toLocaleString() : "—"}
-                    </td>
-                    <td>{version.published_by ?? version.created_by}</td>
-                    <td>{version.change_summary ?? "—"}</td>
-                    <td>
-                      {version.status === "superseded" && !draft && (
-                        <Button
-                          size="sm"
-                          variant="outline-warning"
-                          onClick={() => handleCreateDraft(version.version_number)}
-                        >
-                          {m.admin_policy_rollback_action()}
-                        </Button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
+            <div className="table-responsive">
+              <Table size="sm">
+                <thead>
+                  {historyTable.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th key={header.id}>
+                          <historyTable.FlexRender header={header} />
+                        </th>
+                      ))}
+                    </tr>
+                  ))}
+                </thead>
+                <tbody>
+                  {historyTable.getRowModel().rows.map((row) => (
+                    <tr key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td key={cell.id}>
+                          <historyTable.FlexRender cell={cell} />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
             {contentFor(published, locale) === "" && published && (
               <p className="text-secondary small">
                 {m.admin_policy_no_published_content({ locale: locale.toUpperCase() })}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
@@ -15,6 +15,7 @@ import {
 import { queryKeys } from "@/utils/queryKeys";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 interface Announcement {
   id: string;
@@ -59,6 +60,8 @@ export function iso(value: string | null, timezoneOffsetMinutes?: number) {
   return new Date(localAsUtc.getTime() + timezoneOffsetMinutes * 60_000).toISOString();
 }
 
+const columnHelper = createAppColumnHelper<Announcement>();
+
 function writePayload(item: Draft) {
   return {
     text_nl: item.text_nl,
@@ -95,7 +98,7 @@ export default function AnnouncementManagement({
   const [preview, setPreview] = useState<"nl" | "en" | "fr">("nl");
   const [error, setError] = useState("");
   const { confirm, confirmDialog } = useConfirmDialog();
-  const refresh = () => client.invalidateQueries({ queryKey: key });
+  const refresh = useCallback(() => client.invalidateQueries({ queryKey: key }), [client, key]);
   const save = useMutation({
     mutationFn: (payload: Draft) =>
       fetchJsonOrThrowWithUnauthorized(
@@ -175,44 +178,53 @@ export default function AnnouncementManagement({
     onSuccess: () => void refresh(),
     retry: false,
   });
-  const handleDelete = async (id: string) => {
-    const confirmed = await confirm({
-      title: m.admin_announcement_delete_title(),
-      body: m.admin_announcement_delete_confirm(),
-      errorFallback: m.admin_error_delete_announcement(),
-    });
-    if (confirmed) remove.mutate(id);
-  };
-  const update = async (item: Announcement, values: Partial<Announcement>) =>
-    fetchJsonOrThrowWithUnauthorized(
-      `/api/announcements/${item.id}`,
-      {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify(writePayload({ ...item, ...values })),
-      },
-      m.admin_error_update_announcement(),
-    );
-  const move = async (index: number, direction: number) => {
-    const ordered = [...items];
-    const target = index + direction;
-    if (target < 0 || target >= ordered.length) return;
-    const current = ordered[index];
-    const replacement = ordered[target];
-    if (!current || !replacement) return;
-    ordered[index] = replacement;
-    ordered[target] = current;
-    await fetchJsonOrThrowWithUnauthorized(
-      "/api/announcements/reorder",
-      {
-        method: "POST",
-        headers: authHeaders(),
-        body: JSON.stringify({ ordered_ids: ordered.map((item) => item.id) }),
-      },
-      m.admin_error_reorder_announcements(),
-    );
-    await refresh();
-  };
+  const handleDelete = useCallback(
+    async (id: string) => {
+      const confirmed = await confirm({
+        title: m.admin_announcement_delete_title(),
+        body: m.admin_announcement_delete_confirm(),
+        errorFallback: m.admin_error_delete_announcement(),
+      });
+      if (confirmed) remove.mutate(id);
+    },
+    [confirm, remove],
+  );
+  const update = useCallback(
+    async (item: Announcement, values: Partial<Announcement>) =>
+      fetchJsonOrThrowWithUnauthorized(
+        `/api/announcements/${item.id}`,
+        {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify(writePayload({ ...item, ...values })),
+        },
+        m.admin_error_update_announcement(),
+      ),
+    [authHeaders],
+  );
+  const move = useCallback(
+    async (index: number, direction: number) => {
+      const ordered = [...items];
+      const target = index + direction;
+      if (target < 0 || target >= ordered.length) return;
+      const current = ordered[index];
+      const replacement = ordered[target];
+      if (!current || !replacement) return;
+      ordered[index] = replacement;
+      ordered[target] = current;
+      await fetchJsonOrThrowWithUnauthorized(
+        "/api/announcements/reorder",
+        {
+          method: "POST",
+          headers: authHeaders(),
+          body: JSON.stringify({ ordered_ids: ordered.map((item) => item.id) }),
+        },
+        m.admin_error_reorder_announcements(),
+      );
+      await refresh();
+    },
+    [items, authHeaders, refresh],
+  );
   type AnnouncementStatus = "disabled" | "scheduled" | "expired" | "active";
   const status = (item: Announcement): AnnouncementStatus =>
     !item.active
@@ -234,6 +246,106 @@ export default function AnnouncementManagement({
         return m.admin_announcement_status_active();
     }
   };
+
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.display({
+          id: "order",
+          header: m.admin_announcement_order_column(),
+          enableSorting: false,
+          cell: ({ row }) => (
+            <>
+              <Button
+                size="sm"
+                variant="outline-secondary"
+                disabled={!row.index}
+                onClick={() => void move(row.index, -1)}
+              >
+                ↑
+              </Button>{" "}
+              <Button
+                size="sm"
+                variant="outline-secondary"
+                disabled={row.index === items.length - 1}
+                onClick={() => void move(row.index, 1)}
+              >
+                ↓
+              </Button>
+            </>
+          ),
+        }),
+        columnHelper.display({
+          id: "preview",
+          header: m.admin_announcement_preview_column(),
+          enableSorting: false,
+          cell: ({ row }) =>
+            row.original[`text_${preview}`] || (
+              <em>{m.admin_announcement_missing_translation()}</em>
+            ),
+        }),
+        columnHelper.display({
+          id: "locales",
+          header: m.admin_announcement_locales_column(),
+          enableSorting: false,
+          cell: ({ row }) =>
+            (["nl", "en", "fr"] as const).map((locale) => (
+              <Badge
+                className="me-1"
+                bg={row.original[`text_${locale}`] ? "success" : "secondary"}
+                key={locale}
+              >
+                {locale}
+              </Badge>
+            )),
+        }),
+        columnHelper.display({
+          id: "status",
+          header: m.admin_status_label(),
+          enableSorting: false,
+          cell: ({ row }) => (
+            <Badge bg={status(row.original) === "active" ? "success" : "secondary"}>
+              {statusLabel(status(row.original))}
+            </Badge>
+          ),
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: m.admin_actions_label(),
+          enableSorting: false,
+          meta: { tdClassName: "text-nowrap" },
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <>
+                <Button size="sm" onClick={() => setEditing(item.id)}>
+                  {m.admin_edit()}
+                </Button>{" "}
+                <Button
+                  size="sm"
+                  variant="warning"
+                  onClick={() =>
+                    void update(item, { active: !item.active })
+                      .then(refresh)
+                      .catch((reason) => setError(String(reason)))
+                  }
+                >
+                  {item.active
+                    ? m.admin_announcement_disable_action()
+                    : m.admin_announcement_publish_action()}
+                </Button>{" "}
+                <Button size="sm" variant="danger" onClick={() => void handleDelete(item.id)}>
+                  {m.admin_delete()}
+                </Button>
+              </>
+            );
+          },
+        }),
+      ]),
+    [items, preview, move, update, refresh, handleDelete],
+  );
+
+  const table = useAppTable({ data: items, columns, getRowId: (row) => row.id }, () => ({}));
 
   return (
     <Card className="admin-card">
@@ -380,81 +492,32 @@ export default function AnnouncementManagement({
           <option value="en">{m.admin_announcement_preview_en()}</option>
           <option value="fr">{m.admin_announcement_preview_fr()}</option>
         </Form.Select>
-        <Table responsive>
-          <thead>
-            <tr>
-              <th>{m.admin_announcement_order_column()}</th>
-              <th>{m.admin_announcement_preview_column()}</th>
-              <th>{m.admin_announcement_locales_column()}</th>
-              <th>{m.admin_status_label()}</th>
-              <th>{m.admin_actions_label()}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item, index) => (
-              <tr key={item.id}>
-                <td>
-                  <Button
-                    size="sm"
-                    variant="outline-secondary"
-                    disabled={!index}
-                    onClick={() => void move(index, -1)}
-                  >
-                    ↑
-                  </Button>{" "}
-                  <Button
-                    size="sm"
-                    variant="outline-secondary"
-                    disabled={index === items.length - 1}
-                    onClick={() => void move(index, 1)}
-                  >
-                    ↓
-                  </Button>
-                </td>
-                <td>
-                  {item[`text_${preview}`] || <em>{m.admin_announcement_missing_translation()}</em>}
-                </td>
-                <td>
-                  {(["nl", "en", "fr"] as const).map((locale) => (
-                    <Badge
-                      className="me-1"
-                      bg={item[`text_${locale}`] ? "success" : "secondary"}
-                      key={locale}
-                    >
-                      {locale}
-                    </Badge>
+        <div className="table-responsive">
+          <Table>
+            <thead>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th key={header.id}>
+                      <table.FlexRender header={header} />
+                    </th>
                   ))}
-                </td>
-                <td>
-                  <Badge bg={status(item) === "active" ? "success" : "secondary"}>
-                    {statusLabel(status(item))}
-                  </Badge>
-                </td>
-                <td className="text-nowrap">
-                  <Button size="sm" onClick={() => setEditing(item.id)}>
-                    {m.admin_edit()}
-                  </Button>{" "}
-                  <Button
-                    size="sm"
-                    variant="warning"
-                    onClick={() =>
-                      void update(item, { active: !item.active })
-                        .then(refresh)
-                        .catch((reason) => setError(String(reason)))
-                    }
-                  >
-                    {item.active
-                      ? m.admin_announcement_disable_action()
-                      : m.admin_announcement_publish_action()}
-                  </Button>{" "}
-                  <Button size="sm" variant="danger" onClick={() => void handleDelete(item.id)}>
-                    {m.admin_delete()}
-                  </Button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </Table>
+                </tr>
+              ))}
+            </thead>
+            <tbody>
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id}>
+                  {row.getVisibleCells().map((cell) => (
+                    <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                      <table.FlexRender cell={cell} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        </div>
       </Card.Body>
       {confirmDialog}
     </Card>
