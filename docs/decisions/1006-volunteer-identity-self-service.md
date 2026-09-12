@@ -153,12 +153,15 @@ narrower scope would add complexity without a matching security need.
    drops omitted-vs-null distinction), surfaced on `VolunteerOut`.
 7. `docs/retry-safety.md` entries for the registration and
    correction-request writes and their outbox enqueue.
-8. Frontend: the NISS/eID self-service section lives on the existing `/me`
-   self-service page (`MyAccountPage`, direct-link-only), shown only when the
-   signed-in OIDC account carries the `volunteer` realm role — no separate
-   `/my-eid` route, since the only thing distinguishing it from the rest of
-   `/me` was that role check. Collects name, NISS, and eID with client-side
-   checksum validation for instant feedback
+8. Frontend: the NISS/eID self-service section is a "Volunteer eID" tab on
+   the unified `/me` self-service page (`MyAccountPage`, direct-link-only),
+   shown only when the signed-in OIDC account carries the `volunteer` realm
+   role — no separate `/my-eid` route, since the only thing distinguishing it
+   from the rest of `/me` was that role check. `/me` itself was later
+   extended further to also absorb `/my-registrations`; see
+   [`unified-self-service-page.md`](./unified-self-service-page.md) for that
+   follow-up decision. Collects name, NISS, and eID with client-side checksum
+   validation for instant feedback
    (`frontend/src/utils/belgianIdentityNumbers.ts`) and formats both for
    display (`95.12.14-237.64`, `595-6570208-28`) while storing them
    digits-only, matching the existing `normalise_optional_identity`
@@ -174,4 +177,6 @@ narrower scope would add complexity without a matching security need.
 - [Visitor passwordless session](./953-visitor-passwordless-session.md) — the
   closest existing precedent for self-service identity, and the origin of
   the `oidc_subject` naming this reuses
+- [Unified self-service page](./unified-self-service-page.md) — the follow-up
+  that merged `/me`, `/my-eid`, and `/my-registrations` into one page
 - [Retry-safety inventory](../retry-safety.md)

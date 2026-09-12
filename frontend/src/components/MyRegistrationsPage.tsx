@@ -5,12 +5,9 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
-import Col from "react-bootstrap/Col";
-import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
 import Modal from "react-bootstrap/Modal";
-import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
@@ -54,9 +51,12 @@ export function buildCheckInQrUrl(
 
 export default function MyRegistrationsPage() {
   const auth = useAuth();
-  const { token: rawToken } = useSearch({ from: "/my-registrations" });
-  const token = rawToken?.trim() ?? "";
-  const navigate = useNavigate({ from: "/my-registrations" });
+  // strict: false since this section is embedded under both /me and
+  // /my-registrations (the latter kept only because it's already emailed to
+  // visitors — see router.tsx) rather than being tied to one route id.
+  const search = useSearch({ strict: false }) as { token?: string };
+  const token = search.token?.trim() ?? "";
+  const navigate = useNavigate();
   const accessToken = auth.getAccessToken();
 
   const [email, setEmail] = useState("");
@@ -107,6 +107,9 @@ export default function MyRegistrationsPage() {
   });
 
   const attemptedToken = useRef("");
+  // Reactive twin of attemptedToken, for the render-time checks below —
+  // reading a ref's .current directly during render isn't safe/reactive.
+  const [tokenAttempted, setTokenAttempted] = useState(false);
   const registrationsMutation = useMutation({
     mutationFn: async ({
       lookupToken,
@@ -115,7 +118,7 @@ export default function MyRegistrationsPage() {
       lookupToken: string;
       oidcToken: string | null;
     }) => {
-      await navigate({ search: {}, replace: true });
+      await navigate({ to: ".", search: {}, replace: true });
       if (!oidcToken) {
         return redeemVisitorMagicLink(lookupToken);
       }
@@ -143,6 +146,7 @@ export default function MyRegistrationsPage() {
     }
 
     attemptedToken.current = token;
+    setTokenAttempted(true);
     registrationsMutation.mutate({
       lookupToken: token,
       oidcToken: auth.isAuthenticated ? accessToken : null,
@@ -172,7 +176,42 @@ export default function MyRegistrationsPage() {
     };
   }, [token, auth.isLoading, auth.isAuthenticated, sessionChecked]);
 
-  const registrations = registrationsMutation.data ?? sessionRegistrations ?? null;
+  // A signed-in member/volunteer with no token in the URL — e.g. they just
+  // navigated straight to /me — already owns any registration booked while
+  // signed in (Registration.user_id is set at booking time). No claim step
+  // needed: fetch their own registrations directly.
+  const [oidcRegistrations, setOidcRegistrations] = useState<GuestRegistration[] | null>(null);
+  const [oidcChecked, setOidcChecked] = useState(false);
+  useEffect(() => {
+    // attemptedToken guards against double-fetching: once a token claim has
+    // run (or is running) for this page load, that flow already owns
+    // fetching registrations — even after it clears the token from the URL,
+    // which would otherwise make this effect's own `!token` guard re-fire.
+    if (
+      token ||
+      attemptedToken.current ||
+      auth.isLoading ||
+      !auth.isAuthenticated ||
+      !accessToken ||
+      oidcChecked
+    ) {
+      return;
+    }
+    let cancelled = false;
+    void fetchOwnedRegistrations(accessToken)
+      .then((regs) => {
+        if (!cancelled) setOidcRegistrations(regs);
+      })
+      .finally(() => {
+        if (!cancelled) setOidcChecked(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [token, auth.isLoading, auth.isAuthenticated, accessToken, oidcChecked]);
+
+  const registrations =
+    registrationsMutation.data ?? sessionRegistrations ?? oidcRegistrations ?? null;
 
   useEffect(() => {
     if (!auth.isAuthenticated || !accessToken || registrations === null) return;
@@ -206,7 +245,8 @@ export default function MyRegistrationsPage() {
   const isSubmittingEmail = requestLookupMutation.isPending;
   const isLoadingRegistrations =
     registrationsMutation.isPending ||
-    (token.length > 0 && (auth.isLoading || (auth.isAuthenticated && !accessToken)));
+    (token.length > 0 && (auth.isLoading || (auth.isAuthenticated && !accessToken))) ||
+    (!token && !tokenAttempted && auth.isAuthenticated && !oidcChecked);
   const tokenError = registrationsMutation.isError
     ? registrationsMutation.error instanceof Error
       ? registrationsMutation.error.message
@@ -222,19 +262,25 @@ export default function MyRegistrationsPage() {
   // spinner in front of the email form on every visit just to rule that out.
   // A session, when one exists, instead promotes registrations from null to
   // non-null once found, which the registrations !== null branch already
-  // switches this on for.
+  // switches this on for. An OIDC session is different: auth.isAuthenticated
+  // is known synchronously (no network round trip), so it's worth gating on
+  // oidcChecked to avoid flashing the anonymous email-lookup form at a
+  // signed-in member/volunteer for an instant before their own registrations
+  // load.
   const showRegistrationFlow =
     token.length > 0 ||
     registrations !== null ||
     registrationsMutation.isPending ||
-    registrationsMutation.isError;
+    registrationsMutation.isError ||
+    (!tokenAttempted && auth.isAuthenticated && !oidcChecked);
 
   const resetToRequestForm = useCallback(() => {
-    void navigate({ search: {}, replace: true });
+    void navigate({ to: ".", search: {}, replace: true });
     setRequestSent(false);
     setError("");
     setIsEmailInvalid(false);
     attemptedToken.current = "";
+    setTokenAttempted(false);
     registrationsMutation.reset();
   }, [navigate, registrationsMutation, setError, setIsEmailInvalid, setRequestSent]);
 
@@ -294,326 +340,322 @@ export default function MyRegistrationsPage() {
   );
 
   return (
-    <section id="my-registrations" className="py-5" aria-labelledby="my-registrations-title">
-      <Container>
-        <h2 id="my-registrations-title" className="text-center mb-2 text-warning">
-          <i className="bi bi-ticket-perforated me-2" aria-hidden="true" />
-          {m.my_registrations_title()}
-        </h2>
-        <p className="text-center text-secondary mb-4">{m.my_registrations_description()}</p>
+    <div id="my-registrations">
+      {!showRegistrationFlow && (
+        <>
+          <p className="text-center text-secondary mb-4">{m.my_registrations_description()}</p>
+          <Form onSubmit={handleEmailSubmit} noValidate>
+            <Form.Group controlId="my-registrations-email" className="mb-3">
+              <Form.Label>{m.my_registrations_email_label()}</Form.Label>
+              <Form.Control
+                type="email"
+                placeholder={m.my_registrations_email_placeholder()}
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isSubmittingEmail}
+                autoComplete="email"
+                isInvalid={isEmailInvalid}
+                className="bg-dark text-light border-secondary"
+                aria-describedby={error ? "email-error" : undefined}
+              />
+            </Form.Group>
 
-        <Row className="justify-content-center">
-          <Col xs={12} sm={10} md={8} lg={6}>
-            {!showRegistrationFlow && (
-              <>
-                <Form onSubmit={handleEmailSubmit} noValidate>
-                  <Form.Group controlId="my-registrations-email" className="mb-3">
-                    <Form.Label>{m.my_registrations_email_label()}</Form.Label>
-                    <Form.Control
-                      type="email"
-                      placeholder={m.my_registrations_email_placeholder()}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      disabled={isSubmittingEmail}
-                      autoComplete="email"
-                      isInvalid={isEmailInvalid}
-                      className="bg-dark text-light border-secondary"
-                      aria-describedby={error ? "email-error" : undefined}
-                    />
-                  </Form.Group>
+            <div id="email-error" role="alert">
+              {error && (
+                <Alert variant="danger" className="mb-3">
+                  <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                  {error}
+                </Alert>
+              )}
+            </div>
 
-                  <div id="email-error" role="alert">
-                    {error && (
-                      <Alert variant="danger" className="mb-3">
-                        <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                        {error}
-                      </Alert>
-                    )}
-                  </div>
+            {requestSent && (
+              <Alert variant="info" className="mb-3" role="status" aria-live="polite">
+                <div className="fw-semibold mb-1">{m.my_registrations_request_success()}</div>
+                <div>{m.my_registrations_request_pending_notice()}</div>
+              </Alert>
+            )}
 
-                  {requestSent && (
-                    <Alert variant="info" className="mb-3" role="status" aria-live="polite">
-                      <div className="fw-semibold mb-1">{m.my_registrations_request_success()}</div>
-                      <div>{m.my_registrations_request_pending_notice()}</div>
-                    </Alert>
+            <Button
+              type="submit"
+              variant="warning"
+              className="w-100"
+              disabled={isSubmittingEmail || !email.trim()}
+            >
+              {isSubmittingEmail ? (
+                <>
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                    className="me-2"
+                  />
+                  {m.my_registrations_requesting()}
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-envelope-paper me-2" aria-hidden="true" />
+                  {m.my_registrations_request_link()}
+                </>
+              )}
+            </Button>
+          </Form>
+          <Button
+            variant="link"
+            className="w-100 mt-2 text-secondary"
+            onClick={() => auth.login("/me")}
+          >
+            {m.my_registrations_sign_in_instead()}
+          </Button>
+        </>
+      )}
+
+      {showRegistrationFlow && (
+        <>
+          {isLoadingRegistrations && (
+            <Alert variant="secondary" className="text-center">
+              <Spinner animation="border" size="sm" className="me-2" />
+              {m.my_registrations_loading()}
+            </Alert>
+          )}
+
+          {tokenError && (
+            <Alert variant="danger" className="mb-3" role="alert">
+              <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+              {tokenError}
+            </Alert>
+          )}
+
+          {!isLoadingRegistrations && (registrations !== null || showRecoveryCTA) && (
+            <>
+              {registrations !== null && registrations.length === 0 ? (
+                <Alert variant="info" className="text-center">
+                  <i className="bi bi-inbox me-2" aria-hidden="true" />
+                  {m.my_registrations_no_results()}
+                </Alert>
+              ) : registrations !== null ? (
+                <div className="d-flex flex-column gap-3">
+                  {auth.isAuthenticated && registrations.length > 0 && (
+                    <Card bg="dark" text="white" border="secondary">
+                      <Card.Body>
+                        <Form.Label htmlFor="my-registrations-language">
+                          {m.registration_preferred_language()}
+                        </Form.Label>
+                        <div className="d-flex gap-2">
+                          <Form.Select
+                            id="my-registrations-language"
+                            value={preferredLanguage}
+                            disabled={isPreferenceLoading || preferenceStatus === "saving"}
+                            onChange={(event) => {
+                              setPreferredLanguage(event.target.value as CommunicationLanguage);
+                              setPreferenceStatus("");
+                            }}
+                          >
+                            <option value="nl">Nederlands</option>
+                            <option value="fr">Français</option>
+                            <option value="en">English</option>
+                          </Form.Select>
+                          <Button
+                            variant="outline-warning"
+                            disabled={isPreferenceLoading || preferenceStatus === "saving"}
+                            onClick={() => void savePreference()}
+                          >
+                            {m.my_registrations_save_language()}
+                          </Button>
+                        </div>
+                        {preferenceStatus === "saved" && (
+                          <div className="small text-success mt-2" role="status">
+                            {m.my_registrations_language_saved()}
+                          </div>
+                        )}
+                        {preferenceStatus === "error" && (
+                          <div className="small text-danger mt-2" role="alert">
+                            {m.my_account_preference_error()}
+                          </div>
+                        )}
+                      </Card.Body>
+                    </Card>
                   )}
-
-                  <Button
-                    type="submit"
-                    variant="warning"
-                    className="w-100"
-                    disabled={isSubmittingEmail || !email.trim()}
-                  >
-                    {isSubmittingEmail ? (
-                      <>
-                        <Spinner
-                          as="span"
-                          animation="border"
-                          size="sm"
-                          role="status"
-                          aria-hidden="true"
-                          className="me-2"
-                        />
-                        {m.my_registrations_requesting()}
-                      </>
-                    ) : (
-                      <>
-                        <i className="bi bi-envelope-paper me-2" aria-hidden="true" />
-                        {m.my_registrations_request_link()}
-                      </>
-                    )}
-                  </Button>
-                </Form>
-              </>
-            )}
-
-            {showRegistrationFlow && (
-              <>
-                {isLoadingRegistrations && (
-                  <Alert variant="secondary" className="text-center">
-                    <Spinner animation="border" size="sm" className="me-2" />
-                    {m.my_registrations_loading()}
-                  </Alert>
-                )}
-
-                {tokenError && (
-                  <Alert variant="danger" className="mb-3" role="alert">
-                    <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                    {tokenError}
-                  </Alert>
-                )}
-
-                {!isLoadingRegistrations && (registrations !== null || showRecoveryCTA) && (
-                  <>
-                    {registrations !== null && registrations.length === 0 ? (
-                      <Alert variant="info" className="text-center">
-                        <i className="bi bi-inbox me-2" aria-hidden="true" />
-                        {m.my_registrations_no_results()}
-                      </Alert>
-                    ) : registrations !== null ? (
-                      <div className="d-flex flex-column gap-3">
-                        {auth.isAuthenticated && registrations.length > 0 && (
-                          <Card bg="dark" text="white" border="secondary">
-                            <Card.Body>
-                              <Form.Label htmlFor="my-registrations-language">
-                                {m.registration_preferred_language()}
-                              </Form.Label>
-                              <div className="d-flex gap-2">
-                                <Form.Select
-                                  id="my-registrations-language"
-                                  value={preferredLanguage}
-                                  disabled={isPreferenceLoading || preferenceStatus === "saving"}
-                                  onChange={(event) => {
-                                    setPreferredLanguage(
-                                      event.target.value as CommunicationLanguage,
-                                    );
-                                    setPreferenceStatus("");
-                                  }}
-                                >
-                                  <option value="nl">Nederlands</option>
-                                  <option value="fr">Français</option>
-                                  <option value="en">English</option>
-                                </Form.Select>
-                                <Button
-                                  variant="outline-warning"
-                                  disabled={isPreferenceLoading || preferenceStatus === "saving"}
-                                  onClick={() => void savePreference()}
-                                >
-                                  {m.my_registrations_save_language()}
-                                </Button>
-                              </div>
-                              {preferenceStatus === "saved" && (
-                                <div className="small text-success mt-2" role="status">
-                                  {m.my_registrations_language_saved()}
-                                </div>
+                  {registrations.map((registration) => (
+                    <Card key={registration.id} bg="dark" text="white" border="secondary">
+                      <Card.Header className="d-flex align-items-center justify-content-between">
+                        <span className="fw-semibold">
+                          <i className="bi bi-calendar-event me-2" aria-hidden="true" />
+                          {registration.eventTitle}
+                        </span>
+                        <span className="text-secondary small">
+                          {new Date(registration.createdAt).toLocaleDateString()}
+                        </span>
+                      </Card.Header>
+                      <Card.Body className="pb-2">
+                        {registration.status !== "cancelled" && (
+                          <div className="text-center mb-3">
+                            <QRCodeSVG
+                              value={buildCheckInQrUrl(
+                                window.location.origin,
+                                registration.id,
+                                registration.checkInToken,
                               )}
-                              {preferenceStatus === "error" && (
-                                <div className="small text-danger mt-2" role="alert">
-                                  {m.my_account_preference_error()}
-                                </div>
-                              )}
-                            </Card.Body>
-                          </Card>
+                              size={160}
+                              level="M"
+                              includeMargin
+                              aria-label={m.my_registrations_qr_label()}
+                            />
+                            <div className="small text-secondary mt-1">
+                              {m.registration_reference({ reference: registration.id })}
+                            </div>
+                          </div>
                         )}
-                        {registrations.map((registration) => (
-                          <Card key={registration.id} bg="dark" text="white" border="secondary">
-                            <Card.Header className="d-flex align-items-center justify-content-between">
-                              <span className="fw-semibold">
-                                <i className="bi bi-calendar-event me-2" aria-hidden="true" />
-                                {registration.eventTitle}
-                              </span>
-                              <span className="text-secondary small">
-                                {new Date(registration.createdAt).toLocaleDateString()}
-                              </span>
-                            </Card.Header>
-                            <Card.Body className="pb-2">
-                              {registration.status !== "cancelled" && (
-                                <div className="text-center mb-3">
-                                  <QRCodeSVG
-                                    value={buildCheckInQrUrl(
-                                      window.location.origin,
-                                      registration.id,
-                                      registration.checkInToken,
-                                    )}
-                                    size={160}
-                                    level="M"
-                                    includeMargin
-                                    aria-label={m.my_registrations_qr_label()}
-                                  />
-                                  <div className="small text-secondary mt-1">
-                                    {m.registration_reference({ reference: registration.id })}
-                                  </div>
-                                </div>
-                              )}
-                              <div className="d-flex gap-2 flex-wrap mb-2">
-                                <Badge
-                                  bg={
-                                    registration.status === "confirmed"
-                                      ? "success"
-                                      : registration.status === "cancelled"
-                                        ? "danger"
-                                        : "warning"
-                                  }
-                                >
-                                  {registration.status === "confirmed"
-                                    ? m.admin_status_confirmed()
-                                    : registration.status === "cancelled"
-                                      ? m.admin_status_cancelled()
-                                      : m.admin_status_pending()}
-                                </Badge>
-                                <Badge
-                                  bg={
-                                    registration.paymentStatus === "paid"
-                                      ? "success"
-                                      : registration.paymentStatus === "partial"
-                                        ? "warning"
-                                        : "secondary"
-                                  }
-                                >
-                                  {registration.paymentStatus === "paid"
-                                    ? m.admin_payment_paid()
-                                    : registration.paymentStatus === "partial"
-                                      ? m.admin_payment_partial()
-                                      : m.admin_payment_unpaid()}
-                                </Badge>
-                                {registration.checkedIn && (
-                                  <Badge bg="success">
-                                    <i className="bi bi-check2-circle me-1" aria-hidden="true" />
-                                    {m.admin_checked_in()}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-secondary small">
-                                <i className="bi bi-people me-1" aria-hidden="true" />
-                                {registration.guestCount} {m.my_registrations_guests_label()}
-                              </div>
-                              {registration.eventDate && (
-                                <a
-                                  className="btn btn-sm btn-outline-warning mt-2"
-                                  href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(registration.eventTitle)}&dates=${calendarDateRange(registration.eventDate)}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  {m.my_registrations_add_calendar()}
-                                </a>
-                              )}
-                              {registration.status !== "cancelled" && (
-                                <Button
-                                  size="sm"
-                                  variant="outline-light"
-                                  className="mt-2 ms-2"
-                                  onClick={() => {
-                                    submissionId.current = crypto.randomUUID();
-                                    setRequestRegistration(registration);
-                                    setRequestType("change");
-                                    setRequestDetails("");
-                                    setRequestSubmitted(false);
-                                    bookingRequestMutation.reset();
-                                  }}
-                                >
-                                  {m.my_registrations_request_change()}
-                                </Button>
-                              )}
-                              {registration.orderItems.some((item) => item.visible) && (
-                                <ListGroup variant="flush" className="mt-2">
-                                  {registration.orderItems
-                                    .filter((item) => item.visible)
-                                    .map((item, idx) => (
-                                      <ListGroup.Item
-                                        key={`${item.productId}-${idx}`}
-                                        className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center px-0 py-1"
-                                      >
-                                        <span className="small">
-                                          {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
-                                        </span>
-                                      </ListGroup.Item>
-                                    ))}
-                                </ListGroup>
-                              )}
-                            </Card.Body>
-                          </Card>
-                        ))}
-                        <Alert variant="info" className="mb-0">
-                          {m.my_registrations_changes_contact()}
-                        </Alert>
-                      </div>
-                    ) : null}
-
-                    {showSignOut && sessionExpiresAt && (
-                      <p className="small text-secondary text-center mt-3 mb-0">
-                        {m.my_registrations_session_expires({
-                          date: new Date(sessionExpiresAt).toLocaleDateString(),
-                        })}
-                      </p>
-                    )}
-
-                    {showSignOut && signOutError && (
-                      <Alert variant="danger" className="mt-3 mb-0" role="alert">
-                        <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                        {signOutError}
-                      </Alert>
-                    )}
-
-                    {showSignOut ? (
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        className="mt-2 w-100"
-                        disabled={isSigningOut}
-                        onClick={() => void handleSignOut()}
-                      >
-                        {isSigningOut ? (
-                          <Spinner
-                            as="span"
-                            animation="border"
+                        <div className="d-flex gap-2 flex-wrap mb-2">
+                          <Badge
+                            bg={
+                              registration.status === "confirmed"
+                                ? "success"
+                                : registration.status === "cancelled"
+                                  ? "danger"
+                                  : "warning"
+                            }
+                          >
+                            {registration.status === "confirmed"
+                              ? m.admin_status_confirmed()
+                              : registration.status === "cancelled"
+                                ? m.admin_status_cancelled()
+                                : m.admin_status_pending()}
+                          </Badge>
+                          <Badge
+                            bg={
+                              registration.paymentStatus === "paid"
+                                ? "success"
+                                : registration.paymentStatus === "partial"
+                                  ? "warning"
+                                  : "secondary"
+                            }
+                          >
+                            {registration.paymentStatus === "paid"
+                              ? m.admin_payment_paid()
+                              : registration.paymentStatus === "partial"
+                                ? m.admin_payment_partial()
+                                : m.admin_payment_unpaid()}
+                          </Badge>
+                          {registration.checkedIn && (
+                            <Badge bg="success">
+                              <i className="bi bi-check2-circle me-1" aria-hidden="true" />
+                              {m.admin_checked_in()}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="text-secondary small">
+                          <i className="bi bi-people me-1" aria-hidden="true" />
+                          {registration.guestCount} {m.my_registrations_guests_label()}
+                        </div>
+                        {registration.eventDate && (
+                          <a
+                            className="btn btn-sm btn-outline-warning mt-2"
+                            href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(registration.eventTitle)}&dates=${calendarDateRange(registration.eventDate)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {m.my_registrations_add_calendar()}
+                          </a>
+                        )}
+                        {registration.status !== "cancelled" && (
+                          <Button
                             size="sm"
-                            role="status"
-                            aria-hidden="true"
-                          />
-                        ) : (
-                          <i className="bi bi-box-arrow-right me-2" aria-hidden="true" />
+                            variant="outline-light"
+                            className="mt-2 ms-2"
+                            onClick={() => {
+                              submissionId.current = crypto.randomUUID();
+                              setRequestRegistration(registration);
+                              setRequestType("change");
+                              setRequestDetails("");
+                              setRequestSubmitted(false);
+                              bookingRequestMutation.reset();
+                            }}
+                          >
+                            {m.my_registrations_request_change()}
+                          </Button>
                         )}
-                        {m.my_registrations_sign_out()}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        className="mt-3 w-100"
-                        onClick={resetToRequestForm}
-                      >
-                        <i className="bi bi-arrow-repeat me-2" aria-hidden="true" />
-                        {m.my_registrations_request_new_link()}
-                      </Button>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </Col>
-        </Row>
-      </Container>
+                        {registration.orderItems.some((item) => item.visible) && (
+                          <ListGroup variant="flush" className="mt-2">
+                            {registration.orderItems
+                              .filter((item) => item.visible)
+                              .map((item, idx) => (
+                                <ListGroup.Item
+                                  key={`${item.productId}-${idx}`}
+                                  className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center px-0 py-1"
+                                >
+                                  <span className="small">
+                                    {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
+                                  </span>
+                                </ListGroup.Item>
+                              ))}
+                          </ListGroup>
+                        )}
+                      </Card.Body>
+                    </Card>
+                  ))}
+                  <Alert variant="info" className="mb-0">
+                    {m.my_registrations_changes_contact()}
+                  </Alert>
+                </div>
+              ) : null}
+
+              {showSignOut && sessionExpiresAt && (
+                <p className="small text-secondary text-center mt-3 mb-0">
+                  {m.my_registrations_session_expires({
+                    date: new Date(sessionExpiresAt).toLocaleDateString(),
+                  })}
+                </p>
+              )}
+
+              {showSignOut && signOutError && (
+                <Alert variant="danger" className="mt-3 mb-0" role="alert">
+                  <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                  {signOutError}
+                </Alert>
+              )}
+
+              {showSignOut ? (
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  className="mt-2 w-100"
+                  disabled={isSigningOut}
+                  onClick={() => void handleSignOut()}
+                >
+                  {isSigningOut ? (
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <i className="bi bi-box-arrow-right me-2" aria-hidden="true" />
+                  )}
+                  {m.my_registrations_sign_out()}
+                </Button>
+              ) : (
+                !auth.isAuthenticated && (
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    className="mt-3 w-100"
+                    onClick={resetToRequestForm}
+                  >
+                    <i className="bi bi-arrow-repeat me-2" aria-hidden="true" />
+                    {m.my_registrations_request_new_link()}
+                  </Button>
+                )
+              )}
+            </>
+          )}
+        </>
+      )}
       <Modal
         show={requestRegistration !== null}
         onHide={() => setRequestRegistration(null)}
@@ -677,6 +719,6 @@ export default function MyRegistrationsPage() {
           )}
         </Modal.Footer>
       </Modal>
-    </section>
+    </div>
   );
 }

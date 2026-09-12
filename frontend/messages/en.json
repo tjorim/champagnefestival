@@ -609,6 +609,7 @@
   "my_registrations_email_label": "Email address",
   "my_registrations_email_placeholder": "your@email.com",
   "my_registrations_request_link": "Email me a secure link",
+  "my_registrations_sign_in_instead": "Already a member or volunteer? Sign in instead.",
   "my_registrations_requesting": "Preparing secure link...",
   "my_registrations_request_success": "If we found registrations for that email address, we prepared a secure link.",
   "my_registrations_invalid_email": "Please enter a valid email address.",

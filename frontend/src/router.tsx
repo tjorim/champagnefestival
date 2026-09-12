@@ -33,7 +33,6 @@ interface AppRouteComponents {
   App: RouteComponent;
   AdminPage: RouteComponent;
   CheckInRoute: RouteComponent;
-  MyRegistrationsRoute: RouteComponent;
   PrivacyPolicyRoute: RouteComponent;
   PebblePairRoute: RouteComponent;
   MyAccountRoute: RouteComponent;
@@ -44,7 +43,6 @@ export function createAppRouter({
   App,
   AdminPage,
   CheckInRoute,
-  MyRegistrationsRoute,
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,
@@ -93,11 +91,15 @@ export function createAppRouter({
     component: VenuePlanRoute,
   });
 
+  // /my-registrations and /me render the same unified self-service page
+  // (MyAccountRoute) — kept as two distinct paths since /my-registrations?
+  // token=... is already embedded in sent confirmation/magic-link emails and
+  // must keep resolving, but there's no behavioral difference between them.
   const myRegistrationsRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/my-registrations",
     validateSearch: validateMyRegistrationsSearch,
-    component: MyRegistrationsRoute,
+    component: MyAccountRoute,
   });
 
   const privacyPolicyRoute = createRoute({
@@ -115,6 +117,7 @@ export function createAppRouter({
   const myAccountRoute = createRoute({
     getParentRoute: () => rootRoute,
     path: "/me",
+    validateSearch: validateMyRegistrationsSearch,
     component: MyAccountRoute,
   });
 

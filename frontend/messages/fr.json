@@ -609,6 +609,7 @@
   "my_registrations_email_label": "Adresse e-mail",
   "my_registrations_email_placeholder": "votre@email.fr",
   "my_registrations_request_link": "Recevoir un lien sécurisé",
+  "my_registrations_sign_in_instead": "Déjà membre ou bénévole ? Connectez-vous plutôt.",
   "my_registrations_requesting": "Préparation du lien sécurisé...",
   "my_registrations_request_success": "Si des inscriptions existent pour cette adresse e-mail, un lien sécurisé a été préparé.",
   "my_registrations_invalid_email": "Veuillez saisir une adresse e-mail valide.",

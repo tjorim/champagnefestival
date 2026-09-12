@@ -18,6 +18,7 @@ const authState = vi.hoisted(() => ({
   accessToken: null as string | null,
   isAuthenticated: false,
   isLoading: false,
+  login: vi.fn(),
   listeners: new Set<() => void>(),
   set(next: Partial<{ accessToken: string | null; isAuthenticated: boolean; isLoading: boolean }>) {
     Object.assign(this, next);
@@ -40,6 +41,7 @@ vi.mock("@/contexts/AuthContext", async () => {
         getAccessToken: () => authState.accessToken,
         isAuthenticated: authState.isAuthenticated,
         isLoading: authState.isLoading,
+        login: authState.login,
       };
     },
   };
@@ -52,6 +54,7 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_email_label: () => "Email",
     my_registrations_email_placeholder: () => "email@example.com",
     my_registrations_request_link: () => "Email me a secure link",
+    my_registrations_sign_in_instead: () => "Already a member or volunteer? Sign in instead.",
     my_registrations_requesting: () => "Preparing secure link...",
     my_registrations_request_success: () =>
       "If we found registrations for that email, we prepared a secure link.",
@@ -100,6 +103,7 @@ describe("MyRegistrationsPage", () => {
     authState.accessToken = null;
     authState.isAuthenticated = false;
     authState.isLoading = false;
+    authState.login.mockClear();
   });
 
   it("keeps the check-in credential out of the QR query string", () => {
@@ -498,6 +502,56 @@ describe("MyRegistrationsPage", () => {
     // toLocaleDateString's exact format is locale-dependent (varies between
     // dev machines and CI runners); only assert the locale-independent parts.
     expect(screen.getByText(/^Signed in until /)).toBeInTheDocument();
+  });
+
+  it("shows a signed-in member's own registrations directly, with no token needed", async () => {
+    authState.accessToken = "member-access-token";
+    authState.isAuthenticated = true;
+    let authorization = "";
+    server.use(
+      http.get("/api/me/registrations", ({ request }) => {
+        authorization = request.headers.get("Authorization") ?? "";
+        return HttpResponse.json([
+          {
+            id: "reg-member",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]);
+      }),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
+    });
+    expect(authorization).toBe("Bearer member-access-token");
+    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    // Neither of the anonymous-only controls makes sense for a signed-in member.
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Request another secure link" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers a sign-in link alongside the email-lookup form", async () => {
+    await renderPage();
+
+    const signInLink = await screen.findByRole("button", {
+      name: "Already a member or volunteer? Sign in instead.",
+    });
+    fireEvent.click(signInLink);
+
+    expect(authState.login).toHaveBeenCalledWith("/me");
   });
 
   it("shows the email form directly when there is no existing session", async () => {

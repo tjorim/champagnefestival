@@ -7,9 +7,17 @@ import { useAuth } from "@/contexts/AuthContext";
 import { server } from "@/mocks/server";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
+// MyRegistrationsPage needs a TanStack Router context (useSearch/useNavigate)
+// that these tests don't set up — irrelevant here since none of them exercise
+// the registrations tab itself.
+vi.mock("@/components/MyRegistrationsPage", () => ({
+  default: () => <div>Registrations section</div>,
+}));
+
 vi.mock("@/paraglide/messages", () => ({
   m: {
     my_account_title: () => "My Account",
+    my_registrations_title: () => "Registrations",
     my_account_signed_in_as: ({ account }: { account: string }) => `Signed in as ${account}`,
     my_account_delete_heading: () => "Delete my account",
     my_account_delete_description: () => "Your festival records are kept.",
@@ -141,8 +149,7 @@ describe("MyAccountPage", () => {
     expect(screen.getByRole("button", { name: "Confirm" })).not.toBeDisabled();
   });
 
-  it("offers a way out when sign-in itself fails", async () => {
-    const login = vi.fn();
+  it("shows a dismissible auth error without blocking the rest of the page", async () => {
     const clearAuthError = vi.fn();
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: false,
@@ -155,7 +162,7 @@ describe("MyAccountPage", () => {
       getAccessToken: vi.fn().mockReturnValue(null),
       authError: "Keycloak is unreachable.",
       clearAuthError,
-      login,
+      login: vi.fn(),
       logout: vi.fn(),
       renewSession: vi.fn().mockResolvedValue(false),
     });
@@ -164,10 +171,12 @@ describe("MyAccountPage", () => {
     render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
 
     expect(screen.getByText("Keycloak is unreachable.")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Try signing in again" }));
+    // The page never forces sign-in (unlike the old design), so the
+    // registrations section still renders underneath the error.
+    expect(screen.getByText("Registrations section")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Close alert" }));
 
     expect(clearAuthError).toHaveBeenCalledTimes(1);
-    expect(login).toHaveBeenCalledWith("/me");
   });
 
   it("does not show the volunteer identity section for a non-volunteer account", async () => {
@@ -208,5 +217,46 @@ describe("MyAccountPage", () => {
 
     expect(await screen.findByText("Register your volunteer record")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
+  });
+
+  it("shows three switchable tabs for an authenticated volunteer, defaulting to Registrations", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-volunteer",
+      roles: ["volunteer"],
+      hasRole: vi.fn((role: string) => role === "volunteer"),
+      getAccessToken: vi.fn().mockReturnValue("oidc-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+    server.use(
+      http.get("/api/me/volunteer", () =>
+        HttpResponse.json({
+          linked: false,
+          name: null,
+          national_register_number: null,
+          eid_document_number: null,
+        }),
+      ),
+    );
+
+    const user = userEvent.setup();
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+
+    const registrationsTab = await screen.findByRole("tab", { name: "Registrations" });
+    const volunteerTab = screen.getByRole("tab", { name: "My eID" });
+    const accountTab = screen.getByRole("tab", { name: "My Account" });
+    expect(registrationsTab).toHaveAttribute("aria-selected", "true");
+    expect(volunteerTab).toHaveAttribute("aria-selected", "false");
+
+    await user.click(accountTab);
+    expect(accountTab).toHaveAttribute("aria-selected", "true");
+    expect(registrationsTab).toHaveAttribute("aria-selected", "false");
   });
 });
