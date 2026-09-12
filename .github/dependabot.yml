@@ -45,6 +45,9 @@ updates:
       i18n:
         patterns:
           - "@inlang/*"
+      dayjs:
+        patterns:
+          - "dayjs"
       maps:
         patterns:
           - "leaflet"
