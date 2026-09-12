@@ -72,8 +72,10 @@ async def update_volunteer(
     eid_document_number: str | None = None,
     active: bool | None = None,
     help_periods: list[dict] | None = None,
+    oidc_subject: str | None = None,
+    clear_oidc_subject: bool = False,
 ) -> dict:
-    provided = {
+    provided: dict[str, Any] = {
         k: v
         for k, v in {
             "name": name,
@@ -82,9 +84,15 @@ async def update_volunteer(
             "eid_document_number": eid_document_number,
             "active": active,
             "help_periods": help_periods,
+            "oidc_subject": oidc_subject,
         }.items()
         if v is not None
     }
+    # An omitted oidc_subject is indistinguishable from an explicit null once
+    # filtered above, so clearing the link needs its own explicit flag —
+    # otherwise the MCP tool could set the link but never unlink it (#1037 review).
+    if clear_oidc_subject:
+        provided["oidc_subject"] = None
     body = validate_with_schema(VolunteerUpdate, **provided)
 
     async with session_factory() as db:

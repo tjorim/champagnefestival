@@ -4,53 +4,48 @@ Admin-only mutation logic — order-item resolution, the table/edition guard,
 and the admin create/update/delete transitions — lives in
 ``app.services.registrations_service`` and is shared with
 ``app.mcp.admin.registrations``. The public self-service endpoints below
-(guest-facing creation, CSV export, the email-token "my registrations"
-lookup flow) have no MCP equivalent and stay here.
+(guest-facing creation, CSV export) have no MCP equivalent and stay here.
+The email-token "my registrations" lookup flow that used to live here was
+retired in #1044 — see docs/decisions/1044-confirm-first-registration-claiming.md;
+``app.routers.visitor_auth`` covers the surviving magic-link flow.
 """
 
 from __future__ import annotations
 
 import csv
-import hashlib
 import io
 import logging
 import re
 import secrets
 from collections.abc import AsyncIterator
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
-from sqlalchemy import delete, func, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import StreamingResponse
 
 from app.auth import get_actor_id, get_optional_claims, require_admin
-from app.config import settings
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
-from app.email import send_guest_access_email
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
-from app.models import Edition, Event, Person, Registration, ReservationAccessToken, Table
+from app.models import Edition, Event, Person, Registration, Table
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
     PaymentTransactionCreate,
     PaymentTransactionLedgerEnvelope,
     PaymentTransactionOut,
-    RegistrationAccessLookupRequest,
     RegistrationAdminCreate,
     RegistrationCreate,
-    RegistrationGuestOut,
     RegistrationListEnvelope,
-    RegistrationLookupRequest,
-    RegistrationLookupRequestAccepted,
     RegistrationOut,
     RegistrationOutWithToken,
     RegistrationPublicOut,
     RegistrationUpdate,
+    RegistrationVolunteerAssignment,
 )
 from app.services import events_service, payments_service, registrations_service
 from app.services.allocations_service import allocated_registration_filter
@@ -64,7 +59,6 @@ from app.utils import (
     make_id,
     registration_to_dict,
     registration_to_dict_with_token,
-    registration_to_guest_dict,
     registration_to_list_dict,
 )
 
@@ -534,104 +528,6 @@ async def export_payment_transactions_csv(
     )
 
 
-@router.post(
-    "/my/request",
-    response_model=RegistrationLookupRequestAccepted,
-    status_code=status.HTTP_202_ACCEPTED,
-)
-async def request_my_registrations_access(
-    body: RegistrationLookupRequest,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-) -> RegistrationLookupRequestAccepted:
-    client_ip = get_client_ip(request)
-    if not check_rate_limit(client_ip, scope="registration-access-request"):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
-        )
-
-    email_norm = str(body.email).lower().strip()
-    token = secrets.token_urlsafe(24)
-    now = datetime.now(UTC)
-    expires_at = now + timedelta(minutes=settings.guest_access_token_ttl_minutes)
-    request_id = _guest_access_log_id(email_norm)
-    token_hash = _hash_guest_access_token(token)
-
-    await db.execute(delete(ReservationAccessToken).where(ReservationAccessToken.expires_at < now))
-    existing_token_row = (
-        await db.execute(select(ReservationAccessToken).where(ReservationAccessToken.email == email_norm))
-    ).scalar_one_or_none()
-    if existing_token_row is None:
-        db.add(
-            ReservationAccessToken(
-                id=make_id("rat"),
-                email=email_norm,
-                token_hash=token_hash,
-                expires_at=expires_at,
-                created_at=now,
-                last_used_at=None,
-            )
-        )
-    else:
-        existing_token_row.token_hash = token_hash
-        existing_token_row.expires_at = expires_at
-        existing_token_row.created_at = now
-        existing_token_row.last_used_at = None
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()
-        existing_token_row = (
-            await db.execute(select(ReservationAccessToken).where(ReservationAccessToken.email == email_norm))
-        ).scalar_one_or_none()
-        if existing_token_row is None:
-            raise
-        existing_token_row.token_hash = token_hash
-        existing_token_row.expires_at = expires_at
-        existing_token_row.created_at = now
-        existing_token_row.last_used_at = None
-        await db.commit()
-
-    try:
-        email_sent = await send_guest_access_email(
-            email=email_norm,
-            token=token,
-            request_id=request_id,
-            expires_at=expires_at,
-        )
-    except Exception:
-        logger.exception(
-            "Guest access email delivery failed unexpectedly for request_id=%s.",
-            request_id,
-        )
-        email_sent = False
-    logger.info(
-        "Prepared guest registration access token request_id=%s delivery_mode=email expires_at=%s email_sent=%s",
-        request_id,
-        expires_at.isoformat(),
-        email_sent,
-    )
-    return RegistrationLookupRequestAccepted(
-        delivery_mode="email",
-        expires_in_minutes=settings.guest_access_token_ttl_minutes,
-    )
-
-
-@router.post("/my/access", response_model=list[RegistrationGuestOut])
-async def access_my_registrations(
-    body: RegistrationAccessLookupRequest,
-    db: AsyncSession = Depends(get_db),
-) -> list[dict]:
-    token_row = await _get_guest_access_token_or_401(db, body.token)
-    email_norm = token_row.email
-    # Expire the token immediately after first use so it cannot be replayed.
-    token_row.expires_at = datetime.now(UTC)
-    rows = await _load_guest_registrations_by_email(db, email_norm)
-    await db.commit()
-    return [registration_to_guest_dict(row, person, event) for row, person, event in rows]
-
-
 @router.get(
     "/{registration_id}",
     response_model=RegistrationOutWithToken,
@@ -710,6 +606,31 @@ async def update_registration(
     )
 
 
+@router.post(
+    "/{registration_id}/assign-volunteer",
+    response_model=RegistrationOut,
+    dependencies=[Depends(require_admin)],
+)
+async def assign_registration_to_volunteer(
+    registration_id: str,
+    body: RegistrationVolunteerAssignment,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    """Attach an unowned registration to a volunteer's own portal account
+    (#1044) — an admin override alongside the volunteer's own self-service
+    claim flow, for a booking they never confirmed themselves."""
+    registration = await registrations_service.get_registration_or_404(db, registration_id)
+    return await registrations_service.assign_registration_to_volunteer(
+        db,
+        registration,
+        body.volunteer_id,
+        actor=actor,
+        request_id=getattr(request.state, "request_id", None),
+    )
+
+
 @router.delete(
     "/{registration_id}",
     status_code=status.HTTP_204_NO_CONTENT,
@@ -724,36 +645,6 @@ async def delete_registration(
     registration = await registrations_service.get_registration_or_404(db, registration_id)
     await registrations_service.delete_registration(
         db, registration, actor=actor, request_id=getattr(request.state, "request_id", None)
-    )
-
-
-def _hash_guest_access_token(token: str) -> str:
-    return hashlib.sha256(token.encode("utf-8")).hexdigest()
-
-
-def _guest_access_log_id(email: str) -> str:
-    return hashlib.sha256(email.encode("utf-8")).hexdigest()[:12]
-
-
-async def _get_guest_access_token_or_401(
-    db: AsyncSession,
-    token: str,
-) -> ReservationAccessToken:
-    token_hash = _hash_guest_access_token(token)
-    result = await db.execute(
-        select(ReservationAccessToken).where(ReservationAccessToken.token_hash == token_hash).with_for_update()
-    )
-    token_row = result.scalar_one_or_none()
-    if token_row:
-        now = datetime.now(UTC)
-        expires_at = token_row.expires_at
-        if expires_at.tzinfo is None:
-            expires_at = expires_at.replace(tzinfo=UTC)
-        if expires_at > now:
-            return token_row
-    raise HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid or expired registration access token.",
     )
 
 

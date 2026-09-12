@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -25,7 +24,6 @@ from app.schemas import (
     MyRegistrationOut,
     PaymentStatus,
     PebbleAccessTokenOut,
-    RegistrationAccessLookupRequest,
     RegistrationGuestOut,
     RegistrationStatus,
 )
@@ -37,7 +35,7 @@ from app.services.pebble_access import (
 )
 from app.services.users_service import claim_unowned_registrations_for_email, get_or_create_user
 from app.utils import registration_to_guest_dict
-from app.visitor_session import actor_for_user
+from app.visitor_session import actor_for_user, get_current_user_with_claims
 from app.visitor_session import get_current_user as get_current_portal_user
 
 router = APIRouter(prefix="/api/me", tags=["me"])
@@ -226,30 +224,75 @@ async def request_registration_change(
     return {"ok": True}
 
 
-@router.post("/registrations/claim", response_model=list[RegistrationGuestOut])
-async def claim_my_registrations(
-    body: RegistrationAccessLookupRequest,
-    user: User = Depends(get_current_portal_user),
+def _verified_email_from_claims(claims: dict[str, Any] | None) -> str | None:
+    """Return the caller's own email, only when Keycloak itself attests it.
+
+    An unverified email is self-asserted, not Keycloak's own attestation —
+    the same trust bar #1006 uses for volunteer identity. ``None`` means
+    there is nothing safe to auto-detect for this caller; there is no
+    fallback path for a different email (#1044 removed the manual
+    proof-token flow entirely).
+    """
+    if claims is None:
+        return None
+    email = claims.get("email")
+    if claims.get("email_verified") is True and isinstance(email, str) and email.strip():
+        return email.strip().lower()
+    return None
+
+
+@router.get("/registrations/claimable", response_model=list[RegistrationGuestOut])
+async def list_claimable_registrations(
+    response: Response,
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    """Claim unowned registrations after proving control of their email address.
+    """Preview unowned registrations under the caller's own verified email.
 
-    Unchanged in shape since #953: still requires a fresh one-shot lookup
-    token proving control of the email being claimed, regardless of whether
-    the caller authenticated via OIDC or an existing visitor session — a
-    visitor session already proves control of *its own* verified_email (see
-    the magic-link redemption endpoint, which claims that email's
-    registrations directly, no separate token needed), but this endpoint
-    lets the caller claim registrations under *any* email they can prove,
-    exactly as it already did for OIDC callers.
+    Read-only — nothing is linked here (#1044). The frontend shows these as
+    "is this yours?" candidates; only an explicit
+    ``POST /registrations/claim-verified-email`` actually attaches them,
+    since silently rewriting someone's account data without them seeing it
+    first isn't something a verified-email match alone should justify.
     """
-    from app.routers.registrations import _get_guest_access_token_or_401, _load_guest_registrations_by_email
+    # Each row includes check_in_token — same no-store rationale as every
+    # other identity-linked /me endpoint (see get_communication_preference).
+    response.headers["Cache-Control"] = "no-store"
+    from app.routers.registrations import _load_guest_registrations_by_email
 
-    token_row = await _get_guest_access_token_or_401(db, body.token)
-    token_row.expires_at = datetime.now(UTC)
+    _user, claims = user_and_claims
+    email = _verified_email_from_claims(claims)
+    if email is None:
+        return []
+    rows = await _load_guest_registrations_by_email(db, email)
+    return [
+        registration_to_guest_dict(registration, person, event)
+        for registration, person, event in rows
+        if registration.user_id is None
+    ]
+
+
+@router.post("/registrations/claim-verified-email", response_model=list[RegistrationGuestOut])
+async def claim_verified_email_registrations(
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Link unowned registrations under the caller's own verified email,
+    after they've explicitly confirmed it — see ``list_claimable_registrations``
+    for the read-only preview this follows.
+    """
+    from app.routers.registrations import _load_guest_registrations_by_email
+
+    user, claims = user_and_claims
+    email = _verified_email_from_claims(claims)
+    if email is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="No verified email available to claim registrations with.",
+        )
     actor, auth_source = actor_for_user(user)
-    await claim_unowned_registrations_for_email(db, user, token_row.email, actor=actor, auth_source=auth_source)
-    rows = await _load_guest_registrations_by_email(db, token_row.email)
+    await claim_unowned_registrations_for_email(db, user, email, actor=actor, auth_source=auth_source)
+    rows = await _load_guest_registrations_by_email(db, email)
     await db.commit()
     return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]
 

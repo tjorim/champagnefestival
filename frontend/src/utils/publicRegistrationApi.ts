@@ -333,25 +333,6 @@ function mapGuestRegistrations(data: GuestRegistrationResponse[]): GuestRegistra
   }));
 }
 
-export async function requestRegistrationLookup(
-  email: string,
-): Promise<RegistrationLookupRequestAcceptedResponse> {
-  const response = await fetch("/api/registrations/my/request", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-
-  if (!response.ok) {
-    throw new RegistrationLookupError(
-      response.status === 422 ? "invalid_email" : "request_failed",
-      response.status === 422 ? m.my_registrations_invalid_email() : m.my_registrations_error(),
-    );
-  }
-
-  return parseRegistrationLookupRequestAccepted(await response.json());
-}
-
 async function parseRegistrationLookupResponse(response: Response): Promise<GuestRegistration[]> {
   if (!response.ok) {
     throw new RegistrationLookupError(
@@ -364,26 +345,34 @@ async function parseRegistrationLookupResponse(response: Response): Promise<Gues
   return mapGuestRegistrations(data);
 }
 
-export async function claimMyRegistrations(token: string, accessToken: string): Promise<void> {
-  const response = await fetch("/api/me/registrations/claim", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ token }),
-  });
-
-  if (!response.ok) {
-    throw new RegistrationLookupError(
-      response.status === 401 ? "invalid_token" : "request_failed",
-      response.status === 401 ? m.my_registrations_invalid_token() : m.my_registrations_error(),
-    );
-  }
-}
-
 export async function fetchOwnedRegistrations(accessToken: string): Promise<GuestRegistration[]> {
   const response = await fetch("/api/me/registrations", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  return parseRegistrationLookupResponse(response);
+}
+
+/** Preview registrations under the caller's own verified email — read-only,
+ * nothing is linked (#1044). Empty when the account has no verified email
+ * on file, which is not an error. */
+export async function fetchClaimableRegistrations(
+  accessToken: string,
+): Promise<GuestRegistration[]> {
+  const response = await fetch("/api/me/registrations/claimable", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  return parseRegistrationLookupResponse(response);
+}
+
+/** Link the registrations previewed by `fetchClaimableRegistrations` — only
+ * called after the caller explicitly confirms it's them. */
+export async function claimVerifiedEmailRegistrations(
+  accessToken: string,
+): Promise<GuestRegistration[]> {
+  const response = await fetch("/api/me/registrations/claim-verified-email", {
+    method: "POST",
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 

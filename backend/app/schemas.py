@@ -498,6 +498,16 @@ class RegistrationUpdate(RegistrationNotesRequest):
     strap_issued: bool | None = None
 
 
+class RegistrationVolunteerAssignment(RequestModel):
+    """Admin override (#1044) attaching an unowned registration to a
+    volunteer's own portal account, for a booking the volunteer never
+    confirmed themselves via the self-service claim flow — e.g. they don't
+    use the account much, or the booking predates their self-registration.
+    """
+
+    volunteer_id: str = Field(min_length=1)
+
+
 class RegistrationOut(BaseModel):
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)
@@ -800,8 +810,13 @@ class VolunteerUpdate(RequestModel):
     eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
     active: bool | None = None
     help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
+    oidc_subject: str | None = Field(default=None, max_length=255)
+    """Admin-only override for the self-service identity link (#1006) — e.g.
+    to unlink a mistaken registration (explicit ``null``) or hand-link a
+    volunteer who can't or won't complete self-registration themselves.
+    Normally established by the volunteer via ``POST /api/me/volunteer/register``."""
 
-    @field_validator("name", "national_register_number", "eid_document_number", mode="before")
+    @field_validator("name", "national_register_number", "eid_document_number", "oidc_subject", mode="before")
     @classmethod
     def strip_optional_strings(cls, value: str | None) -> str | None:
         if not isinstance(value, str):
@@ -826,6 +841,7 @@ class VolunteerOut(BaseModel):
     eid_document_number: str | None
     active: bool
     help_periods: list[VolunteerPeriodOut]
+    oidc_subject: str | None
     created_at: datetime
     updated_at: datetime
 

@@ -1,18 +1,18 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Guest self-service (/my-registrations)", () => {
+test.describe("Guest self-service (/me)", () => {
   test("shows email request form when no token in URL", async ({ page }) => {
-    await page.goto("/my-registrations");
+    await page.goto("/me");
 
-    // Page title should be visible
-    await expect(page.locator("#my-registrations-title")).toBeVisible();
+    // Page heading should be visible
+    await expect(page.locator("#my-account-title")).toBeVisible();
 
     // Email input should be present
     await expect(page.locator("#my-registrations-email")).toBeVisible();
   });
 
   test("submitting a valid email shows confirmation", async ({ page }) => {
-    await page.goto("/my-registrations");
+    await page.goto("/me");
 
     // Fill in a valid email
     await page.locator("#my-registrations-email").fill("alice@moet.com");
@@ -27,7 +27,7 @@ test.describe("Guest self-service (/my-registrations)", () => {
   });
 
   test("submitting an invalid email shows an error", async ({ page }) => {
-    await page.goto("/my-registrations");
+    await page.goto("/me");
 
     await page.locator("#my-registrations-email").fill("not-an-email");
     await page
@@ -41,7 +41,7 @@ test.describe("Guest self-service (/my-registrations)", () => {
 
   test("shows registrations when a valid token is provided", async ({ page }) => {
     // Any non-empty token is accepted by the MSW mock
-    await page.goto("/my-registrations?token=mock-token-reg-01");
+    await page.goto("/me?token=mock-token-reg-01");
 
     // Should show at least one registration card
     await expect(page.locator(".card").first()).toBeVisible({ timeout: 10_000 });
@@ -51,7 +51,7 @@ test.describe("Guest self-service (/my-registrations)", () => {
   });
 
   test("sign out button resets to email form", async ({ page }) => {
-    await page.goto("/my-registrations?token=mock-token-reg-01");
+    await page.goto("/me?token=mock-token-reg-01");
 
     // Wait for registrations to load
     await expect(page.locator(".card").first()).toBeVisible({ timeout: 10_000 });
@@ -70,7 +70,7 @@ test.describe("Guest self-service (/my-registrations)", () => {
   });
 
   test("back to site link navigates home", async ({ page }) => {
-    await page.goto("/my-registrations");
+    await page.goto("/me");
 
     const backLink = page.locator('a[href="/"]');
     await expect(backLink).toBeVisible();

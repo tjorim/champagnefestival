@@ -63,7 +63,6 @@ const OtherEvents = lazy(() => import("./components/OtherEvents"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
 const CheckInPage = lazy(() => import("./components/CheckInPage"));
 const VenuePlanPage = lazy(() => import("./components/VenuePlanPage"));
-const MyRegistrationsPage = lazy(() => import("./components/MyRegistrationsPage"));
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
 const MyAccountPage = lazy(() => import("./components/MyAccountPage"));
@@ -186,24 +185,6 @@ function VenuePlanRoute() {
   );
 }
 
-/** Route component for /my-registrations */
-function MyRegistrationsRoute() {
-  useNoIndex();
-  return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar iconClass="bi bi-ticket-perforated" title={m.my_registrations_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.my_registrations_error()}>
-          <MyRegistrationsPage />
-        </AppSuspense>
-      </main>
-    </div>
-  );
-}
-
 /** Route component for /privacy */
 function PrivacyPolicyRoute() {
   return (
@@ -239,7 +220,12 @@ function PebblePairRoute() {
   );
 }
 
-/** Route component for /me — unlinked, direct-URL-only self-service account page. */
+/**
+ * Route component for /me — unlinked, direct-URL-only self-service page for
+ * visitors, members, and volunteers alike (the latter two via OIDC). Also
+ * the target of the confirmation/magic-link emails' `?token=` links (see
+ * backend/app/email.py) — no separate /my-registrations route.
+ */
 function MyAccountRoute() {
   useNoIndex();
   return (
@@ -714,7 +700,6 @@ const router = createAppRouter({
   App,
   AdminPage,
   CheckInRoute,
-  MyRegistrationsRoute,
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,

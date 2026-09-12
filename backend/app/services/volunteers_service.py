@@ -46,11 +46,14 @@ async def ensure_unique_fields(
     db: AsyncSession,
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
+    oidc_subject: str | None = None,
     exclude_id: str | None = None,
 ) -> None:
     """Check for a conflicting row. Callers are expected to have already run
-    values through ``normalise_optional_identity`` (see ``create_volunteer``/
-    ``apply_volunteer_update``) — this only queries with what it's given."""
+    identity values through ``normalise_optional_identity`` (see
+    ``create_volunteer``/``apply_volunteer_update``) — this only queries with
+    what it's given. ``oidc_subject`` needs no such normalisation; it's an
+    opaque OIDC ``sub`` claim, not a human-entered identity number."""
     if national_register_number is not None:
         stmt = select(Person).where(Person.national_register_number == national_register_number)
         if exclude_id:
@@ -71,6 +74,17 @@ async def ensure_unique_fields(
             raise HTTPException(
                 status_code=409,
                 detail="Person with this eID document number already exists.",
+            )
+
+    if oidc_subject is not None:
+        stmt = select(Person).where(Person.oidc_subject == oidc_subject)
+        if exclude_id:
+            stmt = stmt.where(Person.id != exclude_id)
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing is not None:
+            raise HTTPException(
+                status_code=409,
+                detail="Person with this OIDC identity link already exists.",
             )
 
 
@@ -130,6 +144,7 @@ def to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> dic
         "national_register_number": d["national_register_number"],
         "eid_document_number": d["eid_document_number"],
         "active": d["active"],
+        "oidc_subject": person.oidc_subject,
         "help_periods": [
             {
                 "id": period.id,
@@ -213,6 +228,7 @@ async def apply_volunteer_update(
 
     nrr_in_set = "national_register_number" in body.model_fields_set
     eid_in_set = "eid_document_number" in body.model_fields_set
+    subject_in_set = "oidc_subject" in body.model_fields_set
     nrr = normalise_optional_identity(body.national_register_number) if nrr_in_set else None
     eid = normalise_optional_identity(body.eid_document_number) if eid_in_set else None
 
@@ -220,6 +236,8 @@ async def apply_volunteer_update(
         await ensure_unique_fields(db, national_register_number=nrr, exclude_id=volunteer_id)
     if eid_in_set and eid is not None:
         await ensure_unique_fields(db, eid_document_number=eid, exclude_id=volunteer_id)
+    if subject_in_set and body.oidc_subject is not None:
+        await ensure_unique_fields(db, oidc_subject=body.oidc_subject, exclude_id=volunteer_id)
 
     for field in ("name", "address", "active"):
         if field in body.model_fields_set:
@@ -229,6 +247,8 @@ async def apply_volunteer_update(
         volunteer.national_register_number = nrr
     if eid_in_set:
         volunteer.eid_document_number = eid
+    if subject_in_set:
+        volunteer.oidc_subject = body.oidc_subject
 
     if "help_periods" in body.model_fields_set and body.help_periods is not None:
         await replace_help_periods(db, volunteer_id, body.help_periods)
@@ -250,7 +270,7 @@ async def apply_volunteer_update(
         await db.rollback()
         raise HTTPException(
             status_code=409,
-            detail="Person with this national register number or eID document number already exists.",
+            detail="Person with this national register number, eID document number, or OIDC identity link already exists.",
         ) from exc
     await db.refresh(volunteer)
     periods_map = await load_periods_map(db, [volunteer.id])

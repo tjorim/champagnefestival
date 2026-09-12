@@ -145,7 +145,7 @@ describe("RegistrationModal component", () => {
       expect(screen.getByText(/Booking reference: reg-/)).toBeInTheDocument();
       expect(screen.getByRole("link", { name: /my registrations/i })).toHaveAttribute(
         "href",
-        "/my-registrations",
+        "/me",
       );
     });
   });

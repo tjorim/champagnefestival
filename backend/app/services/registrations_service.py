@@ -63,6 +63,77 @@ async def get_registration_or_404(db: AsyncSession, registration_id: str) -> Reg
     return registration
 
 
+async def assign_registration_to_volunteer(
+    db: AsyncSession,
+    registration: Registration,
+    volunteer_id: str,
+    *,
+    actor: str,
+    request_id: str | None = None,
+) -> dict:
+    """Admin override (#1044): attach an unowned registration to a
+    volunteer's own portal account. The same convergent,
+    existing-owner-protected write self-service claiming uses
+    (``claim_unowned_registrations_for_email``'s existing-owner-protection,
+    mirrored here for a single registration), triggered by an admin instead
+    of the volunteer themselves — for a booking they never confirmed via the
+    claim flow (e.g. an account they rarely sign into, or a booking made
+    before they self-registered).
+    """
+    from app.services.users_service import get_or_create_user
+
+    volunteer = await db.get(Person, volunteer_id)
+    if volunteer is None or "volunteer" not in volunteer.roles:
+        raise HTTPException(status_code=404, detail="Volunteer not found.")
+    if volunteer.oidc_subject is None:
+        raise HTTPException(
+            status_code=422,
+            detail="This volunteer hasn't linked their own account yet, so there's nothing to assign to.",
+        )
+    user = await get_or_create_user(db, volunteer.oidc_subject, commit=False)
+
+    # Lock and re-check under the lock rather than trusting the caller's
+    # already-loaded `registration` snapshot — mirrors
+    # `claim_unowned_registrations_for_email`'s `.with_for_update()` guard
+    # against two concurrent assignments both observing `user_id IS NULL`.
+    locked = (
+        await db.execute(
+            select(Registration)
+            .options(
+                selectinload(Registration.event).selectinload(Event.edition),
+                selectinload(Registration.event).selectinload(Event.products),
+            )
+            .where(Registration.id == registration.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if locked is None:
+        raise HTTPException(status_code=404, detail="Registration not found.")
+    registration = locked
+    if registration.user_id == user.id:
+        person = (await db.execute(select(Person).where(Person.id == registration.person_id))).scalar_one()
+        return registration_to_dict(registration, person, registration.event)
+    if registration.user_id is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="This registration is already linked to an account.",
+        )
+    registration.user_id = user.id
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="registration_assigned",
+        resource_type="registration",
+        resource_id=registration.id,
+        request_id=request_id,
+        details={"volunteer_id": volunteer_id},
+    )
+    await db.commit()
+    person = (await db.execute(select(Person).where(Person.id == registration.person_id))).scalar_one()
+    return registration_to_dict(registration, person, registration.event)
+
+
 def ensure_registration_can_check_in(registration: Registration) -> None:
     """Reject entrance mutations for a canceled registration."""
     if registration.status == "cancelled":

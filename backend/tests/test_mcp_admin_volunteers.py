@@ -97,6 +97,29 @@ async def test_update_volunteer_partial(db_session):
     assert len(updated["help_periods"]) == 1  # untouched help periods survive too
 
 
+async def test_update_volunteer_can_set_and_clear_oidc_subject(db_session):
+    """clear_oidc_subject is required to unlink — passing oidc_subject=None is a no-op,
+    since it's indistinguishable from omitting the parameter entirely (#1037 review)."""
+    factory = mcp_session_factory(db_session)
+    created = await mcp_volunteers.create_volunteer(
+        factory,
+        "admin-1",
+        name="Alice",
+        national_register_number="85010199999",
+        eid_document_number="BEI998877",
+        help_periods=HELP_PERIODS,
+    )
+
+    linked = await mcp_volunteers.update_volunteer(factory, "admin-1", created["id"], oidc_subject="keycloak-sub-123")
+    assert linked["oidc_subject"] == "keycloak-sub-123"
+
+    unchanged = await mcp_volunteers.update_volunteer(factory, "admin-1", created["id"], oidc_subject=None)
+    assert unchanged["oidc_subject"] == "keycloak-sub-123"
+
+    unlinked = await mcp_volunteers.update_volunteer(factory, "admin-1", created["id"], clear_oidc_subject=True)
+    assert unlinked["oidc_subject"] is None
+
+
 async def test_update_volunteer_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):

@@ -18,6 +18,7 @@ const authState = vi.hoisted(() => ({
   accessToken: null as string | null,
   isAuthenticated: false,
   isLoading: false,
+  login: vi.fn(),
   listeners: new Set<() => void>(),
   set(next: Partial<{ accessToken: string | null; isAuthenticated: boolean; isLoading: boolean }>) {
     Object.assign(this, next);
@@ -40,6 +41,7 @@ vi.mock("@/contexts/AuthContext", async () => {
         getAccessToken: () => authState.accessToken,
         isAuthenticated: authState.isAuthenticated,
         isLoading: authState.isLoading,
+        login: authState.login,
       };
     },
   };
@@ -52,6 +54,7 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_email_label: () => "Email",
     my_registrations_email_placeholder: () => "email@example.com",
     my_registrations_request_link: () => "Email me a secure link",
+    my_registrations_sign_in_instead: () => "Already a member or volunteer? Sign in instead.",
     my_registrations_requesting: () => "Preparing secure link...",
     my_registrations_request_success: () =>
       "If we found registrations for that email, we prepared a secure link.",
@@ -65,6 +68,11 @@ vi.mock("@/paraglide/messages", () => ({
     registration_preferred_language: () => "Preferred communication language",
     my_registrations_save_language: () => "Save language",
     my_registrations_language_saved: () => "Communication language saved.",
+    my_registrations_claimable_heading: () => "Is this you?",
+    my_registrations_claimable_description: () =>
+      "We found bookings placed under your email address.",
+    my_registrations_claimable_confirm: () => "Yes, add to my account",
+    my_registrations_claimable_dismiss: () => "Not now",
     my_account_preference_error: () => "Could not update language.",
     my_registrations_qr_label: () => "Booking check-in QR code",
     my_registrations_add_calendar: () => "Add to calendar",
@@ -100,6 +108,7 @@ describe("MyRegistrationsPage", () => {
     authState.accessToken = null;
     authState.isAuthenticated = false;
     authState.isLoading = false;
+    authState.login.mockClear();
   });
 
   it("keeps the check-in credential out of the QR query string", () => {
@@ -109,15 +118,15 @@ describe("MyRegistrationsPage", () => {
     expect(url.hash).toBe("#token=secret%2Ftoken");
   });
 
-  async function renderPage(initialEntry = "/my-registrations") {
+  async function renderPage(initialEntry = "/me") {
     const rootRoute = createRootRoute();
-    const myRegistrationsRoute = createRoute({
+    const myAccountRoute = createRoute({
       getParentRoute: () => rootRoute,
-      path: "/my-registrations",
+      path: "/me",
       validateSearch: validateMyRegistrationsSearch,
       component: MyRegistrationsPage,
     });
-    const routeTree = rootRoute.addChildren([myRegistrationsRoute]);
+    const routeTree = rootRoute.addChildren([myAccountRoute]);
     const memoryHistory = createMemoryHistory({ initialEntries: [initialEntry] });
     const router = createRouter({ routeTree, history: memoryHistory });
     await router.load();
@@ -144,7 +153,7 @@ describe("MyRegistrationsPage", () => {
     // Any non-empty token is accepted by the MSW handler and returns the seed
     // registrations — reg-01 (Grand Opening), reg-02 (Tasting Day 1), reg-03
     // (Tasting Day 2).
-    await renderPage("/my-registrations?token=any-valid-token");
+    await renderPage("/me?token=any-valid-token");
 
     await waitFor(() => {
       expect(screen.getByText("Grand Opening")).toBeInTheDocument();
@@ -156,69 +165,6 @@ describe("MyRegistrationsPage", () => {
     );
   });
 
-  it("claims email-proven registrations when the visitor is signed in", async () => {
-    authState.accessToken = "visitor-access-token";
-    authState.isAuthenticated = true;
-    let authorization = "";
-    server.use(
-      http.post("/api/me/registrations/claim", ({ request }) => {
-        authorization = request.headers.get("Authorization") ?? "";
-        return HttpResponse.json([]);
-      }),
-      http.get("/api/me/registrations", () => HttpResponse.json([])),
-    );
-
-    await renderPage("/my-registrations?token=email-access-token");
-
-    await waitFor(() => {
-      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
-    });
-    expect(authorization).toBe("Bearer visitor-access-token");
-  });
-
-  it("waits for authentication restoration before claiming the token", async () => {
-    authState.isLoading = true;
-    let anonymousCalls = 0;
-    let claimCalls = 0;
-    let ownedCalls = 0;
-    server.use(
-      http.post("/api/registrations/my/access", () => {
-        anonymousCalls += 1;
-        return HttpResponse.json([]);
-      }),
-      http.post("/api/me/registrations/claim", () => {
-        claimCalls += 1;
-        return HttpResponse.json([]);
-      }),
-      http.get("/api/me/registrations", () => {
-        ownedCalls += 1;
-        return HttpResponse.json([]);
-      }),
-    );
-
-    const view = await renderPage("/my-registrations?token=email-access-token");
-    expect(screen.getByText("Loading registrations...")).toBeInTheDocument();
-    expect(anonymousCalls).toBe(0);
-
-    authState.set({
-      isLoading: false,
-      isAuthenticated: true,
-      accessToken: "restored-access-token",
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
-    });
-    expect(anonymousCalls).toBe(0);
-    expect(claimCalls).toBe(1);
-    expect(ownedCalls).toBe(1);
-    await waitFor(() => expect(view.router.state.location.search).toEqual({}));
-    const currentHref = view.router.state.location.href;
-    view.unmount();
-    await renderPage(currentHref);
-    expect(claimCalls).toBe(1);
-  });
-
   it("does not replay an anonymous token exchange after successful remount", async () => {
     let accessCalls = 0;
     server.use(
@@ -228,7 +174,7 @@ describe("MyRegistrationsPage", () => {
       }),
     );
 
-    const view = await renderPage("/my-registrations?token=email-access-token");
+    const view = await renderPage("/me?token=email-access-token");
     await waitFor(() => {
       expect(screen.getByText("No registrations found.")).toBeInTheDocument();
     });
@@ -256,7 +202,7 @@ describe("MyRegistrationsPage", () => {
       }),
     );
 
-    const view = await renderPage("/my-registrations?token=email-access-token");
+    const view = await renderPage("/me?token=email-access-token");
     await waitFor(() => expect(accessCalls).toBe(1));
     await waitFor(() => expect(view.router.state.location.search).toEqual({}));
     const currentHref = view.router.state.location.href;
@@ -266,37 +212,12 @@ describe("MyRegistrationsPage", () => {
     finishExchange?.();
   });
 
-  it("reconciles an ambiguous signed claim through the owned registrations GET", async () => {
-    authState.accessToken = "visitor-access-token";
-    authState.isAuthenticated = true;
-    let claimCalls = 0;
-    let ownedCalls = 0;
-    server.use(
-      http.post("/api/me/registrations/claim", () => {
-        claimCalls += 1;
-        return HttpResponse.error();
-      }),
-      http.get("/api/me/registrations", () => {
-        ownedCalls += 1;
-        return HttpResponse.json([]);
-      }),
-    );
-
-    const view = await renderPage("/my-registrations?token=email-access-token");
-    await waitFor(() => {
-      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
-    });
-    expect(claimCalls).toBe(1);
-    expect(ownedCalls).toBe(1);
-    expect(view.router.state.location.search).toEqual({});
-  });
-
   it("shows an invalid-link message when the token is rejected", async () => {
     server.use(
       http.post("/api/visitor-sessions/redeem", () => HttpResponse.json(null, { status: 401 })),
     );
 
-    await renderPage("/my-registrations?token=expired-token");
+    await renderPage("/me?token=expired-token");
 
     await waitFor(() => {
       expect(screen.getByText("This secure link is invalid or expired.")).toBeInTheDocument();
@@ -360,7 +281,7 @@ describe("MyRegistrationsPage", () => {
   });
 
   it("has no axe violations when registrations are loaded", async () => {
-    const { container } = await renderPage("/my-registrations?token=any-valid-token");
+    const { container } = await renderPage("/me?token=any-valid-token");
 
     await waitFor(() => {
       expect(screen.getByText("Grand Opening")).toBeInTheDocument();
@@ -375,7 +296,7 @@ describe("MyRegistrationsPage", () => {
       http.post("/api/visitor-sessions/redeem", () => HttpResponse.json(null, { status: 401 })),
     );
 
-    const { container } = await renderPage("/my-registrations?token=expired-token");
+    const { container } = await renderPage("/me?token=expired-token");
 
     await waitFor(() => {
       expect(screen.getByText("This secure link is invalid or expired.")).toBeInTheDocument();
@@ -389,7 +310,6 @@ describe("MyRegistrationsPage", () => {
     authState.isAuthenticated = true;
     let savedBody: unknown;
     server.use(
-      http.post("/api/me/registrations/claim", () => HttpResponse.json([])),
       http.get("/api/me/registrations", () =>
         HttpResponse.json([
           {
@@ -415,7 +335,7 @@ describe("MyRegistrationsPage", () => {
         return HttpResponse.json({ preferred_language: "en" });
       }),
     );
-    await renderPage("/my-registrations?token=email-access-token");
+    await renderPage();
     const language = await screen.findByLabelText("Preferred communication language");
     await waitFor(() => expect(language).toHaveValue("fr"));
     fireEvent.change(language, { target: { value: "en" } });
@@ -432,7 +352,6 @@ describe("MyRegistrationsPage", () => {
       resolvePreference = resolve;
     });
     server.use(
-      http.post("/api/me/registrations/claim", () => HttpResponse.json([])),
       http.get("/api/me/registrations", () =>
         HttpResponse.json([
           {
@@ -455,9 +374,9 @@ describe("MyRegistrationsPage", () => {
         return HttpResponse.json({ preferred_language: "fr" });
       }),
     );
-    await renderPage("/my-registrations?token=email-access-token");
+    await renderPage();
     const language = await screen.findByLabelText("Preferred communication language");
-    expect(language).toBeDisabled();
+    await waitFor(() => expect(language).toBeDisabled());
     expect(screen.getByRole("button", { name: "Save language" })).toBeDisabled();
     resolvePreference();
     await waitFor(() => expect(language).toBeEnabled());
@@ -498,6 +417,151 @@ describe("MyRegistrationsPage", () => {
     // toLocaleDateString's exact format is locale-dependent (varies between
     // dev machines and CI runners); only assert the locale-independent parts.
     expect(screen.getByText(/^Signed in until /)).toBeInTheDocument();
+  });
+
+  it("shows a signed-in member's own registrations directly, with no token needed", async () => {
+    authState.accessToken = "member-access-token";
+    authState.isAuthenticated = true;
+    let authorization = "";
+    server.use(
+      http.get("/api/me/registrations", ({ request }) => {
+        authorization = request.headers.get("Authorization") ?? "";
+        return HttpResponse.json([
+          {
+            id: "reg-member",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]);
+      }),
+    );
+
+    await renderPage();
+
+    await waitFor(() => {
+      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
+    });
+    expect(authorization).toBe("Bearer member-access-token");
+    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+    // Neither of the anonymous-only controls makes sense for a signed-in member.
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Request another secure link" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a confirm-first prompt for a claimable booking and links it only after confirming", async () => {
+    authState.accessToken = "member-access-token";
+    authState.isAuthenticated = true;
+    let claimCalled = false;
+    server.use(
+      http.get("/api/me/registrations", () => HttpResponse.json([])),
+      http.get("/api/me/registrations/claimable", () =>
+        HttpResponse.json([
+          {
+            id: "reg-claimable",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]),
+      ),
+      http.post("/api/me/registrations/claim-verified-email", () => {
+        claimCalled = true;
+        return HttpResponse.json([
+          {
+            id: "reg-claimable",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]);
+      }),
+    );
+
+    await renderPage();
+
+    // Nothing is linked yet — the card only previews the match.
+    expect(await screen.findByText("Is this you?")).toBeInTheDocument();
+    expect(claimCalled).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Yes, add to my account" }));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Is this you?")).not.toBeInTheDocument();
+    });
+    expect(claimCalled).toBe(true);
+    expect(screen.getByText("Grand Opening")).toBeInTheDocument();
+  });
+
+  it("lets the caller dismiss the claimable prompt without linking anything", async () => {
+    authState.accessToken = "member-access-token";
+    authState.isAuthenticated = true;
+    let claimCalled = false;
+    server.use(
+      http.get("/api/me/registrations", () => HttpResponse.json([])),
+      http.get("/api/me/registrations/claimable", () =>
+        HttpResponse.json([
+          {
+            id: "reg-dismiss",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]),
+      ),
+      http.post("/api/me/registrations/claim-verified-email", () => {
+        claimCalled = true;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    await renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Not now" }));
+
+    expect(screen.queryByText("Is this you?")).not.toBeInTheDocument();
+    expect(claimCalled).toBe(false);
+  });
+
+  it("offers a sign-in link alongside the email-lookup form", async () => {
+    await renderPage();
+
+    const signInLink = await screen.findByRole("button", {
+      name: "Already a member or volunteer? Sign in instead.",
+    });
+    fireEvent.click(signInLink);
+
+    expect(authState.login).toHaveBeenCalledWith("/me");
   });
 
   it("shows the email form directly when there is no existing session", async () => {

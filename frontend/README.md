@@ -149,7 +149,7 @@ Use these routes with `VITE_MSW=true`:
 - Admin dashboard root: `/admin`
 - Check-in success fixture: `/check-in?id=reg-01#token=mock-token-reg-01`
 - Check-in not-found fixture: `/check-in?id=reg-404#token=mock-token-reg-404`
-- Guest registrations: `/my-registrations?token=demo-token`
+- Guest registrations: `/me?token=demo-token`
 
 For venue, seating, order, and delivery screenshots, open `/admin` and use the seeded data:
 
@@ -196,10 +196,12 @@ production builds**.
   - Public marketing site: `/`
   - Admin dashboard: `/admin`
   - Volunteer check-in: `/check-in`
-  - Guest self-service registrations: `/my-registrations`
+  - Self-service page for visitors, members, and volunteers: `/me` (visitors
+    reach it via an emailed magic-link token; no separate `/my-registrations`
+    route)
 - Route search params:
   - `/check-in` expects optional `id` + `token` string params
-  - `/my-registrations` expects an optional `token` string param
+  - `/me` expects an optional `token` string param
 - Add navigation items in `src/config/navigation.ts`.
 
 ## Query key ownership and invalidation

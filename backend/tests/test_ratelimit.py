@@ -71,7 +71,7 @@ def test_public_rate_limit_buckets_are_split_by_scope() -> None:
         assert check_rate_limit("203.0.113.5", scope="registration-create")
 
     assert not check_rate_limit("203.0.113.5", scope="registration-create")
-    assert check_rate_limit("203.0.113.5", scope="registration-access-request")
+    assert check_rate_limit("203.0.113.5", scope="visitor-magic-link-request")
 
 
 def test_new_bucket_evicts_expired_entries() -> None:

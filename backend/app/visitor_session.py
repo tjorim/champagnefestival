@@ -22,6 +22,7 @@ from __future__ import annotations
 import hashlib
 import secrets
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from fastapi import Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -181,15 +182,15 @@ async def cleanup_expired_magic_links(db: AsyncSession) -> int:
     return len(deleted_ids)
 
 
-async def get_current_user(
+async def _resolve_current_user(
     request: Request,
-    db: AsyncSession = Depends(get_db),
-    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer_scheme),
-) -> User:
+    db: AsyncSession,
+    credentials: HTTPAuthorizationCredentials | None,
+) -> tuple[User, dict[str, Any] | None]:
     """Resolve the caller to a ``User`` from either an OIDC bearer token or a
-    visitor-session cookie (#953 decision 1) — the shared seam every
-    dual-mode ``/me`` handler depends on instead of
-    ``get_current_claims`` + ``get_or_create_user``.
+    visitor-session cookie (#953 decision 1), also returning the raw OIDC
+    claims when resolved that way (``None`` for a visitor-session caller,
+    which has no token claims at all).
     """
     if credentials is not None:
         try:
@@ -203,7 +204,7 @@ async def get_current_user(
         subject = claims.get("sub")
         if not isinstance(subject, str) or not subject:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
-        return await get_or_create_user(db, subject)
+        return await get_or_create_user(db, subject), claims
 
     session_id = request.cookies.get(COOKIE_NAME)
     if session_id:
@@ -211,9 +212,37 @@ async def get_current_user(
         if session_row is not None:
             user = await db.get(User, session_row.user_id)
             if user is not None:
-                return user
+                return user, None
 
     raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+
+
+async def get_current_user(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer_scheme),
+) -> User:
+    """Resolve the caller to a ``User`` — the shared seam every dual-mode
+    ``/me`` handler depends on instead of ``get_current_claims`` +
+    ``get_or_create_user``. Use ``get_current_user_with_claims`` instead when
+    a handler also needs the caller's raw OIDC claims (e.g. their own
+    verified email).
+    """
+    user, _claims = await _resolve_current_user(request, db, credentials)
+    return user
+
+
+async def get_current_user_with_claims(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    credentials: HTTPAuthorizationCredentials | None = Depends(_optional_bearer_scheme),
+) -> tuple[User, dict[str, Any] | None]:
+    """Same resolution as ``get_current_user``, also exposing the raw OIDC
+    claims (``None`` for a visitor-session caller) — needed by the
+    confirm-first claim flow (#1044), which must know the caller's own
+    verified email without a second token decode.
+    """
+    return await _resolve_current_user(request, db, credentials)
 
 
 def actor_for_user(user: User) -> tuple[str, str | None]:

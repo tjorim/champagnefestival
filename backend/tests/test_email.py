@@ -22,6 +22,7 @@ async def test_registration_confirmation_contains_reference_link_and_inline_qr(m
             guest_count=2,
             amount_due=None,
             order_items=[],
+            user_id=None,
         ),
     )
     person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com", preferred_language="en"))
@@ -80,7 +81,9 @@ async def test_registration_confirmation_uses_preferred_language(monkeypatch):
     monkeypatch.setattr(email_module, "_send_message_sync", sent.append)
     registration = cast(
         Registration,
-        SimpleNamespace(id="reg-fr", check_in_token="token", guest_count=1, amount_due=None, order_items=[]),
+        SimpleNamespace(
+            id="reg-fr", check_in_token="token", guest_count=1, amount_due=None, order_items=[], user_id=None
+        ),
     )
     person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com", preferred_language="fr"))
     event = cast(Event, SimpleNamespace(title="Dégustation", date=None))
@@ -88,3 +91,60 @@ async def test_registration_confirmation_uses_preferred_language(monkeypatch):
     message = sent[0]
     assert message["Subject"].startswith("Inscription Champagnefestival")
     assert "Nous avons bien reçu votre inscription" in message.get_body(preferencelist=("plain",)).get_content()
+
+
+async def test_registration_confirmation_invites_sign_in_when_booking_is_unowned(monkeypatch):
+    sent = []
+    monkeypatch.setattr(email_module.settings, "smtp_host", "smtp.example.com")
+    monkeypatch.setattr(email_module.settings, "smtp_from", "festival@example.com")
+    monkeypatch.setattr(email_module.settings, "frontend_url", "https://festival.example")
+    monkeypatch.setattr(email_module, "_send_message_sync", sent.append)
+    registration = cast(
+        Registration,
+        SimpleNamespace(
+            id="reg-unowned",
+            check_in_token="token",
+            guest_count=1,
+            amount_due=None,
+            order_items=[],
+            user_id=None,
+        ),
+    )
+    person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com", preferred_language="en"))
+    event = cast(Event, SimpleNamespace(title="Opening", date=None))
+
+    assert await email_module.send_registration_confirmation(registration, person, event) is True
+    message = sent[0]
+    plain = message.get_body(preferencelist=("plain",)).get_content()
+    html = message.get_body(preferencelist=("html",)).get_content()
+    assert "https://festival.example/me" in plain
+    assert "https://festival.example/me" in html
+    assert "Already a member or volunteer?" in plain
+
+
+async def test_registration_confirmation_omits_sign_in_invite_when_already_owned(monkeypatch):
+    sent = []
+    monkeypatch.setattr(email_module.settings, "smtp_host", "smtp.example.com")
+    monkeypatch.setattr(email_module.settings, "smtp_from", "festival@example.com")
+    monkeypatch.setattr(email_module.settings, "frontend_url", "https://festival.example")
+    monkeypatch.setattr(email_module, "_send_message_sync", sent.append)
+    registration = cast(
+        Registration,
+        SimpleNamespace(
+            id="reg-owned",
+            check_in_token="token",
+            guest_count=1,
+            amount_due=None,
+            order_items=[],
+            user_id="usr-already-owns-it",
+        ),
+    )
+    person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com", preferred_language="en"))
+    event = cast(Event, SimpleNamespace(title="Opening", date=None))
+
+    assert await email_module.send_registration_confirmation(registration, person, event) is True
+    message = sent[0]
+    plain = message.get_body(preferencelist=("plain",)).get_content()
+    html = message.get_body(preferencelist=("html",)).get_content()
+    assert "https://festival.example/me" not in plain
+    assert "https://festival.example/me" not in html

@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 
 import pytest
+from fastapi import Request
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -12,7 +13,7 @@ from sqlalchemy.pool import NullPool
 
 import app.ratelimit as ratelimit_module
 import app.routers.public_pages as public_pages_module
-from app.auth import get_current_claims, require_admin, require_volunteer
+from app.auth import get_actor_id, get_current_claims, require_admin, require_volunteer
 from app.database import Base, get_db
 from app.main import app
 from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
@@ -233,6 +234,55 @@ async def volunteer_client(db_session):
     async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def volunteer_client_as(db_session):
+    """Factory for a volunteer-role client acting as a specific OIDC subject.
+
+    ``volunteer_client`` leaves every request's actor as "anonymous" —
+    ``require_volunteer`` is overridden to skip real token decoding, so
+    ``request.state.user_id`` (what ``get_actor_id`` reads) never gets set.
+    This overrides ``get_actor_id`` directly instead, so tests can exercise
+    #1006's per-subject identity linking (e.g. two different volunteer
+    sessions racing to claim the same record). Defaults to
+    ``VOLUNTEER_CLAIMS["sub"]`` when no subject is given.
+    """
+    from contextlib import asynccontextmanager
+
+    from fastapi import HTTPException
+
+    async def override_get_db():
+        yield db_session
+
+    def reject_admin() -> None:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    def actor_from_test_subject_header(request: Request) -> str:
+        # Reads the per-request header set below instead of a closure
+        # variable captured at `_make()` call time — `app.dependency_overrides`
+        # is a single global dict, so a closure-captured subject would let a
+        # second, overlapping `volunteer_client_as` context silently replace
+        # the first's override and misattribute its requests (this is what
+        # makes testing two concurrent volunteer sessions possible at all).
+        return request.headers.get("X-Test-Subject", str(VOLUNTEER_CLAIMS["sub"]))
+
+    @asynccontextmanager
+    async def _make(subject: str = str(VOLUNTEER_CLAIMS["sub"])):
+        app.dependency_overrides[get_db] = override_get_db
+        app.dependency_overrides[require_volunteer] = lambda: None
+        app.dependency_overrides[require_admin] = reject_admin
+        app.dependency_overrides[get_actor_id] = actor_from_test_subject_header
+        transport = ASGITransport(app=app)
+        try:
+            async with AsyncClient(
+                transport=transport, base_url="http://test", headers={"X-Test-Subject": subject}
+            ) as c:
+                yield c
+        finally:
+            app.dependency_overrides.clear()
+
+    return _make
 
 
 @pytest.fixture()

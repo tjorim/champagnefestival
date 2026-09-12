@@ -221,34 +221,16 @@ class PaymentTransaction(Base):
     registration: Mapped[Registration] = relationship()
 
 
-class ReservationAccessToken(Base):
-    """Short-lived visitor access token for viewing registrations via e-mail link.
-
-    Deliberately session-less — one-shot lookup only. #953's visitor magic
-    link (``VisitorMagicLink`` below) is a structurally identical credential
-    shape reused for a different purpose (establishing a ``VisitorSession``,
-    not a one-shot read), kept as its own table rather than overloading this
-    one — see docs/decisions/953-visitor-passwordless-session.md.
-    """
-
-    __tablename__ = "reservation_access_tokens"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    email: Mapped[str] = mapped_column(String(200), unique=True)
-    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-
-
 class VisitorMagicLink(Base):
     """Short-lived, single-use passwordless sign-in credential (#953 decision 2).
 
-    Same shape as ``ReservationAccessToken`` (one outstanding link per email,
-    hashed token, TTL) but a separate table: redeeming this one establishes a
-    persistent ``VisitorSession`` rather than a one-shot read. 30-minute TTL
-    (``settings.guest_access_token_ttl_minutes``, the same number this
-    project already uses for a structurally identical emailed credential).
+    One outstanding link per email, hashed token, TTL. Redeeming it
+    establishes a persistent ``VisitorSession``. 30-minute TTL
+    (``settings.guest_access_token_ttl_minutes``). Previously shared its shape
+    with the now-removed ``ReservationAccessToken`` (a one-shot, session-less
+    "claim any email you can prove control of" credential, retired in #1044 —
+    see docs/decisions/1044-confirm-first-registration-claiming.md); this is
+    the only surviving emailed credential of that shape.
     """
 
     __tablename__ = "visitor_magic_links"
@@ -845,7 +827,28 @@ class Person(Base):
     roles: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     national_register_number: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
+    """Belgium's National Register Number (NISS) — fixed and lifelong; this is
+    what would be used to re-identify the person later. Volunteer-only (see
+    docs/decisions/934-data-retention-and-erasure.md)."""
     eid_document_number: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)
+    """The physical eID card's own document number, captured once at volunteer
+    sign-up to support an insurance claim referencing that specific document.
+    A point-in-time record, not a live one: the card (and this number) is
+    typically renewed or replaced every 5-10 years, and nothing here
+    re-verifies or re-prompts for an update when that happens — a volunteer
+    can flag a renewal themselves via `POST /api/me/volunteer/eid-correction`
+    (see `oidc_subject` below and docs/decisions/1006-volunteer-identity-self-service.md)."""
+
+    oidc_subject: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
+    """The `sub` claim of the OIDC-authenticated volunteer this Person record
+    is linked to, if any — established by the volunteer themselves via
+    `POST /api/me/volunteer/register` (which creates this Person row from
+    their submitted name/NISS/eID, or links to a pre-existing unlinked exact
+    match) or set directly by an admin. Unlike `Person.roles`, this is
+    independent of the OIDC `volunteer`/`admin` realm role used by
+    `require_volunteer` for event-day access — it identifies *which* Person a
+    token belongs to, not *whether* the token may act as a volunteer. See
+    docs/decisions/1006-volunteer-identity-self-service.md."""
     visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     club_name: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")

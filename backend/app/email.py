@@ -38,6 +38,7 @@ _CONFIRMATION_COPY = {
         "pass": "Open je toegangspas",
         "keep": "Bewaar deze e-mail voor de toegang.",
         "qr": "QR-code voor toegang",
+        "link_account": "Al lid of vrijwilliger? Meld je aan om deze boeking bij je account te voegen, naast je andere inschrijvingen:",
     },
     "fr": {
         "subject": "Inscription Champagnefestival",
@@ -53,6 +54,7 @@ _CONFIRMATION_COPY = {
         "pass": "Ouvrir votre laissez-passer",
         "keep": "Conservez cet e-mail pour l’entrée.",
         "qr": "Code QR d’accès",
+        "link_account": "Déjà membre ou bénévole ? Connectez-vous pour ajouter cette réservation à votre compte, avec vos autres inscriptions :",
     },
     "en": {
         "subject": "Champagnefestival registration",
@@ -68,6 +70,7 @@ _CONFIRMATION_COPY = {
         "pass": "Open your check-in pass",
         "keep": "Keep this email available at the entrance.",
         "qr": "Registration check-in QR code",
+        "link_account": "Already a member or volunteer? Sign in to add this booking to your account, alongside your other registrations:",
     },
 }
 
@@ -125,6 +128,20 @@ async def send_registration_confirmation(registration: Registration, person: Per
     amount_due = f"€{amount:.2f}"
     event_date = event.date.isoformat() if event.date is not None else "—"
 
+    # Only worth showing when nobody's account already owns this booking —
+    # an already-owned registration was placed by a signed-in caller, who
+    # doesn't need pointing at a sign-in link for something already theirs.
+    # Never a token/magic-link URL: the recipient proves ownership by
+    # signing in, same as the confirm-first claim card on /me (#1044) this
+    # points at — not by a credential embedded in this email.
+    account_link_text = ""
+    account_link_html = ""
+    if registration.user_id is None:
+        me_url = f"{settings.frontend_url.rstrip('/')}/me"
+        account_link_text = f"\n{text['link_account']}\n{me_url}\n"
+        safe_me_url = escape(me_url, quote=True)
+        account_link_html = f'<p>{text["link_account"]}<br><a href="{safe_me_url}">{safe_me_url}</a></p>'
+
     message = EmailMessage()
     message["Subject"] = f"{text['subject']} {registration.id}"
     message["From"] = settings.smtp_from
@@ -133,7 +150,7 @@ async def send_registration_confirmation(registration: Registration, person: Per
         f"{text['hello']} {person.name},\n\n{text['received']}\n\n"
         f"{text['reference']}: {registration.id}\n{text['event']}: {event.title}\n{text['date']}: {event_date}\n"
         f"{text['guests']}: {registration.guest_count}\n{text['due']}: {amount_due}\n{text['order']}:\n{order_lines}\n\n"
-        f"{text['pass']}:\n{check_in_url}\n\n{text['keep']}\n"
+        f"{text['pass']}:\n{check_in_url}\n\n{text['keep']}\n{account_link_text}"
     )
     safe_name = escape(person.name)
     safe_event_title = escape(event.title)
@@ -154,6 +171,7 @@ async def send_registration_confirmation(registration: Registration, person: Per
         f"<p><strong>{text['order']}:</strong></p><ul>{html_order_lines}</ul>"
         f'<p><a href="{safe_check_in_url}">{text["pass"]}</a></p>'
         f'<p><img src="cid:registration-qr" alt="{text["qr"]}"></p>'
+        f"{account_link_html}"
         "</body></html>",
         subtype="html",
     )
@@ -206,50 +224,6 @@ async def send_contact_notification(*, name: str, email: str, message_text: str,
     return True
 
 
-async def send_guest_access_email(
-    email: str,
-    token: str,
-    request_id: str,
-    expires_at: datetime,
-) -> bool:
-    """Send a short-lived guest registration access token by email.
-
-    Returns ``True`` when an SMTP delivery attempt succeeds. Missing SMTP
-    configuration or transport errors are logged and reported as ``False`` so
-    callers can keep public responses generic.
-    """
-    if not settings.smtp_host or not settings.smtp_from:
-        logger.warning(
-            "Guest access email not sent for request_id=%s because SMTP is not configured.",
-            request_id,
-        )
-        return False
-
-    message = EmailMessage()
-    message["Subject"] = "Your Champagnefestival registration access code"
-    message["From"] = settings.smtp_from
-    message["To"] = email
-    message.set_content(
-        "Hello,\n\n"
-        "Use the following access code to view your Champagnefestival registrations:\n\n"
-        f"{token}\n\n"
-        f"This code expires at {expires_at.isoformat()}.\n"
-        "If you did not request this email, you can ignore it.\n"
-    )
-
-    try:
-        await asyncio.to_thread(_send_message_sync, message)
-    except Exception:
-        logger.exception(
-            "Failed to send guest access email for request_id=%s.",
-            request_id,
-        )
-        return False
-
-    logger.info("Sent guest access email for request_id=%s.", request_id)
-    return True
-
-
 async def send_visitor_magic_link_email(
     email: str,
     token: str,
@@ -258,18 +232,13 @@ async def send_visitor_magic_link_email(
 ) -> bool:
     """Send a passwordless sign-in link for the visitor "My orders" session (#953).
 
-    Same shape and failure handling as ``send_guest_access_email`` — a
-    structurally identical emailed credential, kept as its own function
-    because it links to a persistent session rather than a one-shot code
-    (docs/decisions/953-visitor-passwordless-session.md). The token goes in
-    the ``?token=`` query string, matching how ``MyRegistrationsPage``
-    already reads it (``useSearch({ from: "/my-registrations" })`` — a
-    TanStack Router search param, not a URL fragment). The frontend removes
-    it from browser history immediately on load
-    (``navigate({ search: {}, replace: true })``, before the redemption
-    network call), the same scrub-after-use protection the pre-existing
-    one-shot guest-lookup token already relies on for this exact acceptance
-    criterion.
+    The token goes in the ``?token=`` query string, matching how
+    ``MyAccountPage`` (via ``MyRegistrationsPage``) already reads it
+    (``useSearch({ from: "/me" })`` — a TanStack Router search param, not a
+    URL fragment). The frontend removes it from browser history immediately
+    on load (``navigate({ search: {}, replace: true })``, before the
+    redemption network call) so a redeemed, single-use link never lingers
+    somewhere it could be replayed from.
     """
     if not settings.smtp_host or not settings.smtp_from:
         logger.warning(
@@ -278,7 +247,7 @@ async def send_visitor_magic_link_email(
         )
         return False
 
-    link = f"{settings.frontend_url.rstrip('/')}/my-registrations?token={token}"
+    link = f"{settings.frontend_url.rstrip('/')}/me?token={token}"
 
     message = EmailMessage()
     message["Subject"] = "Sign in to your Champagnefestival orders"
