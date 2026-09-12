@@ -20,7 +20,9 @@ kept narrowed (see
 [`1044-confirm-first-registration-claiming.md`](./1044-confirm-first-registration-claiming.md)).
 That removal took `claim_my_registrations`, `POST /api/registrations/my/request`,
 `POST /api/registrations/my/access`, and the `reservation_access_tokens` table
-with it (migration `003_drop_reservation_access_tokens`) — every place below
+with it (originally its own migration `003`, squashed into `001` afterward
+since nothing between `000` and `003` had shipped in a release — see that
+migration file's docstring) — every place below
 that describes any of those as still in place, still shared, or "out of
 scope to remove" is superseded by that later change. The magic-link/
 visitor-session mechanism itself (Decisions 1–4, the session table, the

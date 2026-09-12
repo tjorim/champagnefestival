@@ -144,7 +144,8 @@ narrower scope would add complexity without a matching security need.
 
 ## Implemented (2026-09-11, eID correction reworked 2026-09-12)
 
-1. `Person.oidc_subject` (nullable, unique) — migration `002`.
+1. `Person.oidc_subject` (nullable, unique) — originally migration `002`,
+   later squashed into `001` since neither had shipped in a release yet.
 2. `app.services.identity_checksum`: `validate_niss_checksum`,
    `validate_eid_checksum` (mod 97; the NISS variant retries with
    `+2_000_000_000` for post-2000 birth dates).

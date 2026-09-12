@@ -155,8 +155,10 @@ just the manual retyping UI for it. Removed:
 - `POST /api/registrations/my/request` and `POST /api/registrations/my/access`
   (`app/routers/registrations.py`) — the emailed one-shot proof-token request/
   redeem pair those two endpoints and the manual claim shared.
-- The `ReservationAccessToken` model and table (migration
-  `003_drop_reservation_access_tokens`), and `send_guest_access_email`.
+- The `ReservationAccessToken` model and table (originally its own migration
+  `003`, squashed into `001` afterward — see that migration file's docstring
+  — since nothing between `000` and `003` had shipped in a release), and
+  `send_guest_access_email`.
 - The "Have a booking under a different email? Claim it" UI this decision's
   original text still described as the fallback, plus its
   `my_registrations_claim_*` translation strings.

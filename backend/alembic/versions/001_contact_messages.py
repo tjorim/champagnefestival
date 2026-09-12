@@ -1,4 +1,8 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, a short product description, the append-only payment transaction ledger, and a single purchasable flag covering both standalone product availability and visitor visibility.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, a short product description, the append-only payment transaction ledger, a single purchasable flag covering both standalone product availability and visitor visibility, an OIDC-authenticated volunteer's link to their own Person record (#1006), and dropping the retired reservation_access_tokens claim-token table (#1044).
+
+None of this had shipped in a release as of when it was squashed into one
+revision (formerly split across 001/002/003) — 000 is the only migration a
+deployed database has ever run.
 
 Revision ID: 001
 Revises: 000
@@ -550,8 +554,34 @@ def upgrade() -> None:
     op.create_index("ix_layout_revisions_layout_id", "layout_revisions", ["layout_id"])
     op.create_unique_constraint("uq_layout_revisions_number", "layout_revisions", ["layout_id", "revision_number"])
 
+    # #1006: link an OIDC-authenticated volunteer to their own Person record.
+    op.add_column("people", sa.Column("oidc_subject", sa.String(255), nullable=True))
+    op.create_unique_constraint("uq_people_oidc_subject", "people", ["oidc_subject"])
+
+    # #1044: retired the token-based "claim under any email you can prove
+    # control of" mechanism entirely — an account can now only ever claim
+    # bookings under its own verified email (via confirm-first or magic-link
+    # redemption), never a different one. See
+    # docs/decisions/1044-confirm-first-registration-claiming.md.
+    op.drop_table("reservation_access_tokens")
+
 
 def downgrade() -> None:
+    # #1044 (reverse of the drop above).
+    op.create_table(
+        "reservation_access_tokens",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("email", sa.String(200), unique=True, nullable=False),
+        sa.Column("token_hash", sa.String(64), unique=True, nullable=False),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("last_used_at", sa.DateTime(timezone=True), nullable=True),
+    )
+
+    # #1006 (reverse of the link above).
+    op.drop_constraint("uq_people_oidc_subject", "people", type_="unique")
+    op.drop_column("people", "oidc_subject")
+
     op.drop_constraint("uq_layout_revisions_number", "layout_revisions", type_="unique")
     op.drop_index("ix_layout_revisions_layout_id", table_name="layout_revisions")
     op.drop_table("layout_revisions")
