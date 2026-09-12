@@ -21,18 +21,14 @@ docs/decisions/1006-volunteer-identity-self-service.md.
 
 from __future__ import annotations
 
-from uuid import UUID
-
 from fastapi import HTTPException
 from sqlalchemy import or_, select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import ContactMessage, Person
+from app.models import Person
 from app.services.identity_checksum import validate_eid_checksum, validate_niss_checksum
-from app.services.outbox_service import enqueue_contact_notification
 from app.services.people_service import normalise_optional_identity
 from app.services.volunteers_service import ensure_volunteer_role
 from app.utils import make_id
@@ -147,77 +143,58 @@ async def register_volunteer_identity(
     return person
 
 
-async def submit_eid_correction_request(
+async def update_eid_document_number(
     db: AsyncSession,
     *,
     person: Person,
-    submission_id: UUID,
     new_eid_document_number: str,
-    note: str,
-    client_ip: str,
     actor: str,
     request_id: str | None = None,
-) -> None:
-    """Record a volunteer's self-reported eID renewal for admin review.
+) -> Person:
+    """Update the calling volunteer's own eID document number directly.
 
-    Not a direct write to ``Person.eid_document_number`` — the field backs an
-    insurance record, so a correction is admin-reviewed, same posture as the
-    booking change/cancellation request this mirrors
-    (``app.routers.me.request_registration_change``): a ``ContactMessage`` is
-    inserted under the client-generated ``submission_id`` (idempotent via
-    ``ON CONFLICT DO NOTHING``) and an outbox notification is enqueued in the
-    same transaction so an admin sees it and applies the change themselves
-    through the existing ``PUT /api/volunteers/{id}``.
+    A direct write, not an admin-reviewed request: the volunteer already
+    self-registers their own NISS/eID with nothing but a checksum check
+    (see ``register_volunteer_identity``), so a correction is held to the
+    same trust model rather than a stricter one — the checksum catches a
+    typo here exactly as it does on initial registration, and there's no
+    more of an identity-proof gap on a correction than there was on the
+    original claim (same already-linked person). Superseded the earlier
+    admin-reviewed-ContactMessage design; see Decision 2 in
+    docs/decisions/1006-volunteer-identity-self-service.md.
 
-    Unlike a plain client-generated-ID replay, the frontend keeps the same
-    ``submission_id`` across a failed attempt even if the volunteer edits the
-    form before retrying (it only rotates the id on success) — so a reused id
-    with a *different* payload is a distinct correction, not a replay, and
-    must not be silently swallowed by ``ON CONFLICT DO NOTHING`` (#1037
-    review). Raises 409 in that case; the client must submit a fresh
-    ``submission_id``.
+    Convergent and safe to retry: writing the same value twice is a no-op
+    the second time, so no idempotency key is needed.
     """
     new_eid = normalise_optional_identity(new_eid_document_number)
-    message_text = (
-        "Volunteer eID correction request\n"
-        f"Person: {person.name} (ID {person.id})\n"
-        f"Current eID on file: {person.eid_document_number or '(none)'}\n"
-        f"Requested new eID: {new_eid_document_number.strip()}\n\n"
-        f"Note: {note.strip() or '(none)'}"
-    )
-    message_id = str(submission_id)
-    inserted = await db.scalar(
-        insert(ContactMessage)
-        .values(
-            id=message_id,
-            name=person.name,
-            email=person.email,
-            message=message_text,
-            client_ip=client_ip,
-            request_id=request_id,
+    if new_eid is None or not validate_eid_checksum(new_eid):
+        raise HTTPException(
+            status_code=422,
+            detail="That eID document number doesn't look valid. Please check it and try again.",
         )
-        .on_conflict_do_nothing(index_elements=[ContactMessage.id])
-        .returning(ContactMessage.id)
-    )
-    if inserted is None:
-        existing = await db.get(ContactMessage, message_id)
-        if existing is not None and existing.message != message_text:
-            raise HTTPException(
-                status_code=409,
-                detail="This request was already submitted with different details. Please try again.",
-            )
-    if inserted is not None:
-        # Intentionally omits the actual eID values — audit details are not a
-        # place to duplicate PII already captured in the ContactMessage above
-        # (matches volunteer_updated's fields_changed-only convention).
+
+    changed = new_eid != person.eid_document_number
+    person.eid_document_number = new_eid
+    if changed:
+        # Intentionally omits the actual eID value — audit details are not a
+        # place to record PII, matching volunteer_updated's and
+        # volunteer_identity_registered's fields-changed-only convention.
         await write_audit_entry(
             db,
             actor=actor,
-            action="volunteer_eid_correction_requested",
+            action="volunteer_eid_updated",
             resource_type="person",
             resource_id=person.id,
             request_id=request_id,
-            details={"contact_message_id": message_id, "eid_changed": new_eid != person.eid_document_number},
+            details={"eid_changed": True},
         )
-        await enqueue_contact_notification(db, message_id, actor=actor, request_id=request_id)
-    await db.commit()
+    try:
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(
+            status_code=409,
+            detail="This eID document number is already associated with another account.",
+        ) from exc
+    await db.refresh(person)
+    return person

@@ -80,30 +80,42 @@ an admin hand-link a volunteer who can't or won't complete self-registration
 mistaken link (explicit `null`) — covering #1006's "admin-assigned link"
 alternative for the cases self-registration can't reach.
 
-## Decision 2 — a correction is admin-reviewed, not a direct write
+## Decision 2 — a correction is a direct write, checksum-validated like registration
 
-**Chosen: `POST /api/me/volunteer/eid-correction` never writes
-`Person.eid_document_number`. It inserts a `ContactMessage` describing the
-requested change (current value, requested value, an optional note) and
-enqueues the existing outbox contact-notification job, exactly mirroring
-`app.routers.me.request_registration_change`'s booking
-change/cancellation-request pattern. An admin reviews it in the existing
-contact inbox and applies the change themselves through
-`PUT /api/volunteers/{id}`.**
+**Chosen: `POST /api/me/volunteer/eid-correction` writes
+`Person.eid_document_number` directly, after the same modulo-97 checksum
+check `register_volunteer_identity` already runs on the initial NISS/eID
+submission.**
 
-Issue #1006 called this out explicitly: `eid_document_number` backs an insurance
-claim referencing a specific physical document, so a volunteer's own
-unverified assertion that "my card was renewed" shouldn't silently become
-the record of truth. Reusing the booking-change-request mechanism (rather
-than a new approval-state table) means no new admin UI or workflow had to be
-built — the correction shows up wherever contact messages already do,
-idempotent via the same client-generated `submission_id` /
-`ON CONFLICT DO NOTHING` shape. The audit entry
-(`volunteer_eid_correction_requested`) records that a correction was
-requested and whether the value actually differs, but not the raw eID
-digits themselves — consistent with `volunteer_updated`'s existing
-fields-changed-only convention; the actual values live only in the
-`ContactMessage` the admin reviews.
+This supersedes an earlier version of this decision that made a correction
+admin-reviewed instead: it inserted a `ContactMessage` describing the
+requested change and enqueued the existing outbox contact-notification job
+(mirroring `app.routers.me.request_registration_change`'s booking
+change/cancellation-request pattern), leaving an admin to apply the change
+themselves through `PUT /api/volunteers/{id}`. The reasoning at the time was
+that `eid_document_number` backs an insurance claim referencing a specific
+physical document, so a volunteer's own unverified assertion that "my card
+was renewed" shouldn't silently become the record of truth.
+
+On reflection that drew a line in the wrong place: Decision 1 already trusts
+the volunteer's own input for the *initial* NISS/eID, checksum-validated and
+nothing else — there is no admin review, no proof-of-identity step beyond
+"the identity provider vouches this OIDC account is a volunteer." A
+correction to an already-linked record isn't a *weaker* claim than that; if
+anything it's stronger, since the account is already known to belong to this
+specific `Person`. Treating a correction as needing a human reviewer while
+registration doesn't was an inconsistency, not an extra safeguard — the
+checksum catches the same class of typo either way, and there's no more of
+an identity-proof gap on a correction than there was on the original claim.
+
+The admin-review machinery (the `ContactMessage`/outbox pattern, the
+per-subject Postgres rate limiter that existed specifically to bound
+notification volume) is removed along with it — a direct write to one's own
+already-linked record needs no rate limit of its own, the same way
+registration never had one. The audit entry (`volunteer_eid_updated`)
+records that the value changed, but not the raw eID digits themselves —
+consistent with `volunteer_updated`'s and `volunteer_identity_registered`'s
+existing fields-changed-only convention.
 
 ## Decision 3 — stays behind the existing `require_volunteer` dependency
 
@@ -123,14 +135,14 @@ narrower scope would add complexity without a matching security need.
   editing the volunteer record directly, same as any other admin correction.
 - No re-verification prompt or expiry on `eid_document_number` — it remains,
   as `934-data-retention-and-erasure.md` already stated, a point-in-time
-  record. This only adds a way for a volunteer to *flag* that it's gone
-  stale; it doesn't make the system proactively notice.
+  record. A volunteer can now update it themselves at any time, but nothing
+  proactively prompts them to.
 - MCP admin tooling gained `oidc_subject` on `update_volunteer` for parity
   with the REST admin surface, but the self-service endpoints themselves have
   no MCP equivalent — same as every other `/api/me/*` endpoint, which are
   browser-session surfaces, not admin automation.
 
-## Implemented (2026-09-11)
+## Implemented (2026-09-11, eID correction reworked 2026-09-12)
 
 1. `Person.oidc_subject` (nullable, unique) — migration `002`.
 2. `app.services.identity_checksum`: `validate_niss_checksum`,
@@ -138,38 +150,35 @@ narrower scope would add complexity without a matching security need.
    `+2_000_000_000` for post-2000 birth dates).
 3. `app.services.volunteer_self_service`: `get_linked_volunteer`,
    `register_volunteer_identity` (self-registration, absorbing an unlinked
-   pre-existing exact match), `submit_eid_correction_request`.
+   pre-existing exact match), `update_eid_document_number` (direct,
+   checksum-validated write — see Decision 2).
 4. `POST /api/me/volunteer/register`, `GET /api/me/volunteer`,
    `POST /api/me/volunteer/eid-correction` — router
    `app.routers.volunteer_self`.
-5. `app.ratelimit.check_volunteer_eid_correction_rate_limit` — a
-   client-generated `submission_id` only dedupes a replay of the same id,
-   not repeated new ones. (The identity-claim rate limiter and the
-   admin-notification-on-claim from the superseded matching-based design
-   were removed — see Decision 1 — since they mitigated a guessing attack
-   that no longer applies.)
-6. Admin `VolunteerUpdate.oidc_subject` (REST and MCP `update_volunteer`,
+5. Admin `VolunteerUpdate.oidc_subject` (REST and MCP `update_volunteer`,
    the latter also gaining an explicit `clear_oidc_subject` flag since MCP
    drops omitted-vs-null distinction), surfaced on `VolunteerOut`.
-7. `docs/retry-safety.md` entries for the registration and
-   correction-request writes and their outbox enqueue.
-8. Frontend: the NISS/eID self-service section is a "Volunteer eID" tab on
+6. `docs/retry-safety.md` entry for the registration write; the
+   eID-correction write is convergent by the same reasoning and needs no
+   separate entry.
+7. Frontend: the NISS/eID self-service section is a "Volunteer eID" tab on
    the unified `/me` self-service page (`MyAccountPage`, direct-link-only),
    shown only when the signed-in OIDC account carries the `volunteer` realm
    role — no separate `/my-eid` route, since the only thing distinguishing it
    from the rest of `/me` was that role check. `/me` itself was later
    extended further to also absorb `/my-registrations`; see
    [`unified-self-service-page.md`](./unified-self-service-page.md) for that
-   follow-up decision. Collects name, NISS, and eID with client-side checksum
-   validation for instant feedback
-   (`frontend/src/utils/belgianIdentityNumbers.ts`) and formats both for
-   display (`95.12.14-237.64`, `595-6570208-28`) while storing them
-   digits-only, matching the existing `normalise_optional_identity`
-   convention.
-9. A 409 instead of a silently dropped update when an eID-correction
-   `submission_id` is reused with a different payload;
-   `volunteer_client_as`'s dependency overrides clear in a `finally` block
-   so a raising test can't leak state into the next one.
+   follow-up decision. Both registration and correction collect the eID with
+   client-side checksum validation for instant feedback
+   (`frontend/src/utils/belgianIdentityNumbers.ts`) and format it for display
+   (`595-6570208-28`) while storing it digits-only, matching the existing
+   `normalise_optional_identity` convention.
+
+Removed in the 2026-09-12 rework, since they existed specifically to
+support the admin-reviewed design Decision 2 superseded: the
+`ContactMessage`/outbox-notification path for corrections,
+`app.ratelimit.check_volunteer_eid_correction_rate_limit`, and the
+client-generated `submission_id`/409-on-mismatch replay handling.
 
 ## References
 

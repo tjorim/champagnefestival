@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   getMyVolunteerIdentity,
   registerMyVolunteerIdentity,
-  submitEidCorrection,
+  updateMyEidDocumentNumber,
 } from "./myVolunteerApi";
 
 beforeEach(() => {
@@ -128,26 +128,26 @@ describe("registerMyVolunteerIdentity", () => {
   });
 });
 
-describe("submitEidCorrection", () => {
-  it("posts the correction request in snake_case", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ submitted: true }, 202));
+describe("updateMyEidDocumentNumber", () => {
+  it("posts the new eID number and returns the updated identity", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        linked: true,
+        name: "Sofie De Smet",
+        national_register_number: "91010112319",
+        eid_document_number: "123456789103",
+      }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
-    await submitEidCorrection("token-1", {
-      submissionId: "27d6a186-ded1-45b9-af20-2061bb739436",
-      newEidDocumentNumber: "BEX999999",
-      note: "Card renewed.",
-    });
+    const identity = await updateMyEidDocumentNumber("token-1", "123456789103");
 
     expect(fetchMock).toHaveBeenCalledWith("/api/me/volunteer/eid-correction", {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: "Bearer token-1" },
-      body: JSON.stringify({
-        submission_id: "27d6a186-ded1-45b9-af20-2061bb739436",
-        new_eid_document_number: "BEX999999",
-        note: "Card renewed.",
-      }),
+      body: JSON.stringify({ eid_document_number: "123456789103" }),
     });
+    expect(identity.eidDocumentNumber).toBe("123456789103");
   });
 
   it("throws when the volunteer isn't linked yet", async () => {
@@ -160,12 +160,26 @@ describe("submitEidCorrection", () => {
         ),
     );
 
-    await expect(
-      submitEidCorrection("token-1", {
-        submissionId: "27d6a186-ded1-45b9-af20-2061bb739436",
-        newEidDocumentNumber: "BEX999999",
-        note: "",
-      }),
-    ).rejects.toThrow("Your account isn't linked to a volunteer record yet.");
+    await expect(updateMyEidDocumentNumber("token-1", "123456789103")).rejects.toThrow(
+      "Your account isn't linked to a volunteer record yet.",
+    );
+  });
+
+  it("throws when the checksum is rejected", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          {
+            detail: "That eID document number doesn't look valid. Please check it and try again.",
+          },
+          422,
+        ),
+      ),
+    );
+
+    await expect(updateMyEidDocumentNumber("token-1", "999999999999")).rejects.toThrow(
+      "doesn't look valid",
+    );
   });
 });

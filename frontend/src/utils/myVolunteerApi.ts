@@ -60,21 +60,19 @@ export async function registerMyVolunteerIdentity(
 }
 
 /**
- * Flag an eID renewal for admin review (POST /api/me/volunteer/eid-correction).
- * Never writes the record directly — an admin applies the change after review.
+ * Update the signed-in volunteer's own eID document number directly
+ * (POST /api/me/volunteer/eid-correction). Checksum-validated server-side,
+ * same trust model as registration — see docs/decisions/1006-volunteer-identity-self-service.md.
  */
-export async function submitEidCorrection(
+export async function updateMyEidDocumentNumber(
   accessToken: string,
-  params: { submissionId: string; newEidDocumentNumber: string; note: string },
-): Promise<void> {
+  eidDocumentNumber: string,
+): Promise<MyVolunteerIdentity> {
   const response = await fetch("/api/me/volunteer/eid-correction", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({
-      submission_id: params.submissionId,
-      new_eid_document_number: params.newEidDocumentNumber,
-      note: params.note,
-    }),
+    body: JSON.stringify({ eid_document_number: eidDocumentNumber }),
   });
   if (!response.ok) return throwDetailOrFallback(response, m.my_eid_correction_error());
+  return parseIdentity(await response.json());
 }

@@ -43,13 +43,12 @@ vi.mock("@/paraglide/messages", () => ({
     my_eid_niss_label: () => "National Register Number (NISS)",
     my_eid_eid_label: () => "eID document number",
     my_eid_identity_heading: () => "Your identity on file",
-    my_eid_correction_heading: () => "Report an eID renewal",
-    my_eid_correction_description: () => "Let us know the new document number.",
+    my_eid_correction_heading: () => "Update your eID document number",
+    my_eid_correction_description: () => "Update the document number here.",
     my_eid_new_number_label: () => "New eID document number",
-    my_eid_note_label: () => "Note (optional)",
-    my_eid_submit_correction: () => "Submit for review",
-    my_eid_correction_submitted: () => "Thank you — an administrator will review your request.",
-    my_eid_correction_error: () => "Could not submit your request.",
+    my_eid_submit_correction: () => "Save",
+    my_eid_correction_success: () => "Your eID document number has been updated.",
+    my_eid_correction_error: () => "Could not update your eID document number.",
     my_eid_submitting: () => "Submitting…",
   },
 }));
@@ -217,6 +216,102 @@ describe("MyAccountPage", () => {
 
     expect(await screen.findByText("Register your volunteer record")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
+  });
+
+  it("updates the eID document number directly for a linked volunteer", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-volunteer",
+      roles: ["volunteer"],
+      hasRole: vi.fn((role: string) => role === "volunteer"),
+      getAccessToken: vi.fn().mockReturnValue("oidc-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+    server.use(
+      http.get("/api/me/volunteer", () =>
+        HttpResponse.json({
+          linked: true,
+          name: "Sofie De Smet",
+          national_register_number: "91010112319",
+          eid_document_number: "123456789002",
+        }),
+      ),
+      http.post("/api/me/volunteer/eid-correction", async ({ request }) => {
+        const body = (await request.json()) as { eid_document_number: string };
+        return HttpResponse.json({
+          linked: true,
+          name: "Sofie De Smet",
+          national_register_number: "91010112319",
+          eid_document_number: body.eid_document_number,
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+
+    expect(await screen.findByText("Update your eID document number")).toBeInTheDocument();
+    const input = screen.getByLabelText("New eID document number");
+    await user.type(input, "123456789103");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(
+      await screen.findByText("Your eID document number has been updated."),
+    ).toBeInTheDocument();
+    // No more admin-review copy — this is now a direct write.
+    expect(screen.queryByText(/administrator will review/i)).not.toBeInTheDocument();
+  });
+
+  it("rejects an invalid eID checksum on correction without calling the API", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-volunteer",
+      roles: ["volunteer"],
+      hasRole: vi.fn((role: string) => role === "volunteer"),
+      getAccessToken: vi.fn().mockReturnValue("oidc-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+    let correctionCalls = 0;
+    server.use(
+      http.get("/api/me/volunteer", () =>
+        HttpResponse.json({
+          linked: true,
+          name: "Sofie De Smet",
+          national_register_number: "91010112319",
+          eid_document_number: "123456789002",
+        }),
+      ),
+      http.post("/api/me/volunteer/eid-correction", () => {
+        correctionCalls += 1;
+        return HttpResponse.json({ detail: "invalid" }, { status: 422 });
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+
+    const input = await screen.findByLabelText("New eID document number");
+    await user.type(input, "999999999999");
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(
+      await screen.findByText("That doesn't look like a valid eID document number."),
+    ).toBeInTheDocument();
+    expect(correctionCalls).toBe(0);
   });
 
   it("shows three switchable tabs for an authenticated volunteer, defaulting to Registrations", async () => {

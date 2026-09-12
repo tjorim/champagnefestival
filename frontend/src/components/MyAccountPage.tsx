@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
@@ -21,7 +21,7 @@ import {
 import {
   getMyVolunteerIdentity,
   registerMyVolunteerIdentity,
-  submitEidCorrection,
+  updateMyEidDocumentNumber,
 } from "@/utils/myVolunteerApi";
 
 /**
@@ -51,14 +51,12 @@ export default function MyAccountPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isVolunteer = isAuthenticated && hasRole("volunteer");
 
-  const [correctionSubmitted, setCorrectionSubmitted] = useState(false);
   const [name, setName] = useState("");
   const [nationalRegisterNumber, setNationalRegisterNumber] = useState("");
   const [eidDocumentNumber, setEidDocumentNumber] = useState("");
   const [registerValidationError, setRegisterValidationError] = useState("");
   const [newEidDocumentNumber, setNewEidDocumentNumber] = useState("");
-  const [note, setNote] = useState("");
-  const submissionId = useRef(crypto.randomUUID());
+  const [correctionValidationError, setCorrectionValidationError] = useState("");
 
   const handleDelete = async () => {
     const accessToken = getAccessToken();
@@ -97,22 +95,25 @@ export default function MyAccountPage() {
   }, [isVolunteer, getAccessToken]);
 
   const correctionMutation = useMutation({
-    mutationFn: () =>
-      submitEidCorrection(getAccessToken() ?? "", {
-        submissionId: submissionId.current,
-        newEidDocumentNumber,
-        note,
-      }),
+    mutationFn: () => updateMyEidDocumentNumber(getAccessToken() ?? "", newEidDocumentNumber),
     retry: false,
     onSuccess: () => {
-      setCorrectionSubmitted(true);
       setNewEidDocumentNumber("");
-      setNote("");
-      submissionId.current = crypto.randomUUID();
     },
   });
 
-  const identity = registerMutation.data ?? identityMutation.data ?? null;
+  const identity =
+    correctionMutation.data ?? registerMutation.data ?? identityMutation.data ?? null;
+
+  const handleCorrectionSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!isValidEidNumber(newEidDocumentNumber)) {
+      setCorrectionValidationError(m.my_eid_invalid_eid());
+      return;
+    }
+    setCorrectionValidationError("");
+    correctionMutation.mutate();
+  };
 
   const handleRegisterSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -157,55 +158,45 @@ export default function MyAccountPage() {
           <Alert variant="secondary">
             <h3 className="h6">{m.my_eid_correction_heading()}</h3>
             <p className="small mb-3">{m.my_eid_correction_description()}</p>
-            {correctionSubmitted ? (
-              <Alert variant="success" className="mb-0">
-                {m.my_eid_correction_submitted()}
-              </Alert>
-            ) : (
-              <Form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  correctionMutation.mutate();
-                }}
-              >
-                <Form.Group className="mb-3" controlId="my-eid-new-number">
-                  <Form.Label>{m.my_eid_new_number_label()}</Form.Label>
-                  <Form.Control
-                    value={newEidDocumentNumber}
-                    onChange={(event) => setNewEidDocumentNumber(event.target.value)}
-                    maxLength={50}
-                    required
-                  />
-                </Form.Group>
-                <Form.Group className="mb-3" controlId="my-eid-note">
-                  <Form.Label>{m.my_eid_note_label()}</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={2}
-                    value={note}
-                    onChange={(event) => setNote(event.target.value)}
-                    maxLength={2000}
-                  />
-                </Form.Group>
-                {correctionMutation.isError && (
-                  <Alert variant="danger" className="py-2 small">
-                    {correctionMutation.error instanceof Error
+            <Form onSubmit={handleCorrectionSubmit}>
+              <Form.Group className="mb-3" controlId="my-eid-new-number">
+                <Form.Label>{m.my_eid_new_number_label()}</Form.Label>
+                <Form.Control
+                  value={newEidDocumentNumber}
+                  onChange={(event) => setNewEidDocumentNumber(event.target.value)}
+                  onBlur={(event) => {
+                    if (isValidEidNumber(event.target.value)) {
+                      setNewEidDocumentNumber(formatEidNumber(event.target.value));
+                    }
+                  }}
+                  maxLength={50}
+                  required
+                />
+              </Form.Group>
+              {(correctionValidationError || correctionMutation.isError) && (
+                <Alert variant="danger" className="py-2 small">
+                  {correctionValidationError ||
+                    (correctionMutation.error instanceof Error
                       ? correctionMutation.error.message
-                      : m.my_eid_correction_error()}
-                  </Alert>
-                )}
-                <Button
-                  type="submit"
-                  variant="outline-primary"
-                  size="sm"
-                  disabled={correctionMutation.isPending}
-                >
-                  {correctionMutation.isPending
-                    ? m.my_eid_submitting()
-                    : m.my_eid_submit_correction()}
-                </Button>
-              </Form>
-            )}
+                      : m.my_eid_correction_error())}
+                </Alert>
+              )}
+              {correctionMutation.isSuccess && (
+                <Alert variant="success" className="py-2 small mb-3">
+                  {m.my_eid_correction_success()}
+                </Alert>
+              )}
+              <Button
+                type="submit"
+                variant="outline-primary"
+                size="sm"
+                disabled={correctionMutation.isPending}
+              >
+                {correctionMutation.isPending
+                  ? m.my_eid_submitting()
+                  : m.my_eid_submit_correction()}
+              </Button>
+            </Form>
           </Alert>
         </>
       ) : (

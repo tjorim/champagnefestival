@@ -9,9 +9,7 @@ docs/decisions/1006-volunteer-identity-self-service.md for the full design.
 
 from __future__ import annotations
 
-from uuid import UUID
-
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +17,6 @@ from app.auth import get_actor_id, require_volunteer
 from app.database import get_db
 from app.dependencies import get_request_id
 from app.models import Person
-from app.ratelimit import check_volunteer_eid_correction_rate_limit, get_client_ip
 from app.schemas import RequestModel
 from app.services import volunteer_self_service
 
@@ -33,9 +30,7 @@ class VolunteerIdentityRegisterRequest(RequestModel):
 
 
 class VolunteerEidCorrectionRequest(RequestModel):
-    submission_id: UUID
-    new_eid_document_number: str = Field(min_length=1, max_length=50)
-    note: str = Field(default="", max_length=2000)
+    eid_document_number: str = Field(min_length=1, max_length=50)
 
 
 class VolunteerIdentityOut(BaseModel):
@@ -88,39 +83,24 @@ async def register_my_volunteer_identity(
     return _identity_out(person)
 
 
-@router.post("/eid-correction", status_code=status.HTTP_202_ACCEPTED)
-async def request_eid_correction(
+@router.post("/eid-correction", response_model=VolunteerIdentityOut)
+async def update_my_eid_document_number(
     body: VolunteerEidCorrectionRequest,
-    request: Request,
     subject: str = Depends(get_actor_id),
     db: AsyncSession = Depends(get_db),
     request_id: str | None = Depends(get_request_id),
-) -> dict[str, bool]:
+) -> VolunteerIdentityOut:
     person = await volunteer_self_service.get_linked_volunteer(db, subject)
     if person is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Your account isn't linked to a volunteer record yet.",
         )
-    # Commit the bucket increment before the write itself, matching
-    # app.routers.check_in/push's fix: otherwise a rejected request rolls
-    # back with the rest of this request's uncommitted transaction and is
-    # never actually counted.
-    allowed = await check_volunteer_eid_correction_rate_limit(db, subject)
-    await db.commit()
-    if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
-        )
-    await volunteer_self_service.submit_eid_correction_request(
+    person = await volunteer_self_service.update_eid_document_number(
         db,
         person=person,
-        submission_id=body.submission_id,
-        new_eid_document_number=body.new_eid_document_number,
-        note=body.note,
-        client_ip=get_client_ip(request),
+        new_eid_document_number=body.eid_document_number,
         actor=subject,
         request_id=request_id,
     )
-    return {"submitted": True}
+    return _identity_out(person)

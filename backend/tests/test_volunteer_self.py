@@ -10,8 +10,7 @@ from __future__ import annotations
 import pytest
 from sqlalchemy import select
 
-from app.models import AuditEntry, ContactMessage, OutboxJob, Person
-from app.services.outbox_service import CONTACT_NOTIFICATION
+from app.models import AuditEntry, Person
 from tests.helpers import ADMIN_HEADERS
 
 NISS_A = "91010112319"
@@ -183,103 +182,65 @@ async def test_eid_correction_requires_a_linked_volunteer(volunteer_client_as):
     async with volunteer_client_as() as vclient:
         r = await vclient.post(
             "/api/me/volunteer/eid-correction",
-            json={
-                "submission_id": "27d6a186-ded1-45b9-af20-2061bb739436",
-                "new_eid_document_number": "BEX999999",
-            },
+            json={"eid_document_number": EID_B},
         )
         assert r.status_code == 404
 
 
 @pytest.mark.anyio
-async def test_eid_correction_creates_contact_message_and_is_idempotent(volunteer_client_as, db_session):
-    submission_id = "9c6a4e0a-2f3a-4b8e-9a0d-6a2b8f7c1e11"
-
+async def test_eid_correction_writes_directly_and_is_idempotent(volunteer_client_as, db_session):
     async with volunteer_client_as("subject-a") as vclient:
         registered = await _register(vclient)
         assert registered.status_code == 200
 
-        body = {"submission_id": submission_id, "new_eid_document_number": "BEX999999", "note": "Card renewed."}
+        body = {"eid_document_number": EID_B}
         first = await vclient.post("/api/me/volunteer/eid-correction", json=body)
         replay = await vclient.post("/api/me/volunteer/eid-correction", json=body)
-        assert first.status_code == replay.status_code == 202
-        assert first.json() == replay.json() == {"submitted": True}
+        assert first.status_code == replay.status_code == 200
+        assert first.json()["eid_document_number"] == EID_B
+        assert replay.json() == first.json()
 
     person = (await db_session.scalars(select(Person).where(Person.oidc_subject == "subject-a"))).one()
-    # The Person row is untouched — a correction is admin-reviewed, not a direct write.
-    assert person.eid_document_number == EID_A
-
-    stored = await db_session.get(ContactMessage, submission_id)
-    assert stored is not None
-    assert person.id in stored.message
-    assert "BEX999999" in stored.message
+    # Now a direct write, unlike the earlier admin-reviewed design.
+    assert person.eid_document_number == EID_B
 
     audits = (
         await db_session.scalars(
             select(AuditEntry).where(
-                AuditEntry.action == "volunteer_eid_correction_requested",
+                AuditEntry.action == "volunteer_eid_updated",
                 AuditEntry.resource_id == person.id,
             )
         )
     ).all()
+    # Only the first request actually changed the value — the idempotent
+    # replay writes the same value again and doesn't re-audit a non-change.
     assert len(audits) == 1
     # No raw eID values in the audit trail — see volunteer_self_service.
-    assert "BEX999999" not in str(audits[0].details)
-
-    jobs = (
-        await db_session.scalars(
-            select(OutboxJob).where(OutboxJob.deduplication_key == f"contact-notification:{submission_id}")
-        )
-    ).all()
-    assert len(jobs) == 1
-    assert jobs[0].job_type == CONTACT_NOTIFICATION
+    assert EID_B not in str(audits[0].details)
 
 
 @pytest.mark.anyio
-async def test_eid_correction_reused_submission_id_with_different_payload_is_409(volunteer_client_as, db_session):
-    """The frontend keeps submission_id fixed across a failed attempt even if the
-    volunteer edits the form before retrying, so a reused id with different content
-    is a distinct correction, not a replay — it must not be silently dropped (#1037 review)."""
-    submission_id = "1b1b1b1b-2c2c-3d3d-4e4e-5f5f5f5f5f5f"
+async def test_eid_correction_rejects_invalid_checksum(volunteer_client_as):
+    async with volunteer_client_as("subject-a") as vclient:
+        registered = await _register(vclient)
+        assert registered.status_code == 200
+
+        r = await vclient.post("/api/me/volunteer/eid-correction", json={"eid_document_number": "999999999999"})
+        assert r.status_code == 422
+
+
+@pytest.mark.anyio
+async def test_eid_correction_conflicts_with_an_eid_already_on_file(client, volunteer_client_as):
+    """The new eID number belongs to someone else's record — reject rather
+    than silently taking over their identity number."""
+    await _create_volunteer(client, national_register_number=NISS_B, eid_document_number=EID_B)
 
     async with volunteer_client_as("subject-a") as vclient:
         registered = await _register(vclient)
         assert registered.status_code == 200
 
-        first = await vclient.post(
-            "/api/me/volunteer/eid-correction",
-            json={"submission_id": submission_id, "new_eid_document_number": "BEX111111", "note": "First try."},
-        )
-        assert first.status_code == 202
-
-        mismatched = await vclient.post(
-            "/api/me/volunteer/eid-correction",
-            json={"submission_id": submission_id, "new_eid_document_number": "BEX222222", "note": "Edited try."},
-        )
-        assert mismatched.status_code == 409
-
-    stored = await db_session.get(ContactMessage, submission_id)
-    assert "BEX111111" in stored.message
-    assert "BEX222222" not in stored.message
-
-
-@pytest.mark.anyio
-async def test_eid_correction_is_rate_limited_per_subject(volunteer_client_as):
-    async with volunteer_client_as("subject-rl") as vclient:
-        registered = await _register(vclient)
-        assert registered.status_code == 200
-
-        for i in range(5):
-            r = await vclient.post(
-                "/api/me/volunteer/eid-correction",
-                json={"submission_id": f"2b2b2b2b-3c3c-4d4d-5e5e-6f6f6f6f6f6{i}", "new_eid_document_number": "BEX1"},
-            )
-            assert r.status_code == 202
-        limited = await vclient.post(
-            "/api/me/volunteer/eid-correction",
-            json={"submission_id": "2b2b2b2b-3c3c-4d4d-5e5e-6f6f6f6f6fff", "new_eid_document_number": "BEX1"},
-        )
-        assert limited.status_code == 429
+        r = await vclient.post("/api/me/volunteer/eid-correction", json={"eid_document_number": EID_B})
+        assert r.status_code == 409
 
 
 @pytest.mark.anyio
