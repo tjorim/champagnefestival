@@ -68,6 +68,9 @@ vi.mock("@/paraglide/messages", () => ({
     registration_preferred_language: () => "Preferred communication language",
     my_registrations_save_language: () => "Save language",
     my_registrations_language_saved: () => "Communication language saved.",
+    my_registrations_claim_other_email: () => "Have a booking under a different email? Claim it",
+    my_registrations_claim_description: () => "Enter the other email address.",
+    my_registrations_cancel_claim: () => "Never mind, go back",
     my_account_preference_error: () => "Could not update language.",
     my_registrations_qr_label: () => "Booking check-in QR code",
     my_registrations_add_calendar: () => "Add to calendar",
@@ -541,6 +544,64 @@ describe("MyRegistrationsPage", () => {
     expect(
       screen.queryByRole("button", { name: "Request another secure link" }),
     ).not.toBeInTheDocument();
+  });
+
+  it("lets a signed-in member claim a booking made under a different email", async () => {
+    authState.accessToken = "member-access-token";
+    authState.isAuthenticated = true;
+    let requestedEmail = "";
+    server.use(
+      http.get("/api/me/registrations", () =>
+        HttpResponse.json([
+          {
+            id: "reg-member",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]),
+      ),
+      http.post("/api/registrations/my/request", async ({ request }) => {
+        const body = (await request.json()) as { email: string };
+        requestedEmail = body.email;
+        return HttpResponse.json({ ok: true, delivery_mode: "email", expires_in_minutes: 30 });
+      }),
+    );
+
+    await renderPage();
+    await waitFor(() => {
+      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Have a booking under a different email? Claim it" }),
+    );
+
+    // Claiming replaces the owned-registrations view with the email form —
+    // the two aren't shown at once.
+    expect(screen.queryByText("Grand Opening")).not.toBeInTheDocument();
+    const emailInput = screen.getByLabelText("Email");
+    fireEvent.change(emailInput, { target: { value: "other@example.com" } });
+    fireEvent.click(screen.getByRole("button", { name: /email me a secure link/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/if we found registrations for that email/i)).toBeInTheDocument();
+    });
+    expect(requestedEmail).toBe("other@example.com");
+
+    fireEvent.click(screen.getByRole("button", { name: "Never mind, go back" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
+    });
+    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
   });
 
   it("offers a sign-in link alongside the email-lookup form", async () => {

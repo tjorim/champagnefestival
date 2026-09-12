@@ -76,6 +76,11 @@ export default function MyRegistrationsPage() {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [signOutError, setSignOutError] = useState("");
+  // Lets an already-authenticated member/volunteer claim a booking made
+  // under a different email — the only way to reach requestLookupMutation's
+  // authenticated branch, since their own registrations otherwise render
+  // without ever showing the email form (see showResults/showEmailForm).
+  const [showClaimForm, setShowClaimForm] = useState(false);
   const [requestRegistration, setRequestRegistration] = useState<GuestRegistration | null>(null);
   const [requestType, setRequestType] = useState<"change" | "cancellation">("change");
   const [requestDetails, setRequestDetails] = useState("");
@@ -270,6 +275,13 @@ export default function MyRegistrationsPage() {
     registrationsMutation.isPending ||
     registrationsMutation.isError ||
     (!tokenAttempted && auth.isAuthenticated && !oidcChecked);
+  // An authenticated member/volunteer viewing their own registrations can
+  // still open the email-lookup form to claim a booking made under a
+  // different email — showEmailForm/showResults split showRegistrationFlow
+  // so the two aren't mutually exclusive just for that case.
+  const isClaiming = auth.isAuthenticated && showClaimForm;
+  const showEmailForm = !showRegistrationFlow || isClaiming;
+  const showResults = showRegistrationFlow && !isClaiming;
 
   const resetToRequestForm = useCallback(() => {
     void navigate({ search: {}, replace: true });
@@ -280,6 +292,15 @@ export default function MyRegistrationsPage() {
     setTokenAttempted(false);
     registrationsMutation.reset();
   }, [navigate, registrationsMutation, setError, setIsEmailInvalid, setRequestSent]);
+
+  const cancelClaim = useCallback(() => {
+    setShowClaimForm(false);
+    setEmail("");
+    setError("");
+    setIsEmailInvalid(false);
+    setRequestSent(false);
+    requestLookupMutation.reset();
+  }, [requestLookupMutation]);
 
   const handleSignOut = useCallback(async () => {
     setIsSigningOut(true);
@@ -338,9 +359,11 @@ export default function MyRegistrationsPage() {
 
   return (
     <div id="my-registrations">
-      {!showRegistrationFlow && (
+      {showEmailForm && (
         <>
-          <p className="text-center text-secondary mb-4">{m.my_registrations_description()}</p>
+          <p className="text-center text-secondary mb-4">
+            {isClaiming ? m.my_registrations_claim_description() : m.my_registrations_description()}
+          </p>
           <Form onSubmit={handleEmailSubmit} noValidate>
             <Form.Group controlId="my-registrations-email" className="mb-3">
               <Form.Label>{m.my_registrations_email_label()}</Form.Label>
@@ -403,20 +426,31 @@ export default function MyRegistrationsPage() {
           <Button
             variant="link"
             className="w-100 mt-2 text-secondary"
-            onClick={() => auth.login("/me")}
+            onClick={isClaiming ? cancelClaim : () => auth.login("/me")}
           >
-            {m.my_registrations_sign_in_instead()}
+            {isClaiming ? m.my_registrations_cancel_claim() : m.my_registrations_sign_in_instead()}
           </Button>
         </>
       )}
 
-      {showRegistrationFlow && (
+      {showResults && (
         <>
           {isLoadingRegistrations && (
             <Alert variant="secondary" className="text-center">
               <Spinner animation="border" size="sm" className="me-2" />
               {m.my_registrations_loading()}
             </Alert>
+          )}
+
+          {!isLoadingRegistrations && auth.isAuthenticated && (
+            <Button
+              variant="link"
+              size="sm"
+              className="w-100 text-secondary mb-2 p-0"
+              onClick={() => setShowClaimForm(true)}
+            >
+              {m.my_registrations_claim_other_email()}
+            </Button>
           )}
 
           {tokenError && (
