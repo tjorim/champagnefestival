@@ -1,3 +1,4 @@
+import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -56,7 +57,6 @@ export default function MyRegistrationsPage() {
   const navigate = useNavigate({ from: "/me" });
   const accessToken = auth.getAccessToken();
 
-  const [email, setEmail] = useState("");
   const [requestSent, setRequestSent] = useState(false);
   const [error, setError] = useState("");
   const [isEmailInvalid, setIsEmailInvalid] = useState(false);
@@ -315,10 +315,10 @@ export default function MyRegistrationsPage() {
     resetToRequestForm();
   }, [resetToRequestForm]);
 
-  const handleEmailSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      const trimmed = email.trim();
+  const emailForm = useForm({
+    defaultValues: { email: "" },
+    onSubmit: async ({ value }) => {
+      const trimmed = value.email.trim();
       if (!trimmed) return;
       if (!EMAIL_REGEX.test(trimmed)) {
         setError(m.my_registrations_invalid_email());
@@ -344,29 +344,40 @@ export default function MyRegistrationsPage() {
         setError(m.my_registrations_error());
       }
     },
-    [email, requestLookupMutation, setError, setIsEmailInvalid, setRequestSent],
-  );
+  });
+  const email = useStore(emailForm.store, (s) => s.values.email);
 
   return (
     <div id="my-registrations">
       {!showRegistrationFlow && (
         <>
           <p className="text-center text-secondary mb-4">{m.my_registrations_description()}</p>
-          <Form onSubmit={handleEmailSubmit} noValidate>
+          <Form
+            onSubmit={(e) => {
+              e.preventDefault();
+              void emailForm.handleSubmit();
+            }}
+            noValidate
+          >
             <Form.Group controlId="my-registrations-email" className="mb-3">
               <Form.Label>{m.my_registrations_email_label()}</Form.Label>
-              <Form.Control
-                type="email"
-                placeholder={m.my_registrations_email_placeholder()}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                disabled={isSubmittingEmail}
-                autoComplete="email"
-                isInvalid={isEmailInvalid}
-                className="bg-dark text-light border-secondary"
-                aria-describedby={error ? "email-error" : undefined}
-              />
+              <emailForm.Field name="email">
+                {(field) => (
+                  <Form.Control
+                    type="email"
+                    placeholder={m.my_registrations_email_placeholder()}
+                    value={field.state.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    required
+                    disabled={isSubmittingEmail}
+                    autoComplete="email"
+                    isInvalid={isEmailInvalid}
+                    className="bg-dark text-light border-secondary"
+                    aria-describedby={error ? "email-error" : undefined}
+                  />
+                )}
+              </emailForm.Field>
             </Form.Group>
 
             <div id="email-error" role="alert">

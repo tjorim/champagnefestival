@@ -2,7 +2,8 @@
  * SettingsManagement — site-wide toggles. Currently just maintenance mode.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Card from "react-bootstrap/Card";
@@ -28,9 +29,6 @@ interface ApiAppSettings {
 export default function SettingsManagement({ authHeaders }: SettingsManagementProps) {
   const queryClient = useQueryClient();
   const settingsQueryKey = queryKeys.admin.settings;
-  const [publicEmail, setPublicEmail] = useState("");
-  const [publicPhone, setPublicPhone] = useState("");
-  const [facebookUrl, setFacebookUrl] = useState("");
 
   const settingsQuery = useQuery({
     queryKey: settingsQueryKey,
@@ -60,17 +58,36 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
 
   const maintenanceMode = settingsQuery.data?.maintenance_mode;
 
-  // Seed the editable fields once the settings load. Adjust during render
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EditionModal for the details.
+  const defaultValues = useMemo(
+    () => ({
+      publicEmail: settingsQuery.data?.public_email ?? "",
+      publicPhone: settingsQuery.data?.public_phone ?? "",
+      facebookUrl: settingsQuery.data?.facebook_url ?? "",
+    }),
+    [settingsQuery.data],
+  );
+
+  const form = useForm({
+    defaultValues,
+    onSubmit: async ({ value }) => {
+      await updateMutation.mutateAsync({
+        public_email: value.publicEmail,
+        public_phone: value.publicPhone,
+        facebook_url: value.facebookUrl,
+      });
+    },
+  });
+
+  // Seed the editable fields once the settings load. Reset during render
   // (comparing against the previous query data) rather than in an effect,
   // since this only needs to react to that data actually changing.
   const [prevSettingsData, setPrevSettingsData] = useState(settingsQuery.data);
   if (settingsQuery.data !== prevSettingsData) {
     setPrevSettingsData(settingsQuery.data);
-    if (settingsQuery.data) {
-      setPublicEmail(settingsQuery.data.public_email);
-      setPublicPhone(settingsQuery.data.public_phone);
-      setFacebookUrl(settingsQuery.data.facebook_url);
-    }
+    if (settingsQuery.data) form.reset(defaultValues);
   }
 
   return (
@@ -107,50 +124,61 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
             <Form
               onSubmit={(event) => {
                 event.preventDefault();
-                updateMutation.mutate({
-                  public_email: publicEmail,
-                  public_phone: publicPhone,
-                  facebook_url: facebookUrl,
-                });
+                void form.handleSubmit();
               }}
             >
-              <Form.Group className="mb-3" controlId="public-email">
-                <Form.Label>{m.admin_settings_public_email_label()}</Form.Label>
-                <Form.Control
-                  type="email"
-                  value={publicEmail}
-                  disabled={updateMutation.isPending}
-                  onChange={(event) => setPublicEmail(event.target.value)}
-                />
-                <Form.Text className="text-secondary">
-                  {m.admin_settings_public_email_help()}
-                </Form.Text>
-              </Form.Group>
-              <Form.Group className="mb-3" controlId="public-phone">
-                <Form.Label>{m.admin_settings_public_phone_label()}</Form.Label>
-                <Form.Control
-                  type="tel"
-                  value={publicPhone}
-                  disabled={updateMutation.isPending}
-                  onChange={(event) => setPublicPhone(event.target.value)}
-                />
-                <Form.Text className="text-secondary">
-                  {m.admin_settings_public_phone_help()}
-                </Form.Text>
-              </Form.Group>
-              <Form.Group className="mb-3" controlId="facebook-url">
-                <Form.Label>{m.admin_settings_facebook_url_label()}</Form.Label>
-                <Form.Control
-                  type="url"
-                  pattern="https://.*"
-                  value={facebookUrl}
-                  disabled={updateMutation.isPending}
-                  onChange={(event) => setFacebookUrl(event.target.value)}
-                />
-                <Form.Text className="text-secondary">
-                  {m.admin_settings_facebook_url_help()}
-                </Form.Text>
-              </Form.Group>
+              <form.Field name="publicEmail">
+                {(field) => (
+                  <Form.Group className="mb-3" controlId="public-email">
+                    <Form.Label>{m.admin_settings_public_email_label()}</Form.Label>
+                    <Form.Control
+                      type="email"
+                      value={field.state.value}
+                      disabled={updateMutation.isPending}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    <Form.Text className="text-secondary">
+                      {m.admin_settings_public_email_help()}
+                    </Form.Text>
+                  </Form.Group>
+                )}
+              </form.Field>
+              <form.Field name="publicPhone">
+                {(field) => (
+                  <Form.Group className="mb-3" controlId="public-phone">
+                    <Form.Label>{m.admin_settings_public_phone_label()}</Form.Label>
+                    <Form.Control
+                      type="tel"
+                      value={field.state.value}
+                      disabled={updateMutation.isPending}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    <Form.Text className="text-secondary">
+                      {m.admin_settings_public_phone_help()}
+                    </Form.Text>
+                  </Form.Group>
+                )}
+              </form.Field>
+              <form.Field name="facebookUrl">
+                {(field) => (
+                  <Form.Group className="mb-3" controlId="facebook-url">
+                    <Form.Label>{m.admin_settings_facebook_url_label()}</Form.Label>
+                    <Form.Control
+                      type="url"
+                      pattern="https://.*"
+                      value={field.state.value}
+                      disabled={updateMutation.isPending}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    <Form.Text className="text-secondary">
+                      {m.admin_settings_facebook_url_help()}
+                    </Form.Text>
+                  </Form.Group>
+                )}
+              </form.Field>
               <Button type="submit" variant="primary" disabled={updateMutation.isPending}>
                 {updateMutation.isPending
                   ? m.admin_settings_saving()

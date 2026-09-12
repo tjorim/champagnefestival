@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -82,20 +83,71 @@ export default function BookingEditor({
     () => Object.fromEntries(registration.orderItems.map((item) => [item.productId, item.price])),
     [registration],
   );
-  const [guestCount, setGuestCount] = useState(registration.guestCount);
-  const [quantities, setQuantities] = useState<Record<string, number>>(purchased);
-  const [allocations, setAllocations] = useState<TableAllocation[]>(registration.allocations ?? []);
-  const [notes, setNotes] = useState(registration.notes);
-  const [status, setStatus] = useState(registration.status);
   const [pending, setPending] = useState(false);
   const [showLedger, setShowLedger] = useState(false);
 
-  const [transactionAmount, setTransactionAmount] = useState("");
-  const [transactionDate, setTransactionDate] = useState(toLocalDateKey(new Date()));
-  const [transactionReference, setTransactionReference] = useState("");
-  const [transactionNote, setTransactionNote] = useState("");
+  const form = useForm({
+    defaultValues: {
+      guestCount: registration.guestCount,
+      quantities: purchased,
+      allocations: registration.allocations ?? ([] as TableAllocation[]),
+      notes: registration.notes,
+      status: registration.status,
+    },
+    onSubmit: async ({ value }) => {
+      setPending(true);
+      try {
+        await onSave(registration.id, {
+          guestCount: value.guestCount,
+          quantities: value.quantities,
+          allocations: value.allocations,
+          notes: value.notes,
+          status: value.status,
+        });
+      } finally {
+        setPending(false);
+      }
+    },
+  });
+  const guestCount = useStore(form.store, (s) => s.values.guestCount);
+  const quantities = useStore(form.store, (s) => s.values.quantities);
+  const allocations = useStore(form.store, (s) => s.values.allocations);
+  const status = useStore(form.store, (s) => s.values.status);
+
   const [transactionPending, setTransactionPending] = useState(false);
   const [transactionError, setTransactionError] = useState("");
+
+  const transactionForm = useForm({
+    defaultValues: {
+      amount: "",
+      date: toLocalDateKey(new Date()),
+      reference: "",
+      note: "",
+    },
+    onSubmit: async ({ value }) => {
+      if (!onAddTransaction) return;
+      setTransactionPending(true);
+      setTransactionError("");
+      try {
+        await onAddTransaction(registration.id, {
+          amount: Number(value.amount),
+          effectiveDate: value.date,
+          reference: value.reference.trim() || undefined,
+          note: value.note.trim() || undefined,
+          idempotencyKey: crypto.randomUUID(),
+        });
+        transactionForm.setFieldValue("amount", "");
+        transactionForm.setFieldValue("reference", "");
+        transactionForm.setFieldValue("note", "");
+      } catch (err) {
+        setTransactionError(err instanceof Error ? err.message : m.admin_error_record_payment());
+      } finally {
+        setTransactionPending(false);
+      }
+    },
+  });
+  const transactionAmount = useStore(transactionForm.store, (s) => s.values.amount);
+  const transactionDate = useStore(transactionForm.store, (s) => s.values.date);
 
   const ledgerQuery = useQuery({
     queryKey: queryKeys.admin.paymentTransactions(registration.id),
@@ -130,7 +182,9 @@ export default function BookingEditor({
   );
 
   const changeAllocation = (index: number, patch: Partial<TableAllocation>) =>
-    setAllocations((items) => items.map((item, i) => (i === index ? { ...item, ...patch } : item)));
+    form.setFieldValue("allocations", (items) =>
+      items.map((item, i) => (i === index ? { ...item, ...patch } : item)),
+    );
   const allocationShortage = status !== "cancelled" && assigned > allocationTotal;
   const tableReleaseCount = allocations.length - tableQuantity;
   const invalidQuantity = Object.values(quantities).some(
@@ -143,7 +197,7 @@ export default function BookingEditor({
       0,
     );
     if (Boolean(nextTableQuantity) !== Boolean(tableQuantity)) {
-      setAllocations((items) =>
+      form.setFieldValue("allocations", (items) =>
         items.map((item) => ({
           ...item,
           exclusive: nextTableQuantity > 0,
@@ -151,7 +205,7 @@ export default function BookingEditor({
         })),
       );
     }
-    setQuantities(next);
+    form.setFieldValue("quantities", next);
   };
 
   const parsedTransactionAmount = Number(transactionAmount);
@@ -168,26 +222,36 @@ export default function BookingEditor({
       <div className="row g-3">
         <Form.Group className="col-sm-4">
           <Form.Label>{m.admin_guests_count()}</Form.Label>
-          <Form.Control
-            aria-label={m.admin_guests_count()}
-            type="number"
-            min={1}
-            max={20}
-            value={guestCount}
-            onChange={(event) => setGuestCount(Number(event.target.value))}
-          />
+          <form.Field name="guestCount">
+            {(field) => (
+              <Form.Control
+                aria-label={m.admin_guests_count()}
+                type="number"
+                min={1}
+                max={20}
+                value={field.state.value}
+                onChange={(event) => field.handleChange(Number(event.target.value))}
+                onBlur={field.handleBlur}
+              />
+            )}
+          </form.Field>
         </Form.Group>
         <Form.Group className="col-sm-4">
           <Form.Label>{m.admin_status_label()}</Form.Label>
-          <Form.Select
-            aria-label={m.admin_status_label()}
-            value={status}
-            onChange={(event) => setStatus(event.target.value as RegistrationStatus)}
-          >
-            <option value="pending">{m.admin_status_pending()}</option>
-            <option value="confirmed">{m.admin_status_confirmed()}</option>
-            <option value="cancelled">{m.admin_status_cancelled()}</option>
-          </Form.Select>
+          <form.Field name="status">
+            {(field) => (
+              <Form.Select
+                aria-label={m.admin_status_label()}
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value as RegistrationStatus)}
+                onBlur={field.handleBlur}
+              >
+                <option value="pending">{m.admin_status_pending()}</option>
+                <option value="confirmed">{m.admin_status_confirmed()}</option>
+                <option value="cancelled">{m.admin_status_cancelled()}</option>
+              </Form.Select>
+            )}
+          </form.Field>
         </Form.Group>
         <div className="col-sm-4 small align-self-end">
           <div>
@@ -223,12 +287,17 @@ export default function BookingEditor({
         ))}
         <Form.Group className="col-12">
           <Form.Label>{m.admin_notes()}</Form.Label>
-          <Form.Control
-            as="textarea"
-            rows={3}
-            value={notes}
-            onChange={(event) => setNotes(event.target.value)}
-          />
+          <form.Field name="notes">
+            {(field) => (
+              <Form.Control
+                as="textarea"
+                rows={3}
+                value={field.state.value}
+                onChange={(event) => field.handleChange(event.target.value)}
+                onBlur={field.handleBlur}
+              />
+            )}
+          </form.Field>
         </Form.Group>
       </div>
 
@@ -283,7 +352,7 @@ export default function BookingEditor({
             />
             <Button
               variant="outline-danger"
-              onClick={() => setAllocations((items) => items.filter((_, i) => i !== index))}
+              onClick={() => void form.removeFieldValue("allocations", index)}
             >
               {m.admin_inventory_remove()}
             </Button>
@@ -294,10 +363,11 @@ export default function BookingEditor({
           className="me-2"
           disabled={assigned >= allocationTotal}
           onClick={() =>
-            setAllocations((items) => [
-              ...items,
-              { tableId: "", guestCount: tableQuantity ? 0 : 1, exclusive: tableQuantity > 0 },
-            ])
+            form.pushFieldValue("allocations", {
+              tableId: "",
+              guestCount: tableQuantity ? 0 : 1,
+              exclusive: tableQuantity > 0,
+            })
           }
         >
           {m.admin_allocation_add()}
@@ -312,20 +382,7 @@ export default function BookingEditor({
             guestCount < 1 ||
             guestCount > 20
           }
-          onClick={async () => {
-            setPending(true);
-            try {
-              await onSave(registration.id, {
-                guestCount,
-                quantities,
-                allocations,
-                notes,
-                status,
-              });
-            } finally {
-              setPending(false);
-            }
-          }}
+          onClick={() => void form.handleSubmit()}
         >
           {m.admin_booking_save_all()}
         </Button>
@@ -369,81 +426,80 @@ export default function BookingEditor({
               <div className="d-flex flex-wrap gap-2 align-items-end">
                 <Form.Group>
                   <Form.Label className="small mb-1">{m.admin_payment_amount_label()}</Form.Label>
-                  <Form.Control
-                    size="sm"
-                    type="number"
-                    step="0.01"
-                    style={{ maxWidth: "8rem" }}
-                    aria-label={m.admin_payment_amount_label()}
-                    value={transactionAmount}
-                    onChange={(event) => setTransactionAmount(event.target.value)}
-                  />
+                  <transactionForm.Field name="amount">
+                    {(field) => (
+                      <Form.Control
+                        size="sm"
+                        type="number"
+                        step="0.01"
+                        style={{ maxWidth: "8rem" }}
+                        aria-label={m.admin_payment_amount_label()}
+                        value={field.state.value}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                    )}
+                  </transactionForm.Field>
                   <Form.Text className="small">{m.admin_payment_amount_help()}</Form.Text>
                 </Form.Group>
                 <Form.Group>
                   <Form.Label className="small mb-1">
                     {m.admin_payment_transaction_date()}
                   </Form.Label>
-                  <Form.Control
-                    size="sm"
-                    type="date"
-                    required
-                    aria-label={m.admin_payment_transaction_date()}
-                    value={transactionDate}
-                    onChange={(event) => setTransactionDate(event.target.value)}
-                  />
+                  <transactionForm.Field name="date">
+                    {(field) => (
+                      <Form.Control
+                        size="sm"
+                        type="date"
+                        required
+                        aria-label={m.admin_payment_transaction_date()}
+                        value={field.state.value}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                    )}
+                  </transactionForm.Field>
                 </Form.Group>
                 <Form.Group>
                   <Form.Label className="small mb-1">
                     {m.admin_payment_reference_label()}
                   </Form.Label>
-                  <Form.Control
-                    size="sm"
-                    type="text"
-                    style={{ maxWidth: "10rem" }}
-                    aria-label={m.admin_payment_reference_label()}
-                    value={transactionReference}
-                    onChange={(event) => setTransactionReference(event.target.value)}
-                  />
+                  <transactionForm.Field name="reference">
+                    {(field) => (
+                      <Form.Control
+                        size="sm"
+                        type="text"
+                        style={{ maxWidth: "10rem" }}
+                        aria-label={m.admin_payment_reference_label()}
+                        value={field.state.value}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                    )}
+                  </transactionForm.Field>
                 </Form.Group>
                 <Form.Group>
                   <Form.Label className="small mb-1">{m.admin_payment_note_label()}</Form.Label>
-                  <Form.Control
-                    size="sm"
-                    type="text"
-                    style={{ maxWidth: "12rem" }}
-                    aria-label={m.admin_payment_note_label()}
-                    value={transactionNote}
-                    onChange={(event) => setTransactionNote(event.target.value)}
-                  />
+                  <transactionForm.Field name="note">
+                    {(field) => (
+                      <Form.Control
+                        size="sm"
+                        type="text"
+                        style={{ maxWidth: "12rem" }}
+                        aria-label={m.admin_payment_note_label()}
+                        value={field.state.value}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                    )}
+                  </transactionForm.Field>
                 </Form.Group>
                 <Button
                   size="sm"
                   disabled={
                     transactionPending || transactionAmountInvalid || transactionDate === ""
                   }
-                  onClick={async () => {
-                    setTransactionPending(true);
-                    setTransactionError("");
-                    try {
-                      await onAddTransaction(registration.id, {
-                        amount: parsedTransactionAmount,
-                        effectiveDate: transactionDate,
-                        reference: transactionReference.trim() || undefined,
-                        note: transactionNote.trim() || undefined,
-                        idempotencyKey: crypto.randomUUID(),
-                      });
-                      setTransactionAmount("");
-                      setTransactionReference("");
-                      setTransactionNote("");
-                    } catch (err) {
-                      setTransactionError(
-                        err instanceof Error ? err.message : m.admin_error_record_payment(),
-                      );
-                    } finally {
-                      setTransactionPending(false);
-                    }
-                  }}
+                  onClick={() => void transactionForm.handleSubmit()}
                 >
                   {m.admin_payment_record()}
                 </Button>

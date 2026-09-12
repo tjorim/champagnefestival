@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -84,7 +85,6 @@ export default function EventProductsModal({
   const { confirm, confirmDialog } = useConfirmDialog();
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<ProductFormState>(EMPTY_FORM);
   const [formOpen, setFormOpen] = useState(false);
   const [preview, setPreview] = useState<{
     payload: ProductWrite;
@@ -103,21 +103,6 @@ export default function EventProductsModal({
     staleTime: 0,
   });
 
-  // Clear local state once the modal closes, rather than in an effect (the
-  // "adjusting state when a prop changes" pattern) since this only needs to
-  // react to the show=true->false transition, not to every render.
-  const [wasShown, setWasShown] = useState(show);
-  if (show !== wasShown) {
-    setWasShown(show);
-    if (!show) {
-      setFormOpen(false);
-      setPreview(null);
-      setEditingId(null);
-      setForm(EMPTY_FORM);
-      setError("");
-    }
-  }
-
   const saveMutation = useMutation({
     mutationFn: (payload: ProductWrite) => saveEventProduct(payload, authHeaders),
     retry: false,
@@ -128,55 +113,6 @@ export default function EventProductsModal({
     retry: false,
   });
 
-  const products = useMemo(
-    () => [...(productsQuery.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
-    [productsQuery.data],
-  );
-  // Any product can be a bundle target, purchasable or hidden — the server
-  // only checks the complete graph for cycles.
-  const bundleCandidates = products.filter((p) => p.id !== editingId);
-
-  function openAdd() {
-    setPreview(null);
-    setEditingId(null);
-    setForm(EMPTY_FORM);
-    setFormOpen(true);
-    setError("");
-  }
-
-  function openEdit(product: Product) {
-    setPreview(null);
-    setEditingId(product.id);
-    setForm({
-      name: product.name,
-      description: product.description,
-      price: String(product.price),
-      category: product.category,
-      purchasable: product.purchasable,
-      required: product.required,
-      includedProductId: product.includedProductId ?? "",
-      includedPerGuests: product.includedPerGuests != null ? String(product.includedPerGuests) : "",
-      unit: product.unit ?? "item",
-      stock: product.stock == null ? "" : String(product.stock),
-      inclusions:
-        product.inclusions ??
-        (product.includedProductId
-          ? [
-              {
-                product_id: product.includedProductId,
-                quantity: 1,
-                per_quantity: product.includedPerGuests ?? 1,
-                rounding: "down",
-              },
-            ]
-          : []),
-      updateExistingContents: false,
-      updateExistingPrices: false,
-    });
-    setFormOpen(true);
-    setError("");
-  }
-
   function updateQueryData(saved: Product) {
     queryClient.setQueryData<Product[]>(productsQueryKey, (prev = []) => {
       const idx = prev.findIndex((p) => p.id === saved.id);
@@ -184,58 +120,148 @@ export default function EventProductsModal({
     });
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    if (!form.name.trim()) {
-      setError(m.admin_products_name_required());
-      return;
-    }
-    const priceText = form.price.trim();
-    const price = Number(priceText);
-    if (!priceText || !Number.isFinite(price) || price < 0) {
-      setError(m.admin_products_price_invalid());
-      return;
-    }
-    const stock = form.stock.trim() === "" ? null : Number(form.stock);
-    if (stock !== null && (!Number.isSafeInteger(stock) || stock < 0)) {
-      setError(m.admin_inventory_stock_invalid());
-      return;
-    }
-    try {
-      const payload: ProductWrite = {
-        eventId,
-        id: editingId ?? undefined,
-        name: form.name.trim(),
-        description: form.description.trim(),
-        price,
-        category: form.category,
-        purchasable: form.purchasable,
-        required: form.required,
-        unit: form.unit,
-        stock,
-        inclusions: form.inclusions,
-        updateExistingContents: form.updateExistingContents,
-        updateExistingPrices: form.updateExistingPrices,
-      };
-      if (editingId) {
-        setPreviewPending(true);
-        const result = await previewEventProduct(payload, authHeaders);
-        setPreviewPending(false);
-        setConfirmShortage(false);
-        setPreview({ payload, result });
+  const products = useMemo(
+    () => [...(productsQuery.data ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
+    [productsQuery.data],
+  );
+  const editingProduct = editingId ? (products.find((p) => p.id === editingId) ?? null) : null;
+
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EditionModal for the details.
+  const formDefaultValues = useMemo(
+    (): ProductFormState =>
+      editingProduct
+        ? {
+            name: editingProduct.name,
+            description: editingProduct.description,
+            price: String(editingProduct.price),
+            category: editingProduct.category,
+            purchasable: editingProduct.purchasable,
+            required: editingProduct.required,
+            includedProductId: editingProduct.includedProductId ?? "",
+            includedPerGuests:
+              editingProduct.includedPerGuests != null
+                ? String(editingProduct.includedPerGuests)
+                : "",
+            unit: editingProduct.unit ?? "item",
+            stock: editingProduct.stock == null ? "" : String(editingProduct.stock),
+            inclusions:
+              editingProduct.inclusions ??
+              (editingProduct.includedProductId
+                ? [
+                    {
+                      product_id: editingProduct.includedProductId,
+                      quantity: 1,
+                      per_quantity: editingProduct.includedPerGuests ?? 1,
+                      rounding: "down",
+                    },
+                  ]
+                : []),
+            updateExistingContents: false,
+            updateExistingPrices: false,
+          }
+        : EMPTY_FORM,
+    [editingProduct],
+  );
+
+  const form = useForm({
+    defaultValues: formDefaultValues,
+    onSubmit: async ({ value }) => {
+      setError("");
+      if (!value.name.trim()) {
+        setError(m.admin_products_name_required());
         return;
       }
-      const saved = await saveMutation.mutateAsync(payload);
-      updateQueryData(saved);
+      const priceText = value.price.trim();
+      const price = Number(priceText);
+      if (!priceText || !Number.isFinite(price) || price < 0) {
+        setError(m.admin_products_price_invalid());
+        return;
+      }
+      const stock = value.stock.trim() === "" ? null : Number(value.stock);
+      if (stock !== null && (!Number.isSafeInteger(stock) || stock < 0)) {
+        setError(m.admin_inventory_stock_invalid());
+        return;
+      }
+      try {
+        const payload: ProductWrite = {
+          eventId,
+          id: editingId ?? undefined,
+          name: value.name.trim(),
+          description: value.description.trim(),
+          price,
+          category: value.category,
+          purchasable: value.purchasable,
+          required: value.required,
+          unit: value.unit,
+          stock,
+          inclusions: value.inclusions,
+          updateExistingContents: value.updateExistingContents,
+          updateExistingPrices: value.updateExistingPrices,
+        };
+        if (editingId) {
+          setPreviewPending(true);
+          const result = await previewEventProduct(payload, authHeaders);
+          setPreviewPending(false);
+          setConfirmShortage(false);
+          setPreview({ payload, result });
+          return;
+        }
+        const saved = await saveMutation.mutateAsync(payload);
+        updateQueryData(saved);
+        setFormOpen(false);
+        setEditingId(null);
+        onProductsChanged?.();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : m.admin_content_error_save());
+      } finally {
+        setPreviewPending(false);
+      }
+    },
+  });
+  const inclusions = useStore(form.store, (s) => s.values.inclusions);
+
+  // Clear local state once the modal closes, rather than in an effect (the
+  // "adjusting state when a prop changes" pattern) since this only needs to
+  // react to the show=true->false transition, not to every render.
+  const [wasShown, setWasShown] = useState(show);
+  if (show !== wasShown) {
+    setWasShown(show);
+    if (!show) {
       setFormOpen(false);
+      setPreview(null);
       setEditingId(null);
-      onProductsChanged?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : m.admin_content_error_save());
-    } finally {
-      setPreviewPending(false);
+      setError("");
     }
+  }
+
+  // Seed the inline form from the record it's opened for. Reset during render
+  // (the same "adjusting state when a prop changes" pattern) since this only
+  // needs to react to the formOpen=false->true transition, not to every render —
+  // see VolunteerFormModal for why the reset value must match `formDefaultValues`.
+  const [wasFormOpen, setWasFormOpen] = useState(formOpen);
+  if (formOpen !== wasFormOpen) {
+    setWasFormOpen(formOpen);
+    if (formOpen) form.reset(formDefaultValues);
+  }
+
+  // Any product can be a bundle target, purchasable or hidden — the server
+  // only checks the complete graph for cycles.
+  const bundleCandidates = products.filter((p) => p.id !== editingId);
+
+  function openAdd() {
+    setPreview(null);
+    setEditingId(null);
+    setFormOpen(true);
+    setError("");
+  }
+
+  function openEdit(product: Product) {
+    setPreview(null);
+    setEditingId(product.id);
+    setFormOpen(true);
+    setError("");
   }
 
   async function handleDelete(product: Product) {
@@ -259,17 +285,29 @@ export default function EventProductsModal({
 
   function renderForm() {
     return (
-      <Form onSubmit={handleSubmit} noValidate className="border-top border-secondary pt-3 mt-2">
+      <Form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void form.handleSubmit();
+        }}
+        noValidate
+        className="border-top border-secondary pt-3 mt-2"
+      >
         <div className="d-flex gap-2 flex-wrap mb-2">
           <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }} controlId="product-name">
             <Form.Label className="text-secondary small mb-1">{m.admin_products_name()}</Form.Label>
-            <Form.Control
-              size="sm"
-              className="bg-dark text-light border-secondary"
-              autoFocus
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-            />
+            <form.Field name="name">
+              {(field) => (
+                <Form.Control
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  autoFocus
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
           <Form.Group
             style={{ minWidth: "200px", flex: "2 1 200px" }}
@@ -278,111 +316,149 @@ export default function EventProductsModal({
             <Form.Label className="text-secondary small mb-1">
               {m.admin_products_description()}
             </Form.Label>
-            <Form.Control
-              size="sm"
-              className="bg-dark text-light border-secondary"
-              maxLength={300}
-              value={form.description}
-              onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-            />
+            <form.Field name="description">
+              {(field) => (
+                <Form.Control
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  maxLength={300}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
           <Form.Group style={{ maxWidth: "120px" }} controlId="product-price">
             <Form.Label className="text-secondary small mb-1">
               {m.admin_products_price()}
             </Form.Label>
-            <Form.Control
-              type="number"
-              min={0}
-              step="0.01"
-              size="sm"
-              className="bg-dark text-light border-secondary"
-              value={form.price}
-              onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
-            />
+            <form.Field name="price">
+              {(field) => (
+                <Form.Control
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
           <Form.Group style={{ maxWidth: "160px" }} controlId="product-category">
             <Form.Label className="text-secondary small mb-1">
               {m.admin_products_category()}
             </Form.Label>
-            <Form.Select
-              size="sm"
-              className="bg-dark text-light border-secondary"
-              value={form.category}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, category: e.target.value as OrderItemCategory }))
-              }
-            >
-              <option value="champagne">{m.admin_products_category_champagne()}</option>
-              <option value="food">{m.admin_products_category_food()}</option>
-              <option value="other">{m.admin_products_category_other()}</option>
-            </Form.Select>
+            <form.Field name="category">
+              {(field) => (
+                <Form.Select
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value as OrderItemCategory)}
+                  onBlur={field.handleBlur}
+                >
+                  <option value="champagne">{m.admin_products_category_champagne()}</option>
+                  <option value="food">{m.admin_products_category_food()}</option>
+                  <option value="other">{m.admin_products_category_other()}</option>
+                </Form.Select>
+              )}
+            </form.Field>
           </Form.Group>
         </div>
 
         <div className="d-flex flex-wrap gap-4 mb-1">
-          <Form.Check
-            type="checkbox"
-            id="product-purchasable"
-            label={m.admin_products_purchasable_label()}
-            checked={form.purchasable}
-            onChange={(e) => {
-              const purchasable = e.target.checked;
-              setForm((f) => ({ ...f, purchasable, required: purchasable ? f.required : false }));
-            }}
-          />
-          <Form.Check
-            type="checkbox"
-            id="product-required"
-            label={m.admin_products_required_label()}
-            checked={form.required}
-            disabled={!form.purchasable}
-            onChange={(e) => setForm((f) => ({ ...f, required: e.target.checked }))}
-          />
+          <form.Field name="purchasable">
+            {(field) => (
+              <Form.Check
+                type="checkbox"
+                id="product-purchasable"
+                label={m.admin_products_purchasable_label()}
+                checked={field.state.value}
+                onChange={(e) => {
+                  const purchasable = e.target.checked;
+                  field.handleChange(purchasable);
+                  if (!purchasable) form.setFieldValue("required", false);
+                }}
+              />
+            )}
+          </form.Field>
+          <form.Field name="required">
+            {(field) => (
+              <form.Subscribe selector={(s) => s.values.purchasable}>
+                {(purchasable) => (
+                  <Form.Check
+                    type="checkbox"
+                    id="product-required"
+                    label={m.admin_products_required_label()}
+                    checked={field.state.value}
+                    disabled={!purchasable}
+                    onChange={(e) => field.handleChange(e.target.checked)}
+                  />
+                )}
+              </form.Subscribe>
+            )}
+          </form.Field>
         </div>
         <div className="text-secondary small mb-1">{m.admin_products_purchasable_help()}</div>
-        <div className="text-secondary small mb-2">
-          {form.purchasable
-            ? m.admin_products_required_help()
-            : m.admin_products_required_needs_purchasable()}
-        </div>
+        <form.Subscribe selector={(s) => s.values.purchasable}>
+          {(purchasable) => (
+            <div className="text-secondary small mb-2">
+              {purchasable
+                ? m.admin_products_required_help()
+                : m.admin_products_required_needs_purchasable()}
+            </div>
+          )}
+        </form.Subscribe>
 
         <div className="d-flex gap-2 flex-wrap mb-2">
           <Form.Group style={{ maxWidth: "160px" }} controlId="product-unit">
             <Form.Label className="text-secondary small mb-1">
               {m.admin_inventory_unit()}
             </Form.Label>
-            <Form.Select
-              size="sm"
-              className="bg-dark text-light border-secondary"
-              value={form.unit}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, unit: e.target.value as ProductFormState["unit"] }))
-              }
-            >
-              <option value="item">{m.admin_inventory_unit_item()}</option>
-              <option value="person">{m.admin_inventory_unit_person()}</option>
-              <option value="table">{m.admin_inventory_unit_table()}</option>
-            </Form.Select>
+            <form.Field name="unit">
+              {(field) => (
+                <Form.Select
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value as ProductFormState["unit"])}
+                  onBlur={field.handleBlur}
+                >
+                  <option value="item">{m.admin_inventory_unit_item()}</option>
+                  <option value="person">{m.admin_inventory_unit_person()}</option>
+                  <option value="table">{m.admin_inventory_unit_table()}</option>
+                </Form.Select>
+              )}
+            </form.Field>
           </Form.Group>
           <Form.Group style={{ maxWidth: "160px" }} controlId="product-stock">
             <Form.Label className="text-secondary small mb-1">
               {m.admin_inventory_stock()}
             </Form.Label>
-            <Form.Control
-              type="number"
-              min={0}
-              step={1}
-              size="sm"
-              className="bg-dark text-light border-secondary"
-              value={form.stock}
-              onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
-            />
+            <form.Field name="stock">
+              {(field) => (
+                <Form.Control
+                  type="number"
+                  min={0}
+                  step={1}
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
         </div>
         <Form.Text className="d-block mb-2">{m.admin_inventory_unlimited_help()}</Form.Text>
         <fieldset className="mb-3">
           <legend className="h6">{m.admin_inventory_inclusions()}</legend>
-          {form.inclusions.map((edge, index) => (
+          {inclusions.map((edge, index) => (
             <div className="d-flex flex-wrap gap-2 mb-2 align-items-start" key={index}>
               <Form.Select
                 size="sm"
@@ -391,12 +467,10 @@ export default function EventProductsModal({
                 aria-label={m.admin_products_bundle_target()}
                 value={edge.product_id}
                 onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    inclusions: f.inclusions.map((x, i) =>
-                      i === index ? { ...x, product_id: e.target.value } : x,
-                    ),
-                  }))
+                  void form.replaceFieldValue("inclusions", index, {
+                    ...edge,
+                    product_id: e.target.value,
+                  })
                 }
               >
                 <option value="">{m.admin_products_bundle_none()}</option>
@@ -416,12 +490,10 @@ export default function EventProductsModal({
                 aria-label={m.admin_inventory_included_quantity()}
                 value={edge.quantity}
                 onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    inclusions: f.inclusions.map((x, i) =>
-                      i === index ? { ...x, quantity: Number(e.target.value) } : x,
-                    ),
-                  }))
+                  void form.replaceFieldValue("inclusions", index, {
+                    ...edge,
+                    quantity: Number(e.target.value),
+                  })
                 }
               />
               <Form.Control
@@ -434,12 +506,10 @@ export default function EventProductsModal({
                 aria-label={m.admin_inventory_per_quantity()}
                 value={edge.per_quantity}
                 onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    inclusions: f.inclusions.map((x, i) =>
-                      i === index ? { ...x, per_quantity: Number(e.target.value) } : x,
-                    ),
-                  }))
+                  void form.replaceFieldValue("inclusions", index, {
+                    ...edge,
+                    per_quantity: Number(e.target.value),
+                  })
                 }
               />
               <Form.Select
@@ -449,12 +519,10 @@ export default function EventProductsModal({
                 aria-label={m.admin_inventory_rounding()}
                 value={edge.rounding}
                 onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    inclusions: f.inclusions.map((x, i) =>
-                      i === index ? { ...x, rounding: e.target.value as "up" | "down" } : x,
-                    ),
-                  }))
+                  void form.replaceFieldValue("inclusions", index, {
+                    ...edge,
+                    rounding: e.target.value as "up" | "down",
+                  })
                 }
               >
                 <option value="down">{m.admin_inventory_round_down()}</option>
@@ -464,9 +532,7 @@ export default function EventProductsModal({
                 type="button"
                 size="sm"
                 variant="outline-danger"
-                onClick={() =>
-                  setForm((f) => ({ ...f, inclusions: f.inclusions.filter((_, i) => i !== index) }))
-                }
+                onClick={() => void form.removeFieldValue("inclusions", index)}
               >
                 {m.admin_inventory_remove()}
               </Button>
@@ -477,13 +543,12 @@ export default function EventProductsModal({
           <Button
             type="button"
             onClick={() =>
-              setForm((f) => ({
-                ...f,
-                inclusions: [
-                  ...f.inclusions,
-                  { product_id: "", quantity: 1, per_quantity: 1, rounding: "down" },
-                ],
-              }))
+              form.pushFieldValue("inclusions", {
+                product_id: "",
+                quantity: 1,
+                per_quantity: 1,
+                rounding: "down",
+              })
             }
           >
             {m.admin_inventory_add_inclusion()}
@@ -492,18 +557,26 @@ export default function EventProductsModal({
         {editingId && (
           <fieldset className="mb-3">
             <legend className="h6">{m.admin_inventory_existing_bookings()}</legend>
-            <Form.Check
-              id="update-booked-contents"
-              label={m.admin_inventory_update_contents()}
-              checked={form.updateExistingContents}
-              onChange={(e) => setForm((f) => ({ ...f, updateExistingContents: e.target.checked }))}
-            />
-            <Form.Check
-              id="update-booked-prices"
-              label={m.admin_inventory_update_prices()}
-              checked={form.updateExistingPrices}
-              onChange={(e) => setForm((f) => ({ ...f, updateExistingPrices: e.target.checked }))}
-            />
+            <form.Field name="updateExistingContents">
+              {(field) => (
+                <Form.Check
+                  id="update-booked-contents"
+                  label={m.admin_inventory_update_contents()}
+                  checked={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.checked)}
+                />
+              )}
+            </form.Field>
+            <form.Field name="updateExistingPrices">
+              {(field) => (
+                <Form.Check
+                  id="update-booked-prices"
+                  label={m.admin_inventory_update_prices()}
+                  checked={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.checked)}
+                />
+              )}
+            </form.Field>
             <Form.Text>{m.admin_inventory_keep_help()}</Form.Text>
           </fieldset>
         )}
