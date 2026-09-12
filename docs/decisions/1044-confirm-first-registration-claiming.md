@@ -121,6 +121,14 @@ every other claim path). Resolves/creates the volunteer's `User` row via
 - No re-verification of `email_verified` beyond trusting the token at request
   time — if a realm ever sets it `true` incorrectly, that is a realm
   configuration bug, not something this app can independently audit.
+- **No guarantee that real accounts actually carry `email_verified: true`.**
+  Nothing in `tjorim/apps` sets it — volunteer/admin accounts on the
+  `champagnefestival` realm are created manually through the Keycloak Admin
+  Console, not by any script, so it depends entirely on whoever creates the
+  account remembering to tick it. When it's unset, the feature doesn't error;
+  the confirm-first prompt on `/me` just never appears, silently degrading to
+  "always use the manual claim form." Tracked as
+  [tjorim/apps#198](https://github.com/tjorim/apps/issues/198).
 - No behavior change for visitor magic-link sessions — those already claim by
   construction (the redeemed link itself is the proof), independent of this
   OIDC-specific path.
