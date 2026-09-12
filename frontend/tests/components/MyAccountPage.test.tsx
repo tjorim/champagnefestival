@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import MyAccountPage from "@/components/MyAccountPage";
 import { useAuth } from "@/contexts/AuthContext";
 import { server } from "@/mocks/server";
+import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -21,6 +22,27 @@ vi.mock("@/paraglide/messages", () => ({
     auth_signing_out: () => "Signing out…",
     admin_action_cancel: () => "Cancel",
     admin_action_confirm: () => "Confirm",
+    my_eid_title: () => "My eID",
+    my_eid_load_error: () => "Could not load your volunteer identity. Please try again.",
+    my_eid_register_heading: () => "Register your volunteer record",
+    my_eid_register_description: () =>
+      "Enter your name, National Register Number (NISS) and eID document number to create your own volunteer record.",
+    my_eid_register_button: () => "Register my details",
+    my_eid_register_error: () => "Could not register your details.",
+    my_eid_invalid_niss: () => "That doesn't look like a valid National Register Number.",
+    my_eid_invalid_eid: () => "That doesn't look like a valid eID document number.",
+    my_eid_name_label: () => "Full name",
+    my_eid_niss_label: () => "National Register Number (NISS)",
+    my_eid_eid_label: () => "eID document number",
+    my_eid_identity_heading: () => "Your identity on file",
+    my_eid_correction_heading: () => "Report an eID renewal",
+    my_eid_correction_description: () => "Let us know the new document number.",
+    my_eid_new_number_label: () => "New eID document number",
+    my_eid_note_label: () => "Note (optional)",
+    my_eid_submit_correction: () => "Submit for review",
+    my_eid_correction_submitted: () => "Thank you — an administrator will review your request.",
+    my_eid_correction_error: () => "Could not submit your request.",
+    my_eid_submitting: () => "Submitting…",
   },
 }));
 
@@ -75,7 +97,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />);
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
 
     expect(screen.getByText("Signed in as mock-user")).toBeInTheDocument();
     await openDeleteConfirm(user);
@@ -95,7 +117,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />);
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
     await openDeleteConfirm(user);
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
@@ -111,7 +133,7 @@ describe("MyAccountPage", () => {
     );
 
     const user = userEvent.setup();
-    render(<MyAccountPage />);
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
     await openDeleteConfirm(user);
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
@@ -139,12 +161,52 @@ describe("MyAccountPage", () => {
     });
 
     const user = userEvent.setup();
-    render(<MyAccountPage />);
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
 
     expect(screen.getByText("Keycloak is unreachable.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Try signing in again" }));
 
     expect(clearAuthError).toHaveBeenCalledTimes(1);
     expect(login).toHaveBeenCalledWith("/me");
+  });
+
+  it("does not show the volunteer identity section for a non-volunteer account", async () => {
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+
+    expect(await screen.findByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
+    expect(screen.queryByText("My eID")).not.toBeInTheDocument();
+  });
+
+  it("shows the volunteer registration form for an unlinked volunteer account", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-volunteer",
+      roles: ["volunteer"],
+      hasRole: vi.fn((role: string) => role === "volunteer"),
+      getAccessToken: vi.fn().mockReturnValue("oidc-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+    server.use(
+      http.get("/api/me/volunteer", () =>
+        HttpResponse.json({
+          linked: false,
+          name: null,
+          national_register_number: null,
+          eid_document_number: null,
+        }),
+      ),
+    );
+
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+
+    expect(await screen.findByText("Register your volunteer record")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
   });
 });

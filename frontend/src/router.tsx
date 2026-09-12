@@ -37,7 +37,6 @@ interface AppRouteComponents {
   PrivacyPolicyRoute: RouteComponent;
   PebblePairRoute: RouteComponent;
   MyAccountRoute: RouteComponent;
-  MyEidRoute: RouteComponent;
   VenuePlanRoute: RouteComponent;
 }
 
@@ -49,7 +48,6 @@ export function createAppRouter({
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,
-  MyEidRoute,
   VenuePlanRoute,
 }: AppRouteComponents) {
   const rootRoute = createRootRoute({
@@ -120,12 +118,6 @@ export function createAppRouter({
     component: MyAccountRoute,
   });
 
-  const myEidRoute = createRoute({
-    getParentRoute: () => rootRoute,
-    path: "/my-eid",
-    component: MyEidRoute,
-  });
-
   const routeTree = rootRoute.addChildren([
     indexRoute,
     adminLayoutRoute.addChildren([adminRoute, checkInRoute, venuePlanRoute]),
@@ -133,7 +125,6 @@ export function createAppRouter({
     privacyPolicyRoute,
     pebblePairRoute,
     myAccountRoute,
-    myEidRoute,
   ]);
 
   return createRouter({
