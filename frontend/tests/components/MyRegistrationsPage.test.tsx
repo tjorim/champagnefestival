@@ -68,9 +68,6 @@ vi.mock("@/paraglide/messages", () => ({
     registration_preferred_language: () => "Preferred communication language",
     my_registrations_save_language: () => "Save language",
     my_registrations_language_saved: () => "Communication language saved.",
-    my_registrations_claim_other_email: () => "Have a booking under a different email? Claim it",
-    my_registrations_claim_description: () => "Enter the other email address.",
-    my_registrations_cancel_claim: () => "Never mind, go back",
     my_registrations_claimable_heading: () => "Is this you?",
     my_registrations_claimable_description: () =>
       "We found bookings placed under your email address.",
@@ -168,69 +165,6 @@ describe("MyRegistrationsPage", () => {
     );
   });
 
-  it("claims email-proven registrations when the visitor is signed in", async () => {
-    authState.accessToken = "visitor-access-token";
-    authState.isAuthenticated = true;
-    let authorization = "";
-    server.use(
-      http.post("/api/me/registrations/claim", ({ request }) => {
-        authorization = request.headers.get("Authorization") ?? "";
-        return HttpResponse.json([]);
-      }),
-      http.get("/api/me/registrations", () => HttpResponse.json([])),
-    );
-
-    await renderPage("/me?token=email-access-token");
-
-    await waitFor(() => {
-      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
-    });
-    expect(authorization).toBe("Bearer visitor-access-token");
-  });
-
-  it("waits for authentication restoration before claiming the token", async () => {
-    authState.isLoading = true;
-    let anonymousCalls = 0;
-    let claimCalls = 0;
-    let ownedCalls = 0;
-    server.use(
-      http.post("/api/registrations/my/access", () => {
-        anonymousCalls += 1;
-        return HttpResponse.json([]);
-      }),
-      http.post("/api/me/registrations/claim", () => {
-        claimCalls += 1;
-        return HttpResponse.json([]);
-      }),
-      http.get("/api/me/registrations", () => {
-        ownedCalls += 1;
-        return HttpResponse.json([]);
-      }),
-    );
-
-    const view = await renderPage("/me?token=email-access-token");
-    expect(screen.getByText("Loading registrations...")).toBeInTheDocument();
-    expect(anonymousCalls).toBe(0);
-
-    authState.set({
-      isLoading: false,
-      isAuthenticated: true,
-      accessToken: "restored-access-token",
-    });
-
-    await waitFor(() => {
-      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
-    });
-    expect(anonymousCalls).toBe(0);
-    expect(claimCalls).toBe(1);
-    expect(ownedCalls).toBe(1);
-    await waitFor(() => expect(view.router.state.location.search).toEqual({}));
-    const currentHref = view.router.state.location.href;
-    view.unmount();
-    await renderPage(currentHref);
-    expect(claimCalls).toBe(1);
-  });
-
   it("does not replay an anonymous token exchange after successful remount", async () => {
     let accessCalls = 0;
     server.use(
@@ -276,31 +210,6 @@ describe("MyRegistrationsPage", () => {
     await renderPage(currentHref);
     expect(accessCalls).toBe(1);
     finishExchange?.();
-  });
-
-  it("reconciles an ambiguous signed claim through the owned registrations GET", async () => {
-    authState.accessToken = "visitor-access-token";
-    authState.isAuthenticated = true;
-    let claimCalls = 0;
-    let ownedCalls = 0;
-    server.use(
-      http.post("/api/me/registrations/claim", () => {
-        claimCalls += 1;
-        return HttpResponse.error();
-      }),
-      http.get("/api/me/registrations", () => {
-        ownedCalls += 1;
-        return HttpResponse.json([]);
-      }),
-    );
-
-    const view = await renderPage("/me?token=email-access-token");
-    await waitFor(() => {
-      expect(screen.getByText("No registrations found.")).toBeInTheDocument();
-    });
-    expect(claimCalls).toBe(1);
-    expect(ownedCalls).toBe(1);
-    expect(view.router.state.location.search).toEqual({});
   });
 
   it("shows an invalid-link message when the token is rejected", async () => {
@@ -401,7 +310,6 @@ describe("MyRegistrationsPage", () => {
     authState.isAuthenticated = true;
     let savedBody: unknown;
     server.use(
-      http.post("/api/me/registrations/claim", () => HttpResponse.json([])),
       http.get("/api/me/registrations", () =>
         HttpResponse.json([
           {
@@ -427,7 +335,7 @@ describe("MyRegistrationsPage", () => {
         return HttpResponse.json({ preferred_language: "en" });
       }),
     );
-    await renderPage("/me?token=email-access-token");
+    await renderPage();
     const language = await screen.findByLabelText("Preferred communication language");
     await waitFor(() => expect(language).toHaveValue("fr"));
     fireEvent.change(language, { target: { value: "en" } });
@@ -444,7 +352,6 @@ describe("MyRegistrationsPage", () => {
       resolvePreference = resolve;
     });
     server.use(
-      http.post("/api/me/registrations/claim", () => HttpResponse.json([])),
       http.get("/api/me/registrations", () =>
         HttpResponse.json([
           {
@@ -467,9 +374,9 @@ describe("MyRegistrationsPage", () => {
         return HttpResponse.json({ preferred_language: "fr" });
       }),
     );
-    await renderPage("/me?token=email-access-token");
+    await renderPage();
     const language = await screen.findByLabelText("Preferred communication language");
-    expect(language).toBeDisabled();
+    await waitFor(() => expect(language).toBeDisabled());
     expect(screen.getByRole("button", { name: "Save language" })).toBeDisabled();
     resolvePreference();
     await waitFor(() => expect(language).toBeEnabled());
@@ -549,64 +456,6 @@ describe("MyRegistrationsPage", () => {
     expect(
       screen.queryByRole("button", { name: "Request another secure link" }),
     ).not.toBeInTheDocument();
-  });
-
-  it("lets a signed-in member claim a booking made under a different email", async () => {
-    authState.accessToken = "member-access-token";
-    authState.isAuthenticated = true;
-    let requestedEmail = "";
-    server.use(
-      http.get("/api/me/registrations", () =>
-        HttpResponse.json([
-          {
-            id: "reg-member",
-            event_title: "Grand Opening",
-            event_date: "2026-05-01",
-            check_in_token: "token",
-            guest_count: 1,
-            status: "confirmed",
-            payment_status: "paid",
-            checked_in: false,
-            strap_issued: false,
-            created_at: "2026-01-01T00:00:00Z",
-            order_items: [],
-          },
-        ]),
-      ),
-      http.post("/api/registrations/my/request", async ({ request }) => {
-        const body = (await request.json()) as { email: string };
-        requestedEmail = body.email;
-        return HttpResponse.json({ ok: true, delivery_mode: "email", expires_in_minutes: 30 });
-      }),
-    );
-
-    await renderPage();
-    await waitFor(() => {
-      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
-    });
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "Have a booking under a different email? Claim it" }),
-    );
-
-    // Claiming replaces the owned-registrations view with the email form —
-    // the two aren't shown at once.
-    expect(screen.queryByText("Grand Opening")).not.toBeInTheDocument();
-    const emailInput = screen.getByLabelText("Email");
-    fireEvent.change(emailInput, { target: { value: "other@example.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /email me a secure link/i }));
-
-    await waitFor(() => {
-      expect(screen.getByText(/if we found registrations for that email/i)).toBeInTheDocument();
-    });
-    expect(requestedEmail).toBe("other@example.com");
-
-    fireEvent.click(screen.getByRole("button", { name: "Never mind, go back" }));
-
-    await waitFor(() => {
-      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
-    });
-    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
   });
 
   it("shows a confirm-first prompt for a claimable booking and links it only after confirming", async () => {

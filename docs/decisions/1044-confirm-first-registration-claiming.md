@@ -1,11 +1,14 @@
 # Confirm-first registration claiming for a verified OIDC email
 
-**Status:** Implemented (2026-09-12, reworked from a silent-automatic design the same day).
+**Status:** Implemented (2026-09-12, reworked from a silent-automatic design
+the same day, then further narrowed the same day again to remove the manual
+different-email claim flow entirely — see "Later change" below).
 **Date:** 2026-09-12
 **Issue:** [#1044](https://github.com/tjorim/champagnefestival/issues/1044)
 **Related:** [#953](./953-visitor-passwordless-session.md) (the claim mechanism this
-reuses); [Unified self-service page](./unified-self-service-page.md) (added the
-manual claim UI this decision narrows); [1006-volunteer-identity-self-service.md](./1006-volunteer-identity-self-service.md)
+reuses); [Unified self-service page](./unified-self-service-page.md) (added, then
+this decision's later change removed, the manual claim UI);
+[1006-volunteer-identity-self-service.md](./1006-volunteer-identity-self-service.md)
 (the admin-override precedent the new admin action mirrors)
 
 ---
@@ -78,6 +81,11 @@ identity), so `claimable` returns empty and `claim-verified-email` 409s
 without one. The manual proof-token flow remains the fallback for a
 genuinely different email.
 
+> **Superseded the same day** — see "Later change: the manual
+> different-email claim flow was removed entirely" below. There is no
+> fallback for a genuinely different email anymore; that capability was
+> removed rather than kept narrowed.
+
 **Frontend (`MyRegistrationsPage`):** fetches `claimable` once signed in;
 when it returns a non-empty list, an "Is this you?" card appears above the
 caller's own registrations with **Confirm** and **Not now** actions. Only
@@ -111,10 +119,6 @@ every other claim path). Resolves/creates the volunteer's `User` row via
 
 ## What this does not do
 
-- No change to `POST /api/me/registrations/claim` itself, or to its
-  retry-safety characterization — the one-shot lookup token it consumes is
-  still not retry-safe with the same token, unchanged from the existing
-  entry in `docs/retry-safety.md`.
 - No persisted "dismissed" state for the claimable card — see above.
 - No admin path for attaching a registration to a non-volunteer ("member")
   account — there's no admin-visible identity to resolve one from today.
@@ -133,11 +137,60 @@ every other claim path). Resolves/creates the volunteer's `User` row via
   construction (the redeemed link itself is the proof), independent of this
   OIDC-specific path.
 
+## Later change (2026-09-12): the manual different-email claim flow was removed entirely
+
+Review of this same PR raised the product question directly: should the app
+ever support linking a booking made under someone else's email address onto
+an account, given proof of control of that inbox? The answer was **no** —
+*"one account per email, all orders grouped and linked there."* An account
+should only ever gather bookings that were genuinely placed under its own
+email, not bookings proven-by-mailed-token to belong to some other address
+that happens not to be the account's own.
+
+That retires the entire "genuinely different email" case (case 2 above), not
+just the manual retyping UI for it. Removed:
+
+- `POST /api/me/registrations/claim` and its router-level helpers
+  (`claim_my_registrations` in `app/routers/me.py`).
+- `POST /api/registrations/my/request` and `POST /api/registrations/my/access`
+  (`app/routers/registrations.py`) — the emailed one-shot proof-token request/
+  redeem pair those two endpoints and the manual claim shared.
+- The `ReservationAccessToken` model and table (migration
+  `003_drop_reservation_access_tokens`), and `send_guest_access_email`.
+- The "Have a booking under a different email? Claim it" UI this decision's
+  original text still described as the fallback, plus its
+  `my_registrations_claim_*` translation strings.
+
+What survives, and why each one still satisfies "one account per email"
+without reintroducing the removed capability:
+
+1. **Direct ownership at booking time** — `Registration.user_id` set when a
+   signed-in caller books.
+2. **Confirm-first claiming of the caller's own verified email**
+   (`claimable`/`claim-verified-email`, this decision's core mechanism,
+   unchanged) — only ever the caller's own OIDC-verified address.
+3. **Visitor magic-link redemption** — claims only the email the link itself
+   was sent to; the link's existence already proves control of that inbox as
+   the caller's own.
+4. **Admin assign-volunteer override** — not an email-control proof at all;
+   an admin vouching for a volunteer's own already-linked identity.
+
+`app.services.users_service.claim_unowned_registrations_for_email` — the
+shared, existing-owner-protected write every surviving path above still calls
+— is unchanged; only the callers that let it be invoked for an email other
+than the caller's own were removed.
+
+`docs/decisions/953-visitor-passwordless-session.md` and
+`docs/product-audit-2026-08.md` are updated in the same change to drop their
+now-stale descriptions of the removed flow.
+
 ## Retry-safety
 
 See `docs/retry-safety.md`: `claim-verified-email` and the admin
 assign-volunteer action are both convergent, existing-owner-protected writes
-— safe to blindly retry, no dedup needed. `claimable` is a pure read.
+— safe to blindly retry, no dedup needed. `claimable` is a pure read. The
+removed `claim`/`my/request`/`my/access` endpoints' retry-safety rows were
+deleted along with them.
 
 ## References
 
@@ -147,5 +200,5 @@ assign-volunteer action are both convergent, existing-owner-protected writes
 - [Volunteer identity self-service](./1006-volunteer-identity-self-service.md) —
   the `oidc_subject`/admin-override precedent the assign-volunteer action mirrors
 - [Unified self-service page](./unified-self-service-page.md) — added the
-  manual claim UI this decision narrows to the genuine-different-email case
+  manual claim UI this decision's later change removed entirely
 - [Retry-safety inventory](../retry-safety.md)

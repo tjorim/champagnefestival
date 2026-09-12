@@ -221,34 +221,16 @@ class PaymentTransaction(Base):
     registration: Mapped[Registration] = relationship()
 
 
-class ReservationAccessToken(Base):
-    """Short-lived visitor access token for viewing registrations via e-mail link.
-
-    Deliberately session-less — one-shot lookup only. #953's visitor magic
-    link (``VisitorMagicLink`` below) is a structurally identical credential
-    shape reused for a different purpose (establishing a ``VisitorSession``,
-    not a one-shot read), kept as its own table rather than overloading this
-    one — see docs/decisions/953-visitor-passwordless-session.md.
-    """
-
-    __tablename__ = "reservation_access_tokens"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    email: Mapped[str] = mapped_column(String(200), unique=True)
-    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-
-
 class VisitorMagicLink(Base):
     """Short-lived, single-use passwordless sign-in credential (#953 decision 2).
 
-    Same shape as ``ReservationAccessToken`` (one outstanding link per email,
-    hashed token, TTL) but a separate table: redeeming this one establishes a
-    persistent ``VisitorSession`` rather than a one-shot read. 30-minute TTL
-    (``settings.guest_access_token_ttl_minutes``, the same number this
-    project already uses for a structurally identical emailed credential).
+    One outstanding link per email, hashed token, TTL. Redeeming it
+    establishes a persistent ``VisitorSession``. 30-minute TTL
+    (``settings.guest_access_token_ttl_minutes``). Previously shared its shape
+    with the now-removed ``ReservationAccessToken`` (a one-shot, session-less
+    "claim any email you can prove control of" credential, retired in #1044 —
+    see docs/decisions/1044-confirm-first-registration-claiming.md); this is
+    the only surviving emailed credential of that shape.
     """
 
     __tablename__ = "visitor_magic_links"

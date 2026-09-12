@@ -10,13 +10,22 @@ deliberately still undone: the public navigation entry, gated on verified
 production email delivery per #953's own text.
 Later extended (2026-09-12, PR #1037): `/my-registrations` — the page this
 document built its UI on — was folded into the unified `/me` page (see
-[`unified-self-service-page.md`](./unified-self-service-page.md)), and
-claiming for an OIDC caller was split into a confirm-first flow for the
+[`unified-self-service-page.md`](./unified-self-service-page.md)). Claiming
+for an OIDC caller was first split into a confirm-first flow for the
 caller's own verified email plus this document's original manual/proof-token
-flow for a genuinely different one (see
+flow for a genuinely different one, then — the same day, on the product
+decision that an account should only ever gather bookings placed under its
+own email — the manual/proof-token flow was removed outright rather than
+kept narrowed (see
 [`1044-confirm-first-registration-claiming.md`](./1044-confirm-first-registration-claiming.md)).
-Nothing below about the magic-link/visitor-session mechanism itself changed —
-only the page it lives on and how an OIDC caller's *own* claiming got easier.
+That removal took `claim_my_registrations`, `POST /api/registrations/my/request`,
+`POST /api/registrations/my/access`, and the `reservation_access_tokens` table
+with it (migration `003_drop_reservation_access_tokens`) — every place below
+that describes any of those as still in place, still shared, or "out of
+scope to remove" is superseded by that later change. The magic-link/
+visitor-session mechanism itself (Decisions 1–4, the session table, the
+cookie, `claim_unowned_registrations_for_email`) is unaffected — only the
+now-removed sibling flow that used to share its shape.
 **Date:** 2026-09-06 (confirmed same day, implemented 2026-09-07)
 **Issues:** [#953](https://github.com/tjorim/champagnefestival/issues/953)
 (primary); [#922](https://github.com/tjorim/champagnefestival/issues/922)
@@ -211,9 +220,9 @@ not offering it. Nothing else here waits on that:
 
 ## Retry-safety (to formalise at implementation time, per `AGENTS.md`)
 
-Two new writes join the existing table
-(`POST /api/registrations/my/access` and `POST /api/me/registrations/claim`
-are already documented there):
+Two new writes join the existing table (`POST /api/registrations/my/access`
+and `POST /api/me/registrations/claim` were documented there at the time —
+both later removed in #1044, see the note at the top of this document):
 
 - **Magic-link request** — same shape as the existing guest-access-token
   request: not retry-safe with the same token, generic response regardless
@@ -276,12 +285,15 @@ refinements worth recording:
   control over that email, so it calls a new shared
   `claim_unowned_registrations_for_email` (extracted from
   `claim_my_registrations`'s previously-inline logic) with the verified email
-  directly — no separate lookup token required. `claim_my_registrations`
-  itself is unchanged in *shape*: still requires a fresh one-shot token, now
-  usable by either an OIDC caller or an already-signed-in visitor session to
-  claim registrations under *any* email they can prove control of (their own
-  or otherwise) — a visitor's own session already covers claiming their own
-  email's registrations without that endpoint.
+  directly — no separate lookup token required. At the time this was written,
+  `claim_my_registrations` itself was unchanged in *shape*: still required a
+  fresh one-shot token, usable by either an OIDC caller or an already-signed-in
+  visitor session to claim registrations under *any* email they could prove
+  control of (their own or otherwise) — a visitor's own session already
+  covered claiming their own email's registrations without that endpoint.
+  `claim_my_registrations` itself was later removed entirely (#1044, see the
+  note at the top of this document); `claim_unowned_registrations_for_email`
+  survives as the shared write every remaining claim path still calls.
 - **Audit actor for a visitor-session action is the opaque `User.id`, not the
   verified email**, with a new `auth_source == "visitor_session"` value
   (`app.visitor_session.actor_for_user`, documented in `AuditEntry.actor`'s
@@ -296,8 +308,10 @@ refinements worth recording:
   email form, a sign-out control with an expiry date, and redemption now
   hitting `/api/visitor-sessions/redeem` (which establishes the session)
   instead of the one-shot `/api/registrations/my/access` for a non-OIDC
-  caller. An OIDC-authenticated visitor to this page (unchanged) still goes
-  through `requestRegistrationLookup` → `claimMyRegistrations`, unaffected.
+  caller. At the time this was written, an OIDC-authenticated visitor to this
+  page still went through `requestRegistrationLookup` → `claimMyRegistrations`
+  unaffected; both were later removed entirely (#1044, see the note at the
+  top of this document).
   (`/my-registrations` itself was later removed and folded into `/me` — see
   the "Later extended" note above; the component and this description of its
   behavior otherwise still apply, just as `/me`'s Registrations tab.)
@@ -316,11 +330,17 @@ refinements worth recording:
   been republished to describe the new session mechanism — the same kind of
   legal-content edit #934 left for the project owner rather than
   auto-editing.
-- **Not removed, out of scope:** the pre-existing one-shot
-  `POST /api/registrations/my/access` (and its `/my/request` counterpart)
-  stay in the backend. Nothing in the frontend calls them anymore, but
-  removing a still-functioning, still-tested public API surface is a
-  separate cleanup decision this document doesn't make.
+- **Later removed (2026-09-12, #1044):** the pre-existing one-shot
+  `POST /api/registrations/my/access` and its `/my/request` counterpart were
+  kept at the time this section was written — nothing in the frontend called
+  them anymore, but removing a still-functioning, still-tested public API
+  surface was treated as a separate cleanup decision. That cleanup happened
+  the same day: both endpoints, `claim_my_registrations`, and the
+  `reservation_access_tokens` table they and the manual claim form shared
+  were all removed once the product decision landed that an account should
+  only ever gather bookings placed under its own email — see the note at the
+  top of this document and
+  [`1044-confirm-first-registration-claiming.md`](./1044-confirm-first-registration-claiming.md).
 
 ## References
 
@@ -334,17 +354,18 @@ refinements worth recording:
   transactional email and the durable outbox; code complete, production
   delivery verification is the only remaining gate on the navigation entry
 - `backend/app/routers/me.py` — `get_or_create_user`, `_user_people`,
-  `_registrations_for_user`, `claim_my_registrations`, the seam Decision 1
-  extends
-- `backend/app/routers/registrations.py` — the existing one-shot
-  `reservation_access_tokens` lookup this document's magic link reuses the
-  TTL/single-use precedent from, without reusing the token table itself
+  `_registrations_for_user`, the seam Decision 1 extends (`claim_my_registrations`,
+  once here, was removed in #1044)
+- `backend/app/routers/registrations.py` — at the time this document was
+  written, the one-shot `reservation_access_tokens` lookup this document's
+  magic link reused the TTL/single-use precedent from, without reusing the
+  token table itself; both the lookup and the table were removed in #1044
 - [Unified self-service page](./unified-self-service-page.md) — folded
   `/my-registrations` into `/me` (2026-09-12)
 - [Confirm-first registration claiming](./1044-confirm-first-registration-claiming.md) —
-  split OIDC claiming into a confirm-first flow for the caller's own verified
-  email and this document's original manual/proof-token flow (2026-09-12)
-  (that one is deliberately session-less)
+  first split OIDC claiming into a confirm-first flow for the caller's own
+  verified email plus this document's original manual/proof-token flow, then
+  the same day (2026-09-12) removed that manual/proof-token flow entirely
 - `tjorim/apps`'s `ansible/playbooks/keycloak.yml` — confirms
   `registration_allowed: false` on the `champagnefestival` realm (visitors
   cannot self-register via OIDC, which is why this document exists) and the

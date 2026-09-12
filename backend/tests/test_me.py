@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
-import asyncio
-import hashlib
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import cast
 
 import pytest
-from fastapi import HTTPException
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app import email as email_module
 from app import visitor_session as visitor_session_module
@@ -25,12 +22,9 @@ from app.models import (
     OutboxJob,
     PebbleAccessToken,
     Registration,
-    ReservationAccessToken,
     User,
 )
 from app.routers import me as me_router
-from app.routers import registrations as registrations_router
-from app.schemas import RegistrationAccessLookupRequest
 from app.services import users_service
 from app.services.outbox_service import CONTACT_NOTIFICATION, REGISTRATION_CONFIRMATION, process_one_job
 from app.services.pebble_access import rotate_pebble_token
@@ -231,176 +225,6 @@ async def test_booking_change_request_notification_retries_after_failure_then_de
     await db_session.refresh(job)
     assert attempts == 2
     assert job.state == "delivered"
-
-
-@pytest.mark.anyio
-async def test_claim_registrations_links_email_proven_bookings(me_client, db_session):
-    response = await _post_registration_with_admin_setup(me_client, email="claimed@example.com")
-    assert response.status_code == 201
-    registration_id = response.json()["id"]
-    token = "claim-token-with-sufficient-length"
-    now = datetime.now(UTC)
-    db_session.add(
-        ReservationAccessToken(
-            id="rat-claim",
-            email="claimed@example.com",
-            token_hash=hashlib.sha256(token.encode()).hexdigest(),
-            expires_at=now + timedelta(minutes=30),
-            created_at=now,
-        )
-    )
-    await db_session.commit()
-
-    claimed = await me_client.post("/api/me/registrations/claim", json={"token": token})
-    assert claimed.status_code == 200
-    assert [item["id"] for item in claimed.json()] == [registration_id]
-
-    registration = await db_session.get(Registration, registration_id)
-    user = await db_session.scalar(select(User).where(User.oidc_subject == "visitor-sub"))
-    assert registration is not None and user is not None
-    await db_session.refresh(registration)
-    assert registration.user_id == user.id
-    audit = await db_session.scalar(
-        select(AuditEntry).where(
-            AuditEntry.action == "registration_claimed",
-            AuditEntry.resource_id == registration_id,
-        )
-    )
-    assert audit is not None
-
-    owned = await me_client.get("/api/me/registrations")
-    assert owned.status_code == 200
-    assert [item["id"] for item in owned.json()] == [registration_id]
-    assert owned.json()[0]["check_in_token"]
-
-    pebble_response = await me_client.post("/api/me/pebble-token")
-    pebble_token = pebble_response.json()["token"]
-    glance = await me_client.get(
-        "/api/pebble/registrations",
-        headers={"Authorization": f"Bearer {pebble_token}"},
-    )
-    assert glance.status_code == 200
-    assert [item["id"] for item in glance.json()] == [registration_id]
-
-    replay = await me_client.post("/api/me/registrations/claim", json={"token": token})
-    assert replay.status_code == 401
-
-
-@pytest.mark.anyio
-async def test_concurrent_first_use_claims_only_allow_one_owner(
-    me_client,
-    db_session,
-    engine,
-    monkeypatch,
-):
-    response = await _post_registration_with_admin_setup(me_client, email="race-claim@example.com")
-    registration_id = response.json()["id"]
-    token = "concurrent-claim-token-with-sufficient-length"
-    now = datetime.now(UTC)
-    db_session.add(
-        ReservationAccessToken(
-            id="rat-concurrent-claim",
-            email="race-claim@example.com",
-            token_hash=hashlib.sha256(token.encode()).hexdigest(),
-            expires_at=now + timedelta(minutes=30),
-            created_at=now,
-        )
-    )
-    await db_session.commit()
-
-    # User resolution now happens in the get_current_user dependency, outside
-    # claim_my_registrations itself (#953), so the deterministic pause moves
-    # to _get_guest_access_token_or_401 — the row lock that actually
-    # serializes two concurrent claims of the same token in production.
-    # Pausing there, right after acquiring that lock, reproduces the same
-    # race the original test drove through user provisioning.
-    first_locked = asyncio.Event()
-    release_first = asyncio.Event()
-    original_get_token = registrations_router._get_guest_access_token_or_401
-    paused = False
-
-    async def pause_first_lookup(db, tok):
-        nonlocal paused
-        token_row = await original_get_token(db, tok)
-        if not paused:
-            paused = True
-            first_locked.set()
-            await release_first.wait()
-        return token_row
-
-    monkeypatch.setattr(registrations_router, "_get_guest_access_token_or_401", pause_first_lookup)
-    session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    body = RegistrationAccessLookupRequest(token=token)
-
-    async def attempt_claim(subject: str):
-        async with session_factory() as session:
-            user = await users_service.get_or_create_user(session, subject)
-            try:
-                return await me_router.claim_my_registrations(body, user, session)
-            except HTTPException as exc:
-                return exc.status_code
-
-    first_task = asyncio.create_task(attempt_claim("first-claim-sub"))
-    await asyncio.wait_for(first_locked.wait(), timeout=2)
-    second_task = asyncio.create_task(attempt_claim("second-claim-sub"))
-    await asyncio.sleep(0.05)
-    release_first.set()
-    outcomes = await asyncio.wait_for(asyncio.gather(first_task, second_task), timeout=2)
-
-    assert sum(isinstance(outcome, list) for outcome in outcomes) == 1
-    assert outcomes.count(401) == 1
-    async with session_factory() as assertion_session:
-        registration = await assertion_session.get(Registration, registration_id)
-        assert registration is not None
-        assert registration.user_id is not None
-        owner = await assertion_session.get(User, registration.user_id)
-        assert owner is not None
-        assert owner.oidc_subject == "first-claim-sub"
-        audits = (
-            await assertion_session.scalars(
-                select(AuditEntry).where(
-                    AuditEntry.action == "registration_claimed",
-                    AuditEntry.resource_id == registration_id,
-                )
-            )
-        ).all()
-        assert len(audits) == 1
-
-
-@pytest.mark.anyio
-async def test_claim_registrations_does_not_reassign_owned_booking(me_client, db_session):
-    response = await _post_registration_with_admin_setup(me_client, email="owned@example.com")
-    registration_id = response.json()["id"]
-    existing_owner = User(id="usr-existing-owner", oidc_subject="existing-owner-sub")
-    registration = await db_session.get(Registration, registration_id)
-    assert registration is not None
-    db_session.add(existing_owner)
-    registration.user_id = existing_owner.id
-    token = "owned-claim-token-with-sufficient-length"
-    now = datetime.now(UTC)
-    db_session.add(
-        ReservationAccessToken(
-            id="rat-owned-claim",
-            email="owned@example.com",
-            token_hash=hashlib.sha256(token.encode()).hexdigest(),
-            expires_at=now + timedelta(minutes=30),
-            created_at=now,
-        )
-    )
-    await db_session.commit()
-
-    claimed = await me_client.post("/api/me/registrations/claim", json={"token": token})
-
-    assert claimed.status_code == 200
-    await db_session.refresh(registration)
-    assert registration.user_id == existing_owner.id
-    audit = await db_session.scalar(
-        select(AuditEntry).where(
-            AuditEntry.action == "registration_claimed",
-            AuditEntry.resource_id == registration_id,
-        )
-    )
-    assert audit is None
 
 
 @pytest.mark.anyio

@@ -6,7 +6,9 @@
 the #1006 volunteer identity work — see
 [`1006-volunteer-identity-self-service.md`](./1006-volunteer-identity-self-service.md));
 [#953](https://github.com/tjorim/champagnefestival/issues/953) (visitor passwordless session);
-[#922](https://github.com/tjorim/champagnefestival/issues/922) (owned-registrations reads)
+[#922](https://github.com/tjorim/champagnefestival/issues/922) (owned-registrations reads);
+[#1044](./1044-confirm-first-registration-claiming.md) (later the same day, removed the
+token-driven "claim a different email" flow this doc still describes as current below)
 
 ---
 

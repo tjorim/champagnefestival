@@ -224,50 +224,6 @@ async def send_contact_notification(*, name: str, email: str, message_text: str,
     return True
 
 
-async def send_guest_access_email(
-    email: str,
-    token: str,
-    request_id: str,
-    expires_at: datetime,
-) -> bool:
-    """Send a short-lived guest registration access token by email.
-
-    Returns ``True`` when an SMTP delivery attempt succeeds. Missing SMTP
-    configuration or transport errors are logged and reported as ``False`` so
-    callers can keep public responses generic.
-    """
-    if not settings.smtp_host or not settings.smtp_from:
-        logger.warning(
-            "Guest access email not sent for request_id=%s because SMTP is not configured.",
-            request_id,
-        )
-        return False
-
-    message = EmailMessage()
-    message["Subject"] = "Your Champagnefestival registration access code"
-    message["From"] = settings.smtp_from
-    message["To"] = email
-    message.set_content(
-        "Hello,\n\n"
-        "Use the following access code to view your Champagnefestival registrations:\n\n"
-        f"{token}\n\n"
-        f"This code expires at {expires_at.isoformat()}.\n"
-        "If you did not request this email, you can ignore it.\n"
-    )
-
-    try:
-        await asyncio.to_thread(_send_message_sync, message)
-    except Exception:
-        logger.exception(
-            "Failed to send guest access email for request_id=%s.",
-            request_id,
-        )
-        return False
-
-    logger.info("Sent guest access email for request_id=%s.", request_id)
-    return True
-
-
 async def send_visitor_magic_link_email(
     email: str,
     token: str,
@@ -276,18 +232,13 @@ async def send_visitor_magic_link_email(
 ) -> bool:
     """Send a passwordless sign-in link for the visitor "My orders" session (#953).
 
-    Same shape and failure handling as ``send_guest_access_email`` — a
-    structurally identical emailed credential, kept as its own function
-    because it links to a persistent session rather than a one-shot code
-    (docs/decisions/953-visitor-passwordless-session.md). The token goes in
-    the ``?token=`` query string, matching how ``MyAccountPage`` (via
-    ``MyRegistrationsPage``) already reads it (``useSearch({ strict: false
-    })`` — a TanStack Router search param, not a URL fragment). The frontend
-    removes it from browser history immediately on load
-    (``navigate({ to: ".", search: {}, replace: true })``, before the
-    redemption network call), the same scrub-after-use protection the
-    pre-existing one-shot guest-lookup token already relies on for this exact
-    acceptance criterion.
+    The token goes in the ``?token=`` query string, matching how
+    ``MyAccountPage`` (via ``MyRegistrationsPage``) already reads it
+    (``useSearch({ from: "/me" })`` — a TanStack Router search param, not a
+    URL fragment). The frontend removes it from browser history immediately
+    on load (``navigate({ search: {}, replace: true })``, before the
+    redemption network call) so a redeemed, single-use link never lingers
+    somewhere it could be replayed from.
     """
     if not settings.smtp_host or not settings.smtp_from:
         logger.warning(

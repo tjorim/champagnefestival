@@ -333,25 +333,6 @@ function mapGuestRegistrations(data: GuestRegistrationResponse[]): GuestRegistra
   }));
 }
 
-export async function requestRegistrationLookup(
-  email: string,
-): Promise<RegistrationLookupRequestAcceptedResponse> {
-  const response = await fetch("/api/registrations/my/request", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email }),
-  });
-
-  if (!response.ok) {
-    throw new RegistrationLookupError(
-      response.status === 422 ? "invalid_email" : "request_failed",
-      response.status === 422 ? m.my_registrations_invalid_email() : m.my_registrations_error(),
-    );
-  }
-
-  return parseRegistrationLookupRequestAccepted(await response.json());
-}
-
 async function parseRegistrationLookupResponse(response: Response): Promise<GuestRegistration[]> {
   if (!response.ok) {
     throw new RegistrationLookupError(
@@ -362,24 +343,6 @@ async function parseRegistrationLookupResponse(response: Response): Promise<Gues
 
   const data = parseGuestRegistrationsResponse(await response.json());
   return mapGuestRegistrations(data);
-}
-
-export async function claimMyRegistrations(token: string, accessToken: string): Promise<void> {
-  const response = await fetch("/api/me/registrations/claim", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
-    body: JSON.stringify({ token }),
-  });
-
-  if (!response.ok) {
-    throw new RegistrationLookupError(
-      response.status === 401 ? "invalid_token" : "request_failed",
-      response.status === 401 ? m.my_registrations_invalid_token() : m.my_registrations_error(),
-    );
-  }
 }
 
 export async function fetchOwnedRegistrations(accessToken: string): Promise<GuestRegistration[]> {

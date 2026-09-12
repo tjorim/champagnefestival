@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import UUID
 
@@ -25,7 +24,6 @@ from app.schemas import (
     MyRegistrationOut,
     PaymentStatus,
     PebbleAccessTokenOut,
-    RegistrationAccessLookupRequest,
     RegistrationGuestOut,
     RegistrationStatus,
 )
@@ -224,34 +222,6 @@ async def request_registration_change(
         await enqueue_contact_notification(db, message_id, actor=actor, request_id=request_id)
     await db.commit()
     return {"ok": True}
-
-
-@router.post("/registrations/claim", response_model=list[RegistrationGuestOut])
-async def claim_my_registrations(
-    body: RegistrationAccessLookupRequest,
-    user: User = Depends(get_current_portal_user),
-    db: AsyncSession = Depends(get_db),
-) -> list[dict]:
-    """Claim unowned registrations after proving control of their email address.
-
-    Unchanged in shape since #953: still requires a fresh one-shot lookup
-    token proving control of the email being claimed, regardless of whether
-    the caller authenticated via OIDC or an existing visitor session — a
-    visitor session already proves control of *its own* verified_email (see
-    the magic-link redemption endpoint, which claims that email's
-    registrations directly, no separate token needed), but this endpoint
-    lets the caller claim registrations under *any* email they can prove,
-    exactly as it already did for OIDC callers.
-    """
-    from app.routers.registrations import _get_guest_access_token_or_401, _load_guest_registrations_by_email
-
-    token_row = await _get_guest_access_token_or_401(db, body.token)
-    token_row.expires_at = datetime.now(UTC)
-    actor, auth_source = actor_for_user(user)
-    await claim_unowned_registrations_for_email(db, user, token_row.email, actor=actor, auth_source=auth_source)
-    rows = await _load_guest_registrations_by_email(db, token_row.email)
-    await db.commit()
-    return [registration_to_guest_dict(registration, person, event) for registration, person, event in rows]
 
 
 def _verified_email_from_claims(claims: dict[str, Any] | None) -> str | None:
