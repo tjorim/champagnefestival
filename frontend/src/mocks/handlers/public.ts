@@ -280,6 +280,11 @@ export const publicHandlers = [
     HttpResponse.json({ authenticated: false, expires_at: null }),
   ),
 
+  /** GET /api/me/registrations/claimable — no claimable candidates by
+   * default in tests (#1044); override with server.use for tests that
+   * exercise the confirm-first claim card. */
+  http.get("/api/me/registrations/claimable", () => HttpResponse.json([])),
+
   /** POST /api/visitor-sessions/sign-out — always succeeds (#953). */
   http.post("/api/visitor-sessions/sign-out", () => new HttpResponse(null, { status: 204 })),
 

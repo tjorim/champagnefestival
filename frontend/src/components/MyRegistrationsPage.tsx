@@ -13,6 +13,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import {
   claimMyRegistrations,
+  claimVerifiedEmailRegistrations,
+  fetchClaimableRegistrations,
   fetchOwnedRegistrations,
   fetchOwnedRegistrationsViaSession,
   getVisitorSessionStatus,
@@ -214,6 +216,35 @@ export default function MyRegistrationsPage() {
 
   const registrations =
     registrationsMutation.data ?? sessionRegistrations ?? oidcRegistrations ?? null;
+
+  // A signed-in caller's own verified email may match bookings placed while
+  // signed out — previewed here, never linked without an explicit confirm
+  // (#1044: an earlier version of this did so silently, which is exactly
+  // the "randomly linked" behaviour that isn't acceptable for someone
+  // else's account data, even when it's provably the same person).
+  const [claimableRegistrations, setClaimableRegistrations] = useState<GuestRegistration[] | null>(
+    null,
+  );
+  const [claimableDismissed, setClaimableDismissed] = useState(false);
+  useEffect(() => {
+    if (!auth.isAuthenticated || !accessToken) return;
+    let cancelled = false;
+    void fetchClaimableRegistrations(accessToken).then((regs) => {
+      if (!cancelled) setClaimableRegistrations(regs);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [auth.isAuthenticated, accessToken]);
+
+  const claimVerifiedEmailMutation = useMutation({
+    mutationFn: () => claimVerifiedEmailRegistrations(accessToken ?? ""),
+    retry: false,
+    onSuccess: (regs) => {
+      setOidcRegistrations(regs);
+      setClaimableRegistrations(null);
+    },
+  });
 
   useEffect(() => {
     if (!auth.isAuthenticated || !accessToken || registrations === null) return;
@@ -441,6 +472,49 @@ export default function MyRegistrationsPage() {
               {m.my_registrations_loading()}
             </Alert>
           )}
+
+          {!isLoadingRegistrations &&
+            !claimableDismissed &&
+            claimableRegistrations !== null &&
+            claimableRegistrations.length > 0 && (
+              <Alert variant="warning" className="mb-3">
+                <div className="fw-semibold mb-1">{m.my_registrations_claimable_heading()}</div>
+                <div className="mb-2">{m.my_registrations_claimable_description()}</div>
+                <div className="d-flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="warning"
+                    disabled={claimVerifiedEmailMutation.isPending}
+                    onClick={() => claimVerifiedEmailMutation.mutate()}
+                  >
+                    {claimVerifiedEmailMutation.isPending ? (
+                      <Spinner
+                        as="span"
+                        animation="border"
+                        size="sm"
+                        role="status"
+                        aria-hidden="true"
+                      />
+                    ) : (
+                      m.my_registrations_claimable_confirm()
+                    )}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline-secondary"
+                    disabled={claimVerifiedEmailMutation.isPending}
+                    onClick={() => setClaimableDismissed(true)}
+                  >
+                    {m.my_registrations_claimable_dismiss()}
+                  </Button>
+                </div>
+                {claimVerifiedEmailMutation.isError && (
+                  <div className="small text-danger mt-2" role="alert">
+                    {m.my_registrations_error()}
+                  </div>
+                )}
+              </Alert>
+            )}
 
           {!isLoadingRegistrations && auth.isAuthenticated && (
             <Button

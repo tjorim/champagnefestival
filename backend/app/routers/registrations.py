@@ -51,6 +51,7 @@ from app.schemas import (
     RegistrationOutWithToken,
     RegistrationPublicOut,
     RegistrationUpdate,
+    RegistrationVolunteerAssignment,
 )
 from app.services import events_service, payments_service, registrations_service
 from app.services.allocations_service import allocated_registration_filter
@@ -707,6 +708,31 @@ async def update_registration(
     registration = await registrations_service.get_registration_or_404(db, registration_id)
     return await registrations_service.apply_registration_update(
         db, registration, body, actor=actor, request_id=getattr(request.state, "request_id", None)
+    )
+
+
+@router.post(
+    "/{registration_id}/assign-volunteer",
+    response_model=RegistrationOut,
+    dependencies=[Depends(require_admin)],
+)
+async def assign_registration_to_volunteer(
+    registration_id: str,
+    body: RegistrationVolunteerAssignment,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    """Attach an unowned registration to a volunteer's own portal account
+    (#1044) — an admin override alongside the volunteer's own self-service
+    claim flow, for a booking they never confirmed themselves."""
+    registration = await registrations_service.get_registration_or_404(db, registration_id)
+    return await registrations_service.assign_registration_to_volunteer(
+        db,
+        registration,
+        body.volunteer_id,
+        actor=actor,
+        request_id=getattr(request.state, "request_id", None),
     )
 
 

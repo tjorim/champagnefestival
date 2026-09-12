@@ -498,6 +498,16 @@ class RegistrationUpdate(RegistrationNotesRequest):
     strap_issued: bool | None = None
 
 
+class RegistrationVolunteerAssignment(RequestModel):
+    """Admin override (#1044) attaching an unowned registration to a
+    volunteer's own portal account, for a booking the volunteer never
+    confirmed themselves via the self-service claim flow — e.g. they don't
+    use the account much, or the booking predates their self-registration.
+    """
+
+    volunteer_id: str = Field(min_length=1)
+
+
 class RegistrationOut(BaseModel):
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)

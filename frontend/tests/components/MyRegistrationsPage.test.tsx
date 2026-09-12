@@ -71,6 +71,11 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_claim_other_email: () => "Have a booking under a different email? Claim it",
     my_registrations_claim_description: () => "Enter the other email address.",
     my_registrations_cancel_claim: () => "Never mind, go back",
+    my_registrations_claimable_heading: () => "Is this you?",
+    my_registrations_claimable_description: () =>
+      "We found bookings placed under your email address.",
+    my_registrations_claimable_confirm: () => "Yes, add to my account",
+    my_registrations_claimable_dismiss: () => "Not now",
     my_account_preference_error: () => "Could not update language.",
     my_registrations_qr_label: () => "Booking check-in QR code",
     my_registrations_add_calendar: () => "Add to calendar",
@@ -602,6 +607,101 @@ describe("MyRegistrationsPage", () => {
       expect(screen.getByText("Grand Opening")).toBeInTheDocument();
     });
     expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
+  });
+
+  it("shows a confirm-first prompt for a claimable booking and links it only after confirming", async () => {
+    authState.accessToken = "member-access-token";
+    authState.isAuthenticated = true;
+    let claimCalled = false;
+    server.use(
+      http.get("/api/me/registrations", () => HttpResponse.json([])),
+      http.get("/api/me/registrations/claimable", () =>
+        HttpResponse.json([
+          {
+            id: "reg-claimable",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]),
+      ),
+      http.post("/api/me/registrations/claim-verified-email", () => {
+        claimCalled = true;
+        return HttpResponse.json([
+          {
+            id: "reg-claimable",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]);
+      }),
+    );
+
+    await renderPage();
+
+    // Nothing is linked yet — the card only previews the match.
+    expect(await screen.findByText("Is this you?")).toBeInTheDocument();
+    expect(claimCalled).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Yes, add to my account" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
+    });
+    expect(claimCalled).toBe(true);
+    expect(screen.queryByText("Is this you?")).not.toBeInTheDocument();
+  });
+
+  it("lets the caller dismiss the claimable prompt without linking anything", async () => {
+    authState.accessToken = "member-access-token";
+    authState.isAuthenticated = true;
+    let claimCalled = false;
+    server.use(
+      http.get("/api/me/registrations", () => HttpResponse.json([])),
+      http.get("/api/me/registrations/claimable", () =>
+        HttpResponse.json([
+          {
+            id: "reg-dismiss",
+            event_title: "Grand Opening",
+            event_date: "2026-05-01",
+            check_in_token: "token",
+            guest_count: 1,
+            status: "confirmed",
+            payment_status: "paid",
+            checked_in: false,
+            strap_issued: false,
+            created_at: "2026-01-01T00:00:00Z",
+            order_items: [],
+          },
+        ]),
+      ),
+      http.post("/api/me/registrations/claim-verified-email", () => {
+        claimCalled = true;
+        return HttpResponse.json([]);
+      }),
+    );
+
+    await renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Not now" }));
+
+    expect(screen.queryByText("Is this you?")).not.toBeInTheDocument();
+    expect(claimCalled).toBe(false);
   });
 
   it("offers a sign-in link alongside the email-lookup form", async () => {

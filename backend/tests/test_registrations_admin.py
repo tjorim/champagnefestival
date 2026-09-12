@@ -9,7 +9,7 @@ from fastapi import HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models import Registration
+from app.models import AuditEntry, Person, Registration, User
 from app.schemas import RegistrationUpdate
 from app.services import registrations_service
 from tests.helpers import (
@@ -612,3 +612,103 @@ async def test_payment_transaction_without_reference_or_note_omits_them_from_aud
     assert len(entries) == 1
     assert entries[0]["details"]["reference"] is None
     assert entries[0]["details"]["reversed_transaction_id"] is None
+
+
+@pytest.mark.anyio
+async def test_admin_assigns_registration_to_a_linked_volunteer(client, db_session):
+    """#1044: an admin override alongside self-service claiming, for a
+    booking a volunteer never confirmed themselves."""
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    volunteer = Person(
+        id="per-assign-volunteer",
+        name="Assign Volunteer",
+        roles=["volunteer"],
+        oidc_subject="assign-volunteer-sub",
+    )
+    db_session.add(volunteer)
+    await db_session.commit()
+
+    r = await client.post(
+        f"/api/registrations/{registration_id}/assign-volunteer",
+        json={"volunteer_id": volunteer.id},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert r.status_code == 200
+    registration = await db_session.get(Registration, registration_id)
+    user = await db_session.scalar(select(User).where(User.oidc_subject == "assign-volunteer-sub"))
+    assert user is not None
+    assert registration.user_id == user.id
+    audit = await db_session.scalar(
+        select(AuditEntry).where(
+            AuditEntry.action == "registration_assigned",
+            AuditEntry.resource_id == registration_id,
+        )
+    )
+    assert audit is not None
+    assert audit.details == {"volunteer_id": volunteer.id}
+
+
+@pytest.mark.anyio
+async def test_admin_assign_conflicts_when_already_owned(client, db_session):
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    existing_owner = User(id="usr-already-owns-it", oidc_subject="already-owns-it-sub")
+    registration = await db_session.get(Registration, registration_id)
+    db_session.add(existing_owner)
+    registration.user_id = existing_owner.id
+    volunteer = Person(
+        id="per-assign-conflict",
+        name="Assign Conflict",
+        roles=["volunteer"],
+        oidc_subject="assign-conflict-sub",
+    )
+    db_session.add(volunteer)
+    await db_session.commit()
+
+    r = await client.post(
+        f"/api/registrations/{registration_id}/assign-volunteer",
+        json={"volunteer_id": volunteer.id},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert r.status_code == 409
+    await db_session.refresh(registration)
+    assert registration.user_id == existing_owner.id
+
+
+@pytest.mark.anyio
+async def test_admin_assign_requires_the_volunteer_to_be_linked_first(client, db_session):
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    unlinked_volunteer = Person(id="per-unlinked-volunteer", name="Unlinked Volunteer", roles=["volunteer"])
+    db_session.add(unlinked_volunteer)
+    await db_session.commit()
+
+    r = await client.post(
+        f"/api/registrations/{registration_id}/assign-volunteer",
+        json={"volunteer_id": unlinked_volunteer.id},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert r.status_code == 422
+    registration = await db_session.get(Registration, registration_id)
+    assert registration.user_id is None
+
+
+@pytest.mark.anyio
+async def test_admin_assign_rejects_a_non_volunteer_person(client, db_session):
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    member = Person(id="per-not-a-volunteer", name="Just A Member", roles=["member"])
+    db_session.add(member)
+    await db_session.commit()
+
+    r = await client.post(
+        f"/api/registrations/{registration_id}/assign-volunteer",
+        json={"volunteer_id": member.id},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert r.status_code == 404

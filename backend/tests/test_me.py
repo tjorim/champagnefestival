@@ -51,11 +51,13 @@ async def _post_registration_with_admin_setup(me_client, **overrides):
 @pytest.fixture()
 async def raw_client(db_session):
     """Client with no auth override at all — goes through the real
-    ``app.visitor_session.get_current_user``, unlike ``me_client`` (which
-    overrides that dependency wholesale). Needed to test the auto-claim
-    behavior embedded inside it, since an override would bypass that code
-    entirely. Pair with ``monkeypatch.setattr(visitor_session_module,
-    "decode_token", ...)`` to control the bearer token's claims.
+    ``app.visitor_session.get_current_user``/``get_current_user_with_claims``,
+    unlike ``me_client`` (which overrides those dependencies wholesale).
+    Needed to test the confirm-first claim flow (#1044), which depends on the
+    caller's raw OIDC claims (their own verified email), since an override
+    would bypass that resolution entirely. Pair with
+    ``monkeypatch.setattr(visitor_session_module, "decode_token", ...)`` to
+    control the bearer token's claims.
     """
 
     async def override_get_db():
@@ -402,59 +404,29 @@ async def test_claim_registrations_does_not_reassign_owned_booking(me_client, db
 
 
 @pytest.mark.anyio
-async def test_auto_claims_unowned_registration_for_a_verified_oidc_email(raw_client, db_session, monkeypatch):
-    """#1044: a signed-in caller's own verified email auto-claims a booking
-    made under that same address while signed out — no token, no form.
+async def test_lists_claimable_registrations_without_linking_them(raw_client, db_session, monkeypatch):
+    """#1044: a verified email surfaces a candidate to *preview* — nothing is
+    linked by the GET itself, unlike an earlier, silent version of this
+    feature.
     """
-    response = await _post_registration_with_admin_setup(raw_client, email="auto-claim@example.com")
+    response = await _post_registration_with_admin_setup(raw_client, email="claimable@example.com")
     registration_id = response.json()["id"]
     registration = await db_session.get(Registration, registration_id)
     assert registration is not None
     assert registration.user_id is None
 
     async def fake_decode_token(_token: str) -> dict:
-        return {"sub": "auto-claim-sub", "email": "auto-claim@example.com", "email_verified": True}
+        return {"sub": "claimable-sub", "email": "claimable@example.com", "email_verified": True}
 
     monkeypatch.setattr(visitor_session_module, "decode_token", fake_decode_token)
 
-    result = await raw_client.get("/api/me/registrations", headers={"Authorization": "Bearer auto-claim-token"})
+    result = await raw_client.get(
+        "/api/me/registrations/claimable", headers={"Authorization": "Bearer claimable-token"}
+    )
 
     assert result.status_code == 200
     assert [item["id"] for item in result.json()] == [registration_id]
     await db_session.refresh(registration)
-    user = await db_session.scalar(select(User).where(User.oidc_subject == "auto-claim-sub"))
-    assert user is not None
-    assert registration.user_id == user.id
-    audit = await db_session.scalar(
-        select(AuditEntry).where(
-            AuditEntry.action == "registration_claimed",
-            AuditEntry.resource_id == registration_id,
-        )
-    )
-    assert audit is not None
-    assert audit.actor == "auto-claim-sub"
-
-
-@pytest.mark.anyio
-async def test_does_not_auto_claim_without_an_email_verified_claim(raw_client, db_session, monkeypatch):
-    """An unverified email is self-asserted, not Keycloak's own attestation —
-    same trust bar #1006 uses for volunteer identity, so it stays unclaimed
-    and falls back to the manual proof-token flow instead.
-    """
-    response = await _post_registration_with_admin_setup(raw_client, email="unverified@example.com")
-    registration_id = response.json()["id"]
-
-    async def fake_decode_token(_token: str) -> dict:
-        return {"sub": "unverified-sub", "email": "unverified@example.com", "email_verified": False}
-
-    monkeypatch.setattr(visitor_session_module, "decode_token", fake_decode_token)
-
-    result = await raw_client.get("/api/me/registrations", headers={"Authorization": "Bearer unverified-token"})
-
-    assert result.status_code == 200
-    assert result.json() == []
-    registration = await db_session.get(Registration, registration_id)
-    assert registration is not None
     assert registration.user_id is None
     audit = await db_session.scalar(
         select(AuditEntry).where(
@@ -466,7 +438,67 @@ async def test_does_not_auto_claim_without_an_email_verified_claim(raw_client, d
 
 
 @pytest.mark.anyio
-async def test_auto_claim_is_idempotent_across_repeated_requests(raw_client, db_session, monkeypatch):
+async def test_claim_verified_email_links_after_explicit_confirmation(raw_client, db_session, monkeypatch):
+    response = await _post_registration_with_admin_setup(raw_client, email="confirm-claim@example.com")
+    registration_id = response.json()["id"]
+
+    async def fake_decode_token(_token: str) -> dict:
+        return {"sub": "confirm-claim-sub", "email": "confirm-claim@example.com", "email_verified": True}
+
+    monkeypatch.setattr(visitor_session_module, "decode_token", fake_decode_token)
+
+    result = await raw_client.post(
+        "/api/me/registrations/claim-verified-email", headers={"Authorization": "Bearer confirm-claim-token"}
+    )
+
+    assert result.status_code == 200
+    assert [item["id"] for item in result.json()] == [registration_id]
+    registration = await db_session.get(Registration, registration_id)
+    assert registration is not None
+    user = await db_session.scalar(select(User).where(User.oidc_subject == "confirm-claim-sub"))
+    assert user is not None
+    assert registration.user_id == user.id
+    audit = await db_session.scalar(
+        select(AuditEntry).where(
+            AuditEntry.action == "registration_claimed",
+            AuditEntry.resource_id == registration_id,
+        )
+    )
+    assert audit is not None
+    assert audit.actor == "confirm-claim-sub"
+
+
+@pytest.mark.anyio
+async def test_claimable_and_claim_verified_email_require_email_verified(raw_client, db_session, monkeypatch):
+    """An unverified email is self-asserted, not Keycloak's own attestation —
+    same trust bar #1006 uses for volunteer identity, so neither endpoint
+    treats it as a match; the manual proof-token flow remains available.
+    """
+    response = await _post_registration_with_admin_setup(raw_client, email="unverified@example.com")
+    registration_id = response.json()["id"]
+
+    async def fake_decode_token(_token: str) -> dict:
+        return {"sub": "unverified-sub", "email": "unverified@example.com", "email_verified": False}
+
+    monkeypatch.setattr(visitor_session_module, "decode_token", fake_decode_token)
+
+    preview = await raw_client.get(
+        "/api/me/registrations/claimable", headers={"Authorization": "Bearer unverified-token"}
+    )
+    claim = await raw_client.post(
+        "/api/me/registrations/claim-verified-email", headers={"Authorization": "Bearer unverified-token"}
+    )
+
+    assert preview.status_code == 200
+    assert preview.json() == []
+    assert claim.status_code == 409
+    registration = await db_session.get(Registration, registration_id)
+    assert registration is not None
+    assert registration.user_id is None
+
+
+@pytest.mark.anyio
+async def test_claim_verified_email_is_idempotent_across_repeated_confirmations(raw_client, db_session, monkeypatch):
     response = await _post_registration_with_admin_setup(raw_client, email="repeat-claim@example.com")
     registration_id = response.json()["id"]
 
@@ -475,8 +507,12 @@ async def test_auto_claim_is_idempotent_across_repeated_requests(raw_client, db_
 
     monkeypatch.setattr(visitor_session_module, "decode_token", fake_decode_token)
 
-    first = await raw_client.get("/api/me/registrations", headers={"Authorization": "Bearer repeat-claim-token"})
-    second = await raw_client.get("/api/me/registrations", headers={"Authorization": "Bearer repeat-claim-token"})
+    first = await raw_client.post(
+        "/api/me/registrations/claim-verified-email", headers={"Authorization": "Bearer repeat-claim-token"}
+    )
+    second = await raw_client.post(
+        "/api/me/registrations/claim-verified-email", headers={"Authorization": "Bearer repeat-claim-token"}
+    )
 
     assert first.status_code == 200
     assert second.status_code == 200

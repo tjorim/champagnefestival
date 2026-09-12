@@ -390,6 +390,32 @@ export async function fetchOwnedRegistrations(accessToken: string): Promise<Gues
   return parseRegistrationLookupResponse(response);
 }
 
+/** Preview registrations under the caller's own verified email — read-only,
+ * nothing is linked (#1044). Empty when the account has no verified email
+ * on file, which is not an error. */
+export async function fetchClaimableRegistrations(
+  accessToken: string,
+): Promise<GuestRegistration[]> {
+  const response = await fetch("/api/me/registrations/claimable", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  return parseRegistrationLookupResponse(response);
+}
+
+/** Link the registrations previewed by `fetchClaimableRegistrations` — only
+ * called after the caller explicitly confirms it's them. */
+export async function claimVerifiedEmailRegistrations(
+  accessToken: string,
+): Promise<GuestRegistration[]> {
+  const response = await fetch("/api/me/registrations/claim-verified-email", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  return parseRegistrationLookupResponse(response);
+}
+
 export async function requestBookingChange(
   registrationId: string,
   requestType: "change" | "cancellation",
