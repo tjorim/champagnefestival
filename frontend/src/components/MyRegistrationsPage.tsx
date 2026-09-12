@@ -149,6 +149,7 @@ export default function MyRegistrationsPage() {
   // needed: fetch their own registrations directly.
   const [oidcRegistrations, setOidcRegistrations] = useState<GuestRegistration[] | null>(null);
   const [oidcChecked, setOidcChecked] = useState(false);
+  const [oidcError, setOidcError] = useState(false);
   useEffect(() => {
     // attemptedToken guards against double-fetching: once a token claim has
     // run (or is running) for this page load, that flow already owns
@@ -168,6 +169,12 @@ export default function MyRegistrationsPage() {
     void fetchOwnedRegistrations(accessToken)
       .then((regs) => {
         if (!cancelled) setOidcRegistrations(regs);
+      })
+      .catch(() => {
+        // Surfaced via oidcError below rather than falling through to the
+        // anonymous email-lookup form, which would otherwise silently show
+        // for a signed-in member/volunteer whose own fetch failed.
+        if (!cancelled) setOidcError(true);
       })
       .finally(() => {
         if (!cancelled) setOidcChecked(true);
@@ -192,9 +199,14 @@ export default function MyRegistrationsPage() {
   useEffect(() => {
     if (!auth.isAuthenticated || !accessToken) return;
     let cancelled = false;
-    void fetchClaimableRegistrations(accessToken).then((regs) => {
-      if (!cancelled) setClaimableRegistrations(regs);
-    });
+    void fetchClaimableRegistrations(accessToken)
+      .then((regs) => {
+        if (!cancelled) setClaimableRegistrations(regs);
+      })
+      .catch(() => {
+        // A failed preview is not actionable for the caller; keep the card hidden.
+        if (!cancelled) setClaimableRegistrations([]);
+      });
     return () => {
       cancelled = true;
     };
@@ -267,6 +279,7 @@ export default function MyRegistrationsPage() {
     registrations !== null ||
     registrationsMutation.isPending ||
     registrationsMutation.isError ||
+    oidcError ||
     (!tokenAttempted && auth.isAuthenticated && !oidcChecked);
 
   const resetToRequestForm = useCallback(() => {
@@ -464,6 +477,13 @@ export default function MyRegistrationsPage() {
             <Alert variant="danger" className="mb-3" role="alert">
               <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
               {tokenError}
+            </Alert>
+          )}
+
+          {oidcError && (
+            <Alert variant="danger" className="mb-3" role="alert">
+              <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+              {m.my_registrations_error()}
             </Alert>
           )}
 

@@ -226,6 +226,11 @@ export const publicHandlers = [
     HttpResponse.json({ authenticated: false, expires_at: null }),
   ),
 
+  /** GET /api/me/registrations — no owned registrations by default in
+   * tests; override with server.use for tests that exercise a signed-in
+   * member/volunteer's direct-fetch path. */
+  http.get("/api/me/registrations", () => HttpResponse.json([])),
+
   /** GET /api/me/registrations/claimable — no claimable candidates by
    * default in tests (#1044); override with server.use for tests that
    * exercise the confirm-first claim card. */

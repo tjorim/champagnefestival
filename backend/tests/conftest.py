@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 
 import pytest
+from fastapi import Request
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -257,15 +258,26 @@ def volunteer_client_as(db_session):
     def reject_admin() -> None:
         raise HTTPException(status_code=403, detail="Forbidden")
 
+    def actor_from_test_subject_header(request: Request) -> str:
+        # Reads the per-request header set below instead of a closure
+        # variable captured at `_make()` call time — `app.dependency_overrides`
+        # is a single global dict, so a closure-captured subject would let a
+        # second, overlapping `volunteer_client_as` context silently replace
+        # the first's override and misattribute its requests (this is what
+        # makes testing two concurrent volunteer sessions possible at all).
+        return request.headers.get("X-Test-Subject", str(VOLUNTEER_CLAIMS["sub"]))
+
     @asynccontextmanager
     async def _make(subject: str = str(VOLUNTEER_CLAIMS["sub"])):
         app.dependency_overrides[get_db] = override_get_db
         app.dependency_overrides[require_volunteer] = lambda: None
         app.dependency_overrides[require_admin] = reject_admin
-        app.dependency_overrides[get_actor_id] = lambda: subject
+        app.dependency_overrides[get_actor_id] = actor_from_test_subject_header
         transport = ASGITransport(app=app)
         try:
-            async with AsyncClient(transport=transport, base_url="http://test") as c:
+            async with AsyncClient(
+                transport=transport, base_url="http://test", headers={"X-Test-Subject": subject}
+            ) as c:
                 yield c
         finally:
             app.dependency_overrides.clear()

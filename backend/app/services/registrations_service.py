@@ -90,12 +90,35 @@ async def assign_registration_to_volunteer(
             status_code=422,
             detail="This volunteer hasn't linked their own account yet, so there's nothing to assign to.",
         )
+    user = await get_or_create_user(db, volunteer.oidc_subject, commit=False)
+
+    # Lock and re-check under the lock rather than trusting the caller's
+    # already-loaded `registration` snapshot — mirrors
+    # `claim_unowned_registrations_for_email`'s `.with_for_update()` guard
+    # against two concurrent assignments both observing `user_id IS NULL`.
+    locked = (
+        await db.execute(
+            select(Registration)
+            .options(
+                selectinload(Registration.event).selectinload(Event.edition),
+                selectinload(Registration.event).selectinload(Event.products),
+            )
+            .where(Registration.id == registration.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if locked is None:
+        raise HTTPException(status_code=404, detail="Registration not found.")
+    registration = locked
+    if registration.user_id == user.id:
+        person = (await db.execute(select(Person).where(Person.id == registration.person_id))).scalar_one()
+        return registration_to_dict(registration, person, registration.event)
     if registration.user_id is not None:
         raise HTTPException(
             status_code=409,
             detail="This registration is already linked to an account.",
         )
-    user = await get_or_create_user(db, volunteer.oidc_subject)
     registration.user_id = user.id
     await write_audit_entry(
         db,

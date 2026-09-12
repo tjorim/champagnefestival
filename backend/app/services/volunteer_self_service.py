@@ -83,10 +83,17 @@ async def register_volunteer_identity(
             detail="That eID document number doesn't look valid. Please check it and try again.",
         )
 
+    # .with_for_update() closes the same race the admin assign-volunteer
+    # override guards against (#1044): without it, two concurrent
+    # registrations targeting the same unlinked Person could both read
+    # `oidc_subject is None` and the later commit would silently overwrite
+    # the earlier subject's link (CWE-367).
     matches = (
         (
             await db.execute(
-                select(Person).where(or_(Person.national_register_number == nrr, Person.eid_document_number == eid))
+                select(Person)
+                .where(or_(Person.national_register_number == nrr, Person.eid_document_number == eid))
+                .with_for_update()
             )
         )
         .scalars()

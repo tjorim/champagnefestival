@@ -679,6 +679,87 @@ async def test_admin_assign_conflicts_when_already_owned(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_admin_assign_is_idempotent_for_a_repeated_same_target_call(client, db_session):
+    """Retrying the same assignment (same registration, same volunteer)
+    after an ambiguous response must converge, not 409 against itself —
+    see docs/retry-safety.md's "safe to blindly retry" characterization."""
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    volunteer = Person(
+        id="per-assign-retry",
+        name="Assign Retry",
+        roles=["volunteer"],
+        oidc_subject="assign-retry-sub",
+    )
+    db_session.add(volunteer)
+    await db_session.commit()
+
+    first = await client.post(
+        f"/api/registrations/{registration_id}/assign-volunteer",
+        json={"volunteer_id": volunteer.id},
+        headers=ADMIN_HEADERS,
+    )
+    second = await client.post(
+        f"/api/registrations/{registration_id}/assign-volunteer",
+        json={"volunteer_id": volunteer.id},
+        headers=ADMIN_HEADERS,
+    )
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    audits = (
+        await db_session.scalars(
+            select(AuditEntry).where(
+                AuditEntry.action == "registration_assigned",
+                AuditEntry.resource_id == registration_id,
+            )
+        )
+    ).all()
+    assert len(audits) == 1
+
+
+@pytest.mark.anyio
+async def test_concurrent_assign_to_different_volunteers_yields_exactly_one_winner(client, engine, db_session):
+    """Two admins racing to assign the same unowned registration to two
+    different volunteers must not both win — the row lock in
+    `assign_registration_to_volunteer` (mirroring
+    `claim_unowned_registrations_for_email`'s `.with_for_update()`) must
+    serialize them so only one commits and the other 409s."""
+    created = await _post_registration(client)
+    registration_id = created.json()["id"]
+    volunteer_a = Person(id="per-assign-race-a", name="Race A", roles=["volunteer"], oidc_subject="assign-race-a-sub")
+    volunteer_b = Person(id="per-assign-race-b", name="Race B", roles=["volunteer"], oidc_subject="assign-race-b-sub")
+    db_session.add_all([volunteer_a, volunteer_b])
+    await db_session.commit()
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with factory() as session_a, factory() as session_b:
+        registration_a = await registrations_service.get_registration_or_404(session_a, registration_id)
+        registration_b = await registrations_service.get_registration_or_404(session_b, registration_id)
+        results = await asyncio.gather(
+            registrations_service.assign_registration_to_volunteer(
+                session_a, registration_a, volunteer_a.id, actor="race-a"
+            ),
+            registrations_service.assign_registration_to_volunteer(
+                session_b, registration_b, volunteer_b.id, actor="race-b"
+            ),
+            return_exceptions=True,
+        )
+
+    conflicts = [result for result in results if isinstance(result, HTTPException)]
+    successes = [result for result in results if not isinstance(result, HTTPException)]
+    assert len(conflicts) == 1
+    assert conflicts[0].status_code == 409
+    assert len(successes) == 1
+
+    registration = await db_session.scalar(select(Registration).where(Registration.id == registration_id))
+    winner = await db_session.scalar(select(User).where(User.oidc_subject == "assign-race-a-sub"))
+    other = await db_session.scalar(select(User).where(User.oidc_subject == "assign-race-b-sub"))
+    assert registration.user_id in {u.id for u in (winner, other) if u is not None}
+    assert sum(1 for u in (winner, other) if u is not None and registration.user_id == u.id) == 1
+
+
+@pytest.mark.anyio
 async def test_admin_assign_requires_the_volunteer_to_be_linked_first(client, db_session):
     created = await _post_registration(client)
     registration_id = created.json()["id"]

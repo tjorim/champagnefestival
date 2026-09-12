@@ -229,8 +229,9 @@ def _verified_email_from_claims(claims: dict[str, Any] | None) -> str | None:
 
     An unverified email is self-asserted, not Keycloak's own attestation —
     the same trust bar #1006 uses for volunteer identity. ``None`` means
-    there is nothing safe to auto-detect, not that claiming is impossible:
-    the manual proof-token flow above always remains available.
+    there is nothing safe to auto-detect for this caller; there is no
+    fallback path for a different email (#1044 removed the manual
+    proof-token flow entirely).
     """
     if claims is None:
         return None
@@ -242,6 +243,7 @@ def _verified_email_from_claims(claims: dict[str, Any] | None) -> str | None:
 
 @router.get("/registrations/claimable", response_model=list[RegistrationGuestOut])
 async def list_claimable_registrations(
+    response: Response,
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
@@ -253,6 +255,9 @@ async def list_claimable_registrations(
     since silently rewriting someone's account data without them seeing it
     first isn't something a verified-email match alone should justify.
     """
+    # Each row includes check_in_token — same no-store rationale as every
+    # other identity-linked /me endpoint (see get_communication_preference).
+    response.headers["Cache-Control"] = "no-store"
     from app.routers.registrations import _load_guest_registrations_by_email
 
     _user, claims = user_and_claims

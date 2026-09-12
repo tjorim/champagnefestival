@@ -78,13 +78,10 @@ Both require `email_verified: true` on the caller's token — an unverified
 email is self-asserted, not Keycloak's own attestation (the same trust bar
 Decision 1 in `1006-volunteer-identity-self-service.md` uses for volunteer
 identity), so `claimable` returns empty and `claim-verified-email` 409s
-without one. The manual proof-token flow remains the fallback for a
-genuinely different email.
-
-> **Superseded the same day** — see "Later change: the manual
-> different-email claim flow was removed entirely" below. There is no
-> fallback for a genuinely different email anymore; that capability was
-> removed rather than kept narrowed.
+without one. At the time this was written, the manual proof-token flow
+remained the fallback for a genuinely different email; see "Later change"
+below — that fallback was removed entirely the same day, so there is no
+fallback for a different email today.
 
 **Frontend (`MyRegistrationsPage`):** fetches `claimable` once signed in;
 when it returns a non-empty list, an "Is this you?" card appears above the

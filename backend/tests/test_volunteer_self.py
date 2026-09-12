@@ -7,10 +7,15 @@ they are not real people's numbers.
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
+from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Person
+from app.services import volunteer_self_service
 from tests.helpers import ADMIN_HEADERS
 
 NISS_A = "91010112319"
@@ -97,7 +102,7 @@ async def test_register_accepts_a_post_2000_niss(volunteer_client_as):
 
 
 @pytest.mark.anyio
-async def test_register_is_idempotent_for_an_already_linked_subject(volunteer_client_as):
+async def test_register_is_idempotent_for_an_already_linked_subject(volunteer_client_as, db_session):
     async with volunteer_client_as("subject-a") as vclient:
         first = await _register(vclient)
         assert first.status_code == 200
@@ -107,6 +112,20 @@ async def test_register_is_idempotent_for_an_already_linked_subject(volunteer_cl
         second = await _register(vclient, name="Someone Else", niss=NISS_B, eid=EID_B)
         assert second.status_code == 200
         assert second.json() == first.json()
+
+    # docs/retry-safety.md requires this to converge without duplicate
+    # state: exactly one linked Person and one audit entry, not two.
+    linked = (await db_session.scalars(select(Person).where(Person.oidc_subject == "subject-a"))).all()
+    assert len(linked) == 1
+    audits = (
+        await db_session.scalars(
+            select(AuditEntry).where(
+                AuditEntry.action == "volunteer_identity_registered",
+                AuditEntry.resource_id == linked[0].id,
+            )
+        )
+    ).all()
+    assert len(audits) == 1
 
 
 @pytest.mark.anyio
@@ -178,6 +197,59 @@ async def test_register_conflicts_on_a_partial_match(client, volunteer_client_as
 
 
 @pytest.mark.anyio
+async def test_register_conflicts_on_a_partial_match_the_other_direction(client, volunteer_client_as):
+    """Same as above with the matching field swapped: the eID matches an
+    existing person but the NISS doesn't. A one-sided matching
+    implementation (checking only NISS, say) could otherwise create a
+    duplicate or link the wrong identity."""
+    await _create_volunteer(client)
+
+    async with volunteer_client_as("subject-a") as vclient:
+        r = await _register(vclient, niss=NISS_B, eid=EID_A)
+        assert r.status_code == 409
+
+
+@pytest.mark.anyio
+async def test_concurrent_registration_for_the_same_exact_match_yields_exactly_one_winner(client, engine, db_session):
+    """Two OIDC subjects racing to self-register against the same
+    pre-existing, unlinked admin-imported record (same NISS *and* eID) must
+    not both win — `.with_for_update()` in `register_volunteer_identity`
+    must serialize them so only one links and the other 409s (CWE-367)."""
+    volunteer = await _create_volunteer(client)
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    async with factory() as session_a, factory() as session_b:
+        results = await asyncio.gather(
+            volunteer_self_service.register_volunteer_identity(
+                session_a,
+                subject="race-subject-a",
+                name="Race A",
+                national_register_number=NISS_A,
+                eid_document_number=EID_A,
+                actor="race-subject-a",
+            ),
+            volunteer_self_service.register_volunteer_identity(
+                session_b,
+                subject="race-subject-b",
+                name="Race B",
+                national_register_number=NISS_A,
+                eid_document_number=EID_A,
+                actor="race-subject-b",
+            ),
+            return_exceptions=True,
+        )
+
+    conflicts = [result for result in results if isinstance(result, HTTPException)]
+    successes = [result for result in results if not isinstance(result, HTTPException)]
+    assert len(conflicts) == 1
+    assert conflicts[0].status_code == 409
+    assert len(successes) == 1
+
+    person = await db_session.get(Person, volunteer["id"])
+    assert person.oidc_subject in {"race-subject-a", "race-subject-b"}
+
+
+@pytest.mark.anyio
 async def test_eid_correction_requires_a_linked_volunteer(volunteer_client_as):
     async with volunteer_client_as() as vclient:
         r = await vclient.post(
@@ -217,6 +289,7 @@ async def test_eid_correction_writes_directly_and_is_idempotent(volunteer_client
     assert len(audits) == 1
     # No raw eID values in the audit trail — see volunteer_self_service.
     assert EID_B not in str(audits[0].details)
+    assert EID_A not in str(audits[0].details)
 
 
 @pytest.mark.anyio

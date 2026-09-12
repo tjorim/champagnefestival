@@ -510,10 +510,10 @@ describe("MyRegistrationsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Yes, add to my account" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Grand Opening")).toBeInTheDocument();
+      expect(screen.queryByText("Is this you?")).not.toBeInTheDocument();
     });
     expect(claimCalled).toBe(true);
-    expect(screen.queryByText("Is this you?")).not.toBeInTheDocument();
+    expect(screen.getByText("Grand Opening")).toBeInTheDocument();
   });
 
   it("lets the caller dismiss the claimable prompt without linking anything", async () => {

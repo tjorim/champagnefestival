@@ -296,7 +296,8 @@ async def test_claim_verified_email_links_after_explicit_confirmation(raw_client
 async def test_claimable_and_claim_verified_email_require_email_verified(raw_client, db_session, monkeypatch):
     """An unverified email is self-asserted, not Keycloak's own attestation —
     same trust bar #1006 uses for volunteer identity, so neither endpoint
-    treats it as a match; the manual proof-token flow remains available.
+    treats it as a match. There is no fallback for an unverified email: the
+    caller simply cannot claim this registration until Keycloak verifies it.
     """
     response = await _post_registration_with_admin_setup(raw_client, email="unverified@example.com")
     registration_id = response.json()["id"]

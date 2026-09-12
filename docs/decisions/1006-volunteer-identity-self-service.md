@@ -24,9 +24,14 @@ the existing `require_volunteer` dependency.
 
 **Chosen: `Person.oidc_subject` (nullable, unique, mirrors `User.oidc_subject`'s
 existing naming from #953), set via `POST /api/me/volunteer/register` where
-the volunteer submits their own name, NISS, and eID document number and this
-*creates their own `Person` row* (role `volunteer`) — there is no
-pre-existing admin-entered record to match against.**
+the volunteer submits their own name, NISS, and eID document number.
+`register_volunteer_identity` creates a new `Person` row (role `volunteer`)
+unless an *unlinked* row already exists whose NISS and eID both exactly
+match what was submitted, in which case that row is linked instead of
+duplicated (preserving any admin-imported help-period history) — there is
+no "guess a partial match" path: both checksum-valid identifiers together
+are what the design accepts as sufficient proof, not a lookup against one
+field alone.**
 
 This supersedes an earlier version of this decision (see git history) that
 had the volunteer submit only their NISS to claim a *pre-existing*,
@@ -159,9 +164,9 @@ narrower scope would add complexity without a matching security need.
 5. Admin `VolunteerUpdate.oidc_subject` (REST and MCP `update_volunteer`,
    the latter also gaining an explicit `clear_oidc_subject` flag since MCP
    drops omitted-vs-null distinction), surfaced on `VolunteerOut`.
-6. `docs/retry-safety.md` entry for the registration write; the
-   eID-correction write is convergent by the same reasoning and needs no
-   separate entry.
+6. `docs/retry-safety.md` entries for both the registration write and the
+   eID-correction write — convergent by the same reasoning, each
+   documented separately.
 7. Frontend: the NISS/eID self-service section is a "Volunteer eID" tab on
    the unified `/me` self-service page (`MyAccountPage`, direct-link-only),
    shown only when the signed-in OIDC account carries the `volunteer` realm
