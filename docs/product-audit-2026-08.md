@@ -21,7 +21,7 @@ listing does not assign a new priority.
 
 | Order | Issue | Current status and remaining acceptance gates |
 | --- | --- | --- |
-| 1 | [#953 — visitor passwordless accounts](https://github.com/tjorim/champagnefestival/issues/953) | Session and order-history implementation merged in #1012. Verify production transactional email end to end before enabling the localised public **My orders** navigation. Publish the corresponding privacy/account copy. See [decision](decisions/953-visitor-passwordless-session.md). |
+| 1 | [#953 — visitor passwordless accounts](https://github.com/tjorim/champagnefestival/issues/953) | Session and order-history implementation merged in #1012; the page itself later moved from `/my-registrations` to the unified `/me` (#1037), and OIDC claiming split into a confirm-first flow for the caller's own verified email plus the original manual/proof-token flow for a different one. Verify production transactional email end to end before enabling the localised public **My orders** navigation (now pointing at `/me`). Publish the corresponding privacy/account copy. See [decision](decisions/953-visitor-passwordless-session.md). |
 | 2 | [#992 — live public rendering](https://github.com/tjorim/champagnefestival/issues/992) | Repository implementation merged in #1015. Complete the infrastructure routing for `/` and `/privacy` and mount the built frontend shell into the API, then verify live content and locale/cache behavior in production. See [decision](decisions/992-live-public-render.md). |
 
 ### Active implementation and work needing scope decisions

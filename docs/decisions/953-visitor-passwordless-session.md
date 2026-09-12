@@ -8,6 +8,15 @@ hard-cap** visitor session (tighter than this document's original
 session cookie rather than a frontend-held JWT. One acceptance criterion is
 deliberately still undone: the public navigation entry, gated on verified
 production email delivery per #953's own text.
+Later extended (2026-09-12, PR #1037): `/my-registrations` — the page this
+document built its UI on — was folded into the unified `/me` page (see
+[`unified-self-service-page.md`](./unified-self-service-page.md)), and
+claiming for an OIDC caller was split into a confirm-first flow for the
+caller's own verified email plus this document's original manual/proof-token
+flow for a genuinely different one (see
+[`1044-confirm-first-registration-claiming.md`](./1044-confirm-first-registration-claiming.md)).
+Nothing below about the magic-link/visitor-session mechanism itself changed —
+only the page it lives on and how an OIDC caller's *own* claiming got easier.
 **Date:** 2026-09-06 (confirmed same day, implemented 2026-09-07)
 **Issues:** [#953](https://github.com/tjorim/champagnefestival/issues/953)
 (primary); [#922](https://github.com/tjorim/champagnefestival/issues/922)
@@ -289,6 +298,9 @@ refinements worth recording:
   instead of the one-shot `/api/registrations/my/access` for a non-OIDC
   caller. An OIDC-authenticated visitor to this page (unchanged) still goes
   through `requestRegistrationLookup` → `claimMyRegistrations`, unaffected.
+  (`/my-registrations` itself was later removed and folded into `/me` — see
+  the "Later extended" note above; the component and this description of its
+  behavior otherwise still apply, just as `/me`'s Registrations tab.)
 - **`GET /api/visitor-sessions/status` was added** beyond the doc's original
   four endpoints — a small, auth-optional "am I signed in, and until when"
   check that never 401s, used by the frontend's on-mount session detection
@@ -327,6 +339,11 @@ refinements worth recording:
 - `backend/app/routers/registrations.py` — the existing one-shot
   `reservation_access_tokens` lookup this document's magic link reuses the
   TTL/single-use precedent from, without reusing the token table itself
+- [Unified self-service page](./unified-self-service-page.md) — folded
+  `/my-registrations` into `/me` (2026-09-12)
+- [Confirm-first registration claiming](./1044-confirm-first-registration-claiming.md) —
+  split OIDC claiming into a confirm-first flow for the caller's own verified
+  email and this document's original manual/proof-token flow (2026-09-12)
   (that one is deliberately session-less)
 - `tjorim/apps`'s `ansible/playbooks/keycloak.yml` — confirms
   `registration_allowed: false` on the `champagnefestival` realm (visitors
