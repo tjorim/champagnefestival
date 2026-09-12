@@ -32,8 +32,7 @@ def _normalize_categories(categories: list[str]) -> list[str]:
         if not _CATEGORY_PATTERN.match(category):
             raise ValidationFailedError(f"Invalid category '{category}': expected lowercase snake_case.")
     # De-duplicate while preserving order — categories is a set of tags, not a sequence.
-    seen: set[str] = set()
-    return [c for c in categories if not (c in seen or seen.add(c))]
+    return list(dict.fromkeys(categories))
 
 
 async def _validate_event_ids(db: AsyncSession, event_ids: list[str]) -> list[str]:
@@ -41,8 +40,7 @@ async def _validate_event_ids(db: AsyncSession, event_ids: list[str]) -> list[st
         return []
     if len(event_ids) > _MAX_EVENT_IDS:
         raise ValidationFailedError(f"A subscription may be event-scoped to at most {_MAX_EVENT_IDS} events.")
-    seen: set[str] = set()
-    deduped = [e for e in event_ids if not (e in seen or seen.add(e))]
+    deduped = list(dict.fromkeys(event_ids))
     found = (await db.execute(select(Event.id).where(Event.id.in_(deduped)))).scalars().all()
     missing = set(deduped) - set(found)
     if missing:
