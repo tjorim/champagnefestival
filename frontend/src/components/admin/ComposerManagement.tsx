@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -11,6 +11,7 @@ import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 type ComposedMessageChannel = "announcement" | "push";
 type ComposedMessageState = "draft" | "scheduled" | "sent";
@@ -76,6 +77,8 @@ function writePayload(draft: Draft) {
     link_url: draft.link_url || null,
   };
 }
+
+const columnHelper = createAppColumnHelper<ComposedMessage>();
 
 function stateBadgeVariant(state: ComposedMessageState): string {
   switch (state) {
@@ -149,20 +152,23 @@ export default function ComposerManagement({
     retry: false,
   });
 
-  const handleSend = async (item: ComposedMessage) => {
-    const confirmed = await confirm({
-      title: m.admin_composer_send_confirm_title(),
-      body: m.admin_composer_send_confirm_body({
-        audience: item.channels.includes("push") ? item.estimated_push_audience : 0,
-        channels: item.channels.join(", "),
-      }),
-      errorFallback: m.admin_composer_error_send(),
-      variant: "primary",
-    });
-    if (confirmed) scheduleSend.mutate(item.id);
-  };
+  const handleSend = useCallback(
+    async (item: ComposedMessage) => {
+      const confirmed = await confirm({
+        title: m.admin_composer_send_confirm_title(),
+        body: m.admin_composer_send_confirm_body({
+          audience: item.channels.includes("push") ? item.estimated_push_audience : 0,
+          channels: item.channels.join(", "),
+        }),
+        errorFallback: m.admin_composer_error_send(),
+        variant: "primary",
+      });
+      if (confirmed) scheduleSend.mutate(item.id);
+    },
+    [confirm, scheduleSend],
+  );
 
-  const startEdit = (item: ComposedMessage) => {
+  const startEdit = useCallback((item: ComposedMessage) => {
     setEditing(item.id);
     setDraft({
       title_nl: item.title_nl,
@@ -175,7 +181,7 @@ export default function ComposerManagement({
       channels: item.channels,
       link_url: item.link_url,
     });
-  };
+  }, []);
 
   const toggleChannel = (channel: ComposedMessageChannel) => {
     setDraft((current) => ({
@@ -185,6 +191,87 @@ export default function ComposerManagement({
         : [...current.channels, channel],
     }));
   };
+
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.display({
+          id: "title",
+          header: m.admin_composer_column_title(),
+          enableSorting: false,
+          cell: ({ row }) =>
+            row.original.title_nl || row.original.title_en || row.original.title_fr,
+        }),
+        columnHelper.display({
+          id: "channels",
+          header: m.admin_composer_column_channels(),
+          enableSorting: false,
+          cell: ({ row }) => row.original.channels.join(", "),
+        }),
+        columnHelper.display({
+          id: "state",
+          header: m.admin_composer_column_state(),
+          enableSorting: false,
+          cell: ({ row }) => (
+            <Badge bg={stateBadgeVariant(row.original.state)}>{row.original.state}</Badge>
+          ),
+        }),
+        columnHelper.display({
+          id: "results",
+          header: m.admin_composer_column_results(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const item = row.original;
+            if (item.state === "sent") {
+              return (
+                <span className="small">
+                  {item.channels.includes("push") &&
+                    m.admin_composer_push_results({
+                      delivered: item.push_delivered_count,
+                      failed: item.push_failed_count,
+                      pending: item.push_pending_count,
+                    })}
+                </span>
+              );
+            }
+            if (item.channels.includes("push")) {
+              return (
+                <span className="small text-secondary">
+                  {m.admin_composer_estimated_audience({ count: item.estimated_push_audience })}
+                </span>
+              );
+            }
+            return null;
+          },
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: () => (
+            <span className="visually-hidden">{m.admin_composer_column_actions()}</span>
+          ),
+          enableSorting: false,
+          meta: { tdClassName: "text-end" },
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              item.state === "draft" && (
+                <div className="d-flex gap-2 justify-content-end">
+                  <Button size="sm" variant="outline-secondary" onClick={() => startEdit(item)}>
+                    {m.admin_composer_edit_button()}
+                  </Button>
+                  <Button size="sm" variant="warning" onClick={() => void handleSend(item)}>
+                    {m.admin_composer_send_button()}
+                  </Button>
+                </div>
+              )
+            );
+          },
+        }),
+      ]),
+    [startEdit, handleSend],
+  );
+
+  const table = useAppTable({ data: items, columns, getRowId: (row) => row.id }, () => ({}));
 
   return (
     <Card className="admin-card">
@@ -303,65 +390,36 @@ export default function ComposerManagement({
           </div>
         </Form>
 
-        <Table responsive className="mt-4 align-middle">
-          <thead>
-            <tr>
-              <th>{m.admin_composer_column_title()}</th>
-              <th>{m.admin_composer_column_channels()}</th>
-              <th>{m.admin_composer_column_state()}</th>
-              <th>{m.admin_composer_column_results()}</th>
-              <th>
-                <span className="visually-hidden">{m.admin_composer_column_actions()}</span>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id}>
-                <td>{item.title_nl || item.title_en || item.title_fr}</td>
-                <td>{item.channels.join(", ")}</td>
-                <td>
-                  <Badge bg={stateBadgeVariant(item.state)}>{item.state}</Badge>
-                </td>
-                <td>
-                  {item.state === "sent" ? (
-                    <span className="small">
-                      {item.channels.includes("push") &&
-                        m.admin_composer_push_results({
-                          delivered: item.push_delivered_count,
-                          failed: item.push_failed_count,
-                          pending: item.push_pending_count,
-                        })}
-                    </span>
-                  ) : item.channels.includes("push") ? (
-                    <span className="small text-secondary">
-                      {m.admin_composer_estimated_audience({ count: item.estimated_push_audience })}
-                    </span>
-                  ) : null}
-                </td>
-                <td className="text-end">
-                  {item.state === "draft" && (
-                    <div className="d-flex gap-2 justify-content-end">
-                      <Button size="sm" variant="outline-secondary" onClick={() => startEdit(item)}>
-                        {m.admin_composer_edit_button()}
-                      </Button>
-                      <Button size="sm" variant="warning" onClick={() => void handleSend(item)}>
-                        {m.admin_composer_send_button()}
-                      </Button>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-            {items.length === 0 && (
-              <tr>
-                <td colSpan={5} className="text-center text-secondary">
-                  {m.admin_composer_empty()}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </Table>
+        {items.length === 0 ? (
+          <p className="text-center text-secondary mt-4 mb-0">{m.admin_composer_empty()}</p>
+        ) : (
+          <div className="table-responsive">
+            <Table className="mt-4 align-middle">
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th key={header.id}>
+                        <table.FlexRender header={header} />
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <tr key={row.id}>
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                        <table.FlexRender cell={cell} />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </div>
+        )}
       </Card.Body>
     </Card>
   );

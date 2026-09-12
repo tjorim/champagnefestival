@@ -31,6 +31,7 @@ import {
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
+import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
 interface FaqManagementProps {
   authHeaders: () => Record<string, string>;
@@ -58,6 +59,8 @@ interface FaqLocaleData {
   question: string;
   answer: string;
 }
+
+const columnHelper = createAppColumnHelper<FaqItem>();
 
 function faqPayload(data: FaqLocaleData & Omit<FaqFormState, "questionNl" | "answerNl">) {
   return {
@@ -287,6 +290,111 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
     </Badge>
   );
 
+  const columns = useMemo(
+    () =>
+      columnHelper.columns([
+        columnHelper.display({
+          id: "reorder",
+          header: "",
+          enableSorting: false,
+          cell: ({ row }) => (
+            <div className="d-flex flex-column">
+              <Button
+                size="sm"
+                variant="link"
+                className="p-0 text-light"
+                disabled={row.index === 0 || isMutating}
+                onClick={() => handleMove(row.original, "up")}
+                aria-label={m.admin_faq_move_up()}
+                title={m.admin_faq_move_up()}
+              >
+                <i className="bi bi-caret-up-fill" aria-hidden="true" />
+              </Button>
+              <Button
+                size="sm"
+                variant="link"
+                className="p-0 text-light"
+                disabled={row.index === sortedItems.length - 1 || isMutating}
+                onClick={() => handleMove(row.original, "down")}
+                aria-label={m.admin_faq_move_down()}
+                title={m.admin_faq_move_down()}
+              >
+                <i className="bi bi-caret-down-fill" aria-hidden="true" />
+              </Button>
+            </div>
+          ),
+        }),
+        columnHelper.display({
+          id: "content",
+          header: "",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <>
+                <div className="fw-semibold">
+                  {item.questionNl}
+                  {!item.active && (
+                    <Badge bg="secondary" className="ms-2 fs-2xs">
+                      {m.admin_venue_archived_badge()}
+                    </Badge>
+                  )}
+                  {localeBadge("EN", Boolean(item.questionEn && item.answerEn))}
+                  {localeBadge("FR", Boolean(item.questionFr && item.answerFr))}
+                </div>
+                <div className="text-secondary small">{item.answerNl}</div>
+              </>
+            );
+          },
+        }),
+        columnHelper.display({
+          id: "actions",
+          header: "",
+          enableSorting: false,
+          cell: ({ row }) => {
+            const item = row.original;
+            return (
+              <div className="d-flex gap-1">
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  disabled={isMutating}
+                  onClick={() => openEdit(item)}
+                  aria-label={m.admin_edit()}
+                  title={m.admin_edit()}
+                >
+                  <i className="bi bi-pencil" aria-hidden="true" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-secondary"
+                  disabled={isMutating}
+                  onClick={() => handleToggleActive(item)}
+                  aria-label={item.active ? m.admin_content_archive() : m.admin_content_restore()}
+                  title={item.active ? m.admin_content_archive() : m.admin_content_restore()}
+                >
+                  <i className={item.active ? "bi bi-eye-slash" : "bi bi-eye"} aria-hidden="true" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline-danger"
+                  disabled={isMutating}
+                  onClick={() => handleDelete(item)}
+                  aria-label={m.admin_delete()}
+                  title={m.admin_delete()}
+                >
+                  <i className="bi bi-trash" aria-hidden="true" />
+                </Button>
+              </div>
+            );
+          },
+        }),
+      ]),
+    [sortedItems.length, isMutating, handleMove, openEdit, handleToggleActive, handleDelete],
+  );
+
+  const table = useAppTable({ data: sortedItems, columns, getRowId: (row) => row.id }, () => ({}));
+
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
@@ -319,88 +427,20 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
             <div className="table-responsive">
               <Table variant="dark" hover className="mb-0" size="sm">
                 <tbody>
-                  {sortedItems.map((item, index) => (
-                    <tr key={item.id} className={!item.active ? "opacity-50" : undefined}>
-                      <td style={{ width: "1%", whiteSpace: "nowrap" }}>
-                        <div className="d-flex flex-column">
-                          <Button
-                            size="sm"
-                            variant="link"
-                            className="p-0 text-light"
-                            disabled={index === 0 || isMutating}
-                            onClick={() => handleMove(item, "up")}
-                            aria-label={m.admin_faq_move_up()}
-                            title={m.admin_faq_move_up()}
-                          >
-                            <i className="bi bi-caret-up-fill" aria-hidden="true" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="link"
-                            className="p-0 text-light"
-                            disabled={index === sortedItems.length - 1 || isMutating}
-                            onClick={() => handleMove(item, "down")}
-                            aria-label={m.admin_faq_move_down()}
-                            title={m.admin_faq_move_down()}
-                          >
-                            <i className="bi bi-caret-down-fill" aria-hidden="true" />
-                          </Button>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="fw-semibold">
-                          {item.questionNl}
-                          {!item.active && (
-                            <Badge bg="secondary" className="ms-2 fs-2xs">
-                              {m.admin_venue_archived_badge()}
-                            </Badge>
-                          )}
-                          {localeBadge("EN", Boolean(item.questionEn && item.answerEn))}
-                          {localeBadge("FR", Boolean(item.questionFr && item.answerFr))}
-                        </div>
-                        <div className="text-secondary small">{item.answerNl}</div>
-                      </td>
-                      <td style={{ width: "1%", whiteSpace: "nowrap" }}>
-                        <div className="d-flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="outline-secondary"
-                            disabled={isMutating}
-                            onClick={() => openEdit(item)}
-                            aria-label={m.admin_edit()}
-                            title={m.admin_edit()}
-                          >
-                            <i className="bi bi-pencil" aria-hidden="true" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline-secondary"
-                            disabled={isMutating}
-                            onClick={() => handleToggleActive(item)}
-                            aria-label={
-                              item.active ? m.admin_content_archive() : m.admin_content_restore()
-                            }
-                            title={
-                              item.active ? m.admin_content_archive() : m.admin_content_restore()
-                            }
-                          >
-                            <i
-                              className={item.active ? "bi bi-eye-slash" : "bi bi-eye"}
-                              aria-hidden="true"
-                            />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline-danger"
-                            disabled={isMutating}
-                            onClick={() => handleDelete(item)}
-                            aria-label={m.admin_delete()}
-                            title={m.admin_delete()}
-                          >
-                            <i className="bi bi-trash" aria-hidden="true" />
-                          </Button>
-                        </div>
-                      </td>
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className={!row.original.active ? "opacity-50" : undefined}>
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          style={
+                            cell.column.id === "reorder" || cell.column.id === "actions"
+                              ? { width: "1%", whiteSpace: "nowrap" }
+                              : undefined
+                          }
+                        >
+                          <table.FlexRender cell={cell} />
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
