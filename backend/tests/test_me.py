@@ -9,13 +9,15 @@ from typing import cast
 
 import pytest
 from fastapi import HTTPException
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app import email as email_module
+from app import visitor_session as visitor_session_module
 from app.auth import require_admin
-from app.database import async_session_factory
+from app.database import async_session_factory, get_db
 from app.main import app
 from app.models import (
     AuditEntry,
@@ -44,6 +46,26 @@ async def _post_registration_with_admin_setup(me_client, **overrides):
         return await _post_registration(me_client, **overrides)
     finally:
         app.dependency_overrides.pop(require_admin, None)
+
+
+@pytest.fixture()
+async def raw_client(db_session):
+    """Client with no auth override at all — goes through the real
+    ``app.visitor_session.get_current_user``, unlike ``me_client`` (which
+    overrides that dependency wholesale). Needed to test the auto-claim
+    behavior embedded inside it, since an override would bypass that code
+    entirely. Pair with ``monkeypatch.setattr(visitor_session_module,
+    "decode_token", ...)`` to control the bearer token's claims.
+    """
+
+    async def override_get_db():
+        yield db_session
+
+    app.dependency_overrides[get_db] = override_get_db
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c
+    app.dependency_overrides.clear()
 
 
 class _RacingUserSession:
@@ -377,6 +399,97 @@ async def test_claim_registrations_does_not_reassign_owned_booking(me_client, db
         )
     )
     assert audit is None
+
+
+@pytest.mark.anyio
+async def test_auto_claims_unowned_registration_for_a_verified_oidc_email(raw_client, db_session, monkeypatch):
+    """#1044: a signed-in caller's own verified email auto-claims a booking
+    made under that same address while signed out — no token, no form.
+    """
+    response = await _post_registration_with_admin_setup(raw_client, email="auto-claim@example.com")
+    registration_id = response.json()["id"]
+    registration = await db_session.get(Registration, registration_id)
+    assert registration is not None
+    assert registration.user_id is None
+
+    async def fake_decode_token(_token: str) -> dict:
+        return {"sub": "auto-claim-sub", "email": "auto-claim@example.com", "email_verified": True}
+
+    monkeypatch.setattr(visitor_session_module, "decode_token", fake_decode_token)
+
+    result = await raw_client.get("/api/me/registrations", headers={"Authorization": "Bearer auto-claim-token"})
+
+    assert result.status_code == 200
+    assert [item["id"] for item in result.json()] == [registration_id]
+    await db_session.refresh(registration)
+    user = await db_session.scalar(select(User).where(User.oidc_subject == "auto-claim-sub"))
+    assert user is not None
+    assert registration.user_id == user.id
+    audit = await db_session.scalar(
+        select(AuditEntry).where(
+            AuditEntry.action == "registration_claimed",
+            AuditEntry.resource_id == registration_id,
+        )
+    )
+    assert audit is not None
+    assert audit.actor == "auto-claim-sub"
+
+
+@pytest.mark.anyio
+async def test_does_not_auto_claim_without_an_email_verified_claim(raw_client, db_session, monkeypatch):
+    """An unverified email is self-asserted, not Keycloak's own attestation —
+    same trust bar #1006 uses for volunteer identity, so it stays unclaimed
+    and falls back to the manual proof-token flow instead.
+    """
+    response = await _post_registration_with_admin_setup(raw_client, email="unverified@example.com")
+    registration_id = response.json()["id"]
+
+    async def fake_decode_token(_token: str) -> dict:
+        return {"sub": "unverified-sub", "email": "unverified@example.com", "email_verified": False}
+
+    monkeypatch.setattr(visitor_session_module, "decode_token", fake_decode_token)
+
+    result = await raw_client.get("/api/me/registrations", headers={"Authorization": "Bearer unverified-token"})
+
+    assert result.status_code == 200
+    assert result.json() == []
+    registration = await db_session.get(Registration, registration_id)
+    assert registration is not None
+    assert registration.user_id is None
+    audit = await db_session.scalar(
+        select(AuditEntry).where(
+            AuditEntry.action == "registration_claimed",
+            AuditEntry.resource_id == registration_id,
+        )
+    )
+    assert audit is None
+
+
+@pytest.mark.anyio
+async def test_auto_claim_is_idempotent_across_repeated_requests(raw_client, db_session, monkeypatch):
+    response = await _post_registration_with_admin_setup(raw_client, email="repeat-claim@example.com")
+    registration_id = response.json()["id"]
+
+    async def fake_decode_token(_token: str) -> dict:
+        return {"sub": "repeat-claim-sub", "email": "repeat-claim@example.com", "email_verified": True}
+
+    monkeypatch.setattr(visitor_session_module, "decode_token", fake_decode_token)
+
+    first = await raw_client.get("/api/me/registrations", headers={"Authorization": "Bearer repeat-claim-token"})
+    second = await raw_client.get("/api/me/registrations", headers={"Authorization": "Bearer repeat-claim-token"})
+
+    assert first.status_code == 200
+    assert second.status_code == 200
+    assert [item["id"] for item in second.json()] == [registration_id]
+    audits = (
+        await db_session.scalars(
+            select(AuditEntry).where(
+                AuditEntry.action == "registration_claimed",
+                AuditEntry.resource_id == registration_id,
+            )
+        )
+    ).all()
+    assert len(audits) == 1
 
 
 @pytest.mark.anyio

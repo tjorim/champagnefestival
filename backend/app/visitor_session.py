@@ -32,7 +32,7 @@ from app.config import settings
 from app.database import get_db
 from app.models import User, VisitorMagicLink, VisitorSession
 from app.oidc_config import OIDCTokenError, decode_token
-from app.services.users_service import get_or_create_user
+from app.services.users_service import claim_unowned_registrations_for_email, get_or_create_user
 from app.utils import make_id
 
 #: Confirmed by the project owner 2026-09-06 — matches worktime's existing
@@ -203,7 +203,22 @@ async def get_current_user(
         subject = claims.get("sub")
         if not isinstance(subject, str) or not subject:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
-        return await get_or_create_user(db, subject)
+        user = await get_or_create_user(db, subject)
+        # Every booking always collects an email, whether or not the booker
+        # was signed in at the time — "unowned" only ever means "not linked
+        # to a user yet", never "no email on file". So a booking made under
+        # this same OIDC account's own verified address is virtually always
+        # the *same person*, just unauthenticated at booking time, not a
+        # separate identity to prove control of. Trusting Keycloak's own
+        # email_verified claim here (rather than a manual proof-token, which
+        # stays for the genuine case of a booking under a *different*
+        # email — see app.routers.me.claim_my_registrations) resolves #1044's
+        # open question in favor of doing this automatically.
+        email = claims.get("email")
+        if claims.get("email_verified") is True and isinstance(email, str) and email:
+            await claim_unowned_registrations_for_email(db, user, email, actor=subject)
+            await db.commit()
+        return user
 
     session_id = request.cookies.get(COOKIE_NAME)
     if session_id:
