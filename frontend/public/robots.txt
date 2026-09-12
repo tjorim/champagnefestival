@@ -3,7 +3,6 @@ Allow: /
 Disallow: /admin
 Disallow: /check-in
 Disallow: /venue-plan
-Disallow: /my-registrations
 Disallow: /me
 Disallow: /pebble-pair
 

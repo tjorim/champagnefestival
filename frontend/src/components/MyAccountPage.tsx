@@ -291,7 +291,9 @@ export default function MyAccountPage() {
 
   return (
     <Container className="py-5" style={{ maxWidth: "540px" }}>
-      <h1 className="h4 mb-4 text-center">{m.my_account_title()}</h1>
+      <h1 id="my-account-title" className="h4 mb-4 text-center">
+        {m.my_account_title()}
+      </h1>
 
       {authError && (
         <Alert variant="danger" dismissible onClose={clearAuthError}>

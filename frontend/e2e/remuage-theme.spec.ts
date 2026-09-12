@@ -201,7 +201,7 @@ test.describe("Remuage visual theme", () => {
     const routes = [
       { path: "/privacy", heading: "#privacy-policy" },
       { path: "/check-in", heading: "#checkin-title" },
-      { path: "/my-registrations", heading: "#my-registrations-title" },
+      { path: "/me", heading: "#my-account-title" },
       { path: "/admin", heading: "#admin" },
     ];
 

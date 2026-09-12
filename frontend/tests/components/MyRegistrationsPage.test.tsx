@@ -113,15 +113,15 @@ describe("MyRegistrationsPage", () => {
     expect(url.hash).toBe("#token=secret%2Ftoken");
   });
 
-  async function renderPage(initialEntry = "/my-registrations") {
+  async function renderPage(initialEntry = "/me") {
     const rootRoute = createRootRoute();
-    const myRegistrationsRoute = createRoute({
+    const myAccountRoute = createRoute({
       getParentRoute: () => rootRoute,
-      path: "/my-registrations",
+      path: "/me",
       validateSearch: validateMyRegistrationsSearch,
       component: MyRegistrationsPage,
     });
-    const routeTree = rootRoute.addChildren([myRegistrationsRoute]);
+    const routeTree = rootRoute.addChildren([myAccountRoute]);
     const memoryHistory = createMemoryHistory({ initialEntries: [initialEntry] });
     const router = createRouter({ routeTree, history: memoryHistory });
     await router.load();
@@ -148,7 +148,7 @@ describe("MyRegistrationsPage", () => {
     // Any non-empty token is accepted by the MSW handler and returns the seed
     // registrations — reg-01 (Grand Opening), reg-02 (Tasting Day 1), reg-03
     // (Tasting Day 2).
-    await renderPage("/my-registrations?token=any-valid-token");
+    await renderPage("/me?token=any-valid-token");
 
     await waitFor(() => {
       expect(screen.getByText("Grand Opening")).toBeInTheDocument();
@@ -172,7 +172,7 @@ describe("MyRegistrationsPage", () => {
       http.get("/api/me/registrations", () => HttpResponse.json([])),
     );
 
-    await renderPage("/my-registrations?token=email-access-token");
+    await renderPage("/me?token=email-access-token");
 
     await waitFor(() => {
       expect(screen.getByText("No registrations found.")).toBeInTheDocument();
@@ -200,7 +200,7 @@ describe("MyRegistrationsPage", () => {
       }),
     );
 
-    const view = await renderPage("/my-registrations?token=email-access-token");
+    const view = await renderPage("/me?token=email-access-token");
     expect(screen.getByText("Loading registrations...")).toBeInTheDocument();
     expect(anonymousCalls).toBe(0);
 
@@ -232,7 +232,7 @@ describe("MyRegistrationsPage", () => {
       }),
     );
 
-    const view = await renderPage("/my-registrations?token=email-access-token");
+    const view = await renderPage("/me?token=email-access-token");
     await waitFor(() => {
       expect(screen.getByText("No registrations found.")).toBeInTheDocument();
     });
@@ -260,7 +260,7 @@ describe("MyRegistrationsPage", () => {
       }),
     );
 
-    const view = await renderPage("/my-registrations?token=email-access-token");
+    const view = await renderPage("/me?token=email-access-token");
     await waitFor(() => expect(accessCalls).toBe(1));
     await waitFor(() => expect(view.router.state.location.search).toEqual({}));
     const currentHref = view.router.state.location.href;
@@ -286,7 +286,7 @@ describe("MyRegistrationsPage", () => {
       }),
     );
 
-    const view = await renderPage("/my-registrations?token=email-access-token");
+    const view = await renderPage("/me?token=email-access-token");
     await waitFor(() => {
       expect(screen.getByText("No registrations found.")).toBeInTheDocument();
     });
@@ -300,7 +300,7 @@ describe("MyRegistrationsPage", () => {
       http.post("/api/visitor-sessions/redeem", () => HttpResponse.json(null, { status: 401 })),
     );
 
-    await renderPage("/my-registrations?token=expired-token");
+    await renderPage("/me?token=expired-token");
 
     await waitFor(() => {
       expect(screen.getByText("This secure link is invalid or expired.")).toBeInTheDocument();
@@ -364,7 +364,7 @@ describe("MyRegistrationsPage", () => {
   });
 
   it("has no axe violations when registrations are loaded", async () => {
-    const { container } = await renderPage("/my-registrations?token=any-valid-token");
+    const { container } = await renderPage("/me?token=any-valid-token");
 
     await waitFor(() => {
       expect(screen.getByText("Grand Opening")).toBeInTheDocument();
@@ -379,7 +379,7 @@ describe("MyRegistrationsPage", () => {
       http.post("/api/visitor-sessions/redeem", () => HttpResponse.json(null, { status: 401 })),
     );
 
-    const { container } = await renderPage("/my-registrations?token=expired-token");
+    const { container } = await renderPage("/me?token=expired-token");
 
     await waitFor(() => {
       expect(screen.getByText("This secure link is invalid or expired.")).toBeInTheDocument();
@@ -419,7 +419,7 @@ describe("MyRegistrationsPage", () => {
         return HttpResponse.json({ preferred_language: "en" });
       }),
     );
-    await renderPage("/my-registrations?token=email-access-token");
+    await renderPage("/me?token=email-access-token");
     const language = await screen.findByLabelText("Preferred communication language");
     await waitFor(() => expect(language).toHaveValue("fr"));
     fireEvent.change(language, { target: { value: "en" } });
@@ -459,7 +459,7 @@ describe("MyRegistrationsPage", () => {
         return HttpResponse.json({ preferred_language: "fr" });
       }),
     );
-    await renderPage("/my-registrations?token=email-access-token");
+    await renderPage("/me?token=email-access-token");
     const language = await screen.findByLabelText("Preferred communication language");
     expect(language).toBeDisabled();
     expect(screen.getByRole("button", { name: "Save language" })).toBeDisabled();

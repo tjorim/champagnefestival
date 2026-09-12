@@ -54,12 +54,13 @@ When only one tab applies — the common case for an anonymous visitor — it
 renders directly with no tab chrome, so the experience is identical to the
 old `/my-registrations` page.
 
-**`/my-registrations` is kept as a second route to the same page**, not
-removed: its `?token=...` form is already embedded in sent confirmation and
-magic-link emails (`backend/app/email.py`), including ones already delivered
-to inboxes, so it has to keep resolving. Both routes share one component
-(`MyAccountRoute` in `main.tsx`, `MyAccountPage` in the frontend) and one
-`token` search-param schema (`validateMyRegistrationsSearch` in `router.tsx`).
+**`/my-registrations` is removed outright, not kept as an alias.** No
+confirmation or magic-link email had gone out referencing it yet, so there
+was no compatibility burden — `send_visitor_magic_link_email` and the
+post-booking "view my registrations" link (`RegistrationModal`) now point
+straight at `/me?token=...`. The `MyRegistrationsPage` component (still that
+name — it's the Registrations tab's content, not a route anymore) reads its
+`token` search param via `useSearch({ from: "/me" })`.
 
 ### Auth-error handling changed to match
 
@@ -87,8 +88,7 @@ to land on this tab.
   `POST /api/me/volunteer/*`, `DELETE /api/me`) are untouched.
 - No MCP/Android/Pebble equivalent — same as every `/api/me/*` and
   `/my-registrations`-era surface before it; these remain browser-session-only.
-- No site navigation entry — both routes stay direct-link-only, same as
-  before.
+- No site navigation entry — `/me` stays direct-link-only, same as before.
 
 ## References
 

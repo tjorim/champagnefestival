@@ -51,12 +51,9 @@ export function buildCheckInQrUrl(
 
 export default function MyRegistrationsPage() {
   const auth = useAuth();
-  // strict: false since this section is embedded under both /me and
-  // /my-registrations (the latter kept only because it's already emailed to
-  // visitors — see router.tsx) rather than being tied to one route id.
-  const search = useSearch({ strict: false }) as { token?: string };
-  const token = search.token?.trim() ?? "";
-  const navigate = useNavigate();
+  const { token: rawToken } = useSearch({ from: "/me" });
+  const token = rawToken?.trim() ?? "";
+  const navigate = useNavigate({ from: "/me" });
   const accessToken = auth.getAccessToken();
 
   const [email, setEmail] = useState("");
@@ -118,7 +115,7 @@ export default function MyRegistrationsPage() {
       lookupToken: string;
       oidcToken: string | null;
     }) => {
-      await navigate({ to: ".", search: {}, replace: true });
+      await navigate({ search: {}, replace: true });
       if (!oidcToken) {
         return redeemVisitorMagicLink(lookupToken);
       }
@@ -275,7 +272,7 @@ export default function MyRegistrationsPage() {
     (!tokenAttempted && auth.isAuthenticated && !oidcChecked);
 
   const resetToRequestForm = useCallback(() => {
-    void navigate({ to: ".", search: {}, replace: true });
+    void navigate({ search: {}, replace: true });
     setRequestSent(false);
     setError("");
     setIsEmailInvalid(false);

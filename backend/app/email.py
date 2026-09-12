@@ -262,14 +262,14 @@ async def send_visitor_magic_link_email(
     structurally identical emailed credential, kept as its own function
     because it links to a persistent session rather than a one-shot code
     (docs/decisions/953-visitor-passwordless-session.md). The token goes in
-    the ``?token=`` query string, matching how ``MyRegistrationsPage``
-    already reads it (``useSearch({ from: "/my-registrations" })`` — a
-    TanStack Router search param, not a URL fragment). The frontend removes
-    it from browser history immediately on load
-    (``navigate({ search: {}, replace: true })``, before the redemption
-    network call), the same scrub-after-use protection the pre-existing
-    one-shot guest-lookup token already relies on for this exact acceptance
-    criterion.
+    the ``?token=`` query string, matching how ``MyAccountPage`` (via
+    ``MyRegistrationsPage``) already reads it (``useSearch({ strict: false
+    })`` — a TanStack Router search param, not a URL fragment). The frontend
+    removes it from browser history immediately on load
+    (``navigate({ to: ".", search: {}, replace: true })``, before the
+    redemption network call), the same scrub-after-use protection the
+    pre-existing one-shot guest-lookup token already relies on for this exact
+    acceptance criterion.
     """
     if not settings.smtp_host or not settings.smtp_from:
         logger.warning(
@@ -278,7 +278,7 @@ async def send_visitor_magic_link_email(
         )
         return False
 
-    link = f"{settings.frontend_url.rstrip('/')}/my-registrations?token={token}"
+    link = f"{settings.frontend_url.rstrip('/')}/me?token={token}"
 
     message = EmailMessage()
     message["Subject"] = "Sign in to your Champagnefestival orders"

@@ -221,11 +221,10 @@ function PebblePairRoute() {
 }
 
 /**
- * Route component for /me and /my-registrations — unlinked, direct-URL-only
- * self-service page for visitors, members, and volunteers alike (the latter
- * two via OIDC). Both paths render the same MyAccountPage; /my-registrations
- * is kept only because it's already embedded in sent confirmation/magic-link
- * emails (see backend/app/email.py).
+ * Route component for /me — unlinked, direct-URL-only self-service page for
+ * visitors, members, and volunteers alike (the latter two via OIDC). Also
+ * the target of the confirmation/magic-link emails' `?token=` links (see
+ * backend/app/email.py) — no separate /my-registrations route.
  */
 function MyAccountRoute() {
   useNoIndex();
