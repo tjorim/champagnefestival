@@ -212,7 +212,7 @@ describe("RegistrationDetail", () => {
     );
   });
 
-  it("keeps a whole-table booking partially allocated without inventing a companion count", () => {
+  it("keeps a whole-table booking partially allocated without inventing a companion count", async () => {
     const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     renderDetail({
       onSaveBooking,
@@ -231,18 +231,20 @@ describe("RegistrationDetail", () => {
     ).not.toBeInTheDocument();
     fireEvent.change(selectors[1]!, { target: { value: "table-2" } });
     fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
-    expect(onSaveBooking).toHaveBeenCalledWith(
-      "reg-1",
-      expect.objectContaining({
-        allocations: [
-          { tableId: "table-1", guestCount: 0, exclusive: true },
-          { tableId: "table-2", guestCount: 0, exclusive: true },
-        ],
-      }),
+    await waitFor(() =>
+      expect(onSaveBooking).toHaveBeenCalledWith(
+        "reg-1",
+        expect.objectContaining({
+          allocations: [
+            { tableId: "table-1", guestCount: 0, exclusive: true },
+            { tableId: "table-2", guestCount: 0, exclusive: true },
+          ],
+        }),
+      ),
     );
   });
 
-  it("records actual guest counts when splitting a booking", () => {
+  it("records actual guest counts when splitting a booking", async () => {
     const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     renderDetail({
       onSaveBooking,
@@ -264,14 +266,16 @@ describe("RegistrationDetail", () => {
       '"assigned":5,"total":6',
     );
     fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
-    expect(onSaveBooking).toHaveBeenCalledWith(
-      "reg-1",
-      expect.objectContaining({
-        allocations: [
-          { tableId: "table-1", guestCount: 4, exclusive: false },
-          { tableId: "table-2", guestCount: 1, exclusive: false },
-        ],
-      }),
+    await waitFor(() =>
+      expect(onSaveBooking).toHaveBeenCalledWith(
+        "reg-1",
+        expect.objectContaining({
+          allocations: [
+            { tableId: "table-1", guestCount: 4, exclusive: false },
+            { tableId: "table-2", guestCount: 1, exclusive: false },
+          ],
+        }),
+      ),
     );
   });
 
@@ -300,11 +304,13 @@ describe("RegistrationDetail", () => {
 
     expect(onSaveBooking).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
-    expect(onSaveBooking).toHaveBeenCalledWith(
-      "reg-1",
-      expect.objectContaining({
-        allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
-      }),
+    await waitFor(() =>
+      expect(onSaveBooking).toHaveBeenCalledWith(
+        "reg-1",
+        expect.objectContaining({
+          allocations: [{ tableId: "table-1", guestCount: 2, exclusive: false }],
+        }),
+      ),
     );
   });
 
@@ -397,7 +403,7 @@ describe("RegistrationDetail", () => {
     ).not.toBeDisabled();
   });
 
-  it("previews a table quantity reduction and saves the chosen release", () => {
+  it("previews a table quantity reduction and saves the chosen release", async () => {
     const onSaveBooking = vi.fn().mockResolvedValue(undefined);
     const tableProduct = {
       id: "table-product",
@@ -449,12 +455,14 @@ describe("RegistrationDetail", () => {
     expect(screen.getByRole("button", { name: "admin_booking_save_all" })).toBeDisabled();
     fireEvent.click(screen.getAllByRole("button", { name: "admin_inventory_remove" })[1]!);
     fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
-    expect(onSaveBooking).toHaveBeenCalledWith(
-      "reg-1",
-      expect.objectContaining({
-        quantities: { "table-product": 1 },
-        allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
-      }),
+    await waitFor(() =>
+      expect(onSaveBooking).toHaveBeenCalledWith(
+        "reg-1",
+        expect.objectContaining({
+          quantities: { "table-product": 1 },
+          allocations: [{ tableId: "table-1", guestCount: 0, exclusive: true }],
+        }),
+      ),
     );
   });
 

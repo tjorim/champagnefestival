@@ -76,9 +76,15 @@ jobs:
           # AdminDashboard raised 750 -> 780 for #1019's payment-ledger follow-up
           # (person payment summary, edition/person ledger CSV export links, and
           # a refund/correction reversal picker) — measured 752 kB.
+          # AdminDashboard raised 780 -> 810 for #1048's admin-form consistency
+          # migration (VenueManagement, EventProductsModal, BookingEditor,
+          # PolicyManagement, ComposerManagement, AnnouncementManagement, and
+          # SettingsManagement moved off hand-rolled useState onto the
+          # @tanstack/react-form pattern the rest of the admin dashboard already
+          # used) — measured 782 kB.
           TOTAL_MAX_KB=2200
           INDEX_MAX_KB=1050
-          ADMIN_MAX_KB=780
+          ADMIN_MAX_KB=810
 
           total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
           index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')

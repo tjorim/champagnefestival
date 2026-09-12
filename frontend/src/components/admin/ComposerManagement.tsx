@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -109,31 +110,76 @@ export default function ComposerManagement({
     refetchInterval: 10_000,
   });
   const items = query.data ?? [];
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [editing, setEditing] = useState<string | null>(null);
   const [preview, setPreview] = useState<"nl" | "en" | "fr">("nl");
   const [error, setError] = useState("");
   const { confirm, confirmDialog } = useConfirmDialog();
-  const refresh = () => client.invalidateQueries({ queryKey: key });
+  const refresh = useCallback(() => client.invalidateQueries({ queryKey: key }), [client, key]);
 
   const save = useMutation({
-    mutationFn: () =>
+    mutationFn: (payload: Draft) =>
       fetchJsonOrThrowWithUnauthorized(
         `/api/composer${editing ? `/${editing}` : ""}`,
         {
           method: editing ? "PUT" : "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify(writePayload(draft)),
+          body: JSON.stringify(writePayload(payload)),
         },
         m.admin_composer_error_save(),
       ),
     onSuccess: () => {
-      setDraft(emptyDraft);
+      form.reset(emptyDraft);
       setEditing(null);
       void refresh();
     },
     retry: false,
   });
+
+  const editingItem = editing ? (items.find((i) => i.id === editing) ?? null) : null;
+
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EditionModal for the details.
+  const formDefaultValues = useMemo(
+    (): Draft =>
+      editingItem
+        ? {
+            title_nl: editingItem.title_nl,
+            title_en: editingItem.title_en,
+            title_fr: editingItem.title_fr,
+            body_nl: editingItem.body_nl,
+            body_en: editingItem.body_en,
+            body_fr: editingItem.body_fr,
+            level: editingItem.level,
+            channels: editingItem.channels,
+            link_url: editingItem.link_url,
+          }
+        : emptyDraft,
+    [editingItem],
+  );
+
+  const form = useForm({
+    defaultValues: formDefaultValues,
+    onSubmit: async ({ value }) => {
+      if (save.isPending) return;
+      setError("");
+      try {
+        await save.mutateAsync(value);
+      } catch (reason) {
+        setError(String(reason));
+      }
+    },
+  });
+  const channels = useStore(form.store, (s) => s.values.channels);
+
+  // Seed the form when entering edit mode. Reset during render (the
+  // "adjusting state when a prop changes" pattern) since this only needs to
+  // react to `editing` changing to a specific item, not to every render.
+  const [lastEditing, setLastEditing] = useState(editing);
+  if (editing !== lastEditing) {
+    setLastEditing(editing);
+    if (editing) form.reset(formDefaultValues);
+  }
 
   const scheduleSend = useMutation({
     mutationFn: (id: string) =>
@@ -170,27 +216,7 @@ export default function ComposerManagement({
 
   const startEdit = useCallback((item: ComposedMessage) => {
     setEditing(item.id);
-    setDraft({
-      title_nl: item.title_nl,
-      title_en: item.title_en,
-      title_fr: item.title_fr,
-      body_nl: item.body_nl,
-      body_en: item.body_en,
-      body_fr: item.body_fr,
-      level: item.level,
-      channels: item.channels,
-      link_url: item.link_url,
-    });
   }, []);
-
-  const toggleChannel = (channel: ComposedMessageChannel) => {
-    setDraft((current) => ({
-      ...current,
-      channels: current.channels.includes(channel)
-        ? current.channels.filter((c) => c !== channel)
-        : [...current.channels, channel],
-    }));
-  };
 
   const columns = useMemo(
     () =>
@@ -285,9 +311,7 @@ export default function ComposerManagement({
         <Form
           onSubmit={(event) => {
             event.preventDefault();
-            if (save.isPending) return;
-            setError("");
-            void save.mutateAsync().catch((reason) => setError(String(reason)));
+            void form.handleSubmit();
           }}
         >
           <div className="d-flex gap-2 mb-2">
@@ -305,73 +329,107 @@ export default function ComposerManagement({
           </div>
           <Form.Group className="mb-2" controlId="composer-title">
             <Form.Label>{m.admin_composer_title_label()}</Form.Label>
-            <Form.Control
-              maxLength={500}
-              value={draft[`title_${preview}`] ?? ""}
-              onChange={(event) => setDraft({ ...draft, [`title_${preview}`]: event.target.value })}
-            />
+            <form.Field name={`title_${preview}`}>
+              {(field) => (
+                <Form.Control
+                  maxLength={500}
+                  value={field.state.value ?? ""}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
           <Form.Group className="mb-2" controlId="composer-body">
             <Form.Label>{m.admin_composer_body_label()}</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              maxLength={500}
-              value={draft[`body_${preview}`] ?? ""}
-              onChange={(event) => setDraft({ ...draft, [`body_${preview}`]: event.target.value })}
-            />
+            <form.Field name={`body_${preview}`}>
+              {(field) => (
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  maxLength={500}
+                  value={field.state.value ?? ""}
+                  onChange={(event) => field.handleChange(event.target.value)}
+                  onBlur={field.handleBlur}
+                />
+              )}
+            </form.Field>
           </Form.Group>
 
           <div className="row g-2 mb-2">
             <Form.Group className="col-md-4" controlId="composer-level">
               <Form.Label>{m.admin_composer_level_label()}</Form.Label>
-              <Form.Select
-                value={draft.level}
-                onChange={(event) =>
-                  setDraft({ ...draft, level: event.target.value as Draft["level"] })
-                }
-              >
-                <option value="info">{m.admin_announcement_level_info()}</option>
-                <option value="warning">{m.admin_announcement_level_warning()}</option>
-                <option value="urgent">{m.admin_announcement_level_urgent()}</option>
-              </Form.Select>
+              <form.Field name="level">
+                {(field) => (
+                  <Form.Select
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value as Draft["level"])}
+                    onBlur={field.handleBlur}
+                  >
+                    <option value="info">{m.admin_announcement_level_info()}</option>
+                    <option value="warning">{m.admin_announcement_level_warning()}</option>
+                    <option value="urgent">{m.admin_announcement_level_urgent()}</option>
+                  </Form.Select>
+                )}
+              </form.Field>
             </Form.Group>
             <Form.Group className="col-md-8" controlId="composer-link-url">
               <Form.Label>{m.admin_composer_link_url_label()}</Form.Label>
-              <Form.Control
-                type="url"
-                value={draft.link_url ?? ""}
-                onChange={(event) => setDraft({ ...draft, link_url: event.target.value })}
-                placeholder="https://…"
-              />
+              <form.Field name="link_url">
+                {(field) => (
+                  <Form.Control
+                    type="url"
+                    value={field.state.value ?? ""}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={field.handleBlur}
+                    placeholder="https://…"
+                  />
+                )}
+              </form.Field>
             </Form.Group>
           </div>
 
-          <div className="mb-3">
-            <Form.Label className="d-block">{m.admin_composer_channels_label()}</Form.Label>
-            <Form.Check
-              inline
-              type="checkbox"
-              id="composer-channel-announcement"
-              label={m.admin_composer_channel_announcement()}
-              checked={draft.channels.includes("announcement")}
-              onChange={() => toggleChannel("announcement")}
-            />
-            <Form.Check
-              inline
-              type="checkbox"
-              id="composer-channel-push"
-              label={m.admin_composer_channel_push()}
-              checked={draft.channels.includes("push")}
-              onChange={() => toggleChannel("push")}
-            />
-          </div>
+          <form.Field name="channels">
+            {(field) => (
+              <div className="mb-3">
+                <Form.Label className="d-block">{m.admin_composer_channels_label()}</Form.Label>
+                <Form.Check
+                  inline
+                  type="checkbox"
+                  id="composer-channel-announcement"
+                  label={m.admin_composer_channel_announcement()}
+                  checked={field.state.value.includes("announcement")}
+                  onChange={() =>
+                    field.handleChange(
+                      field.state.value.includes("announcement")
+                        ? field.state.value.filter((c) => c !== "announcement")
+                        : [...field.state.value, "announcement"],
+                    )
+                  }
+                />
+                <Form.Check
+                  inline
+                  type="checkbox"
+                  id="composer-channel-push"
+                  label={m.admin_composer_channel_push()}
+                  checked={field.state.value.includes("push")}
+                  onChange={() =>
+                    field.handleChange(
+                      field.state.value.includes("push")
+                        ? field.state.value.filter((c) => c !== "push")
+                        : [...field.state.value, "push"],
+                    )
+                  }
+                />
+              </div>
+            )}
+          </form.Field>
 
           <div className="d-flex gap-2">
             <Button
               type="submit"
               variant="warning"
-              disabled={draft.channels.length === 0 || save.isPending}
+              disabled={channels.length === 0 || save.isPending}
             >
               {editing ? m.admin_composer_save_button() : m.admin_composer_create_button()}
             </Button>
@@ -381,7 +439,7 @@ export default function ComposerManagement({
                 variant="outline-secondary"
                 onClick={() => {
                   setEditing(null);
-                  setDraft(emptyDraft);
+                  form.reset(emptyDraft);
                 }}
               >
                 {m.admin_composer_cancel_edit_button()}

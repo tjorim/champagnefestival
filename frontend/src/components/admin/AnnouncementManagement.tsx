@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -93,35 +94,80 @@ export default function AnnouncementManagement({
     },
   });
   const items = useMemo(() => query.data ?? [], [query.data]);
-  const [draft, setDraft] = useState<Draft>(empty);
   const [editing, setEditing] = useState<string | null>(null);
   const [preview, setPreview] = useState<"nl" | "en" | "fr">("nl");
   const [error, setError] = useState("");
   const { confirm, confirmDialog } = useConfirmDialog();
   const refresh = useCallback(() => client.invalidateQueries({ queryKey: key }), [client, key]);
   const save = useMutation({
-    mutationFn: () =>
+    mutationFn: (payload: Draft) =>
       fetchJsonOrThrowWithUnauthorized(
         `/api/announcements${editing ? `/${editing}` : ""}`,
         {
           method: editing ? "PUT" : "POST",
           headers: authHeaders(),
           body: JSON.stringify({
-            ...writePayload(draft),
-            starts_at: iso(draft.starts_at),
-            ends_at: iso(draft.ends_at),
-            link_url: draft.link_url || null,
+            ...writePayload(payload),
+            starts_at: iso(payload.starts_at),
+            ends_at: iso(payload.ends_at),
+            link_url: payload.link_url || null,
           }),
         },
         m.admin_error_save_announcement(),
       ),
     onSuccess: () => {
-      setDraft(empty);
+      form.reset(empty);
       setEditing(null);
       void refresh();
     },
     retry: false,
   });
+
+  const editingItem = editing ? (items.find((i) => i.id === editing) ?? null) : null;
+
+  // Derived rather than a static template: `useForm` re-applies `defaultValues`
+  // on every render, so a template that disagrees with what `form.reset(record)`
+  // stored gets re-applied and blanks the form. See EditionModal for the details.
+  const formDefaultValues = useMemo(
+    (): Draft =>
+      editingItem
+        ? {
+            text_nl: editingItem.text_nl,
+            text_en: editingItem.text_en,
+            text_fr: editingItem.text_fr,
+            level: editingItem.level,
+            active: editingItem.active,
+            starts_at: localDate(editingItem.starts_at),
+            ends_at: localDate(editingItem.ends_at),
+            link_url: editingItem.link_url,
+            link_label_nl: editingItem.link_label_nl,
+            link_label_en: editingItem.link_label_en,
+            link_label_fr: editingItem.link_label_fr,
+          }
+        : empty,
+    [editingItem],
+  );
+
+  const form = useForm({
+    defaultValues: formDefaultValues,
+    onSubmit: async ({ value }) => {
+      setError("");
+      try {
+        await save.mutateAsync(value);
+      } catch (reason) {
+        setError(String(reason));
+      }
+    },
+  });
+
+  // Seed the form when entering edit mode. Reset during render (the
+  // "adjusting state when a prop changes" pattern) since this only needs to
+  // react to `editing` changing to a specific item, not to every render.
+  const [lastEditing, setLastEditing] = useState(editing);
+  if (editing !== lastEditing) {
+    setLastEditing(editing);
+    if (editing) form.reset(formDefaultValues);
+  }
   const remove = useMutation({
     mutationFn: (id: string) =>
       fetchVoidOrThrowWithUnauthorized(
@@ -272,17 +318,7 @@ export default function AnnouncementManagement({
             const item = row.original;
             return (
               <>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    setEditing(item.id);
-                    setDraft({
-                      ...item,
-                      starts_at: localDate(item.starts_at),
-                      ends_at: localDate(item.ends_at),
-                    });
-                  }}
-                >
+                <Button size="sm" onClick={() => setEditing(item.id)}>
                   {m.admin_edit()}
                 </Button>{" "}
                 <Button
@@ -306,7 +342,7 @@ export default function AnnouncementManagement({
           },
         }),
       ]),
-    [items, preview, move, update, refresh, handleDelete, setEditing, setDraft, setError],
+    [items, preview, move, update, refresh, handleDelete],
   );
 
   const table = useAppTable({ data: items, columns, getRowId: (row) => row.id }, () => ({}));
@@ -321,8 +357,7 @@ export default function AnnouncementManagement({
         <Form
           onSubmit={(event) => {
             event.preventDefault();
-            setError("");
-            void save.mutateAsync().catch((reason) => setError(String(reason)));
+            void form.handleSubmit();
           }}
         >
           <div className="row g-2">
@@ -331,53 +366,74 @@ export default function AnnouncementManagement({
                 <Form.Label>
                   {m.admin_announcement_text_label({ locale: locale.toUpperCase() })}
                 </Form.Label>
-                <Form.Control
-                  maxLength={500}
-                  value={draft[`text_${locale}`] ?? ""}
-                  onChange={(event) =>
-                    setDraft({ ...draft, [`text_${locale}`]: event.target.value })
-                  }
-                />
+                <form.Field name={`text_${locale}`}>
+                  {(field) => (
+                    <Form.Control
+                      maxLength={500}
+                      value={field.state.value ?? ""}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                  )}
+                </form.Field>
               </Form.Group>
             ))}
           </div>
           <div className="row g-2 mt-1">
             <Form.Group className="col-md-3">
               <Form.Label>{m.admin_announcement_level_label()}</Form.Label>
-              <Form.Select
-                value={draft.level}
-                onChange={(event) =>
-                  setDraft({ ...draft, level: event.target.value as Draft["level"] })
-                }
-              >
-                <option value="info">{m.admin_announcement_level_info()}</option>
-                <option value="warning">{m.admin_announcement_level_warning()}</option>
-                <option value="urgent">{m.admin_announcement_level_urgent()}</option>
-              </Form.Select>
+              <form.Field name="level">
+                {(field) => (
+                  <Form.Select
+                    value={field.state.value}
+                    onChange={(event) => field.handleChange(event.target.value as Draft["level"])}
+                    onBlur={field.handleBlur}
+                  >
+                    <option value="info">{m.admin_announcement_level_info()}</option>
+                    <option value="warning">{m.admin_announcement_level_warning()}</option>
+                    <option value="urgent">{m.admin_announcement_level_urgent()}</option>
+                  </Form.Select>
+                )}
+              </form.Field>
             </Form.Group>
             <Form.Group className="col-md-3">
               <Form.Label>{m.admin_announcement_starts_label()}</Form.Label>
-              <Form.Control
-                type="datetime-local"
-                value={localDate(draft.starts_at)}
-                onChange={(event) => setDraft({ ...draft, starts_at: event.target.value || null })}
-              />
+              <form.Field name="starts_at">
+                {(field) => (
+                  <Form.Control
+                    type="datetime-local"
+                    value={localDate(field.state.value)}
+                    onChange={(event) => field.handleChange(event.target.value || null)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
             </Form.Group>
             <Form.Group className="col-md-3">
               <Form.Label>{m.admin_announcement_ends_label()}</Form.Label>
-              <Form.Control
-                type="datetime-local"
-                value={localDate(draft.ends_at)}
-                onChange={(event) => setDraft({ ...draft, ends_at: event.target.value || null })}
-              />
+              <form.Field name="ends_at">
+                {(field) => (
+                  <Form.Control
+                    type="datetime-local"
+                    value={localDate(field.state.value)}
+                    onChange={(event) => field.handleChange(event.target.value || null)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
             </Form.Group>
             <Form.Group className="col-md-3">
               <Form.Label>{m.admin_announcement_link_url_label()}</Form.Label>
-              <Form.Control
-                type="url"
-                value={draft.link_url ?? ""}
-                onChange={(event) => setDraft({ ...draft, link_url: event.target.value })}
-              />
+              <form.Field name="link_url">
+                {(field) => (
+                  <Form.Control
+                    type="url"
+                    value={field.state.value ?? ""}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
             </Form.Group>
           </div>
           <div className="row g-2 mt-1">
@@ -386,21 +442,28 @@ export default function AnnouncementManagement({
                 <Form.Label>
                   {m.admin_announcement_link_label_field({ locale: locale.toUpperCase() })}
                 </Form.Label>
-                <Form.Control
-                  value={draft[`link_label_${locale}`] ?? ""}
-                  onChange={(event) =>
-                    setDraft({ ...draft, [`link_label_${locale}`]: event.target.value })
-                  }
-                />
+                <form.Field name={`link_label_${locale}`}>
+                  {(field) => (
+                    <Form.Control
+                      value={field.state.value ?? ""}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                  )}
+                </form.Field>
               </Form.Group>
             ))}
           </div>
-          <Form.Check
-            className="mt-3"
-            label={m.admin_announcement_publish_immediately()}
-            checked={draft.active}
-            onChange={(event) => setDraft({ ...draft, active: event.target.checked })}
-          />
+          <form.Field name="active">
+            {(field) => (
+              <Form.Check
+                className="mt-3"
+                label={m.admin_announcement_publish_immediately()}
+                checked={field.state.value}
+                onChange={(event) => field.handleChange(event.target.checked)}
+              />
+            )}
+          </form.Field>
           <div className="d-flex gap-2 mt-3">
             <Button type="submit" disabled={save.isPending}>
               {editing ? m.admin_save() : m.admin_create_action()}
@@ -410,7 +473,7 @@ export default function AnnouncementManagement({
                 variant="secondary"
                 onClick={() => {
                   setEditing(null);
-                  setDraft(empty);
+                  form.reset(empty);
                 }}
               >
                 {m.admin_action_cancel()}
