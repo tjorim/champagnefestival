@@ -84,3 +84,12 @@ button.announcement-ticker__item-content:focus-visible {
     display: none;
   }
 }
+
+.announcement-dialog-item {
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  margin-bottom: 0.75rem;
+}
+.announcement-dialog-item:last-child {
+  margin-bottom: 0;
+}

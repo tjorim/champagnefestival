@@ -44,7 +44,7 @@ describe("AnnouncementBanner", () => {
     expect(screen.getByRole("alert")).toHaveAttribute("aria-live", "assertive");
   });
 
-  it("opens a modal with the full text and link when a ticker item is clicked", async () => {
+  it("opens an overview of every active announcement, whichever item is clicked", async () => {
     const user = userEvent.setup();
     renderBanner([
       {
@@ -54,11 +54,15 @@ describe("AnnouncementBanner", () => {
         link_url: "https://example.com/map",
         link_label: "View map",
       },
+      { id: "two", text: "Festival closing", level: "urgent", link_url: null, link_label: null },
     ]);
-    const button = await screen.findByRole("button", { name: "Entrance changed" });
+    // Click the urgent item specifically — the overview it opens must still
+    // include the other (warning) announcement, not just this one.
+    const button = await screen.findByRole("button", { name: /Festival closing/ });
     await user.click(button);
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Entrance changed");
+    expect(dialog).toHaveTextContent("Festival closing");
     expect(screen.getByRole("button", { name: "View map" })).toHaveAttribute(
       "href",
       "https://example.com/map",

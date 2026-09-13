@@ -30,7 +30,7 @@ export default function AnnouncementBanner() {
     staleTime: 60_000,
     refetchInterval: 60_000,
   });
-  const [selected, setSelected] = useState<PublicAnnouncement | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const titleId = useId();
   if (!data.length) return null;
 
@@ -59,9 +59,10 @@ export default function AnnouncementBanner() {
                   <button
                     type="button"
                     className="announcement-ticker__item-content"
-                    onClick={() => setSelected(item)}
+                    onClick={() => setDetailsOpen(true)}
                   >
                     {item.text}
+                    <span className="visually-hidden"> — {m.announcement_ticker_item_hint()}</span>
                   </button>
                 ) : (
                   <span className="announcement-ticker__item-content">{item.text}</span>
@@ -72,8 +73,8 @@ export default function AnnouncementBanner() {
         </div>
       </div>
       <Modal
-        show={selected != null}
-        onHide={() => setSelected(null)}
+        show={detailsOpen}
+        onHide={() => setDetailsOpen(false)}
         aria-labelledby={titleId}
         centered
       >
@@ -81,12 +82,18 @@ export default function AnnouncementBanner() {
           <Modal.Title id={titleId}>{m.announcement_dialog_title()}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <p>{selected?.text}</p>
-          {selected?.link_url && selected.link_label && (
-            <Button href={selected.link_url} variant="primary">
-              {selected.link_label}
-            </Button>
-          )}
+          <ul className="announcement-dialog-list list-unstyled mb-0">
+            {data.map((item) => (
+              <li key={item.id} className={`announcement-dialog-item announcement-${item.level}`}>
+                <p className="mb-2">{item.text}</p>
+                {item.link_url && item.link_label && (
+                  <Button href={item.link_url} variant="primary" size="sm">
+                    {item.link_label}
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
         </Modal.Body>
       </Modal>
     </>
