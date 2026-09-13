@@ -21,6 +21,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      target: api
     ports:
       - "8000:8000"
     environment:
@@ -48,6 +49,7 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+      target: worker
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@db:5432/champagne
       ENVIRONMENT: development
@@ -59,7 +61,6 @@ services:
       - ./backend:/app
       - worker_venv:/app/.venv
       - ./VERSION:/app/VERSION:ro
-    command: python -m app.worker
 
 volumes:
   postgres_data:

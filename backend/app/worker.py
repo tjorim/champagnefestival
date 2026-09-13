@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 from app.composer_delivery import COMPOSER_MESSAGE_PUSH, deliver_composer_message_dispatch, deliver_composer_push
 from app.config import settings
@@ -24,6 +25,12 @@ from app.visitor_session import cleanup_expired_magic_links, cleanup_expired_ses
 
 logger = logging.getLogger(__name__)
 
+# The worker has no HTTP listener, so Docker's HEALTHCHECK (see backend/Dockerfile's
+# worker target) checks liveness by this file's mtime instead of a request. Keep the
+# staleness threshold there in sync with HEARTBEAT_STALE_SECONDS below.
+HEARTBEAT_PATH = Path("/tmp/worker-heartbeat")
+HEARTBEAT_STALE_SECONDS = 600
+
 
 async def run() -> None:
     handlers = {
@@ -35,6 +42,7 @@ async def run() -> None:
     }
     next_cleanup = datetime.now(UTC)
     while True:
+        HEARTBEAT_PATH.touch()
         if datetime.now(UTC) >= next_cleanup:
             async with async_session_factory() as db:
                 deleted = await cleanup_completed_jobs(db, retention_days=settings.outbox_retention_days)
