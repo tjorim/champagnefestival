@@ -1,13 +1,16 @@
+/* Flat fills — these exact colors are also the gradient endpoints for
+   .announcement-ticker__seam in AnnouncementBanner.tsx (LEVEL_COLOR), so a
+   seam meets each item's own background with no visible discontinuity. */
 .announcement-info {
-  background: linear-gradient(135deg, #dcf0fa 0%, #b8def5 100%);
+  background: #d9edf7;
   color: #123f52;
 }
 .announcement-warning {
-  background: linear-gradient(135deg, #fff3c4 0%, #ffe28a 100%);
+  background: #fff0bf;
   color: #513d00;
 }
 .announcement-urgent {
-  background: linear-gradient(135deg, #c22239 0%, #7a0f1d 100%);
+  background: #a9192b;
   color: #fff;
 }
 
@@ -31,6 +34,13 @@
   align-items: center;
   flex-shrink: 0;
   font-weight: 600;
+}
+/* The blended transition between two adjacent announcements — its gradient
+   colors come from AnnouncementBanner.tsx (LEVEL_COLOR) via an inline style. */
+.announcement-ticker__seam {
+  flex-shrink: 0;
+  align-self: stretch;
+  width: 2.5rem;
 }
 /* Shared by the clickable visible copy (<button>) and the aria-hidden
    duplicate (<span>) so both halves of the scroll loop have identical
@@ -81,6 +91,9 @@ button.announcement-ticker__item-content:focus-visible {
     text-align: center;
   }
   .announcement-ticker__item[aria-hidden="true"] {
+    display: none;
+  }
+  .announcement-ticker__seam {
     display: none;
   }
 }
