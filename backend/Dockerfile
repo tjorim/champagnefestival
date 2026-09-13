@@ -39,9 +39,13 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # ── worker target ─────────────────────────────────────────────────────────────
-# Runs the durable outbox worker. It exposes no HTTP server, so it
-# intentionally has no HEALTHCHECK — see docker-compose.yml / infra compose
-# for how liveness is instead handled via Compose restart-on-exit.
+# Runs the durable outbox worker. It exposes no HTTP server, so liveness is
+# checked via a heartbeat file the worker's loop touches each pass (see
+# app/worker.py) rather than an HTTP probe. Keep the staleness threshold below
+# in sync with HEARTBEAT_STALE_SECONDS there.
 FROM runtime AS worker
+
+HEALTHCHECK --interval=60s --timeout=5s --start-period=30s --retries=3 \
+    CMD python -c "import pathlib, sys, time; p = pathlib.Path('/tmp/worker-heartbeat'); sys.exit(0 if p.exists() and time.time() - p.stat().st_mtime < 600 else 1)"
 
 CMD ["python", "-m", "app.worker"]
