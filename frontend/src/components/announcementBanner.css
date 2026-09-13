@@ -40,7 +40,7 @@
 .announcement-ticker__seam {
   flex-shrink: 0;
   align-self: stretch;
-  width: 2.5rem;
+  width: 5rem;
 }
 /* Shared by the clickable visible copy (<button>) and the aria-hidden
    duplicate (<span>) so both halves of the scroll loop have identical
