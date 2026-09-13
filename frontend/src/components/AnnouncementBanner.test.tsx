@@ -20,13 +20,19 @@ function renderBanner(items: object[]) {
 }
 
 describe("AnnouncementBanner", () => {
-  it("renders ordinary announcements as static, non-live text", async () => {
+  it("renders info/warning announcements in a pausable ticker", async () => {
     const view = renderBanner([
       { id: "one", text: "Entrance changed", level: "info", link_url: null, link_label: null },
     ]);
-    await screen.findByText("Entrance changed");
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Entrance changed"));
     expect(screen.getByRole("status")).toHaveAttribute("aria-live", "off");
-    expect(view.container.querySelector("[aria-pressed]")).toBeNull();
+    const ticker = view.container.querySelector<HTMLElement>(".announcement-ticker");
+    expect(ticker?.tabIndex).toBe(0);
+    // Content is duplicated for a seamless scroll loop; the second copy must
+    // be hidden from assistive tech so it isn't announced twice.
+    const items = view.container.querySelectorAll(".announcement-ticker__item");
+    expect(items).toHaveLength(2);
+    expect(items[1]).toHaveAttribute("aria-hidden", "true");
   });
 
   it("announces an urgent message once with an alert live region", async () => {

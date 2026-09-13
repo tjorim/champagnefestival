@@ -29,3 +29,63 @@
     transform: none !important;
   }
 }
+
+.announcement-ticker {
+  position: relative;
+  z-index: 20;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.announcement-ticker:focus-visible {
+  outline-offset: -2px;
+}
+.announcement-ticker__track {
+  display: inline-flex;
+  width: max-content;
+  animation: announcement-ticker-scroll 35s linear infinite;
+}
+.announcement-ticker:hover .announcement-ticker__track,
+.announcement-ticker:focus-within .announcement-ticker__track {
+  animation-play-state: paused;
+}
+.announcement-ticker__item {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0.75rem 2.5rem;
+  font-weight: 600;
+}
+.announcement-ticker__item a {
+  color: inherit;
+  margin-inline-start: 0.4rem;
+}
+@keyframes announcement-ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .announcement-ticker {
+    overflow: visible;
+    white-space: normal;
+  }
+  .announcement-ticker__track {
+    display: flex;
+    flex-direction: column;
+    width: auto;
+    animation: none;
+    transform: none;
+  }
+  .announcement-ticker__item {
+    flex-shrink: 1;
+    text-align: center;
+    justify-content: center;
+    padding: 0.75rem 1rem;
+  }
+  .announcement-ticker__item[aria-hidden="true"] {
+    display: none;
+  }
+}
