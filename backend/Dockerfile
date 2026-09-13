@@ -8,7 +8,9 @@ COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # ── runtime stage ─────────────────────────────────────────────────────────────
-FROM python:3.14-slim
+# Shared base for the api and worker targets below — neither the HTTP
+# healthcheck nor a command belongs here since only api exposes a port.
+FROM python:3.14-slim AS runtime
 
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
@@ -26,9 +28,20 @@ RUN groupadd --gid 1000 appgroup \
 
 USER appuser
 
+# ── api target ────────────────────────────────────────────────────────────────
+FROM runtime AS api
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# ── worker target ─────────────────────────────────────────────────────────────
+# Runs the durable outbox worker. It exposes no HTTP server, so it
+# intentionally has no HEALTHCHECK — see docker-compose.yml / infra compose
+# for how liveness is instead handled via Compose restart-on-exit.
+FROM runtime AS worker
+
+CMD ["python", "-m", "app.worker"]
