@@ -933,6 +933,7 @@
   "my_eid_load_error": "Kon je vrijwilligersgegevens niet laden. Probeer opnieuw.",
   "admin_email_copy_failed": "Kopiëren naar het klembord is mislukt. Selecteer en kopieer de ontvanger, het onderwerp en het bericht hierboven handmatig.",
   "announcements_accessible_label": "Operationele mededelingen",
+  "announcement_dialog_title": "Mededeling",
   "admin_announcements_section": "Mededelingen",
   "admin_policies_section": "Juridisch beleid",
   "admin_faq_delete_title": "Vraag verwijderen",

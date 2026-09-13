@@ -1,12 +1,3 @@
-.announcement-stack {
-  position: relative;
-  z-index: 20;
-}
-.announcement-banner {
-  padding: 0.75rem 3rem 0.75rem 1rem;
-  text-align: center;
-  font-weight: 600;
-}
 .announcement-info {
   background: #d9edf7;
   color: #123f52;
@@ -19,25 +10,12 @@
   background: #a9192b;
   color: #fff;
 }
-.announcement-banner a {
-  color: inherit;
-  margin-inline-start: 0.4rem;
-}
-@media (prefers-reduced-motion: reduce) {
-  .announcement-banner {
-    animation: none !important;
-    transform: none !important;
-  }
-}
 
 .announcement-ticker {
   position: relative;
   z-index: 20;
   overflow: hidden;
   white-space: nowrap;
-}
-.announcement-ticker:focus-visible {
-  outline-offset: -2px;
 }
 .announcement-ticker__track {
   display: inline-flex;
@@ -52,12 +30,26 @@
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 0.75rem 2.5rem;
   font-weight: 600;
 }
-.announcement-ticker__item a {
+/* Shared by the clickable visible copy (<button>) and the aria-hidden
+   duplicate (<span>) so both halves of the scroll loop have identical
+   width — only the interactive affordances differ between them. */
+.announcement-ticker__item-content {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.75rem 2.5rem;
+  font: inherit;
   color: inherit;
-  margin-inline-start: 0.4rem;
+  background: none;
+  border: 0;
+}
+button.announcement-ticker__item-content {
+  cursor: pointer;
+}
+button.announcement-ticker__item-content:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
 }
 @keyframes announcement-ticker-scroll {
   from {
@@ -81,9 +73,12 @@
   }
   .announcement-ticker__item {
     flex-shrink: 1;
-    text-align: center;
     justify-content: center;
-    padding: 0.75rem 1rem;
+  }
+  .announcement-ticker__item-content {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
   }
   .announcement-ticker__item[aria-hidden="true"] {
     display: none;

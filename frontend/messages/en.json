@@ -933,6 +933,7 @@
   "my_eid_load_error": "Could not load your volunteer identity. Please try again.",
   "admin_email_copy_failed": "Clipboard access failed. Select and copy the recipient, subject, and message above manually.",
   "announcements_accessible_label": "Operational announcements",
+  "announcement_dialog_title": "Announcement",
   "admin_announcements_section": "Announcements",
   "admin_policies_section": "Legal Policies",
   "admin_faq_delete_title": "Delete question",
