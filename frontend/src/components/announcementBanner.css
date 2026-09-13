@@ -1,13 +1,13 @@
 .announcement-info {
-  background: #d9edf7;
+  background: linear-gradient(135deg, #dcf0fa 0%, #b8def5 100%);
   color: #123f52;
 }
 .announcement-warning {
-  background: #fff0bf;
+  background: linear-gradient(135deg, #fff3c4 0%, #ffe28a 100%);
   color: #513d00;
 }
 .announcement-urgent {
-  background: #a9192b;
+  background: linear-gradient(135deg, #c22239 0%, #7a0f1d 100%);
   color: #fff;
 }
 
