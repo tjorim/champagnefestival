@@ -1,4 +1,4 @@
-"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, a short product description, the append-only payment transaction ledger, a single purchasable flag covering both standalone product availability and visitor visibility, an OIDC-authenticated volunteer's link to their own Person record (#1006), dropping the retired reservation_access_tokens claim-token table (#1044), dropping the redundant events.max_capacity headcount cap in favour of the required product's own stock as the sole capacity signal, and admin-configured per-edition volunteer meal/dinner poll options with each volunteer's own picks.
+"""Persist Phase 1 operations, remove stale table reservation data, add versioned policy publishing, marketing opt-in consent fields, cross-worker rate-limit buckets, visitor passwordless sessions, Web Push subscriptions, the central composer for announcements/push, booking product inventory/packages with consolidated notes, a short product description, the append-only payment transaction ledger, a single purchasable flag covering both standalone product availability and visitor visibility, an OIDC-authenticated volunteer's link to their own Person record (#1006), dropping the retired reservation_access_tokens claim-token table (#1044), dropping the redundant events.max_capacity headcount cap in favour of the required product's own stock as the sole capacity signal, admin-configured per-edition volunteer meal/dinner poll options with each volunteer's own picks, and a per-product visitor waitlist.
 
 None of this had shipped in a release as of when it was squashed into one
 revision (formerly split across 001/002/003) — 000 is the only migration a
@@ -592,8 +592,31 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
     )
 
+    # A visitor's request to be contacted if a sold-out product frees up.
+    # Scoped to the product (not the event) since capacity now lives
+    # entirely on Product.stock.
+    op.create_table(
+        "waitlist_entries",
+        sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("product_id", sa.String(64), sa.ForeignKey("products.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("name", sa.String(200), nullable=False),
+        sa.Column("email", sa.String(320), nullable=False),
+        sa.Column("phone", sa.String(30), nullable=True),
+        sa.Column("guest_count", sa.Integer(), nullable=False, server_default="1"),
+        sa.Column("notes", sa.Text(), nullable=False, server_default=""),
+        sa.Column("client_ip", sa.String(45), nullable=False),
+        sa.Column("request_id", sa.String(64), nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("handled_at", sa.DateTime(timezone=True), nullable=True),
+    )
+    op.create_index("ix_waitlist_entries_product_id", "waitlist_entries", ["product_id"])
+    op.create_index("ix_waitlist_entries_created_at", "waitlist_entries", ["created_at"])
+
 
 def downgrade() -> None:
+    op.drop_index("ix_waitlist_entries_created_at", table_name="waitlist_entries")
+    op.drop_index("ix_waitlist_entries_product_id", table_name="waitlist_entries")
+    op.drop_table("waitlist_entries")
     op.drop_table("volunteer_poll_selections")
     op.drop_index("ix_edition_poll_options_edition_id", table_name="edition_poll_options")
     op.drop_table("edition_poll_options")

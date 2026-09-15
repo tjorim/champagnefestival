@@ -33,6 +33,11 @@ vi.mock("@/paraglide/messages", () => ({
     registration_order_included_note: ({ count, source }: { count: number; source: string }) =>
       `Includes ${count} free with your ${source}`,
     registration_order_sold_out: () => "Sold out",
+    registration_waitlist_join: () => "Join waitlist",
+    registration_waitlist_joined: () => "You're on the waitlist",
+    registration_waitlist_needs_contact_info: () =>
+      "Please fill in your name and a valid email above first.",
+    registration_waitlist_error: () => "Could not join the waitlist. Please try again.",
     registration_notes: () => "Notes",
     registration_notes_placeholder: () => "Any special requests...",
     registration_submit: () => "Place Registration",
@@ -248,6 +253,43 @@ describe("RegistrationModal component", () => {
       name: /Increase quantity of Champagne Bottle \(Standard\)/i,
     });
     expect(increaseButton).toBeDisabled();
+  });
+
+  it("requires a name and valid email before joining the waitlist for a sold-out product", () => {
+    const soldOutProduct: Product = { ...champagneProduct, soldOut: true };
+    renderModal({ event: { ...vipEvent, products: [soldOutProduct] } });
+
+    fireEvent.click(screen.getByRole("button", { name: "Join waitlist" }));
+
+    expect(
+      screen.getByText("Please fill in your name and a valid email above first."),
+    ).toBeInTheDocument();
+  });
+
+  it("joins the waitlist for a sold-out product once contact details are filled in", async () => {
+    let submittedBody: Record<string, unknown> | null = null;
+    server.use(
+      http.post("/api/waitlist", async ({ request }) => {
+        submittedBody = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+
+    const soldOutProduct: Product = { ...champagneProduct, soldOut: true };
+    renderModal({ event: { ...vipEvent, products: [soldOutProduct] } });
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Nancy Cattrysse" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), {
+      target: { value: "nancy@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Join waitlist" }));
+
+    expect(await screen.findByText("You're on the waitlist")).toBeInTheDocument();
+    expect(submittedBody).toMatchObject({
+      product_id: "champagne-standard",
+      name: "Nancy Cattrysse",
+      email: "nancy@example.com",
+    });
   });
 
   it("shows order products for a non-vip category, as long as it has products", () => {

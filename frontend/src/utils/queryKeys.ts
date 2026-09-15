@@ -113,6 +113,7 @@ export const queryKeys = {
     policy: (policyKey: string) => ["admin", "policies", policyKey] as const,
     settings: ["admin", "settings"] as const,
     contactMessages: ["admin", "contact-messages"] as const,
+    waitlistEntries: ["admin", "waitlist-entries"] as const,
     contentManagement: {
       section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,
       editions: ["admin", "content-management", "editions"] as const,

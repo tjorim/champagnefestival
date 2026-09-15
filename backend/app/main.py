@@ -53,6 +53,7 @@ from app.routers import (
     volunteer_ops,
     volunteer_self,
     volunteers,
+    waitlist,
 )
 from app.routers import (
     settings as settings_router,
@@ -186,6 +187,7 @@ app.include_router(events.router)
 app.include_router(check_in.router)
 app.include_router(composer.router)
 app.include_router(contact.router)
+app.include_router(waitlist.router)
 app.include_router(outbox.router)
 app.include_router(tables.router)
 app.include_router(table_types.router)
