@@ -7,6 +7,7 @@ vi.mock("@/paraglide/messages", () => ({
   m: {
     admin_title: () => "Administration",
     admin_registrations_tab: () => "Registrations",
+    admin_waitlist_section: () => "Waitlist",
     admin_events_group: () => "Events",
     admin_content_editions_section: () => "Editions",
     admin_content_tab: () => "Content",
@@ -75,6 +76,7 @@ describe("AdminSidebar", () => {
         .map((button) => button.textContent),
     ).toEqual([
       "Registrations2",
+      "Waitlist",
       "Events",
       "Editions",
       "Content",
@@ -104,7 +106,7 @@ describe("AdminSidebar", () => {
       within(navigation)
         .getAllByRole("button")
         .map((button) => button.textContent),
-    ).toEqual(["Registrations2"]);
+    ).toEqual(["Registrations2", "Waitlist"]);
   });
 
   it("selects a leaf destination directly from the sidebar", () => {

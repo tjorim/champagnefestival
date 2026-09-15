@@ -10,7 +10,6 @@ from app.main import app
 from app.models import OutboxJob, Person, Registration, User
 from tests.helpers import (
     ADMIN_HEADERS,
-    VALID_RESERVATION,
     VENUE_PAYLOAD,
     _create_event,
     _post_registration,
@@ -110,30 +109,6 @@ async def test_create_reservation_rejects_registrations_before_opening(client):
 
 
 @pytest.mark.anyio
-async def test_create_reservation_rejects_fully_booked_event(client):
-    event = await _create_event(client, max_capacity=2)
-
-    first = await client.post(
-        "/api/registrations",
-        json={**VALID_RESERVATION, "event_id": event["id"], "guest_count": 2},
-    )
-    assert first.status_code == 201
-
-    second = await client.post(
-        "/api/registrations",
-        json={
-            **VALID_RESERVATION,
-            "event_id": event["id"],
-            "email": "other@example.com",
-            "phone": "+32499000001",
-        },
-    )
-
-    assert second.status_code == 400
-    assert second.json()["detail"] == "This event is fully booked."
-
-
-@pytest.mark.anyio
 async def test_create_reservation_rejects_inactive_event(client):
     event = await _create_event(client, event_active=False)
 
@@ -180,10 +155,7 @@ async def test_event_rejects_registration_window_without_registration_required(c
     )
 
     assert r.status_code == 400
-    assert (
-        r.json()["detail"]
-        == "registrations_open_from and max_capacity may only be set when registration_required is true."
-    )
+    assert r.json()["detail"] == "registrations_open_from may only be set when registration_required is true."
 
 
 @pytest.mark.anyio

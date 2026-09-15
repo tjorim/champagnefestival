@@ -518,3 +518,38 @@ export async function submitRegistration(
   if (typeof data.id !== "string") throw new RegistrationSubmitError(m.registration_error());
   return { id: data.id };
 }
+
+export interface WaitlistJoinPayload {
+  productId: string;
+  name: string;
+  email: string;
+  phone: string;
+  guestCount: number;
+  notes: string;
+}
+
+/** Ask to be contacted if a sold-out product frees up (POST /api/waitlist). */
+export async function submitWaitlistEntry(
+  payload: WaitlistJoinPayload,
+  submissionId: string,
+): Promise<void> {
+  const response = await fetch("/api/waitlist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      submission_id: submissionId,
+      product_id: payload.productId,
+      name: payload.name,
+      email: payload.email,
+      phone: payload.phone || null,
+      guest_count: payload.guestCount,
+      notes: payload.notes,
+    }),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new RegistrationSubmitError(
+      (data as { detail?: string }).detail ?? m.registration_waitlist_error(),
+    );
+  }
+}

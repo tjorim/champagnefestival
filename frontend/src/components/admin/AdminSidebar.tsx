@@ -158,6 +158,13 @@ export default function AdminSidebar({
             {...itemProps}
           />
 
+          <SidebarItem
+            itemKey="waitlist"
+            icon="bi-hourglass-split"
+            label={m.admin_waitlist_section()}
+            {...itemProps}
+          />
+
           {canManageAdminSections && (
             <>
               <SidebarGroup

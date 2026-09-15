@@ -231,7 +231,6 @@ class EventCreate(RequestModel):
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
-    max_capacity: int | None = Field(default=None, ge=1)
     active: bool = True
 
 
@@ -246,7 +245,6 @@ class EventUpdate(RequestModel):
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
-    max_capacity: int | None = Field(default=None, ge=1)
     active: bool | None = None
 
 
@@ -262,7 +260,6 @@ class EventOut(BaseModel):
     registration_required: bool
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None
-    max_capacity: int | None
     active: bool
     edition: EditionSummaryOut | None = None
     products: list[ProductOut] = Field(default_factory=list)
@@ -288,7 +285,6 @@ class EventPublicOut(BaseModel):
     registration_required: bool
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None
-    max_capacity: int | None
     active: bool
     products: list[ProductPublicOut] = Field(default_factory=list)
     created_at: datetime
@@ -855,6 +851,62 @@ class VolunteerListEnvelope(BaseModel):
     total: int
     limit: int
     page: int
+
+
+# ---------------------------------------------------------------------------
+# Volunteer meal/dinner poll
+# ---------------------------------------------------------------------------
+
+PollOptionKind = Literal["dish", "soup", "dinner"]
+
+
+class PollOptionCreate(RequestModel):
+    edition_id: str = Field(min_length=1, max_length=100)
+    kind: PollOptionKind
+    label: str = Field(min_length=1, max_length=200)
+
+
+class PollOptionUpdate(RequestModel):
+    label: str = Field(min_length=1, max_length=200)
+
+
+class PollOptionOut(BaseModel):
+    id: str
+    edition_id: str
+    kind: str
+    label: str
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class VolunteerPollSelectionsIn(RequestModel):
+    """A volunteer's full set of picks, replacing whatever they had before.
+
+    Safe to wholesale-replace (unlike `EditionPollOption` itself): every row
+    touched is keyed by this one volunteer's own id, so replacing never
+    affects another volunteer's picks or the options themselves.
+    """
+
+    dish_option_id: str | None = None
+    soup_option_id: str | None = None
+    dinner_option_ids: list[str] = Field(default_factory=list, max_length=50)
+
+
+class VolunteerPollSelectionsOut(BaseModel):
+    dish_option_id: str | None
+    soup_option_id: str | None
+    dinner_option_ids: list[str]
+
+
+class VolunteerPollOptionsOut(BaseModel):
+    """What a volunteer sees: the active festival edition's options (empty if
+    none), grouped by kind, plus their own current selections."""
+
+    edition_id: str | None
+    options: list[PollOptionOut]
+    selections: VolunteerPollSelectionsOut
 
 
 # ---------------------------------------------------------------------------

@@ -14,6 +14,7 @@ import {
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
 import EditionModal from "./EditionModal";
+import EditionPollOptionsModal from "./EditionPollOptionsModal";
 import EventModal from "./EventModal";
 import EventProductsModal from "./EventProductsModal";
 import { parseEditionDate, type Edition } from "./editionTypes";
@@ -59,6 +60,7 @@ export default function EditionCard({
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [productsModalOpen, setProductsModalOpen] = useState(false);
   const [productsEvent, setProductsEvent] = useState<Event | null>(null);
+  const [pollOptionsModalOpen, setPollOptionsModalOpen] = useState(false);
   const editionEventsQueryKey = queryKeys.admin.editionEvents(edition.id);
 
   const eventsQuery = useQuery({
@@ -236,6 +238,15 @@ export default function EditionCard({
             <Button
               size="sm"
               variant="outline-secondary"
+              onClick={() => setPollOptionsModalOpen(true)}
+              aria-label={`${m.admin_poll_kind_dish()} / ${m.admin_poll_kind_soup()} / ${m.admin_poll_kind_dinner()} — ${edition.id}`}
+              title={m.admin_poll_modal_title({ edition: edition.id })}
+            >
+              <i className="bi bi-cup-hot" aria-hidden="true" />
+            </Button>
+            <Button
+              size="sm"
+              variant="outline-secondary"
               onClick={() => setEditionModalOpen(true)}
               aria-label={`${m.admin_edit()} ${edition.id}`}
             >
@@ -310,11 +321,6 @@ export default function EditionCard({
                         {m.schedule_registration()}
                       </Badge>
                     )}
-                    {event.maxCapacity !== undefined && (
-                      <Badge bg="secondary" className="fs-3xs">
-                        Cap {event.maxCapacity}
-                      </Badge>
-                    )}
                   </span>
                   <span className="d-flex gap-1 flex-shrink-0">
                     <Button
@@ -374,6 +380,12 @@ export default function EditionCard({
         authHeaders={authHeaders}
         onHide={() => setProductsModalOpen(false)}
         onProductsChanged={() => queryClient.invalidateQueries({ queryKey: editionEventsQueryKey })}
+      />
+      <EditionPollOptionsModal
+        show={pollOptionsModalOpen}
+        edition={edition}
+        authHeaders={authHeaders}
+        onHide={() => setPollOptionsModalOpen(false)}
       />
     </Card>
   );

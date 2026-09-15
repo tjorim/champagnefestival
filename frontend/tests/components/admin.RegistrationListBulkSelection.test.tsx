@@ -77,7 +77,6 @@ function buildRawRegistration(index: number): Record<string, unknown> {
       end_time: "22:00",
       category: "festival",
       registration_required: true,
-      max_capacity: null,
       active: true,
       created_at: "2024-01-01T00:00:00Z",
       updated_at: "2024-01-01T00:00:00Z",

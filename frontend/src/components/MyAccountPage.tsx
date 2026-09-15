@@ -19,9 +19,12 @@ import {
   isValidNiss,
 } from "@/utils/belgianIdentityNumbers";
 import {
+  getMyPollOptions,
   getMyVolunteerIdentity,
   registerMyVolunteerIdentity,
+  replaceMyPollSelections,
   updateMyEidDocumentNumber,
+  type MyPollSelections,
 } from "@/utils/myVolunteerApi";
 
 /**
@@ -105,6 +108,27 @@ export default function MyAccountPage() {
   const identity =
     correctionMutation.data ?? registerMutation.data ?? identityMutation.data ?? null;
 
+  const pollOptionsMutation = useMutation({
+    mutationFn: () => getMyPollOptions(getAccessToken() ?? ""),
+    retry: false,
+  });
+
+  const pollSelectionsMutation = useMutation({
+    mutationFn: (selections: MyPollSelections) =>
+      replaceMyPollSelections(getAccessToken() ?? "", selections),
+    retry: false,
+  });
+
+  const poll = pollSelectionsMutation.data ?? pollOptionsMutation.data ?? null;
+
+  useEffect(() => {
+    if (!isVolunteer || !identity?.linked) return;
+    pollOptionsMutation.mutate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVolunteer, identity?.linked, getAccessToken]);
+
+  const savePollSelections = (next: MyPollSelections) => pollSelectionsMutation.mutate(next);
+
   const handleCorrectionSubmit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!isValidEidNumber(newEidDocumentNumber)) {
@@ -154,6 +178,86 @@ export default function MyAccountPage() {
               </dd>
             </dl>
           </Alert>
+
+          {pollOptionsMutation.isError && !poll && (
+            <Alert variant="danger">{m.my_poll_load_error()}</Alert>
+          )}
+
+          {!pollOptionsMutation.isPending && poll && poll.options.length > 0 && (
+            <Alert variant="secondary">
+              <h3 className="h6">{m.my_poll_heading()}</h3>
+              <p className="small mb-3">{m.my_poll_description()}</p>
+              {(["dish", "soup"] as const).map((kind) => {
+                const kindOptions = poll.options.filter((o) => o.kind === kind);
+                if (kindOptions.length === 0) return null;
+                const selectedId =
+                  kind === "dish" ? poll.selections.dishOptionId : poll.selections.soupOptionId;
+                return (
+                  <Form.Group key={kind} className="mb-3">
+                    <Form.Label className="fw-semibold small">
+                      {kind === "dish" ? m.my_poll_dish_label() : m.my_poll_soup_label()}
+                    </Form.Label>
+                    {kindOptions.map((option) => (
+                      <Form.Check
+                        key={option.id}
+                        type="radio"
+                        id={`my-poll-${kind}-${option.id}`}
+                        name={`my-poll-${kind}`}
+                        label={option.label}
+                        checked={selectedId === option.id}
+                        disabled={pollSelectionsMutation.isPending}
+                        onChange={() =>
+                          savePollSelections({
+                            dishOptionId:
+                              kind === "dish" ? option.id : poll.selections.dishOptionId,
+                            soupOptionId:
+                              kind === "soup" ? option.id : poll.selections.soupOptionId,
+                            dinnerOptionIds: poll.selections.dinnerOptionIds,
+                          })
+                        }
+                      />
+                    ))}
+                  </Form.Group>
+                );
+              })}
+              {poll.options.some((o) => o.kind === "dinner") && (
+                <Form.Group className="mb-2">
+                  <Form.Label className="fw-semibold small">{m.my_poll_dinner_label()}</Form.Label>
+                  {poll.options
+                    .filter((o) => o.kind === "dinner")
+                    .map((option) => {
+                      const checked = poll.selections.dinnerOptionIds.includes(option.id);
+                      return (
+                        <Form.Check
+                          key={option.id}
+                          type="checkbox"
+                          id={`my-poll-dinner-${option.id}`}
+                          label={option.label}
+                          checked={checked}
+                          disabled={pollSelectionsMutation.isPending}
+                          onChange={() =>
+                            savePollSelections({
+                              dishOptionId: poll.selections.dishOptionId,
+                              soupOptionId: poll.selections.soupOptionId,
+                              dinnerOptionIds: checked
+                                ? poll.selections.dinnerOptionIds.filter((id) => id !== option.id)
+                                : [...poll.selections.dinnerOptionIds, option.id],
+                            })
+                          }
+                        />
+                      );
+                    })}
+                </Form.Group>
+              )}
+              {pollSelectionsMutation.isError && (
+                <Alert variant="danger" className="py-2 small mb-0">
+                  {pollSelectionsMutation.error instanceof Error
+                    ? pollSelectionsMutation.error.message
+                    : m.my_poll_save_error()}
+                </Alert>
+              )}
+            </Alert>
+          )}
 
           <Alert variant="secondary">
             <h3 className="h6">{m.my_eid_correction_heading()}</h3>

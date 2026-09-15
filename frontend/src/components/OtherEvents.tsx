@@ -80,19 +80,13 @@ function isApiEvent(value: unknown): value is Record<string, unknown> {
     value.registrations_close_at === null ||
     value.registrations_close_at === undefined ||
     typeof value.registrations_close_at === "string";
-  const maxCapacityIsValid =
-    value.max_capacity === null ||
-    value.max_capacity === undefined ||
-    typeof value.max_capacity === "number";
-
   return (
     requiredStrings.every((key) => typeof value[key] === "string") &&
     typeof value.registration_required === "boolean" &&
     typeof value.active === "boolean" &&
     endTimeIsValid &&
     registrationsOpenFromIsValid &&
-    registrationsCloseAtIsValid &&
-    maxCapacityIsValid
+    registrationsCloseAtIsValid
   );
 }
 

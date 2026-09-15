@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import { useForm, useStore } from "@tanstack/react-form";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
@@ -11,7 +11,11 @@ import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { RegistrationFormData, OrderItem } from "@/types/registration";
 import type { Event } from "@/types/event";
-import { RegistrationSubmitError, submitRegistration } from "@/utils/publicRegistrationApi";
+import {
+  RegistrationSubmitError,
+  submitRegistration,
+  submitWaitlistEntry,
+} from "@/utils/publicRegistrationApi";
 import { useAuth } from "@/contexts/AuthContext";
 import { getLocale } from "@/paraglide/runtime";
 
@@ -127,6 +131,50 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   );
 
   const guestCount = useStore(form.store, (s) => s.values.guestCount);
+  const contactName = useStore(form.store, (s) => s.values.name);
+  const contactEmail = useStore(form.store, (s) => s.values.email);
+  const contactPhone = useStore(form.store, (s) => s.values.phone);
+  const contactNotes = useStore(form.store, (s) => s.values.notes);
+
+  const [waitlistedProductIds, setWaitlistedProductIds] = useState<Set<string>>(new Set());
+  const [waitlistError, setWaitlistError] = useState("");
+  const waitlistSubmissionId = useRef(crypto.randomUUID());
+  const joinWaitlistMutation = useMutation({
+    mutationFn: (productId: string) =>
+      submitWaitlistEntry(
+        {
+          productId,
+          name: contactName,
+          email: contactEmail,
+          phone: contactPhone,
+          guestCount,
+          notes: contactNotes,
+        },
+        waitlistSubmissionId.current,
+      ),
+    onSuccess: (_data, productId) => {
+      waitlistSubmissionId.current = crypto.randomUUID();
+      setWaitlistedProductIds((prev) => new Set(prev).add(productId));
+    },
+    onError: (error) => {
+      setWaitlistError(
+        error instanceof RegistrationSubmitError ? error.message : m.registration_waitlist_error(),
+      );
+    },
+    retry: false,
+  });
+
+  const handleJoinWaitlist = useCallback(
+    (productId: string) => {
+      setWaitlistError("");
+      if (!contactName.trim() || !EMAIL_REGEX.test(contactEmail)) {
+        setWaitlistError(m.registration_waitlist_needs_contact_info());
+        return;
+      }
+      joinWaitlistMutation.mutate(productId);
+    },
+    [contactName, contactEmail, joinWaitlistMutation],
+  );
 
   const requiredProducts = useMemo(
     () => purchasableProducts.filter((p) => p.required),
@@ -450,9 +498,26 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                         <span className="text-light small">
                           {label}
                           {product.soldOut && (
-                            <span className="badge bg-danger ms-2">
-                              {m.registration_order_sold_out()}
-                            </span>
+                            <>
+                              <span className="badge bg-danger ms-2">
+                                {m.registration_order_sold_out()}
+                              </span>
+                              {waitlistedProductIds.has(product.id) ? (
+                                <span className="badge bg-success ms-2">
+                                  {m.registration_waitlist_joined()}
+                                </span>
+                              ) : (
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="p-0 ms-2 align-baseline"
+                                  disabled={joinWaitlistMutation.isPending}
+                                  onClick={() => handleJoinWaitlist(product.id)}
+                                >
+                                  {m.registration_waitlist_join()}
+                                </Button>
+                              )}
+                            </>
                           )}
                           {product.description && (
                             <span
@@ -512,6 +577,12 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   );
                 })}
               </fieldset>
+            )}
+
+            {waitlistError && (
+              <Alert variant="danger" className="py-2 small">
+                {waitlistError}
+              </Alert>
             )}
 
             <form.Field name="notes">

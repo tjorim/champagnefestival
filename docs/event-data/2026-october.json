@@ -60,7 +60,6 @@
       "category": "tasting",
       "registration_required": false,
       "registrations_open_from": null,
-      "max_capacity": null,
       "active": true
     },
     {
@@ -73,7 +72,6 @@
       "category": "vip",
       "registration_required": true,
       "registrations_open_from": null,
-      "max_capacity": null,
       "active": true
     },
     {
@@ -86,7 +84,6 @@
       "category": "exchange",
       "registration_required": true,
       "registrations_open_from": null,
-      "max_capacity": null,
       "active": true,
       "_note": "poster gives no end time for the ruilbeurs - left null, set one if you have it."
     },
@@ -100,7 +97,6 @@
       "category": "tasting",
       "registration_required": false,
       "registrations_open_from": null,
-      "max_capacity": null,
       "active": true,
       "_note": "poster says festival + party run until 24.00 (midnight); end_time is capped at 23:59 since the field only accepts HH:MM within one day."
     },
@@ -114,7 +110,6 @@
       "category": "party",
       "registration_required": false,
       "registrations_open_from": null,
-      "max_capacity": null,
       "active": true
     },
     {
@@ -127,7 +122,6 @@
       "category": "breakfast",
       "registration_required": true,
       "registrations_open_from": null,
-      "max_capacity": null,
       "active": true,
       "_note": "poster gives no end time for the champagneontbijt - left null, set one if you have it."
     },
@@ -141,7 +135,6 @@
       "category": "tasting",
       "registration_required": false,
       "registrations_open_from": null,
-      "max_capacity": null,
       "active": true
     }
   ],

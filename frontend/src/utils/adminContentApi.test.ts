@@ -83,7 +83,6 @@ describe("saveEditionEvent", () => {
           registrationRequired: true,
           registrationsOpenFrom: "2026-03-20T18:00",
           registrationsCloseAt: "2026-03-21T17:00",
-          maxCapacity: "20",
           sortOrder: "",
           active: true,
         },
