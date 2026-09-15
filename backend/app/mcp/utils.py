@@ -157,7 +157,6 @@ def event_dict(event: Any) -> dict:
         "end_time": event.end_time,
         "category": event.category,
         "registration_required": event.registration_required,
-        "max_capacity": event.max_capacity,
         "active": event.active,
     }
 

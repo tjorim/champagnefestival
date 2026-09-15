@@ -274,11 +274,6 @@ export async function saveEditionEvent(
           payload.formData.registrationRequired && payload.formData.registrationsCloseAt
             ? datetimeLocalToIso(payload.formData.registrationsCloseAt)
             : null,
-        max_capacity: (() => {
-          if (!payload.formData.registrationRequired || !payload.formData.maxCapacity) return null;
-          const n = Number(payload.formData.maxCapacity);
-          return Number.isFinite(n) && n > 0 ? Math.trunc(n) : null;
-        })(),
         active: payload.formData.active,
       }),
     },
@@ -422,4 +417,84 @@ export async function deleteEditionById(
     m.admin_content_error_save(),
   );
   return editionId;
+}
+
+export type PollOptionKind = "dish" | "soup" | "dinner";
+
+export interface PollOption {
+  id: string;
+  editionId: string;
+  kind: PollOptionKind;
+  label: string;
+}
+
+function apiToPollOption(data: Record<string, unknown>): PollOption {
+  const kind = data.kind;
+  return {
+    id: String(data.id ?? ""),
+    editionId: String(data.edition_id ?? ""),
+    kind: kind === "soup" || kind === "dinner" ? kind : "dish",
+    label: String(data.label ?? ""),
+  };
+}
+
+export async function fetchEditionPollOptions(
+  editionId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<PollOption[]> {
+  const response = await safeFetch(
+    `/api/poll-options?edition_id=${encodeURIComponent(editionId)}`,
+    { headers: authHeaders() },
+    m.admin_content_error_load(),
+  );
+  const data = (await response.json()) as Record<string, unknown>[];
+  return Array.isArray(data) ? data.map(apiToPollOption) : [];
+}
+
+export async function createPollOption(
+  payload: { editionId: string; kind: PollOptionKind; label: string },
+  authHeaders: () => Record<string, string>,
+): Promise<PollOption> {
+  const response = await safeFetch(
+    "/api/poll-options",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({
+        edition_id: payload.editionId,
+        kind: payload.kind,
+        label: payload.label,
+      }),
+    },
+    m.admin_content_error_save(),
+  );
+  return apiToPollOption((await response.json()) as Record<string, unknown>);
+}
+
+export async function updatePollOption(
+  optionId: string,
+  label: string,
+  authHeaders: () => Record<string, string>,
+): Promise<PollOption> {
+  const response = await safeFetch(
+    `/api/poll-options/${optionId}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify({ label }),
+    },
+    m.admin_content_error_save(),
+  );
+  return apiToPollOption((await response.json()) as Record<string, unknown>);
+}
+
+export async function deletePollOption(
+  optionId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<void> {
+  await safeFetch(
+    `/api/poll-options/${optionId}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_content_error_save(),
+  );
 }

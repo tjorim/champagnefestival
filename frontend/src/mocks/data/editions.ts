@@ -26,7 +26,6 @@ export const seedEvents = [
     category: "ceremony",
     registration_required: true,
     registrations_open_from: "2027-01-01T00:00:00Z",
-    max_capacity: 200,
     sort_order: 1,
     active: true,
     edition: {
@@ -51,7 +50,6 @@ export const seedEvents = [
     category: "tasting",
     registration_required: true,
     registrations_open_from: "2027-01-01T00:00:00Z",
-    max_capacity: 500,
     sort_order: 2,
     active: true,
     edition: {
@@ -117,7 +115,6 @@ export const seedEvents = [
     category: "tasting",
     registration_required: true,
     registrations_open_from: "2027-01-01T00:00:00Z",
-    max_capacity: 500,
     sort_order: 3,
     active: true,
     edition: {
@@ -142,7 +139,6 @@ export const seedEvents = [
     category: "masterclass",
     registration_required: true,
     registrations_open_from: "2027-01-15T00:00:00Z",
-    max_capacity: 30,
     sort_order: 4,
     active: true,
     edition: {
@@ -167,7 +163,6 @@ export const seedEvents = [
     category: "social",
     registration_required: false,
     registrations_open_from: null,
-    max_capacity: null,
     sort_order: 0,
     active: true,
     edition: {

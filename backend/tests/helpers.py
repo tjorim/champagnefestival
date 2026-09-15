@@ -80,7 +80,6 @@ async def _create_event(
     registration_required: bool = True,
     registrations_open_from: str | None = None,
     registrations_close_at: str | None = None,
-    max_capacity: int | None = None,
     title: str = "Vrijdagavond",
     date: str = "2099-03-21",
 ):
@@ -117,8 +116,6 @@ async def _create_event(
         event_payload["registrations_open_from"] = registrations_open_from
     if registrations_close_at is not None:
         event_payload["registrations_close_at"] = registrations_close_at
-    if max_capacity is not None:
-        event_payload["max_capacity"] = max_capacity
 
     event_response = await client.post("/api/events", json=event_payload, headers=ADMIN_HEADERS)
     assert event_response.status_code == 201

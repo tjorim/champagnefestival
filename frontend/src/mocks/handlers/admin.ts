@@ -796,7 +796,6 @@ export const adminHandlers = [
       registration_required: body.registration_required === true,
       registrations_open_from:
         typeof body.registrations_open_from === "string" ? body.registrations_open_from : null,
-      max_capacity: typeof body.max_capacity === "number" ? body.max_capacity : null,
       sort_order: typeof body.sort_order === "number" ? body.sort_order : 0,
       active: body.active !== false,
       edition: edition

@@ -118,7 +118,6 @@ def event_to_summary_dict(event: Event, include_edition: bool = False, *, public
         "registration_required": event.registration_required,
         "registrations_open_from": event.registrations_open_from,
         "registrations_close_at": event.registrations_close_at,
-        "max_capacity": event.max_capacity,
         "active": event.active,
         "created_at": event.created_at,
         "updated_at": event.updated_at,

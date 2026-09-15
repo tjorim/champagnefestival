@@ -76,3 +76,89 @@ export async function updateMyEidDocumentNumber(
   if (!response.ok) return throwDetailOrFallback(response, m.my_eid_correction_error());
   return parseIdentity(await response.json());
 }
+
+export interface PollOption {
+  id: string;
+  kind: "dish" | "soup" | "dinner";
+  label: string;
+}
+
+export interface MyPollSelections {
+  dishOptionId: string | null;
+  soupOptionId: string | null;
+  dinnerOptionIds: string[];
+}
+
+export interface MyPollOptions {
+  editionId: string | null;
+  options: PollOption[];
+  selections: MyPollSelections;
+}
+
+function isPollOptionKind(value: unknown): value is PollOption["kind"] {
+  return value === "dish" || value === "soup" || value === "dinner";
+}
+
+function parsePollOptions(data: unknown): MyPollOptions {
+  const record = data as {
+    edition_id?: unknown;
+    options?: unknown;
+    selections?: unknown;
+  };
+  const rawOptions = Array.isArray(record.options) ? record.options : [];
+  const selectionsRecord = (record.selections ?? {}) as {
+    dish_option_id?: unknown;
+    soup_option_id?: unknown;
+    dinner_option_ids?: unknown;
+  };
+  return {
+    editionId: typeof record.edition_id === "string" ? record.edition_id : null,
+    options: rawOptions
+      .filter((o): o is Record<string, unknown> => typeof o === "object" && o !== null)
+      .map((o) => ({
+        id: String(o.id ?? ""),
+        kind: isPollOptionKind(o.kind) ? o.kind : "dish",
+        label: String(o.label ?? ""),
+      })),
+    selections: {
+      dishOptionId:
+        typeof selectionsRecord.dish_option_id === "string"
+          ? selectionsRecord.dish_option_id
+          : null,
+      soupOptionId:
+        typeof selectionsRecord.soup_option_id === "string"
+          ? selectionsRecord.soup_option_id
+          : null,
+      dinnerOptionIds: Array.isArray(selectionsRecord.dinner_option_ids)
+        ? selectionsRecord.dinner_option_ids.filter((id): id is string => typeof id === "string")
+        : [],
+    },
+  };
+}
+
+/** Fetch the active edition's meal/dinner poll options and this volunteer's own picks. */
+export async function getMyPollOptions(accessToken: string): Promise<MyPollOptions> {
+  const response = await fetch("/api/me/volunteer/poll-options", {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+  if (!response.ok) throw new Error(m.my_poll_load_error());
+  return parsePollOptions(await response.json());
+}
+
+/** Replace the signed-in volunteer's own meal/dinner poll picks. */
+export async function replaceMyPollSelections(
+  accessToken: string,
+  selections: MyPollSelections,
+): Promise<MyPollOptions> {
+  const response = await fetch("/api/me/volunteer/poll-selections", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+    body: JSON.stringify({
+      dish_option_id: selections.dishOptionId,
+      soup_option_id: selections.soupOptionId,
+      dinner_option_ids: selections.dinnerOptionIds,
+    }),
+  });
+  if (!response.ok) return throwDetailOrFallback(response, m.my_poll_save_error());
+  return parsePollOptions(await response.json());
+}

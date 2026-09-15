@@ -55,7 +55,6 @@ export interface SeedEvent {
   category: string;
   registration_required: boolean;
   registrations_open_from: string | null;
-  max_capacity: number | null;
   sort_order: number;
   active: boolean;
   edition: SeedEventEditionSummary | null;

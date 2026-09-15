@@ -52,6 +52,7 @@ from app.mcp.admin import layouts as mcp_admin_layouts
 from app.mcp.admin import members as mcp_admin_members
 from app.mcp.admin import payments as mcp_admin_payments
 from app.mcp.admin import people as mcp_admin_people
+from app.mcp.admin import poll_options as mcp_admin_poll_options
 from app.mcp.admin import products as mcp_admin_products
 from app.mcp.admin import registrations as mcp_admin_registrations
 from app.mcp.admin import rooms as mcp_admin_rooms
@@ -1066,14 +1067,13 @@ class ChampagneFestivalMcpBackend:
         registration_required: bool = False,
         registrations_open_from: datetime | None = None,
         registrations_close_at: datetime | None = None,
-        max_capacity: int | None = None,
         active: bool = True,
     ) -> dict:
         """Create an event within an edition. Requires the ``admin`` role.
 
         Off-festival (bourse/capsule-exchange) editions may only contain events on
-        a single date. ``registrations_open_from``/``max_capacity`` may only be set
-        when ``registration_required`` is true.
+        a single date. ``registrations_open_from`` may only be set when
+        ``registration_required`` is true.
         """
         self._require_admin()
         return await mcp_admin_events.create_event(
@@ -1089,7 +1089,6 @@ class ChampagneFestivalMcpBackend:
             registration_required=registration_required,
             registrations_open_from=registrations_open_from,
             registrations_close_at=registrations_close_at,
-            max_capacity=max_capacity,
             active=active,
         )
 
@@ -1111,18 +1110,16 @@ class ChampagneFestivalMcpBackend:
         registration_required: bool | None = None,
         registrations_open_from: datetime | None = None,
         registrations_close_at: datetime | None = None,
-        max_capacity: int | None = None,
         active: bool | None = None,
         clear_end_time: bool = False,
         clear_registrations_open_from: bool = False,
         clear_registrations_close_at: bool = False,
-        clear_max_capacity: bool = False,
     ) -> dict:
         """Partially update an event; omitted fields are left unchanged.
 
-        ``end_time``/``registrations_open_from``/``max_capacity`` have no natural
-        "clear" value, so pass ``clear_end_time=True`` / ``clear_registrations_open_from=True``
-        / ``clear_max_capacity=True`` to unset them instead of providing a value.
+        ``end_time``/``registrations_open_from`` have no natural "clear" value,
+        so pass ``clear_end_time=True`` / ``clear_registrations_open_from=True``
+        to unset them instead of providing a value.
         Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1140,12 +1137,10 @@ class ChampagneFestivalMcpBackend:
             registration_required=registration_required,
             registrations_open_from=registrations_open_from,
             registrations_close_at=registrations_close_at,
-            max_capacity=max_capacity,
             active=active,
             clear_end_time=clear_end_time,
             clear_registrations_open_from=clear_registrations_open_from,
             clear_registrations_close_at=clear_registrations_close_at,
-            clear_max_capacity=clear_max_capacity,
         )
 
     async def delete_event(self, event_id: str) -> dict:
@@ -1278,6 +1273,35 @@ class ChampagneFestivalMcpBackend:
         """Delete a product. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_products.delete_product(self.session_factory, self._actor(), product_id)
+
+    # -- Volunteer meal/dinner poll options -----------------------------
+
+    async def create_poll_option(self, edition_id: str, kind: str, label: str) -> dict:
+        """Add one volunteer meal/dinner poll choice to an edition. ``kind`` is
+        ``dish``, ``soup``, or ``dinner``. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll_options.create_poll_option(
+            self.session_factory, self._actor(), edition_id=edition_id, kind=kind, label=label
+        )
+
+    async def list_poll_options(self, edition_id: str | None = None) -> list[dict]:
+        """List volunteer meal/dinner poll options, optionally filtered by
+        edition. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll_options.list_poll_options(self.session_factory, edition_id)
+
+    async def update_poll_option(self, option_id: str, label: str) -> dict:
+        """Rename a volunteer meal/dinner poll option. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll_options.update_poll_option(
+            self.session_factory, self._actor(), option_id, label=label
+        )
+
+    async def delete_poll_option(self, option_id: str) -> dict:
+        """Delete a volunteer meal/dinner poll option, along with any
+        volunteer's selection of it. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll_options.delete_poll_option(self.session_factory, self._actor(), option_id)
 
     # -- FAQ -----------------------------------------------------------
 
@@ -2085,6 +2109,10 @@ def create_mcp_server(
     register_tool(backend.list_products)
     register_tool(backend.update_product)
     register_tool(backend.delete_product)
+    register_tool(backend.create_poll_option)
+    register_tool(backend.list_poll_options)
+    register_tool(backend.update_poll_option)
+    register_tool(backend.delete_poll_option)
     register_tool(backend.create_faq_item)
     register_tool(backend.list_faq_items)
     register_tool(backend.update_faq_item)

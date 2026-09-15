@@ -221,7 +221,7 @@ async def test_create_event_rejects_registration_settings_without_registration_r
             start_time="18:00",
             category="festival",
             registration_required=False,
-            max_capacity=10,
+            registrations_open_from=datetime(2026, 1, 1, tzinfo=UTC),
         )
 
 
@@ -240,7 +240,9 @@ async def test_update_event_rejects_registration_settings_without_registration_r
     )
 
     with pytest.raises(ValueError, match="registration_required"):
-        await mcp_events.update_event(factory, "admin-1", created["id"], max_capacity=10)
+        await mcp_events.update_event(
+            factory, "admin-1", created["id"], registrations_open_from=datetime(2026, 1, 1, tzinfo=UTC)
+        )
 
 
 async def test_update_event_clears_nullable_fields(db_session):
@@ -257,10 +259,8 @@ async def test_update_event_clears_nullable_fields(db_session):
         category="festival",
         registration_required=True,
         registrations_open_from=datetime(2026, 1, 1, tzinfo=UTC),
-        max_capacity=50,
     )
     assert created["end_time"] == "22:00"
-    assert created["max_capacity"] == 50
     assert created["registrations_open_from"] is not None
 
     updated = await mcp_events.update_event(
@@ -269,9 +269,7 @@ async def test_update_event_clears_nullable_fields(db_session):
         created["id"],
         clear_end_time=True,
         clear_registrations_open_from=True,
-        clear_max_capacity=True,
     )
     assert updated["end_time"] is None
-    assert updated["max_capacity"] is None
     assert updated["registrations_open_from"] is None
     assert updated["title"] == "Friday Tasting"  # untouched fields survive a partial update
