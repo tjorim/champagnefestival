@@ -535,8 +535,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onClearSectionError={() => setRegistrationError("")}
                   />
                 )}
-                {activeKey === "waitlist" && <WaitlistManagement authHeaders={authHeaders} />}
-                {activeKey === "scratchpad" && (
+                {canManageAdminSections && activeKey === "waitlist" && (
+                  <WaitlistManagement authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "scratchpad" && (
                   <ScratchpadManagement authHeaders={authHeaders} editionId={activeEdition.id} />
                 )}
                 {canManageAdminSections && activeKey === "exhibitors" && (

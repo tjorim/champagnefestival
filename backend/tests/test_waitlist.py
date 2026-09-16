@@ -48,6 +48,37 @@ async def test_waitlist_submission(client, db_session):
 
 
 @pytest.mark.anyio
+async def test_waitlist_submission_rejects_available_product(client):
+    """A product that still has stock isn't sold out — nothing to wait for."""
+    event = await _create_event(client)
+    r = await client.post(
+        "/api/products",
+        json={
+            "event_id": event["id"],
+            "name": "In-stock ticket",
+            "price": "0",
+            "category": "other",
+            "unit": "person",
+            "stock": 5,
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    product_id = r.json()["id"]
+
+    r = await client.post(
+        "/api/waitlist",
+        json={
+            "submission_id": SUBMISSION_ID,
+            "product_id": product_id,
+            "name": "Nancy Cattrysse",
+            "email": "nancy@example.com",
+        },
+    )
+    assert r.status_code == 400
+
+
+@pytest.mark.anyio
 async def test_waitlist_submission_rejects_unknown_product(client):
     r = await client.post(
         "/api/waitlist",

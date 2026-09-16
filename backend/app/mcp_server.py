@@ -1117,8 +1117,9 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update an event; omitted fields are left unchanged.
 
-        ``end_time``/``registrations_open_from`` have no natural "clear" value,
-        so pass ``clear_end_time=True`` / ``clear_registrations_open_from=True``
+        ``end_time``/``registrations_open_from``/``registrations_close_at`` have
+        no natural "clear" value, so pass ``clear_end_time=True`` /
+        ``clear_registrations_open_from=True`` / ``clear_registrations_close_at=True``
         to unset them instead of providing a value.
         Requires the ``admin`` role.
         """

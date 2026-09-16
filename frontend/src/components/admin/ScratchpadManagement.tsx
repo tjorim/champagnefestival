@@ -56,13 +56,15 @@ export default function ScratchpadManagement({
     setContent(query.data?.content ?? "");
     setSaved(false);
   } else if (query.data !== prevData) {
-    // Same edition — either the initial load resolving, or our own
-    // successful save writing back through the cache. Reseed content (a
-    // no-op after a save, since it already matches what was submitted) but
-    // never touch `saved` here: doing so would immediately clear the
+    // Same edition — either the initial load resolving, our own successful
+    // save writing back through the cache, or a background refetch. Only
+    // reseed content when it still matches what was previously loaded — a
+    // refetch racing an in-progress, not-yet-saved edit must not clobber it.
+    // Never touch `saved` here: doing so would immediately clear the
     // "Saved." confirmation onSuccess just set.
+    const previousContent = prevData?.content ?? "";
     setPrevData(query.data);
-    if (query.data) setContent(query.data.content);
+    if (query.data && content === previousContent) setContent(query.data.content);
   }
 
   const saveMutation = useMutation({

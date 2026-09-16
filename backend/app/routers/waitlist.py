@@ -22,6 +22,7 @@ from app.models import Event, Product, WaitlistEntry
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import RequestModel
 from app.spam import check_form_timing, check_honeypot
+from app.utils import product_available_quantity, product_sold_out
 
 router = APIRouter(prefix="/api/waitlist", tags=["waitlist"])
 
@@ -89,6 +90,8 @@ async def submit_waitlist_entry(
     product = (await db.execute(select(Product).where(Product.id == body.product_id))).scalar_one_or_none()
     if product is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
+    if not product_sold_out(product, product_available_quantity(product)):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This item isn't sold out.")
 
     entry_id = str(body.submission_id)
     await db.execute(

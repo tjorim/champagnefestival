@@ -93,12 +93,12 @@ async def update_event(
 ) -> dict:
     """Partially update an event; omitted fields are left unchanged.
 
-    ``end_time``/``registrations_open_from`` are nullable with no natural
-    "clear" value via a plain optional parameter (there's no ambiguity-free
-    way to tell "leave unchanged" apart from "unset it" through a bare
-    ``None`` default) — pass ``clear_end_time=True`` /
-    ``clear_registrations_open_from=True`` to null them out instead of
-    providing a value.
+    ``end_time``/``registrations_open_from``/``registrations_close_at`` are
+    nullable with no natural "clear" value via a plain optional parameter
+    (there's no ambiguity-free way to tell "leave unchanged" apart from
+    "unset it" through a bare ``None`` default) — pass ``clear_end_time=True``
+    / ``clear_registrations_open_from=True`` / ``clear_registrations_close_at=True``
+    to null them out instead of providing a value.
     """
     provided: dict[str, Any] = {
         k: v

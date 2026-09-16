@@ -57,6 +57,22 @@ async def test_admin_creates_lists_updates_and_deletes_poll_options(client):
 
 
 @pytest.mark.anyio
+async def test_poll_option_label_is_stripped(client):
+    event = await _create_event(client, edition_id="edition-poll-strip")
+    r = await client.post(
+        "/api/poll-options",
+        json={"edition_id": event["edition_id"], "kind": "dish", "label": "  Vol-au-vent  "},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 201, r.text
+    option_id = r.json()["id"]
+    assert r.json()["label"] == "Vol-au-vent"
+
+    r = await client.put(f"/api/poll-options/{option_id}", json={"label": "   "}, headers=ADMIN_HEADERS)
+    assert r.status_code == 422
+
+
+@pytest.mark.anyio
 async def test_create_poll_option_rejects_unknown_edition(client):
     r = await client.post(
         "/api/poll-options",
@@ -165,6 +181,92 @@ async def test_volunteer_poll_selection_rejects_option_not_in_active_edition(cli
 
         r = await vclient.put("/api/me/volunteer/poll-selections", json={"dish_option_id": stale_dish["id"]})
         assert r.status_code == 404
+
+
+@pytest.mark.anyio
+async def test_replacing_selections_preserves_a_past_editions_picks(client, volunteer_client_as, db_session):
+    """Saving this edition's picks must never touch a volunteer's picks from
+    a past edition — neither read them back as if they were current, nor
+    delete them as a side effect of the full-replace."""
+    from datetime import date as dt_date
+
+    from sqlalchemy import select as sa_select
+    from sqlalchemy import update as sa_update
+
+    from app.models import Edition, EditionPollOption, Event, VolunteerPollSelection
+    from app.utils import make_id
+
+    old_event = await _create_event(client, edition_id="edition-poll-old", title="Old Edition Event")
+    old_dish = await _create_option(client, edition_id=old_event["edition_id"], kind="dish", label="Old Dish")
+
+    async with volunteer_client_as("subject-poll-cross-edition") as vclient:
+        assert (await _register(vclient)).status_code == 200
+        r = await vclient.put("/api/me/volunteer/poll-selections", json={"dish_option_id": old_dish["id"]})
+        assert r.status_code == 200, r.text
+
+    # A new active festival edition supersedes the old one, built directly
+    # against the shared session rather than via the `client` fixture: a used
+    # volunteer_client_as context clears the app's *entire*
+    # dependency_overrides dict on exit, including `client`'s own — the two
+    # fixtures can't be interleaved within one test (see
+    # test_volunteer_poll_selections_do_not_leak_between_volunteers, which
+    # only ever does its `client`-based setup once, up front).
+    old_edition = await db_session.get(Edition, old_event["edition_id"])
+    await db_session.execute(sa_update(Edition).where(Edition.id == old_edition.id).values(active=False))
+    new_edition = Edition(
+        id="edition-poll-new",
+        year=old_edition.year,
+        month=old_edition.month,
+        venue_id=old_edition.venue_id,
+        edition_type="festival",
+        active=True,
+    )
+    db_session.add(new_edition)
+    new_event = Event(
+        id=make_id("evt"),
+        edition_id=new_edition.id,
+        title="New Edition Event",
+        date=dt_date(2099, 3, 22),
+        start_time="18:00",
+        end_time="22:00",
+        category="festival",
+        registration_required=True,
+        active=True,
+    )
+    db_session.add(new_event)
+    new_dish = EditionPollOption(id=make_id("opt"), edition_id=new_edition.id, kind="dish", label="New Dish")
+    db_session.add(new_dish)
+    await db_session.commit()
+
+    async with volunteer_client_as("subject-poll-cross-edition") as vclient:
+        r = await vclient.put("/api/me/volunteer/poll-selections", json={"dish_option_id": new_dish.id})
+        assert r.status_code == 200, r.text
+        assert r.json()["edition_id"] == new_edition.id
+        assert r.json()["selections"]["dish_option_id"] == new_dish.id
+
+        r = await vclient.get("/api/me/volunteer/poll-options")
+        assert r.json()["selections"]["dish_option_id"] == new_dish.id
+
+    rows = (await db_session.execute(sa_select(VolunteerPollSelection.option_id))).scalars().all()
+    assert set(rows) == {old_dish["id"], new_dish.id}
+
+
+@pytest.mark.anyio
+async def test_volunteer_poll_selection_rejects_blank_option_id(client, volunteer_client_as):
+    event = await _create_event(client, edition_id="edition-poll-blank")
+    dish = await _create_option(client, edition_id=event["edition_id"], kind="dish", label="Vol-au-vent")
+
+    async with volunteer_client_as("subject-poll-blank") as vclient:
+        assert (await _register(vclient)).status_code == 200
+
+        r = await vclient.put("/api/me/volunteer/poll-selections", json={"dish_option_id": "  "})
+        assert r.status_code == 422
+
+        r = await vclient.put(
+            "/api/me/volunteer/poll-selections",
+            json={"dish_option_id": dish["id"], "dinner_option_ids": [""]},
+        )
+        assert r.status_code == 422
 
 
 @pytest.mark.anyio

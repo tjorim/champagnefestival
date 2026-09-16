@@ -138,10 +138,17 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
   const [waitlistedProductIds, setWaitlistedProductIds] = useState<Set<string>>(new Set());
   const [waitlistError, setWaitlistError] = useState("");
-  const waitlistSubmissionId = useRef(crypto.randomUUID());
+  // One stable submission id per product, not one shared across every
+  // product: a failed/lost response for product A must not have a
+  // subsequent join for a different product B silently reuse A's id (the
+  // server's ON CONFLICT DO NOTHING would then no-op B's insert while this
+  // still reports success and marks B as joined).
+  const waitlistSubmissionIds = useRef(new Map<string, string>());
   const joinWaitlistMutation = useMutation({
-    mutationFn: (productId: string) =>
-      submitWaitlistEntry(
+    mutationFn: (productId: string) => {
+      const submissionId = waitlistSubmissionIds.current.get(productId) ?? crypto.randomUUID();
+      waitlistSubmissionIds.current.set(productId, submissionId);
+      return submitWaitlistEntry(
         {
           productId,
           name: contactName,
@@ -150,10 +157,11 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
           guestCount,
           notes: contactNotes,
         },
-        waitlistSubmissionId.current,
-      ),
+        submissionId,
+      );
+    },
     onSuccess: (_data, productId) => {
-      waitlistSubmissionId.current = crypto.randomUUID();
+      waitlistSubmissionIds.current.delete(productId);
       setWaitlistedProductIds((prev) => new Set(prev).add(productId));
     },
     onError: (error) => {

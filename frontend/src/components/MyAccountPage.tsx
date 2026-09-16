@@ -122,6 +122,11 @@ export default function MyAccountPage() {
   const poll = pollSelectionsMutation.data ?? pollOptionsMutation.data ?? null;
 
   useEffect(() => {
+    // Same rationale as the identity effect above (#1037 review): without
+    // resetting, a previous account's saved poll picks would keep showing
+    // as this account's own until it explicitly resaves.
+    pollOptionsMutation.reset();
+    pollSelectionsMutation.reset();
     if (!isVolunteer || !identity?.linked) return;
     pollOptionsMutation.mutate();
     // eslint-disable-next-line react-hooks/exhaustive-deps

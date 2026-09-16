@@ -108,7 +108,7 @@ describe("AdminSidebar", () => {
       within(navigation)
         .getAllByRole("button")
         .map((button) => button.textContent),
-    ).toEqual(["Registrations2", "Waitlist", "Scratchpad"]);
+    ).toEqual(["Registrations2"]);
   });
 
   it("selects a leaf destination directly from the sidebar", () => {

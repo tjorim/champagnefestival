@@ -872,9 +872,19 @@ class PollOptionCreate(RequestModel):
     kind: PollOptionKind
     label: str = Field(min_length=1, max_length=200)
 
+    @field_validator("label", mode="before")
+    @classmethod
+    def strip_label(cls, value: str) -> str:
+        return value.strip() if isinstance(value, str) else value
+
 
 class PollOptionUpdate(RequestModel):
     label: str = Field(min_length=1, max_length=200)
+
+    @field_validator("label", mode="before")
+    @classmethod
+    def strip_label(cls, value: str) -> str:
+        return value.strip() if isinstance(value, str) else value
 
 
 class PollOptionOut(BaseModel):
@@ -899,6 +909,20 @@ class VolunteerPollSelectionsIn(RequestModel):
     dish_option_id: str | None = None
     soup_option_id: str | None = None
     dinner_option_ids: list[str] = Field(default_factory=list, max_length=50)
+
+    @field_validator("dish_option_id", "soup_option_id", mode="after")
+    @classmethod
+    def reject_blank_option_id(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("Option id must not be blank.")
+        return value
+
+    @field_validator("dinner_option_ids", mode="after")
+    @classmethod
+    def reject_blank_dinner_option_ids(cls, value: list[str]) -> list[str]:
+        if any(not v.strip() for v in value):
+            raise ValueError("Dinner option ids must not be blank.")
+        return value
 
 
 class VolunteerPollSelectionsOut(BaseModel):

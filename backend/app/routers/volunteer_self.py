@@ -126,7 +126,7 @@ async def get_my_poll_options(
     edition_id, options = await volunteer_self_service.get_active_edition_poll_options(db)
     person = await volunteer_self_service.get_linked_volunteer(db, subject)
     selections = (
-        await volunteer_self_service.get_poll_selections(db, person.id)
+        await volunteer_self_service.get_poll_selections(db, person.id, edition_id)
         if person is not None
         else VolunteerPollSelectionsOut(dish_option_id=None, soup_option_id=None, dinner_option_ids=[])
     )

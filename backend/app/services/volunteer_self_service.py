@@ -229,12 +229,23 @@ async def get_active_edition_poll_options(db: AsyncSession) -> tuple[str | None,
     return edition.id, list(options)
 
 
-async def get_poll_selections(db: AsyncSession, volunteer_id: str) -> VolunteerPollSelectionsOut:
+async def get_poll_selections(
+    db: AsyncSession, volunteer_id: str, edition_id: str | None
+) -> VolunteerPollSelectionsOut:
+    """Only this ``edition_id``'s selections — a volunteer who helped a past
+    edition keeps whatever they picked then, but it must never surface (or,
+    in ``replace_poll_selections``, be deleted) as if it were this edition's
+    picks."""
+    if edition_id is None:
+        return VolunteerPollSelectionsOut(dish_option_id=None, soup_option_id=None, dinner_option_ids=[])
     option_ids = (
         await db.execute(
             select(VolunteerPollSelection.option_id, EditionPollOption.kind)
             .join(EditionPollOption, EditionPollOption.id == VolunteerPollSelection.option_id)
-            .where(VolunteerPollSelection.volunteer_id == volunteer_id)
+            .where(
+                VolunteerPollSelection.volunteer_id == volunteer_id,
+                EditionPollOption.edition_id == edition_id,
+            )
         )
     ).all()
     dish = next((oid for oid, kind in option_ids if kind == "dish"), None)
@@ -254,7 +265,17 @@ async def replace_poll_selections(
     """Replace this volunteer's own picks. Safe to wholesale-replace: every
     row touched is keyed by `volunteer_id`, so this can never affect another
     volunteer's selections or the options themselves (see
-    `VolunteerPollSelectionsIn`'s docstring)."""
+    `VolunteerPollSelectionsIn`'s docstring). Only ever replaces the *active
+    edition's* selections — a volunteer's picks from a past edition are left
+    untouched, never wiped out by saving this edition's choices.
+
+    Locks the volunteer's own `Person` row first (mirrors
+    `register_volunteer_identity`'s use of the same pattern) so two
+    concurrent replacements for the same volunteer (a double-submit, or a
+    retry racing the original) serialize instead of interleaving their
+    delete-then-insert and potentially leaving two `dish`/`soup` rows behind.
+    """
+    await db.execute(select(Person.id).where(Person.id == volunteer_id).with_for_update())
     active_edition_id, _ = await get_active_edition_poll_options(db)
     requested_ids = [oid for oid in (body.dish_option_id, body.soup_option_id, *body.dinner_option_ids) if oid]
     options_by_id: dict[str, EditionPollOption] = {}
@@ -277,7 +298,16 @@ async def replace_poll_selections(
         if options_by_id[dinner_id].kind != "dinner":
             raise HTTPException(status_code=400, detail="That option isn't a dinner choice.")
 
-    await db.execute(delete(VolunteerPollSelection).where(VolunteerPollSelection.volunteer_id == volunteer_id))
+    if active_edition_id is not None:
+        current_edition_option_ids = select(EditionPollOption.id).where(
+            EditionPollOption.edition_id == active_edition_id
+        )
+        await db.execute(
+            delete(VolunteerPollSelection).where(
+                VolunteerPollSelection.volunteer_id == volunteer_id,
+                VolunteerPollSelection.option_id.in_(current_edition_option_ids),
+            )
+        )
     for option_id in dict.fromkeys(requested_ids):  # de-duplicate, preserve order
         db.add(VolunteerPollSelection(volunteer_id=volunteer_id, option_id=option_id))
 
@@ -291,4 +321,4 @@ async def replace_poll_selections(
         details={"option_count": len(set(requested_ids))},
     )
     await db.commit()
-    return await get_poll_selections(db, volunteer_id)
+    return await get_poll_selections(db, volunteer_id, active_edition_id)
