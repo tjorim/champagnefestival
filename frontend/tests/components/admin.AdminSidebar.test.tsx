@@ -7,6 +7,8 @@ vi.mock("@/paraglide/messages", () => ({
   m: {
     admin_title: () => "Administration",
     admin_registrations_tab: () => "Registrations",
+    admin_waitlist_section: () => "Waitlist",
+    admin_scratchpad_section: () => "Scratchpad",
     admin_events_group: () => "Events",
     admin_content_editions_section: () => "Editions",
     admin_content_tab: () => "Content",
@@ -75,6 +77,8 @@ describe("AdminSidebar", () => {
         .map((button) => button.textContent),
     ).toEqual([
       "Registrations2",
+      "Waitlist",
+      "Scratchpad",
       "Events",
       "Editions",
       "Content",

@@ -873,21 +873,19 @@ export default function RegistrationList({
   );
   pageRegistrationsRef.current = table.getRowModel().rows.map((r) => r.original);
 
-  // Built from every registration, not the current page: capacity is a property
-  // of the event, so it must not shift when someone searches, filters, or pages.
+  // Built from every registration, not the current page: these counts are a
+  // property of the event, so they must not shift when someone searches,
+  // filters, or pages.
   //
   // The counts themselves come from GET /api/events/checkin-stats — the endpoint
   // built for exactly this, and the one the Android entrance display reads — so
   // both surfaces report the same numbers, counted server-side over every
   // registration rather than over whatever this client happens to hold. The
-  // local tally below still supplies each event's title and capacity, which the
-  // stats endpoint doesn't carry, and stands in for the counts until the query
+  // local tally below still supplies each event's title, which the stats
+  // endpoint doesn't carry, and stands in for the counts until the query
   // settles (or if it fails), since it measures the same thing.
   const eventCapacityStats = useMemo(() => {
-    const statsByEvent = new Map<
-      string,
-      { checkedIn: number; total: number; title: string; maxCapacity?: number }
-    >();
+    const statsByEvent = new Map<string, { checkedIn: number; total: number; title: string }>();
 
     for (const registration of registrations) {
       if (registration.status === "cancelled") continue;
@@ -901,15 +899,11 @@ export default function RegistrationList({
         if (existing.title === registration.eventId && registration.event?.title) {
           existing.title = registration.event.title;
         }
-        if (existing.maxCapacity === undefined && registration.event?.maxCapacity !== undefined) {
-          existing.maxCapacity = registration.event.maxCapacity;
-        }
       } else {
         statsByEvent.set(registration.eventId, {
           checkedIn: checkedInGuests,
           total: guestCount,
           title: registration.event?.title ?? registration.eventId,
-          maxCapacity: registration.event?.maxCapacity,
         });
       }
     }
@@ -920,7 +914,6 @@ export default function RegistrationList({
         checkedIn: serverStats.checkedIn,
         total: serverStats.total,
         title: existing?.title ?? serverStats.eventId,
-        maxCapacity: existing?.maxCapacity,
       });
     }
 
@@ -1164,10 +1157,6 @@ export default function RegistrationList({
                 {eventCapacityStats.map((eventStats) => {
                   const checkInPercent =
                     eventStats.total > 0 ? (eventStats.checkedIn / eventStats.total) * 100 : 0;
-                  const isOverCapacity =
-                    eventStats.maxCapacity != null &&
-                    eventStats.maxCapacity > 0 &&
-                    eventStats.total >= eventStats.maxCapacity;
 
                   return (
                     <div key={eventStats.eventId}>
@@ -1180,11 +1169,6 @@ export default function RegistrationList({
                           {m.admin_guests_count()}
                         </span>
                         <span className="d-flex align-items-center gap-2">
-                          {eventStats.maxCapacity && eventStats.maxCapacity > 0 && (
-                            <span className={isOverCapacity ? "text-danger" : "text-secondary"}>
-                              {m.event_capacity()}: {eventStats.total}/{eventStats.maxCapacity}
-                            </span>
-                          )}
                           <Button
                             variant="outline-secondary"
                             size="sm"

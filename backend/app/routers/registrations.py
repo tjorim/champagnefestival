@@ -108,7 +108,7 @@ async def create_registration(
     from app.services import product_inventory as inventory
 
     event = await inventory.lock_event(db, body.event_id)
-    await _ensure_public_registration_allowed(db, event, body.guest_count)
+    await _ensure_public_registration_allowed(db, event)
     resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
     await inventory.check_stock(db, event, resolved_order_items)
 
@@ -677,7 +677,6 @@ async def _load_guest_registrations_by_email(
 async def _ensure_public_registration_allowed(
     db: AsyncSession,
     event: Event,
-    requested_guest_count: int,
 ) -> None:
     if not event.active or not event.edition.active:
         raise HTTPException(
@@ -714,25 +713,3 @@ async def _ensure_public_registration_allowed(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Registrations for this event have closed.",
             )
-
-    if event.max_capacity is None:
-        return
-
-    # Re-fetch the event with a row-level lock so concurrent registrations are
-    # serialised and cannot both pass the capacity check (preventing unconfirmed over-capacity assignments).
-    locked_event = (await db.execute(select(Event).where(Event.id == event.id).with_for_update())).scalar_one()
-
-    reserved_guest_count = (
-        await db.execute(
-            select(func.coalesce(func.sum(Registration.guest_count), 0)).where(
-                Registration.event_id == locked_event.id,
-                Registration.status != "cancelled",
-            )
-        )
-    ).scalar_one()
-    assert locked_event.max_capacity is not None  # already guarded at top of function
-    if reserved_guest_count + requested_guest_count > locked_event.max_capacity:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="This event is fully booked.",
-        )

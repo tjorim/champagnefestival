@@ -79,7 +79,6 @@ def validate_registration_settings(
     registration_required: bool,
     registrations_open_from: datetime | None,
     registrations_close_at: datetime | None,
-    max_capacity: int | None,
 ) -> None:
     def as_utc(value: datetime | None) -> datetime | None:
         if value is None:
@@ -96,11 +95,11 @@ def validate_registration_settings(
         raise HTTPException(status_code=400, detail="registrations_close_at must be after registrations_open_from.")
     if registration_required:
         return
-    if registrations_open_from is not None or registrations_close_at is not None or max_capacity is not None:
+    if registrations_open_from is not None or registrations_close_at is not None:
         detail = (
             "registrations_close_at may only be set when registration_required is true."
             if registrations_close_at is not None
-            else "registrations_open_from and max_capacity may only be set when registration_required is true."
+            else "registrations_open_from may only be set when registration_required is true."
         )
         raise HTTPException(
             status_code=400,
@@ -137,7 +136,6 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
         registration_required=body.registration_required,
         registrations_open_from=body.registrations_open_from,
         registrations_close_at=body.registrations_close_at,
-        max_capacity=body.max_capacity,
     )
     event = Event(
         id=make_id("evt"),
@@ -151,7 +149,6 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
         registration_required=body.registration_required,
         registrations_open_from=body.registrations_open_from,
         registrations_close_at=body.registrations_close_at,
-        max_capacity=body.max_capacity,
         active=body.active,
     )
     db.add(event)
@@ -216,13 +213,11 @@ async def apply_event_update(
     candidate_registrations_close_at = (
         body.registrations_close_at if "registrations_close_at" in fields_set else event.registrations_close_at
     )
-    candidate_max_capacity = body.max_capacity if "max_capacity" in fields_set else event.max_capacity
     await validate_standalone_event_date(db, edition, candidate_date, exclude_event_id=event.id)
     validate_registration_settings(
         registration_required=candidate_registration_required,
         registrations_open_from=candidate_registrations_open_from,
         registrations_close_at=candidate_registrations_close_at,
-        max_capacity=candidate_max_capacity,
     )
 
     for field in (
@@ -235,7 +230,6 @@ async def apply_event_update(
         "registration_required",
         "registrations_open_from",
         "registrations_close_at",
-        "max_capacity",
         "active",
     ):
         if field in fields_set:

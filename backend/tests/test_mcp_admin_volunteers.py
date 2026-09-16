@@ -126,6 +126,29 @@ async def test_update_volunteer_not_found(db_session):
         await mcp_volunteers.update_volunteer(factory, "admin-1", "nonexistent", address="New Address")
 
 
+async def test_create_and_update_volunteer_round_trips_period_notes(db_session):
+    """notes is a free-text, admin-only rough schedule/notepad per period —
+    deliberately unstructured, not a role/task model."""
+    factory = mcp_session_factory(db_session)
+    created = await mcp_volunteers.create_volunteer(
+        factory,
+        "admin-1",
+        name="Alice",
+        national_register_number="85010199999",
+        eid_document_number="BEI998877",
+        help_periods=[{"first_help_day": "2099-03-21", "last_help_day": "2099-03-22", "notes": "Fri: bar"}],
+    )
+    assert created["help_periods"][0]["notes"] == "Fri: bar"
+
+    updated = await mcp_volunteers.update_volunteer(
+        factory,
+        "admin-1",
+        created["id"],
+        help_periods=[{"first_help_day": "2099-04-01", "last_help_day": None, "notes": "Sat: serving"}],
+    )
+    assert updated["help_periods"][0]["notes"] == "Sat: serving"
+
+
 async def test_update_volunteer_replaces_help_periods(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_volunteers.create_volunteer(

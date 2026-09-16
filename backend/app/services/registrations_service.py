@@ -24,7 +24,7 @@ import secrets
 from datetime import UTC, datetime
 
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -280,19 +280,6 @@ async def apply_registration_update(
     target_status = body.status if body.status is not None else registration.status
     target_guest_count = body.guest_count if body.guest_count is not None else registration.guest_count
     if target_guest_count != registration.guest_count:
-        if registration.event.max_capacity is not None and target_status != "cancelled":
-            await db.execute(select(Event).where(Event.id == event_id).with_for_update())
-            reserved_guest_count = (
-                await db.execute(
-                    select(func.coalesce(func.sum(Registration.guest_count), 0)).where(
-                        Registration.event_id == event_id,
-                        Registration.id != registration.id,
-                        Registration.status != "cancelled",
-                    )
-                )
-            ).scalar_one()
-            if reserved_guest_count + target_guest_count > registration.event.max_capacity:
-                raise HTTPException(status_code=400, detail="This event is fully booked.")
         registration.guest_count = target_guest_count
 
     target_checked_in = body.checked_in if body.checked_in is not None else registration.checked_in

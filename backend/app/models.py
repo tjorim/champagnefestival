@@ -282,6 +282,36 @@ class ContactMessage(Base):
     handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
+class WaitlistEntry(Base):
+    """A visitor's request to be contacted if a sold-out product frees up.
+
+    Scoped to one `Product`, not an `Event` — capacity now lives entirely on
+    the product's own `stock` (see `Event.max_capacity`'s removal), and a
+    table-unit product's stock (a ruilbeurs table) is a different number
+    from a person-unit product's (a champagne breakfast seat), so a waitlist
+    can only ever mean "this specific sold-out thing", never "the event" in
+    the abstract. Purely a manually-worked queue for staff to contact people
+    from in order — nothing here auto-promotes or auto-notifies.
+    """
+
+    __tablename__ = "waitlist_entries"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    product_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("products.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    email: Mapped[str] = mapped_column(String(320), nullable=False)
+    phone: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    guest_count: Mapped[int] = mapped_column(Integer, default=1)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    client_ip: Mapped[str] = mapped_column(String(45), nullable=False)
+    request_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+    handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    product: Mapped[Product] = relationship()
+
+
 class OutboxJob(Base):
     """Durable, lease-claimed work item for one external side effect."""
 
@@ -647,6 +677,15 @@ class Edition(Base):
     single-request path, by `app.services.editions_service.deactivate_conflicting_editions`
     transactionally deactivating the previous active edition of the same type. See #832."""
 
+    scratchpad: Mapped[str] = mapped_column(Text, default="")
+    """A free-text, deliberately unstructured planning notepad for this edition
+    — reminders, ideas, anything an admin wants written down. Admin-only,
+    never exposed through the public edition endpoints (``EditionPublicOut``
+    excludes it) or the admin `EditionOut` list/detail shape; read/written
+    only through the dedicated ``GET``/``PUT /api/editions/{id}/scratchpad``
+    endpoints, so scratchpad edits don't force a refetch of the much heavier
+    full edition payload."""
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
@@ -678,7 +717,6 @@ class Event(Base):
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     registrations_close_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    max_capacity: Mapped[int | None] = mapped_column(Integer, nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
@@ -877,9 +915,52 @@ class VolunteerPeriod(Base):
     volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), nullable=False)
     first_help_day: Mapped[dt_date] = mapped_column(Date, nullable=False)
     last_help_day: Mapped[dt_date | None] = mapped_column(Date, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    """Free-text rough schedule/notepad for this period (e.g. "Fri: bar,
+    Sat: serving") — deliberately unstructured rather than a role/task
+    model; admin-only, not surfaced to the volunteer themselves."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class EditionPollOption(Base):
+    """An admin-defined choice offered to volunteers for one edition — a main
+    dish, a soup, or a group dinner (e.g. "Donderdag - Cardis"). The actual
+    choices are catering-dependent and change every edition, so they are
+    admin-configured content rather than a fixed enum, mirroring how
+    `Product` holds one event's orderable items rather than a hardcoded list.
+    """
+
+    __tablename__ = "edition_poll_options"
+    __table_args__ = (CheckConstraint("kind IN ('dish', 'soup', 'dinner')", name="ck_poll_option_kind"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    edition_id: Mapped[str] = mapped_column(
+        String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class VolunteerPollSelection(Base):
+    """One volunteer's pick of one `EditionPollOption`. A row's mere presence
+    is the selection — there is nothing else to store. `dish`/`soup` are
+    enforced as at-most-one-per-volunteer by the service layer replacing only
+    that kind's row on change (see `volunteer_self_service.replace_poll_selections`);
+    `dinner` allows any number, toggled the same way a checklist would be.
+    """
+
+    __tablename__ = "volunteer_poll_selections"
+
+    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
+    option_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("edition_poll_options.id", ondelete="CASCADE"), primary_key=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
 class AuditEntry(Base):

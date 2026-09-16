@@ -160,6 +160,19 @@ export default function AdminSidebar({
 
           {canManageAdminSections && (
             <>
+              <SidebarItem
+                itemKey="waitlist"
+                icon="bi-hourglass-split"
+                label={m.admin_waitlist_section()}
+                {...itemProps}
+              />
+
+              <SidebarItem
+                itemKey="scratchpad"
+                icon="bi-journal-text"
+                label={m.admin_scratchpad_section()}
+                {...itemProps}
+              />
               <SidebarGroup
                 groupKey="events"
                 icon="bi-calendar-event"

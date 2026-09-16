@@ -66,7 +66,14 @@ describe("VolunteersManagement — rendering", () => {
         makeVolunteer({
           id: "v1",
           name: "With Period",
-          helpPeriods: [{ id: 1, firstHelpDay: "2025-03-01", lastHelpDay: "2025-03-02" }],
+          helpPeriods: [
+            {
+              id: 1,
+              firstHelpDay: "2025-03-01",
+              lastHelpDay: "2025-03-02",
+              notes: "Fri: bar",
+            },
+          ],
         }),
         makeVolunteer({ id: "v2", name: "No Period", helpPeriods: [] }),
       ],
@@ -78,6 +85,7 @@ describe("VolunteersManagement — rendering", () => {
     expect(scopedWithPeriod.getByText("12.34.56-789.01")).toBeInTheDocument();
     expect(scopedWithPeriod.getByText("EID123456")).toBeInTheDocument();
     expect(scopedWithPeriod.getByText("2025-03-01 → 2025-03-02")).toBeInTheDocument();
+    expect(scopedWithPeriod.getByText("Fri: bar")).toBeInTheDocument();
 
     const rowNoPeriod = screen.getByText("No Period").closest("tr");
     expect(
@@ -118,6 +126,9 @@ describe("VolunteersManagement — add volunteer flow", () => {
     fireEvent.change(scoped.getByLabelText(/admin_volunteers_period_start_label/), {
       target: { value: "2025-06-01" },
     });
+    fireEvent.change(scoped.getByLabelText(/admin_volunteers_period_notes_label/), {
+      target: { value: "  Fri: bar, Sat: serving  " },
+    });
 
     fireEvent.click(scoped.getByRole("button", { name: "admin_people_save" }));
 
@@ -130,7 +141,9 @@ describe("VolunteersManagement — add volunteer flow", () => {
         nationalRegisterNumber: "99.99.99-999.99",
         eidDocumentNumber: "EIDNEW1",
         active: true,
-        helpPeriods: [{ firstHelpDay: "2025-06-01", lastHelpDay: null }],
+        helpPeriods: [
+          { firstHelpDay: "2025-06-01", lastHelpDay: null, notes: "Fri: bar, Sat: serving" },
+        ],
       }),
     );
   });

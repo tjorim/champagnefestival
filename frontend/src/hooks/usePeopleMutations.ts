@@ -192,6 +192,7 @@ export function usePeopleMutations({
             help_periods: data.helpPeriods.map((period) => ({
               first_help_day: period.firstHelpDay,
               last_help_day: period.lastHelpDay,
+              notes: period.notes,
             })),
           }),
         },
@@ -219,6 +220,7 @@ export function usePeopleMutations({
             help_periods: data.helpPeriods.map((period) => ({
               first_help_day: period.firstHelpDay,
               last_help_day: period.lastHelpDay,
+              notes: period.notes,
             })),
           }),
         },

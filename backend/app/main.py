@@ -39,6 +39,7 @@ from app.routers import (
     outbox,
     people,
     policies,
+    poll_options,
     products,
     public_pages,
     push,
@@ -52,6 +53,7 @@ from app.routers import (
     volunteer_ops,
     volunteer_self,
     volunteers,
+    waitlist,
 )
 from app.routers import (
     settings as settings_router,
@@ -185,6 +187,7 @@ app.include_router(events.router)
 app.include_router(check_in.router)
 app.include_router(composer.router)
 app.include_router(contact.router)
+app.include_router(waitlist.router)
 app.include_router(outbox.router)
 app.include_router(tables.router)
 app.include_router(table_types.router)
@@ -195,6 +198,7 @@ app.include_router(exhibitors.router)
 app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(products.router)
+app.include_router(poll_options.router)
 app.include_router(push.router)
 app.include_router(volunteers.router)
 app.include_router(volunteer_ops.router)

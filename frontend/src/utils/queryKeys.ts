@@ -60,6 +60,8 @@ export const queryKeys = {
     personOptionsRoot: ["admin", "person-options"] as const,
     editionEvents: (editionId: string) => ["admin", "edition-events", editionId] as const,
     eventProducts: (eventId: string) => ["admin", "event-products", eventId] as const,
+    editionPollOptions: (editionId: string) =>
+      ["admin", "edition-poll-options", editionId] as const,
     editionModalExhibitors: ["admin", "edition-modal", "exhibitors"] as const,
     itemModalPeople: (query: string) => ["admin", "item-modal", "people", query] as const,
     peopleRegistrations: (personId: string) =>
@@ -110,7 +112,9 @@ export const queryKeys = {
     composerMessages: ["admin", "composer-messages"] as const,
     policy: (policyKey: string) => ["admin", "policies", policyKey] as const,
     settings: ["admin", "settings"] as const,
+    editionScratchpad: (editionId: string) => ["admin", "edition-scratchpad", editionId] as const,
     contactMessages: ["admin", "contact-messages"] as const,
+    waitlistEntries: ["admin", "waitlist-entries"] as const,
     contentManagement: {
       section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,
       editions: ["admin", "content-management", "editions"] as const,

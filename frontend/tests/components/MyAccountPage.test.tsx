@@ -50,6 +50,13 @@ vi.mock("@/paraglide/messages", () => ({
     my_eid_correction_success: () => "Your eID document number has been updated.",
     my_eid_correction_error: () => "Could not update your eID document number.",
     my_eid_submitting: () => "Submitting…",
+    my_poll_heading: () => "Meal and dinner choices",
+    my_poll_description: () => "Pick your main dish and soup.",
+    my_poll_dish_label: () => "Main dish",
+    my_poll_soup_label: () => "Soup",
+    my_poll_dinner_label: () => "Group dinners",
+    my_poll_load_error: () => "Could not load the meal and dinner choices. Please try again.",
+    my_poll_save_error: () => "Could not save your choice. Please try again.",
   },
 }));
 
@@ -353,5 +360,66 @@ describe("MyAccountPage", () => {
     await user.click(accountTab);
     expect(accountTab).toHaveAttribute("aria-selected", "true");
     expect(registrationsTab).toHaveAttribute("aria-selected", "false");
+  });
+
+  it("lets a linked volunteer pick a meal/dinner poll option and saves it", async () => {
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-volunteer",
+      roles: ["volunteer"],
+      hasRole: vi.fn((role: string) => role === "volunteer"),
+      getAccessToken: vi.fn().mockReturnValue("oidc-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout: vi.fn(),
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+    server.use(
+      http.get("/api/me/volunteer", () =>
+        HttpResponse.json({
+          linked: true,
+          name: "Sofie De Smet",
+          national_register_number: "91010112319",
+          eid_document_number: "123456789002",
+        }),
+      ),
+      http.get("/api/me/volunteer/poll-options", () =>
+        HttpResponse.json({
+          edition_id: "2026-october",
+          options: [
+            { id: "poll-dish-1", kind: "dish", label: "Vol-au-vent" },
+            { id: "poll-soup-1", kind: "soup", label: "Tomatensoep" },
+          ],
+          selections: { dish_option_id: null, soup_option_id: null, dinner_option_ids: [] },
+        }),
+      ),
+      http.put("/api/me/volunteer/poll-selections", async ({ request }) => {
+        const body = (await request.json()) as { dish_option_id: string | null };
+        return HttpResponse.json({
+          edition_id: "2026-october",
+          options: [
+            { id: "poll-dish-1", kind: "dish", label: "Vol-au-vent" },
+            { id: "poll-soup-1", kind: "soup", label: "Tomatensoep" },
+          ],
+          selections: {
+            dish_option_id: body.dish_option_id,
+            soup_option_id: null,
+            dinner_option_ids: [],
+          },
+        });
+      }),
+    );
+
+    const user = userEvent.setup();
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+
+    const dishOption = await screen.findByRole("radio", { name: "Vol-au-vent" });
+    await user.click(dishOption);
+
+    await waitFor(() => expect(dishOption).toBeChecked());
   });
 });

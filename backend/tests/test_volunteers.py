@@ -25,6 +25,7 @@ async def test_volunteer_crud_and_constraints(client):
             {
                 "first_help_day": "2024-03-15",
                 "last_help_day": "2024-03-17",
+                "notes": "  Fri: bar, Sat: serving  ",
             },
             {
                 "first_help_day": "2025-10-10",
@@ -38,6 +39,10 @@ async def test_volunteer_crud_and_constraints(client):
     volunteer = r.json()
     assert volunteer["name"] == "Sofie De Smet"
     assert len(volunteer["help_periods"]) == 2
+    # notes is stripped and defaults to "" when omitted — a rough,
+    # unstructured schedule/notepad rather than a role/task model.
+    assert volunteer["help_periods"][0]["notes"] == "Fri: bar, Sat: serving"
+    assert volunteer["help_periods"][1]["notes"] == ""
 
     # duplicate insurance identity fields are rejected
     r = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
@@ -77,6 +82,7 @@ async def test_volunteer_crud_and_constraints(client):
                 {
                     "first_help_day": "2025-03-21",
                     "last_help_day": "2025-03-23",
+                    "notes": "Sun: desk",
                 },
                 {
                     "first_help_day": "2025-10-10",
@@ -90,6 +96,7 @@ async def test_volunteer_crud_and_constraints(client):
     assert r.json()["address"] == "Nieuwe Steenweg 8, 8400 Oostende"
     assert r.json()["active"] is True
     assert len(r.json()["help_periods"]) == 3
+    assert r.json()["help_periods"][1]["notes"] == "Sun: desk"
 
     r = await client.put(
         f"/api/volunteers/{volunteer_id}",

@@ -17,6 +17,8 @@ import PolicyManagement from "./PolicyManagement";
 import PushOptIn from "@/components/PushOptIn";
 import SettingsManagement from "./SettingsManagement";
 import ContactMessagesManagement from "./ContactMessagesManagement";
+import ScratchpadManagement from "./ScratchpadManagement";
+import WaitlistManagement from "./WaitlistManagement";
 import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
 import MembersManagement from "./MembersManagement";
@@ -532,6 +534,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     sectionError={registrationError}
                     onClearSectionError={() => setRegistrationError("")}
                   />
+                )}
+                {canManageAdminSections && activeKey === "waitlist" && (
+                  <WaitlistManagement authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "scratchpad" && (
+                  <ScratchpadManagement authHeaders={authHeaders} editionId={activeEdition.id} />
                 )}
                 {canManageAdminSections && activeKey === "exhibitors" && (
                   <Card bg="dark" text="white" border="secondary" className="mb-3">

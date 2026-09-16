@@ -117,28 +117,6 @@ async def test_checkin_stats_excludes_cancelled_registrations(client):
 
 
 @pytest.mark.anyio
-async def test_reactivating_with_guest_count_change_checks_event_capacity(client):
-    event = await _create_event(client, edition_id="edition-reactivate-capacity", max_capacity=3)
-    await _register(client, event, guest_count=2, person_name="Active Guest")
-    cancelled_id = await _register(client, event, guest_count=1, person_name="Cancelled Guest")
-    cancel_response = await client.put(
-        f"/api/registrations/{cancelled_id}",
-        json={"status": "cancelled"},
-        headers=ADMIN_HEADERS,
-    )
-    assert cancel_response.status_code == 200, cancel_response.text
-
-    response = await client.put(
-        f"/api/registrations/{cancelled_id}",
-        json={"status": "confirmed", "guest_count": 2},
-        headers=ADMIN_HEADERS,
-    )
-
-    assert response.status_code == 400
-    assert response.json()["detail"] == "This event is fully booked."
-
-
-@pytest.mark.anyio
 async def test_checkin_stats_filters_by_edition(client):
     event_a = await _create_event(client, edition_id="edition-checkin-a", title="Event A")
     event_b = await _create_event(client, edition_id="edition-checkin-b", title="Event B")

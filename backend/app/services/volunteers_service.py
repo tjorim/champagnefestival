@@ -100,6 +100,7 @@ async def replace_help_periods(
                 volunteer_id=volunteer_id,
                 first_help_day=period.first_help_day,
                 last_help_day=period.last_help_day,
+                notes=period.notes,
             )
         )
 
@@ -150,6 +151,7 @@ def to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> dic
                 "id": period.id,
                 "first_help_day": period.first_help_day,
                 "last_help_day": period.last_help_day,
+                "notes": period.notes,
             }
             for period in help_periods
         ],

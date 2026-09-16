@@ -44,7 +44,7 @@ function makePerson(overrides: Partial<Person> & { id: string }): Person {
 const CANONICAL = makePerson({
   id: "per_canonical",
   roles: ["member", "volunteer"],
-  helpPeriods: [{ id: 1, firstHelpDay: "2024-03-15", lastHelpDay: "2024-03-17" }],
+  helpPeriods: [{ id: 1, firstHelpDay: "2024-03-15", lastHelpDay: "2024-03-17", notes: "" }],
 });
 
 const DUPLICATE = makePerson({
@@ -52,8 +52,8 @@ const DUPLICATE = makePerson({
   email: "sofie@example.com",
   roles: ["volunteer"],
   helpPeriods: [
-    { id: 2, firstHelpDay: "2025-10-10", lastHelpDay: null },
-    { id: 3, firstHelpDay: "2026-02-01", lastHelpDay: "2026-02-03" },
+    { id: 2, firstHelpDay: "2025-10-10", lastHelpDay: null, notes: "" },
+    { id: 3, firstHelpDay: "2026-02-01", lastHelpDay: "2026-02-03", notes: "" },
   ],
 });
 

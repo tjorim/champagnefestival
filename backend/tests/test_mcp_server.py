@@ -101,7 +101,6 @@ def _make_event(
     ev.end_time = "22:00"
     ev.category = "festival"
     ev.registration_required = True
-    ev.max_capacity = None
     ev.active = active
     ev.created_at = datetime(2026, 1, 1, tzinfo=UTC)
     ev.updated_at = datetime(2026, 1, 1, tzinfo=UTC)

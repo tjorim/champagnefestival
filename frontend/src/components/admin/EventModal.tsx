@@ -26,7 +26,6 @@ const EMPTY_FORM: EventFormData = {
   registrationRequired: false,
   registrationsOpenFrom: "",
   registrationsCloseAt: "",
-  maxCapacity: "",
   sortOrder: "",
   active: true,
 };
@@ -58,7 +57,6 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             registrationRequired: initial.registrationRequired,
             registrationsOpenFrom: initial.registrationsOpenFrom ?? "",
             registrationsCloseAt: initial.registrationsCloseAt ?? "",
-            maxCapacity: initial.maxCapacity != null ? String(initial.maxCapacity) : "",
             sortOrder: initial.sortOrder != null ? String(initial.sortOrder) : "",
             active: initial.active,
           }
@@ -258,42 +256,6 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     onBlur={field.handleBlur}
                   />
                 )}
-              </form.Field>
-            </Form.Group>
-            <Form.Group controlId="event-max-capacity" style={{ maxWidth: "160px" }}>
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_event_max_capacity()}
-              </Form.Label>
-              <form.Field
-                name="maxCapacity"
-                validators={{
-                  onChange: ({ value }) =>
-                    value && Number(value) < 0 ? m.admin_event_capacity_min() : undefined,
-                }}
-              >
-                {(field) => {
-                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
-                  return (
-                    <>
-                      <Form.Control
-                        type="number"
-                        min={0}
-                        size="sm"
-                        className="bg-dark text-light border-secondary"
-                        disabled={!registrationRequired}
-                        value={field.state.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        isInvalid={showErr}
-                      />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.state.meta.errors[0]}
-                        </Form.Control.Feedback>
-                      )}
-                    </>
-                  );
-                }}
               </form.Field>
             </Form.Group>
           </div>

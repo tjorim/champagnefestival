@@ -118,7 +118,6 @@ def event_to_summary_dict(event: Event, include_edition: bool = False, *, public
         "registration_required": event.registration_required,
         "registrations_open_from": event.registrations_open_from,
         "registrations_close_at": event.registrations_close_at,
-        "max_capacity": event.max_capacity,
         "active": event.active,
         "created_at": event.created_at,
         "updated_at": event.updated_at,
@@ -148,16 +147,16 @@ def _public_products(products: Sequence[Product]) -> list[dict]:
     return [product_to_public_dict(p, purchasable_ids) for p in products if p.id in purchasable_ids]
 
 
-def _product_available_quantity(p: Product) -> int | None:
+def product_available_quantity(p: Product) -> int | None:
     return max(0, p.stock - p.reserved_quantity) if p.stock is not None else None
 
 
-def _product_sold_out(p: Product, available_quantity: int | None) -> bool:
+def product_sold_out(p: Product, available_quantity: int | None) -> bool:
     return p.purchasable and available_quantity is not None and available_quantity <= 0
 
 
 def product_to_dict(p: Product) -> dict:
-    available_quantity = _product_available_quantity(p)
+    available_quantity = product_available_quantity(p)
     return {
         "id": p.id,
         "event_id": p.event_id,
@@ -175,7 +174,7 @@ def product_to_dict(p: Product) -> dict:
         "reserved_quantity": p.reserved_quantity,
         "available_quantity": available_quantity,
         "shortage": max(0, p.reserved_quantity - p.stock) if p.stock is not None else 0,
-        "sold_out": _product_sold_out(p, available_quantity),
+        "sold_out": product_sold_out(p, available_quantity),
         "created_at": p.created_at,
         "updated_at": p.updated_at,
     }
@@ -189,7 +188,7 @@ def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None) 
     product and is stripped, so a hidden product's id never reaches an
     unauthenticated caller even as a bare bundle-target reference. See
     app.schemas.ProductPublicOut."""
-    available_quantity = _product_available_quantity(p)
+    available_quantity = product_available_quantity(p)
     inclusions = p.inclusions
     included_product_id = p.included_product_id
     included_per_guests = p.included_per_guests
@@ -209,7 +208,7 @@ def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None) 
         "required": p.required,
         "purchasable": p.purchasable,
         "available_quantity": available_quantity,
-        "sold_out": _product_sold_out(p, available_quantity),
+        "sold_out": product_sold_out(p, available_quantity),
         "inclusions": inclusions,
         "included_product_id": included_product_id,
         "included_per_guests": included_per_guests,

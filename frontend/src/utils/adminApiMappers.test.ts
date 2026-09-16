@@ -501,7 +501,7 @@ describe("apiRoomToRoom", () => {
 // ─── mergeVolunteerPerson ─────────────────────────────────────────────────────
 
 describe("mergeVolunteerPerson", () => {
-  const helpPeriods = [{ id: 1, firstHelpDay: "2025-06-01", lastHelpDay: "2025-06-02" }];
+  const helpPeriods = [{ id: 1, firstHelpDay: "2025-06-01", lastHelpDay: "2025-06-02", notes: "" }];
 
   it("always includes 'volunteer' in roles", () => {
     const result = mergeVolunteerPerson(undefined, makePerson({ roles: ["member"] }));
@@ -590,14 +590,14 @@ describe("mergePersonUpdate", () => {
 
   it("returns updated directly when updated has no volunteer role", () => {
     const existing = makePerson({
-      helpPeriods: [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null }],
+      helpPeriods: [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null, notes: "" }],
     });
     const updated = makePerson({ roles: ["member"] });
     expect(mergePersonUpdate(existing, updated)).toBe(updated);
   });
 
   it("preserves existing helpPeriods when updated has volunteer role", () => {
-    const helpPeriods = [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null }];
+    const helpPeriods = [{ id: 1, firstHelpDay: "2025-01-01", lastHelpDay: null, notes: "" }];
     const existing = makePerson({ helpPeriods });
     const updated = makePerson({ roles: ["volunteer"], helpPeriods: [] });
     const result = mergePersonUpdate(existing, updated);

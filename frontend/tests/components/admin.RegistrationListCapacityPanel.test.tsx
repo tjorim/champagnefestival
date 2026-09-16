@@ -62,7 +62,6 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
       category: "bourse",
       products: [],
       registrationRequired: true,
-      maxCapacity: 40,
       active: true,
       createdAt: "2026-01-01T00:00:00.000Z",
       updatedAt: "2026-01-01T00:00:00.000Z",
@@ -126,8 +125,6 @@ describe("RegistrationList — per-event capacity panel", () => {
     // The one loaded registration would tally 0/2 on its own.
     expect(screen.getByText(/admin_checked_in: 0\/2/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText(/admin_checked_in: 12\/30/)).toBeInTheDocument());
-    // Capacity comes from the event, which the stats endpoint doesn't carry.
-    expect(screen.getByText("event_capacity: 30/40")).toBeInTheDocument();
   });
 
   it("falls back to the locally derived counts when the stats request fails", async () => {
@@ -162,7 +159,6 @@ describe("RegistrationList — per-event capacity panel", () => {
           ...buildRegistration().event!,
           id: "event-2",
           title: "Capsule Exchange",
-          maxCapacity: undefined,
         },
       }),
     ]);
