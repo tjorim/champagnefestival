@@ -15,6 +15,7 @@ from sqlalchemy.orm.interfaces import ORMOption
 
 from app.database import Base
 from app.models import (
+    AdminScratchpad,
     AppSettings,
     Area,
     Edition,
@@ -497,6 +498,13 @@ def app_settings_to_dict(s: AppSettings) -> dict:
         "public_email": s.public_email,
         "public_phone": s.public_phone,
         "facebook_url": s.facebook_url,
+        "updated_at": s.updated_at,
+    }
+
+
+def admin_scratchpad_to_dict(s: AdminScratchpad) -> dict:
+    return {
+        "content": s.content,
         "updated_at": s.updated_at,
     }
 

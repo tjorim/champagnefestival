@@ -1661,7 +1661,10 @@ class ChampagneFestivalMcpBackend:
         """Create a volunteer (a ``Person`` with the ``volunteer`` role).
 
         ``help_periods`` is a list of ``{"first_help_day": "YYYY-MM-DD", "last_help_day":
-        "YYYY-MM-DD" | None}`` and must contain at least one entry. Requires the ``admin`` role.
+        "YYYY-MM-DD" | None, "notes": str}`` and must contain at least one entry.
+        ``notes`` is a free-text, admin-only rough schedule/notepad for that period
+        (e.g. "Fri: bar, Sat: serving") — there is no structured role/task model.
+        Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_volunteers.create_volunteer(

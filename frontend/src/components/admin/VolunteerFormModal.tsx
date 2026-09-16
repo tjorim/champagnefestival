@@ -20,6 +20,7 @@ interface VolunteerFormModalProps {
 export interface VolunteerHelpPeriodFormData {
   firstHelpDay: string;
   lastHelpDay: string | null;
+  notes: string;
 }
 
 export interface VolunteerFormData {
@@ -32,13 +33,14 @@ export interface VolunteerFormData {
 }
 
 function emptyPeriod(): VolunteerHelpPeriodFormData {
-  return { firstHelpDay: "", lastHelpDay: null };
+  return { firstHelpDay: "", lastHelpDay: null, notes: "" };
 }
 
 function mapPeriod(period: VolunteerHelpPeriod): VolunteerHelpPeriodFormData {
   return {
     firstHelpDay: period.firstHelpDay,
     lastHelpDay: period.lastHelpDay,
+    notes: period.notes,
   };
 }
 
@@ -85,6 +87,7 @@ export default function VolunteerFormModal({
       const normalized = value.helpPeriods.map((period) => ({
         firstHelpDay: period.firstHelpDay,
         lastHelpDay: period.lastHelpDay?.trim() ? period.lastHelpDay : null,
+        notes: period.notes.trim(),
       }));
 
       if (normalized.length === 0 || normalized.some((period) => !period.firstHelpDay)) {
@@ -330,6 +333,25 @@ export default function VolunteerFormModal({
                         </Form.Group>
                       </Col>
                     </Row>
+                    <Form.Group className="mt-2" controlId={`volunteer-period-notes-${index}`}>
+                      <Form.Label className="text-secondary small">
+                        {m.admin_volunteers_period_notes_label()}
+                      </Form.Label>
+                      <Form.Control
+                        as="textarea"
+                        rows={2}
+                        value={period.notes}
+                        onChange={(e) =>
+                          void form.replaceFieldValue("helpPeriods", index, {
+                            ...period,
+                            notes: e.target.value,
+                          })
+                        }
+                        placeholder={m.admin_volunteers_period_notes_placeholder()}
+                        className="bg-dark text-light border-secondary"
+                        maxLength={2000}
+                      />
+                    </Form.Group>
                   </div>
                 ))}
               </div>

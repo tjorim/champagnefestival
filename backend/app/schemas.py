@@ -777,6 +777,12 @@ class RegistrationAdminCreate(RegistrationNotesRequest):
 class VolunteerHelpPeriodIn(RequestModel):
     first_help_day: dt_date
     last_help_day: dt_date | None = None
+    notes: str = Field(default="", max_length=2000)
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def strip_notes(cls, v: str) -> str:
+        return v.strip() if isinstance(v, str) else v
 
     @model_validator(mode="after")
     def validate_range(self) -> Self:
@@ -825,6 +831,7 @@ class VolunteerPeriodOut(BaseModel):
     id: int
     first_help_day: dt_date
     last_help_day: dt_date | None
+    notes: str
 
     model_config = {"from_attributes": True}
 
@@ -1789,6 +1796,17 @@ class AppSettingsOut(BaseModel):
     public_email: str
     public_phone: str
     facebook_url: str
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AdminScratchpadUpdate(RequestModel):
+    content: str = Field(max_length=20000)
+
+
+class AdminScratchpadOut(BaseModel):
+    content: str
     updated_at: datetime
 
     model_config = {"from_attributes": True}

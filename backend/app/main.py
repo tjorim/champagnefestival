@@ -45,6 +45,7 @@ from app.routers import (
     push,
     registrations,
     rooms,
+    scratchpad,
     table_types,
     tables,
     venue_plan,
@@ -188,6 +189,7 @@ app.include_router(check_in.router)
 app.include_router(composer.router)
 app.include_router(contact.router)
 app.include_router(waitlist.router)
+app.include_router(scratchpad.router)
 app.include_router(outbox.router)
 app.include_router(tables.router)
 app.include_router(table_types.router)

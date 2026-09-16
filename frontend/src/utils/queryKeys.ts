@@ -112,6 +112,7 @@ export const queryKeys = {
     composerMessages: ["admin", "composer-messages"] as const,
     policy: (policyKey: string) => ["admin", "policies", policyKey] as const,
     settings: ["admin", "settings"] as const,
+    scratchpad: ["admin", "scratchpad"] as const,
     contactMessages: ["admin", "contact-messages"] as const,
     waitlistEntries: ["admin", "waitlist-entries"] as const,
     contentManagement: {

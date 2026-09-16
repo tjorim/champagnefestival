@@ -2,6 +2,7 @@ export interface VolunteerHelpPeriod {
   id: number;
   firstHelpDay: string;
   lastHelpDay: string | null;
+  notes: string;
 }
 
 export interface Person {
@@ -45,6 +46,7 @@ export function apiToPerson(d: Record<string, unknown>): Person {
             id: (p.id ?? 0) as number,
             firstHelpDay: p.first_help_day as string,
             lastHelpDay: (p.last_help_day as string | null) ?? null,
+            notes: (p.notes ?? "") as string,
           };
         })
       : [],

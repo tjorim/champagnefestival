@@ -906,6 +906,10 @@ class VolunteerPeriod(Base):
     volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), nullable=False)
     first_help_day: Mapped[dt_date] = mapped_column(Date, nullable=False)
     last_help_day: Mapped[dt_date | None] = mapped_column(Date, nullable=True)
+    notes: Mapped[str] = mapped_column(Text, default="")
+    """Free-text rough schedule/notepad for this period (e.g. "Fri: bar,
+    Sat: serving") — deliberately unstructured rather than a role/task
+    model; admin-only, not surfaced to the volunteer themselves."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
@@ -1073,6 +1077,21 @@ class AppSettings(Base):
     public_email: Mapped[str] = mapped_column(String(320), default="nancy.cattrysse@telenet.be")
     public_phone: Mapped[str] = mapped_column(String(30), default="+32 478 48 01 77")
     facebook_url: Mapped[str] = mapped_column(String(500), default="https://www.facebook.com/champagnefestival.kust")
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class AdminScratchpad(Base):
+    """A single shared free-text notepad for general admin planning notes —
+    not tied to any volunteer, period, or edition. Always exactly one row,
+    with a fixed id (mirrors ``AppSettings``). Deliberately unstructured;
+    admin-only, never exposed through the public ``AppSettings`` response."""
+
+    __tablename__ = "admin_scratchpad"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    content: Mapped[str] = mapped_column(Text, default="")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

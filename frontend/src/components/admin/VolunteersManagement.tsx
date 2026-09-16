@@ -49,7 +49,8 @@ const volunteersGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
     row.original.helpPeriods.some(
       (period) =>
         period.firstHelpDay.toLowerCase().includes(s) ||
-        (period.lastHelpDay ?? "").toLowerCase().includes(s),
+        (period.lastHelpDay ?? "").toLowerCase().includes(s) ||
+        period.notes.toLowerCase().includes(s),
     )
   );
 };
@@ -168,6 +169,9 @@ export default function VolunteersManagement({
                 row.original.helpPeriods.map((period) => (
                   <span key={period.id} className="text-secondary">
                     {formatPeriod(period)}
+                    {period.notes && (
+                      <span className="d-block text-secondary opacity-75">{period.notes}</span>
+                    )}
                   </span>
                 ))
               ) : (

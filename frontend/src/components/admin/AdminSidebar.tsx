@@ -165,6 +165,13 @@ export default function AdminSidebar({
             {...itemProps}
           />
 
+          <SidebarItem
+            itemKey="scratchpad"
+            icon="bi-journal-text"
+            label={m.admin_scratchpad_section()}
+            {...itemProps}
+          />
+
           {canManageAdminSections && (
             <>
               <SidebarGroup

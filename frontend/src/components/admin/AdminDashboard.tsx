@@ -17,6 +17,7 @@ import PolicyManagement from "./PolicyManagement";
 import PushOptIn from "@/components/PushOptIn";
 import SettingsManagement from "./SettingsManagement";
 import ContactMessagesManagement from "./ContactMessagesManagement";
+import ScratchpadManagement from "./ScratchpadManagement";
 import WaitlistManagement from "./WaitlistManagement";
 import type { ItemDraft } from "./itemTypes";
 import PeopleManagement from "./PeopleManagement";
@@ -535,6 +536,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   />
                 )}
                 {activeKey === "waitlist" && <WaitlistManagement authHeaders={authHeaders} />}
+                {activeKey === "scratchpad" && <ScratchpadManagement authHeaders={authHeaders} />}
                 {canManageAdminSections && activeKey === "exhibitors" && (
                   <Card bg="dark" text="white" border="secondary" className="mb-3">
                     <Card.Body>
