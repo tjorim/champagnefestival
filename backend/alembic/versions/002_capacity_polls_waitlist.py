@@ -1,4 +1,8 @@
-"""Drop the redundant events.max_capacity headcount cap in favour of the required product's own stock as the sole capacity signal, admin-configured per-edition volunteer meal/dinner poll options with each volunteer's own picks, and a per-product visitor waitlist.
+"""Drop the redundant events.max_capacity headcount cap in favour of the required product's own stock as the sole capacity signal, admin-configured per-edition volunteer meal/dinner poll options with each volunteer's own picks, a per-product visitor waitlist, a rough per-period volunteer schedule/notepad, and a per-edition admin scratchpad.
+
+None of this had shipped in a release as of when it was squashed into one
+revision (formerly split across 002/003/004) — 000 and 001 are the only
+migrations a deployed database has ever run.
 
 Revision ID: 002
 Revises: 001
@@ -63,8 +67,18 @@ def upgrade() -> None:
     op.create_index("ix_waitlist_entries_product_id", "waitlist_entries", ["product_id"])
     op.create_index("ix_waitlist_entries_created_at", "waitlist_entries", ["created_at"])
 
+    # A rough, deliberately unstructured per-period schedule/notepad
+    # (e.g. "Fri: bar, Sat: serving"), admin-only — not a role/task model.
+    op.add_column("volunteer_periods", sa.Column("notes", sa.Text(), nullable=False, server_default=""))
+
+    # A free-text planning notepad scoped to one edition, not a single
+    # global blob that would accumulate clutter across editions.
+    op.add_column("editions", sa.Column("scratchpad", sa.Text(), nullable=False, server_default=""))
+
 
 def downgrade() -> None:
+    op.drop_column("editions", "scratchpad")
+    op.drop_column("volunteer_periods", "notes")
     op.drop_index("ix_waitlist_entries_created_at", table_name="waitlist_entries")
     op.drop_index("ix_waitlist_entries_product_id", table_name="waitlist_entries")
     op.drop_table("waitlist_entries")
