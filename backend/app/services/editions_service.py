@@ -31,7 +31,7 @@ from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.models import Edition, Event, Exhibitor, Venue
-from app.schemas import EditionCreate, EditionType, EditionUpdate
+from app.schemas import EditionCreate, EditionScratchpadUpdate, EditionType, EditionUpdate
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
 
@@ -59,6 +59,29 @@ async def get_edition_or_404(db: AsyncSession, edition_id: str) -> Edition:
         "Edition not found.",
         options=[selectinload(Edition.events).selectinload(Event.products)],
     )
+
+
+async def get_edition_scratchpad(db: AsyncSession, edition_id: str) -> dict:
+    edition = await get_edition_or_404(db, edition_id)
+    return {"content": edition.scratchpad, "updated_at": edition.updated_at}
+
+
+async def update_edition_scratchpad(
+    db: AsyncSession, edition: Edition, *, body: EditionScratchpadUpdate, actor: str, request_id: str | None = None
+) -> dict:
+    edition.scratchpad = body.content
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="edition_scratchpad_updated",
+        resource_type="edition",
+        resource_id=edition.id,
+        request_id=request_id,
+        details={},
+    )
+    await db.commit()
+    await db.refresh(edition)
+    return {"content": edition.scratchpad, "updated_at": edition.updated_at}
 
 
 async def deactivate_conflicting_editions(

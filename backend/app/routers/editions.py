@@ -19,7 +19,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.models import Event, PaymentTransaction, Registration
-from app.schemas import EditionAttendanceStats, EditionCreate, EditionOut, EditionPublicOut, EditionType, EditionUpdate
+from app.schemas import (
+    EditionAttendanceStats,
+    EditionCreate,
+    EditionOut,
+    EditionPublicOut,
+    EditionScratchpadOut,
+    EditionScratchpadUpdate,
+    EditionType,
+    EditionUpdate,
+)
 from app.services import editions_service
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
@@ -201,6 +210,30 @@ async def update_edition(
     edition = await editions_service.get_edition_or_404(db, edition_id)
     return await editions_service.apply_edition_update(
         db, edition, body, actor=actor, request_id=getattr(request.state, "request_id", None)
+    )
+
+
+@router.get("/{edition_id}/scratchpad", response_model=EditionScratchpadOut, dependencies=[Depends(require_admin)])
+async def get_edition_scratchpad(edition_id: str, db: AsyncSession = Depends(get_db)) -> dict:
+    """A free-text planning notepad scoped to one edition. Deliberately its own
+    lightweight resource rather than a field on `EditionOut`/`EditionUpdate`,
+    so editing it doesn't require fetching or resubmitting the much heavier
+    full edition payload (venue, events, producers, ...). Browser-only, no
+    MCP equivalent, matching `app.routers.contact`/`app.routers.waitlist`."""
+    return await editions_service.get_edition_scratchpad(db, edition_id)
+
+
+@router.put("/{edition_id}/scratchpad", response_model=EditionScratchpadOut, dependencies=[Depends(require_admin)])
+async def update_edition_scratchpad(
+    edition_id: str,
+    body: EditionScratchpadUpdate,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    edition = await editions_service.get_edition_or_404(db, edition_id)
+    return await editions_service.update_edition_scratchpad(
+        db, edition, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
 
 

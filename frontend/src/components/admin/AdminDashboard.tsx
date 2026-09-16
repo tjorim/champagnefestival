@@ -536,7 +536,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   />
                 )}
                 {activeKey === "waitlist" && <WaitlistManagement authHeaders={authHeaders} />}
-                {activeKey === "scratchpad" && <ScratchpadManagement authHeaders={authHeaders} />}
+                {activeKey === "scratchpad" && (
+                  <ScratchpadManagement authHeaders={authHeaders} editionId={activeEdition.id} />
+                )}
                 {canManageAdminSections && activeKey === "exhibitors" && (
                   <Card bg="dark" text="white" border="secondary" className="mb-3">
                     <Card.Body>

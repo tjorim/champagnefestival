@@ -1707,6 +1707,17 @@ class EditionPublicOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class EditionScratchpadUpdate(RequestModel):
+    content: str = Field(max_length=20000)
+
+
+class EditionScratchpadOut(BaseModel):
+    content: str
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class AuditEntryOut(BaseModel):
     id: str
     timestamp: datetime
@@ -1796,17 +1807,6 @@ class AppSettingsOut(BaseModel):
     public_email: str
     public_phone: str
     facebook_url: str
-    updated_at: datetime
-
-    model_config = {"from_attributes": True}
-
-
-class AdminScratchpadUpdate(RequestModel):
-    content: str = Field(max_length=20000)
-
-
-class AdminScratchpadOut(BaseModel):
-    content: str
     updated_at: datetime
 
     model_config = {"from_attributes": True}
