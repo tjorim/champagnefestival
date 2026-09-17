@@ -70,6 +70,47 @@ describe("AnalyticsDashboard", () => {
     expect(screen.getByText("admin_analytics_legend_checked_in")).toBeInTheDocument();
   });
 
+  it("hides a series' bars when its legend item is toggled off", async () => {
+    fetchEditionStats.mockResolvedValue([
+      {
+        editionId: "edition-2026",
+        year: 2026,
+        month: "march",
+        editionType: "festival",
+        startDate: "2026-03-20",
+        eventsCount: 2,
+        totalRegistrations: 10,
+        totalGuests: 25,
+        totalCheckedIn: 18,
+        totalPaid: 500,
+        totalDue: 600,
+        totalReceived: 500,
+        totalRefunded: 0,
+        totalOutstanding: 100,
+        totalRefundLiability: 0,
+      },
+    ]);
+    const { container } = render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <AnalyticsDashboard authHeaders={() => ({})} />
+      </QueryClientProvider>,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("img", { name: "admin_analytics_chart_aria" })).toBeInTheDocument(),
+    );
+
+    const barPaths = () => container.querySelectorAll("g.ts-chart__bar-y path");
+    await waitFor(() => expect(barPaths()).toHaveLength(2));
+
+    fireEvent.click(screen.getByRole("button", { name: /guests/i }));
+
+    await waitFor(() => expect(barPaths()).toHaveLength(1));
+    expect(
+      container.querySelector('g.ts-chart__bar-y path[data-ts-key*=":guests:"]'),
+    ).not.toBeInTheDocument();
+  });
+
   it("switches to a table view showing the same data", async () => {
     fetchEditionStats.mockResolvedValue([
       {

@@ -874,6 +874,7 @@
   "admin_analytics_legend_guests": "Guests registered",
   "admin_analytics_legend_checked_in": "Checked in",
   "admin_analytics_chart_aria": "Guests registered and checked in per edition, chronological",
+  "admin_analytics_legend_toggle_aria": "Toggle series visibility",
   "admin_analytics_bar_group_aria": "{edition}: {guests} guests registered, {checkedIn} checked in",
   "admin_registrations_export_event_csv": "Export guest list (CSV)",
   "admin_registrations_export_event_csv_for": "Export guest list for {event} as CSV",

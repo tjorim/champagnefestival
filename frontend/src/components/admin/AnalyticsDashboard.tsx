@@ -10,7 +10,10 @@ import { useCallback, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type SortingState } from "@tanstack/react-table";
 import { barY, defineChart, group } from "@tanstack/charts";
-import { Chart } from "@tanstack/charts/react";
+import { controlledSignal } from "@tanstack/charts/interaction/signal";
+import { interactiveColorLegend } from "@tanstack/charts/legend";
+import { motion } from "@tanstack/charts/motion";
+import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
@@ -37,9 +40,16 @@ interface AnalyticsDashboardProps {
 
 const CHART_HEIGHT = 260;
 
+// Spring transition for bar height/position and tooltip movement as the
+// underlying edition stats query resolves or refreshes.
+const chartRenderer = motion({
+  transition: { type: "spring", stiffness: 170, damping: 22, mass: 1 },
+});
+
 /**
- * Kept in sync by hand with `--series-guests` / `--series-checked-in` in
- * analyticsDashboard.css — TanStack Charts' `color.range` needs literal
+ * Validated categorical palette slots (blue, aqua) for this app's dark
+ * chart surface — see analyticsDashboard.css's header comment for the
+ * validation command. TanStack Charts' `color.range` needs literal
  * values, not CSS custom properties.
  */
 const SERIES_COLORS = { guests: "#3987e5", checkedIn: "#199e70" } as const;
@@ -63,6 +73,10 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
   const [ledgerEdition, setLedgerEdition] = useState<{ id: string; label: string } | null>(null);
   const [ledgerPage, setLedgerPage] = useState(1);
   const [ledgerSorting, setLedgerSorting] = useState<SortingState>([]);
+  const [visibleSeries, setVisibleSeries] = useState<readonly AttendanceSeries[]>([
+    "guests",
+    "checkedIn",
+  ]);
 
   const handleExportLedger = useCallback(
     async (editionId: string) => {
@@ -152,6 +166,15 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
       color: {
         domain: ["guests", "checkedIn"],
         range: [SERIES_COLORS.guests, SERIES_COLORS.checkedIn],
+        legend: interactiveColorLegend({
+          visible: controlledSignal(visibleSeries, (next) => setVisibleSeries(next)),
+          placement: "top",
+          ariaLabel: m.admin_analytics_legend_toggle_aria(),
+          format: (value) =>
+            value === "guests"
+              ? m.admin_analytics_legend_guests()
+              : m.admin_analytics_legend_checked_in(),
+        }),
       },
       theme: {
         foreground: "var(--viz-text-secondary)",
@@ -163,7 +186,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
       keyboard: true,
       tooltip,
     });
-  }, [editions]);
+  }, [editions, visibleSeries]);
 
   return (
     <div>
@@ -279,19 +302,10 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         </Table>
       ) : (
         <div className="viz-root">
-          <div className="analytics-legend mb-2">
-            <span className="analytics-legend-item">
-              <span className="analytics-legend-swatch analytics-series-guests" />
-              {m.admin_analytics_legend_guests()}
-            </span>
-            <span className="analytics-legend-item">
-              <span className="analytics-legend-swatch analytics-series-checked-in" />
-              {m.admin_analytics_legend_checked_in()}
-            </span>
-          </div>
           {attendanceChart && (
             <Chart
               definition={attendanceChart}
+              renderer={chartRenderer}
               height={CHART_HEIGHT}
               ariaLabel={m.admin_analytics_chart_aria()}
             />

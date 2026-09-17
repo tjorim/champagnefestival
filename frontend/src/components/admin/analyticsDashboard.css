@@ -9,8 +9,6 @@
  */
 
 .viz-root {
-  --series-guests: #3987e5; /* categorical slot 1 (blue) */
-  --series-checked-in: #199e70; /* categorical slot 2 (aqua) */
   --viz-text-secondary: #c3c2b7;
   --viz-text-muted: #898781;
   --viz-gridline: #2c2c2a;
@@ -24,35 +22,5 @@
   --ts-chart-tooltip-border: 1px solid var(--viz-axis);
 
   min-width: 0;
-}
-
-.analytics-legend {
-  display: flex;
-  gap: 1.25rem;
-  font-size: 0.875rem;
-  color: var(--viz-text-secondary);
-}
-
-.analytics-legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.analytics-legend-swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
-}
-
-.analytics-series-guests {
-  fill: var(--series-guests);
-  background-color: var(--series-guests);
-}
-
-.analytics-series-checked-in {
-  fill: var(--series-checked-in);
-  background-color: var(--series-checked-in);
 }
 

@@ -874,6 +874,7 @@
   "admin_analytics_legend_guests": "Geregistreerde gasten",
   "admin_analytics_legend_checked_in": "Ingecheckt",
   "admin_analytics_chart_aria": "Geregistreerde en ingecheckte gasten per editie, chronologisch",
+  "admin_analytics_legend_toggle_aria": "Zichtbaarheid van reeks wisselen",
   "admin_analytics_bar_group_aria": "{edition}: {guests} gasten geregistreerd, {checkedIn} ingecheckt",
   "admin_registrations_export_event_csv": "Gastenlijst exporteren (CSV)",
   "admin_registrations_export_event_csv_for": "Gastenlijst voor {event} exporteren als CSV",
