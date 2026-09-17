@@ -82,9 +82,13 @@ jobs:
           # SettingsManagement moved off hand-rolled useState onto the
           # @tanstack/react-form pattern the rest of the admin dashboard already
           # used) — measured 782 kB.
+          # AdminDashboard raised 810 -> 830 for the tanstack-db dependency-group
+          # bump (@tanstack/query-db-collection 1.2.12 -> 1.2.13, @tanstack/react-db
+          # 0.3.7 -> 0.3.8, transitively @tanstack/db -> 0.9.0) — no admin feature
+          # changed; the upstream release grew the shared chunk (measured 816 kB).
           TOTAL_MAX_KB=2200
           INDEX_MAX_KB=1050
-          ADMIN_MAX_KB=810
+          ADMIN_MAX_KB=830
 
           total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
           index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
