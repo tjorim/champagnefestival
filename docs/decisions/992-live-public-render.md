@@ -1,10 +1,10 @@
 # Live backend rendering of `/` and `/privacy`
 
 **Status:** Implemented in this repository (2026-09-07) — see "Implementation
-summary" below. **The `tjorim/apps` infra companion change has not been made
-yet**: until it ships, Caddy continues to serve `/` and `/privacy` as static
-files exactly as before, so this has no live effect in production yet — see
-"What's not done" below.
+summary" below. **The `tjorim/apps` infra companion change shipped and was
+verified live in production on 2026-09-17** (`tjorim/apps#209`, plus a
+follow-up fallback fix on the same branch) — see "Infra companion (shipped
+2026-09-17)" below.
 **Date:** 2026-09-06 (confirmed 2026-09-07, implemented 2026-09-07)
 **Issues:** [#992](https://github.com/tjorim/champagnefestival/issues/992)
 (primary); [#936](https://github.com/tjorim/champagnefestival/issues/936)
@@ -286,20 +286,43 @@ Shipped per the confirmed decisions above:
   `test_jsonld_service.py`; 2 new frontend tests
   (`JsonLd.contract.test.tsx`).
 
-## What's not done
+## Infra companion (shipped 2026-09-17)
 
-- **The `tjorim/apps` infra companion change** (decision doc's own
-  "Constraint the issue did not surface" section): the exact-path Caddy
-  `handle` for `/` and `/privacy` routing to `champagnefestival-api`, and
-  the read-only mount of the built frontend into that API container. Both
-  land in that separate repository, not this one — this session has no
-  access to it, so **this has not been done by anyone yet**, unlike #934's
-  `tjorim/apps#192` (confirmed already closed when that work landed).
-  Without it, Caddy's existing `try_files … /index.html` keeps serving `/`
-  and `/privacy` as static files exactly as before; this repository's new
-  routes are correct and fully tested but currently unreachable in
-  production. Needs its own PR in `tjorim/apps` before this has any live
-  effect.
+The `tjorim/apps` infra companion change this document's own "Constraint the
+issue did not surface" section called for landed in three PRs against that
+separate repository, applied and verified directly against production:
+
+- **`tjorim/apps#209`** — the exact-path Caddy `@public_pages path / /privacy`
+  matcher, `handle @public_pages { reverse_proxy champagnefestival-api:8000 }`
+  routing those two paths to the backend (every other path stays the
+  pre-existing `handle { root * /srv/champagnefestival; try_files …
+  /index.html; file_server }` catch-all), and a read-only bind mount of
+  `champagnefestival/frontend/dist` into the `champagnefestival-api`
+  container at the exact path `Settings.frontend_dist_path`'s default
+  (`../frontend/dist` relative to the container's `/app` WORKDIR) already
+  resolves to — no `champagnefestival.env` change needed. A follow-up commit
+  on the same PR adds a `handle_response` on a 404 status match from the
+  backend, falling through to the same static `file_server` rather than
+  surfacing a bare API 404 on the homepage, closing the gap this document's
+  "A missing or unreadable shell must degrade, not crash" requirement (above)
+  originally specified but the first cut of the Caddy config didn't actually
+  implement.
+- **`tjorim/apps#210`** and **`#211`** are unrelated cleanup found along the
+  way (worktime/daynest `noindex` headers; a dangling `badgehub.tjor.im`
+  Caddy block with no backing container) — not part of this issue's scope,
+  noted here only because they landed in the same session.
+
+Verified live against `https://champagnefestival.tjor.im` after all three
+merged: `/` and `/privacy` return 200 with real `<title>`/OG/Twitter/JSON-LD
+for the default locale and `?lng=en`/`?lng=fr`, `Cache-Control: public,
+max-age=60`, and FAQ/schedule text visible in the raw HTML; `/venue-plan` and
+`/api/health` are unaffected; the 404-fallback path was exercised against an
+isolated throwaway Caddy instance (a dummy always-404 backend on a separate
+Docker network) rather than by breaking the production mount. Edit-freshness
+(an admin FAQ/edition/policy change reaching the next render within the TTL)
+relies on `test_public_pages.py`'s real `NOTIFY` round-trip rather than a
+separate live production edit — the project owner confirmed that test
+coverage is sufficient rather than requiring one.
 
 ## References
 
