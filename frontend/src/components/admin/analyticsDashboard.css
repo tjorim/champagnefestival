@@ -16,6 +16,14 @@
   --viz-gridline: #2c2c2a;
   --viz-axis: #383835;
   --viz-surface: #1e1e1e;
+
+  /* Pin the TanStack Charts built-in tooltip to this app's forced dark
+   * theme instead of the OS-preference-driven Canvas/CanvasText defaults. */
+  --ts-chart-tooltip-background: var(--viz-surface);
+  --ts-chart-tooltip-color: var(--viz-text-secondary);
+  --ts-chart-tooltip-border: 1px solid var(--viz-axis);
+
+  min-width: 0;
 }
 
 .analytics-legend {
@@ -48,36 +56,3 @@
   background-color: var(--series-checked-in);
 }
 
-.analytics-gridline {
-  stroke: var(--viz-gridline);
-  stroke-width: 1;
-}
-
-.analytics-axis-line {
-  stroke: var(--viz-axis);
-  stroke-width: 1;
-}
-
-.analytics-axis-label {
-  fill: var(--viz-text-muted);
-  font-size: 11px;
-}
-
-.analytics-tooltip {
-  position: relative;
-  margin-top: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: var(--viz-surface);
-  border: 1px solid var(--viz-axis);
-  border-radius: 6px;
-  font-size: 0.8rem;
-  color: var(--viz-text-secondary);
-  display: inline-flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  max-width: fit-content;
-}
-
-.analytics-tooltip .analytics-legend-swatch {
-  margin-right: 0.35rem;
-}
