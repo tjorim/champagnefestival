@@ -1,6 +1,6 @@
 # Product audit and remaining work
 
-Updated 2026-09-15. This is the current scope, dependency and preferred-order
+Updated 2026-09-17. This is the current scope, dependency and preferred-order
 record for the August 2026 audit and communications roadmap. GitHub issues
 hold discussion and workflow state; decision documents hold current contracts.
 
@@ -15,14 +15,13 @@ in the Git history identified below rather than duplicate its narrative.
 
 ## Preferred order
 
-The two implementation-ready follow-ups retain their previous order. #802 has
+The remaining implementation-ready follow-up retains its previous order. #802 has
 owner-agreed design guidance with one open organiser question. Its separate
 listing does not assign a new priority.
 
 | Order | Issue | Current status and remaining acceptance gates |
 | --- | --- | --- |
 | 1 | [#953 — visitor passwordless accounts](https://github.com/tjorim/champagnefestival/issues/953) | Session and order-history implementation merged in #1012; the page itself later moved from `/my-registrations` to the unified `/me` (#1037). OIDC claiming is now a confirm-first flow for the caller's own verified email only (#1044) — the original manual/proof-token flow for claiming a different email was removed outright the same day, per the decision that an account should only ever gather bookings placed under its own email. Verify production transactional email end to end before enabling the localised public **My orders** navigation (now pointing at `/me`). Publish the corresponding privacy/account copy. See [decision](decisions/953-visitor-passwordless-session.md) and [confirm-first claiming decision](decisions/1044-confirm-first-registration-claiming.md). |
-| 2 | [#992 — live public rendering](https://github.com/tjorim/champagnefestival/issues/992) | Repository implementation merged in #1015. Complete the infrastructure routing for `/` and `/privacy` and mount the built frontend shell into the API, then verify live content and locale/cache behavior in production. See [decision](decisions/992-live-public-render.md). |
 
 ### Active implementation and work needing scope decisions
 
@@ -37,16 +36,9 @@ For #953:
 - [ ] Localised public navigation enabled after verification.
 - [ ] Privacy/account copy published for the implemented session.
 
-For #992:
-
-- [x] Backend rendering, shared JSON-LD fixture, TTL/fallback and proactive invalidation implemented.
-- [ ] Exact-path infrastructure routing and frontend-shell mount completed.
-- [ ] Production HTML, locale variants, edit freshness and fallback verified.
-
 ## Dependencies and accepted boundaries
 
 - #953's code prerequisites (#922, #924, #947) are complete; delivery verification is an operational gate.
-- #992 uses #932's PostgreSQL notification pattern on its own render-cache channel. Its remaining dependency is infrastructure activation.
 - #932 is closed under the accepted one-API-worker deployment scope. Remaining process-local limits and metrics are not a planned scaling project. Revisit only if measured load warrants it; see [deployment](../DEPLOYMENT.md).
 - #946 is closed: all communications children (#940, #943, #944, #945, #947, #941, #942) are implemented.
 - Public communications use fixed forms and rendering, escaped/sanitised content, audited admin changes and explicit locales. Arbitrary pages/HTML/CSS, uploaded audiences, database-managed credentials and bulk marketing email are excluded.
@@ -62,6 +54,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#992](https://github.com/tjorim/champagnefestival/issues/992) | Completed | 2026-09-17 | PR #1015; [decision](decisions/992-live-public-render.md); infra `tjorim/apps#209` | `GET /` and `GET /privacy` render live from the database on every request instead of a static shell: real `<title>`/description/OG/Twitter meta and `EventStructuredData` JSON-LD for the default locale and `?lng=en`/`?lng=fr`, server-rendered FAQ/schedule text, a 60s TTL cache with `NOTIFY`-based proactive invalidation and last-known-good fallback on a database failure. The `tjorim/apps` infra companion (exact-path Caddy routing to `champagnefestival-api`, a read-only mount of `frontend/dist` into that container, and a fallback to the static `file_server` if the backend 404s) shipped and was verified live in production on 2026-09-17, closing the gap this row's earlier "infrastructure activation" dependency described. Edit-freshness (an admin FAQ/edition/policy change reaching the next render within the TTL) is covered by `test_public_pages.py`'s real `NOTIFY` round-trip rather than a separate live production edit. |
 | [#1006](https://github.com/tjorim/champagnefestival/issues/1006) | Completed | 2026-09-12 | PR #1037; [decision](decisions/1006-volunteer-identity-self-service.md); [unified page decision](decisions/unified-self-service-page.md) | A volunteer with the OIDC `volunteer` realm role self-registers (name, checksum-validated NISS and eID) to create and link their own `Person` (`Person.oidc_subject`), rather than matching a pre-existing admin-entered record — closes an identity-guessing gap the matching design had. Adopts a matching unlinked admin-imported record instead of duplicating it; admin override for hand-linking/unlinking. Self-service `GET`/`POST /api/me/volunteer/*` view own NISS/eID and update the eID document number directly (checksum-validated, same trust model as registration — superseded an earlier admin-reviewed-`ContactMessage` design). Stays behind `require_volunteer`; no new auth scope. The frontend section was folded into a single `/me` self-service page (tabs for Registrations/Volunteer eID/Account, absorbing the former `/my-registrations` route entirely), which never forces an OIDC redirect and now also fetches a signed-in member's own registrations directly with no claim step needed. Extended on 2026-09-15 with a volunteer meal/dinner poll: an admin defines per-edition `dish`/`soup`/`dinner` options on `GET`/`POST`/`PUT`/`DELETE /api/poll-options` (mirroring `Product`'s per-event admin CRUD rather than a hardcoded list, since catering choices change every edition), and a linked volunteer views the active festival edition's options and replaces their own picks via `GET`/`PUT /api/me/volunteer/poll-*` — a full-list replace scoped to the caller's own `volunteer_id`, so it can never affect another volunteer's picks. |
 | [#1021](https://github.com/tjorim/champagnefestival/issues/1021) | Completed | 2026-09-11 | #1021, follows #802 and PR #1018 | Added an immutable `layout_revisions` table (geometry-only snapshot of tables/areas/room, allocations excluded) numbered per layout under a parent-row lock; REST/MCP save, list, get, compare, restore-preview, and restore endpoints matching snapshot objects by stable id; a restore preview that blocks deleting/moving an allocated table or an exhibitor-assigned area unless the caller sets `resolve_allocations`, never itself touching registrations/exhibitor assignments; audit events for save/restore; retry-safety documentation; and admin UI (save/list/compare/restore) alongside the pre-existing cross-date plan comparison, whose scope is now labelled explicitly in the UI. |
 | [#932](https://github.com/tjorim/champagnefestival/issues/932) | Completed | 2026-09-07 | PR #1011; [decision](decisions/932-multi-worker-state.md) | PostgreSQL check-in limits and transactional live updates; per-process metrics labelled. One API worker accepted on 2026-09-08; further scaling is not planned. |
