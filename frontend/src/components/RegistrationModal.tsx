@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useState, useCallback, useMemo, useRef } from "react";
 import Modal from "react-bootstrap/Modal";
 import Form from "react-bootstrap/Form";
@@ -130,11 +130,11 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
     [products],
   );
 
-  const guestCount = useStore(form.store, (s) => s.values.guestCount);
-  const contactName = useStore(form.store, (s) => s.values.name);
-  const contactEmail = useStore(form.store, (s) => s.values.email);
-  const contactPhone = useStore(form.store, (s) => s.values.phone);
-  const contactNotes = useStore(form.store, (s) => s.values.notes);
+  const guestCount = useSelector(form.atom, (s) => s.values.guestCount);
+  const contactName = useSelector(form.atom, (s) => s.values.name);
+  const contactEmail = useSelector(form.atom, (s) => s.values.email);
+  const contactPhone = useSelector(form.atom, (s) => s.values.phone);
+  const contactNotes = useSelector(form.atom, (s) => s.values.notes);
 
   const [waitlistedProductIds, setWaitlistedProductIds] = useState<Set<string>>(new Set());
   const [waitlistError, setWaitlistError] = useState("");
@@ -304,7 +304,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   tabIndex={-1}
                   autoComplete="off"
                   className="d-none"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                 />
               )}
@@ -312,13 +312,16 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
             <form.Field
               name="name"
-              validators={{
-                onChange: ({ value }) =>
-                  !value?.trim() ? m.registration_errors_name_required() : undefined,
-              }}
+              validators={[
+                {
+                  run: ({ value }) =>
+                    !value?.trim() ? m.registration_errors_name_required() : undefined,
+                  triggers: ["change"],
+                },
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <Form.Group className="mb-3" controlId="res-name">
                     <Form.Label>{m.registration_name()} *</Form.Label>
@@ -327,13 +330,13 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       isInvalid={showErr}
                       className="bg-dark text-light border-secondary"
                       autoComplete="name"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </Form.Group>
@@ -343,16 +346,19 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
             <form.Field
               name="email"
-              validators={{
-                onChange: ({ value }) => {
-                  if (!value?.trim()) return m.registration_errors_email_required();
-                  if (!EMAIL_REGEX.test(value)) return m.registration_errors_email_invalid();
-                  return undefined;
+              validators={[
+                {
+                  run: ({ value }) => {
+                    if (!value?.trim()) return m.registration_errors_email_required();
+                    if (!EMAIL_REGEX.test(value)) return m.registration_errors_email_invalid();
+                    return undefined;
+                  },
+                  triggers: ["change"],
                 },
-              }}
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <Form.Group className="mb-3" controlId="res-email">
                     <Form.Label>{m.registration_email()} *</Form.Label>
@@ -361,13 +367,13 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       isInvalid={showErr}
                       className="bg-dark text-light border-secondary"
                       autoComplete="email"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </Form.Group>
@@ -377,13 +383,16 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
             <form.Field
               name="phone"
-              validators={{
-                onChange: ({ value }) =>
-                  !value?.trim() ? m.registration_errors_phone_required() : undefined,
-              }}
+              validators={[
+                {
+                  run: ({ value }) =>
+                    !value?.trim() ? m.registration_errors_phone_required() : undefined,
+                  triggers: ["change"],
+                },
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <Form.Group className="mb-3" controlId="res-phone">
                     <Form.Label>{m.registration_phone()} *</Form.Label>
@@ -392,13 +401,13 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       isInvalid={showErr}
                       className="bg-dark text-light border-secondary"
                       autoComplete="tel"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </Form.Group>
@@ -408,17 +417,20 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
             <form.Field
               name="guestCount"
-              validators={{
-                onChange: ({ value }) => {
-                  if (!value && value !== 0) return m.registration_errors_guests_required();
-                  if (value < MIN_GUESTS) return m.registration_errors_guests_min();
-                  if (value > MAX_GUESTS) return m.registration_errors_guests_max();
-                  return undefined;
+              validators={[
+                {
+                  run: ({ value }) => {
+                    if (!value && value !== 0) return m.registration_errors_guests_required();
+                    if (value < MIN_GUESTS) return m.registration_errors_guests_min();
+                    if (value > MAX_GUESTS) return m.registration_errors_guests_max();
+                    return undefined;
+                  },
+                  triggers: ["change"],
                 },
-              }}
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <Form.Group className="mb-3" controlId="res-guests">
                     <Form.Label>{m.registration_guests()} *</Form.Label>
@@ -428,13 +440,13 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       min={MIN_GUESTS}
                       max={MAX_GUESTS}
                       className="bg-dark text-light border-secondary"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(Number(e.target.value))}
                       onBlur={field.handleBlur}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </Form.Group>
@@ -447,7 +459,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 <Form.Group className="mb-3" controlId="res-preferred-language">
                   <Form.Label>{m.registration_preferred_language()}</Form.Label>
                   <Form.Select
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(event) =>
                       field.handleChange(event.target.value as "nl" | "fr" | "en")
                     }
@@ -470,7 +482,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                     id="res-marketing-opt-in-check"
                     type="checkbox"
                     label={m.registration_marketing_opt_in()}
-                    checked={field.state.value}
+                    checked={field.value}
                     onChange={(e) => field.handleChange(e.target.checked)}
                     aria-describedby="res-marketing-opt-in-help"
                   />
@@ -604,7 +616,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                     aria-describedby="res-notes-help"
                     placeholder={m.registration_notes_placeholder()}
                     className="bg-dark text-light border-secondary"
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   />

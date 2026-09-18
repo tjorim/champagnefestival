@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Modal from "react-bootstrap/Modal";
@@ -91,8 +91,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
     }
   }, [derivedStandaloneDate, isFestival, form]);
 
-  const dateValue = useStore(form.store, (s) => s.values.date);
-  const registrationRequired = useStore(form.store, (s) => s.values.registrationRequired);
+  const dateValue = useSelector(form.atom, (s) => s.values.date);
+  const registrationRequired = useSelector(form.atom, (s) => s.values.registrationRequired);
 
   const effectiveDate = isFestival ? dateValue : dateValue || derivedStandaloneDate;
 
@@ -127,27 +127,30 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Label>
               <form.Field
                 name="title"
-                validators={{
-                  onChange: ({ value }) =>
-                    !value?.trim() ? m.admin_event_title_required() : undefined,
-                }}
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.admin_event_title_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
               >
                 {(field) => {
-                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
                       <Form.Control
                         size="sm"
                         className="bg-dark text-light border-secondary"
                         autoFocus
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                         isInvalid={showErr}
                       />
                       {showErr && (
                         <Form.Control.Feedback type="invalid">
-                          {field.state.meta.errors[0]}
+                          {field.errors[0]?.message}
                         </Form.Control.Feedback>
                       )}
                     </>
@@ -165,7 +168,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     size="sm"
                     className="bg-dark text-light border-secondary"
                     placeholder={m.admin_event_category_placeholder()}
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   />
@@ -179,12 +182,15 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               <Form.Label className="text-secondary small mb-1">{m.admin_event_date()}</Form.Label>
               <form.Field
                 name="date"
-                validators={{
-                  onChange: ({ value }) => (!value ? m.admin_event_date_required() : undefined),
-                }}
+                validators={[
+                  {
+                    run: ({ value }) => (!value ? m.admin_event_date_required() : undefined),
+                    triggers: ["change"],
+                  },
+                ]}
               >
                 {(field) => {
-                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
                       <Form.Control
@@ -199,7 +205,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                       />
                       {showErr && (
                         <Form.Control.Feedback type="invalid">
-                          {field.state.meta.errors[0]}
+                          {field.errors[0]?.message}
                         </Form.Control.Feedback>
                       )}
                     </>
@@ -213,27 +219,29 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Label>
               <form.Field
                 name="startTime"
-                validators={{
-                  onChange: ({ value }) =>
-                    !value ? m.admin_event_start_time_required() : undefined,
-                }}
+                validators={[
+                  {
+                    run: ({ value }) => (!value ? m.admin_event_start_time_required() : undefined),
+                    triggers: ["change"],
+                  },
+                ]}
               >
                 {(field) => {
-                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
                       <Form.Control
                         type="time"
                         size="sm"
                         className="bg-dark text-light border-secondary"
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                         isInvalid={showErr}
                       />
                       {showErr && (
                         <Form.Control.Feedback type="invalid">
-                          {field.state.meta.errors[0]}
+                          {field.errors[0]?.message}
                         </Form.Control.Feedback>
                       )}
                     </>
@@ -251,7 +259,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     type="time"
                     size="sm"
                     className="bg-dark text-light border-secondary"
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   />
@@ -271,7 +279,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                   size="sm"
                   rows={2}
                   className="bg-dark text-light border-secondary"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -285,7 +293,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 type="checkbox"
                 id="modal-event-registration"
                 label={m.admin_content_event_requires_registration()}
-                checked={field.state.value}
+                checked={field.value}
                 onChange={(e) => field.handleChange(e.target.checked)}
                 className="text-light mb-2"
               />
@@ -303,7 +311,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                       type="datetime-local"
                       size="sm"
                       className="bg-dark text-light border-secondary"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
@@ -320,7 +328,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                       type="datetime-local"
                       size="sm"
                       className="bg-dark text-light border-secondary"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />

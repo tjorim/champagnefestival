@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -156,7 +156,7 @@ export default function PolicyManagement({
       saveDraft.mutate(value, { onError: (reason) => setError(String(reason)) });
     },
   });
-  const values = useStore(form.store, (s) => s.values);
+  const values = useSelector(form.atom, (s) => s.values);
 
   // Load the open draft's content into the editor whenever it (re)appears.
   // Reset during render rather than in an effect (the "adjusting state when a
@@ -509,7 +509,7 @@ export default function PolicyManagement({
                         as="textarea"
                         rows={12}
                         className="font-monospace"
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
                         onBlur={field.handleBlur}
                       />
@@ -542,7 +542,7 @@ export default function PolicyManagement({
                           <Form.Control
                             as="textarea"
                             rows={4}
-                            value={field.state.value}
+                            value={field.value}
                             onChange={(event) => field.handleChange(event.target.value)}
                             onBlur={field.handleBlur}
                             placeholder={m.admin_policy_change_summary_placeholder()}

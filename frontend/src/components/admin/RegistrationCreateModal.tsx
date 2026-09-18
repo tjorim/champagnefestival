@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -170,9 +170,9 @@ export default function RegistrationCreateModal({
   const loadingEvents = eventsQuery.isPending;
   const loadingPersons = personOptionsQuery.isFetching;
 
-  const watchedEventId = useStore(form.store, (state) => state.values.eventId);
-  const watchedPersonOption = useStore(form.store, (state) => state.values.personOption);
-  const isSubmitting = useStore(form.store, (state) => state.isSubmitting);
+  const watchedEventId = useSelector(form.atom, (state) => state.values.eventId);
+  const watchedPersonOption = useSelector(form.atom, (state) => state.values.personOption);
+  const isSubmitting = useSelector(form.atom, (state) => state.isSubmitting);
   const hasValidEventSelection = events.some((event) => event.id === watchedEventId);
 
   return (
@@ -230,7 +230,7 @@ export default function RegistrationCreateModal({
                 {(field) => (
                   <Form.Select
                     className="bg-dark text-light border-secondary"
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   >
@@ -270,7 +270,7 @@ export default function RegistrationCreateModal({
                   inputId="registration-person"
                   isClearable
                   options={personOptions}
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(option) => field.handleChange(option)}
                   onInputChange={(value) => setPersonQuery(value)}
                   inputValue={personQuery}
@@ -299,7 +299,7 @@ export default function RegistrationCreateModal({
                   min={1}
                   max={20}
                   className="bg-dark text-light border-secondary"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(Number(e.target.value))}
                   onBlur={field.handleBlur}
                 />
@@ -315,7 +315,7 @@ export default function RegistrationCreateModal({
                   as="textarea"
                   rows={2}
                   className="bg-dark text-light border-secondary"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />

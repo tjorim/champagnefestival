@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -170,7 +170,7 @@ export default function ComposerManagement({
       }
     },
   });
-  const channels = useStore(form.store, (s) => s.values.channels);
+  const channels = useSelector(form.atom, (s) => s.values.channels);
 
   // Seed the form when entering edit mode. Reset during render (the
   // "adjusting state when a prop changes" pattern) since this only needs to
@@ -333,7 +333,7 @@ export default function ComposerManagement({
               {(field) => (
                 <Form.Control
                   maxLength={500}
-                  value={field.state.value ?? ""}
+                  value={field.value ?? ""}
                   onChange={(event) => field.handleChange(event.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -348,7 +348,7 @@ export default function ComposerManagement({
                   as="textarea"
                   rows={3}
                   maxLength={500}
-                  value={field.state.value ?? ""}
+                  value={field.value ?? ""}
                   onChange={(event) => field.handleChange(event.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -362,7 +362,7 @@ export default function ComposerManagement({
               <form.Field name="level">
                 {(field) => (
                   <Form.Select
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(event) => field.handleChange(event.target.value as Draft["level"])}
                     onBlur={field.handleBlur}
                   >
@@ -379,7 +379,7 @@ export default function ComposerManagement({
                 {(field) => (
                   <Form.Control
                     type="url"
-                    value={field.state.value ?? ""}
+                    value={field.value ?? ""}
                     onChange={(event) => field.handleChange(event.target.value)}
                     onBlur={field.handleBlur}
                     placeholder="https://…"
@@ -398,12 +398,12 @@ export default function ComposerManagement({
                   type="checkbox"
                   id="composer-channel-announcement"
                   label={m.admin_composer_channel_announcement()}
-                  checked={field.state.value.includes("announcement")}
+                  checked={field.value.includes("announcement")}
                   onChange={() =>
                     field.handleChange(
-                      field.state.value.includes("announcement")
-                        ? field.state.value.filter((c) => c !== "announcement")
-                        : [...field.state.value, "announcement"],
+                      field.value.includes("announcement")
+                        ? field.value.filter((c) => c !== "announcement")
+                        : [...field.value, "announcement"],
                     )
                   }
                 />
@@ -412,12 +412,12 @@ export default function ComposerManagement({
                   type="checkbox"
                   id="composer-channel-push"
                   label={m.admin_composer_channel_push()}
-                  checked={field.state.value.includes("push")}
+                  checked={field.value.includes("push")}
                   onChange={() =>
                     field.handleChange(
-                      field.state.value.includes("push")
-                        ? field.state.value.filter((c) => c !== "push")
-                        : [...field.state.value, "push"],
+                      field.value.includes("push")
+                        ? field.value.filter((c) => c !== "push")
+                        : [...field.value, "push"],
                     )
                   }
                 />

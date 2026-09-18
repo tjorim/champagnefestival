@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -109,10 +109,10 @@ export default function BookingEditor({
       }
     },
   });
-  const guestCount = useStore(form.store, (s) => s.values.guestCount);
-  const quantities = useStore(form.store, (s) => s.values.quantities);
-  const allocations = useStore(form.store, (s) => s.values.allocations);
-  const status = useStore(form.store, (s) => s.values.status);
+  const guestCount = useSelector(form.atom, (s) => s.values.guestCount);
+  const quantities = useSelector(form.atom, (s) => s.values.quantities);
+  const allocations = useSelector(form.atom, (s) => s.values.allocations);
+  const status = useSelector(form.atom, (s) => s.values.status);
 
   const [transactionPending, setTransactionPending] = useState(false);
   const [transactionError, setTransactionError] = useState("");
@@ -146,8 +146,8 @@ export default function BookingEditor({
       }
     },
   });
-  const transactionAmount = useStore(transactionForm.store, (s) => s.values.amount);
-  const transactionDate = useStore(transactionForm.store, (s) => s.values.date);
+  const transactionAmount = useSelector(transactionForm.atom, (s) => s.values.amount);
+  const transactionDate = useSelector(transactionForm.atom, (s) => s.values.date);
 
   const ledgerQuery = useQuery({
     queryKey: queryKeys.admin.paymentTransactions(registration.id),
@@ -229,7 +229,7 @@ export default function BookingEditor({
                 type="number"
                 min={1}
                 max={20}
-                value={field.state.value}
+                value={field.value}
                 onChange={(event) => field.handleChange(Number(event.target.value))}
                 onBlur={field.handleBlur}
               />
@@ -242,7 +242,7 @@ export default function BookingEditor({
             {(field) => (
               <Form.Select
                 aria-label={m.admin_status_label()}
-                value={field.state.value}
+                value={field.value}
                 onChange={(event) => field.handleChange(event.target.value as RegistrationStatus)}
                 onBlur={field.handleBlur}
               >
@@ -292,7 +292,7 @@ export default function BookingEditor({
               <Form.Control
                 as="textarea"
                 rows={3}
-                value={field.state.value}
+                value={field.value}
                 onChange={(event) => field.handleChange(event.target.value)}
                 onBlur={field.handleBlur}
               />
@@ -434,7 +434,7 @@ export default function BookingEditor({
                         step="0.01"
                         style={{ maxWidth: "8rem" }}
                         aria-label={m.admin_payment_amount_label()}
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
                         onBlur={field.handleBlur}
                       />
@@ -453,7 +453,7 @@ export default function BookingEditor({
                         type="date"
                         required
                         aria-label={m.admin_payment_transaction_date()}
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
                         onBlur={field.handleBlur}
                       />
@@ -471,7 +471,7 @@ export default function BookingEditor({
                         type="text"
                         style={{ maxWidth: "10rem" }}
                         aria-label={m.admin_payment_reference_label()}
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
                         onBlur={field.handleBlur}
                       />
@@ -487,7 +487,7 @@ export default function BookingEditor({
                         type="text"
                         style={{ maxWidth: "12rem" }}
                         aria-label={m.admin_payment_note_label()}
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
                         onBlur={field.handleBlur}
                       />

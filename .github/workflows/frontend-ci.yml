@@ -86,9 +86,15 @@ jobs:
           # bump (@tanstack/query-db-collection 1.2.12 -> 1.2.13, @tanstack/react-db
           # 0.3.7 -> 0.3.8, transitively @tanstack/db -> 0.9.0) — no admin feature
           # changed; the upstream release grew the shared chunk (measured 816 kB).
-          TOTAL_MAX_KB=2200
+          # Total raised 2200 -> 2450 and AdminDashboard raised 830 -> 1050 for the
+          # @tanstack/react-form v1 -> v2 (alpha) migration across all 17 admin/
+          # public forms — the new atom-based reactivity (@tanstack/react-store)
+          # and pipeline validator engine are meaningfully heavier than v1's in
+          # this alpha (measured: total 2362 kB, AdminDashboard 977 kB). Revisit
+          # downward once v2 reaches stable and has had a chance to slim down.
+          TOTAL_MAX_KB=2450
           INDEX_MAX_KB=1050
-          ADMIN_MAX_KB=830
+          ADMIN_MAX_KB=1050
 
           total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
           index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')

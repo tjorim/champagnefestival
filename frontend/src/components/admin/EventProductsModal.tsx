@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -220,7 +220,7 @@ export default function EventProductsModal({
       }
     },
   });
-  const inclusions = useStore(form.store, (s) => s.values.inclusions);
+  const inclusions = useSelector(form.atom, (s) => s.values.inclusions);
 
   // Clear local state once the modal closes, rather than in an effect (the
   // "adjusting state when a prop changes" pattern) since this only needs to
@@ -302,7 +302,7 @@ export default function EventProductsModal({
                   size="sm"
                   className="bg-dark text-light border-secondary"
                   autoFocus
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -322,7 +322,7 @@ export default function EventProductsModal({
                   size="sm"
                   className="bg-dark text-light border-secondary"
                   maxLength={300}
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -341,7 +341,7 @@ export default function EventProductsModal({
                   step="0.01"
                   size="sm"
                   className="bg-dark text-light border-secondary"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -357,7 +357,7 @@ export default function EventProductsModal({
                 <Form.Select
                   size="sm"
                   className="bg-dark text-light border-secondary"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value as OrderItemCategory)}
                   onBlur={field.handleBlur}
                 >
@@ -377,7 +377,7 @@ export default function EventProductsModal({
                 type="checkbox"
                 id="product-purchasable"
                 label={m.admin_products_purchasable_label()}
-                checked={field.state.value}
+                checked={field.value}
                 onChange={(e) => {
                   const purchasable = e.target.checked;
                   field.handleChange(purchasable);
@@ -394,7 +394,7 @@ export default function EventProductsModal({
                     type="checkbox"
                     id="product-required"
                     label={m.admin_products_required_label()}
-                    checked={field.state.value}
+                    checked={field.value}
                     disabled={!purchasable}
                     onChange={(e) => field.handleChange(e.target.checked)}
                   />
@@ -424,7 +424,7 @@ export default function EventProductsModal({
                 <Form.Select
                   size="sm"
                   className="bg-dark text-light border-secondary"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value as ProductFormState["unit"])}
                   onBlur={field.handleBlur}
                 >
@@ -447,7 +447,7 @@ export default function EventProductsModal({
                   step={1}
                   size="sm"
                   className="bg-dark text-light border-secondary"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -467,7 +467,7 @@ export default function EventProductsModal({
                 aria-label={m.admin_products_bundle_target()}
                 value={edge.product_id}
                 onChange={(e) =>
-                  void form.replaceFieldValue("inclusions", index, {
+                  form.setFieldValue(`inclusions[${index}]`, {
                     ...edge,
                     product_id: e.target.value,
                   })
@@ -490,7 +490,7 @@ export default function EventProductsModal({
                 aria-label={m.admin_inventory_included_quantity()}
                 value={edge.quantity}
                 onChange={(e) =>
-                  void form.replaceFieldValue("inclusions", index, {
+                  form.setFieldValue(`inclusions[${index}]`, {
                     ...edge,
                     quantity: Number(e.target.value),
                   })
@@ -506,7 +506,7 @@ export default function EventProductsModal({
                 aria-label={m.admin_inventory_per_quantity()}
                 value={edge.per_quantity}
                 onChange={(e) =>
-                  void form.replaceFieldValue("inclusions", index, {
+                  form.setFieldValue(`inclusions[${index}]`, {
                     ...edge,
                     per_quantity: Number(e.target.value),
                   })
@@ -519,7 +519,7 @@ export default function EventProductsModal({
                 aria-label={m.admin_inventory_rounding()}
                 value={edge.rounding}
                 onChange={(e) =>
-                  void form.replaceFieldValue("inclusions", index, {
+                  form.setFieldValue(`inclusions[${index}]`, {
                     ...edge,
                     rounding: e.target.value as "up" | "down",
                   })
@@ -562,7 +562,7 @@ export default function EventProductsModal({
                 <Form.Check
                   id="update-booked-contents"
                   label={m.admin_inventory_update_contents()}
-                  checked={field.state.value}
+                  checked={field.value}
                   onChange={(e) => field.handleChange(e.target.checked)}
                 />
               )}
@@ -572,7 +572,7 @@ export default function EventProductsModal({
                 <Form.Check
                   id="update-booked-prices"
                   label={m.admin_inventory_update_prices()}
-                  checked={field.state.value}
+                  checked={field.value}
                   onChange={(e) => field.handleChange(e.target.checked)}
                 />
               )}

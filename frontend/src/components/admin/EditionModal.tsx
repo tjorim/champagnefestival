@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -171,7 +171,7 @@ export default function EditionModal({
 
   const allExhibitors = useMemo(() => exhibitorsQuery.data ?? [], [exhibitorsQuery.data]);
   const isEdit = !!initial;
-  const editionType = useStore(form.store, (s) => s.values.editionType as EditionType);
+  const editionType = useSelector(form.atom, (s) => s.values.editionType as EditionType);
   const isFestival = editionType === "festival";
   const programmableExhibitors = useMemo(
     () => allExhibitors.filter((exhibitor) => exhibitor.type !== "vendor"),
@@ -236,27 +236,30 @@ export default function EditionModal({
               <Form.Label className="text-secondary small mb-1">ID</Form.Label>
               <form.Field
                 name="id"
-                validators={{
-                  onChange: ({ value }) =>
-                    !value?.trim() ? m.admin_edition_id_required() : undefined,
-                }}
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.admin_edition_id_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
               >
                 {(field) => {
-                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
                       <Form.Control
                         className="bg-dark text-light border-secondary"
                         placeholder="e.g. 2026-march"
                         autoFocus
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                         isInvalid={showErr}
                       />
                       {showErr && (
                         <Form.Control.Feedback type="invalid">
-                          {field.state.meta.errors[0]}
+                          {field.errors[0]?.message}
                         </Form.Control.Feedback>
                       )}
                     </>
@@ -274,7 +277,7 @@ export default function EditionModal({
                   <Form.Control
                     type="number"
                     className="bg-dark text-light border-secondary"
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => field.handleChange(Number(e.target.value))}
                     onBlur={field.handleBlur}
                   />
@@ -285,26 +288,29 @@ export default function EditionModal({
               <Form.Label className="text-secondary small mb-1">Month</Form.Label>
               <form.Field
                 name="month"
-                validators={{
-                  onChange: ({ value }) =>
-                    !value?.trim() ? m.admin_edition_month_required() : undefined,
-                }}
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.admin_edition_month_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
               >
                 {(field) => {
-                  const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
                       <Form.Control
                         className="bg-dark text-light border-secondary"
                         placeholder="e.g. march"
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                         isInvalid={showErr}
                       />
                       {showErr && (
                         <Form.Control.Feedback type="invalid">
-                          {field.state.meta.errors[0]}
+                          {field.errors[0]?.message}
                         </Form.Control.Feedback>
                       )}
                     </>
@@ -319,7 +325,7 @@ export default function EditionModal({
               <form.Field name="editionType">
                 {(field) => (
                   <Form.Select
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => {
                       field.handleChange(e.target.value as EditionType);
                       if (e.target.value !== "festival") {
@@ -344,7 +350,7 @@ export default function EditionModal({
                   type="checkbox"
                   id="modal-edition-active"
                   label={m.admin_content_edition_active()}
-                  checked={field.state.value}
+                  checked={field.value}
                   onChange={(e) => field.handleChange(e.target.checked)}
                   className="text-light align-self-end mb-1"
                 />
@@ -358,17 +364,20 @@ export default function EditionModal({
             </Form.Label>
             <form.Field
               name="venueId"
-              validators={{
-                onChange: ({ value }) => (!value ? m.admin_edition_venue_required() : undefined),
-              }}
+              validators={[
+                {
+                  run: ({ value }) => (!value ? m.admin_edition_venue_required() : undefined),
+                  triggers: ["change"],
+                },
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <>
                     <Form.Select
                       className="bg-dark text-light border-secondary"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       isInvalid={showErr}
@@ -383,7 +392,7 @@ export default function EditionModal({
                     </Form.Select>
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </>
@@ -446,7 +455,7 @@ export default function EditionModal({
               {(field) => (
                 <Form.Select
                   className="bg-dark text-light border-secondary"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 >
@@ -482,7 +491,7 @@ export default function EditionModal({
                       isMulti
                       closeMenuOnSelect={false}
                       options={exhibitorGroups}
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(options) => field.handleChange(options)}
                       classNamePrefix="rs"
                       placeholder={m.admin_edition_exhibitors()}

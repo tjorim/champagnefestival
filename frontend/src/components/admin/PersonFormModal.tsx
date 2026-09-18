@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -158,9 +158,9 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
     }
   }
 
-  const nameValue = useStore(form.store, (s) => s.values.name);
-  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
-  const rolesInput = useStore(form.store, (s) => s.values.rolesInput) ?? "";
+  const nameValue = useSelector(form.atom, (s) => s.values.name);
+  const isSubmitting = useSelector(form.atom, (s) => s.isSubmitting);
+  const rolesInput = useSelector(form.atom, (s) => s.values.rolesInput) ?? "";
   const currentRoles = parseRoles(rolesInput);
 
   function toggleRole(role: string) {
@@ -209,27 +209,30 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
             <form.Field
               name="name"
-              validators={{
-                onChange: ({ value }) =>
-                  !value?.trim() ? m.registration_errors_name_required() : undefined,
-              }}
+              validators={[
+                {
+                  run: ({ value }) =>
+                    !value?.trim() ? m.registration_errors_name_required() : undefined,
+                  triggers: ["change"],
+                },
+              ]}
             >
               {(field) => {
-                const showErr = !!field.state.meta.errors.length && field.state.meta.isTouched;
+                const showErr = !!field.errors.length && field.meta.isTouched;
                 return (
                   <>
                     <Form.Control
                       type="text"
                       className="bg-dark text-light border-secondary"
                       maxLength={200}
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       isInvalid={showErr}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </>
@@ -244,30 +247,32 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
                 <form.Field
                   name="email"
-                  validators={{
-                    onChange: ({ value }) =>
-                      value && !EMAIL_REGEX.test(value)
-                        ? m.registration_errors_email_invalid()
-                        : undefined,
-                  }}
+                  validators={[
+                    {
+                      run: ({ value }) =>
+                        value && !EMAIL_REGEX.test(value)
+                          ? m.registration_errors_email_invalid()
+                          : undefined,
+                      triggers: ["change"],
+                    },
+                  ]}
                 >
                   {(field) => {
-                    const showErr =
-                      field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                    const showErr = field.meta.isTouched && field.errors.length > 0;
                     return (
                       <>
                         <Form.Control
                           type="email"
                           className="bg-dark text-light border-secondary"
                           maxLength={200}
-                          value={field.state.value}
+                          value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
                           isInvalid={showErr}
                         />
                         {showErr && (
                           <Form.Control.Feedback type="invalid">
-                            {field.state.meta.errors[0]}
+                            {field.errors[0]?.message}
                           </Form.Control.Feedback>
                         )}
                       </>
@@ -285,7 +290,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                       type="tel"
                       className="bg-dark text-light border-secondary"
                       maxLength={50}
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
@@ -305,7 +310,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   type="text"
                   className="bg-dark text-light border-secondary"
                   maxLength={300}
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -318,7 +323,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               <Form.Group className="mb-3" controlId="person-preferred-language">
                 <Form.Label>{m.registration_preferred_language()}</Form.Label>
                 <Form.Select
-                  value={field.state.value ?? ""}
+                  value={field.value ?? ""}
                   onChange={(event) =>
                     field.handleChange((event.target.value || null) as "nl" | "fr" | "en" | null)
                   }
@@ -341,7 +346,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   type="text"
                   className="bg-dark text-light border-secondary"
                   maxLength={200}
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -370,7 +375,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   type="text"
                   className="bg-dark text-light border-secondary"
                   placeholder={m.admin_people_roles_placeholder()}
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -387,7 +392,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   rows={2}
                   className="bg-dark text-light border-secondary"
                   maxLength={2000}
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
@@ -401,7 +406,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 id="person-active"
                 type="switch"
                 label={m.admin_people_active_label()}
-                checked={field.state.value}
+                checked={field.value}
                 onChange={(e) => field.handleChange(e.target.checked)}
                 className="text-secondary small"
               />

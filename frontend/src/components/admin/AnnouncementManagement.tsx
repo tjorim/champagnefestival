@@ -370,7 +370,7 @@ export default function AnnouncementManagement({
                   {(field) => (
                     <Form.Control
                       maxLength={500}
-                      value={field.state.value ?? ""}
+                      value={field.value ?? ""}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
@@ -385,7 +385,7 @@ export default function AnnouncementManagement({
               <form.Field name="level">
                 {(field) => (
                   <Form.Select
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(event) => field.handleChange(event.target.value as Draft["level"])}
                     onBlur={field.handleBlur}
                   >
@@ -402,7 +402,7 @@ export default function AnnouncementManagement({
                 {(field) => (
                   <Form.Control
                     type="datetime-local"
-                    value={localDate(field.state.value)}
+                    value={localDate(field.value)}
                     onChange={(event) => field.handleChange(event.target.value || null)}
                     onBlur={field.handleBlur}
                   />
@@ -415,7 +415,7 @@ export default function AnnouncementManagement({
                 {(field) => (
                   <Form.Control
                     type="datetime-local"
-                    value={localDate(field.state.value)}
+                    value={localDate(field.value)}
                     onChange={(event) => field.handleChange(event.target.value || null)}
                     onBlur={field.handleBlur}
                   />
@@ -428,7 +428,7 @@ export default function AnnouncementManagement({
                 {(field) => (
                   <Form.Control
                     type="url"
-                    value={field.state.value ?? ""}
+                    value={field.value ?? ""}
                     onChange={(event) => field.handleChange(event.target.value)}
                     onBlur={field.handleBlur}
                   />
@@ -445,7 +445,7 @@ export default function AnnouncementManagement({
                 <form.Field name={`link_label_${locale}`}>
                   {(field) => (
                     <Form.Control
-                      value={field.state.value ?? ""}
+                      value={field.value ?? ""}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
@@ -459,7 +459,7 @@ export default function AnnouncementManagement({
               <Form.Check
                 className="mt-3"
                 label={m.admin_announcement_publish_immediately()}
-                checked={field.state.value}
+                checked={field.value}
                 onChange={(event) => field.handleChange(event.target.checked)}
               />
             )}

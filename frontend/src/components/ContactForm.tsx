@@ -159,7 +159,7 @@ const ContactForm = () => {
                     autoComplete="off"
                     tabIndex={-1}
                     aria-hidden="true"
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
                 </div>
@@ -168,13 +168,16 @@ const ContactForm = () => {
 
             <form.Field
               name="name"
-              validators={{
-                onChange: ({ value }) =>
-                  !value?.trim() ? m.contact_errors_name_required() : undefined,
-              }}
+              validators={[
+                {
+                  run: ({ value }) =>
+                    !value?.trim() ? m.contact_errors_name_required() : undefined,
+                  triggers: ["change"],
+                },
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <Form.Group className="mb-3 text-start">
                     <Form.Label htmlFor="name">{m.contact_name()}</Form.Label>
@@ -185,13 +188,13 @@ const ContactForm = () => {
                       isInvalid={showErr}
                       autoComplete="name"
                       required
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </Form.Group>
@@ -201,16 +204,19 @@ const ContactForm = () => {
 
             <form.Field
               name="email"
-              validators={{
-                onChange: ({ value }) => {
-                  if (!value?.trim()) return m.contact_errors_email_required();
-                  if (!EMAIL_REGEX.test(value)) return m.contact_errors_email_invalid();
-                  return undefined;
+              validators={[
+                {
+                  run: ({ value }) => {
+                    if (!value?.trim()) return m.contact_errors_email_required();
+                    if (!EMAIL_REGEX.test(value)) return m.contact_errors_email_invalid();
+                    return undefined;
+                  },
+                  triggers: ["change"],
                 },
-              }}
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <Form.Group className="mb-3 text-start">
                     <Form.Label htmlFor="email">{m.contact_email()}</Form.Label>
@@ -222,13 +228,13 @@ const ContactForm = () => {
                       isInvalid={showErr}
                       autoComplete="email"
                       required
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </Form.Group>
@@ -238,13 +244,16 @@ const ContactForm = () => {
 
             <form.Field
               name="message"
-              validators={{
-                onChange: ({ value }) =>
-                  !value?.trim() ? m.contact_errors_message_required() : undefined,
-              }}
+              validators={[
+                {
+                  run: ({ value }) =>
+                    !value?.trim() ? m.contact_errors_message_required() : undefined,
+                  triggers: ["change"],
+                },
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <Form.Group className="mb-3 text-start">
                     <Form.Label htmlFor="message">{m.contact_message()}</Form.Label>
@@ -257,13 +266,13 @@ const ContactForm = () => {
                       isInvalid={showErr}
                       autoComplete="off"
                       required
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </Form.Group>

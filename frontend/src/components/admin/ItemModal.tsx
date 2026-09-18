@@ -161,26 +161,28 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             </Form.Label>
             <form.Field
               name="name"
-              validators={{
-                onChange: ({ value }) =>
-                  !value?.trim() ? m.admin_item_name_required() : undefined,
-              }}
+              validators={[
+                {
+                  run: ({ value }) => (!value?.trim() ? m.admin_item_name_required() : undefined),
+                  triggers: ["change"],
+                },
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <>
                     <Form.Control
                       className="bg-dark text-light border-secondary"
                       autoFocus
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       isInvalid={showErr}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </>
@@ -194,25 +196,27 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             </Form.Label>
             <form.Field
               name="image"
-              validators={{
-                onChange: ({ value }) =>
-                  !value?.trim() ? m.admin_item_image_required() : undefined,
-              }}
+              validators={[
+                {
+                  run: ({ value }) => (!value?.trim() ? m.admin_item_image_required() : undefined),
+                  triggers: ["change"],
+                },
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <>
                     <Form.Control
                       className="bg-dark text-light border-secondary"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       isInvalid={showErr}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </>
@@ -224,27 +228,30 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
             <form.Field
               name="website"
-              validators={{
-                onChange: ({ value }) =>
-                  value && !/^https?:\/\/.+/.test(value) ? m.admin_item_url_invalid() : undefined,
-              }}
+              validators={[
+                {
+                  run: ({ value }) =>
+                    value && !/^https?:\/\/.+/.test(value) ? m.admin_item_url_invalid() : undefined,
+                  triggers: ["change"],
+                },
+              ]}
             >
               {(field) => {
-                const showErr = field.state.meta.isTouched && field.state.meta.errors.length > 0;
+                const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
                   <>
                     <Form.Control
                       type="url"
                       className="bg-dark text-light border-secondary"
                       placeholder="https://…"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       isInvalid={showErr}
                     />
                     {showErr && (
                       <Form.Control.Feedback type="invalid">
-                        {field.state.meta.errors[0]}
+                        {field.errors[0]?.message}
                       </Form.Control.Feedback>
                     )}
                   </>
@@ -258,7 +265,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               {(field) => (
                 <Form.Select
                   className="bg-dark text-light border-secondary"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 >
@@ -279,7 +286,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   inputId="item-contact-person"
                   isClearable
                   options={personOptions}
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(option) => field.handleChange(option)}
                   onBlur={field.handleBlur}
                   onInputChange={(v) => setPersonQuery(v)}

@@ -1,4 +1,4 @@
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -345,7 +345,7 @@ export default function MyRegistrationsPage() {
       }
     },
   });
-  const email = useStore(emailForm.store, (s) => s.values.email);
+  const email = useSelector(emailForm.atom, (s) => s.values.email);
 
   return (
     <div id="my-registrations">
@@ -366,7 +366,7 @@ export default function MyRegistrationsPage() {
                   <Form.Control
                     type="email"
                     placeholder={m.my_registrations_email_placeholder()}
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                     required
