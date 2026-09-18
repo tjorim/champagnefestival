@@ -27,7 +27,7 @@ dependencies = [
   "python-multipart==0.0.32",
   "qrcode[pil]==8.2",
   "slowapi==0.1.10",
-  "sqlalchemy==2.0.52",
+  "sqlalchemy==2.0.53",
   "uvicorn[standard]==0.53.0",
   "markdown-it-py==4.2.0",
   "nh3==0.3.7",
