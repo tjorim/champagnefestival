@@ -1,10 +1,22 @@
+import type { ReactElement } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import type { User } from "oidc-client-ts";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 
 const { AuthProvider, useAuth } =
   await vi.importActual<typeof import("@/contexts/AuthContext")>("@/contexts/AuthContext");
+
+function renderWithProviders(ui: ReactElement) {
+  const queryClient = new QueryClient();
+  const result = render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
+  return {
+    ...result,
+    rerender: (next: ReactElement) =>
+      result.rerender(<QueryClientProvider client={queryClient}>{next}</QueryClientProvider>),
+  };
+}
 
 function mockOidcError(error: Error | null) {
   vi.mocked(useOidcAuth).mockReturnValue({
@@ -33,7 +45,7 @@ function AuthErrorConsumer() {
 describe("AuthProvider", () => {
   it("shows the same provider error again after the provider clears and re-emits it", () => {
     mockOidcError(new Error("Keycloak is unavailable."));
-    const { rerender } = render(
+    const { rerender } = renderWithProviders(
       <AuthProvider>
         <AuthErrorConsumer />
       </AuthProvider>,
@@ -91,7 +103,7 @@ describe("AuthProvider", () => {
         );
       }
 
-      render(
+      renderWithProviders(
         <AuthProvider>
           <RenewConsumer />
         </AuthProvider>,
