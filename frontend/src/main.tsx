@@ -704,6 +704,7 @@ const router = createAppRouter({
   PebblePairRoute,
   MyAccountRoute,
   VenuePlanRoute,
+  queryClient,
 });
 
 const oidcConfig = createOidcConfig({
