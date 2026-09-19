@@ -27,7 +27,7 @@ dependencies = [
   "python-multipart==0.0.32",
   "qrcode[pil]==8.2",
   "slowapi==0.1.10",
-  "sqlalchemy==2.0.52",
+  "sqlalchemy==2.0.53",
   "uvicorn[standard]==0.53.0",
   "markdown-it-py==4.2.0",
   "nh3==0.3.7",
@@ -35,10 +35,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-sentry = ["sentry-sdk[fastapi]==2.69.1"]
+sentry = ["sentry-sdk[fastapi]==2.69.2"]
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "anyio==4.15.1", "ruff==0.16.7", "ty==0.0.80"]
+dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "anyio==4.15.1", "ruff==0.16.7", "ty==0.0.81"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
