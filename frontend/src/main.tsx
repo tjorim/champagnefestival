@@ -747,11 +747,11 @@ function renderApp(): void {
   ReactDOM.createRoot(rootElement!).render(
     <React.StrictMode>
       <OidcAuthProvider {...oidcConfig}>
-        <AuthProvider>
-          <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
             <RouterProvider router={router} />
-          </QueryClientProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </QueryClientProvider>
       </OidcAuthProvider>
     </React.StrictMode>,
   );
