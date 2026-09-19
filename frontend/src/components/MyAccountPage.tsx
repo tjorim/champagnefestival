@@ -1,3 +1,4 @@
+import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import Alert from "react-bootstrap/Alert";
@@ -54,11 +55,7 @@ export default function MyAccountPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isVolunteer = isAuthenticated && hasRole("volunteer");
 
-  const [name, setName] = useState("");
-  const [nationalRegisterNumber, setNationalRegisterNumber] = useState("");
-  const [eidDocumentNumber, setEidDocumentNumber] = useState("");
   const [registerValidationError, setRegisterValidationError] = useState("");
-  const [newEidDocumentNumber, setNewEidDocumentNumber] = useState("");
   const [correctionValidationError, setCorrectionValidationError] = useState("");
 
   const handleDelete = async () => {
@@ -73,13 +70,28 @@ export default function MyAccountPage() {
     retry: false,
   });
 
+  const registerForm = useForm({
+    defaultValues: { name: "", nationalRegisterNumber: "", eidDocumentNumber: "" },
+    onSubmit: async ({ value }) => {
+      if (!isValidNiss(value.nationalRegisterNumber)) {
+        setRegisterValidationError(m.my_eid_invalid_niss());
+        return;
+      }
+      if (!isValidEidNumber(value.eidDocumentNumber)) {
+        setRegisterValidationError(m.my_eid_invalid_eid());
+        return;
+      }
+      setRegisterValidationError("");
+      registerMutation.mutate(value);
+    },
+  });
+
   const registerMutation = useMutation({
-    mutationFn: () =>
-      registerMyVolunteerIdentity(getAccessToken() ?? "", {
-        name,
-        nationalRegisterNumber,
-        eidDocumentNumber,
-      }),
+    mutationFn: (vars: {
+      name: string;
+      nationalRegisterNumber: string;
+      eidDocumentNumber: string;
+    }) => registerMyVolunteerIdentity(getAccessToken() ?? "", vars),
     retry: false,
   });
 
@@ -97,11 +109,24 @@ export default function MyAccountPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVolunteer, getAccessToken]);
 
+  const correctionForm = useForm({
+    defaultValues: { newEidDocumentNumber: "" },
+    onSubmit: async ({ value }) => {
+      if (!isValidEidNumber(value.newEidDocumentNumber)) {
+        setCorrectionValidationError(m.my_eid_invalid_eid());
+        return;
+      }
+      setCorrectionValidationError("");
+      correctionMutation.mutate(value.newEidDocumentNumber);
+    },
+  });
+
   const correctionMutation = useMutation({
-    mutationFn: () => updateMyEidDocumentNumber(getAccessToken() ?? "", newEidDocumentNumber),
+    mutationFn: (eidDocumentNumber: string) =>
+      updateMyEidDocumentNumber(getAccessToken() ?? "", eidDocumentNumber),
     retry: false,
     onSuccess: () => {
-      setNewEidDocumentNumber("");
+      correctionForm.reset();
     },
   });
 
@@ -133,30 +158,6 @@ export default function MyAccountPage() {
   }, [isVolunteer, identity?.linked, getAccessToken]);
 
   const savePollSelections = (next: MyPollSelections) => pollSelectionsMutation.mutate(next);
-
-  const handleCorrectionSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!isValidEidNumber(newEidDocumentNumber)) {
-      setCorrectionValidationError(m.my_eid_invalid_eid());
-      return;
-    }
-    setCorrectionValidationError("");
-    correctionMutation.mutate();
-  };
-
-  const handleRegisterSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!isValidNiss(nationalRegisterNumber)) {
-      setRegisterValidationError(m.my_eid_invalid_niss());
-      return;
-    }
-    if (!isValidEidNumber(eidDocumentNumber)) {
-      setRegisterValidationError(m.my_eid_invalid_eid());
-      return;
-    }
-    setRegisterValidationError("");
-    registerMutation.mutate();
-  };
 
   const volunteerSection = (
     <>
@@ -267,20 +268,30 @@ export default function MyAccountPage() {
           <Alert variant="secondary">
             <h3 className="h6">{m.my_eid_correction_heading()}</h3>
             <p className="small mb-3">{m.my_eid_correction_description()}</p>
-            <Form onSubmit={handleCorrectionSubmit}>
+            <Form
+              onSubmit={(event) => {
+                event.preventDefault();
+                void correctionForm.handleSubmit();
+              }}
+            >
               <Form.Group className="mb-3" controlId="my-eid-new-number">
                 <Form.Label>{m.my_eid_new_number_label()}</Form.Label>
-                <Form.Control
-                  value={newEidDocumentNumber}
-                  onChange={(event) => setNewEidDocumentNumber(event.target.value)}
-                  onBlur={(event) => {
-                    if (isValidEidNumber(event.target.value)) {
-                      setNewEidDocumentNumber(formatEidNumber(event.target.value));
-                    }
-                  }}
-                  maxLength={50}
-                  required
-                />
+                <correctionForm.Field name="newEidDocumentNumber">
+                  {(field) => (
+                    <Form.Control
+                      value={field.value}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                      onBlur={(event) => {
+                        field.handleBlur();
+                        if (isValidEidNumber(event.target.value)) {
+                          field.handleChange(formatEidNumber(event.target.value));
+                        }
+                      }}
+                      maxLength={50}
+                      required
+                    />
+                  )}
+                </correctionForm.Field>
               </Form.Group>
               {(correctionValidationError || correctionMutation.isError) && (
                 <Alert variant="danger" className="py-2 small">
@@ -312,42 +323,61 @@ export default function MyAccountPage() {
         <Alert variant="secondary">
           <h3 className="h6">{m.my_eid_register_heading()}</h3>
           <p className="small mb-3">{m.my_eid_register_description()}</p>
-          <Form onSubmit={handleRegisterSubmit}>
+          <Form
+            onSubmit={(event) => {
+              event.preventDefault();
+              void registerForm.handleSubmit();
+            }}
+          >
             <Form.Group className="mb-3" controlId="my-eid-name">
               <Form.Label>{m.my_eid_name_label()}</Form.Label>
-              <Form.Control
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={200}
-                required
-              />
+              <registerForm.Field name="name">
+                {(field) => (
+                  <Form.Control
+                    value={field.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    maxLength={200}
+                    required
+                  />
+                )}
+              </registerForm.Field>
             </Form.Group>
             <Form.Group className="mb-3" controlId="my-eid-niss">
               <Form.Label>{m.my_eid_niss_label()}</Form.Label>
-              <Form.Control
-                value={nationalRegisterNumber}
-                onChange={(event) => setNationalRegisterNumber(event.target.value)}
-                onBlur={(event) => {
-                  if (isValidNiss(event.target.value))
-                    setNationalRegisterNumber(formatNiss(event.target.value));
-                }}
-                maxLength={20}
-                required
-              />
+              <registerForm.Field name="nationalRegisterNumber">
+                {(field) => (
+                  <Form.Control
+                    value={field.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={(event) => {
+                      field.handleBlur();
+                      if (isValidNiss(event.target.value))
+                        field.handleChange(formatNiss(event.target.value));
+                    }}
+                    maxLength={20}
+                    required
+                  />
+                )}
+              </registerForm.Field>
             </Form.Group>
             <Form.Group className="mb-3" controlId="my-eid-eid">
               <Form.Label>{m.my_eid_eid_label()}</Form.Label>
-              <Form.Control
-                value={eidDocumentNumber}
-                onChange={(event) => setEidDocumentNumber(event.target.value)}
-                onBlur={(event) => {
-                  if (isValidEidNumber(event.target.value)) {
-                    setEidDocumentNumber(formatEidNumber(event.target.value));
-                  }
-                }}
-                maxLength={50}
-                required
-              />
+              <registerForm.Field name="eidDocumentNumber">
+                {(field) => (
+                  <Form.Control
+                    value={field.value}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={(event) => {
+                      field.handleBlur();
+                      if (isValidEidNumber(event.target.value)) {
+                        field.handleChange(formatEidNumber(event.target.value));
+                      }
+                    }}
+                    maxLength={50}
+                    required
+                  />
+                )}
+              </registerForm.Field>
             </Form.Group>
             {(registerValidationError || registerMutation.isError) && (
               <Alert variant="danger" className="py-2 small">
