@@ -11,8 +11,6 @@ test.describe("Admin dashboard (authenticated)", () => {
     await page.goto("/admin");
 
     await expect(page.locator("section#admin.admin-authenticated")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: /log.?in|sign.?in|aanmelden/i }),
-    ).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /log.?in|sign.?in|aanmelden/i })).toHaveCount(0);
   });
 });

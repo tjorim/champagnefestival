@@ -55,9 +55,9 @@ function buildFakeOidcUser() {
 setup("authenticate as admin", async ({ page, baseURL }) => {
   // Navigate first so the localStorage write lands on the app's own origin.
   await page.goto(baseURL ?? "/");
-  await page.evaluate(
-    ([key, user]) => window.localStorage.setItem(key, user),
-    [storageKey, JSON.stringify(buildFakeOidcUser())] as [string, string],
-  );
+  await page.evaluate(([key, user]) => window.localStorage.setItem(key, user), [
+    storageKey,
+    JSON.stringify(buildFakeOidcUser()),
+  ] as [string, string]);
   await page.context().storageState({ path: authFile });
 });
