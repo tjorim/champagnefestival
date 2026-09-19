@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -48,8 +49,6 @@ export default function EditionPollOptionsModal({
   const queryClient = useQueryClient();
   const { confirm, confirmDialog } = useConfirmDialog();
   const [error, setError] = useState("");
-  const [newLabel, setNewLabel] = useState("");
-  const [newKind, setNewKind] = useState<PollOptionKind>("dish");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingLabel, setEditingLabel] = useState("");
 
@@ -63,13 +62,26 @@ export default function EditionPollOptionsModal({
     staleTime: 0,
   });
 
+  const addForm = useForm({
+    defaultValues: { label: "", kind: "dish" as PollOptionKind },
+    onSubmit: async ({ value }) => {
+      setError("");
+      if (!value.label.trim()) return;
+      try {
+        await createMutation.mutateAsync({ kind: value.kind, label: value.label.trim() });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : m.admin_content_error_save());
+      }
+    },
+  });
+
   const createMutation = useMutation({
     mutationFn: (payload: { kind: PollOptionKind; label: string }) =>
       createPollOption({ editionId, kind: payload.kind, label: payload.label }, authHeaders),
     retry: false,
     onSuccess: (created) => {
       queryClient.setQueryData<PollOption[]>(queryKey, (prev = []) => [...prev, created]);
-      setNewLabel("");
+      addForm.setFieldValue("label", "");
     },
   });
 
@@ -91,17 +103,6 @@ export default function EditionPollOptionsModal({
   });
 
   const options = optionsQuery.data ?? [];
-
-  async function handleAdd(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
-    if (!newLabel.trim()) return;
-    try {
-      await createMutation.mutateAsync({ kind: newKind, label: newLabel.trim() });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : m.admin_content_error_save());
-    }
-  }
 
   async function handleSaveEdit(id: string) {
     setError("");
@@ -219,37 +220,48 @@ export default function EditionPollOptionsModal({
           })
         )}
         <Form
-          onSubmit={handleAdd}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void addForm.handleSubmit();
+          }}
           className="d-flex gap-2 align-items-end flex-wrap border-top border-secondary pt-3"
         >
           <Form.Group controlId="poll-option-add-kind">
             <Form.Label className="small text-secondary mb-1">
               {m.admin_poll_add_kind_label()}
             </Form.Label>
-            <Form.Select
-              size="sm"
-              className="bg-dark text-light border-secondary"
-              value={newKind}
-              onChange={(e) => setNewKind(e.target.value as PollOptionKind)}
-            >
-              {KINDS.map((kind) => (
-                <option key={kind} value={kind}>
-                  {kindLabel(kind)}
-                </option>
-              ))}
-            </Form.Select>
+            <addForm.Field name="kind">
+              {(field) => (
+                <Form.Select
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={field.value}
+                  onChange={(e) => field.handleChange(e.target.value as PollOptionKind)}
+                >
+                  {KINDS.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {kindLabel(kind)}
+                    </option>
+                  ))}
+                </Form.Select>
+              )}
+            </addForm.Field>
           </Form.Group>
           <Form.Group controlId="poll-option-add-label" className="flex-grow-1">
             <Form.Label className="small text-secondary mb-1">
               {m.admin_poll_add_label_label()}
             </Form.Label>
-            <Form.Control
-              size="sm"
-              className="bg-dark text-light border-secondary"
-              value={newLabel}
-              onChange={(e) => setNewLabel(e.target.value)}
-              maxLength={200}
-            />
+            <addForm.Field name="label">
+              {(field) => (
+                <Form.Control
+                  size="sm"
+                  className="bg-dark text-light border-secondary"
+                  value={field.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  maxLength={200}
+                />
+              )}
+            </addForm.Field>
           </Form.Group>
           <Button
             type="submit"

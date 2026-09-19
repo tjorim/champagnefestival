@@ -704,6 +704,7 @@ const router = createAppRouter({
   PebblePairRoute,
   MyAccountRoute,
   VenuePlanRoute,
+  queryClient,
 });
 
 const oidcConfig = createOidcConfig({
@@ -746,11 +747,11 @@ function renderApp(): void {
   ReactDOM.createRoot(rootElement!).render(
     <React.StrictMode>
       <OidcAuthProvider {...oidcConfig}>
-        <AuthProvider>
-          <QueryClientProvider client={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
             <RouterProvider router={router} />
-          </QueryClientProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </QueryClientProvider>
       </OidcAuthProvider>
     </React.StrictMode>,
   );

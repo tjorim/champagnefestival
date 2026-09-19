@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -163,9 +164,6 @@ export default function LayoutRevisionsModal({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
-  const [label, setLabel] = useState("");
-  const [changeNote, setChangeNote] = useState("");
-  const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
   const [compareFrom, setCompareFrom] = useState<string>(CURRENT_REF);
@@ -223,21 +221,22 @@ export default function LayoutRevisionsModal({
     [revisions],
   );
 
-  const handleSave = async () => {
-    if (!label.trim()) return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      await onSaveRevision(layoutId, label.trim(), changeNote.trim() || undefined);
-      setLabel("");
-      setChangeNote("");
-      await loadRevisions();
-    } catch (error) {
-      setSaveError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setSaving(false);
-    }
-  };
+  const saveForm = useForm({
+    defaultValues: { label: "", changeNote: "" },
+    onSubmit: async ({ value }) => {
+      if (!value.label.trim()) return;
+      setSaveError(null);
+      try {
+        await onSaveRevision(layoutId, value.label.trim(), value.changeNote.trim() || undefined);
+        saveForm.reset();
+        await loadRevisions();
+      } catch (error) {
+        setSaveError(error instanceof Error ? error.message : String(error));
+      }
+    },
+  });
+  const saving = useSelector(saveForm.atom, (s) => s.isSubmitting);
+  const saveLabelValue = useSelector(saveForm.atom, (s) => s.values.label);
 
   const runCompare = useCallback(
     async (fromRef: string, toRef: string) => {
@@ -327,25 +326,33 @@ export default function LayoutRevisionsModal({
           className="d-flex flex-wrap gap-2 align-items-start mb-3"
           onSubmit={(e) => {
             e.preventDefault();
-            void handleSave();
+            void saveForm.handleSubmit();
           }}
         >
-          <Form.Control
-            style={{ flex: "1 1 220px" }}
-            value={label}
-            onChange={(e) => setLabel(e.target.value)}
-            placeholder={m.admin_layout_revisions_label_placeholder()}
-            maxLength={200}
-            required
-          />
-          <Form.Control
-            style={{ flex: "2 1 280px" }}
-            value={changeNote}
-            onChange={(e) => setChangeNote(e.target.value)}
-            placeholder={m.admin_layout_revisions_change_note_placeholder()}
-            maxLength={2000}
-          />
-          <Button type="submit" variant="success" disabled={saving || !label.trim()}>
+          <saveForm.Field name="label">
+            {(field) => (
+              <Form.Control
+                style={{ flex: "1 1 220px" }}
+                value={field.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder={m.admin_layout_revisions_label_placeholder()}
+                maxLength={200}
+                required
+              />
+            )}
+          </saveForm.Field>
+          <saveForm.Field name="changeNote">
+            {(field) => (
+              <Form.Control
+                style={{ flex: "2 1 280px" }}
+                value={field.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder={m.admin_layout_revisions_change_note_placeholder()}
+                maxLength={2000}
+              />
+            )}
+          </saveForm.Field>
+          <Button type="submit" variant="success" disabled={saving || !saveLabelValue.trim()}>
             {saving ? m.admin_layout_revisions_saving() : m.admin_layout_revisions_save()}
           </Button>
         </Form>

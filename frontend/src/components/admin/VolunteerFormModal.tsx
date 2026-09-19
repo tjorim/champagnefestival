@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
@@ -140,11 +140,14 @@ export default function VolunteerFormModal({
     }
   }
 
-  const nameValue = useStore(form.store, (s) => s.values.name);
-  const nationalRegisterNumberValue = useStore(form.store, (s) => s.values.nationalRegisterNumber);
-  const eidDocumentNumberValue = useStore(form.store, (s) => s.values.eidDocumentNumber);
-  const helpPeriods = useStore(form.store, (s) => s.values.helpPeriods);
-  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
+  const nameValue = useSelector(form.atom, (s) => s.values.name);
+  const nationalRegisterNumberValue = useSelector(
+    form.atom,
+    (s) => s.values.nationalRegisterNumber,
+  );
+  const eidDocumentNumberValue = useSelector(form.atom, (s) => s.values.eidDocumentNumber);
+  const helpPeriods = useSelector(form.atom, (s) => s.values.helpPeriods);
+  const isSubmitting = useSelector(form.atom, (s) => s.isSubmitting);
 
   return (
     <Modal
@@ -186,7 +189,7 @@ export default function VolunteerFormModal({
                 <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
                 <Form.Control
                   type="text"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
@@ -205,7 +208,7 @@ export default function VolunteerFormModal({
                 </Form.Label>
                 <Form.Control
                   type="text"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
@@ -225,7 +228,7 @@ export default function VolunteerFormModal({
                     </Form.Label>
                     <Form.Control
                       type="text"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value.slice(0, 20))}
                       onBlur={field.handleBlur}
                       className="bg-dark text-light border-secondary"
@@ -245,7 +248,7 @@ export default function VolunteerFormModal({
                     </Form.Label>
                     <Form.Control
                       type="text"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       className="bg-dark text-light border-secondary"
@@ -303,7 +306,7 @@ export default function VolunteerFormModal({
                             type="date"
                             value={period.firstHelpDay}
                             onChange={(e) =>
-                              void form.replaceFieldValue("helpPeriods", index, {
+                              form.setFieldValue(`helpPeriods[${index}]`, {
                                 ...period,
                                 firstHelpDay: e.target.value,
                               })
@@ -322,7 +325,7 @@ export default function VolunteerFormModal({
                             type="date"
                             value={period.lastHelpDay ?? ""}
                             onChange={(e) =>
-                              void form.replaceFieldValue("helpPeriods", index, {
+                              form.setFieldValue(`helpPeriods[${index}]`, {
                                 ...period,
                                 lastHelpDay: e.target.value || null,
                               })
@@ -342,7 +345,7 @@ export default function VolunteerFormModal({
                         rows={2}
                         value={period.notes}
                         onChange={(e) =>
-                          void form.replaceFieldValue("helpPeriods", index, {
+                          form.setFieldValue(`helpPeriods[${index}]`, {
                             ...period,
                             notes: e.target.value,
                           })
@@ -364,7 +367,7 @@ export default function VolunteerFormModal({
                 id="volunteer-active"
                 type="switch"
                 label={m.admin_people_active_label()}
-                checked={field.state.value}
+                checked={field.value}
                 onChange={(e) => field.handleChange(e.target.checked)}
                 className="text-secondary small"
               />

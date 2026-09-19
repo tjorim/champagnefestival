@@ -25,6 +25,30 @@ interface OidcConfigOptions {
   navigateTo: (to: string) => void | Promise<void>;
 }
 
+/**
+ * Reads the current access token straight out of the same localStorage entry
+ * `oidc-client-ts`'s `WebStorageStateStore` maintains (`oidc.user:<authority>:<client_id>`),
+ * for the router loader, which runs outside React and can't call the
+ * `useAuth()` hook. Mirrors `frontend/e2e/auth.setup.ts`'s storage key
+ * construction — keep the two in sync if either changes.
+ *
+ * Best-effort only: returns `null` on any missing/unparsable/expired session
+ * rather than throwing, since a failed prefetch should silently fall back to
+ * the component's own `useQuery`/auth handling, not break navigation.
+ */
+export function getStoredAccessToken(): string | null {
+  try {
+    const raw = window.localStorage.getItem(`oidc.user:${OIDC_AUTHORITY}:${OIDC_CLIENT_ID}`);
+    if (!raw) return null;
+    const user = JSON.parse(raw) as { access_token?: string; expires_at?: number };
+    if (!user.access_token) return null;
+    if (typeof user.expires_at === "number" && user.expires_at * 1000 <= Date.now()) return null;
+    return user.access_token;
+  } catch {
+    return null;
+  }
+}
+
 export function resolvePostSigninReturnTo(state: unknown): string {
   const returnTo = (state as { returnTo?: unknown } | undefined)?.returnTo;
   return typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//")

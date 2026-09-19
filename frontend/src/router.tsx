@@ -1,7 +1,19 @@
+import type { QueryClient } from "@tanstack/react-query";
 import type { RouteComponent } from "@tanstack/react-router";
-import { Outlet, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import {
+  Outlet,
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+} from "@tanstack/react-router";
 
 import { LiveUpdatesProvider } from "./state/LiveUpdatesProvider";
+import { getStoredAccessToken } from "./config/oidc";
+import { venuePlanQueryOptions } from "./utils/venuePlanApi";
+
+interface RouterContext {
+  queryClient: QueryClient;
+}
 
 export interface CheckInSearch {
   id?: string;
@@ -47,8 +59,9 @@ export function createAppRouter({
   PebblePairRoute,
   MyAccountRoute,
   VenuePlanRoute,
-}: AppRouteComponents) {
-  const rootRoute = createRootRoute({
+  queryClient,
+}: AppRouteComponents & { queryClient: QueryClient }) {
+  const rootRoute = createRootRouteWithContext<RouterContext>()({
     notFoundComponent: App,
   });
 
@@ -88,6 +101,30 @@ export function createAppRouter({
       edition: typeof search.edition === "string" ? search.edition : undefined,
       table: typeof search.table === "string" ? search.table : undefined,
     }),
+    loaderDeps: ({ search: { edition } }: { search: VenuePlanSearch }) => ({ edition }),
+    context: ({ deps }) => {
+      const token = getStoredAccessToken();
+      return {
+        venuePlanQueryOptions:
+          deps.edition && token
+            ? venuePlanQueryOptions(deps.edition, () => ({ Authorization: `Bearer ${token}` }))
+            : undefined,
+      };
+    },
+    loader: async ({ context }) => {
+      // Best-effort prefetch only: no edition yet, or no/expired stored
+      // session (role-gating still happens client-side in VenuePlanPage,
+      // same as before) — just skip warming the cache, never throw and
+      // block the navigation over it.
+      if (!context.venuePlanQueryOptions) return;
+      try {
+        await context.queryClient.ensureQueryData(context.venuePlanQueryOptions);
+      } catch {
+        // Swallowed deliberately — VenuePlanPage's own useQuery (sharing the
+        // exact same queryOptions) still runs normally and surfaces any real
+        // error through its existing inline Alert.
+      }
+    },
     component: VenuePlanRoute,
   });
 
@@ -121,5 +158,6 @@ export function createAppRouter({
   return createRouter({
     routeTree,
     basepath: import.meta.env.BASE_URL,
+    context: { queryClient },
   });
 }

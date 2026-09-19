@@ -2,13 +2,21 @@
  * AnalyticsDashboard — cross-edition attendance/check-in trend view.
  *
  * A grouped bar chart (guests registered vs. checked in, per edition,
- * chronological) built as plain SVG — no charting library dependency.
- * A table view of the same data is always available alongside it.
+ * chronological) built with TanStack Charts. A table view of the same
+ * data is always available alongside it.
  */
 
 import { useCallback, useMemo, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type SortingState } from "@tanstack/react-table";
+import { barY, defineChart, group } from "@tanstack/charts";
+import { controlledSignal } from "@tanstack/charts/interaction/signal";
+import { interactiveColorLegend } from "@tanstack/charts/legend";
+import { motion } from "@tanstack/charts/motion";
+import { Chart } from "@tanstack/charts/react/core";
+import { scaleBand } from "@tanstack/charts/scales/band";
+import { scaleLinear } from "@tanstack/charts/scales/linear";
+import { tooltip } from "@tanstack/charts/tooltip";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
@@ -20,6 +28,7 @@ import {
   fetchPaymentTransactionsLedger,
   LEDGER_PAGE_SIZE,
 } from "@/utils/adminFetch";
+import type { EditionAttendanceStats } from "@/types/admin";
 import { queryKeys } from "@/utils/queryKeys";
 import { devError } from "@/utils/devLog";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
@@ -30,28 +39,44 @@ interface AnalyticsDashboardProps {
 }
 
 const CHART_HEIGHT = 260;
-const BAR_WIDTH = 20;
-const BAR_GAP = 2;
-const GROUP_GAP = 28;
-const AXIS_LEFT = 44;
-const AXIS_BOTTOM = 36;
-const CHART_TOP_PADDING = 16;
 
-/** Round a max value up to a "clean" tick ceiling (nearest 5/10/25/50/100 step). */
-function niceCeiling(max: number): number {
-  if (max <= 0) return 5;
-  const step = max <= 20 ? 5 : max <= 50 ? 10 : max <= 200 ? 25 : max <= 1000 ? 100 : 500;
-  return Math.ceil(max / step) * step;
+// Spring transition for bar height/position and tooltip movement as the
+// underlying edition stats query resolves or refreshes.
+const chartRenderer = motion({
+  transition: { type: "spring", stiffness: 170, damping: 22, mass: 1 },
+});
+
+/**
+ * Validated categorical palette slots (blue, aqua) for this app's dark
+ * chart surface — see analyticsDashboard.css's header comment for the
+ * validation command. TanStack Charts' `color.range` needs literal
+ * values, not CSS custom properties.
+ */
+const SERIES_COLORS = { guests: "#3987e5", checkedIn: "#199e70" } as const;
+
+type AttendanceSeries = keyof typeof SERIES_COLORS;
+
+interface AttendanceRow {
+  edition: string;
+  series: AttendanceSeries;
+  count: number;
+}
+
+function editionLabel(edition: EditionAttendanceStats): string {
+  return `${edition.year} ${edition.month}`;
 }
 
 export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardProps) {
   const [showTable, setShowTable] = useState(false);
-  const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [exportingEditionId, setExportingEditionId] = useState<string | null>(null);
   const [ledgerExportError, setLedgerExportError] = useState("");
   const [ledgerEdition, setLedgerEdition] = useState<{ id: string; label: string } | null>(null);
   const [ledgerPage, setLedgerPage] = useState(1);
   const [ledgerSorting, setLedgerSorting] = useState<SortingState>([]);
+  const [visibleSeries, setVisibleSeries] = useState<readonly AttendanceSeries[]>([
+    "guests",
+    "checkedIn",
+  ]);
 
   const handleExportLedger = useCallback(
     async (editionId: string) => {
@@ -109,19 +134,67 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
 
   const editions = useMemo(() => statsQuery.data ?? [], [statsQuery.data]);
 
-  const yMax = useMemo(
-    () =>
-      niceCeiling(Math.max(1, ...editions.map((e) => Math.max(e.totalGuests, e.totalCheckedIn)))),
-    [editions],
-  );
+  const attendanceChart = useMemo(() => {
+    if (editions.length === 0) return null;
 
-  const chartWidth = Math.max(
-    400,
-    AXIS_LEFT + editions.length * (BAR_WIDTH * 2 + BAR_GAP + GROUP_GAP) + GROUP_GAP,
-  );
-  const plotHeight = CHART_HEIGHT - AXIS_BOTTOM - CHART_TOP_PADDING;
+    const rows: AttendanceRow[] = editions.flatMap((edition) => [
+      { edition: edition.editionId, series: "guests", count: edition.totalGuests },
+      { edition: edition.editionId, series: "checkedIn", count: edition.totalCheckedIn },
+    ]);
+    const editionLabelById = new Map(
+      editions.map((edition) => [edition.editionId, editionLabel(edition)]),
+    );
 
-  const yTicks = [0, 0.25, 0.5, 0.75, 1].map((fraction) => Math.round(yMax * fraction));
+    return defineChart({
+      marks: [
+        barY(rows, {
+          x: "edition",
+          y: "count",
+          color: "series",
+          layout: group({ padding: 0.25 }),
+          inset: 1,
+          radius: { end: 4 },
+        }),
+      ],
+      scales: {
+        x: {
+          scale: () => scaleBand<string>().paddingInner(0.3).paddingOuter(0.1),
+          axis: {
+            ticks: {
+              format: (editionId: string) => editionLabelById.get(editionId) ?? editionId,
+            },
+          },
+        },
+        y: {
+          scale: scaleLinear,
+          nice: true,
+          grid: true,
+        },
+      },
+      color: {
+        domain: ["guests", "checkedIn"],
+        range: [SERIES_COLORS.guests, SERIES_COLORS.checkedIn],
+        legend: interactiveColorLegend({
+          visible: controlledSignal(visibleSeries, (next) => setVisibleSeries(next)),
+          placement: "top",
+          ariaLabel: m.admin_analytics_legend_toggle_aria(),
+          format: (value) =>
+            value === "guests"
+              ? m.admin_analytics_legend_guests()
+              : m.admin_analytics_legend_checked_in(),
+        }),
+      },
+      theme: {
+        foreground: "var(--viz-text-secondary)",
+        muted: "var(--viz-text-muted)",
+        grid: "var(--viz-gridline)",
+        background: "transparent",
+      },
+      focus: "group-x",
+      keyboard: true,
+      tooltip,
+    });
+  }, [editions, visibleSeries]);
 
   return (
     <div>
@@ -236,147 +309,16 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
           </tbody>
         </Table>
       ) : (
-        <>
-          <div className="viz-root">
-            <div className="analytics-legend mb-2">
-              <span className="analytics-legend-item">
-                <span className="analytics-legend-swatch analytics-series-guests" />
-                {m.admin_analytics_legend_guests()}
-              </span>
-              <span className="analytics-legend-item">
-                <span className="analytics-legend-swatch analytics-series-checked-in" />
-                {m.admin_analytics_legend_checked_in()}
-              </span>
-            </div>
-            <div style={{ overflowX: "auto" }}>
-              <svg
-                width={chartWidth}
-                height={CHART_HEIGHT}
-                role="img"
-                aria-label={m.admin_analytics_chart_aria()}
-              >
-                <title>{m.admin_analytics_chart_aria()}</title>
-                {/* Gridlines + y-axis ticks */}
-                {yTicks.map((tick) => {
-                  const y = CHART_TOP_PADDING + plotHeight - (tick / yMax) * plotHeight;
-                  return (
-                    <g key={tick}>
-                      <line
-                        x1={AXIS_LEFT}
-                        x2={chartWidth}
-                        y1={y}
-                        y2={y}
-                        className="analytics-gridline"
-                      />
-                      <text
-                        x={AXIS_LEFT - 8}
-                        y={y}
-                        className="analytics-axis-label"
-                        textAnchor="end"
-                        dy="0.32em"
-                      >
-                        {tick.toLocaleString()}
-                      </text>
-                    </g>
-                  );
-                })}
-                <line
-                  x1={AXIS_LEFT}
-                  x2={AXIS_LEFT}
-                  y1={CHART_TOP_PADDING}
-                  y2={CHART_TOP_PADDING + plotHeight}
-                  className="analytics-axis-line"
-                />
-                <line
-                  x1={AXIS_LEFT}
-                  x2={chartWidth}
-                  y1={CHART_TOP_PADDING + plotHeight}
-                  y2={CHART_TOP_PADDING + plotHeight}
-                  className="analytics-axis-line"
-                />
-
-                {/* Bars */}
-                {editions.map((edition, index) => {
-                  const groupX =
-                    AXIS_LEFT + GROUP_GAP + index * (BAR_WIDTH * 2 + BAR_GAP + GROUP_GAP);
-                  const guestsHeight = (edition.totalGuests / yMax) * plotHeight;
-                  const checkedInHeight = (edition.totalCheckedIn / yMax) * plotHeight;
-                  const baseline = CHART_TOP_PADDING + plotHeight;
-                  const isHovered = hoveredIndex === index;
-
-                  return (
-                    <g key={edition.editionId}>
-                      <rect
-                        x={groupX}
-                        y={baseline - guestsHeight}
-                        width={BAR_WIDTH}
-                        height={guestsHeight}
-                        rx={4}
-                        className="analytics-series-guests"
-                        opacity={isHovered ? 0.8 : 1}
-                      />
-                      <rect
-                        x={groupX + BAR_WIDTH + BAR_GAP}
-                        y={baseline - checkedInHeight}
-                        width={BAR_WIDTH}
-                        height={checkedInHeight}
-                        rx={4}
-                        className="analytics-series-checked-in"
-                        opacity={isHovered ? 0.8 : 1}
-                      />
-                      <text
-                        x={groupX + BAR_WIDTH + BAR_GAP / 2}
-                        y={baseline + 16}
-                        className="analytics-axis-label"
-                        textAnchor="middle"
-                      >
-                        {edition.year}
-                      </text>
-                      {/* Invisible hit area covering the whole group, for hover/focus */}
-                      <rect
-                        x={groupX - BAR_GAP}
-                        y={CHART_TOP_PADDING}
-                        width={BAR_WIDTH * 2 + BAR_GAP * 3}
-                        height={plotHeight}
-                        fill="transparent"
-                        tabIndex={0}
-                        role="img"
-                        aria-label={m.admin_analytics_bar_group_aria({
-                          edition: `${edition.year} ${edition.month}`,
-                          guests: edition.totalGuests,
-                          checkedIn: edition.totalCheckedIn,
-                        })}
-                        onPointerEnter={() => setHoveredIndex(index)}
-                        onPointerLeave={() =>
-                          setHoveredIndex((current) => (current === index ? null : current))
-                        }
-                        onFocus={() => setHoveredIndex(index)}
-                        onBlur={() =>
-                          setHoveredIndex((current) => (current === index ? null : current))
-                        }
-                      />
-                    </g>
-                  );
-                })}
-              </svg>
-            </div>
-            {hoveredIndex !== null && editions[hoveredIndex] && (
-              <div className="analytics-tooltip" role="status">
-                <strong>
-                  {editions[hoveredIndex].year} {editions[hoveredIndex].month}
-                </strong>
-                <div>
-                  <span className="analytics-legend-swatch analytics-series-guests" />
-                  {m.admin_analytics_legend_guests()}: {editions[hoveredIndex].totalGuests}
-                </div>
-                <div>
-                  <span className="analytics-legend-swatch analytics-series-checked-in" />
-                  {m.admin_analytics_legend_checked_in()}: {editions[hoveredIndex].totalCheckedIn}
-                </div>
-              </div>
-            )}
-          </div>
-        </>
+        <div className="viz-root">
+          {attendanceChart && (
+            <Chart
+              definition={attendanceChart}
+              renderer={chartRenderer}
+              height={CHART_HEIGHT}
+              ariaLabel={m.admin_analytics_chart_aria()}
+            />
+          )}
+        </div>
       )}
 
       {ledgerEdition && (

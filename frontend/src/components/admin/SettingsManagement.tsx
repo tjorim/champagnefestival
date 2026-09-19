@@ -133,7 +133,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                     <Form.Label>{m.admin_settings_public_email_label()}</Form.Label>
                     <Form.Control
                       type="email"
-                      value={field.state.value}
+                      value={field.value}
                       disabled={updateMutation.isPending}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
@@ -150,7 +150,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                     <Form.Label>{m.admin_settings_public_phone_label()}</Form.Label>
                     <Form.Control
                       type="tel"
-                      value={field.state.value}
+                      value={field.value}
                       disabled={updateMutation.isPending}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
@@ -168,7 +168,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                     <Form.Control
                       type="url"
                       pattern="https://.*"
-                      value={field.state.value}
+                      value={field.value}
                       disabled={updateMutation.isPending}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}

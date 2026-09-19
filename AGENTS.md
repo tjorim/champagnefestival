@@ -42,6 +42,11 @@ uv run alembic upgrade head
 > string and pass it as `Authorization: Bearer <value>`; it's treated as a fixed
 > dev user with the admin and volunteer realm roles. Refuses to start if set
 > outside `ENVIRONMENT=development`.
+>
+> The frontend has the matching piece for local UI work: `frontend/e2e/auth.setup.ts`
+> seeds a browser session as that same dev-bypass user (Playwright's standard
+> `storageState` auth pattern — https://playwright.dev/docs/auth — nothing in
+> application code changes). See `frontend/e2e/README.md`.
 
 ## Versioning
 

@@ -874,6 +874,7 @@
   "admin_analytics_legend_guests": "Invités inscrits",
   "admin_analytics_legend_checked_in": "Enregistrés",
   "admin_analytics_chart_aria": "Invités inscrits et enregistrés par édition, par ordre chronologique",
+  "admin_analytics_legend_toggle_aria": "Afficher ou masquer une série",
   "admin_analytics_bar_group_aria": "{edition} : {guests} invités inscrits, {checkedIn} enregistrés",
   "admin_registrations_export_event_csv": "Exporter la liste des invités (CSV)",
   "admin_registrations_export_event_csv_for": "Exporter la liste des invités pour {event} au format CSV",

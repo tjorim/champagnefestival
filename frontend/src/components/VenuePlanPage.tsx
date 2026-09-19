@@ -6,7 +6,7 @@ import Card from "react-bootstrap/Card";
 import Spinner from "react-bootstrap/Spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
-import { fetchVenuePlan } from "@/utils/venuePlanApi";
+import { venuePlanQueryOptions } from "@/utils/venuePlanApi";
 
 export default function VenuePlanPage() {
   const auth = useAuth();
@@ -15,11 +15,16 @@ export default function VenuePlanPage() {
     const token = auth.getAccessToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
+  // Same queryOptions the route loader prefetches with (router.tsx) — kept as
+  // the single source of truth so the two can't drift out of sync. Staying on
+  // useQuery (not useSuspenseQuery) here deliberately preserves this page's
+  // existing inline-Alert error handling instead of routing errors through a
+  // Suspense error boundary; the loader's prefetch is best-effort and never
+  // throws, so this still gets the full benefit (warm cache, no fetch
+  // waterfall) without changing this component's error-handling shape.
   const query = useQuery({
-    queryKey: ["venue-plan", edition],
-    queryFn: () => fetchVenuePlan(edition!, authHeaders),
+    ...venuePlanQueryOptions(edition ?? "", authHeaders),
     enabled: Boolean(edition && (auth.hasRole("admin") || auth.hasRole("volunteer"))),
-    retry: false,
   });
 
   if (!edition) return <Alert variant="warning">{m.venue_plan_missing_edition()}</Alert>;

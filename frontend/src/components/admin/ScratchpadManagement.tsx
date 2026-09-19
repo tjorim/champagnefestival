@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
@@ -26,8 +27,14 @@ export default function ScratchpadManagement({
 }) {
   const queryClient = useQueryClient();
   const scratchpadQueryKey = queryKeys.admin.editionScratchpad(editionId);
-  const [content, setContent] = useState("");
   const [saved, setSaved] = useState(false);
+  const form = useForm({
+    defaultValues: { content: "" },
+    onSubmit: async ({ value }) => {
+      setSaved(false);
+      saveMutation.mutate(value.content);
+    },
+  });
 
   const query = useQuery({
     queryKey: scratchpadQueryKey,
@@ -48,12 +55,13 @@ export default function ScratchpadManagement({
   const [prevKey, setPrevKey] = useState(scratchpadQueryKey.join("|"));
   const [prevData, setPrevData] = useState(query.data);
   const currentKey = scratchpadQueryKey.join("|");
+  const contentValue = useSelector(form.atom, (s) => s.values.content);
   if (currentKey !== prevKey) {
     // Switched to a different edition: fully reseed, including the stale
     // "Saved." banner from whatever was previously open.
     setPrevKey(currentKey);
     setPrevData(query.data);
-    setContent(query.data?.content ?? "");
+    form.reset({ content: query.data?.content ?? "" });
     setSaved(false);
   } else if (query.data !== prevData) {
     // Same edition — either the initial load resolving, our own successful
@@ -64,7 +72,7 @@ export default function ScratchpadManagement({
     // "Saved." confirmation onSuccess just set.
     const previousContent = prevData?.content ?? "";
     setPrevData(query.data);
-    if (query.data && content === previousContent) setContent(query.data.content);
+    if (query.data && contentValue === previousContent) form.reset({ content: query.data.content });
   }
 
   const saveMutation = useMutation({
@@ -85,7 +93,7 @@ export default function ScratchpadManagement({
     retry: false,
   });
 
-  const isDirty = query.data != null && content !== query.data.content;
+  const isDirty = query.data != null && contentValue !== query.data.content;
 
   return (
     <Card bg="dark" text="white" border="secondary">
@@ -115,24 +123,27 @@ export default function ScratchpadManagement({
               <Form
                 onSubmit={(e) => {
                   e.preventDefault();
-                  setSaved(false);
-                  saveMutation.mutate(content);
+                  void form.handleSubmit();
                 }}
               >
                 <Form.Group className="mb-3" controlId="admin-scratchpad-content">
-                  <Form.Control
-                    as="textarea"
-                    rows={16}
-                    value={content}
-                    onChange={(e) => {
-                      setContent(e.target.value);
-                      setSaved(false);
-                    }}
-                    placeholder={m.admin_scratchpad_placeholder()}
-                    className="bg-dark text-light border-secondary"
-                    style={{ fontFamily: "monospace" }}
-                    maxLength={20000}
-                  />
+                  <form.Field name="content">
+                    {(field) => (
+                      <Form.Control
+                        as="textarea"
+                        rows={16}
+                        value={field.value}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                          setSaved(false);
+                        }}
+                        placeholder={m.admin_scratchpad_placeholder()}
+                        className="bg-dark text-light border-secondary"
+                        style={{ fontFamily: "monospace" }}
+                        maxLength={20000}
+                      />
+                    )}
+                  </form.Field>
                 </Form.Group>
                 <Button
                   type="submit"

@@ -8,7 +8,7 @@
 
 import clsx from "clsx";
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
-import { useForm, useStore } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
@@ -204,7 +204,7 @@ export default function VenueManagement({
       }
     },
   });
-  const venueValues = useStore(venueForm.store, (s) => s.values);
+  const venueValues = useSelector(venueForm.atom, (s) => s.values);
 
   const venueCoordinatesAreValid =
     typeof venueValues.lat === "number" &&
@@ -325,7 +325,7 @@ export default function VenueManagement({
       }
     },
   });
-  const roomValues = useStore(roomForm.store, (s) => s.values);
+  const roomValues = useSelector(roomForm.atom, (s) => s.values);
 
   const isRoomFormValid = useCallback(
     () =>
@@ -499,7 +499,7 @@ export default function VenueManagement({
       }
     },
   });
-  const tableTypeValues = useStore(tableTypeForm.store, (s) => s.values);
+  const tableTypeValues = useSelector(tableTypeForm.atom, (s) => s.values);
 
   const commitSaveTableType = async (
     payload: typeof emptyTableTypeForm & { widthM: number; lengthM: number },
@@ -888,7 +888,7 @@ export default function VenueManagement({
               {(field) => (
                 <Form.Control
                   type="text"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
@@ -903,7 +903,7 @@ export default function VenueManagement({
               {(field) => (
                 <Form.Control
                   type="text"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
@@ -919,7 +919,7 @@ export default function VenueManagement({
                   {(field) => (
                     <Form.Control
                       type="text"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       className="bg-dark text-light border-secondary"
@@ -935,7 +935,7 @@ export default function VenueManagement({
                   {(field) => (
                     <Form.Control
                       type="text"
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                       className="bg-dark text-light border-secondary"
@@ -952,7 +952,7 @@ export default function VenueManagement({
               {(field) => (
                 <Form.Control
                   type="text"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
@@ -971,7 +971,7 @@ export default function VenueManagement({
                       step="any"
                       min={-90}
                       max={90}
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) =>
                         field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                       }
@@ -992,7 +992,7 @@ export default function VenueManagement({
                       step="any"
                       min={-180}
                       max={180}
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) =>
                         field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                       }
@@ -1059,7 +1059,7 @@ export default function VenueManagement({
             <roomForm.Field name="venueId">
               {(field) => (
                 <Form.Select
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
@@ -1081,7 +1081,7 @@ export default function VenueManagement({
               {(field) => (
                 <Form.Control
                   type="text"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
@@ -1101,7 +1101,7 @@ export default function VenueManagement({
                       min={1}
                       max={500}
                       required
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) =>
                         field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                       }
@@ -1122,7 +1122,7 @@ export default function VenueManagement({
                       min={1}
                       max={500}
                       required
-                      value={field.state.value}
+                      value={field.value}
                       onChange={(e) =>
                         field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                       }
@@ -1141,14 +1141,14 @@ export default function VenueManagement({
                 <div className="d-flex gap-2 align-items-center">
                   <Form.Control
                     type="color"
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                     style={{ width: 48, height: 38, padding: 2 }}
                   />
                   <Form.Control
                     type="text"
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                     className="bg-dark text-light border-secondary"
@@ -1192,14 +1192,14 @@ export default function VenueManagement({
             <tableTypeForm.Field name="venueId">
               {(field) => (
                 <Form.Select
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
                 >
                   <option value="">— {m.admin_room_venue_label()} —</option>
                   {venues
-                    .filter((v) => v.active || v.id === field.state.value)
+                    .filter((v) => v.active || v.id === field.value)
                     .map((v) => (
                       <option key={v.id} value={v.id}>
                         {v.name}
@@ -1215,7 +1215,7 @@ export default function VenueManagement({
               {(field) => (
                 <Form.Control
                   type="text"
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
@@ -1229,7 +1229,7 @@ export default function VenueManagement({
             <tableTypeForm.Field name="shape">
               {(field) => (
                 <Form.Select
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => {
                     const s = e.target.value as "rectangle" | "round";
                     field.handleChange(s);
@@ -1253,7 +1253,7 @@ export default function VenueManagement({
             <tableTypeForm.Field name="heightType">
               {(field) => (
                 <Form.Select
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(e.target.value as "low" | "high")}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"
@@ -1275,7 +1275,7 @@ export default function VenueManagement({
                     max={20}
                     step={0.1}
                     required
-                    value={field.state.value}
+                    value={field.value}
                     onChange={(e) => {
                       const raw = e.target.value;
                       const v = raw === "" ? "" : Number(raw);
@@ -1301,7 +1301,7 @@ export default function VenueManagement({
                         max={20}
                         step={0.1}
                         required
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(e) => {
                           const raw = e.target.value;
                           field.handleChange(raw === "" ? "" : Number(raw));
@@ -1324,7 +1324,7 @@ export default function VenueManagement({
                         max={20}
                         step={0.1}
                         required
-                        value={field.state.value}
+                        value={field.value}
                         onChange={(e) => {
                           const raw = e.target.value;
                           field.handleChange(raw === "" ? "" : Number(raw));
@@ -1346,7 +1346,7 @@ export default function VenueManagement({
                   type="number"
                   min={1}
                   max={50}
-                  value={field.state.value}
+                  value={field.value}
                   onChange={(e) => field.handleChange(Number(e.target.value))}
                   onBlur={field.handleBlur}
                   className="bg-dark text-light border-secondary"

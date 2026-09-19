@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
+import { useQueryClient } from "@tanstack/react-query";
 import { devError } from "@/utils/devLog";
+import { removeAuthenticatedQueries } from "@/utils/queryInvalidation";
 
 export interface AuthContextType {
   isAuthenticated: boolean;
@@ -107,6 +109,7 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
   const oidcAuth = useOidcAuth();
+  const queryClient = useQueryClient();
   const { signinRedirect, signoutRedirect, signinSilent } = oidcAuth;
   const [redirectError, setRedirectError] = useState<string | null>(null);
   const [dismissedOidcError, setDismissedOidcError] = useState<string | null>(null);
@@ -165,6 +168,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const logout = useCallback(() => {
+    removeAuthenticatedQueries(queryClient);
     setRedirectError(null);
     setDismissedOidcError(null);
     setIsSigningOut(true);
@@ -173,7 +177,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsSigningOut(false);
       setRedirectError(formatAuthError(error, "Could not sign out. Please try again."));
     });
-  }, [signoutRedirect]);
+  }, [queryClient, signoutRedirect]);
 
   const accountLabel = useMemo(
     () => resolveAccountLabel(oidcAuth.user?.profile as ProfileClaims | undefined),
