@@ -102,16 +102,15 @@ export function createAppRouter({
       table: typeof search.table === "string" ? search.table : undefined,
     }),
     loaderDeps: ({ search: { edition } }: { search: VenuePlanSearch }) => ({ edition }),
-    context: ({ deps }) => ({
-      venuePlanQueryOptions: deps.edition
-        ? venuePlanQueryOptions(deps.edition, () => {
-            const token = getStoredAccessToken();
-            const headers: Record<string, string> = {};
-            if (token) headers.Authorization = `Bearer ${token}`;
-            return headers;
-          })
-        : undefined,
-    }),
+    context: ({ deps }) => {
+      const token = getStoredAccessToken();
+      return {
+        venuePlanQueryOptions:
+          deps.edition && token
+            ? venuePlanQueryOptions(deps.edition, () => ({ Authorization: `Bearer ${token}` }))
+            : undefined,
+      };
+    },
     loader: async ({ context }) => {
       // Best-effort prefetch only: no edition yet, or no/expired stored
       // session (role-gating still happens client-side in VenuePlanPage,

@@ -138,9 +138,12 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
     if (editions.length === 0) return null;
 
     const rows: AttendanceRow[] = editions.flatMap((edition) => [
-      { edition: editionLabel(edition), series: "guests", count: edition.totalGuests },
-      { edition: editionLabel(edition), series: "checkedIn", count: edition.totalCheckedIn },
+      { edition: edition.editionId, series: "guests", count: edition.totalGuests },
+      { edition: edition.editionId, series: "checkedIn", count: edition.totalCheckedIn },
     ]);
+    const editionLabelById = new Map(
+      editions.map((edition) => [edition.editionId, editionLabel(edition)]),
+    );
 
     return defineChart({
       marks: [
@@ -156,6 +159,11 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
       scales: {
         x: {
           scale: () => scaleBand<string>().paddingInner(0.3).paddingOuter(0.1),
+          axis: {
+            ticks: {
+              format: (editionId: string) => editionLabelById.get(editionId) ?? editionId,
+            },
+          },
         },
         y: {
           scale: scaleLinear,
