@@ -11,7 +11,7 @@ measured event-day load demonstrates a need.
 
 Use atomic PostgreSQL fixed-window counters for check-in and public push
 subscription mutations. PostgreSQL is already required; adding Redis was
-rejected. Counter cleanup runs in the outbox worker's daily sweep.
+rejected. Counter cleanup runs in the scheduled `app.maintenance housekeeping` command.
 
 Custom contact, registration creation/access, visitor magic-link, admin push
 test-send, and composer scheduling limits remain process-local, as does

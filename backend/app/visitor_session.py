@@ -150,7 +150,7 @@ async def revoke_session(db: AsyncSession, session_id: str) -> None:
 
 
 async def cleanup_expired_sessions(db: AsyncSession) -> int:
-    """Delete rows past their idle or hard-cap deadline; called by the daily worker sweep."""
+    """Delete rows past their idle or hard-cap deadline; run daily by ``python -m app.maintenance housekeeping``."""
     now = datetime.now(UTC)
     deleted_ids = (
         await db.scalars(
@@ -164,7 +164,7 @@ async def cleanup_expired_sessions(db: AsyncSession) -> int:
 
 
 async def cleanup_expired_magic_links(db: AsyncSession) -> int:
-    """Delete expired VisitorMagicLink rows; called by the daily worker sweep.
+    """Delete expired VisitorMagicLink rows; run daily by ``python -m app.maintenance housekeeping``.
 
     A link for an email that's never requested again would otherwise linger
     forever — ``request_visitor_magic_link`` only sweeps opportunistically

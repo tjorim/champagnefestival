@@ -29,8 +29,8 @@ duplicate, but never loses the durable booking or its job. Logs, admin
 and error classes, not addresses, tokens, message bodies, or SMTP credentials.
 
 Delivered and terminally failed jobs, including their cascading attempt rows,
-are retained for 90 days by default and cleaned daily. Pending/processing jobs
-are never removed. Issue #934 may revise the window when the broader retention
+are retained for 90 days by default and removed by the daily housekeeping
+command (below). Pending/processing jobs are never removed. Issue #934 may revise the window when the broader retention
 schedule is approved.
 
 Configuration:
@@ -39,3 +39,19 @@ Configuration:
 - `OUTBOX_POLL_SECONDS`: idle polling interval (default 2 seconds).
 - `OUTBOX_LEASE_SECONDS`: crash-recovery lease (default 300 seconds).
 - `OUTBOX_RETENTION_DAYS`: terminal job retention (default 90 days).
+
+## Housekeeping
+
+The worker only delivers jobs. Cleanup runs once per invocation of a separate
+command, which the VPS schedules daily (`tjorim/apps`, systemd timer):
+
+```bash
+cd backend
+uv run python -m app.maintenance housekeeping
+```
+
+It removes terminal outbox jobs past `OUTBOX_RETENTION_DAYS`, stale
+rate-limit buckets, expired visitor sessions and magic links, and push
+subscriptions with no successful delivery in `PUSH_SUBSCRIPTION_EXPIRY_DAYS`.
+Each sweep runs in its own session and is idempotent; a failing sweep is logged
+and does not skip the others, and the command exits non-zero if any failed.

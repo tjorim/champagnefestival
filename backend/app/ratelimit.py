@@ -209,7 +209,7 @@ async def check_push_subscription_rate_limit(db: AsyncSession, client_ip: str) -
 
 
 async def cleanup_expired_rate_limit_buckets(db: AsyncSession, *, older_than_seconds: int = 86400) -> int:
-    """Delete stale ``rate_limit_buckets`` rows; called by the daily worker sweep.
+    """Delete stale ``rate_limit_buckets`` rows; run daily by ``python -m app.maintenance housekeeping``.
 
     A row's window is at most ``window_seconds`` wide (600s for check-in
     today), so anything older than a day is unambiguously expired — a
