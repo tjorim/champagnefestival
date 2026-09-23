@@ -14,7 +14,7 @@ from app.config import settings
 from app.database import create_tables
 from app.live.listener import pg_live_listener
 from app.live.render_cache_listener import pg_render_cache_listener
-from app.mcp.capabilities import get_mcp_capabilities
+from app.mcp.capabilities import MCP_CAPABILITY_CONTRACT_VERSION, get_mcp_capabilities
 from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
 from app.observability import request_metrics_middleware
@@ -228,6 +228,7 @@ async def mcp_capabilities() -> dict[str, object]:
     """
     if _mcp is None:
         return {
+            "contract_version": MCP_CAPABILITY_CONTRACT_VERSION,
             "enabled": False,
             "mount_path": "/mcp",
             "version": None,

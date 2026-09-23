@@ -12,6 +12,10 @@ from app.mcp.utils import ROLE_ADMIN, ROLE_PUBLIC, ROLE_VOLUNTEER
 TOOL_EFFECT_READ = "read"
 TOOL_EFFECT_WRITE = "write"
 
+# Shared manifest contract (tjorim/apps#229): every tool reports ``name``,
+# ``effect``, ``requires_confirmation`` and an app-specific ``access`` object.
+MCP_CAPABILITY_CONTRACT_VERSION = 1
+
 # Explicit authentication allowlists. Unknown tools default to admin.
 PUBLIC_TOOL_NAMES: frozenset[str] = frozenset(
     {
@@ -155,10 +159,15 @@ async def get_mcp_capabilities(mcp: FastMCP) -> dict[str, object]:
     # into a caller-specific partial manifest.
     tools = await mcp.local_provider.list_tools()
     return {
+        "contract_version": MCP_CAPABILITY_CONTRACT_VERSION,
         "tools": [
             {
                 "name": tool.name,
                 "effect": tool_effect(tool.name),
+                # No tool here has a server-side confirmation step.
+                "requires_confirmation": False,
+                "access": {"role": tool_required_role(tool.name)},
+                # Legacy flat key, kept for one release; prefer ``access.role``.
                 "required_role": tool_required_role(tool.name),
             }
             for tool in sorted(tools, key=lambda tool: tool.name)

@@ -228,21 +228,39 @@ and the expected `role`.
 ### Capabilities manifest
 
 `GET /api/mcp/capabilities` returns whether the MCP server is mounted and, when it is, the
-live registered tool list with each tool's required role tier and side-effect classification
-(`read` or `write`) — generated directly from the
-running server's tool registration (`app.mcp_server.get_mcp_capabilities`), so it cannot
-drift from what's actually callable (example below is abbreviated — the live response includes all registered tools):
+live registered tool list with each tool's side-effect classification and access policy —
+generated directly from the running server's tool registration
+(`app.mcp_server.get_mcp_capabilities`), so it cannot drift from what's actually callable
+(example below is abbreviated — the live response includes all registered tools).
+
+The manifest follows the shared MCP capability contract (`contract_version: 1`, tracked in
+[tjorim/apps#229](https://github.com/tjorim/apps/issues/229)) used by all four apps. Each tool has:
+
+- `name`
+- `effect` — `read` or `write`. This is the same classification advertised to MCP clients as the
+  standard tool annotations (`readOnlyHint` is `true` exactly for `read` tools; `openWorldHint`
+  is always `false`). Write tools are `destructiveHint: false` only for `create_*`, `copy_*` and
+  `bulk_create_*`; every other write, including updates, deletes and unknown future tools, is
+  treated as destructive.
+- `requires_confirmation` — always `false` here; no tool has a server-side confirmation step.
+- `access` — app-specific policy. Champagnefestival reports `{"role": "public" | "volunteer" | "admin"}`.
+
+`required_role` is the legacy flat form of `access.role`. It is kept for one release; new
+clients should read `access.role`.
 
 ```json
 {
+  "contract_version": 1,
   "enabled": true,
   "mount_path": "/mcp",
   "version": "2026.8.1",
   "tools": [
-    {"name": "whoami", "effect": "read", "required_role": "public"},
-    {"name": "create_venue", "effect": "write", "required_role": "admin"}
+    {"name": "whoami", "effect": "read", "requires_confirmation": false, "access": {"role": "public"}, "required_role": "public"},
+    {"name": "create_venue", "effect": "write", "requires_confirmation": false, "access": {"role": "admin"}, "required_role": "admin"}
     // ... additional tools omitted for brevity
-  ]
+  ],
+  "resources": [],
+  "prompts": []
 }
 ```
 
