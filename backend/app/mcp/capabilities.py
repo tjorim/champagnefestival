@@ -42,7 +42,7 @@ VOLUNTEER_TOOL_NAMES: frozenset[str] = frozenset(
     }
 )
 
-_READ_PREFIXES = ("find_", "get_", "list_", "resolve_")
+_READ_PREFIXES = ("compare_", "find_", "get_", "list_", "preview_", "resolve_")
 _NON_DESTRUCTIVE_WRITE_PREFIXES = ("copy_", "create_", "bulk_create_")
 _INTERACTIVE_ADMIN_TOOLS = frozenset(
     {

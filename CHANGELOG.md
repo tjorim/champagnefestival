@@ -13,7 +13,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Changed
 
-- `GET /api/mcp/capabilities` now follows the shared MCP capability contract v1: a top-level `contract_version`, plus `requires_confirmation` and an `access` object (`{"role": ...}`) on every tool. The flat `required_role` key is kept for one release (tjorim/apps#229)
+- `GET /api/mcp/capabilities` now follows the shared MCP capability contract v1: a top-level `contract_version`, plus `requires_confirmation` and an `access` object (`{"role": ...}`) on every tool. The flat `required_role` key is kept for one release. `compare_layout_revisions` and `preview_layout_restore`, which only read data, are now reported as `read` instead of `write` (tjorim/apps#229)
 
 ## [2026.8.2] - 2026-08-01
 

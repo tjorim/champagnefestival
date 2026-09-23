@@ -294,3 +294,10 @@ async def test_mcp_capabilities_endpoint_reports_enabled_tool_list(client, monke
         and t["requires_confirmation"] is False
         for t in body["tools"]
     )
+
+
+def test_layout_comparison_and_restore_preview_are_read_tools():
+    for name in ("compare_layout_revisions", "preview_layout_restore"):
+        assert tool_effect(name) == TOOL_EFFECT_READ, name
+        assert tool_annotations(name).read_only_hint is True, name
+    assert tool_effect("restore_layout_revision") == TOOL_EFFECT_WRITE
