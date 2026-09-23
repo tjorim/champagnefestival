@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from app.composer_delivery import COMPOSER_MESSAGE_PUSH, deliver_composer_message_dispatch, deliver_composer_push
@@ -12,16 +11,12 @@ from app.config import settings
 from app.database import async_session_factory
 from app.email import deliver_contact_notification, deliver_registration_confirmation
 from app.push import WEB_PUSH_TEST, deliver_web_push_test
-from app.ratelimit import cleanup_expired_rate_limit_buckets
 from app.services.composer_service import COMPOSER_MESSAGE_DISPATCH
 from app.services.outbox_service import (
     CONTACT_NOTIFICATION,
     REGISTRATION_CONFIRMATION,
-    cleanup_completed_jobs,
     process_one_job,
 )
-from app.services.push_service import cleanup_expired_subscriptions
-from app.visitor_session import cleanup_expired_magic_links, cleanup_expired_sessions
 
 logger = logging.getLogger(__name__)
 
@@ -40,26 +35,8 @@ async def run() -> None:
         COMPOSER_MESSAGE_DISPATCH: deliver_composer_message_dispatch,
         COMPOSER_MESSAGE_PUSH: deliver_composer_push,
     }
-    next_cleanup = datetime.now(UTC)
     while True:
         HEARTBEAT_PATH.touch()
-        if datetime.now(UTC) >= next_cleanup:
-            async with async_session_factory() as db:
-                deleted = await cleanup_completed_jobs(db, retention_days=settings.outbox_retention_days)
-            logger.info("Outbox cleanup removed %s terminal jobs", deleted)
-            async with async_session_factory() as db:
-                deleted_buckets = await cleanup_expired_rate_limit_buckets(db)
-            logger.info("Rate-limit bucket cleanup removed %s stale rows", deleted_buckets)
-            async with async_session_factory() as db:
-                deleted_sessions = await cleanup_expired_sessions(db)
-            logger.info("Visitor session cleanup removed %s expired sessions", deleted_sessions)
-            async with async_session_factory() as db:
-                deleted_links = await cleanup_expired_magic_links(db)
-            logger.info("Visitor magic-link cleanup removed %s expired links", deleted_links)
-            async with async_session_factory() as db:
-                deleted_subscriptions = await cleanup_expired_subscriptions(db)
-            logger.info("Push subscription cleanup removed %s stale subscriptions", deleted_subscriptions)
-            next_cleanup = datetime.now(UTC) + timedelta(days=1)
         processed = await process_one_job(
             async_session_factory,
             handlers,
