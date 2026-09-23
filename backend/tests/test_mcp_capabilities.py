@@ -15,6 +15,7 @@ import pytest
 from fastmcp.server.auth import AccessToken, AuthContext, run_auth_checks
 
 from app.mcp.capabilities import (
+    MCP_CAPABILITY_CONTRACT_VERSION,
     PUBLIC_TOOL_NAMES,
     ROLE_ADMIN,
     ROLE_PUBLIC,
@@ -69,6 +70,33 @@ async def test_capabilities_manifest_required_roles_are_valid_and_sorted():
     assert names == sorted(names)
     assert all(entry["required_role"] in (ROLE_PUBLIC, ROLE_VOLUNTEER, ROLE_ADMIN) for entry in tools)
     assert all(entry["effect"] in (TOOL_EFFECT_READ, TOOL_EFFECT_WRITE) for entry in tools)
+
+
+@pytest.mark.anyio
+async def test_capabilities_manifest_follows_shared_contract():
+    """Shared MCP manifest contract v1 (tjorim/apps#229)."""
+    mcp = create_mcp_server(session_factory=MagicMock())
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+
+    assert manifest["contract_version"] == MCP_CAPABILITY_CONTRACT_VERSION == 1
+    tools = cast(list[dict[str, Any]], manifest["tools"])
+    assert tools
+    for entry in tools:
+        assert entry["effect"] in (TOOL_EFFECT_READ, TOOL_EFFECT_WRITE)
+        assert entry["requires_confirmation"] is False
+        assert entry["access"] == {"role": entry["required_role"]}
+
+
+@pytest.mark.anyio
+async def test_manifest_effect_matches_registered_tool_annotations():
+    mcp = create_mcp_server(session_factory=MagicMock())
+    registered = {tool.name: tool for tool in await mcp.local_provider.list_tools()}
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+
+    for entry in cast(list[dict[str, Any]], manifest["tools"]):
+        annotations = registered[entry["name"]].annotations
+        assert annotations is not None
+        assert annotations.read_only_hint is (entry["effect"] == TOOL_EFFECT_READ)
 
 
 @pytest.mark.anyio
@@ -239,6 +267,7 @@ async def test_mcp_capabilities_endpoint_reports_disabled_when_mcp_not_mounted(c
     assert r.status_code == 200
     body = r.json()
     assert body["enabled"] is False
+    assert body["contract_version"] == MCP_CAPABILITY_CONTRACT_VERSION
     assert body["tools"] == []
     assert body["resources"] == []
     assert body["prompts"] == []
@@ -256,5 +285,12 @@ async def test_mcp_capabilities_endpoint_reports_enabled_tool_list(client, monke
     assert r.status_code == 200
     body = r.json()
     assert body["enabled"] is True
+    assert body["contract_version"] == MCP_CAPABILITY_CONTRACT_VERSION
     assert any(t["name"] == "whoami" for t in body["tools"])
-    assert any(t["name"] == "create_venue" and t["required_role"] == "admin" for t in body["tools"])
+    assert any(
+        t["name"] == "create_venue"
+        and t["required_role"] == "admin"
+        and t["access"] == {"role": "admin"}
+        and t["requires_confirmation"] is False
+        for t in body["tools"]
+    )
