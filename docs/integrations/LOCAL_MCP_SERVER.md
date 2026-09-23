@@ -245,8 +245,9 @@ The manifest follows the shared MCP capability contract (`contract_version: 1`, 
 - `requires_confirmation` — always `false` here; no tool has a server-side confirmation step.
 - `access` — app-specific policy. Champagnefestival reports `{"role": "public" | "volunteer" | "admin"}`.
 
-`required_role` is the legacy flat form of `access.role`. It is kept for one release; new
-clients should read `access.role`.
+`search_tools` results use the same `access` shape (`{"role": ...}`) next to `effect`. The former
+flat `required_role` key has been removed from both the manifest and the search results; read
+`access.role` instead.
 
 ```json
 {
@@ -255,8 +256,8 @@ clients should read `access.role`.
   "mount_path": "/mcp",
   "version": "2026.8.1",
   "tools": [
-    {"name": "whoami", "effect": "read", "requires_confirmation": false, "access": {"role": "public"}, "required_role": "public"},
-    {"name": "create_venue", "effect": "write", "requires_confirmation": false, "access": {"role": "admin"}, "required_role": "admin"}
+    {"name": "whoami", "effect": "read", "requires_confirmation": false, "access": {"role": "public"}},
+    {"name": "create_venue", "effect": "write", "requires_confirmation": false, "access": {"role": "admin"}}
     // ... additional tools omitted for brevity
   ],
   "resources": [],

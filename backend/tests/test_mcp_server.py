@@ -24,6 +24,7 @@ from fastmcp.exceptions import ToolError
 
 import app.mcp_server as mcp_module
 from app.mcp import auth as mcp_auth_module
+from app.mcp.capabilities import tool_required_role
 from app.mcp.utils import get_active_edition_obj, person_dict
 from app.mcp_server import (
     ROLE_ADMIN,
@@ -721,6 +722,18 @@ class TestCreateMcpServer:
         names = [item["name"] for item in result.structured_content["result"]]
         assert "get_event_schedule" in names
         assert "find_guest" not in names
+
+    @pytest.mark.anyio
+    async def test_search_tools_results_use_access_shape(self):
+        mcp = create_mcp_server(session_factory=MagicMock())
+        result = await mcp.call_tool("search_tools", {"query": "festival event schedule"})
+
+        assert result.structured_content is not None
+        items = result.structured_content["result"]
+        assert items
+        for item in items:
+            assert "required_role" not in item
+            assert item["access"] == {"role": tool_required_role(item["name"])}
 
     @pytest.mark.anyio
     async def test_search_tools_supports_unicode_tokens(self):

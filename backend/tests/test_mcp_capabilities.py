@@ -27,6 +27,7 @@ from app.mcp.capabilities import (
     tool_annotations,
     tool_auth,
     tool_effect,
+    tool_required_role,
 )
 from app.mcp_server import create_mcp_server
 
@@ -61,14 +62,14 @@ async def test_public_and_volunteer_allowlists_only_reference_real_tools():
 
 
 @pytest.mark.anyio
-async def test_capabilities_manifest_required_roles_are_valid_and_sorted():
+async def test_capabilities_manifest_roles_are_valid_and_sorted():
     mcp = create_mcp_server(session_factory=MagicMock())
     manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
 
     tools = cast(list[dict[str, Any]], manifest["tools"])
     names = [entry["name"] for entry in tools]
     assert names == sorted(names)
-    assert all(entry["required_role"] in (ROLE_PUBLIC, ROLE_VOLUNTEER, ROLE_ADMIN) for entry in tools)
+    assert all(entry["access"]["role"] in (ROLE_PUBLIC, ROLE_VOLUNTEER, ROLE_ADMIN) for entry in tools)
     assert all(entry["effect"] in (TOOL_EFFECT_READ, TOOL_EFFECT_WRITE) for entry in tools)
 
 
@@ -84,7 +85,8 @@ async def test_capabilities_manifest_follows_shared_contract():
     for entry in tools:
         assert entry["effect"] in (TOOL_EFFECT_READ, TOOL_EFFECT_WRITE)
         assert entry["requires_confirmation"] is False
-        assert entry["access"] == {"role": entry["required_role"]}
+        assert set(entry) == {"name", "effect", "requires_confirmation", "access"}
+        assert entry["access"] == {"role": tool_required_role(entry["name"])}
 
 
 @pytest.mark.anyio
@@ -103,7 +105,7 @@ async def test_manifest_effect_matches_registered_tool_annotations():
 async def test_capabilities_manifest_spot_checks_known_tiers():
     mcp = create_mcp_server(session_factory=MagicMock())
     manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
-    role_by_name = {entry["name"]: entry["required_role"] for entry in cast(list[dict[str, Any]], manifest["tools"])}
+    role_by_name = {entry["name"]: entry["access"]["role"] for entry in cast(list[dict[str, Any]], manifest["tools"])}
 
     assert role_by_name["whoami"] == ROLE_PUBLIC
     assert role_by_name["get_active_edition"] == ROLE_PUBLIC
@@ -288,10 +290,7 @@ async def test_mcp_capabilities_endpoint_reports_enabled_tool_list(client, monke
     assert body["contract_version"] == MCP_CAPABILITY_CONTRACT_VERSION
     assert any(t["name"] == "whoami" for t in body["tools"])
     assert any(
-        t["name"] == "create_venue"
-        and t["required_role"] == "admin"
-        and t["access"] == {"role": "admin"}
-        and t["requires_confirmation"] is False
+        t["name"] == "create_venue" and t["access"] == {"role": "admin"} and t["requires_confirmation"] is False
         for t in body["tools"]
     )
 
