@@ -167,8 +167,6 @@ async def get_mcp_capabilities(mcp: FastMCP) -> dict[str, object]:
                 # No tool here has a server-side confirmation step.
                 "requires_confirmation": False,
                 "access": {"role": tool_required_role(tool.name)},
-                # Legacy flat key, kept for one release; prefer ``access.role``.
-                "required_role": tool_required_role(tool.name),
             }
             for tool in sorted(tools, key=lambda tool: tool.name)
         ],
