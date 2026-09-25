@@ -48,8 +48,8 @@
     "swiper": "^14.2.0"
   },
   "devDependencies": {
-    "@inlang/paraglide-js": "^2.25.2",
-    "@inlang/plugin-m-function-matcher": "^2.2.15",
+    "@inlang/paraglide-js": "^2.25.4",
+    "@inlang/plugin-m-function-matcher": "^2.2.16",
     "@inlang/plugin-message-format": "^4.4.4",
     "@playwright/test": "^1.63.0",
     "@tanstack/table-core": "9.2.4",
