@@ -129,3 +129,11 @@ Future workflow additions should follow these conventions:
   `.oxlint-legacy-exceptions.json` records existing inline properties and class
   hooks without CSS; remove a file's exceptions when migrating it. Do not grow
   this baseline for new components. All four shadcn rules apply to new files.
+- Coexistence is temporary: remove unused legacy CSS/classes and each file's lint
+  exceptions as it migrates. At migration completion, remove Bootstrap/Bootstrap
+  Icons, replace reboot with verified Tailwind preflight, remove `tw:` prefixes
+  and utility `important`, update `components.json` and `cn`, and delete legacy
+  lint generation/baselines. Preserve runtime visual themes and required vendor
+  CSS. Follow the cleanup gates in
+  `docs/decisions/1104-tailwind-coexistence.md` and final cleanup issue #1111
+  before declaring completion.
