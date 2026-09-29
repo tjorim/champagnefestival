@@ -5,7 +5,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";

@@ -9,7 +9,7 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
@@ -457,7 +457,6 @@ export default function MembersManagement({
             if (!deleting) setDeletingId(null);
           }}
           centered
-          data-bs-theme="dark"
         >
           <Modal.Header closeButton className="bg-dark border-secondary">
             <Modal.Title className="fs-6 text-warning">

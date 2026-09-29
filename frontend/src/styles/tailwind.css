@@ -5,23 +5,52 @@
 @import "tailwindcss/theme.css" layer(theme) prefix(tw);
 @import "tailwindcss/utilities.css" layer(utilities) prefix(tw) important;
 
+/* A nearer light scope must override a dark public theme and vice versa. */
+@custom-variant dark (&:where([data-theme-mode="dark"], [data-theme-mode="dark"] *):not(:where([data-theme-mode="dark"] [data-theme-mode="light"], [data-theme-mode="dark"] [data-theme-mode="light"] *)));
+
+:root {
+  --surface-background: var(--background-color);
+  --surface-foreground: var(--text-color);
+  --surface-primary: var(--primary-color);
+  --surface-primary-foreground: var(--background-color);
+  --surface-secondary: var(--secondary-color, var(--primary-color));
+  --surface-muted: var(--card-background, var(--background-color));
+  --surface-muted-foreground: var(--text-muted);
+  --surface-border: var(--border-color, var(--bs-border-color));
+  --surface-destructive: var(--bs-danger);
+}
+
+/* Portal wrappers carry this same scope; their DOM location is irrelevant. */
+[data-theme-scope="admin"] {
+  color-scheme: dark;
+  --surface-background: #121212;
+  --surface-foreground: #f0f0f0;
+  --surface-primary: #5a7ff0;
+  --surface-primary-foreground: #121212;
+  --surface-secondary: #9a5df6;
+  --surface-muted: #1e1e1e;
+  --surface-muted-foreground: #c5c5c5;
+  --surface-border: rgb(255 255 255 / 0.1);
+  --surface-destructive: #e05a5a;
+}
+
 @theme inline {
-  --color-background: var(--background-color);
-  --color-foreground: var(--text-color);
-  --color-primary: var(--primary-color);
-  --color-primary-foreground: var(--background-color);
-  --color-secondary: var(--secondary-color, var(--primary-color));
-  --color-secondary-foreground: var(--text-color);
-  --color-muted: var(--card-background, var(--background-color));
-  --color-muted-foreground: var(--text-muted);
-  --color-accent: var(--primary-color);
-  --color-accent-foreground: var(--background-color);
-  --color-card: var(--card-background, var(--background-color));
-  --color-card-foreground: var(--text-color);
-  --color-popover: var(--card-background, var(--background-color));
-  --color-popover-foreground: var(--text-color);
-  --color-border: var(--border-color, var(--bs-border-color));
-  --color-input: var(--border-color, var(--bs-border-color));
-  --color-ring: var(--primary-color);
-  --color-destructive: var(--bs-danger);
+  --color-background: var(--surface-background);
+  --color-foreground: var(--surface-foreground);
+  --color-primary: var(--surface-primary);
+  --color-primary-foreground: var(--surface-primary-foreground);
+  --color-secondary: var(--surface-secondary);
+  --color-secondary-foreground: var(--surface-foreground);
+  --color-muted: var(--surface-muted);
+  --color-muted-foreground: var(--surface-muted-foreground);
+  --color-accent: var(--surface-primary);
+  --color-accent-foreground: var(--surface-primary-foreground);
+  --color-card: var(--surface-muted);
+  --color-card-foreground: var(--surface-foreground);
+  --color-popover: var(--surface-muted);
+  --color-popover-foreground: var(--surface-foreground);
+  --color-border: var(--surface-border);
+  --color-input: var(--surface-border);
+  --color-ring: var(--surface-primary);
+  --color-destructive: var(--surface-destructive);
 }

@@ -4,7 +4,7 @@ import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
@@ -176,14 +176,7 @@ export default function RegistrationCreateModal({
   const hasValidEventSelection = events.some((event) => event.id === watchedEventId);
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="lg"
-      data-bs-theme="dark"
-      dialogClassName="admin-dialog"
-    >
+    <Modal show={show} onHide={onHide} centered size="lg" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">{m.admin_create_registration()}</Modal.Title>
       </Modal.Header>

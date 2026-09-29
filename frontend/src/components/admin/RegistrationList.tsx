@@ -8,7 +8,7 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";

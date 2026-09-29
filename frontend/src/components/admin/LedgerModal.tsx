@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { type OnChangeFn, type SortingState } from "@tanstack/react-table";
@@ -151,7 +151,7 @@ export default function LedgerModal({
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg" data-bs-theme="dark">
+    <Modal show={show} onHide={onHide} centered size="lg">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           <i className="bi bi-journal-text me-2" aria-hidden="true" />

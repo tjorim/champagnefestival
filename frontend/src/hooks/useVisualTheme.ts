@@ -67,6 +67,7 @@ function applyVisualTheme(variant: VisualThemeVariant): void {
 
   if (definition.bootstrapMode !== "system") {
     document.documentElement.dataset.bsTheme = definition.bootstrapMode;
+    document.documentElement.dataset.themeMode = definition.bootstrapMode;
     return;
   }
 
@@ -75,6 +76,7 @@ function applyVisualTheme(variant: VisualThemeVariant): void {
       ? window.matchMedia("(prefers-color-scheme: light)").matches
       : false;
   document.documentElement.dataset.bsTheme = isLight ? "light" : "dark";
+  document.documentElement.dataset.themeMode = document.documentElement.dataset.bsTheme;
 }
 
 /** Call once at module top level in main.tsx, after the bootstrap CSS import, to load the stored variant. */

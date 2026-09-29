@@ -417,6 +417,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   return (
     <section
       id="admin"
+      data-theme-scope="admin"
+      data-theme-mode="dark"
+      data-bs-theme="dark"
       aria-labelledby="admin-title"
       className={isAuthenticated ? "admin-authenticated" : "py-5"}
     >

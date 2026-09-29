@@ -29,6 +29,17 @@
 }
 
 html[data-visual-theme="remuage"] {
+  /* Semantic palette for Tailwind and Base UI; legacy Remuage rules keep
+     consuming --rem-* directly during coexistence. */
+  --surface-background: var(--rem-rack);
+  --surface-foreground: var(--rem-ink);
+  --surface-primary: var(--rem-blue);
+  --surface-primary-foreground: var(--rem-paper);
+  --surface-secondary: var(--rem-grape);
+  --surface-muted: var(--rem-paper);
+  --surface-muted-foreground: var(--rem-muted);
+  --surface-border: var(--rem-line);
+  --surface-destructive: var(--rem-danger);
   color-scheme: light;
   scroll-behavior: smooth;
   scroll-padding-top: 5.5rem;

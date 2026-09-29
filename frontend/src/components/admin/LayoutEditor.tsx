@@ -17,7 +17,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import Nav from "react-bootstrap/Nav";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";

@@ -9,7 +9,7 @@ video {
   max-width: 100%;
 }
 
-:root {
+[data-visual-theme="classic"] {
   /* Base brand colors with enhanced contrast for accessibility */
   --primary-color: #5a7ff0;
   /* Slightly darker for better contrast */
@@ -399,7 +399,7 @@ main {
 }
 
 /* Bootstrap theme is now set via data-bs-theme="dark" on the HTML element */
-:root {
+[data-visual-theme="classic"] {
   /* Override Bootstrap variables with our brand colors */
   --bs-primary: #5a7ff0;
   --bs-primary-rgb: 90, 127, 240;
@@ -442,19 +442,6 @@ main {
 .site-footer {
   background: linear-gradient(to right, rgba(67, 56, 202, 0.7), rgba(126, 34, 206, 0.7));
   padding: 1.5rem 0;
-}
-
-/* Map iframe styling */
-.map-iframe {
-  transition: opacity 0.3s ease;
-}
-
-.map-iframe-loading {
-  opacity: 0;
-}
-
-.map-iframe-loaded {
-  opacity: 1;
 }
 
 /* Schedule styling */
@@ -517,15 +504,6 @@ main {
 /* Darker backdrop for better focus */
 .modal-backdrop.show {
   opacity: 0.75;
-}
-
-/* Handle modal scrolling */
-.modal-close-btn {
-  transition: opacity 0.2s;
-}
-
-.modal-close-btn:hover {
-  opacity: 0.9;
 }
 
 /* Enhanced accessibility features */

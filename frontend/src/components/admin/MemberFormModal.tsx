@@ -4,7 +4,7 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
@@ -113,14 +113,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
   const isSubmitting = useSelector(form.atom, (s) => s.isSubmitting);
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="lg"
-      data-bs-theme="dark"
-      dialogClassName="admin-dialog"
-    >
+    <Modal show={show} onHide={onHide} centered size="lg" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           <i className="bi bi-person-badge me-2" aria-hidden="true" />

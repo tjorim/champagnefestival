@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import type { FloorArea, FloorTable, Layout, TableType } from "@/types/admin";
 import { m } from "@/paraglide/messages";
 import { getDayLabel, type DayOption } from "./LayoutEditor";

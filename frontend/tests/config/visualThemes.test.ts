@@ -57,33 +57,9 @@ describe("visual theme registry", () => {
     }
   });
 
-  it("keeps the pre-paint registry synchronized", () => {
-    const variantsMatch = indexHtml.match(/const VARIANTS = (\[[^;]+\]);/);
-    const modesMatch = indexHtml.match(/const THEME_MODES = (\{[^;]+\});/);
-    const colorsMatch = indexHtml.match(/const THEME_COLORS = (\{[^;]+\});/);
-
-    expect(variantsMatch?.[1]).toBeDefined();
-    expect(modesMatch?.[1]).toBeDefined();
-    expect(colorsMatch?.[1]).toBeDefined();
-
-    // These are JS object/array literals, not JSON — the pre-paint script keeps
-    // its keys quoted by hand today, but nothing enforces that (a formatter is
-    // free to unquote them), so evaluate as JS rather than assuming JSON.parse
-    // stays valid.
-    const evalLiteral = (source: string): unknown => new Function(`return (${source});`)();
-    const variants = evalLiteral(variantsMatch?.[1] ?? "[]") as string[];
-    const modes = evalLiteral(modesMatch?.[1] ?? "{}") as Record<string, string>;
-    const colors = evalLiteral(colorsMatch?.[1] ?? "{}") as Record<
-      string,
-      { dark: string; light: string }
-    >;
-
-    expect(variants).toEqual(EXPECTED_THEMES.map((theme) => theme.value));
-    expect(modes).toEqual(
-      Object.fromEntries(EXPECTED_THEMES.map((theme) => [theme.value, theme.bootstrapMode])),
-    );
-    expect(colors).toEqual(
-      Object.fromEntries(EXPECTED_THEMES.map((theme) => [theme.value, theme.themeColors])),
-    );
+  it("injects one shared pre-paint registry instead of mirrored maps", () => {
+    expect(indexHtml).toContain("const THEMES = __VISUAL_THEMES__;");
+    expect(indexHtml).not.toContain("THEME_MODES");
+    expect(indexHtml).not.toContain("THEME_COLORS");
   });
 });
