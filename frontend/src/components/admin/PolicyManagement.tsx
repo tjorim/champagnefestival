@@ -585,7 +585,7 @@ export default function PolicyManagement({
 
             <hr />
             <h3 className="h6">{m.admin_policy_version_history_heading()}</h3>
-            <div className="tw:w-full">
+            <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
                 <TableHeader>
                   {historyTable.getHeaderGroups().map((headerGroup) => (

@@ -48,7 +48,10 @@ export function AdminTablePagination({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:p-2 tw:border-t tw:border-border">
+    <div
+      data-tailwind-migrated="true"
+      className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:p-2 tw:border-t tw:border-border"
+    >
       <span className="tw:text-muted-foreground tw:text-sm">
         {m.admin_table_page_summary({ from: rangeFrom, to: rangeTo, total })}
       </span>

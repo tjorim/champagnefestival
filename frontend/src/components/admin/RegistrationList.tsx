@@ -1354,7 +1354,7 @@ export default function RegistrationList({
               <p className="text-secondary text-center py-4 mb-0">{m.admin_no_registrations()}</p>
             )
           ) : (
-            <div className="tw:w-full">
+            <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -1385,7 +1385,10 @@ export default function RegistrationList({
             </div>
           )}
           {!pageQuery.isLoading && !pageQuery.isError && total > 0 && (
-            <div className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:p-2 tw:border-t tw:border-border">
+            <div
+              data-tailwind-migrated="true"
+              className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:p-2 tw:border-t tw:border-border"
+            >
               <span className="tw:text-muted-foreground tw:text-sm">
                 {m.admin_registrations_page_summary({ from: rangeFrom, to: rangeTo, total })}
               </span>

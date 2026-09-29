@@ -637,7 +637,7 @@ export default function PeopleManagement({
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_people_no_results()}</p>
           ) : (
-            <div className="tw:w-full">
+            <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (

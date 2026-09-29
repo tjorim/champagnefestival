@@ -458,7 +458,7 @@ export default function ComposerManagement({
         {items.length === 0 ? (
           <p className="text-center text-secondary mt-4 mb-0">{m.admin_composer_empty()}</p>
         ) : (
-          <div className="tw:w-full">
+          <div data-tailwind-migrated="true" className="tw:w-full">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (

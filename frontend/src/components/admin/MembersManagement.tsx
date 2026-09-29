@@ -372,7 +372,7 @@ export default function MembersManagement({
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_members_no_results()}</p>
           ) : (
-            <div className="tw:w-full">
+            <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
                 <caption className="visually-hidden">{m.admin_members_table_caption()}</caption>
                 <TableHeader>

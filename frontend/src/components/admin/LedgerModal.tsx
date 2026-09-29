@@ -175,7 +175,7 @@ export default function LedgerModal({
           <p className="text-secondary text-center py-4 mb-0">{m.admin_payment_history_empty()}</p>
         )}
         {!loading && !error && total > 0 && (
-          <div className="tw:w-full">
+          <div data-tailwind-migrated="true" className="tw:w-full">
             <Table>
               <caption className="visually-hidden">{m.admin_ledger_table_caption()}</caption>
               <TableHeader>
@@ -206,7 +206,10 @@ export default function LedgerModal({
       </Modal.Body>
       <Modal.Footer className="bg-dark border-secondary">
         {total > 0 && (
-          <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:mr-auto">
+          <div
+            data-tailwind-migrated="true"
+            className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:mr-auto"
+          >
             <span className="tw:text-muted-foreground tw:text-sm">
               {m.admin_ledger_page_summary({ from: rangeFrom, to: rangeTo, total })}
             </span>

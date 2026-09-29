@@ -345,7 +345,7 @@ export default function VolunteersManagement({
               {m.admin_volunteers_no_results()}
             </p>
           ) : (
-            <div className="tw:w-full">
+            <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
                 <caption className="visually-hidden">{m.admin_volunteers_table_caption()}</caption>
                 <TableHeader>

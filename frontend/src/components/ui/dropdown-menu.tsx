@@ -39,6 +39,7 @@ function DropdownMenuContent({
         >
           <MenuPrimitive.Popup
             data-slot="dropdown-menu-content"
+            data-tailwind-migrated="true"
             className={cn(
               " tw:z-50   tw:min-w-32  tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-md tw:bg-popover tw:p-1 tw:text-popover-foreground tw:shadow-md tw:ring-1 tw:ring-foreground/10 tw:duration-100 tw:outline-none           tw:data-closed:overflow-hidden  ",
               className,

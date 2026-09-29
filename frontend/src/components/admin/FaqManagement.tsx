@@ -424,7 +424,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           ) : sortedItems.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_no_faq_items()}</p>
           ) : (
-            <div className="tw:w-full">
+            <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
                 <TableBody>
                   {table.getRowModel().rows.map((row) => (

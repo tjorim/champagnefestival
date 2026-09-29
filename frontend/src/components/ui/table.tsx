@@ -3,7 +3,11 @@ import { cn } from "@/lib/utils";
 
 function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div data-slot="table-container" className="tw:relative tw:w-full tw:overflow-x-auto">
+    <div
+      data-slot="table-container"
+      data-tailwind-migrated="true"
+      className="tw:relative tw:w-full tw:overflow-x-auto"
+    >
       <table
         data-slot="table"
         className={cn("tw:w-full tw:caption-bottom tw:text-sm tw:text-foreground", className)}

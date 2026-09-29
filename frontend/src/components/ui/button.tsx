@@ -45,6 +45,7 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
+      data-tailwind-migrated="true"
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

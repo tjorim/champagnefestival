@@ -499,7 +499,7 @@ export default function AnnouncementManagement({
           <option value="en">{m.admin_announcement_preview_en()}</option>
           <option value="fr">{m.admin_announcement_preview_fr()}</option>
         </Form.Select>
-        <div className="tw:w-full">
+        <div data-tailwind-migrated="true" className="tw:w-full">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
