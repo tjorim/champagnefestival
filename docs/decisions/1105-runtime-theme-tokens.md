@@ -8,7 +8,9 @@ All five themes keep their public runtime stylesheets and existing link order.
 Bundling the legacy component rules would change the cascade. Theme identity is
 `data-visual-theme`; Classic's variable declarations are scoped to that identity.
 The semantic `--surface-*` bridge in the bundled Tailwind stylesheet consumes
-existing theme variables for Refresh, Classic, Riviera, Cuvée and Remuage.
+existing theme variables for Refresh, Classic, Riviera and Cuvée. Remuage
+maps its standalone `--rem-*` palette directly to `--surface-*` on
+`html[data-visual-theme="remuage"]`; it does not define the legacy variables.
 Tailwind and future Base UI primitives consume these semantic tokens. As each
 component migrates, its legacy rules can be removed independently. Classic's
 header is the first complete markup → utility → token → runtime-theme prototype.
@@ -67,3 +69,23 @@ Validated locally on 2026-09-29: `pnpm typecheck`, `pnpm lint` (existing warning
 Base UI portal/axe test, and all 52 Playwright tests with `--workers=1`.
 Concurrent runs had intermittent page-load timeouts; the serial full suite and
 serial Remuage/token rerun passed.
+
+
+### Review follow-up: palette completeness and mode assertions
+
+The Worktime review identified missing light-mode aliases and tests that could
+pass against the same incorrectly resolved reference variable. CF had the
+analogous missing-alias problem in Remuage. Its runtime foundation now supplies
+all nine semantic surface tokens from its own palette, leaving legacy rules
+and admin scope overrides intact.
+
+Browser coverage checks every theme under both system preferences against
+literal expected colours, checks every semantic surface token resolves, checks
+card/popover backgrounds, and verifies dark utilities activate only for the
+resolved dark mode. Refresh additionally changes light → dark → light without
+reloading. Pre-paint coverage now includes both preferences and both browser
+chrome colour metadata entries.
+
+Follow-up validation on 2026-09-29: all 68 Playwright tests passed serially,
+including the expanded token checks and all public/admin coexistence cases.
+Lint (existing warnings), format check, typecheck and both builds also passed.
