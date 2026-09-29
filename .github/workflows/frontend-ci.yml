@@ -66,8 +66,8 @@ jobs:
 
       - name: Bundle size budget
         run: |
-          # Ceilings vs. the 2026-06-27 baseline: total is ~48% above baseline,
-          # AdminDashboard is ~103% above baseline (see history below).
+          # Ceilings vs. the 2026-06-27 baseline: total is ~63% above baseline,
+          # AdminDashboard is ~151% above baseline (see history below).
           # Raise only after a deliberate, reviewed size increase.
           # Baselines (kB, uncompressed): total JS ≈ 1 654, index ≈ 785, AdminDashboard ≈ 517
           # AdminDashboard raised 700 -> 750 for #942's ComposerManagement admin
@@ -93,9 +93,17 @@ jobs:
           # and pipeline validator engine are meaningfully heavier than v1's in
           # this alpha (measured: total 2362 kB, AdminDashboard 977 kB). Revisit
           # downward once v2 reaches stable and has had a chance to slim down.
-          TOTAL_MAX_KB=2450
+          # Total raised 2450 -> 2700 and AdminDashboard raised 1050 -> 1300
+          # for #1106 / PR #1114's admin table migration to shadcn and Base UI.
+          # The first production use of Base UI Menu, Select, Checkbox and Button
+          # adds their interaction, focus-management and positioning code while
+          # Bootstrap remains during coexistence. Same-dependency builds before/
+          # after: total 2373 -> 2608 KiB, admin 979 -> 1214 KiB; index stays
+          # 632 KiB. Keep the public entry budget unchanged and revisit these
+          # ceilings downward when the Bootstrap cleanup (#1111) removes overlap.
+          TOTAL_MAX_KB=2700
           INDEX_MAX_KB=1050
-          ADMIN_MAX_KB=1050
+          ADMIN_MAX_KB=1300
 
           total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
           index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
