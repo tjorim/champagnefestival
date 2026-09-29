@@ -1,0 +1,27 @@
+/* Bootstrap owns reboot. Prefixing prevents existing Bootstrap utilities from
+   acquiring Tailwind meanings. Important utilities beat unlayered legacy CSS
+   (including Bootstrap's important utilities) without moving any legacy rules. */
+@layer theme, utilities;
+@import "tailwindcss/theme.css" layer(theme) prefix(tw);
+@import "tailwindcss/utilities.css" layer(utilities) prefix(tw) important;
+
+@theme inline {
+  --color-background: var(--background-color);
+  --color-foreground: var(--text-color);
+  --color-primary: var(--primary-color);
+  --color-primary-foreground: var(--background-color);
+  --color-secondary: var(--secondary-color, var(--primary-color));
+  --color-secondary-foreground: var(--text-color);
+  --color-muted: var(--card-background, var(--background-color));
+  --color-muted-foreground: var(--text-muted);
+  --color-accent: var(--primary-color);
+  --color-accent-foreground: var(--background-color);
+  --color-card: var(--card-background, var(--background-color));
+  --color-card-foreground: var(--text-color);
+  --color-popover: var(--card-background, var(--background-color));
+  --color-popover-foreground: var(--text-color);
+  --color-border: var(--border-color, var(--bs-border-color));
+  --color-input: var(--border-color, var(--bs-border-color));
+  --color-ring: var(--primary-color);
+  --color-destructive: var(--bs-danger);
+}

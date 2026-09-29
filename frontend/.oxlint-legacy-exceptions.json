@@ -1,0 +1,596 @@
+[
+  {
+    "files": ["src/components/AnnouncementBanner.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["background"]
+        }
+      ],
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["announcement-dialog-list"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/CheckInPage.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["width"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/CheckInScanner.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["aspectRatio", "display", "objectFit", "pointerEvents", "width"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/ContactForm.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["minHeight"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/ContactInfo.tsx"],
+    "rules": {
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["contact-info"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/LanguageSwitcher.tsx"],
+    "rules": {
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["min-width-220", "mr-4"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/MaintenancePage.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": "off",
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": [
+            "maintenance-page",
+            "maintenance-page__content",
+            "maintenance-page__cta",
+            "maintenance-page__flyer-card",
+            "maintenance-page__flyer-overlay",
+            "maintenance-page__flyer-trigger",
+            "maintenance-page__scrim"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/MapComponent.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["display", "height", "marginTop", "textDecoration", "width"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/MyAccountPage.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["maxWidth"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/RegistrationModal.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["fontSize", "minWidth", "textAlign"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/ResponsiveImage.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["height", "left", "objectFit", "paddingBottom", "top", "width"]
+        }
+      ],
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["object-cover"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/ThemeSwitcher.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": [
+            "background",
+            "border",
+            "borderRadius",
+            "bottom",
+            "boxShadow",
+            "color",
+            "cursor",
+            "display",
+            "flexWrap",
+            "fontFamily",
+            "fontSize",
+            "fontWeight",
+            "gap",
+            "justifyContent",
+            "maxWidth",
+            "padding",
+            "position",
+            "right",
+            "zIndex"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/VenuePlanPage.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": [
+            "aspectRatio",
+            "background",
+            "borderColor",
+            "left",
+            "minHeight",
+            "minWidth",
+            "top",
+            "transform",
+            "width"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/AdminSkeleton.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["height", "maxWidth", "width"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/AdminTablePagination.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["width"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/AnnouncementManagement.tsx"],
+    "rules": {
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["admin-card"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/AuditLogViewer.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["minWidth"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/BookingEditor.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["maxWidth"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/ColumnVisibilityDropdown.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["minWidth"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/ComposerManagement.tsx"],
+    "rules": {
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["admin-card"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/ContactMessagesManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["whiteSpace"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/ContentManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": [
+            "cursor",
+            "flexShrink",
+            "height",
+            "maxWidth",
+            "objectFit",
+            "textDecorationStyle",
+            "width"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/EditionModal.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["flex", "maxWidth", "minWidth"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/EventModal.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["flex", "maxWidth", "minWidth"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/EventProductsModal.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["flex", "fontSize", "maxWidth", "minWidth"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/FaqManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["whiteSpace", "width"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/LayoutCompareModal.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["flex", "minWidth"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/LayoutEditor.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": "off"
+    }
+  },
+  {
+    "files": ["src/components/admin/LayoutRevisionsModal.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["flex", "minWidth"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/LedgerModal.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["cursor", "whiteSpace"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/MembersManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["cursor", "maxWidth", "whiteSpace"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/PeopleManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["cursor", "fontSize", "maxWidth", "whiteSpace"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/PolicyManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["minHeight"]
+        }
+      ],
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["admin-card"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/RegistrationDetail.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["width"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/RegistrationList.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["cursor", "maxWidth", "whiteSpace", "width"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/ScratchpadManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["fontFamily"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/VenueManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": [
+            "background",
+            "borderRadius",
+            "display",
+            "flexShrink",
+            "fontFamily",
+            "height",
+            "padding",
+            "width"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/VolunteersManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["cursor", "maxWidth", "whiteSpace"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/admin/WaitlistManagement.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["whiteSpace"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/remuage/RemuageFeatureRack.tsx"],
+    "rules": {
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": [
+            "remuage-feature",
+            "remuage-feature-rack",
+            "remuage-feature__aperture",
+            "remuage-feature__content"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/remuage/RemuageHero.tsx"],
+    "rules": {
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": [
+            "remuage-button",
+            "remuage-button--primary",
+            "remuage-button--secondary",
+            "remuage-hero",
+            "remuage-hero__actions",
+            "remuage-hero__cell",
+            "remuage-hero__content",
+            "remuage-hero__disc",
+            "remuage-hero__eyebrow",
+            "remuage-hero__mark",
+            "remuage-hero__rack",
+            "remuage-hero__subtitle",
+            "remuage-hero__title"
+          ]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/riviera/RivieraHero.tsx"],
+    "rules": {
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["riviera-button--primary"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/main.tsx"],
+    "rules": {
+      "shadcn/no-inline-styles": [
+        "error",
+        {
+          "allow": ["position", "zIndex"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["tests/components/ResponsiveImage.test.tsx"],
+    "rules": {
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["custom-class"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["tests/components/SectionHeading.test.tsx"],
+    "rules": {
+      "shadcn/no-unknown-classes": [
+        "error",
+        {
+          "allow": ["custom-class"]
+        }
+      ]
+    }
+  },
+  {
+    "files": ["src/components/FAQ.tsx"],
+    "rules": {
+      "shadcn/no-raw-colors": [
+        "error",
+        {
+          "allow": ["border-brand"]
+        }
+      ]
+    }
+  }
+]
