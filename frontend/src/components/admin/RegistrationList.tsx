@@ -1,3 +1,12 @@
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
@@ -6,11 +15,18 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
-import Dropdown from "react-bootstrap/Dropdown";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Button as TableButton } from "@/components/ui/button";
+import { Ellipsis, X, Euro } from "lucide-react";
 import Form from "react-bootstrap/Form";
 import Modal from "./AdminModal";
 import ProgressBar from "react-bootstrap/ProgressBar";
-import Table from "react-bootstrap/Table";
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
@@ -492,10 +508,10 @@ export default function RegistrationList({
           const allSelected =
             allIds.length > 0 && allIds.every((id) => selectedIdsRef.current.has(id));
           return (
-            <Form.Check
-              type="checkbox"
+            <Checkbox
               checked={allSelected}
-              onChange={() => {
+              indeterminate={!allSelected && allIds.some((id) => selectedIdsRef.current.has(id))}
+              onCheckedChange={() => {
                 setSelectAllMatchingActive(false);
                 setSelectAllMatchingError(null);
                 if (allSelected) {
@@ -509,15 +525,13 @@ export default function RegistrationList({
                 }
               }}
               aria-label={m.admin_select_all()}
-              className="m-0"
             />
           );
         },
         cell: ({ row }) => (
-          <Form.Check
-            type="checkbox"
+          <Checkbox
             checked={selectedIds.has(row.id)}
-            onChange={() => {
+            onCheckedChange={() => {
               setSelectAllMatchingActive(false);
               setSelectAllMatchingError(null);
               setSelectedIds((prev) => {
@@ -528,11 +542,10 @@ export default function RegistrationList({
               });
             }}
             aria-label={`Select registration for ${row.original.person.name}`}
-            className="m-0"
             onClick={(e) => e.stopPropagation()}
           />
         ),
-        meta: { tdClassName: "align-middle" },
+        meta: { tdClassName: "tw:align-middle" },
       }),
     [selectedIds],
   );
@@ -633,8 +646,8 @@ export default function RegistrationList({
         columnHelper.accessor((row) => row.event?.title ?? row.eventId, {
           id: "event",
           header: m.admin_event_label(),
-          cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
-          meta: { tdClassName: "d-none d-md-table-cell" },
+          cell: ({ getValue }) => <span className="tw:text-sm">{String(getValue())}</span>,
+          meta: { tdClassName: "tw:hidden tw:md:table-cell" },
         }),
         columnHelper.accessor("guestCount", {
           header: m.admin_guests_count(),
@@ -650,7 +663,7 @@ export default function RegistrationList({
           cell: ({ getValue }) => (
             <Badge bg={paymentBadgeVariant(getValue())}>{paymentLabel(getValue())}</Badge>
           ),
-          meta: { tdClassName: "d-none d-lg-table-cell" },
+          meta: { tdClassName: "tw:hidden tw:lg:table-cell" },
         }),
         columnHelper.accessor("checkedIn", {
           header: m.admin_check_in_title(),
@@ -675,7 +688,7 @@ export default function RegistrationList({
               </>
             );
           },
-          meta: { tdClassName: "d-none d-md-table-cell" },
+          meta: { tdClassName: "tw:hidden tw:md:table-cell" },
         }),
         columnHelper.display({
           id: "table",
@@ -717,7 +730,7 @@ export default function RegistrationList({
               </Form.Select>
             );
           },
-          meta: { tdClassName: "d-none d-lg-table-cell" },
+          meta: { tdClassName: "tw:hidden tw:lg:table-cell" },
         }),
         columnHelper.display({
           id: "actions",
@@ -773,36 +786,35 @@ export default function RegistrationList({
                   </Button>
                 )}
                 {hasMoreActions && (
-                  <Dropdown>
-                    <Dropdown.Toggle
-                      size="sm"
-                      variant="outline-secondary"
+                  <DropdownMenu>
+                    <DropdownMenuTrigger
+                      render={<TableButton variant="outline" size="sm" />}
                       id={`reg-more-${reg.id}`}
                       aria-label={m.admin_more_actions_for({ name: reg.person.name })}
                     >
-                      <i className="bi bi-three-dots" aria-hidden="true" />
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu variant="dark">
+                      <Ellipsis className="tw:size-4" aria-hidden="true" />
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
                       {reg.status !== "cancelled" && (
-                        <Dropdown.Item
-                          className="text-danger"
+                        <DropdownMenuItem
+                          className="tw:text-destructive"
                           onClick={() => onUpdateStatus(reg.id, "cancelled")}
                         >
-                          <i className="bi bi-x-lg me-2" aria-hidden="true" />
+                          <X className="tw:size-4" aria-hidden="true" />
                           {m.admin_action_cancel()}
-                        </Dropdown.Item>
+                        </DropdownMenuItem>
                       )}
                       {reg.paymentStatus !== "paid" && (
-                        <Dropdown.Item
+                        <DropdownMenuItem
                           disabled={processingIds.has(reg.id)}
                           onClick={() => void handleRecordPayment(reg.id)}
                         >
-                          <i className="bi bi-currency-euro me-2" aria-hidden="true" />
+                          <Euro className="tw:size-4" aria-hidden="true" />
                           {m.admin_action_mark_paid()}
-                        </Dropdown.Item>
+                        </DropdownMenuItem>
                       )}
-                    </Dropdown.Menu>
-                  </Dropdown>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 )}
               </div>
             );
@@ -1342,116 +1354,81 @@ export default function RegistrationList({
               <p className="text-secondary text-center py-4 mb-0">{m.admin_no_registrations()}</p>
             )
           ) : (
-            <div className="table-responsive">
-              <Table variant="dark" hover striped className="mb-0" size="sm">
-                <thead>
+            <div data-tailwind-migrated="true" className="tw:w-full">
+              <Table>
+                <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => {
-                        const canSort = header.column.getCanSort();
-                        const sorted = header.column.getIsSorted();
-                        return (
-                          <th
-                            key={header.id}
-                            className={header.column.columnDef.meta?.tdClassName}
-                            onClick={header.column.getToggleSortingHandler()}
-                            onKeyDown={
-                              canSort
-                                ? (e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.preventDefault();
-                                      header.column.getToggleSortingHandler()?.(e);
-                                    }
-                                  }
-                                : undefined
-                            }
-                            tabIndex={canSort ? 0 : undefined}
-                            aria-sort={
-                              canSort
-                                ? sorted === "asc"
-                                  ? "ascending"
-                                  : sorted === "desc"
-                                    ? "descending"
-                                    : "none"
-                                : undefined
-                            }
-                            style={{
-                              cursor: canSort ? "pointer" : "default",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            <table.FlexRender header={header} />
-                            {header.column.getCanSort() && (
-                              <i
-                                className={`bi ms-1 small ${
-                                  header.column.getIsSorted() === "asc"
-                                    ? "bi-arrow-up"
-                                    : header.column.getIsSorted() === "desc"
-                                      ? "bi-arrow-down"
-                                      : "bi-arrow-down-up opacity-25"
-                                }`}
-                                aria-hidden="true"
-                              />
-                            )}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                          <table.FlexRender cell={cell} />
-                        </td>
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <AdminSortableHeader key={header.id} column={header.column}>
+                          <table.FlexRender header={header} />
+                        </AdminSortableHeader>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cell.column.columnDef.meta?.tdClassName}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
               </Table>
             </div>
           )}
           {!pageQuery.isLoading && !pageQuery.isError && total > 0 && (
-            <div className="d-flex flex-wrap align-items-center justify-content-between gap-2 p-2 border-top border-secondary">
-              <span className="text-secondary small">
+            <div
+              data-tailwind-migrated="true"
+              className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:p-2 tw:border-t tw:border-border"
+            >
+              <span className="tw:text-muted-foreground tw:text-sm">
                 {m.admin_registrations_page_summary({ from: rangeFrom, to: rangeTo, total })}
               </span>
-              <div className="d-flex align-items-center gap-2">
-                <Form.Select
-                  size="sm"
-                  className="bg-dark text-light border-secondary"
-                  style={{ width: "auto" }}
-                  value={pageSize}
-                  onChange={(e) => changePageSize(Number(e.target.value))}
-                  aria-label={m.admin_registrations_page_size_aria()}
+              <div className="tw:flex tw:items-center tw:gap-2">
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    if (value) changePageSize(Number(value));
+                  }}
                 >
-                  {PAGE_SIZE_OPTIONS.map((size) => (
-                    <option key={size} value={size}>
-                      {size}
-                    </option>
-                  ))}
-                </Form.Select>
-                <Button
-                  variant="outline-secondary"
+                  <SelectTrigger size="sm" aria-label={m.admin_registrations_page_size_aria()}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <TableButton
+                  variant="outline"
                   size="sm"
                   disabled={page <= 1 || pageQuery.isFetching}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   {m.admin_registrations_page_previous()}
-                </Button>
-                <span className="text-secondary small">
+                </TableButton>
+                <span className="tw:text-muted-foreground tw:text-sm">
                   {page} / {totalPages}
                 </span>
-                <Button
-                  variant="outline-secondary"
+                <TableButton
+                  variant="outline"
                   size="sm"
                   disabled={page >= totalPages || pageQuery.isFetching}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 >
                   {m.admin_registrations_page_next()}
-                </Button>
+                </TableButton>
               </div>
             </div>
           )}

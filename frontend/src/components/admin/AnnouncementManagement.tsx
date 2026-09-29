@@ -6,7 +6,14 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import Table from "react-bootstrap/Table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 import {
   fetchJsonOrThrowWithUnauthorized,
@@ -313,7 +320,7 @@ export default function AnnouncementManagement({
           id: "actions",
           header: m.admin_actions_label(),
           enableSorting: false,
-          meta: { tdClassName: "text-nowrap" },
+          meta: { tdClassName: "tw:whitespace-nowrap" },
           cell: ({ row }) => {
             const item = row.original;
             return (
@@ -492,30 +499,30 @@ export default function AnnouncementManagement({
           <option value="en">{m.admin_announcement_preview_en()}</option>
           <option value="fr">{m.admin_announcement_preview_fr()}</option>
         </Form.Select>
-        <div className="table-responsive">
+        <div data-tailwind-migrated="true" className="tw:w-full">
           <Table>
-            <thead>
+            <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
+                <TableRow key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
-                    <th key={header.id}>
+                    <TableHead key={header.id}>
                       <table.FlexRender header={header} />
-                    </th>
+                    </TableHead>
                   ))}
-                </tr>
+                </TableRow>
               ))}
-            </thead>
-            <tbody>
+            </TableHeader>
+            <TableBody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id}>
+                <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                    <TableCell key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
                       <table.FlexRender cell={cell} />
-                    </td>
+                    </TableCell>
                   ))}
-                </tr>
+                </TableRow>
               ))}
-            </tbody>
+            </TableBody>
           </Table>
         </div>
       </Card.Body>

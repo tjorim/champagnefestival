@@ -1,9 +1,11 @@
+import { Button as TableButton } from "@/components/ui/button";
+import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useMemo } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Modal from "./AdminModal";
 import Spinner from "react-bootstrap/Spinner";
-import Table from "react-bootstrap/Table";
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { type OnChangeFn, type SortingState } from "@tanstack/react-table";
 import { m } from "@/paraglide/messages";
 import type { LedgerSortKey } from "@/utils/adminFetch";
@@ -173,100 +175,63 @@ export default function LedgerModal({
           <p className="text-secondary text-center py-4 mb-0">{m.admin_payment_history_empty()}</p>
         )}
         {!loading && !error && total > 0 && (
-          <div className="table-responsive">
-            <Table variant="dark" hover striped className="mb-0" size="sm">
+          <div data-tailwind-migrated="true" className="tw:w-full">
+            <Table>
               <caption className="visually-hidden">{m.admin_ledger_table_caption()}</caption>
-              <thead>
+              <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => {
-                      const canSort = header.column.getCanSort();
-                      const sorted = header.column.getIsSorted();
-                      return (
-                        <th
-                          key={header.id}
-                          onClick={header.column.getToggleSortingHandler()}
-                          onKeyDown={
-                            canSort
-                              ? (e) => {
-                                  if (e.key === "Enter" || e.key === " ") {
-                                    e.preventDefault();
-                                    header.column.getToggleSortingHandler()?.(e);
-                                  }
-                                }
-                              : undefined
-                          }
-                          tabIndex={canSort ? 0 : undefined}
-                          aria-sort={
-                            canSort
-                              ? sorted === "asc"
-                                ? "ascending"
-                                : sorted === "desc"
-                                  ? "descending"
-                                  : "none"
-                              : undefined
-                          }
-                          style={{ cursor: canSort ? "pointer" : "default", whiteSpace: "nowrap" }}
-                        >
-                          <table.FlexRender header={header} />
-                          {canSort && (
-                            <i
-                              className={`bi ms-1 small ${
-                                sorted === "asc"
-                                  ? "bi-arrow-up"
-                                  : sorted === "desc"
-                                    ? "bi-arrow-down"
-                                    : "bi-arrow-down-up opacity-25"
-                              }`}
-                              aria-hidden="true"
-                            />
-                          )}
-                        </th>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </thead>
-              <tbody>
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="small">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id}>
-                        <table.FlexRender cell={cell} />
-                      </td>
+                  <TableRow key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <AdminSortableHeader key={header.id} column={header.column}>
+                        <table.FlexRender header={header} />
+                      </AdminSortableHeader>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
+              </TableHeader>
+              <TableBody>
+                {table.getRowModel().rows.map((row) => (
+                  <TableRow key={row.id} className="tw:text-sm">
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id}>
+                        <table.FlexRender cell={cell} />
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableBody>
             </Table>
           </div>
         )}
       </Modal.Body>
       <Modal.Footer className="bg-dark border-secondary">
         {total > 0 && (
-          <div className="d-flex align-items-center gap-2 me-auto">
-            <span className="text-secondary small">
+          <div
+            data-tailwind-migrated="true"
+            className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:mr-auto"
+          >
+            <span className="tw:text-muted-foreground tw:text-sm">
               {m.admin_ledger_page_summary({ from: rangeFrom, to: rangeTo, total })}
             </span>
-            <Button
-              variant="outline-secondary"
+            <TableButton
+              variant="outline"
               size="sm"
               disabled={isFetching || page <= 1}
               onClick={onPreviousPage}
             >
               {m.admin_ledger_previous_page()}
-            </Button>
-            <span className="text-secondary small">
+            </TableButton>
+            <span className="tw:text-muted-foreground tw:text-sm">
               {page} / {totalPages}
             </span>
-            <Button
-              variant="outline-secondary"
+            <TableButton
+              variant="outline"
               size="sm"
               disabled={isFetching || page >= totalPages}
               onClick={onNextPage}
             >
               {m.admin_ledger_next_page()}
-            </Button>
+            </TableButton>
           </div>
         )}
         <Button variant="outline-secondary" size="sm" onClick={onHide}>

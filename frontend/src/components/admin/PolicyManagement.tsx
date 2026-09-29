@@ -8,7 +8,14 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Nav from "react-bootstrap/Nav";
-import Table from "react-bootstrap/Table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 import {
   fetchJsonOrThrowWithUnauthorized,
@@ -578,30 +585,30 @@ export default function PolicyManagement({
 
             <hr />
             <h3 className="h6">{m.admin_policy_version_history_heading()}</h3>
-            <div className="table-responsive">
-              <Table size="sm">
-                <thead>
+            <div data-tailwind-migrated="true" className="tw:w-full">
+              <Table>
+                <TableHeader>
                   {historyTable.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
+                    <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => (
-                        <th key={header.id}>
+                        <TableHead key={header.id}>
                           <historyTable.FlexRender header={header} />
-                        </th>
+                        </TableHead>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))}
-                </thead>
-                <tbody>
+                </TableHeader>
+                <TableBody>
                   {historyTable.getRowModel().rows.map((row) => (
-                    <tr key={row.id}>
+                    <TableRow key={row.id}>
                       {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id}>
+                        <TableCell key={cell.id}>
                           <historyTable.FlexRender cell={cell} />
-                        </td>
+                        </TableCell>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
+                </TableBody>
               </Table>
             </div>
             {contentFor(published, locale) === "" && published && (

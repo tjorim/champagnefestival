@@ -6,6 +6,7 @@
  * someone reverts to rendering the full local `registrations` array again.
  */
 
+import userEvent from "@testing-library/user-event";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
@@ -155,9 +156,9 @@ describe("RegistrationList — server-side pagination", () => {
     renderRegistrationList();
     await waitFor(() => expect(screen.getByText("Guest 01")).toBeInTheDocument());
 
-    fireEvent.change(screen.getByLabelText("admin_registrations_page_size_aria"), {
-      target: { value: "25" },
-    });
+    const user = userEvent.setup();
+    await user.click(screen.getByRole("combobox", { name: "admin_registrations_page_size_aria" }));
+    await user.click(await screen.findByRole("option", { name: /^25$/ }));
 
     await waitFor(() =>
       expect(screen.getByText(/admin_registrations_page_summary/)).toHaveTextContent(

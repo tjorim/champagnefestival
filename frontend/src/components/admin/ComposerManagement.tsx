@@ -6,7 +6,14 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import Table from "react-bootstrap/Table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
@@ -250,7 +257,7 @@ export default function ComposerManagement({
             const item = row.original;
             if (item.state === "sent") {
               return (
-                <span className="small">
+                <span className="tw:text-sm">
                   {item.channels.includes("push") &&
                     m.admin_composer_push_results({
                       delivered: item.push_delivered_count,
@@ -276,7 +283,7 @@ export default function ComposerManagement({
             <span className="visually-hidden">{m.admin_composer_column_actions()}</span>
           ),
           enableSorting: false,
-          meta: { tdClassName: "text-end" },
+          meta: { tdClassName: "tw:text-right" },
           cell: ({ row }) => {
             const item = row.original;
             return (
@@ -451,30 +458,30 @@ export default function ComposerManagement({
         {items.length === 0 ? (
           <p className="text-center text-secondary mt-4 mb-0">{m.admin_composer_empty()}</p>
         ) : (
-          <div className="table-responsive">
-            <Table className="mt-4 align-middle">
-              <thead>
+          <div data-tailwind-migrated="true" className="tw:w-full">
+            <Table>
+              <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
+                  <TableRow key={headerGroup.id}>
                     {headerGroup.headers.map((header) => (
-                      <th key={header.id}>
+                      <TableHead key={header.id}>
                         <table.FlexRender header={header} />
-                      </th>
+                      </TableHead>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </thead>
-              <tbody>
+              </TableHeader>
+              <TableBody>
                 {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id}>
+                  <TableRow key={row.id}>
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                      <TableCell key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
                         <table.FlexRender cell={cell} />
-                      </td>
+                      </TableCell>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))}
-              </tbody>
+              </TableBody>
             </Table>
           </div>
         )}

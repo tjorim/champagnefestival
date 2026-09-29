@@ -20,7 +20,14 @@ import { tooltip } from "@tanstack/charts/tooltip";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
-import Table from "react-bootstrap/Table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import {
   downloadPaymentTransactionsCsv,
@@ -226,47 +233,47 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
       ) : editions.length === 0 ? (
         <p className="text-secondary">{m.admin_analytics_no_data()}</p>
       ) : showTable ? (
-        <Table striped bordered hover responsive size="sm" variant="dark">
+        <Table>
           <caption className="visually-hidden">{m.admin_analytics_table_caption()}</caption>
-          <thead>
-            <tr>
-              <th scope="col">{m.admin_analytics_column_edition()}</th>
-              <th scope="col">{m.admin_analytics_column_events()}</th>
-              <th scope="col">{m.admin_analytics_column_registrations()}</th>
-              <th scope="col">{m.admin_analytics_column_guests()}</th>
-              <th scope="col">{m.admin_analytics_column_checked_in()}</th>
-              <th scope="col">{m.admin_analytics_column_checkin_rate()}</th>
-              <th scope="col">{m.admin_analytics_column_total_paid()}</th>
-              <th scope="col">{m.admin_analytics_column_total_due()}</th>
-              <th scope="col">{m.admin_analytics_column_total_received()}</th>
-              <th scope="col">{m.admin_analytics_column_total_refunded()}</th>
-              <th scope="col">{m.admin_analytics_column_total_outstanding()}</th>
-              <th scope="col">{m.admin_analytics_column_total_refund_liability()}</th>
-              <th scope="col">{m.admin_actions_label()}</th>
-            </tr>
-          </thead>
-          <tbody>
+          <TableHeader>
+            <TableRow>
+              <TableHead scope="col">{m.admin_analytics_column_edition()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_events()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_registrations()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_guests()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_checked_in()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_checkin_rate()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_total_paid()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_total_due()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_total_received()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_total_refunded()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_total_outstanding()}</TableHead>
+              <TableHead scope="col">{m.admin_analytics_column_total_refund_liability()}</TableHead>
+              <TableHead scope="col">{m.admin_actions_label()}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {editions.map((edition) => (
-              <tr key={edition.editionId}>
-                <td>
+              <TableRow key={edition.editionId}>
+                <TableCell>
                   {edition.year} {edition.month}
-                </td>
-                <td>{edition.eventsCount}</td>
-                <td>{edition.totalRegistrations}</td>
-                <td>{edition.totalGuests}</td>
-                <td>{edition.totalCheckedIn}</td>
-                <td>
+                </TableCell>
+                <TableCell>{edition.eventsCount}</TableCell>
+                <TableCell>{edition.totalRegistrations}</TableCell>
+                <TableCell>{edition.totalGuests}</TableCell>
+                <TableCell>{edition.totalCheckedIn}</TableCell>
+                <TableCell>
                   {edition.totalGuests > 0
                     ? `${Math.round((edition.totalCheckedIn / edition.totalGuests) * 100)}%`
                     : "—"}
-                </td>
-                <td>€{edition.totalPaid.toFixed(2)}</td>
-                <td>€{edition.totalDue.toFixed(2)}</td>
-                <td>€{edition.totalReceived.toFixed(2)}</td>
-                <td>€{edition.totalRefunded.toFixed(2)}</td>
-                <td>€{edition.totalOutstanding.toFixed(2)}</td>
-                <td>€{edition.totalRefundLiability.toFixed(2)}</td>
-                <td className="d-flex gap-1">
+                </TableCell>
+                <TableCell>€{edition.totalPaid.toFixed(2)}</TableCell>
+                <TableCell>€{edition.totalDue.toFixed(2)}</TableCell>
+                <TableCell>€{edition.totalReceived.toFixed(2)}</TableCell>
+                <TableCell>€{edition.totalRefunded.toFixed(2)}</TableCell>
+                <TableCell>€{edition.totalOutstanding.toFixed(2)}</TableCell>
+                <TableCell>€{edition.totalRefundLiability.toFixed(2)}</TableCell>
+                <TableCell className="tw:flex tw:gap-1">
                   <Button
                     variant="outline-secondary"
                     size="sm"
@@ -303,10 +310,10 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                       <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" />
                     )}
                   </Button>
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
             ))}
-          </tbody>
+          </TableBody>
         </Table>
       ) : (
         <div className="viz-root">
