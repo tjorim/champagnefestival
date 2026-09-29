@@ -12,7 +12,14 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
-import Table from "react-bootstrap/Table";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import { fetchAuditEntries, fetchAuditResourceTypes } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
@@ -217,32 +224,32 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
         <p className="text-secondary">{m.admin_audit_no_entries()}</p>
       ) : (
         <>
-          <Table striped bordered hover responsive size="sm" variant="dark">
+          <Table>
             <caption className="visually-hidden">{m.admin_audit_table_caption()}</caption>
-            <thead>
-              <tr>
-                <th scope="col">{m.admin_audit_column_timestamp()}</th>
-                <th scope="col">{m.admin_audit_column_actor()}</th>
-                <th scope="col">{m.admin_audit_column_action()}</th>
-                <th scope="col">{m.admin_audit_column_resource()}</th>
-                <th scope="col">{m.admin_audit_column_details()}</th>
-              </tr>
-            </thead>
-            <tbody>
+            <TableHeader>
+              <TableRow>
+                <TableHead scope="col">{m.admin_audit_column_timestamp()}</TableHead>
+                <TableHead scope="col">{m.admin_audit_column_actor()}</TableHead>
+                <TableHead scope="col">{m.admin_audit_column_action()}</TableHead>
+                <TableHead scope="col">{m.admin_audit_column_resource()}</TableHead>
+                <TableHead scope="col">{m.admin_audit_column_details()}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {entries.map((entry) => (
-                <tr key={entry.id}>
-                  <td>{formatTimestamp(entry.timestamp)}</td>
-                  <td className="text-break">{entry.actor}</td>
-                  <td>{entry.action}</td>
-                  <td className="text-break">
+                <TableRow key={entry.id}>
+                  <TableCell>{formatTimestamp(entry.timestamp)}</TableCell>
+                  <TableCell className="tw:break-words">{entry.actor}</TableCell>
+                  <TableCell>{entry.action}</TableCell>
+                  <TableCell className="tw:break-words">
                     {entry.resourceType} / {entry.resourceId}
-                  </td>
-                  <td className="text-break">
+                  </TableCell>
+                  <TableCell className="tw:break-words">
                     {Object.keys(entry.details).length > 0 ? JSON.stringify(entry.details) : ""}
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
+            </TableBody>
           </Table>
 
           <div className="d-flex justify-content-between align-items-center">

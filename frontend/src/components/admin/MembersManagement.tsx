@@ -1,3 +1,4 @@
+import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useState, useMemo, useCallback } from "react";
 import {
   type FilterFn,
@@ -11,7 +12,7 @@ import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Modal from "./AdminModal";
 import Spinner from "react-bootstrap/Spinner";
-import Table from "react-bootstrap/Table";
+import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
@@ -144,15 +145,21 @@ export default function MembersManagement({
         }),
         columnHelper.accessor("email", {
           header: m.registration_email(),
-          cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
+          cell: ({ getValue }) => (
+            <span className="tw:text-sm">{String(getValue() ?? "") || "—"}</span>
+          ),
         }),
         columnHelper.accessor("phone", {
           header: m.registration_phone(),
-          cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
+          cell: ({ getValue }) => (
+            <span className="tw:text-sm">{String(getValue() ?? "") || "—"}</span>
+          ),
         }),
         columnHelper.accessor("clubName", {
           header: m.admin_people_club_name_label(),
-          cell: ({ getValue }) => <span className="small">{String(getValue() ?? "") || "—"}</span>,
+          cell: ({ getValue }) => (
+            <span className="tw:text-sm">{String(getValue() ?? "") || "—"}</span>
+          ),
         }),
         columnHelper.accessor("notes", {
           header: m.registration_notes(),
@@ -170,7 +177,7 @@ export default function MembersManagement({
         columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
           id: "registrations",
           header: m.admin_registrations_tab(),
-          cell: ({ getValue }) => <span className="small">{String(getValue())}</span>,
+          cell: ({ getValue }) => <span className="tw:text-sm">{String(getValue())}</span>,
         }),
         columnHelper.display({
           id: "actions",
@@ -365,75 +372,34 @@ export default function MembersManagement({
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_members_no_results()}</p>
           ) : (
-            <div className="table-responsive">
-              <Table variant="dark" hover striped className="mb-0" size="sm">
+            <div className="tw:w-full">
+              <Table>
                 <caption className="visually-hidden">{m.admin_members_table_caption()}</caption>
-                <thead>
+                <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => {
-                        const canSort = header.column.getCanSort();
-                        const sorted = header.column.getIsSorted();
-                        return (
-                          <th
-                            key={header.id}
-                            className={header.column.columnDef.meta?.tdClassName}
-                            onClick={header.column.getToggleSortingHandler()}
-                            onKeyDown={
-                              canSort
-                                ? (e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.preventDefault();
-                                      header.column.getToggleSortingHandler()?.(e);
-                                    }
-                                  }
-                                : undefined
-                            }
-                            tabIndex={canSort ? 0 : undefined}
-                            aria-sort={
-                              canSort
-                                ? sorted === "asc"
-                                  ? "ascending"
-                                  : sorted === "desc"
-                                    ? "descending"
-                                    : "none"
-                                : undefined
-                            }
-                            style={{
-                              cursor: canSort ? "pointer" : "default",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            <table.FlexRender header={header} />
-                            {canSort && (
-                              <i
-                                className={`bi ms-1 small ${
-                                  sorted === "asc"
-                                    ? "bi-arrow-up"
-                                    : sorted === "desc"
-                                      ? "bi-arrow-down"
-                                      : "bi-arrow-down-up opacity-25"
-                                }`}
-                                aria-hidden="true"
-                              />
-                            )}
-                          </th>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody>
-                  {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <td key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
-                          <table.FlexRender cell={cell} />
-                        </td>
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <AdminSortableHeader key={header.id} column={header.column}>
+                          <table.FlexRender header={header} />
+                        </AdminSortableHeader>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id}>
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell
+                          key={cell.id}
+                          className={cell.column.columnDef.meta?.tdClassName}
+                        >
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
               </Table>
             </div>
           )}

@@ -20,7 +20,7 @@ import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import Modal from "./AdminModal";
 import Spinner from "react-bootstrap/Spinner";
-import Table from "react-bootstrap/Table";
+import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { FaqItem } from "@/types/admin";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
@@ -424,26 +424,29 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           ) : sortedItems.length === 0 ? (
             <p className="text-secondary text-center py-4 mb-0">{m.admin_no_faq_items()}</p>
           ) : (
-            <div className="table-responsive">
-              <Table variant="dark" hover className="mb-0" size="sm">
-                <tbody>
+            <div className="tw:w-full">
+              <Table>
+                <TableBody>
                   {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className={!row.original.active ? "opacity-50" : undefined}>
+                    <TableRow
+                      key={row.id}
+                      className={!row.original.active ? "tw:opacity-50" : undefined}
+                    >
                       {row.getVisibleCells().map((cell) => (
-                        <td
+                        <TableCell
                           key={cell.id}
-                          style={
+                          className={
                             cell.column.id === "reorder" || cell.column.id === "actions"
-                              ? { width: "1%", whiteSpace: "nowrap" }
+                              ? "tw:w-px tw:whitespace-nowrap"
                               : undefined
                           }
                         >
                           <table.FlexRender cell={cell} />
-                        </td>
+                        </TableCell>
                       ))}
-                    </tr>
+                    </TableRow>
                   ))}
-                </tbody>
+                </TableBody>
               </Table>
             </div>
           )}

@@ -205,17 +205,6 @@
     }
   },
   {
-    "files": ["src/components/admin/AdminTablePagination.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["width"]
-        }
-      ]
-    }
-  },
-  {
     "files": ["src/components/admin/AnnouncementManagement.tsx"],
     "rules": {
       "shadcn/no-unknown-classes": [
@@ -244,17 +233,6 @@
         "error",
         {
           "allow": ["maxWidth"]
-        }
-      ]
-    }
-  },
-  {
-    "files": ["src/components/admin/ColumnVisibilityDropdown.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["minWidth"]
         }
       ]
     }
@@ -334,17 +312,6 @@
     }
   },
   {
-    "files": ["src/components/admin/FaqManagement.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["whiteSpace", "width"]
-        }
-      ]
-    }
-  },
-  {
     "files": ["src/components/admin/LayoutCompareModal.tsx"],
     "rules": {
       "shadcn/no-inline-styles": [
@@ -373,23 +340,12 @@
     }
   },
   {
-    "files": ["src/components/admin/LedgerModal.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["cursor", "whiteSpace"]
-        }
-      ]
-    }
-  },
-  {
     "files": ["src/components/admin/MembersManagement.tsx"],
     "rules": {
       "shadcn/no-inline-styles": [
         "error",
         {
-          "allow": ["cursor", "maxWidth", "whiteSpace"]
+          "allow": ["maxWidth"]
         }
       ]
     }
@@ -400,7 +356,7 @@
       "shadcn/no-inline-styles": [
         "error",
         {
-          "allow": ["cursor", "fontSize", "maxWidth", "whiteSpace"]
+          "allow": ["fontSize", "maxWidth"]
         }
       ]
     }
@@ -439,7 +395,7 @@
       "shadcn/no-inline-styles": [
         "error",
         {
-          "allow": ["cursor", "maxWidth", "whiteSpace", "width"]
+          "allow": ["maxWidth"]
         }
       ]
     }
@@ -481,7 +437,7 @@
       "shadcn/no-inline-styles": [
         "error",
         {
-          "allow": ["cursor", "maxWidth", "whiteSpace"]
+          "allow": ["maxWidth"]
         }
       ]
     }
