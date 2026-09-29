@@ -67,7 +67,7 @@ describe("HeaderClassic component", () => {
     render(<HeaderClassic />);
     const adminLink = screen.getByRole("link", { name: "Administration" });
     expect(adminLink).toHaveAttribute("href", "/admin");
-    expect(adminLink.querySelector(".bi-shield-lock")).toBeInTheDocument();
+    expect(adminLink.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
   });
 
   it("does not render a mobile menu button", () => {

@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import Spinner from "react-bootstrap/Spinner";
 import Select, { type GroupBase, type MultiValue } from "react-select";
 import { m } from "@/paraglide/messages";
@@ -204,14 +204,7 @@ export default function EditionModal({
   const previewDates = useMemo(() => initial?.dates ?? [], [initial?.dates]);
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="lg"
-      data-bs-theme="dark"
-      dialogClassName="admin-dialog"
-    >
+    <Modal show={show} onHide={onHide} centered size="lg" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           {isEdit ? `Edit ${initial!.id}` : m.admin_content_edition_add()}

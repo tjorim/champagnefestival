@@ -2,6 +2,7 @@ import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import reactPlugin from "@vitejs/plugin-react";
 import { resolve } from "node:path";
+import visualThemes from "./src/config/visualThemes.json" with { type: "json" };
 import { defineConfig } from "vite";
 
 export default defineConfig({
@@ -11,6 +12,12 @@ export default defineConfig({
     },
   },
   plugins: [
+    {
+      name: "visual-theme-prepaint",
+      transformIndexHtml(html) {
+        return html.replace("__VISUAL_THEMES__", JSON.stringify(visualThemes));
+      },
+    },
     paraglideVitePlugin({
       project: "./project.inlang",
       outdir: "./src/paraglide",

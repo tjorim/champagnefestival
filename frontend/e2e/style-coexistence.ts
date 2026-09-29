@@ -8,7 +8,11 @@ export async function legacyStyleChanges(page: Page) {
         candidate.ownerNode.dataset.viteDevId?.endsWith("/src/styles/tailwind.css"),
     );
     if (!sheet) throw new Error("Tailwind stylesheet missing");
-    const elements = [...document.querySelectorAll("*")];
+    // Migrated components intentionally depend on Tailwind. Compare only legacy
+    // subtrees; inherited properties also change below a migrated ancestor.
+    const elements = [...document.querySelectorAll("*")].filter(
+      (element) => !element.closest('[data-tailwind-migrated="true"]'),
+    );
     const properties = [
       "display",
       "position",

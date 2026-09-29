@@ -5,7 +5,7 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import Spinner from "react-bootstrap/Spinner";
 import Table from "react-bootstrap/Table";
 import { m } from "@/paraglide/messages";
@@ -430,7 +430,7 @@ export default function VolunteersManagement({
       </Card>
 
       {deletingId && (
-        <Modal show onHide={() => setDeletingId(null)} centered data-bs-theme="dark">
+        <Modal show onHide={() => setDeletingId(null)} centered>
           <Modal.Header closeButton className="bg-dark border-secondary">
             <Modal.Title className="text-danger fs-6">
               <i className="bi bi-trash me-2" aria-hidden="true" />

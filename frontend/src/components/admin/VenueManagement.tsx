@@ -15,7 +15,7 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import { m } from "@/paraglide/messages";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
 import ConfirmModal from "@/components/ConfirmModal";

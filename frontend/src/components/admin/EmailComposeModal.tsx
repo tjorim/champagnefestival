@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import { m } from "@/paraglide/messages";
 import { buildMailto, MAILTO_MAX_LENGTH, type EmailDraft } from "@/utils/emailComposer";
 

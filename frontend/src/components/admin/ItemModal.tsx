@@ -3,7 +3,7 @@ import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "react-bootstrap/Modal";
+import Modal from "./AdminModal";
 import Select, { type SingleValue, type StylesConfig } from "react-select";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
@@ -134,14 +134,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const loadingPersons = personOptionsQuery.isFetching;
 
   return (
-    <Modal
-      show={show}
-      onHide={onHide}
-      centered
-      size="lg"
-      data-bs-theme="dark"
-      dialogClassName="admin-dialog"
-    >
+    <Modal show={show} onHide={onHide} centered size="lg" dialogClassName="admin-dialog">
       <Modal.Header closeButton className="bg-dark border-secondary">
         <Modal.Title className="text-warning fs-6">
           {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}
