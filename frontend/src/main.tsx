@@ -5,6 +5,7 @@ import { Link, RouterProvider } from "@tanstack/react-router";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./styles/tailwind.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 import "leaflet/dist/leaflet.css";
 import Alert from "react-bootstrap/Alert";

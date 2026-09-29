@@ -107,3 +107,33 @@ Future workflow additions should follow these conventions:
 - When a change implements, closes, splits, supersedes, or materially changes an issue tracked in `docs/product-audit-2026-08.md`, update that document in the same change. For completed or superseded items, remove the row from the active phase, renumber the remaining preferred order, and add a row to **Completed or superseded work** with the date, issue/PR or commit, outcome, and a concise implementation note. Update affected dependencies, index/specification text, and acceptance-criteria checkboxes. Partial work stays in the active phase with revised notes; do not record completion until the documented acceptance criteria are satisfied. Preserve the original finding/specification as historical context.
 - Do not commit automatically unless explicitly asked
 - GitHub issues are living documents: never add comments to them. Record clarifications, decisions, new sub-issue links and corrections by editing the issue body (read it first, keep the original text, and add or adjust a clearly headed section), including on closed issues
+
+## Styling during the Bootstrap migration (#1104)
+
+- Existing Bootstrap, component CSS and runtime themes retain their cascade and
+  reboot. Do not import Tailwind preflight or reorder the theme `<link>`.
+- New or migrated UI uses Tailwind v4 with the `tw:` prefix (for example
+  `tw:flex tw:gap-2 tw:hover:bg-primary`). Utilities are important so they beat
+  unlayered legacy styles, including Bootstrap's important utilities. Avoid
+  mixing both systems on new controls; coexistence is for gradual migration.
+- Use semantic colours from `frontend/src/styles/tailwind.css`, mapped to the
+  active runtime theme. Do not use raw palette colours, arbitrary values or
+  inline styles. Dynamic positioning needs a deliberate, narrow lint exception.
+- Generate Base UI primitives on demand with `cd frontend && pnpm dlx shadcn@latest
+  add <component>` using the committed `components.json` (`base-vega`, Lucide,
+  Tailwind v4). Own and restyle the generated source; never run `init` over the
+  existing theme or bulk-generate controls. Use `@/lib/utils` for the shared
+  prefix-aware `cn` helper, and Lucide for new icons.
+- `pnpm lint` regenerates `.oxlint-legacy-classes.json` from vendor, component and
+  runtime theme CSS. Never hand-edit that generated allow-list. The frozen
+  `.oxlint-legacy-exceptions.json` records existing inline properties and class
+  hooks without CSS; remove a file's exceptions when migrating it. Do not grow
+  this baseline for new components. All four shadcn rules apply to new files.
+- Coexistence is temporary: remove unused legacy CSS/classes and each file's lint
+  exceptions as it migrates. At migration completion, remove Bootstrap/Bootstrap
+  Icons, replace reboot with verified Tailwind preflight, remove `tw:` prefixes
+  and utility `important`, update `components.json` and `cn`, and delete legacy
+  lint generation/baselines. Preserve runtime visual themes and required vendor
+  CSS. Follow the cleanup gates in
+  `docs/decisions/1104-tailwind-coexistence.md` and final cleanup issue #1111
+  before declaring completion.

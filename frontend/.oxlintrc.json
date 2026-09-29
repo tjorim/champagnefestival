@@ -7,5 +7,11 @@
     "coverage/**",
     "node_modules/**",
     "public/mockServiceWorker.js"
-  ]
+  ],
+  "extends": ["./.oxlint-legacy-classes.json"],
+  "jsPlugins": ["@shadcn/lint"],
+  "rules": {
+    "shadcn/no-arbitrary-values": "error",
+    "shadcn/no-inline-styles": "error"
+  }
 }

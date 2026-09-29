@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = Number(process.env.PLAYWRIGHT_PORT ?? 5173);
+const baseURL = `http://localhost:${port}`;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -8,7 +11,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: "http://localhost:5173",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
@@ -32,8 +35,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm exec vite --no-open",
-    url: "http://localhost:5173",
+    command: `pnpm exec vite --no-open --port ${port} --strictPort`,
+    url: baseURL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
     env: {

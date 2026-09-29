@@ -1,4 +1,5 @@
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
+import tailwindcss from "@tailwindcss/vite";
 import reactPlugin from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 import { defineConfig } from "vite";
@@ -16,6 +17,7 @@ export default defineConfig({
       strategy: ["localStorage", "preferredLanguage", "baseLocale"],
     }),
     reactPlugin(),
+    tailwindcss(),
   ],
   build: {
     rolldownOptions: {

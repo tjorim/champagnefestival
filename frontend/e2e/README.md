@@ -40,3 +40,9 @@ This is test/dev tooling only — `frontend/src/config/oidc.ts` and
 `frontend/src/contexts/AuthContext.tsx` are untouched, and the normal login
 flow works exactly as before for anyone not opting into the authenticated
 project.
+
+## Concurrent development servers
+
+If another app occupies port 5173, run `PLAYWRIGHT_PORT=5174 pnpm test:e2e`.
+The same port is used for Vite and Playwright's base URL; Vite uses strict-port
+mode so a newly started server cannot silently move to a different port.
