@@ -2,13 +2,13 @@
    CHAMPAGNEFESTIVAL — ADMIN STYLES
    Aligns the admin UI with the public site's brand:
    primary #5a7ff0, secondary #9a5df6, dark theme, Inter font.
-   All rules are scoped to #admin or .admin-dialog to avoid
-   bleeding into the public-facing pages.
+   Rules are scoped to #admin or explicitly scoped admin dialog content
+   to avoid bleeding into public-facing pages.
    =================================================================== */
 
 /* ---- Brand tokens (derived from index.css :root variables) ---- */
 #admin,
-.admin-dialog {
+[data-theme-scope="admin"] [data-slot="dialog-content"] {
   --adm-primary: var(--primary-color, #5a7ff0);
   --adm-secondary: var(--secondary-color, #9a5df6);
   --adm-primary-rgb: 90, 127, 240;
@@ -636,167 +636,45 @@
   }
 }
 
-/* ================================================================
-   MODAL DIALOGS (.admin-dialog added to each modal's dialogClassName)
-   Modals render in a portal outside #admin so need their own scope.
-   ================================================================ */
-
-.admin-dialog .modal-content {
-  background: var(--adm-surface);
-  border-color: var(--adm-border);
-}
-
-.admin-dialog .modal-header {
-  border-bottom-color: var(--adm-border);
-}
-
-.admin-dialog .modal-title {
-  background: linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.admin-dialog .modal-footer {
-  border-top-color: var(--adm-border);
-}
-
-.admin-dialog .form-control,
-.admin-dialog .form-select {
+/* Bootstrap form controls inside migrated admin dialog portals. */
+[data-theme-scope="admin"] [data-slot="dialog-content"] .form-control,
+[data-theme-scope="admin"] [data-slot="dialog-content"] .form-select {
   background-color: var(--adm-surface-2) !important;
   border-color: var(--adm-border) !important;
   color: var(--adm-text) !important;
 }
 
-.admin-dialog .form-control:focus,
-.admin-dialog .form-select:focus {
+[data-theme-scope="admin"] [data-slot="dialog-content"] .form-control:focus,
+[data-theme-scope="admin"] [data-slot="dialog-content"] .form-select:focus {
   background-color: var(--adm-surface-2) !important;
   border-color: var(--adm-primary) !important;
   box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb), 0.2) !important;
 }
 
-.admin-dialog .form-control::placeholder {
+[data-theme-scope="admin"] [data-slot="dialog-content"] .form-control::placeholder {
   color: var(--adm-text-dim) !important;
 }
 
-.admin-dialog .btn-warning {
+[data-theme-scope="admin"] [data-slot="dialog-content"] .btn-warning {
   background: var(--adm-gradient) !important;
   border-color: var(--adm-primary) !important;
   color: #fff !important;
   font-weight: 600 !important;
 }
 
-.admin-dialog .btn-warning:hover {
+[data-theme-scope="admin"] [data-slot="dialog-content"] .btn-warning:hover {
   filter: brightness(1.1);
 }
 
-.admin-dialog .text-warning {
+[data-theme-scope="admin"] [data-slot="dialog-content"] .text-warning {
   color: var(--adm-primary) !important;
 }
 
-.admin-dialog .badge.bg-warning,
-.admin-dialog .badge.bg-warning.text-dark {
+[data-theme-scope="admin"] [data-slot="dialog-content"] .badge.bg-warning,
+[data-theme-scope="admin"] [data-slot="dialog-content"] .badge.bg-warning.text-dark {
   background: rgba(var(--adm-primary-rgb), 0.18) !important;
   color: var(--adm-primary) !important;
   border: 1px solid rgba(var(--adm-primary-rgb), 0.3) !important;
-}
-
-/* ---- react-select dark theme (.admin-dialog scope) ---- */
-.admin-dialog .rs__control {
-  background-color: var(--adm-surface-2) !important;
-  border-color: var(--adm-border) !important;
-  min-height: 34px;
-}
-
-.admin-dialog .rs__control:hover {
-  border-color: var(--adm-border-focus) !important;
-}
-
-.admin-dialog .rs__control--is-focused {
-  border-color: var(--adm-primary) !important;
-  box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb), 0.2) !important;
-}
-
-.admin-dialog .rs__menu {
-  background-color: var(--adm-surface-2) !important;
-  border: 1px solid var(--adm-border) !important;
-  z-index: 9999;
-}
-
-.admin-dialog .rs__option {
-  background-color: var(--adm-surface-2) !important;
-  color: var(--adm-text) !important;
-  cursor: pointer;
-}
-
-.admin-dialog .rs__option--is-focused {
-  background-color: var(--adm-surface) !important;
-}
-
-.admin-dialog .rs__option--is-selected {
-  background-color: rgba(var(--adm-primary-rgb), 0.2) !important;
-}
-
-.admin-dialog .rs__option--archived {
-  color: var(--adm-text-dim) !important;
-}
-
-.admin-dialog .rs__multi-value {
-  background-color: #495057 !important;
-}
-
-.admin-dialog .rs__multi-value--archived {
-  background-color: var(--adm-surface) !important;
-}
-
-.admin-dialog .rs__multi-value__label {
-  color: var(--adm-text) !important;
-  font-size: 0.8rem;
-}
-
-.admin-dialog .rs__multi-value__label--archived {
-  color: var(--adm-text-muted) !important;
-}
-
-.admin-dialog .rs__multi-value__remove {
-  color: var(--adm-text-muted) !important;
-}
-
-.admin-dialog .rs__multi-value__remove:hover {
-  background-color: var(--adm-danger) !important;
-  color: #fff !important;
-}
-
-.admin-dialog .rs__input-container,
-.admin-dialog .rs__input {
-  color: var(--adm-text) !important;
-}
-
-.admin-dialog .rs__placeholder {
-  color: var(--adm-text-dim) !important;
-}
-
-.admin-dialog .rs__indicator-separator {
-  background-color: var(--adm-text-dim) !important;
-}
-
-.admin-dialog .rs__dropdown-indicator,
-.admin-dialog .rs__clear-indicator {
-  color: var(--adm-text-dim) !important;
-}
-
-.admin-dialog .rs__dropdown-indicator:hover,
-.admin-dialog .rs__clear-indicator:hover {
-  color: var(--adm-text-muted) !important;
-}
-
-.admin-dialog .rs__group-heading {
-  color: var(--adm-text-muted) !important;
-  font-size: 0.7rem;
-}
-
-.admin-dialog .rs__menu-notice--no-options {
-  color: var(--adm-text-muted) !important;
 }
 
 .admin-active-edition-strip {

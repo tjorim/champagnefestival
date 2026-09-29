@@ -4,11 +4,26 @@ import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Spinner from "react-bootstrap/Spinner";
-import Select, { type SingleValue, type StylesConfig } from "react-select";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+} from "@/components/ui/combobox";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
+import { LoaderCircleIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -22,35 +37,6 @@ import {
 const adminActiveEditionEventsQueryKey = queryKeys.admin.activeEditionEvents;
 const adminPersonOptionsQueryKey = queryKeys.admin.personOptions;
 
-const darkSelectStyles: StylesConfig<PersonOption, false> = {
-  control: (base) => ({
-    ...base,
-    backgroundColor: "#212529",
-    borderColor: "#6c757d",
-    color: "#f8f9fa",
-    minHeight: "34px",
-  }),
-  menu: (base) => ({
-    ...base,
-    backgroundColor: "#212529",
-    border: "1px solid #6c757d",
-    zIndex: 9999,
-  }),
-  option: (base, state) => ({
-    ...base,
-    backgroundColor: state.isFocused ? "#343a40" : "#212529",
-    color: "#f8f9fa",
-    cursor: "pointer",
-  }),
-  singleValue: (base) => ({ ...base, color: "#f8f9fa" }),
-  input: (base) => ({ ...base, color: "#f8f9fa" }),
-  placeholder: (base) => ({ ...base, color: "#6c757d" }),
-  indicatorSeparator: (base) => ({ ...base, backgroundColor: "#6c757d" }),
-  dropdownIndicator: (base) => ({ ...base, color: "#6c757d" }),
-  clearIndicator: (base) => ({ ...base, color: "#6c757d" }),
-  noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
-};
-
 interface RegistrationCreateModalProps {
   show: boolean;
   authHeaders: () => Record<string, string>;
@@ -62,7 +48,7 @@ interface RegistrationCreateForm {
   eventId: string;
   guestCount: number;
   notes: string;
-  personOption: SingleValue<PersonOption>;
+  personOption: PersonOption | null;
 }
 
 export default function RegistrationCreateModal({
@@ -176,165 +162,194 @@ export default function RegistrationCreateModal({
   const hasValidEventSelection = events.some((event) => event.id === watchedEventId);
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg" dialogClassName="admin-dialog">
-      <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="text-warning fs-6">{m.admin_create_registration()}</Modal.Title>
-      </Modal.Header>
-      <Form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-      >
-        <Modal.Body className="bg-dark">
-          {error && (
-            <Alert
-              variant="danger"
-              className="py-2 small"
-              dismissible
-              onClose={() => createRegistrationMutation.reset()}
-            >
-              {error}
-            </Alert>
-          )}
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent admin size="lg">
+        <DialogHeader>
+          <DialogTitle>{m.admin_create_registration()}</DialogTitle>
+        </DialogHeader>
+        <Form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+        >
+          <DialogBody>
+            {error && (
+              <Alert
+                variant="danger"
+                className="py-2 small"
+                dismissible
+                onClose={() => createRegistrationMutation.reset()}
+              >
+                {error}
+              </Alert>
+            )}
 
-          <Form.Group className="mb-3" controlId="registration-event">
-            <Form.Label className="text-secondary small">{m.admin_event_label()}</Form.Label>
-            {loadingEvents ? (
-              <div className="text-secondary small">
-                <Spinner animation="border" size="sm" className="me-2" />
-                {m.admin_loading_events()}
-              </div>
-            ) : eventsQuery.isError ? (
-              <div className="text-danger small d-flex align-items-center gap-2">
-                <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
-                {m.admin_error_load_events()}
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="p-0 text-warning"
-                  onClick={() => void eventsQuery.refetch()}
+            <Form.Group className="mb-3" controlId="registration-event">
+              <Form.Label className="text-secondary small">{m.admin_event_label()}</Form.Label>
+              {loadingEvents ? (
+                <div className="text-secondary small">
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {m.admin_loading_events()}
+                </div>
+              ) : eventsQuery.isError ? (
+                <div className="text-danger small d-flex align-items-center gap-2">
+                  <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                  {m.admin_error_load_events()}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="p-0 text-warning"
+                    onClick={() => void eventsQuery.refetch()}
+                  >
+                    {m.admin_retry()}
+                  </Button>
+                </div>
+              ) : events.length > 0 ? (
+                <form.Field name="eventId">
+                  {(field) => (
+                    <Form.Select
+                      className="bg-dark text-light border-secondary"
+                      value={field.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    >
+                      <option value="">{m.admin_select_event_placeholder()}</option>
+                      {sortedEvents.map((ev) => (
+                        <option key={ev.id} value={ev.id}>
+                          {[
+                            ev.title,
+                            ev.edition?.editionType && ev.edition.editionType !== "festival"
+                              ? m.admin_filter_edition_standalone()
+                              : null,
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </option>
+                      ))}
+                    </Form.Select>
+                  )}
+                </form.Field>
+              ) : (
+                <Form.Select
+                  value=""
+                  className="bg-dark text-light border-secondary"
+                  disabled
+                  aria-label={m.admin_event_label()}
                 >
-                  {m.admin_retry()}
-                </Button>
-              </div>
-            ) : events.length > 0 ? (
-              <form.Field name="eventId">
+                  <option value="">{m.admin_content_edition_no_events()}</option>
+                </Form.Select>
+              )}
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="registration-person">
+              <Form.Label className="text-secondary small">{m.admin_person_label()} *</Form.Label>
+              <form.Field name="personOption">
                 {(field) => (
-                  <Form.Select
+                  <Combobox
+                    items={personOptions}
+                    value={field.value}
+                    onValueChange={(option) => field.handleChange(option)}
+                    onInputValueChange={setPersonQuery}
+                    filter={null}
+                    itemToStringLabel={(option: PersonOption) => option.label}
+                    isItemEqualToValue={(a: PersonOption, b: PersonOption) => a.value === b.value}
+                  >
+                    <ComboboxInput
+                      id="registration-person"
+                      aria-label={m.admin_person_label()}
+                      showClear
+                      onBlur={field.handleBlur}
+                      placeholder={m.admin_search_person_placeholder()}
+                      aria-busy={loadingPersons}
+                    >
+                      {loadingPersons && (
+                        <LoaderCircleIcon
+                          className="tw:size-4 tw:animate-spin tw:text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </ComboboxInput>
+                    <ComboboxContent>
+                      {!loadingPersons && (
+                        <ComboboxEmpty>{m.admin_people_no_results()}</ComboboxEmpty>
+                      )}
+                      <ComboboxList>
+                        {(opt: PersonOption) => (
+                          <ComboboxItem key={opt.value} value={opt}>
+                            <div>
+                              <div>{opt.label}</div>
+                              {opt.sub && (
+                                <small className="tw:text-muted-foreground">{opt.sub}</small>
+                              )}
+                            </div>
+                          </ComboboxItem>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                )}
+              </form.Field>
+            </Form.Group>
+
+            <form.Field name="guestCount">
+              {(field) => (
+                <Form.Group className="mb-3" controlId="registration-guest-count">
+                  <Form.Label className="text-secondary small">{m.admin_guests_count()}</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={1}
+                    max={20}
+                    className="bg-dark text-light border-secondary"
+                    value={field.value}
+                    onChange={(e) => field.handleChange(Number(e.target.value))}
+                    onBlur={field.handleBlur}
+                  />
+                </Form.Group>
+              )}
+            </form.Field>
+
+            <form.Field name="notes">
+              {(field) => (
+                <Form.Group controlId="registration-notes">
+                  <Form.Label className="text-secondary small">{m.admin_notes()}</Form.Label>
+                  <Form.Control
+                    as="textarea"
+                    rows={2}
                     className="bg-dark text-light border-secondary"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                  >
-                    <option value="">{m.admin_select_event_placeholder()}</option>
-                    {sortedEvents.map((ev) => (
-                      <option key={ev.id} value={ev.id}>
-                        {[
-                          ev.title,
-                          ev.edition?.editionType && ev.edition.editionType !== "festival"
-                            ? m.admin_filter_edition_standalone()
-                            : null,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </option>
-                    ))}
-                  </Form.Select>
-                )}
-              </form.Field>
-            ) : (
-              <Form.Select
-                value=""
-                className="bg-dark text-light border-secondary"
-                disabled
-                aria-label={m.admin_event_label()}
-              >
-                <option value="">{m.admin_content_edition_no_events()}</option>
-              </Form.Select>
-            )}
-          </Form.Group>
-
-          <Form.Group className="mb-3" controlId="registration-person">
-            <Form.Label className="text-secondary small">{m.admin_person_label()} *</Form.Label>
-            <form.Field name="personOption">
-              {(field) => (
-                <Select<PersonOption, false>
-                  inputId="registration-person"
-                  isClearable
-                  options={personOptions}
-                  value={field.value}
-                  onChange={(option) => field.handleChange(option)}
-                  onInputChange={(value) => setPersonQuery(value)}
-                  inputValue={personQuery}
-                  isLoading={loadingPersons}
-                  filterOption={null}
-                  styles={darkSelectStyles}
-                  placeholder={m.admin_search_person_placeholder()}
-                  classNamePrefix="rs"
-                  formatOptionLabel={(opt) => (
-                    <div>
-                      <div>{opt.label}</div>
-                      {opt.sub && <small className="text-secondary">{opt.sub}</small>}
-                    </div>
-                  )}
-                />
+                  />
+                </Form.Group>
               )}
             </form.Field>
-          </Form.Group>
-
-          <form.Field name="guestCount">
-            {(field) => (
-              <Form.Group className="mb-3" controlId="registration-guest-count">
-                <Form.Label className="text-secondary small">{m.admin_guests_count()}</Form.Label>
-                <Form.Control
-                  type="number"
-                  min={1}
-                  max={20}
-                  className="bg-dark text-light border-secondary"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(Number(e.target.value))}
-                  onBlur={field.handleBlur}
-                />
-              </Form.Group>
-            )}
-          </form.Field>
-
-          <form.Field name="notes">
-            {(field) => (
-              <Form.Group controlId="registration-notes">
-                <Form.Label className="text-secondary small">{m.admin_notes()}</Form.Label>
-                <Form.Control
-                  as="textarea"
-                  rows={2}
-                  className="bg-dark text-light border-secondary"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              </Form.Group>
-            )}
-          </form.Field>
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button
-            type="submit"
-            variant="warning"
-            size="sm"
-            disabled={isSubmitting || !watchedPersonOption || !hasValidEventSelection}
-          >
-            {isSubmitting ? (
-              <Spinner as="span" animation="border" size="sm" className="me-1" />
-            ) : (
-              <i className="bi bi-floppy me-1" aria-hidden="true" />
-            )}
-            {m.admin_create_action()}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button
+              type="submit"
+              variant="warning"
+              size="sm"
+              disabled={isSubmitting || !watchedPersonOption || !hasValidEventSelection}
+            >
+              {isSubmitting ? (
+                <Spinner as="span" animation="border" size="sm" className="me-1" />
+              ) : (
+                <i className="bi bi-floppy me-1" aria-hidden="true" />
+              )}
+              {m.admin_create_action()}
+            </Button>
+          </DialogFooter>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -47,6 +47,34 @@ test.describe("Guest registration", () => {
     await page.getByRole("button", { name: /submit registration|registratie indienen/i }).click();
 
     // Success alert should appear inside the modal
-    await expect(page.locator(".modal").getByRole("alert")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("dialog").getByRole("alert")).toBeVisible({ timeout: 10_000 });
+  });
+  test("traps focus, locks scrolling and restores focus after dismissal", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2027-02-01T12:00:00Z"));
+    await page.goto("/");
+    const trigger = page
+      .locator("#registrations")
+      .getByRole("button", { name: /register now|registreer nu/i });
+    await trigger.click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe("hidden");
+    for (let index = 0; index < 18; index++) {
+      await page.keyboard.press("Tab");
+      await expect
+        .poll(() => dialog.evaluate((element) => element.contains(document.activeElement)))
+        .toBe(true);
+    }
+    await dialog.locator("#res-name").focus();
+    await page.keyboard.press("Escape");
+    await expect(dialog).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).not.toBe("hidden");
+    await trigger.click();
+    await page
+      .locator('[data-slot="dialog-overlay"]')
+      .click({ position: { x: 2, y: 2 }, force: true });
+    await expect(dialog).not.toBeVisible();
+    await expect(trigger).toBeFocused();
   });
 });

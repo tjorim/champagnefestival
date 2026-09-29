@@ -27,24 +27,23 @@ Riviera, Cuvée and Remuage are light. Theme selection updates both attributes.
 ## Admin and portals
 
 The admin page uses `data-theme-scope="admin"` and `data-theme-mode="dark"`.
-Its semantic palette is fixed independently of the public theme. The central
-AdminModal adapter carries this scope on existing Bootstrap portals, replacing
-repeated mode declarations. Existing `--adm-*` rules remain during coexistence.
-Wrap future Base UI Portal children with `AdminThemeScope`, including popovers
-and dialog backdrops. This explicit wrapper places the scope inside the portal,
+Its semantic palette is fixed independently of the public theme. The generated Base UI dialog content carries this scope inside its portal;
+#1107 removed the transitional Bootstrap `AdminModal` adapter. Existing
+`--adm-*` form-content rules remain during coexistence. Wrap Base UI Portal
+children with `AdminThemeScope`, including popovers and dialog backdrops. This explicit wrapper places the scope inside the portal,
 where inherited page tokens otherwise cannot reach it. Do not rely on a class
 on the trigger or set dark mode on the public document when entering admin.
 
 ## Legacy override audit
 
 Classic retains `.container` (public layouts), `.nav-tabs .nav-link` (schedule),
-`.accordion*` (FAQ), `.modal-backdrop` (registration), and `.visually-hidden`
+`.accordion*` (FAQ), and `.visually-hidden`
 (accessible labels). They are still rendered directly or by react-bootstrap.
 Classic's migrated header no longer consumes navbar or Bootstrap utility classes;
 its stylesheet had no navbar-specific overrides to remove.
 
-Refresh, Riviera, Cuvée and Remuage still render the shared Bootstrap registration,
-FAQ and schedule controls. Their navbar, button, modal, form and accordion
+Refresh, Riviera, Cuvée and Remuage still render the shared Bootstrap form,
+FAQ and schedule controls. Their navbar, button, form and accordion
 selector overrides remain compatibility rules, not token definitions to copy.
 The generated [selector inventory](1105-theme-selector-audit.md) records all
 Bootstrap class overrides per theme, including the imported companion stylesheets.
@@ -89,3 +88,6 @@ chrome colour metadata entries.
 Follow-up validation on 2026-09-29: all 68 Playwright tests passed serially,
 including the expanded token checks and all public/admin coexistence cases.
 Lint (existing warnings), format check, typecheck and both builds also passed.
+
+Dialog and searchable-picker migration is recorded in [#1107](1107-base-ui-dialogs.md).
+Its unused Bootstrap modal overrides have been removed from every runtime theme.

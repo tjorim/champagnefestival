@@ -10,7 +10,14 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Spinner from "react-bootstrap/Spinner";
 import Tooltip from "react-bootstrap/Tooltip";
@@ -551,46 +558,48 @@ export function ContentSection({
       />
 
       {/* Bulk archive confirmation */}
-      <Modal
-        show={bulkArchiveOpen}
-        onHide={() => setBulkArchiveOpen(false)}
-        centered
-        dialogClassName="admin-dialog"
+      <Dialog
+        open={bulkArchiveOpen}
+        onOpenChange={(open) => {
+          if (!open) setBulkArchiveOpen(false);
+        }}
       >
-        <Modal.Header closeButton>
-          <Modal.Title>{m.admin_content_archive()}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {m.admin_bulk_content_archive_confirm({
-            count: activeItems.length,
-            type:
-              typeFilter === "producer"
-                ? m.admin_item_producer()
-                : typeFilter === "sponsor"
-                  ? m.admin_item_sponsor()
-                  : m.admin_item_vendor(),
-          })}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button
-            variant="secondary"
-            onClick={() => setBulkArchiveOpen(false)}
-            disabled={bulkArchiveInProgress}
-          >
-            {m.admin_action_cancel()}
-          </Button>
-          <Button variant="warning" onClick={handleBulkArchive} disabled={bulkArchiveInProgress}>
-            {bulkArchiveInProgress && (
-              <span
-                className="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              />
-            )}
-            {m.admin_content_archive()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+        <DialogContent admin size="default">
+          <DialogHeader>
+            <DialogTitle>{m.admin_content_archive()}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {m.admin_bulk_content_archive_confirm({
+              count: activeItems.length,
+              type:
+                typeFilter === "producer"
+                  ? m.admin_item_producer()
+                  : typeFilter === "sponsor"
+                    ? m.admin_item_sponsor()
+                    : m.admin_item_vendor(),
+            })}
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setBulkArchiveOpen(false)}
+              disabled={bulkArchiveInProgress}
+            >
+              {m.admin_action_cancel()}
+            </Button>
+            <Button variant="warning" onClick={handleBulkArchive} disabled={bulkArchiveInProgress}>
+              {bulkArchiveInProgress && (
+                <span
+                  className="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                />
+              )}
+              {m.admin_content_archive()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

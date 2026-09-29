@@ -4,9 +4,9 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import VenueManagement from "@/components/admin/VenueManagement";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
 
-/** The most recently opened ConfirmModal/Modal (react-bootstrap portals stack in mount order). */
+/** The active confirmation, which may be nested inside a form dialog. */
 function latestDialog(): HTMLElement {
-  const dialogs = screen.getAllByRole("dialog");
+  const dialogs = screen.getAllByRole("alertdialog");
   return dialogs[dialogs.length - 1] as HTMLElement;
 }
 
@@ -329,12 +329,12 @@ describe("VenueManagement", () => {
     fireEvent.click(
       within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_content_archive" }),
     );
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     expect(dialog.getByText("admin_venue_archive_confirm")).toBeInTheDocument();
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
 
     expect(onArchive).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
   });
 
   it("calls onArchive with the venue id when the confirm dialog is accepted", async () => {
@@ -343,7 +343,7 @@ describe("VenueManagement", () => {
     fireEvent.click(
       within(venueCardHeader("Grand Hall")).getByRole("button", { name: "admin_content_archive" }),
     );
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_content_archive" }));
 
     await waitFor(() => expect(onArchive).toHaveBeenCalledWith("venue-1"));
@@ -355,12 +355,12 @@ describe("VenueManagement", () => {
     fireEvent.click(
       within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }),
     );
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     expect(dialog.getByText("admin_venue_delete_confirm")).toBeInTheDocument();
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
 
     expect(onDelete).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
   });
 
   it("calls onDelete with the venue id when the confirm dialog is accepted", async () => {
@@ -369,7 +369,7 @@ describe("VenueManagement", () => {
     fireEvent.click(
       within(venueCardHeader("Old Barn")).getByRole("button", { name: "admin_delete" }),
     );
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
 
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith("venue-2"));
@@ -631,7 +631,7 @@ describe("VenueManagement", () => {
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole("alertdialog")).toHaveLength(1));
     const confirmDialog = within(latestDialog());
     expect(
       confirmDialog.getByText(
@@ -665,7 +665,7 @@ describe("VenueManagement", () => {
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole("alertdialog")).toHaveLength(1));
     const confirmDialog = within(latestDialog());
     expect(
       confirmDialog.getByText(
@@ -694,13 +694,13 @@ describe("VenueManagement", () => {
     });
     fireEvent.click(dialogScope.getByRole("button", { name: "admin_save" }));
 
-    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole("alertdialog")).toHaveLength(1));
     const confirmDialog = within(latestDialog());
     fireEvent.click(confirmDialog.getByRole("button", { name: "admin_action_cancel" }));
 
     expect(onUpdateTableType).not.toHaveBeenCalled();
     // The edit dialog is still open, just the confirm dialog closed.
-    await waitFor(() => expect(screen.getAllByRole("dialog")).toHaveLength(1));
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     expect(dialog).toBeInTheDocument();
   });
 
@@ -759,7 +759,7 @@ describe("VenueManagement", () => {
       within(listItem("Retired Round")).getByRole("button", { name: "admin_delete Retired Round" }),
     );
 
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     expect(dialog.getByText("admin_table_type_delete_confirm")).toBeInTheDocument();
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
 
@@ -775,7 +775,7 @@ describe("VenueManagement", () => {
     fireEvent.click(
       within(listItem("Retired Round")).getByRole("button", { name: "admin_delete Retired Round" }),
     );
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
 
     expect(

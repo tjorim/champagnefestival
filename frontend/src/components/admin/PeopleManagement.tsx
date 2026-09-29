@@ -12,7 +12,14 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Spinner from "react-bootstrap/Spinner";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
@@ -681,123 +688,145 @@ export default function PeopleManagement({
       </Card>
 
       {mergeState && (
-        <Modal show onHide={() => setMergeState(null)} centered aria-labelledby="merge-modal-title">
-          <Modal.Header closeButton className="bg-dark text-light border-secondary">
-            <Modal.Title id="merge-modal-title">
-              <i className="bi bi-person-fill-gear me-2" aria-hidden="true" />
-              {m.admin_people_merge_title()}
-            </Modal.Title>
-          </Modal.Header>
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setMergeState(null);
+          }}
+        >
+          <DialogContent admin size="default">
+            <DialogHeader>
+              <DialogTitle id="merge-modal-title">
+                <i className="bi bi-person-fill-gear me-2" aria-hidden="true" />
+                {m.admin_people_merge_title()}
+              </DialogTitle>
+            </DialogHeader>
 
-          <Modal.Body className="bg-dark text-light">
-            {mergeError && (
-              <Alert role="alert" aria-live="assertive" variant="danger">
-                {mergeError}
-              </Alert>
-            )}
-
-            <p className="text-secondary small mb-3">{m.admin_people_duplicates_same_email()}</p>
-
-            {(["canonical", "duplicate"] as const).map((role) => {
-              const person = mergeState[role];
-              const resCount = registrationCountByPersonId[person.id] ?? 0;
-              const label =
-                role === "canonical" ? m.admin_people_merge_into() : m.admin_people_merge_discard();
-              const variant = role === "canonical" ? "success" : "danger";
-
-              return (
-                <Card key={role} bg="dark" border={variant} className="mb-3">
-                  <Card.Header
-                    className={`border-${variant} text-${variant} small fw-semibold d-flex justify-content-between`}
-                  >
-                    <span>{label}</span>
-                    <Button
-                      size="sm"
-                      variant={`outline-${variant}`}
-                      aria-label={m.admin_people_merge_swap_label()}
-                      title={m.admin_people_merge_swap_label()}
-                      onClick={() =>
-                        setMergeState({
-                          canonical: mergeState.duplicate,
-                          duplicate: mergeState.canonical,
-                        })
-                      }
-                    >
-                      <i className="bi bi-arrow-left-right" aria-hidden="true" />
-                    </Button>
-                  </Card.Header>
-                  <Card.Body className="py-2 small">
-                    <div className="fw-semibold">{person.name}</div>
-                    <div className="text-secondary">{person.email}</div>
-                    {person.phone && <div className="text-secondary">{person.phone}</div>}
-                    <div className="mt-1">
-                      <Badge
-                        bg={resCount > 0 ? "warning" : "secondary"}
-                        text={resCount > 0 ? "dark" : undefined}
-                      >
-                        {resCount} {m.admin_people_registrations_count()}
-                      </Badge>
-                      {person.roles.map((r) => (
-                        <Badge key={r} bg="secondary" className="ms-1 text-capitalize">
-                          {r}
-                        </Badge>
-                      ))}
-                    </div>
-                  </Card.Body>
-                </Card>
-              );
-            })}
-          </Modal.Body>
-
-          <Modal.Footer className="bg-dark border-secondary">
-            <Button variant="outline-secondary" onClick={() => setMergeState(null)}>
-              {m.close()}
-            </Button>
-            <Button variant="warning" onClick={handleMergeConfirm} disabled={merging}>
-              {merging ? (
-                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-              ) : (
-                <>
-                  <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
-                  {m.admin_people_merge_confirm()}
-                </>
+            <DialogBody>
+              {mergeError && (
+                <Alert role="alert" aria-live="assertive" variant="danger">
+                  {mergeError}
+                </Alert>
               )}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+
+              <p className="text-secondary small mb-3">{m.admin_people_duplicates_same_email()}</p>
+
+              {(["canonical", "duplicate"] as const).map((role) => {
+                const person = mergeState[role];
+                const resCount = registrationCountByPersonId[person.id] ?? 0;
+                const label =
+                  role === "canonical"
+                    ? m.admin_people_merge_into()
+                    : m.admin_people_merge_discard();
+                const variant = role === "canonical" ? "success" : "danger";
+
+                return (
+                  <Card key={role} bg="dark" border={variant} className="mb-3">
+                    <Card.Header
+                      className={`border-${variant} text-${variant} small fw-semibold d-flex justify-content-between`}
+                    >
+                      <span>{label}</span>
+                      <Button
+                        size="sm"
+                        variant={`outline-${variant}`}
+                        aria-label={m.admin_people_merge_swap_label()}
+                        title={m.admin_people_merge_swap_label()}
+                        onClick={() =>
+                          setMergeState({
+                            canonical: mergeState.duplicate,
+                            duplicate: mergeState.canonical,
+                          })
+                        }
+                      >
+                        <i className="bi bi-arrow-left-right" aria-hidden="true" />
+                      </Button>
+                    </Card.Header>
+                    <Card.Body className="py-2 small">
+                      <div className="fw-semibold">{person.name}</div>
+                      <div className="text-secondary">{person.email}</div>
+                      {person.phone && <div className="text-secondary">{person.phone}</div>}
+                      <div className="mt-1">
+                        <Badge
+                          bg={resCount > 0 ? "warning" : "secondary"}
+                          text={resCount > 0 ? "dark" : undefined}
+                        >
+                          {resCount} {m.admin_people_registrations_count()}
+                        </Badge>
+                        {person.roles.map((r) => (
+                          <Badge key={r} bg="secondary" className="ms-1 text-capitalize">
+                            {r}
+                          </Badge>
+                        ))}
+                      </div>
+                    </Card.Body>
+                  </Card>
+                );
+              })}
+            </DialogBody>
+
+            <DialogFooter>
+              <Button variant="outline-secondary" onClick={() => setMergeState(null)}>
+                {m.close()}
+              </Button>
+              <Button variant="warning" onClick={handleMergeConfirm} disabled={merging}>
+                {merging ? (
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="sm"
+                    role="status"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <>
+                    <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
+                    {m.admin_people_merge_confirm()}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Delete confirm modal */}
       {deletingId && (
-        <Modal show onHide={() => setDeletingId(null)} centered>
-          <Modal.Header closeButton className="bg-dark border-secondary">
-            <Modal.Title className="text-danger fs-6">
-              <i className="bi bi-trash me-2" aria-hidden="true" />
-              {m.admin_people_delete_title()}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body className="bg-dark text-light">
-            {deleteError && (
-              <Alert role="alert" aria-live="assertive" variant="danger">
-                {deleteError}
-              </Alert>
-            )}
-            <p>{m.admin_people_delete_confirm()}</p>
-          </Modal.Body>
-          <Modal.Footer className="bg-dark border-secondary">
-            <Button variant="outline-secondary" size="sm" onClick={() => setDeletingId(null)}>
-              {m.admin_action_cancel()}
-            </Button>
-            <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
-              {deleting ? (
-                <Spinner as="span" animation="border" size="sm" className="me-1" />
-              ) : (
-                <i className="bi bi-trash me-1" aria-hidden="true" />
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setDeletingId(null);
+          }}
+        >
+          <DialogContent admin size="default">
+            <DialogHeader>
+              <DialogTitle className="tw:text-destructive">
+                <i className="bi bi-trash me-2" aria-hidden="true" />
+                {m.admin_people_delete_title()}
+              </DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              {deleteError && (
+                <Alert role="alert" aria-live="assertive" variant="danger">
+                  {deleteError}
+                </Alert>
               )}
-              {m.admin_action_confirm()}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+              <p>{m.admin_people_delete_confirm()}</p>
+            </DialogBody>
+            <DialogFooter>
+              <Button variant="outline-secondary" size="sm" onClick={() => setDeletingId(null)}>
+                {m.admin_action_cancel()}
+              </Button>
+              <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
+                {deleting ? (
+                  <Spinner as="span" animation="border" size="sm" className="me-1" />
+                ) : (
+                  <i className="bi bi-trash me-1" aria-hidden="true" />
+                )}
+                {m.admin_action_confirm()}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Create / edit person modal */}
@@ -813,172 +842,182 @@ export default function PeopleManagement({
 
       {/* Person registrations modal */}
       {viewRegistrationsPerson && (
-        <Modal show onHide={closePersonRegistrations} centered>
-          <Modal.Header closeButton className="bg-dark border-secondary">
-            <Modal.Title className="text-warning fs-6">
-              <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-              {m.admin_people_registrations_modal_title()} — {viewRegistrationsPerson.name}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body className="bg-dark text-light p-0">
-            {loadingPersonRegistrations && (
-              <div className="text-center py-4">
-                <Spinner animation="border" size="sm" variant="warning" />
-              </div>
-            )}
-            {!loadingPersonRegistrations && personRegistrationsError && (
-              <Alert role="alert" aria-live="assertive" variant="danger" className="m-3">
-                {m.admin_people_registrations_load_error()}
-              </Alert>
-            )}
-            {!loadingPersonRegistrations &&
-              !personRegistrationsError &&
-              personRegistrations.length === 0 && (
-                <p className="text-secondary text-center py-4 mb-0">
-                  {m.admin_people_registrations_empty()}
-                </p>
-              )}
-            {!loadingPersonRegistrations &&
-              !personRegistrationsError &&
-              personRegistrations.length > 0 && (
-                <div className="px-3 pt-3 small text-secondary">
-                  <div>
-                    {m.admin_people_total_paid({
-                      amount: personPaymentTotals.grandTotal.toFixed(2),
-                    })}
-                  </div>
-                  <div>
-                    {m.admin_people_total_outstanding({
-                      amount: personPaymentTotals.outstandingTotal.toFixed(2),
-                    })}
-                  </div>
-                  {personPaymentSummary && (
-                    <>
-                      <div>
-                        {m.admin_people_total_received({
-                          amount: personPaymentSummary.received.toFixed(2),
-                        })}
-                      </div>
-                      <div>
-                        {m.admin_people_total_refunded({
-                          amount: personPaymentSummary.refunded.toFixed(2),
-                        })}
-                      </div>
-                    </>
-                  )}
-                  {personPaymentTotals.byEdition.length > 1 &&
-                    personPaymentTotals.byEdition.map((edition) => (
-                      <div key={edition.label} className="ms-2">
-                        {edition.label}: €{edition.totalPaid.toFixed(2)}
-                      </div>
-                    ))}
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) closePersonRegistrations();
+          }}
+        >
+          <DialogContent admin size="default">
+            <DialogHeader>
+              <DialogTitle>
+                <i className="bi bi-calendar-check me-2" aria-hidden="true" />
+                {m.admin_people_registrations_modal_title()} — {viewRegistrationsPerson.name}
+              </DialogTitle>
+            </DialogHeader>
+            <DialogBody className="tw:p-0">
+              {loadingPersonRegistrations && (
+                <div className="text-center py-4">
+                  <Spinner animation="border" size="sm" variant="warning" />
                 </div>
               )}
-            {!loadingPersonRegistrations &&
-              !personRegistrationsError &&
-              personRegistrations.length > 0 && (
-                <ListGroup variant="flush">
-                  {personRegistrations.map((r) => (
-                    <ListGroup.Item key={r.id} className="bg-dark border-secondary text-light py-2">
-                      <div className="d-flex justify-content-between align-items-start gap-2">
+              {!loadingPersonRegistrations && personRegistrationsError && (
+                <Alert role="alert" aria-live="assertive" variant="danger" className="m-3">
+                  {m.admin_people_registrations_load_error()}
+                </Alert>
+              )}
+              {!loadingPersonRegistrations &&
+                !personRegistrationsError &&
+                personRegistrations.length === 0 && (
+                  <p className="text-secondary text-center py-4 mb-0">
+                    {m.admin_people_registrations_empty()}
+                  </p>
+                )}
+              {!loadingPersonRegistrations &&
+                !personRegistrationsError &&
+                personRegistrations.length > 0 && (
+                  <div className="px-3 pt-3 small text-secondary">
+                    <div>
+                      {m.admin_people_total_paid({
+                        amount: personPaymentTotals.grandTotal.toFixed(2),
+                      })}
+                    </div>
+                    <div>
+                      {m.admin_people_total_outstanding({
+                        amount: personPaymentTotals.outstandingTotal.toFixed(2),
+                      })}
+                    </div>
+                    {personPaymentSummary && (
+                      <>
                         <div>
-                          <div className="fw-semibold small">{r.eventTitle}</div>
-                          <div className="text-secondary small">
-                            <i className="bi bi-people me-1" aria-hidden="true" />
-                            {r.guestCount}
-                            <span className="ms-2">€{r.amountPaid.toFixed(2)}</span>
+                          {m.admin_people_total_received({
+                            amount: personPaymentSummary.received.toFixed(2),
+                          })}
+                        </div>
+                        <div>
+                          {m.admin_people_total_refunded({
+                            amount: personPaymentSummary.refunded.toFixed(2),
+                          })}
+                        </div>
+                      </>
+                    )}
+                    {personPaymentTotals.byEdition.length > 1 &&
+                      personPaymentTotals.byEdition.map((edition) => (
+                        <div key={edition.label} className="ms-2">
+                          {edition.label}: €{edition.totalPaid.toFixed(2)}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              {!loadingPersonRegistrations &&
+                !personRegistrationsError &&
+                personRegistrations.length > 0 && (
+                  <ListGroup variant="flush">
+                    {personRegistrations.map((r) => (
+                      <ListGroup.Item
+                        key={r.id}
+                        className="bg-dark border-secondary text-light py-2"
+                      >
+                        <div className="d-flex justify-content-between align-items-start gap-2">
+                          <div>
+                            <div className="fw-semibold small">{r.eventTitle}</div>
+                            <div className="text-secondary small">
+                              <i className="bi bi-people me-1" aria-hidden="true" />
+                              {r.guestCount}
+                              <span className="ms-2">€{r.amountPaid.toFixed(2)}</span>
+                            </div>
+                          </div>
+                          <div className="d-flex gap-1 flex-wrap justify-content-end">
+                            <Badge
+                              bg={
+                                r.status === "confirmed"
+                                  ? "success"
+                                  : r.status === "cancelled"
+                                    ? "danger"
+                                    : "warning"
+                              }
+                            >
+                              {r.status === "confirmed"
+                                ? m.admin_status_confirmed()
+                                : r.status === "cancelled"
+                                  ? m.admin_status_cancelled()
+                                  : m.admin_status_pending()}
+                            </Badge>
+                            <Badge
+                              bg={
+                                r.paymentStatus === "paid"
+                                  ? "success"
+                                  : r.paymentStatus === "partial"
+                                    ? "warning"
+                                    : "secondary"
+                              }
+                            >
+                              {r.paymentStatus === "paid"
+                                ? m.admin_payment_paid()
+                                : r.paymentStatus === "partial"
+                                  ? m.admin_payment_partial()
+                                  : m.admin_payment_unpaid()}
+                            </Badge>
+                            {r.checkedIn && (
+                              <Badge bg="success">
+                                <i className="bi bi-check2-circle me-1" aria-hidden="true" />
+                                {m.admin_checked_in()}
+                              </Badge>
+                            )}
                           </div>
                         </div>
-                        <div className="d-flex gap-1 flex-wrap justify-content-end">
-                          <Badge
-                            bg={
-                              r.status === "confirmed"
-                                ? "success"
-                                : r.status === "cancelled"
-                                  ? "danger"
-                                  : "warning"
-                            }
-                          >
-                            {r.status === "confirmed"
-                              ? m.admin_status_confirmed()
-                              : r.status === "cancelled"
-                                ? m.admin_status_cancelled()
-                                : m.admin_status_pending()}
-                          </Badge>
-                          <Badge
-                            bg={
-                              r.paymentStatus === "paid"
-                                ? "success"
-                                : r.paymentStatus === "partial"
-                                  ? "warning"
-                                  : "secondary"
-                            }
-                          >
-                            {r.paymentStatus === "paid"
-                              ? m.admin_payment_paid()
-                              : r.paymentStatus === "partial"
-                                ? m.admin_payment_partial()
-                                : m.admin_payment_unpaid()}
-                          </Badge>
-                          {r.checkedIn && (
-                            <Badge bg="success">
-                              <i className="bi bi-check2-circle me-1" aria-hidden="true" />
-                              {m.admin_checked_in()}
-                            </Badge>
-                          )}
+                        <div className="text-secondary" style={{ fontSize: "0.7rem" }}>
+                          {new Date(r.createdAt).toLocaleDateString()}
                         </div>
-                      </div>
-                      <div className="text-secondary" style={{ fontSize: "0.7rem" }}>
-                        {new Date(r.createdAt).toLocaleDateString()}
-                      </div>
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                )}
+            </DialogBody>
+            <DialogFooter className="tw:flex-col tw:items-stretch">
+              {ledgerExportError && (
+                <Alert role="alert" aria-live="assertive" variant="danger" className="py-2 mb-2">
+                  {ledgerExportError}
+                </Alert>
               )}
-          </Modal.Body>
-          <Modal.Footer className="bg-dark border-secondary flex-column align-items-stretch">
-            {ledgerExportError && (
-              <Alert role="alert" aria-live="assertive" variant="danger" className="py-2 mb-2">
-                {ledgerExportError}
-              </Alert>
-            )}
-            <div className="d-flex justify-content-between gap-2">
-              <div className="d-flex gap-2">
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  disabled={personRegistrations.length === 0}
-                  onClick={() => {
-                    setLedgerPage(1);
-                    setLedgerSorting([]);
-                    setShowLedgerModal(true);
-                  }}
-                  title={m.admin_payment_view_ledger()}
-                >
-                  <i className="bi bi-journal-text me-1" aria-hidden="true" />
-                  {m.admin_payment_view_ledger()}
-                </Button>
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  disabled={exportingLedger || personRegistrations.length === 0}
-                  onClick={() => void handleExportLedger()}
-                  title={m.admin_people_export_ledger()}
-                >
-                  {exportingLedger ? (
-                    <Spinner as="span" animation="border" size="sm" className="me-1" />
-                  ) : (
-                    <i className="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true" />
-                  )}
-                  {m.admin_people_export_ledger()}
+              <div className="d-flex justify-content-between gap-2">
+                <div className="d-flex gap-2">
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    disabled={personRegistrations.length === 0}
+                    onClick={() => {
+                      setLedgerPage(1);
+                      setLedgerSorting([]);
+                      setShowLedgerModal(true);
+                    }}
+                    title={m.admin_payment_view_ledger()}
+                  >
+                    <i className="bi bi-journal-text me-1" aria-hidden="true" />
+                    {m.admin_payment_view_ledger()}
+                  </Button>
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    disabled={exportingLedger || personRegistrations.length === 0}
+                    onClick={() => void handleExportLedger()}
+                    title={m.admin_people_export_ledger()}
+                  >
+                    {exportingLedger ? (
+                      <Spinner as="span" animation="border" size="sm" className="me-1" />
+                    ) : (
+                      <i className="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true" />
+                    )}
+                    {m.admin_people_export_ledger()}
+                  </Button>
+                </div>
+                <Button variant="outline-secondary" size="sm" onClick={closePersonRegistrations}>
+                  {m.close()}
                 </Button>
               </div>
-              <Button variant="outline-secondary" size="sm" onClick={closePersonRegistrations}>
-                {m.close()}
-              </Button>
-            </div>
-          </Modal.Footer>
-        </Modal>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {viewRegistrationsPerson && (

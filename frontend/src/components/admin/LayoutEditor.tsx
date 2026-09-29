@@ -17,7 +17,14 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Nav from "react-bootstrap/Nav";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
@@ -1621,275 +1628,297 @@ export default function LayoutEditor({
       )}
 
       {/* Add Layout Modal */}
-      <Modal
-        show={showAddLayout}
-        onHide={() => setShowAddLayout(false)}
-        centered
-        aria-labelledby="add-layout-modal-title"
+      <Dialog
+        open={showAddLayout}
+        onOpenChange={(open) => {
+          if (!open) setShowAddLayout(false);
+        }}
       >
-        <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title id="add-layout-modal-title">{m.admin_add_layout()}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="bg-dark text-light">
-          {addLayoutError && (
-            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
-              {addLayoutError}
-            </Alert>
-          )}
-          <Form.Group className="mb-3" controlId="layout-day">
-            <Form.Label>{m.admin_layout_day_label()}</Form.Label>
-            <Form.Select
-              value={newLayout.eventId}
-              onChange={(e) => setNewLayout((p) => ({ ...p, eventId: e.target.value }))}
-              className="bg-dark text-light border-secondary"
-            >
-              {dayOptions.map((day) => (
-                <option key={day.eventId} value={day.eventId}>
-                  {day.label}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-          <Form.Group controlId="layout-copy-from">
-            <Form.Label>{m.admin_layout_copy_from_label()}</Form.Label>
-            <Form.Select
-              value={newLayout.copyFromLayoutId}
-              onChange={(e) => setNewLayout((p) => ({ ...p, copyFromLayoutId: e.target.value }))}
-              className="bg-dark text-light border-secondary"
-            >
-              <option value="">{m.admin_layout_copy_from_empty()}</option>
-              {roomLayouts.map((layout) => (
-                <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout, dayOptions)}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-          {newLayout.copyFromLayoutId && (
-            <div className="mt-3 d-flex flex-column gap-2">
-              <Form.Check
-                id="layout-copy-tables"
-                type="checkbox"
-                className="small"
-                checked={newLayout.copyTables}
-                onChange={(e) =>
-                  setNewLayout((p) => ({ ...p, copyTables: e.currentTarget.checked }))
-                }
-                label={m.admin_layout_copy_tables()}
-              />
-              <Form.Check
-                id="layout-copy-areas"
-                type="checkbox"
-                className="small"
-                checked={newLayout.copyAreas}
-                onChange={(e) =>
-                  setNewLayout((p) => ({
-                    ...p,
-                    copyAreas: e.currentTarget.checked,
-                  }))
-                }
-                label={m.admin_layout_copy_areas()}
-              />
-              {newLayout.copyAreas && (
-                <div className="text-secondary small">{m.admin_layout_copy_areas_hint()}</div>
-              )}
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="secondary" onClick={() => setShowAddLayout(false)}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button variant="success" onClick={handleAddLayout}>
-            {m.admin_save()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Add Area Modal */}
-      <Modal
-        show={showAddArea}
-        onHide={() => setShowAddArea(false)}
-        centered
-        aria-labelledby="add-area-modal-title"
-      >
-        <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title id="add-area-modal-title">{m.admin_layout_add_area()}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="bg-dark text-light">
-          {addAreaError && (
-            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
-              {addAreaError}
-            </Alert>
-          )}
-          <Form.Group className="mb-3" controlId="area-new-label">
-            <Form.Label>{m.admin_layout_area_form_label()}</Form.Label>
-            <Form.Control
-              type="text"
-              value={newArea.label}
-              onChange={(e) => setNewArea((p) => ({ ...p, label: e.target.value }))}
-              className="bg-dark text-light border-secondary"
-              placeholder={m.admin_layout_area_label_placeholder()}
-            />
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="area-new-icon">
-            <Form.Label>{m.admin_layout_area_form_icon()}</Form.Label>
-            <div className="d-flex gap-2 align-items-center">
-              <i className={clsx("bi", newArea.icon, "fs-4 text-info")} aria-hidden="true" />
+        <DialogContent admin size="default">
+          <DialogHeader>
+            <DialogTitle id="add-layout-modal-title">{m.admin_add_layout()}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {addLayoutError && (
+              <Alert
+                role="alert"
+                aria-live="assertive"
+                variant="danger"
+                className="py-1 mb-3 small"
+              >
+                {addLayoutError}
+              </Alert>
+            )}
+            <Form.Group className="mb-3" controlId="layout-day">
+              <Form.Label>{m.admin_layout_day_label()}</Form.Label>
               <Form.Select
-                value={newArea.icon}
-                onChange={(e) => setNewArea((p) => ({ ...p, icon: e.target.value }))}
+                value={newLayout.eventId}
+                onChange={(e) => setNewLayout((p) => ({ ...p, eventId: e.target.value }))}
                 className="bg-dark text-light border-secondary"
               >
-                {getAreaIcons().map((ic) => (
-                  <option key={ic.value} value={ic.value}>
-                    {ic.label}
+                {dayOptions.map((day) => (
+                  <option key={day.eventId} value={day.eventId}>
+                    {day.label}
                   </option>
                 ))}
               </Form.Select>
-            </div>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="area-new-assign">
-            <Form.Label>{m.admin_layout_area_assigned_to_optional()}</Form.Label>
-            <Form.Select
-              value={newArea.assignedType ? `${newArea.assignedType}:${newArea.assignedId}` : ""}
-              onChange={(e) => {
-                const val = e.target.value;
-                if (!val) {
-                  setNewArea((p) => ({ ...p, assignedType: "", assignedId: 0 }));
-                } else {
-                  const [t, id] = val.split(":");
-                  const entityName = exhibitors.find((x) => x.id === Number(id))?.name;
-                  setNewArea((p) => ({
-                    ...p,
-                    assignedType: t as "e",
-                    assignedId: Number(id),
-                    label: p.label || (entityName ?? p.label),
-                  }));
-                }
-              }}
-              className="bg-dark text-light border-secondary"
-            >
-              <option value="">{m.admin_layout_area_none()}</option>
-              {exhibitors.filter((e) => e.active).length > 0 && (
-                <optgroup label={m.admin_layout_area_exhibitors_group()}>
-                  {exhibitors
-                    .filter((e) => e.active)
-                    .map((e) => (
-                      <option key={e.id} value={`e:${e.id}`}>
-                        {e.name}
-                      </option>
-                    ))}
-                </optgroup>
-              )}
-            </Form.Select>
-          </Form.Group>
-          <div className="row g-3">
-            <div className="col">
-              <Form.Group controlId="area-new-width">
-                <Form.Label>{m.admin_layout_area_width_m()}</Form.Label>
-                <Form.Control
-                  type="number"
-                  min={0.1}
-                  max={50}
-                  step={0.5}
-                  value={newArea.widthM}
-                  onChange={(e) => setNewArea((p) => ({ ...p, widthM: Number(e.target.value) }))}
-                  className="bg-dark text-light border-secondary"
-                />
-              </Form.Group>
-            </div>
-            <div className="col">
-              <Form.Group controlId="area-new-length">
-                <Form.Label>{m.admin_layout_area_length_m()}</Form.Label>
-                <Form.Control
-                  type="number"
-                  min={0.1}
-                  max={50}
-                  step={0.5}
-                  value={newArea.lengthM}
-                  onChange={(e) => setNewArea((p) => ({ ...p, lengthM: Number(e.target.value) }))}
-                  className="bg-dark text-light border-secondary"
-                />
-              </Form.Group>
-            </div>
-          </div>
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="secondary" onClick={() => setShowAddArea(false)}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button variant="info" onClick={handleAddArea} disabled={!newArea.label.trim()}>
-            {m.admin_save()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Add Table Modal */}
-      <Modal
-        show={showAddTable}
-        onHide={() => setShowAddTable(false)}
-        centered
-        aria-labelledby="add-table-modal-title"
-      >
-        <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title id="add-table-modal-title">{m.admin_add_table()}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="bg-dark text-light">
-          {addTableError && (
-            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
-              {addTableError}
-            </Alert>
-          )}
-          <Form.Group className="mb-3" controlId="table-name">
-            <Form.Label>{m.admin_table_name()}</Form.Label>
-            <Form.Control
-              type="text"
-              value={newTable.name}
-              onChange={(e) => setNewTable((p) => ({ ...p, name: e.target.value }))}
-              className="bg-dark text-light border-secondary"
-              placeholder={m.admin_table_name_placeholder()}
-            />
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="table-type">
-            <Form.Label>{m.admin_table_type_select()}</Form.Label>
-            <Form.Select
-              value={newTable.tableTypeId}
-              onChange={(e) => setNewTable((p) => ({ ...p, tableTypeId: e.target.value }))}
-              className="bg-dark text-light border-secondary"
-            >
-              <option value="">— {m.admin_table_type_select()} —</option>
-              {tableTypes
-                .filter((tt) => tt.venueId === activeRoom?.venueId)
-                .map((tt) => (
-                  <option key={tt.id} value={tt.id}>
-                    {tt.name} (
-                    {tt.shape === "round" ? `⌀${tt.widthM}m` : `${tt.widthM}×${tt.lengthM}m`},{" "}
-                    {tt.heightType === "high"
-                      ? m.admin_table_height_type_high()
-                      : m.admin_table_height_type_low()}
-                    , {m.admin_layout_capacity_max()} {tt.capacity})
+            </Form.Group>
+            <Form.Group controlId="layout-copy-from">
+              <Form.Label>{m.admin_layout_copy_from_label()}</Form.Label>
+              <Form.Select
+                value={newLayout.copyFromLayoutId}
+                onChange={(e) => setNewLayout((p) => ({ ...p, copyFromLayoutId: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+              >
+                <option value="">{m.admin_layout_copy_from_empty()}</option>
+                {roomLayouts.map((layout) => (
+                  <option key={layout.id} value={layout.id}>
+                    {getDayLabel(layout, dayOptions)}
                   </option>
                 ))}
-            </Form.Select>
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="secondary" onClick={() => setShowAddTable(false)}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button
-            variant="warning"
-            onClick={handleAddTable}
-            disabled={!newTable.name.trim() || !newTable.tableTypeId}
-          >
-            {m.admin_save()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+              </Form.Select>
+            </Form.Group>
+            {newLayout.copyFromLayoutId && (
+              <div className="mt-3 d-flex flex-column gap-2">
+                <Form.Check
+                  id="layout-copy-tables"
+                  type="checkbox"
+                  className="small"
+                  checked={newLayout.copyTables}
+                  onChange={(e) =>
+                    setNewLayout((p) => ({ ...p, copyTables: e.currentTarget.checked }))
+                  }
+                  label={m.admin_layout_copy_tables()}
+                />
+                <Form.Check
+                  id="layout-copy-areas"
+                  type="checkbox"
+                  className="small"
+                  checked={newLayout.copyAreas}
+                  onChange={(e) =>
+                    setNewLayout((p) => ({
+                      ...p,
+                      copyAreas: e.currentTarget.checked,
+                    }))
+                  }
+                  label={m.admin_layout_copy_areas()}
+                />
+                {newLayout.copyAreas && (
+                  <div className="text-secondary small">{m.admin_layout_copy_areas_hint()}</div>
+                )}
+              </div>
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowAddLayout(false)}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button variant="success" onClick={handleAddLayout}>
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Area Modal */}
+      <Dialog
+        open={showAddArea}
+        onOpenChange={(open) => {
+          if (!open) setShowAddArea(false);
+        }}
+      >
+        <DialogContent admin size="default">
+          <DialogHeader>
+            <DialogTitle id="add-area-modal-title">{m.admin_layout_add_area()}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {addAreaError && (
+              <Alert
+                role="alert"
+                aria-live="assertive"
+                variant="danger"
+                className="py-1 mb-3 small"
+              >
+                {addAreaError}
+              </Alert>
+            )}
+            <Form.Group className="mb-3" controlId="area-new-label">
+              <Form.Label>{m.admin_layout_area_form_label()}</Form.Label>
+              <Form.Control
+                type="text"
+                value={newArea.label}
+                onChange={(e) => setNewArea((p) => ({ ...p, label: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+                placeholder={m.admin_layout_area_label_placeholder()}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="area-new-icon">
+              <Form.Label>{m.admin_layout_area_form_icon()}</Form.Label>
+              <div className="d-flex gap-2 align-items-center">
+                <i className={clsx("bi", newArea.icon, "fs-4 text-info")} aria-hidden="true" />
+                <Form.Select
+                  value={newArea.icon}
+                  onChange={(e) => setNewArea((p) => ({ ...p, icon: e.target.value }))}
+                  className="bg-dark text-light border-secondary"
+                >
+                  {getAreaIcons().map((ic) => (
+                    <option key={ic.value} value={ic.value}>
+                      {ic.label}
+                    </option>
+                  ))}
+                </Form.Select>
+              </div>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="area-new-assign">
+              <Form.Label>{m.admin_layout_area_assigned_to_optional()}</Form.Label>
+              <Form.Select
+                value={newArea.assignedType ? `${newArea.assignedType}:${newArea.assignedId}` : ""}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) {
+                    setNewArea((p) => ({ ...p, assignedType: "", assignedId: 0 }));
+                  } else {
+                    const [t, id] = val.split(":");
+                    const entityName = exhibitors.find((x) => x.id === Number(id))?.name;
+                    setNewArea((p) => ({
+                      ...p,
+                      assignedType: t as "e",
+                      assignedId: Number(id),
+                      label: p.label || (entityName ?? p.label),
+                    }));
+                  }
+                }}
+                className="bg-dark text-light border-secondary"
+              >
+                <option value="">{m.admin_layout_area_none()}</option>
+                {exhibitors.filter((e) => e.active).length > 0 && (
+                  <optgroup label={m.admin_layout_area_exhibitors_group()}>
+                    {exhibitors
+                      .filter((e) => e.active)
+                      .map((e) => (
+                        <option key={e.id} value={`e:${e.id}`}>
+                          {e.name}
+                        </option>
+                      ))}
+                  </optgroup>
+                )}
+              </Form.Select>
+            </Form.Group>
+            <div className="row g-3">
+              <div className="col">
+                <Form.Group controlId="area-new-width">
+                  <Form.Label>{m.admin_layout_area_width_m()}</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={0.1}
+                    max={50}
+                    step={0.5}
+                    value={newArea.widthM}
+                    onChange={(e) => setNewArea((p) => ({ ...p, widthM: Number(e.target.value) }))}
+                    className="bg-dark text-light border-secondary"
+                  />
+                </Form.Group>
+              </div>
+              <div className="col">
+                <Form.Group controlId="area-new-length">
+                  <Form.Label>{m.admin_layout_area_length_m()}</Form.Label>
+                  <Form.Control
+                    type="number"
+                    min={0.1}
+                    max={50}
+                    step={0.5}
+                    value={newArea.lengthM}
+                    onChange={(e) => setNewArea((p) => ({ ...p, lengthM: Number(e.target.value) }))}
+                    className="bg-dark text-light border-secondary"
+                  />
+                </Form.Group>
+              </div>
+            </div>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowAddArea(false)}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button variant="info" onClick={handleAddArea} disabled={!newArea.label.trim()}>
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Table Modal */}
+      <Dialog
+        open={showAddTable}
+        onOpenChange={(open) => {
+          if (!open) setShowAddTable(false);
+        }}
+      >
+        <DialogContent admin size="default">
+          <DialogHeader>
+            <DialogTitle id="add-table-modal-title">{m.admin_add_table()}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {addTableError && (
+              <Alert
+                role="alert"
+                aria-live="assertive"
+                variant="danger"
+                className="py-1 mb-3 small"
+              >
+                {addTableError}
+              </Alert>
+            )}
+            <Form.Group className="mb-3" controlId="table-name">
+              <Form.Label>{m.admin_table_name()}</Form.Label>
+              <Form.Control
+                type="text"
+                value={newTable.name}
+                onChange={(e) => setNewTable((p) => ({ ...p, name: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+                placeholder={m.admin_table_name_placeholder()}
+              />
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="table-type">
+              <Form.Label>{m.admin_table_type_select()}</Form.Label>
+              <Form.Select
+                value={newTable.tableTypeId}
+                onChange={(e) => setNewTable((p) => ({ ...p, tableTypeId: e.target.value }))}
+                className="bg-dark text-light border-secondary"
+              >
+                <option value="">— {m.admin_table_type_select()} —</option>
+                {tableTypes
+                  .filter((tt) => tt.venueId === activeRoom?.venueId)
+                  .map((tt) => (
+                    <option key={tt.id} value={tt.id}>
+                      {tt.name} (
+                      {tt.shape === "round" ? `⌀${tt.widthM}m` : `${tt.widthM}×${tt.lengthM}m`},{" "}
+                      {tt.heightType === "high"
+                        ? m.admin_table_height_type_high()
+                        : m.admin_table_height_type_low()}
+                      , {m.admin_layout_capacity_max()} {tt.capacity})
+                    </option>
+                  ))}
+              </Form.Select>
+            </Form.Group>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowAddTable(false)}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button
+              variant="warning"
+              onClick={handleAddTable}
+              disabled={!newTable.name.trim() || !newTable.tableTypeId}
+            >
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {confirmDeleteLayoutId && (
         <ConfirmModal
+          admin
           show
           title={m.admin_layout_delete_title()}
           body={m.admin_layout_delete_confirm()}
@@ -1900,6 +1929,7 @@ export default function LayoutEditor({
       )}
       {confirmDeleteTableId && (
         <ConfirmModal
+          admin
           show
           title={m.admin_layout_table_delete_title()}
           body={m.admin_layout_table_delete_confirm()}
@@ -1910,6 +1940,7 @@ export default function LayoutEditor({
       )}
       {confirmDeleteAreaId && (
         <ConfirmModal
+          admin
           show
           title={m.admin_layout_area_delete_title()}
           body={m.admin_layout_area_delete_confirm()}

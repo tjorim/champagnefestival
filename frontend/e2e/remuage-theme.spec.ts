@@ -121,10 +121,9 @@ test.describe("Remuage visual theme", () => {
 
     const modal = page.getByRole("dialog");
     await expect(modal).toBeVisible();
-    await expect(modal.locator(".modal-header")).toHaveCSS("background-color", "rgb(72, 34, 77)");
-    await expect(modal.locator(".modal-title")).toHaveCSS("color", "rgb(255, 255, 255)");
-    await expect(modal.locator(".btn-close")).toBeVisible();
-    await expect(modal.locator(".modal-body")).toHaveCSS("background-color", "rgb(251, 252, 254)");
+    await expect(modal).toHaveCSS("background-color", "rgb(251, 252, 254)");
+    await expect(modal.locator('[data-slot="dialog-title"]')).toHaveCSS("color", "rgb(23, 32, 51)");
+    await expect(modal.getByRole("button", { name: /Close|Sluiten/i })).toBeVisible();
 
     await modal.locator("#res-name").fill("Theme Test Visitor");
     await modal.locator("#res-email").fill("theme-test@example.com");
@@ -212,20 +211,20 @@ test.describe("Remuage visual theme", () => {
     }
   });
 
-  test("applies the admin warning-title cascade outside the admin root", async ({ page }) => {
+  test("keeps admin portal tokens dark outside the admin root", async ({ page }) => {
     await page.goto("/admin");
     await expect(page.locator("#admin")).toBeVisible();
     await page.locator("body").evaluate((body) => {
       body.insertAdjacentHTML(
         "beforeend",
-        '<div class="admin-dialog"><div class="modal-header"><h2 class="modal-title text-warning">Admin modal</h2></div></div>',
+        '<div data-theme-scope="admin" data-theme-mode="dark"><div id="admin-portal-probe" class="tw:bg-background tw:text-foreground">Admin dialog</div></div>',
       );
     });
-
-    await expect(page.locator(".admin-dialog .modal-title.text-warning")).toHaveCSS(
-      "color",
-      "rgb(255, 255, 255)",
+    await expect(page.locator("#admin-portal-probe")).toHaveCSS(
+      "background-color",
+      "rgb(18, 18, 18)",
     );
+    await expect(page.locator("#admin-portal-probe")).toHaveCSS("color", "rgb(240, 240, 240)");
   });
 
   test("respects reduced motion for the signature interaction", async ({ page }) => {

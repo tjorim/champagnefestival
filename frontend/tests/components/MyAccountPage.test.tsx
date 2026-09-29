@@ -16,6 +16,7 @@ vi.mock("@/components/MyRegistrationsPage", () => ({
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    close: () => "Close",
     my_account_title: () => "My Account",
     my_registrations_title: () => "Registrations",
     my_account_signed_in_as: ({ account }: { account: string }) => `Signed in as ${account}`,
@@ -62,7 +63,7 @@ vi.mock("@/paraglide/messages", () => ({
 
 async function openDeleteConfirm(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole("button", { name: "Delete my account" }));
-  return screen.getByRole("dialog");
+  return screen.getByRole("alertdialog");
 }
 
 describe("MyAccountPage", () => {
@@ -136,7 +137,7 @@ describe("MyAccountPage", () => {
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(deleteCalled).toBe(false);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   it("shows an error and re-enables the button when deletion fails", async () => {

@@ -169,7 +169,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     registrations,
   });
 
-  const { confirm, confirmDialog } = useConfirmDialog();
+  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const confirmOverCapacity = useCallback(
     () =>
       confirm({

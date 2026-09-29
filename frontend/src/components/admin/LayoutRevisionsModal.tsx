@@ -5,7 +5,13 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+} from "@/components/ui/dialog";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import type {
@@ -314,274 +320,287 @@ export default function LayoutRevisionsModal({
     : [];
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg" scrollable>
-      <Modal.Header closeButton>
-        <Modal.Title>{m.admin_layout_revisions_title()}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <p className="text-secondary small">{m.admin_layout_revisions_scope_note()}</p>
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent admin size="lg">
+        <DialogHeader>
+          <DialogTitle>{m.admin_layout_revisions_title()}</DialogTitle>
+        </DialogHeader>
+        <DialogBody>
+          <p className="text-secondary small">{m.admin_layout_revisions_scope_note()}</p>
 
-        {/* Save */}
-        <Form
-          className="d-flex flex-wrap gap-2 align-items-start mb-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            void saveForm.handleSubmit();
-          }}
-        >
-          <saveForm.Field name="label">
-            {(field) => (
-              <Form.Control
-                style={{ flex: "1 1 220px" }}
-                value={field.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder={m.admin_layout_revisions_label_placeholder()}
-                maxLength={200}
-                required
-              />
-            )}
-          </saveForm.Field>
-          <saveForm.Field name="changeNote">
-            {(field) => (
-              <Form.Control
-                style={{ flex: "2 1 280px" }}
-                value={field.value}
-                onChange={(e) => field.handleChange(e.target.value)}
-                placeholder={m.admin_layout_revisions_change_note_placeholder()}
-                maxLength={2000}
-              />
-            )}
-          </saveForm.Field>
-          <Button type="submit" variant="success" disabled={saving || !saveLabelValue.trim()}>
-            {saving ? m.admin_layout_revisions_saving() : m.admin_layout_revisions_save()}
-          </Button>
-        </Form>
-        {saveError && (
-          <Alert variant="danger" className="py-2 small">
-            {saveError}
-          </Alert>
-        )}
+          {/* Save */}
+          <Form
+            className="d-flex flex-wrap gap-2 align-items-start mb-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void saveForm.handleSubmit();
+            }}
+          >
+            <saveForm.Field name="label">
+              {(field) => (
+                <Form.Control
+                  style={{ flex: "1 1 220px" }}
+                  value={field.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder={m.admin_layout_revisions_label_placeholder()}
+                  maxLength={200}
+                  required
+                />
+              )}
+            </saveForm.Field>
+            <saveForm.Field name="changeNote">
+              {(field) => (
+                <Form.Control
+                  style={{ flex: "2 1 280px" }}
+                  value={field.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder={m.admin_layout_revisions_change_note_placeholder()}
+                  maxLength={2000}
+                />
+              )}
+            </saveForm.Field>
+            <Button type="submit" variant="success" disabled={saving || !saveLabelValue.trim()}>
+              {saving ? m.admin_layout_revisions_saving() : m.admin_layout_revisions_save()}
+            </Button>
+          </Form>
+          {saveError && (
+            <Alert variant="danger" className="py-2 small">
+              {saveError}
+            </Alert>
+          )}
 
-        {/* List */}
-        {loading ? (
-          <div className="text-center py-3">
-            <Spinner animation="border" size="sm" />
-          </div>
-        ) : loadError ? (
-          <Alert variant="danger" className="py-2 small">
-            {loadError}
-          </Alert>
-        ) : revisions.length === 0 ? (
-          <p className="text-secondary small">{m.admin_layout_revisions_empty()}</p>
-        ) : (
-          <ListGroup variant="flush" className="mb-3">
-            {revisionOptions.map((revision) => (
-              <ListGroup.Item
-                key={revision.id}
-                className="d-flex justify-content-between align-items-center gap-2"
-              >
-                <div>
-                  <div className="fw-semibold small">
-                    #{revision.revisionNumber} {revision.label}
-                  </div>
-                  <div className="text-secondary fs-3xs">
-                    {m.admin_layout_revisions_created_by({ actor: revision.createdBy })} ·{" "}
-                    {new Date(revision.createdAt).toLocaleString()}
-                    {revision.changeNote ? ` — ${revision.changeNote}` : ""}
-                  </div>
-                </div>
-                <Button
-                  size="sm"
-                  variant="outline-warning"
-                  onClick={() => void openRestorePreview(revision.revisionNumber)}
-                >
-                  {m.admin_layout_revisions_restore()}
-                </Button>
-              </ListGroup.Item>
-            ))}
-          </ListGroup>
-        )}
-
-        {/* Compare */}
-        {revisions.length > 0 && (
-          <>
-            <h6 className="fs-6">{m.admin_layout_revisions_compare_title()}</h6>
-            <div className="d-flex gap-3 flex-wrap mb-3">
-              <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
-                <Form.Label className="small text-secondary">
-                  {m.admin_layout_revisions_compare_from()}
-                </Form.Label>
-                <Form.Select
-                  aria-label={m.admin_layout_revisions_compare_from()}
-                  value={compareFrom}
-                  onChange={(e) => setCompareFrom(e.target.value)}
-                >
-                  <option value={CURRENT_REF}>{m.admin_layout_revisions_compare_current()}</option>
-                  {revisionOptions.map((revision) => (
-                    <option key={revision.id} value={String(revision.revisionNumber)}>
-                      #{revision.revisionNumber} {revision.label}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
-              <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
-                <Form.Label className="small text-secondary">
-                  {m.admin_layout_revisions_compare_to()}
-                </Form.Label>
-                <Form.Select
-                  aria-label={m.admin_layout_revisions_compare_to()}
-                  value={compareTo}
-                  onChange={(e) => setCompareTo(e.target.value)}
-                >
-                  <option value={CURRENT_REF}>{m.admin_layout_revisions_compare_current()}</option>
-                  {revisionOptions.map((revision) => (
-                    <option key={revision.id} value={String(revision.revisionNumber)}>
-                      #{revision.revisionNumber} {revision.label}
-                    </option>
-                  ))}
-                </Form.Select>
-              </Form.Group>
+          {/* List */}
+          {loading ? (
+            <div className="text-center py-3">
+              <Spinner animation="border" size="sm" />
             </div>
-            {diffLoading ? (
-              <div className="text-center py-2">
-                <Spinner animation="border" size="sm" />
-              </div>
-            ) : diffError ? (
-              <Alert variant="danger" className="py-2 small">
-                {diffError}
-              </Alert>
-            ) : compareFrom === compareTo ? null : diff &&
-              tableDiffRows.length === 0 &&
-              areaDiffRows.length === 0 ? (
-              <p className="text-secondary small">
-                {m.admin_layout_revisions_compare_no_changes()}
-              </p>
-            ) : (
-              diff && (
-                <>
-                  {tableDiffRows.length > 0 && (
-                    <>
-                      <div className="fw-semibold small mb-1">
-                        {m.admin_layout_compare_tables()}
-                      </div>
-                      <DiffRowsList rows={tableDiffRows} />
-                    </>
-                  )}
-                  {areaDiffRows.length > 0 && (
-                    <>
-                      <div className="fw-semibold small mb-1">{m.admin_layout_compare_areas()}</div>
-                      <DiffRowsList rows={areaDiffRows} />
-                    </>
-                  )}
-                </>
-              )
-            )}
-          </>
-        )}
+          ) : loadError ? (
+            <Alert variant="danger" className="py-2 small">
+              {loadError}
+            </Alert>
+          ) : revisions.length === 0 ? (
+            <p className="text-secondary small">{m.admin_layout_revisions_empty()}</p>
+          ) : (
+            <ListGroup variant="flush" className="mb-3">
+              {revisionOptions.map((revision) => (
+                <ListGroup.Item
+                  key={revision.id}
+                  className="d-flex justify-content-between align-items-center gap-2"
+                >
+                  <div>
+                    <div className="fw-semibold small">
+                      #{revision.revisionNumber} {revision.label}
+                    </div>
+                    <div className="text-secondary fs-3xs">
+                      {m.admin_layout_revisions_created_by({ actor: revision.createdBy })} ·{" "}
+                      {new Date(revision.createdAt).toLocaleString()}
+                      {revision.changeNote ? ` — ${revision.changeNote}` : ""}
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline-warning"
+                    onClick={() => void openRestorePreview(revision.revisionNumber)}
+                  >
+                    {m.admin_layout_revisions_restore()}
+                  </Button>
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          )}
 
-        {/* Restore preview / confirm */}
-        {restoreTarget !== null && (
-          <div className="border rounded p-2 mt-3">
-            <h6 className="fs-6">{m.admin_layout_revisions_restore_preview_title()}</h6>
-            {previewLoading ? (
-              <div className="text-center py-2">
-                <Spinner animation="border" size="sm" />
+          {/* Compare */}
+          {revisions.length > 0 && (
+            <>
+              <h6 className="fs-6">{m.admin_layout_revisions_compare_title()}</h6>
+              <div className="d-flex gap-3 flex-wrap mb-3">
+                <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
+                  <Form.Label className="small text-secondary">
+                    {m.admin_layout_revisions_compare_from()}
+                  </Form.Label>
+                  <Form.Select
+                    aria-label={m.admin_layout_revisions_compare_from()}
+                    value={compareFrom}
+                    onChange={(e) => setCompareFrom(e.target.value)}
+                  >
+                    <option value={CURRENT_REF}>
+                      {m.admin_layout_revisions_compare_current()}
+                    </option>
+                    {revisionOptions.map((revision) => (
+                      <option key={revision.id} value={String(revision.revisionNumber)}>
+                        #{revision.revisionNumber} {revision.label}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
+                <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
+                  <Form.Label className="small text-secondary">
+                    {m.admin_layout_revisions_compare_to()}
+                  </Form.Label>
+                  <Form.Select
+                    aria-label={m.admin_layout_revisions_compare_to()}
+                    value={compareTo}
+                    onChange={(e) => setCompareTo(e.target.value)}
+                  >
+                    <option value={CURRENT_REF}>
+                      {m.admin_layout_revisions_compare_current()}
+                    </option>
+                    {revisionOptions.map((revision) => (
+                      <option key={revision.id} value={String(revision.revisionNumber)}>
+                        #{revision.revisionNumber} {revision.label}
+                      </option>
+                    ))}
+                  </Form.Select>
+                </Form.Group>
               </div>
-            ) : previewError ? (
-              <Alert variant="danger" className="py-2 small">
-                {previewError}
-              </Alert>
-            ) : (
-              preview && (
-                <>
-                  {previewTableRows.length === 0 && previewAreaRows.length === 0 ? (
-                    <p className="text-secondary small">
-                      {m.admin_layout_revisions_restore_no_changes()}
-                    </p>
-                  ) : (
-                    <>
-                      {previewTableRows.length > 0 && (
-                        <>
-                          <div className="fw-semibold small mb-1">
-                            {m.admin_layout_compare_tables()}
-                          </div>
-                          <DiffRowsList rows={previewTableRows} />
-                        </>
-                      )}
-                      {previewAreaRows.length > 0 && (
-                        <>
-                          <div className="fw-semibold small mb-1">
-                            {m.admin_layout_compare_areas()}
-                          </div>
-                          <DiffRowsList rows={previewAreaRows} />
-                        </>
-                      )}
-                    </>
-                  )}
-                  {preview.hasConflicts && (
-                    <Alert variant="warning" className="py-2 small">
-                      <div className="fw-semibold mb-1">
-                        {m.admin_layout_revisions_restore_conflicts_title()}
-                      </div>
-                      <ul className="mb-2 ps-3">
-                        {preview.allocationConflicts.map((conflict) => (
-                          <li key={`${conflict.kind}-${conflict.id}`}>
-                            {conflict.kind === "table" && conflict.reason === "deleted"
-                              ? m.admin_layout_revisions_restore_conflict_table_deleted({
-                                  name: conflict.name,
-                                  count: conflict.registrationIds.length,
-                                })
-                              : conflict.kind === "table"
-                                ? m.admin_layout_revisions_restore_conflict_table_moved({
+              {diffLoading ? (
+                <div className="text-center py-2">
+                  <Spinner animation="border" size="sm" />
+                </div>
+              ) : diffError ? (
+                <Alert variant="danger" className="py-2 small">
+                  {diffError}
+                </Alert>
+              ) : compareFrom === compareTo ? null : diff &&
+                tableDiffRows.length === 0 &&
+                areaDiffRows.length === 0 ? (
+                <p className="text-secondary small">
+                  {m.admin_layout_revisions_compare_no_changes()}
+                </p>
+              ) : (
+                diff && (
+                  <>
+                    {tableDiffRows.length > 0 && (
+                      <>
+                        <div className="fw-semibold small mb-1">
+                          {m.admin_layout_compare_tables()}
+                        </div>
+                        <DiffRowsList rows={tableDiffRows} />
+                      </>
+                    )}
+                    {areaDiffRows.length > 0 && (
+                      <>
+                        <div className="fw-semibold small mb-1">
+                          {m.admin_layout_compare_areas()}
+                        </div>
+                        <DiffRowsList rows={areaDiffRows} />
+                      </>
+                    )}
+                  </>
+                )
+              )}
+            </>
+          )}
+
+          {/* Restore preview / confirm */}
+          {restoreTarget !== null && (
+            <div className="border rounded p-2 mt-3">
+              <h6 className="fs-6">{m.admin_layout_revisions_restore_preview_title()}</h6>
+              {previewLoading ? (
+                <div className="text-center py-2">
+                  <Spinner animation="border" size="sm" />
+                </div>
+              ) : previewError ? (
+                <Alert variant="danger" className="py-2 small">
+                  {previewError}
+                </Alert>
+              ) : (
+                preview && (
+                  <>
+                    {previewTableRows.length === 0 && previewAreaRows.length === 0 ? (
+                      <p className="text-secondary small">
+                        {m.admin_layout_revisions_restore_no_changes()}
+                      </p>
+                    ) : (
+                      <>
+                        {previewTableRows.length > 0 && (
+                          <>
+                            <div className="fw-semibold small mb-1">
+                              {m.admin_layout_compare_tables()}
+                            </div>
+                            <DiffRowsList rows={previewTableRows} />
+                          </>
+                        )}
+                        {previewAreaRows.length > 0 && (
+                          <>
+                            <div className="fw-semibold small mb-1">
+                              {m.admin_layout_compare_areas()}
+                            </div>
+                            <DiffRowsList rows={previewAreaRows} />
+                          </>
+                        )}
+                      </>
+                    )}
+                    {preview.hasConflicts && (
+                      <Alert variant="warning" className="py-2 small">
+                        <div className="fw-semibold mb-1">
+                          {m.admin_layout_revisions_restore_conflicts_title()}
+                        </div>
+                        <ul className="mb-2 ps-3">
+                          {preview.allocationConflicts.map((conflict) => (
+                            <li key={`${conflict.kind}-${conflict.id}`}>
+                              {conflict.kind === "table" && conflict.reason === "deleted"
+                                ? m.admin_layout_revisions_restore_conflict_table_deleted({
                                     name: conflict.name,
                                     count: conflict.registrationIds.length,
                                   })
-                                : m.admin_layout_revisions_restore_conflict_area_deleted({
-                                    name: conflict.name,
-                                  })}
-                          </li>
-                        ))}
-                      </ul>
-                      <Form.Check
-                        type="checkbox"
-                        id="layout-revision-resolve-allocations"
-                        label={m.admin_layout_revisions_restore_override_checkbox()}
-                        checked={resolveAllocations}
-                        onChange={(e) => setResolveAllocations(e.target.checked)}
-                      />
-                    </Alert>
-                  )}
-                  {restoreError && (
-                    <Alert variant="danger" className="py-2 small">
-                      {restoreError}
-                    </Alert>
-                  )}
-                  <div className="d-flex gap-2 justify-content-end">
-                    <Button
-                      size="sm"
-                      variant="outline-secondary"
-                      onClick={() => {
-                        setRestoreTarget(null);
-                        setPreview(null);
-                      }}
-                    >
-                      {m.admin_layout_revisions_restore_cancel()}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="warning"
-                      disabled={restoring || (preview.hasConflicts && !resolveAllocations)}
-                      onClick={() => void confirmRestore()}
-                    >
-                      {m.admin_layout_revisions_restore_confirm()}
-                    </Button>
-                  </div>
-                </>
-              )
-            )}
-          </div>
-        )}
-      </Modal.Body>
-    </Modal>
+                                : conflict.kind === "table"
+                                  ? m.admin_layout_revisions_restore_conflict_table_moved({
+                                      name: conflict.name,
+                                      count: conflict.registrationIds.length,
+                                    })
+                                  : m.admin_layout_revisions_restore_conflict_area_deleted({
+                                      name: conflict.name,
+                                    })}
+                            </li>
+                          ))}
+                        </ul>
+                        <Form.Check
+                          type="checkbox"
+                          id="layout-revision-resolve-allocations"
+                          label={m.admin_layout_revisions_restore_override_checkbox()}
+                          checked={resolveAllocations}
+                          onChange={(e) => setResolveAllocations(e.target.checked)}
+                        />
+                      </Alert>
+                    )}
+                    {restoreError && (
+                      <Alert variant="danger" className="py-2 small">
+                        {restoreError}
+                      </Alert>
+                    )}
+                    <div className="d-flex gap-2 justify-content-end">
+                      <Button
+                        size="sm"
+                        variant="outline-secondary"
+                        onClick={() => {
+                          setRestoreTarget(null);
+                          setPreview(null);
+                        }}
+                      >
+                        {m.admin_layout_revisions_restore_cancel()}
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="warning"
+                        disabled={restoring || (preview.hasConflicts && !resolveAllocations)}
+                        onClick={() => void confirmRestore()}
+                      >
+                        {m.admin_layout_revisions_restore_confirm()}
+                      </Button>
+                    </div>
+                  </>
+                )
+              )}
+            </div>
+          )}
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }

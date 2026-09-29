@@ -3,7 +3,14 @@ import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useMemo } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Spinner from "react-bootstrap/Spinner";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { type OnChangeFn, type SortingState } from "@tanstack/react-table";
@@ -153,91 +160,100 @@ export default function LedgerModal({
   const totalPages = Math.max(1, Math.ceil(total / limit));
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg">
-      <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="text-warning fs-6">
-          <i className="bi bi-journal-text me-2" aria-hidden="true" />
-          {title}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body className="bg-dark text-light p-0">
-        {loading && (
-          <div className="text-center py-4">
-            <Spinner animation="border" size="sm" variant="warning" />
-          </div>
-        )}
-        {!loading && error && (
-          <Alert role="alert" aria-live="assertive" variant="danger" className="m-3">
-            {m.admin_payment_history_error()}
-          </Alert>
-        )}
-        {!loading && !error && total === 0 && (
-          <p className="text-secondary text-center py-4 mb-0">{m.admin_payment_history_empty()}</p>
-        )}
-        {!loading && !error && total > 0 && (
-          <div data-tailwind-migrated="true" className="tw:w-full">
-            <Table>
-              <caption className="visually-hidden">{m.admin_ledger_table_caption()}</caption>
-              <TableHeader>
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <AdminSortableHeader key={header.id} column={header.column}>
-                        <table.FlexRender header={header} />
-                      </AdminSortableHeader>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableHeader>
-              <TableBody>
-                {table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className="tw:text-sm">
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        <table.FlexRender cell={cell} />
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </Modal.Body>
-      <Modal.Footer className="bg-dark border-secondary">
-        {total > 0 && (
-          <div
-            data-tailwind-migrated="true"
-            className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:mr-auto"
-          >
-            <span className="tw:text-muted-foreground tw:text-sm">
-              {m.admin_ledger_page_summary({ from: rangeFrom, to: rangeTo, total })}
-            </span>
-            <TableButton
-              variant="outline"
-              size="sm"
-              disabled={isFetching || page <= 1}
-              onClick={onPreviousPage}
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent admin size="lg">
+        <DialogHeader>
+          <DialogTitle>
+            <i className="bi bi-journal-text me-2" aria-hidden="true" />
+            {title}
+          </DialogTitle>
+        </DialogHeader>
+        <DialogBody className="tw:p-0">
+          {loading && (
+            <div className="text-center py-4">
+              <Spinner animation="border" size="sm" variant="warning" />
+            </div>
+          )}
+          {!loading && error && (
+            <Alert role="alert" aria-live="assertive" variant="danger" className="m-3">
+              {m.admin_payment_history_error()}
+            </Alert>
+          )}
+          {!loading && !error && total === 0 && (
+            <p className="text-secondary text-center py-4 mb-0">
+              {m.admin_payment_history_empty()}
+            </p>
+          )}
+          {!loading && !error && total > 0 && (
+            <div data-tailwind-migrated="true" className="tw:w-full">
+              <Table>
+                <caption className="visually-hidden">{m.admin_ledger_table_caption()}</caption>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <AdminSortableHeader key={header.id} column={header.column}>
+                          <table.FlexRender header={header} />
+                        </AdminSortableHeader>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id} className="tw:text-sm">
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id}>
+                          <table.FlexRender cell={cell} />
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          {total > 0 && (
+            <div
+              data-tailwind-migrated="true"
+              className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:mr-auto"
             >
-              {m.admin_ledger_previous_page()}
-            </TableButton>
-            <span className="tw:text-muted-foreground tw:text-sm">
-              {page} / {totalPages}
-            </span>
-            <TableButton
-              variant="outline"
-              size="sm"
-              disabled={isFetching || page >= totalPages}
-              onClick={onNextPage}
-            >
-              {m.admin_ledger_next_page()}
-            </TableButton>
-          </div>
-        )}
-        <Button variant="outline-secondary" size="sm" onClick={onHide}>
-          {m.close()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+              <span className="tw:text-muted-foreground tw:text-sm">
+                {m.admin_ledger_page_summary({ from: rangeFrom, to: rangeTo, total })}
+              </span>
+              <TableButton
+                variant="outline"
+                size="sm"
+                disabled={isFetching || page <= 1}
+                onClick={onPreviousPage}
+              >
+                {m.admin_ledger_previous_page()}
+              </TableButton>
+              <span className="tw:text-muted-foreground tw:text-sm">
+                {page} / {totalPages}
+              </span>
+              <TableButton
+                variant="outline"
+                size="sm"
+                disabled={isFetching || page >= totalPages}
+                onClick={onNextPage}
+              >
+                {m.admin_ledger_next_page()}
+              </TableButton>
+            </div>
+          )}
+          <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            {m.close()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

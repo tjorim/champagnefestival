@@ -18,7 +18,14 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Spinner from "react-bootstrap/Spinner";
 import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
@@ -88,7 +95,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   const [form, setForm] = useState<FaqFormState>(emptyForm);
   const [error, setError] = useState<string | null>(null);
   const [rowError, setRowError] = useState<string | null>(null);
-  const { confirm, confirmDialog } = useConfirmDialog();
+  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
 
   const createMutation = useMutation({
     mutationFn: (data: FaqLocaleData & Omit<FaqFormState, "questionNl" | "answerNl">) =>
@@ -453,112 +460,121 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
         </Card.Body>
       </Card>
 
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered size="lg">
-        <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title>{editingId ? m.admin_edit_faq_item() : m.admin_add_faq_item()}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="bg-dark text-light">
-          {error && (
-            <Alert variant="danger" className="py-1 mb-3 small">
-              {error}
-            </Alert>
-          )}
+      <Dialog
+        open={showModal}
+        onOpenChange={(open) => {
+          if (!open) setShowModal(false);
+        }}
+      >
+        <DialogContent admin size="lg">
+          <DialogHeader>
+            <DialogTitle>
+              {editingId ? m.admin_edit_faq_item() : m.admin_add_faq_item()}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {error && (
+              <Alert variant="danger" className="py-1 mb-3 small">
+                {error}
+              </Alert>
+            )}
 
-          <div className="mb-4">
-            <div className="text-warning small fw-semibold mb-2">
-              {m.admin_faq_locale_nl_label()}
+            <div className="mb-4">
+              <div className="text-warning small fw-semibold mb-2">
+                {m.admin_faq_locale_nl_label()}
+              </div>
+              <Form.Group className="mb-3" controlId="faq-question-nl">
+                <Form.Label>{m.admin_faq_question_label()}</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={form.questionNl}
+                  onChange={(e) => setForm((p) => ({ ...p, questionNl: e.target.value }))}
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
+              <Form.Group controlId="faq-answer-nl">
+                <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={form.answerNl}
+                  onChange={(e) => setForm((p) => ({ ...p, answerNl: e.target.value }))}
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
             </div>
-            <Form.Group className="mb-3" controlId="faq-question-nl">
-              <Form.Label>{m.admin_faq_question_label()}</Form.Label>
-              <Form.Control
-                type="text"
-                value={form.questionNl}
-                onChange={(e) => setForm((p) => ({ ...p, questionNl: e.target.value }))}
-                className="bg-dark text-light border-secondary"
-              />
-            </Form.Group>
-            <Form.Group controlId="faq-answer-nl">
-              <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={form.answerNl}
-                onChange={(e) => setForm((p) => ({ ...p, answerNl: e.target.value }))}
-                className="bg-dark text-light border-secondary"
-              />
-            </Form.Group>
-          </div>
 
-          <div className="mb-4">
-            <div className="text-secondary small fw-semibold mb-1">
-              {m.admin_faq_locale_en_label()}
+            <div className="mb-4">
+              <div className="text-secondary small fw-semibold mb-1">
+                {m.admin_faq_locale_en_label()}
+              </div>
+              <div className="text-secondary small mb-2">{m.admin_faq_locale_optional_hint()}</div>
+              <Form.Group className="mb-3" controlId="faq-question-en">
+                <Form.Label>{m.admin_faq_question_label()}</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={form.questionEn}
+                  onChange={(e) => setForm((p) => ({ ...p, questionEn: e.target.value }))}
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
+              <Form.Group controlId="faq-answer-en">
+                <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={form.answerEn}
+                  onChange={(e) => setForm((p) => ({ ...p, answerEn: e.target.value }))}
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
             </div>
-            <div className="text-secondary small mb-2">{m.admin_faq_locale_optional_hint()}</div>
-            <Form.Group className="mb-3" controlId="faq-question-en">
-              <Form.Label>{m.admin_faq_question_label()}</Form.Label>
-              <Form.Control
-                type="text"
-                value={form.questionEn}
-                onChange={(e) => setForm((p) => ({ ...p, questionEn: e.target.value }))}
-                className="bg-dark text-light border-secondary"
-              />
-            </Form.Group>
-            <Form.Group controlId="faq-answer-en">
-              <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={form.answerEn}
-                onChange={(e) => setForm((p) => ({ ...p, answerEn: e.target.value }))}
-                className="bg-dark text-light border-secondary"
-              />
-            </Form.Group>
-          </div>
 
-          <div>
-            <div className="text-secondary small fw-semibold mb-1">
-              {m.admin_faq_locale_fr_label()}
+            <div>
+              <div className="text-secondary small fw-semibold mb-1">
+                {m.admin_faq_locale_fr_label()}
+              </div>
+              <div className="text-secondary small mb-2">{m.admin_faq_locale_optional_hint()}</div>
+              <Form.Group className="mb-3" controlId="faq-question-fr">
+                <Form.Label>{m.admin_faq_question_label()}</Form.Label>
+                <Form.Control
+                  type="text"
+                  value={form.questionFr}
+                  onChange={(e) => setForm((p) => ({ ...p, questionFr: e.target.value }))}
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
+              <Form.Group controlId="faq-answer-fr">
+                <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
+                <Form.Control
+                  as="textarea"
+                  rows={3}
+                  value={form.answerFr}
+                  onChange={(e) => setForm((p) => ({ ...p, answerFr: e.target.value }))}
+                  className="bg-dark text-light border-secondary"
+                />
+              </Form.Group>
             </div>
-            <div className="text-secondary small mb-2">{m.admin_faq_locale_optional_hint()}</div>
-            <Form.Group className="mb-3" controlId="faq-question-fr">
-              <Form.Label>{m.admin_faq_question_label()}</Form.Label>
-              <Form.Control
-                type="text"
-                value={form.questionFr}
-                onChange={(e) => setForm((p) => ({ ...p, questionFr: e.target.value }))}
-                className="bg-dark text-light border-secondary"
-              />
-            </Form.Group>
-            <Form.Group controlId="faq-answer-fr">
-              <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
-              <Form.Control
-                as="textarea"
-                rows={3}
-                value={form.answerFr}
-                onChange={(e) => setForm((p) => ({ ...p, answerFr: e.target.value }))}
-                className="bg-dark text-light border-secondary"
-              />
-            </Form.Group>
-          </div>
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button
-            variant="warning"
-            onClick={handleSave}
-            disabled={
-              createMutation.isPending ||
-              updateMutation.isPending ||
-              !form.questionNl.trim() ||
-              !form.answerNl.trim()
-            }
-          >
-            {m.admin_save()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowModal(false)}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button
+              variant="warning"
+              onClick={handleSave}
+              disabled={
+                createMutation.isPending ||
+                updateMutation.isPending ||
+                !form.questionNl.trim() ||
+                !form.answerNl.trim()
+              }
+            >
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {confirmDialog}
     </>
   );

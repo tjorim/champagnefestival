@@ -24,7 +24,14 @@ import {
 import { Button as TableButton } from "@/components/ui/button";
 import { Ellipsis, X, Euro } from "lucide-react";
 import Form from "react-bootstrap/Form";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import ProgressBar from "react-bootstrap/ProgressBar";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
@@ -1446,47 +1453,53 @@ export default function RegistrationList({
       />
 
       {/* Bulk action confirmation */}
-      <Modal
-        show={bulkAction !== null}
-        onHide={() => setBulkAction(null)}
-        centered
-        dialogClassName="admin-dialog"
+      <Dialog
+        open={bulkAction !== null}
+        onOpenChange={(open) => {
+          if (!open) setBulkAction(null);
+        }}
       >
-        <Modal.Header closeButton>
-          <Modal.Title>
-            {bulkAction === "confirm" && m.admin_bulk_confirm()}
-            {bulkAction === "cancel" && m.admin_bulk_cancel()}
-            {bulkAction === "paid" && m.admin_bulk_mark_paid()}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {m.admin_bulk_confirm_action({ count: selectedIds.size })}
-          {bulkProgress && (
-            <div className="mt-2 text-secondary small">
-              {m.admin_bulk_progress({ done: bulkProgress.done, total: bulkProgress.total })}
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setBulkAction(null)} disabled={bulkInProgress}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button
-            variant={bulkAction === "cancel" ? "danger" : "primary"}
-            onClick={executeBulkAction}
-            disabled={bulkInProgress}
-          >
-            {bulkInProgress && (
-              <span
-                className="spinner-border spinner-border-sm me-2"
-                role="status"
-                aria-hidden="true"
-              />
+        <DialogContent admin size="default">
+          <DialogHeader>
+            <DialogTitle>
+              {bulkAction === "confirm" && m.admin_bulk_confirm()}
+              {bulkAction === "cancel" && m.admin_bulk_cancel()}
+              {bulkAction === "paid" && m.admin_bulk_mark_paid()}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {m.admin_bulk_confirm_action({ count: selectedIds.size })}
+            {bulkProgress && (
+              <div className="mt-2 text-secondary small">
+                {m.admin_bulk_progress({ done: bulkProgress.done, total: bulkProgress.total })}
+              </div>
             )}
-            {m.admin_action_confirm()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="secondary"
+              onClick={() => setBulkAction(null)}
+              disabled={bulkInProgress}
+            >
+              {m.admin_action_cancel()}
+            </Button>
+            <Button
+              variant={bulkAction === "cancel" ? "danger" : "primary"}
+              onClick={executeBulkAction}
+              disabled={bulkInProgress}
+            >
+              {bulkInProgress && (
+                <span
+                  className="spinner-border spinner-border-sm me-2"
+                  role="status"
+                  aria-hidden="true"
+                />
+              )}
+              {m.admin_action_confirm()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

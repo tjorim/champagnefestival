@@ -87,8 +87,13 @@ const existingItem = {
   website: "https://example.com",
   type: "producer",
   active: true,
-  contactPersonId: null,
-  contactPerson: null,
+  contactPersonId: "person-01",
+  contactPerson: {
+    id: "person-01",
+    name: "Alice Dupont",
+    email: "alice@example.com",
+    phone: "0400000000",
+  },
 } as unknown as ItemDraft;
 
 function withQuery(ui: React.ReactElement) {
@@ -98,7 +103,7 @@ function withQuery(ui: React.ReactElement) {
 /** The modals render through a portal, so query the document rather than the container. */
 function modalInputValues(): string[] {
   return Array.from(
-    document.querySelectorAll<HTMLInputElement>(".modal-body input.form-control"),
+    document.querySelectorAll<HTMLInputElement>('[data-slot="dialog-body"] input.form-control'),
   ).map((input) => input.value);
 }
 
@@ -203,6 +208,9 @@ describe("admin edit modals prefill from the record being edited", () => {
       "/img/moet.png",
     );
     expect(screen.getByLabelText("admin_item_type")).toHaveValue("producer");
+    expect(screen.getByRole("combobox", { name: "admin_item_contact_person" })).toHaveValue(
+      "Alice Dupont",
+    );
   });
 
   it("MemberFormModal keeps the member's values", async () => {

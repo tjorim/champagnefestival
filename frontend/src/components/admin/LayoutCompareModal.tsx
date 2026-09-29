@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+} from "@/components/ui/dialog";
 import type { FloorArea, FloorTable, Layout, TableType } from "@/types/admin";
 import { m } from "@/paraglide/messages";
 import { getDayLabel, type DayOption } from "./LayoutEditor";
@@ -174,85 +180,92 @@ export default function LayoutCompareModal({
   );
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg">
-      <Modal.Header closeButton>
-        <Modal.Title>{m.admin_layout_compare_title()}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <p className="text-secondary small">{m.admin_layout_compare_scope_note()}</p>
-        <div className="d-flex gap-3 flex-wrap mb-3">
-          <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
-            <Form.Label className="small text-secondary">
-              {m.admin_layout_compare_baseline()}
-            </Form.Label>
-            <Form.Select value={baselineId} onChange={(e) => setBaselineId(e.target.value)}>
-              {roomLayouts.map((layout) => (
-                <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout, dayOptions)}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-          <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
-            <Form.Label className="small text-secondary">
-              {m.admin_layout_compare_current()}
-            </Form.Label>
-            <Form.Select value={currentId} onChange={(e) => setCurrentId(e.target.value)}>
-              {roomLayouts.map((layout) => (
-                <option key={layout.id} value={layout.id}>
-                  {getDayLabel(layout, dayOptions)}
-                </option>
-              ))}
-            </Form.Select>
-          </Form.Group>
-        </div>
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent admin size="lg">
+        <DialogHeader>
+          <DialogTitle>{m.admin_layout_compare_title()}</DialogTitle>
+        </DialogHeader>
+        <DialogBody>
+          <p className="text-secondary small">{m.admin_layout_compare_scope_note()}</p>
+          <div className="d-flex gap-3 flex-wrap mb-3">
+            <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
+              <Form.Label className="small text-secondary">
+                {m.admin_layout_compare_baseline()}
+              </Form.Label>
+              <Form.Select value={baselineId} onChange={(e) => setBaselineId(e.target.value)}>
+                {roomLayouts.map((layout) => (
+                  <option key={layout.id} value={layout.id}>
+                    {getDayLabel(layout, dayOptions)}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+            <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
+              <Form.Label className="small text-secondary">
+                {m.admin_layout_compare_current()}
+              </Form.Label>
+              <Form.Select value={currentId} onChange={(e) => setCurrentId(e.target.value)}>
+                {roomLayouts.map((layout) => (
+                  <option key={layout.id} value={layout.id}>
+                    {getDayLabel(layout, dayOptions)}
+                  </option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+          </div>
 
-        {baselineId === currentId ? (
-          <p className="text-secondary small mb-0">{m.admin_layout_compare_same_plan()}</p>
-        ) : tableDiff.length === 0 && areaDiff.length === 0 ? (
-          <p className="text-secondary small mb-0">{m.admin_layout_compare_no_changes()}</p>
-        ) : (
-          <>
-            {tableDiff.length > 0 && (
-              <>
-                <h6 className="fs-6">{m.admin_layout_compare_tables()}</h6>
-                <ListGroup variant="flush" className="mb-3">
-                  {tableDiff.map((row) => (
-                    <ListGroup.Item
-                      key={row.name}
-                      className="d-flex justify-content-between align-items-start gap-2"
-                    >
-                      <div>
-                        <div className="fw-semibold small">{row.name}</div>
-                        {row.changes.length > 0 && (
-                          <div className="text-secondary small">{row.changes.join(", ")}</div>
-                        )}
-                      </div>
-                      {statusBadge(row.status)}
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              </>
-            )}
-            {areaDiff.length > 0 && (
-              <>
-                <h6 className="fs-6">{m.admin_layout_compare_areas()}</h6>
-                <ListGroup variant="flush">
-                  {areaDiff.map((row) => (
-                    <ListGroup.Item
-                      key={row.label}
-                      className="d-flex justify-content-between align-items-center gap-2"
-                    >
-                      <span className="small">{row.label}</span>
-                      {statusBadge(row.status)}
-                    </ListGroup.Item>
-                  ))}
-                </ListGroup>
-              </>
-            )}
-          </>
-        )}
-      </Modal.Body>
-    </Modal>
+          {baselineId === currentId ? (
+            <p className="text-secondary small mb-0">{m.admin_layout_compare_same_plan()}</p>
+          ) : tableDiff.length === 0 && areaDiff.length === 0 ? (
+            <p className="text-secondary small mb-0">{m.admin_layout_compare_no_changes()}</p>
+          ) : (
+            <>
+              {tableDiff.length > 0 && (
+                <>
+                  <h6 className="fs-6">{m.admin_layout_compare_tables()}</h6>
+                  <ListGroup variant="flush" className="mb-3">
+                    {tableDiff.map((row) => (
+                      <ListGroup.Item
+                        key={row.name}
+                        className="d-flex justify-content-between align-items-start gap-2"
+                      >
+                        <div>
+                          <div className="fw-semibold small">{row.name}</div>
+                          {row.changes.length > 0 && (
+                            <div className="text-secondary small">{row.changes.join(", ")}</div>
+                          )}
+                        </div>
+                        {statusBadge(row.status)}
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                </>
+              )}
+              {areaDiff.length > 0 && (
+                <>
+                  <h6 className="fs-6">{m.admin_layout_compare_areas()}</h6>
+                  <ListGroup variant="flush">
+                    {areaDiff.map((row) => (
+                      <ListGroup.Item
+                        key={row.label}
+                        className="d-flex justify-content-between align-items-center gap-2"
+                      >
+                        <span className="small">{row.label}</span>
+                        {statusBadge(row.status)}
+                      </ListGroup.Item>
+                    ))}
+                  </ListGroup>
+                </>
+              )}
+            </>
+          )}
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }

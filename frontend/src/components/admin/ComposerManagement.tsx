@@ -120,7 +120,7 @@ export default function ComposerManagement({
   const [editing, setEditing] = useState<string | null>(null);
   const [preview, setPreview] = useState<"nl" | "en" | "fr">("nl");
   const [error, setError] = useState("");
-  const { confirm, confirmDialog } = useConfirmDialog();
+  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const refresh = useCallback(() => client.invalidateQueries({ queryKey: key }), [client, key]);
 
   const save = useMutation({

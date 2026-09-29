@@ -1,13 +1,21 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import type { ReactNode } from "react";
-import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
-import Spinner from "react-bootstrap/Spinner";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+} from "@/components/ui/alert-dialog";
+import { ArchiveIcon, TriangleAlertIcon, TrashIcon, LoaderCircleIcon, XIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
 
 interface ConfirmModalProps {
   show: boolean;
+  admin?: boolean;
   title: ReactNode;
   body: ReactNode;
   onConfirm: () => Promise<void>;
@@ -27,6 +35,7 @@ interface ConfirmModalProps {
  */
 export default function ConfirmModal({
   show,
+  admin = false,
   title,
   body,
   onConfirm,
@@ -38,9 +47,18 @@ export default function ConfirmModal({
 }: ConfirmModalProps) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const titleId = useId();
+  const dismiss = () => {
+    if (!pending) onHide();
+  };
+  const Icon =
+    icon === "archive"
+      ? ArchiveIcon
+      : icon === "exclamation-triangle"
+        ? TriangleAlertIcon
+        : TrashIcon;
 
   const handleConfirm = async () => {
+    if (pending) return;
     setPending(true);
     setError(null);
     try {
@@ -54,41 +72,56 @@ export default function ConfirmModal({
   };
 
   return (
-    <Modal
-      show={show}
-      onHide={() => {
-        if (!pending) onHide();
+    <AlertDialog
+      open={show}
+      onOpenChange={(open, details) => {
+        if (!open) {
+          if (pending) details.cancel();
+          else onHide();
+        }
       }}
-      onExited={() => setError(null)}
-      aria-labelledby={titleId}
-      centered
+      onOpenChangeComplete={(open) => {
+        if (!open) setError(null);
+      }}
     >
-      <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title id={titleId} className="fs-6 text-warning">
-          {title}
-        </Modal.Title>
-      </Modal.Header>
-      <Modal.Body className="bg-dark text-light">
+      <AlertDialogContent admin={admin} onBackdropClick={dismiss}>
+        <AlertDialogHeader>
+          <AlertDialogTitle className="tw:pr-8">{title}</AlertDialogTitle>
+          <AlertDialogCancel
+            variant="ghost"
+            size="icon-sm"
+            disabled={pending}
+            className="tw:absolute tw:top-4 tw:right-4"
+            aria-label={m.close()}
+          >
+            <XIcon />
+          </AlertDialogCancel>
+          <AlertDialogDescription render={<div />}>{body}</AlertDialogDescription>
+        </AlertDialogHeader>
         {error && (
-          <Alert variant="danger" aria-live="assertive" className="py-2 small">
+          <div
+            role="alert"
+            className="tw:rounded-md tw:border tw:border-destructive tw:bg-destructive/10 tw:p-2 tw:text-sm tw:text-destructive"
+          >
             {error}
-          </Alert>
+          </div>
         )}
-        {body}
-      </Modal.Body>
-      <Modal.Footer className="bg-dark border-secondary">
-        <Button variant="outline-secondary" onClick={onHide} disabled={pending}>
-          {m.admin_action_cancel()}
-        </Button>
-        <Button variant={variant} onClick={() => void handleConfirm()} disabled={pending}>
-          {pending ? (
-            <Spinner as="span" animation="border" size="sm" className="me-1" aria-hidden="true" />
-          ) : (
-            <i className={`bi bi-${icon} me-1`} aria-hidden="true" />
-          )}
-          {confirmLabel ?? m.admin_action_confirm()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>{m.admin_action_cancel()}</AlertDialogCancel>
+          <Button
+            variant={variant === "danger" ? "destructive" : "default"}
+            onClick={() => void handleConfirm()}
+            disabled={pending}
+          >
+            {pending ? (
+              <LoaderCircleIcon className="tw:size-4 tw:animate-spin" aria-hidden="true" />
+            ) : (
+              <Icon className="tw:size-4" aria-hidden="true" />
+            )}
+            {confirmLabel ?? m.admin_action_confirm()}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

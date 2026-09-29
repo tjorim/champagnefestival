@@ -280,48 +280,6 @@ html[data-visual-theme="remuage"] #registrations .btn-warning:hover {
   border-color: var(--rem-paper) !important;
 }
 
-html[data-visual-theme="remuage"] .modal-content {
-  color: var(--rem-ink);
-  background: var(--rem-paper);
-  border: 1px solid var(--rem-line-strong);
-  border-radius: 14px;
-  box-shadow: 0 28px 80px rgba(23, 32, 51, 0.25);
-}
-
-html[data-visual-theme="remuage"] .modal-header,
-html[data-visual-theme="remuage"] .modal-footer {
-  color: #fff !important;
-  background: var(--rem-grape) !important;
-  border-color: rgba(255, 255, 255, 0.16) !important;
-}
-
-html[data-visual-theme="remuage"] .modal-header .modal-title {
-  color: #fff;
-}
-
-html[data-visual-theme="remuage"] .modal-body,
-html[data-visual-theme="remuage"] .modal-body.bg-dark {
-  color: var(--rem-ink) !important;
-  background: var(--rem-paper) !important;
-}
-
-html[data-visual-theme="remuage"] .modal-body .bg-dark {
-  color: var(--rem-ink) !important;
-  background-color: var(--rem-paper) !important;
-}
-
-html[data-visual-theme="remuage"] .modal-body .text-light {
-  color: var(--rem-ink) !important;
-}
-
-html[data-visual-theme="remuage"] .modal-content .border-secondary {
-  border-color: var(--rem-line) !important;
-}
-
-html[data-visual-theme="remuage"] .modal-content .btn-close {
-  filter: invert(1) grayscale(1) brightness(2);
-}
-
 /* ------------------------------------------------------------------ footer + standalone */
 
 html[data-visual-theme="remuage"] .site-footer {

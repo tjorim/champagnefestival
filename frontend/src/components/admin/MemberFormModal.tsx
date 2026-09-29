@@ -4,7 +4,14 @@ import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
@@ -113,232 +120,239 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
   const isSubmitting = useSelector(form.atom, (s) => s.isSubmitting);
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg" dialogClassName="admin-dialog">
-      <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="text-warning fs-6">
-          <i className="bi bi-person-badge me-2" aria-hidden="true" />
-          {isEdit ? m.admin_members_edit_title() : m.admin_members_create_title()}
-        </Modal.Title>
-      </Modal.Header>
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent admin size="lg">
+        <DialogHeader>
+          <DialogTitle>
+            <i className="bi bi-person-badge me-2" aria-hidden="true" />
+            {isEdit ? m.admin_members_edit_title() : m.admin_members_create_title()}
+          </DialogTitle>
+        </DialogHeader>
 
-      <Form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-        noValidate
-      >
-        <Modal.Body className="bg-dark">
-          {error && (
-            <Alert
-              variant="danger"
-              className="py-2 small"
-              dismissible
-              onClose={() => setError(null)}
-            >
-              {error}
-            </Alert>
-          )}
+        <Form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+          noValidate
+        >
+          <DialogBody>
+            {error && (
+              <Alert
+                variant="danger"
+                className="py-2 small"
+                dismissible
+                onClose={() => setError(null)}
+              >
+                {error}
+              </Alert>
+            )}
 
-          <Form.Group className="mb-3" controlId="member-name">
-            <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
-            <form.Field
-              name="name"
-              validators={[
-                {
-                  run: ({ value }) =>
-                    !value?.trim() ? m.registration_errors_name_required() : undefined,
-                  triggers: ["change"],
-                },
-              ]}
-            >
-              {(field) => {
-                const showErr = field.meta.isTouched && field.errors.length > 0;
-                return (
-                  <>
-                    <Form.Control
-                      type="text"
-                      className="bg-dark text-light border-secondary"
-                      maxLength={200}
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      isInvalid={showErr}
-                    />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
+            <Form.Group className="mb-3" controlId="member-name">
+              <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
+              <form.Field
+                name="name"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.registration_errors_name_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        type="text"
+                        className="bg-dark text-light border-secondary"
+                        maxLength={200}
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.errors[0]?.message}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
+            </Form.Group>
+
+            <Row className="mb-3">
+              <Col xs={12} md={6}>
+                <Form.Group controlId="member-email">
+                  <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
+                  <form.Field
+                    name="email"
+                    validators={[
+                      {
+                        run: ({ value }) =>
+                          value && !EMAIL_REGEX.test(value)
+                            ? m.registration_errors_email_invalid()
+                            : undefined,
+                        triggers: ["change"],
+                      },
+                    ]}
+                  >
+                    {(field) => {
+                      const showErr = field.meta.isTouched && field.errors.length > 0;
+                      return (
+                        <>
+                          <Form.Control
+                            type="email"
+                            className="bg-dark text-light border-secondary"
+                            maxLength={200}
+                            value={field.value}
+                            onChange={(e) => field.handleChange(e.target.value)}
+                            onBlur={field.handleBlur}
+                            isInvalid={showErr}
+                          />
+                          {showErr && (
+                            <Form.Control.Feedback type="invalid">
+                              {field.errors[0]?.message}
+                            </Form.Control.Feedback>
+                          )}
+                        </>
+                      );
+                    }}
+                  </form.Field>
+                </Form.Group>
+              </Col>
+              <Col xs={12} md={6}>
+                <Form.Group controlId="member-phone">
+                  <Form.Label className="text-secondary small">{m.registration_phone()}</Form.Label>
+                  <form.Field name="phone">
+                    {(field) => (
+                      <Form.Control
+                        type="tel"
+                        className="bg-dark text-light border-secondary"
+                        maxLength={50}
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
                     )}
-                  </>
-                );
-              }}
-            </form.Field>
-          </Form.Group>
+                  </form.Field>
+                </Form.Group>
+              </Col>
+            </Row>
 
-          <Row className="mb-3">
-            <Col xs={12} md={6}>
-              <Form.Group controlId="member-email">
-                <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
-                <form.Field
-                  name="email"
-                  validators={[
-                    {
-                      run: ({ value }) =>
-                        value && !EMAIL_REGEX.test(value)
-                          ? m.registration_errors_email_invalid()
-                          : undefined,
-                      triggers: ["change"],
-                    },
-                  ]}
-                >
-                  {(field) => {
-                    const showErr = field.meta.isTouched && field.errors.length > 0;
-                    return (
-                      <>
-                        <Form.Control
-                          type="email"
-                          className="bg-dark text-light border-secondary"
-                          maxLength={200}
-                          value={field.value}
-                          onChange={(e) => field.handleChange(e.target.value)}
-                          onBlur={field.handleBlur}
-                          isInvalid={showErr}
-                        />
-                        {showErr && (
-                          <Form.Control.Feedback type="invalid">
-                            {field.errors[0]?.message}
-                          </Form.Control.Feedback>
-                        )}
-                      </>
-                    );
-                  }}
-                </form.Field>
-              </Form.Group>
-            </Col>
-            <Col xs={12} md={6}>
-              <Form.Group controlId="member-phone">
-                <Form.Label className="text-secondary small">{m.registration_phone()}</Form.Label>
-                <form.Field name="phone">
-                  {(field) => (
-                    <Form.Control
-                      type="tel"
-                      className="bg-dark text-light border-secondary"
-                      maxLength={50}
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                  )}
-                </form.Field>
-              </Form.Group>
-            </Col>
-          </Row>
-
-          <form.Field name="preferredLanguage">
-            {(field) => (
-              <Form.Group className="mb-3" controlId="member-preferred-language">
-                <Form.Label>{m.registration_preferred_language()}</Form.Label>
-                <Form.Select
-                  value={field.value ?? ""}
-                  onChange={(event) =>
-                    field.handleChange((event.target.value || null) as "nl" | "fr" | "en" | null)
-                  }
-                >
-                  <option value="">{m.admin_email_language_unknown()}</option>
-                  <option value="nl">Nederlands</option>
-                  <option value="fr">Français</option>
-                  <option value="en">English</option>
-                </Form.Select>
-              </Form.Group>
-            )}
-          </form.Field>
-          <Form.Group className="mb-3" controlId="member-club">
-            <Form.Label className="text-secondary small fw-semibold text-warning-emphasis">
-              {m.admin_people_club_name_label()}
-            </Form.Label>
-            <form.Field name="clubName">
+            <form.Field name="preferredLanguage">
               {(field) => (
-                <Form.Control
-                  type="text"
-                  className="bg-dark text-light border-secondary border-warning"
-                  maxLength={200}
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
+                <Form.Group className="mb-3" controlId="member-preferred-language">
+                  <Form.Label>{m.registration_preferred_language()}</Form.Label>
+                  <Form.Select
+                    value={field.value ?? ""}
+                    onChange={(event) =>
+                      field.handleChange((event.target.value || null) as "nl" | "fr" | "en" | null)
+                    }
+                  >
+                    <option value="">{m.admin_email_language_unknown()}</option>
+                    <option value="nl">Nederlands</option>
+                    <option value="fr">Français</option>
+                    <option value="en">English</option>
+                  </Form.Select>
+                </Form.Group>
+              )}
+            </form.Field>
+            <Form.Group className="mb-3" controlId="member-club">
+              <Form.Label className="text-secondary small fw-semibold text-warning-emphasis">
+                {m.admin_people_club_name_label()}
+              </Form.Label>
+              <form.Field name="clubName">
+                {(field) => (
+                  <Form.Control
+                    type="text"
+                    className="bg-dark text-light border-secondary border-warning"
+                    maxLength={200}
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="member-address">
+              <Form.Label className="text-secondary small">
+                {m.admin_people_address_label()}
+              </Form.Label>
+              <form.Field name="address">
+                {(field) => (
+                  <Form.Control
+                    type="text"
+                    className="bg-dark text-light border-secondary"
+                    maxLength={300}
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
+            </Form.Group>
+
+            <Form.Group className="mb-3" controlId="member-notes">
+              <Form.Label className="text-secondary small">{m.registration_notes()}</Form.Label>
+              <form.Field name="notes">
+                {(field) => (
+                  <Form.Control
+                    as="textarea"
+                    rows={4}
+                    className="bg-dark text-light border-secondary"
+                    maxLength={2000}
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
+            </Form.Group>
+
+            <form.Field name="active">
+              {(field) => (
+                <Form.Check
+                  type="switch"
+                  id="member-active"
+                  className="text-secondary"
+                  label={m.admin_people_active_label()}
+                  checked={field.value}
+                  onChange={(e) => field.handleChange(e.target.checked)}
                 />
               )}
             </form.Field>
-          </Form.Group>
+          </DialogBody>
 
-          <Form.Group className="mb-3" controlId="member-address">
-            <Form.Label className="text-secondary small">
-              {m.admin_people_address_label()}
-            </Form.Label>
-            <form.Field name="address">
-              {(field) => (
-                <Form.Control
-                  type="text"
-                  className="bg-dark text-light border-secondary"
-                  maxLength={300}
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
+          <DialogFooter>
+            <Button variant="outline-secondary" onClick={onHide} disabled={isSubmitting}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button variant="warning" type="submit" disabled={isSubmitting || !nameValue?.trim()}>
+              {isSubmitting ? (
+                <>
+                  <Spinner animation="border" size="sm" className="me-2" />
+                  {m.admin_save()}
+                </>
+              ) : (
+                <>
+                  <i className="bi bi-check2-circle me-1" aria-hidden="true" />
+                  {m.admin_people_save()}
+                </>
               )}
-            </form.Field>
-          </Form.Group>
-
-          <Form.Group className="mb-3" controlId="member-notes">
-            <Form.Label className="text-secondary small">{m.registration_notes()}</Form.Label>
-            <form.Field name="notes">
-              {(field) => (
-                <Form.Control
-                  as="textarea"
-                  rows={4}
-                  className="bg-dark text-light border-secondary"
-                  maxLength={2000}
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              )}
-            </form.Field>
-          </Form.Group>
-
-          <form.Field name="active">
-            {(field) => (
-              <Form.Check
-                type="switch"
-                id="member-active"
-                className="text-secondary"
-                label={m.admin_people_active_label()}
-                checked={field.value}
-                onChange={(e) => field.handleChange(e.target.checked)}
-              />
-            )}
-          </form.Field>
-        </Modal.Body>
-
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" onClick={onHide} disabled={isSubmitting}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button variant="warning" type="submit" disabled={isSubmitting || !nameValue?.trim()}>
-            {isSubmitting ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-2" />
-                {m.admin_save()}
-              </>
-            ) : (
-              <>
-                <i className="bi bi-check2-circle me-1" aria-hidden="true" />
-                {m.admin_people_save()}
-              </>
-            )}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+            </Button>
+          </DialogFooter>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

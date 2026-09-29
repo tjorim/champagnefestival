@@ -4,9 +4,30 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Spinner from "react-bootstrap/Spinner";
-import Select, { type GroupBase, type MultiValue } from "react-select";
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxLabel,
+  ComboboxCollection,
+  ComboboxChips,
+  ComboboxChip,
+  ComboboxChipsInput,
+  ComboboxValue,
+  useComboboxAnchor,
+} from "@/components/ui/combobox";
 import { m } from "@/paraglide/messages";
 import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
@@ -86,7 +107,7 @@ export default function EditionModal({
       // so vendors are deliberately not selectable and not submitted.
       selectedExhibitors: [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map(
         (e) => ({ value: e.id, label: e.name, isArchived: false }),
-      ) as MultiValue<ItemOption>,
+      ) as ItemOption[],
     }),
     [fallbackVenueId, initial],
   );
@@ -195,332 +216,382 @@ export default function EditionModal({
   }, [allExhibitors, programmableExhibitors, initial, form, show]);
   const exhibitorGroups = useMemo(() => {
     const { active: act, archived: arch } = toOptions(programmableExhibitors);
-    const groups: GroupBase<ItemOption>[] = [];
-    if (act.length) groups.push({ label: m.admin_edition_exhibitors(), options: act });
-    if (arch.length) groups.push({ label: m.admin_content_archived_section(), options: arch });
+    const groups: { label: string; items: ItemOption[] }[] = [];
+    if (act.length) groups.push({ label: m.admin_edition_exhibitors(), items: act });
+    if (arch.length) groups.push({ label: m.admin_content_archived_section(), items: arch });
     return groups;
   }, [programmableExhibitors]);
 
+  const comboboxAnchor = useComboboxAnchor();
   const previewDates = useMemo(() => initial?.dates ?? [], [initial?.dates]);
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg" dialogClassName="admin-dialog">
-      <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="text-warning fs-6">
-          {isEdit ? `Edit ${initial!.id}` : m.admin_content_edition_add()}
-        </Modal.Title>
-      </Modal.Header>
-      <Form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-        noValidate
-      >
-        <Modal.Body className="bg-dark">
-          {error && (
-            <Alert variant="danger" className="py-1 mb-3 small">
-              {error}
-            </Alert>
-          )}
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent admin size="lg">
+        <DialogHeader>
+          <DialogTitle>
+            {isEdit ? `Edit ${initial!.id}` : m.admin_content_edition_add()}
+          </DialogTitle>
+        </DialogHeader>
+        <Form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+          noValidate
+        >
+          <DialogBody>
+            {error && (
+              <Alert variant="danger" className="py-1 mb-3 small">
+                {error}
+              </Alert>
+            )}
 
-          {!isEdit && (
-            <Form.Group className="mb-3" controlId="edition-id">
-              <Form.Label className="text-secondary small mb-1">ID</Form.Label>
-              <form.Field
-                name="id"
-                validators={[
-                  {
-                    run: ({ value }) =>
-                      !value?.trim() ? m.admin_edition_id_required() : undefined,
-                    triggers: ["change"],
-                  },
-                ]}
-              >
-                {(field) => {
-                  const showErr = field.meta.isTouched && field.errors.length > 0;
-                  return (
-                    <>
-                      <Form.Control
-                        className="bg-dark text-light border-secondary"
-                        placeholder="e.g. 2026-march"
-                        autoFocus
-                        value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        isInvalid={showErr}
-                      />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
-                    </>
-                  );
-                }}
-              </form.Field>
-            </Form.Group>
-          )}
-
-          <div className="d-flex gap-2 flex-wrap mb-3">
-            <Form.Group style={{ maxWidth: "100px" }} controlId="edition-year">
-              <Form.Label className="text-secondary small mb-1">Year</Form.Label>
-              <form.Field name="year">
-                {(field) => (
-                  <Form.Control
-                    type="number"
-                    className="bg-dark text-light border-secondary"
-                    value={field.value}
-                    onChange={(e) => field.handleChange(Number(e.target.value))}
-                    onBlur={field.handleBlur}
-                  />
-                )}
-              </form.Field>
-            </Form.Group>
-            <Form.Group style={{ minWidth: "140px", flex: "1 1 140px" }} controlId="edition-month">
-              <Form.Label className="text-secondary small mb-1">Month</Form.Label>
-              <form.Field
-                name="month"
-                validators={[
-                  {
-                    run: ({ value }) =>
-                      !value?.trim() ? m.admin_edition_month_required() : undefined,
-                    triggers: ["change"],
-                  },
-                ]}
-              >
-                {(field) => {
-                  const showErr = field.meta.isTouched && field.errors.length > 0;
-                  return (
-                    <>
-                      <Form.Control
-                        className="bg-dark text-light border-secondary"
-                        placeholder="e.g. march"
-                        value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
-                        onBlur={field.handleBlur}
-                        isInvalid={showErr}
-                      />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
-                    </>
-                  );
-                }}
-              </form.Field>
-            </Form.Group>
-            <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }} controlId="edition-type">
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_edition_type_label()}
-              </Form.Label>
-              <form.Field name="editionType">
-                {(field) => (
-                  <Form.Select
-                    value={field.value}
-                    onChange={(e) => {
-                      field.handleChange(e.target.value as EditionType);
-                      if (e.target.value !== "festival") {
-                        form.setFieldValue("selectedExhibitors", [] as MultiValue<ItemOption>);
-                      }
-                    }}
-                    onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
-                  >
-                    <option value="festival">{m.admin_edition_type_festival()}</option>
-                    <option value="bourse">{m.admin_edition_type_bourse()}</option>
-                    <option value="capsule_exchange">
-                      {m.admin_edition_type_capsule_exchange()}
-                    </option>
-                  </Form.Select>
-                )}
-              </form.Field>
-            </Form.Group>
-            <form.Field name="active">
-              {(field) => (
-                <Form.Check
-                  type="checkbox"
-                  id="modal-edition-active"
-                  label={m.admin_content_edition_active()}
-                  checked={field.value}
-                  onChange={(e) => field.handleChange(e.target.checked)}
-                  className="text-light align-self-end mb-1"
-                />
-              )}
-            </form.Field>
-          </div>
-
-          <Form.Group className="mb-3" controlId="edition-venue">
-            <Form.Label className="text-secondary small mb-1">
-              {m.admin_edition_venue_label()}
-            </Form.Label>
-            <form.Field
-              name="venueId"
-              validators={[
-                {
-                  run: ({ value }) => (!value ? m.admin_edition_venue_required() : undefined),
-                  triggers: ["change"],
-                },
-              ]}
-            >
-              {(field) => {
-                const showErr = field.meta.isTouched && field.errors.length > 0;
-                return (
-                  <>
-                    <Form.Select
-                      className="bg-dark text-light border-secondary"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      isInvalid={showErr}
-                    >
-                      <option value="">{m.admin_edition_venue_placeholder()}</option>
-                      {venues.map((venue) => (
-                        <option key={venue.id} value={venue.id}>
-                          {venue.name}
-                          {venue.active ? "" : " (archived)"}
-                        </option>
-                      ))}
-                    </Form.Select>
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </>
-                );
-              }}
-            </form.Field>
-          </Form.Group>
-
-          <div className="border border-secondary rounded p-3 mb-3">
-            <div className="d-flex justify-content-between align-items-center mb-2">
-              <div className="text-light small fw-semibold">
-                {typeLabel(editionType)} {m.admin_edition_date_handling()}
-              </div>
-              <span className="text-secondary small">{m.admin_edition_dates_info()}</span>
-            </div>
-            {isFestival ? (
-              <div className="row g-2">
-                {["Friday", "Saturday", "Sunday"].map((label, index) => (
-                  <Form.Group
-                    as="div"
-                    className="col-md-4"
-                    key={label}
-                    controlId={`edition-date-${label.toLowerCase()}`}
-                  >
-                    <Form.Label className="text-secondary small mb-1">{label}</Form.Label>
-                    <Form.Control
-                      type="date"
-                      value={previewDates[index] ?? ""}
-                      className="bg-dark text-light border-secondary"
-                      readOnly
-                      disabled={!previewDates[index]}
-                    />
-                  </Form.Group>
-                ))}
-              </div>
-            ) : (
-              <Form.Group controlId="edition-standalone-date">
-                <Form.Label className="text-secondary small mb-1">Edition date</Form.Label>
-                <Form.Control
-                  type="date"
-                  value={previewDates[0] ?? ""}
-                  className="bg-dark text-light border-secondary"
-                  readOnly
-                  disabled={!previewDates[0]}
-                />
+            {!isEdit && (
+              <Form.Group className="mb-3" controlId="edition-id">
+                <Form.Label className="text-secondary small mb-1">ID</Form.Label>
+                <form.Field
+                  name="id"
+                  validators={[
+                    {
+                      run: ({ value }) =>
+                        !value?.trim() ? m.admin_edition_id_required() : undefined,
+                      triggers: ["change"],
+                    },
+                  ]}
+                >
+                  {(field) => {
+                    const showErr = field.meta.isTouched && field.errors.length > 0;
+                    return (
+                      <>
+                        <Form.Control
+                          className="bg-dark text-light border-secondary"
+                          placeholder="e.g. 2026-march"
+                          autoFocus
+                          value={field.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                          isInvalid={showErr}
+                        />
+                        {showErr && (
+                          <Form.Control.Feedback type="invalid">
+                            {field.errors[0]?.message}
+                          </Form.Control.Feedback>
+                        )}
+                      </>
+                    );
+                  }}
+                </form.Field>
               </Form.Group>
             )}
-            <div className="text-secondary small mt-2">
-              {isEdit
-                ? m.admin_edition_update_event_dates()
-                : m.admin_edition_create_first_then_events()}
-            </div>
-          </div>
 
-          <Form.Group className="mb-3" controlId="edition-co-organizer">
-            <Form.Label className="text-secondary small mb-1">
-              {m.admin_edition_co_organizer_label()}
-            </Form.Label>
-            <form.Field name="coOrganizerId">
-              {(field) => (
-                <Form.Select
-                  className="bg-dark text-light border-secondary"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                >
-                  <option value="">{m.admin_edition_co_organizer_none()}</option>
-                  {allExhibitors
-                    .filter((exhibitor) => exhibitor.active !== false)
-                    .map((exhibitor) => (
-                      <option key={exhibitor.id} value={String(exhibitor.id)}>
-                        {exhibitor.name}
-                      </option>
-                    ))}
-                </Form.Select>
-              )}
-            </form.Field>
-            <div className="text-secondary small mt-1">{m.admin_edition_co_organizer_help()}</div>
-          </Form.Group>
-
-          {isFestival && (
-            <Form.Group className="mb-3" controlId="edition-exhibitors">
-              <Form.Label className="text-secondary small mb-1">
-                {m.admin_edition_festival_exhibitors()}
-              </Form.Label>
-              {exhibitorsQuery.isPending ? (
-                <div className="text-secondary small">
-                  <Spinner animation="border" size="sm" className="me-2" />
-                  {m.admin_edition_loading_exhibitors()}
-                </div>
-              ) : (
-                <form.Field name="selectedExhibitors">
+            <div className="d-flex gap-2 flex-wrap mb-3">
+              <Form.Group style={{ maxWidth: "100px" }} controlId="edition-year">
+                <Form.Label className="text-secondary small mb-1">Year</Form.Label>
+                <form.Field name="year">
                   {(field) => (
-                    <Select<ItemOption, true>
-                      inputId="edition-exhibitors"
-                      isMulti
-                      closeMenuOnSelect={false}
-                      options={exhibitorGroups}
+                    <Form.Control
+                      type="number"
+                      className="bg-dark text-light border-secondary"
                       value={field.value}
-                      onChange={(options) => field.handleChange(options)}
-                      classNamePrefix="rs"
-                      placeholder={m.admin_edition_exhibitors()}
-                      classNames={{
-                        option: (state) => (state.data.isArchived ? "rs__option--archived" : ""),
-                        multiValue: (state) =>
-                          state.data.isArchived ? "rs__multi-value--archived" : "",
-                        multiValueLabel: (state) =>
-                          state.data.isArchived ? "rs__multi-value__label--archived" : "",
-                      }}
+                      onChange={(e) => field.handleChange(Number(e.target.value))}
+                      onBlur={field.handleBlur}
                     />
                   )}
                 </form.Field>
-              )}
+              </Form.Group>
+              <Form.Group
+                style={{ minWidth: "140px", flex: "1 1 140px" }}
+                controlId="edition-month"
+              >
+                <Form.Label className="text-secondary small mb-1">Month</Form.Label>
+                <form.Field
+                  name="month"
+                  validators={[
+                    {
+                      run: ({ value }) =>
+                        !value?.trim() ? m.admin_edition_month_required() : undefined,
+                      triggers: ["change"],
+                    },
+                  ]}
+                >
+                  {(field) => {
+                    const showErr = field.meta.isTouched && field.errors.length > 0;
+                    return (
+                      <>
+                        <Form.Control
+                          className="bg-dark text-light border-secondary"
+                          placeholder="e.g. march"
+                          value={field.value}
+                          onChange={(e) => field.handleChange(e.target.value)}
+                          onBlur={field.handleBlur}
+                          isInvalid={showErr}
+                        />
+                        {showErr && (
+                          <Form.Control.Feedback type="invalid">
+                            {field.errors[0]?.message}
+                          </Form.Control.Feedback>
+                        )}
+                      </>
+                    );
+                  }}
+                </form.Field>
+              </Form.Group>
+              <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }} controlId="edition-type">
+                <Form.Label className="text-secondary small mb-1">
+                  {m.admin_edition_type_label()}
+                </Form.Label>
+                <form.Field name="editionType">
+                  {(field) => (
+                    <Form.Select
+                      value={field.value}
+                      onChange={(e) => {
+                        field.handleChange(e.target.value as EditionType);
+                        if (e.target.value !== "festival") {
+                          form.setFieldValue("selectedExhibitors", [] as ItemOption[]);
+                        }
+                      }}
+                      onBlur={field.handleBlur}
+                      className="bg-dark text-light border-secondary"
+                    >
+                      <option value="festival">{m.admin_edition_type_festival()}</option>
+                      <option value="bourse">{m.admin_edition_type_bourse()}</option>
+                      <option value="capsule_exchange">
+                        {m.admin_edition_type_capsule_exchange()}
+                      </option>
+                    </Form.Select>
+                  )}
+                </form.Field>
+              </Form.Group>
+              <form.Field name="active">
+                {(field) => (
+                  <Form.Check
+                    type="checkbox"
+                    id="modal-edition-active"
+                    label={m.admin_content_edition_active()}
+                    checked={field.value}
+                    onChange={(e) => field.handleChange(e.target.checked)}
+                    className="text-light align-self-end mb-1"
+                  />
+                )}
+              </form.Field>
+            </div>
+
+            <Form.Group className="mb-3" controlId="edition-venue">
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_edition_venue_label()}
+              </Form.Label>
+              <form.Field
+                name="venueId"
+                validators={[
+                  {
+                    run: ({ value }) => (!value ? m.admin_edition_venue_required() : undefined),
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Select
+                        className="bg-dark text-light border-secondary"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      >
+                        <option value="">{m.admin_edition_venue_placeholder()}</option>
+                        {venues.map((venue) => (
+                          <option key={venue.id} value={venue.id}>
+                            {venue.name}
+                            {venue.active ? "" : " (archived)"}
+                          </option>
+                        ))}
+                      </Form.Select>
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.errors[0]?.message}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
             </Form.Group>
-          )}
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>
-            {m.close()}
-          </Button>
-          <Button
-            type="submit"
-            variant="warning"
-            size="sm"
-            disabled={saveEditionMutation.isPending}
-          >
-            {saveEditionMutation.isPending ? (
-              <Spinner as="span" animation="border" size="sm" className="me-1" />
-            ) : (
-              <i className="bi bi-floppy me-1" aria-hidden="true" />
+
+            <div className="border border-secondary rounded p-3 mb-3">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <div className="text-light small fw-semibold">
+                  {typeLabel(editionType)} {m.admin_edition_date_handling()}
+                </div>
+                <span className="text-secondary small">{m.admin_edition_dates_info()}</span>
+              </div>
+              {isFestival ? (
+                <div className="row g-2">
+                  {["Friday", "Saturday", "Sunday"].map((label, index) => (
+                    <Form.Group
+                      as="div"
+                      className="col-md-4"
+                      key={label}
+                      controlId={`edition-date-${label.toLowerCase()}`}
+                    >
+                      <Form.Label className="text-secondary small mb-1">{label}</Form.Label>
+                      <Form.Control
+                        type="date"
+                        value={previewDates[index] ?? ""}
+                        className="bg-dark text-light border-secondary"
+                        readOnly
+                        disabled={!previewDates[index]}
+                      />
+                    </Form.Group>
+                  ))}
+                </div>
+              ) : (
+                <Form.Group controlId="edition-standalone-date">
+                  <Form.Label className="text-secondary small mb-1">Edition date</Form.Label>
+                  <Form.Control
+                    type="date"
+                    value={previewDates[0] ?? ""}
+                    className="bg-dark text-light border-secondary"
+                    readOnly
+                    disabled={!previewDates[0]}
+                  />
+                </Form.Group>
+              )}
+              <div className="text-secondary small mt-2">
+                {isEdit
+                  ? m.admin_edition_update_event_dates()
+                  : m.admin_edition_create_first_then_events()}
+              </div>
+            </div>
+
+            <Form.Group className="mb-3" controlId="edition-co-organizer">
+              <Form.Label className="text-secondary small mb-1">
+                {m.admin_edition_co_organizer_label()}
+              </Form.Label>
+              <form.Field name="coOrganizerId">
+                {(field) => (
+                  <Form.Select
+                    className="bg-dark text-light border-secondary"
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  >
+                    <option value="">{m.admin_edition_co_organizer_none()}</option>
+                    {allExhibitors
+                      .filter((exhibitor) => exhibitor.active !== false)
+                      .map((exhibitor) => (
+                        <option key={exhibitor.id} value={String(exhibitor.id)}>
+                          {exhibitor.name}
+                        </option>
+                      ))}
+                  </Form.Select>
+                )}
+              </form.Field>
+              <div className="text-secondary small mt-1">{m.admin_edition_co_organizer_help()}</div>
+            </Form.Group>
+
+            {isFestival && (
+              <Form.Group className="mb-3" controlId="edition-exhibitors">
+                <Form.Label className="text-secondary small mb-1">
+                  {m.admin_edition_festival_exhibitors()}
+                </Form.Label>
+                {exhibitorsQuery.isPending ? (
+                  <div className="text-secondary small">
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    {m.admin_edition_loading_exhibitors()}
+                  </div>
+                ) : (
+                  <form.Field name="selectedExhibitors">
+                    {(field) => (
+                      <Combobox
+                        multiple
+                        items={exhibitorGroups}
+                        value={field.value}
+                        onValueChange={(options) => field.handleChange(options)}
+                        itemToStringLabel={(option: ItemOption) => option.label}
+                        isItemEqualToValue={(a: ItemOption, b: ItemOption) => a.value === b.value}
+                      >
+                        <ComboboxChips ref={comboboxAnchor}>
+                          <ComboboxValue>
+                            {(options: ItemOption[]) => (
+                              <>
+                                {options.map((option) => (
+                                  <ComboboxChip
+                                    key={option.value}
+                                    className={
+                                      option.isArchived ? "tw:text-muted-foreground" : undefined
+                                    }
+                                  >
+                                    {option.label}
+                                  </ComboboxChip>
+                                ))}
+                                <ComboboxChipsInput
+                                  id="edition-exhibitors"
+                                  aria-label={m.admin_edition_festival_exhibitors()}
+                                  onBlur={field.handleBlur}
+                                  placeholder={m.admin_edition_exhibitors()}
+                                />
+                              </>
+                            )}
+                          </ComboboxValue>
+                        </ComboboxChips>
+                        <ComboboxContent anchor={comboboxAnchor}>
+                          <ComboboxEmpty>{m.admin_content_no_results()}</ComboboxEmpty>
+                          <ComboboxList>
+                            {(group: { label: string; items: ItemOption[] }) => (
+                              <ComboboxGroup key={group.label} items={group.items}>
+                                <ComboboxLabel>{group.label}</ComboboxLabel>
+                                <ComboboxCollection>
+                                  {(option: ItemOption) => (
+                                    <ComboboxItem
+                                      key={option.value}
+                                      value={option}
+                                      className={
+                                        option.isArchived ? "tw:text-muted-foreground" : undefined
+                                      }
+                                    >
+                                      {option.label}
+                                    </ComboboxItem>
+                                  )}
+                                </ComboboxCollection>
+                              </ComboboxGroup>
+                            )}
+                          </ComboboxList>
+                        </ComboboxContent>
+                      </Combobox>
+                    )}
+                  </form.Field>
+                )}
+              </Form.Group>
             )}
-            {m.admin_save()}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+              {m.close()}
+            </Button>
+            <Button
+              type="submit"
+              variant="warning"
+              size="sm"
+              disabled={saveEditionMutation.isPending}
+            >
+              {saveEditionMutation.isPending ? (
+                <Spinner as="span" animation="border" size="sm" className="me-1" />
+              ) : (
+                <i className="bi bi-floppy me-1" aria-hidden="true" />
+              )}
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

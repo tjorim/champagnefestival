@@ -703,8 +703,7 @@ html[data-visual-theme="riviera"] .bubble-background {
 
 .accordion-item,
 .card,
-.marquee-card,
-.modal-content {
+.marquee-card {
   color: var(--ink);
   background: #fffaf0;
   border: 2px solid rgba(18, 50, 59, 0.13);

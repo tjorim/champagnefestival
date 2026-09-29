@@ -1158,5 +1158,8 @@
   "admin_inventory_shortage": "Pénurie",
   "admin_inventory_unlimited": "Illimité",
   "admin_inventory_confirm_shortage": "Conserver les réservations malgré les pénuries et arrêter les ventes des produits indisponibles.",
-  "admin_inventory_available": "Disponible"
+  "admin_inventory_available": "Disponible",
+  "admin_action_clear_selection": "Effacer la sélection",
+  "admin_action_show_options": "Afficher les options",
+  "admin_action_remove_selection": "Retirer la sélection"
 }
