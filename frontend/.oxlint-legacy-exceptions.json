@@ -161,17 +161,6 @@
     }
   },
   {
-    "files": ["src/components/admin/AnnouncementManagement.tsx"],
-    "rules": {
-      "shadcn/no-unknown-classes": [
-        "error",
-        {
-          "allow": ["admin-card"]
-        }
-      ]
-    }
-  },
-  {
     "files": ["src/components/admin/AuditLogViewer.tsx"],
     "rules": {
       "shadcn/no-inline-styles": [
@@ -189,17 +178,6 @@
         "error",
         {
           "allow": ["maxWidth"]
-        }
-      ]
-    }
-  },
-  {
-    "files": ["src/components/admin/ComposerManagement.tsx"],
-    "rules": {
-      "shadcn/no-unknown-classes": [
-        "error",
-        {
-          "allow": ["admin-card"]
         }
       ]
     }
@@ -324,12 +302,6 @@
         "error",
         {
           "allow": ["minHeight"]
-        }
-      ],
-      "shadcn/no-unknown-classes": [
-        "error",
-        {
-          "allow": ["admin-card"]
         }
       ]
     }

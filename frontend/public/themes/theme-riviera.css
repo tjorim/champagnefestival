@@ -614,7 +614,7 @@ html[data-visual-theme="riviera"] .bubble-background {
   border-radius: 999px;
 }
 
-.event-card.card {
+.event-card[data-slot="card"] {
   position: relative;
   margin-bottom: 0 !important;
   overflow: visible;
@@ -661,7 +661,7 @@ html[data-visual-theme="riviera"] .bubble-background {
 }
 
 [data-slot="accordion-item"],
-.card,
+[data-slot="card"],
 .marquee-card {
   color: var(--ink);
   background: #fffaf0;

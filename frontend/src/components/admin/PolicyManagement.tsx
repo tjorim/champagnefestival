@@ -5,7 +5,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
 import { Button as LocaleButton } from "@/components/ui/button";
 import {
@@ -367,13 +367,13 @@ export default function PolicyManagement({
   if (query.isLoading) return null;
 
   return (
-    <Card className="admin-card">
-      <Card.Header>
+    <Card>
+      <CardHeader>
         <h2 className="tw:text-xl tw:font-medium tw:leading-tight tw:mb-0">
           {m.admin_policies_section()}
         </h2>
-      </Card.Header>
-      <Card.Body>
+      </CardHeader>
+      <CardContent>
         {error && <Alert variant="danger">{error}</Alert>}
         {query.isError && <Alert variant="danger">{m.admin_error_load_policy()}</Alert>}
         {policy && (
@@ -628,7 +628,7 @@ export default function PolicyManagement({
             )}
           </>
         )}
-      </Card.Body>
+      </CardContent>
       {confirmDialog}
     </Card>
   );

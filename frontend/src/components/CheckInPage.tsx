@@ -22,12 +22,12 @@ import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import Form from "react-bootstrap/Form";
 import { Button as SearchButton } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -91,15 +91,15 @@ function CheckInCard({
   const isCancelled = registration.status === "cancelled";
   const canUpdateEntrance = canManageEntranceActions && !isCancelled;
   return (
-    <Card
-      bg="dark"
-      text="white"
-      border={success ? "success" : isAlreadyCheckedIn ? "warning" : "secondary"}
-    >
-      <Card.Header
+    <Card tone={success ? "success" : isAlreadyCheckedIn ? "warning" : "secondary"}>
+      <CardHeader
         className={clsx(
           "tw:flex tw:items-center tw:justify-between tw:gap-4 tw:flex-wrap",
-          success ? "border-success" : isAlreadyCheckedIn ? "border-warning" : "border-secondary",
+          success
+            ? "tw:border-success"
+            : isAlreadyCheckedIn
+              ? "tw:border-warning"
+              : "tw:border-border",
         )}
       >
         <span className="tw:font-semibold tw:text-xl">
@@ -121,9 +121,9 @@ function CheckInCard({
             </Badge>
           )}
         </div>
-      </Card.Header>
+      </CardHeader>
 
-      <Card.Body>
+      <CardContent>
         <div role="status" aria-live="polite">
           {success && (
             <Alert variant="success" className="tw:mb-4">
@@ -169,22 +169,22 @@ function CheckInCard({
           )}
         </div>
 
-        <ListGroup variant="flush" className="bg-dark">
-          <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:gap-4">
+        <PresentationList flush className="tw:bg-card">
+          <PresentationListItem className="tw:flex tw:justify-between tw:gap-4">
             <span className="tw:text-subtle">{m.checkin_event()}</span>
             <span className="tw:text-right">{registration.eventTitle || registration.eventId}</span>
-          </ListGroup.Item>
-          <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:gap-4">
+          </PresentationListItem>
+          <PresentationListItem className="tw:flex tw:justify-between tw:gap-4">
             <span className="tw:text-subtle">{m.checkin_guests()}</span>
             <span>{registration.guestCount}</span>
-          </ListGroup.Item>
+          </PresentationListItem>
           {registration.tableName && (
-            <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:gap-4">
+            <PresentationListItem className="tw:flex tw:justify-between tw:gap-4">
               <span className="tw:text-subtle">{m.checkin_table()}</span>
               <span className="tw:font-semibold tw:text-highlight">{registration.tableName}</span>
-            </ListGroup.Item>
+            </PresentationListItem>
           )}
-        </ListGroup>
+        </PresentationList>
 
         {registration.orderItems.length > 0 && (
           <div className="tw:mt-4">
@@ -192,11 +192,11 @@ function CheckInCard({
               <Icon icon={ShoppingCartIcon} className="tw:me-2" />
               {m.checkin_order_items()}
             </p>
-            <ListGroup variant="flush">
+            <PresentationList flush>
               {registration.orderItems.map((item, idx) => (
-                <ListGroup.Item
+                <PresentationListItem
                   key={`${item.productId}-${idx}`}
-                  className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:items-center tw:gap-4 tw:flex-wrap"
+                  className="tw:flex tw:justify-between tw:items-center tw:gap-4 tw:flex-wrap"
                 >
                   <span>
                     {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
@@ -269,9 +269,9 @@ function CheckInCard({
                       </Button>
                     </div>
                   </div>
-                </ListGroup.Item>
+                </PresentationListItem>
               ))}
-            </ListGroup>
+            </PresentationList>
             {!canManageEntranceActions && registration.checkedIn && registration.strapIssued && (
               <div className="tw:text-sm tw:text-subtle tw:mt-2">
                 <Icon icon={InfoIcon} className="tw:me-1" />
@@ -280,10 +280,10 @@ function CheckInCard({
             )}
           </div>
         )}
-      </Card.Body>
+      </CardContent>
 
       {!isCancelled && (!registration.checkedIn || !registration.strapIssued) && (
-        <Card.Footer className="bg-dark border-secondary tw:grid tw:gap-2">
+        <CardFooter className="tw:grid tw:gap-2">
           {!registration.checkedIn && (
             <Button
               variant="warning"
@@ -331,7 +331,7 @@ function CheckInCard({
           {!canManageEntranceActions && (
             <div className="tw:text-sm tw:text-subtle">{m.checkin_actions_login_required()}</div>
           )}
-        </Card.Footer>
+        </CardFooter>
       )}
     </Card>
   );
@@ -647,8 +647,8 @@ export default function CheckInPage() {
                   </Alert>
 
                   <Collapsible open={searchOpen} onOpenChange={setSearchOpen}>
-                    <Card bg="dark" text="white" border="secondary" className="tw:mb-4">
-                      <Card.Header className="bg-dark border-secondary tw:p-0">
+                    <Card tone="secondary" className="tw:mb-4">
+                      <CardHeader className="tw:p-0">
                         <CollapsibleTrigger
                           render={<SearchButton variant="ghost" />}
                           className="tw:flex tw:w-full tw:items-center tw:justify-between tw:p-4 tw:text-left tw:text-warning"
@@ -665,9 +665,9 @@ export default function CheckInPage() {
                             <ChevronDown aria-hidden="true" className="tw:size-4" />
                           )}
                         </CollapsibleTrigger>
-                      </Card.Header>
+                      </CardHeader>
                       <CollapsibleContent id="manual-checkin-search" keepMounted>
-                        <Card.Body>
+                        <CardContent>
                           {!auth.isAuthenticated && (
                             <Alert
                               variant="info"
@@ -767,13 +767,13 @@ export default function CheckInPage() {
                             )}
 
                           {searchResults.length > 0 && (
-                            <ListGroup className="tw:mt-4">
+                            <PresentationList className="tw:mt-4">
                               {searchResults.map((result) => (
-                                <ListGroup.Item
+                                <PresentationListItem
                                   key={result.id}
                                   action
-                                  variant="dark"
-                                  className="border-secondary tw:flex tw:justify-between tw:items-center tw:gap-4"
+
+                                  className="tw:flex tw:justify-between tw:items-center tw:gap-4"
                                   onClick={() => handleSelectManualRegistration(result)}
                                 >
                                   <span>
@@ -788,11 +788,11 @@ export default function CheckInPage() {
                                       ? m.admin_checked_in()
                                       : m.checkin_manual_not_checked_in()}
                                   </Badge>
-                                </ListGroup.Item>
+                                </PresentationListItem>
                               ))}
-                            </ListGroup>
+                            </PresentationList>
                           )}
-                        </Card.Body>
+                        </CardContent>
                       </CollapsibleContent>
                     </Card>
                   </Collapsible>

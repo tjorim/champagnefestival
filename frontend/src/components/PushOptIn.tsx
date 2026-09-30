@@ -1,7 +1,7 @@
 import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
@@ -56,11 +56,11 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
   };
 
   return (
-    <Card bg="dark" text="white" border="secondary">
-      <Card.Body>
-        <Card.Title className="tw:text-base tw:font-medium tw:leading-tight">
+    <Card tone="secondary">
+      <CardContent>
+        <CardTitle className="tw:text-base tw:font-medium tw:leading-tight">
           {m.push_opt_in_title()}
-        </Card.Title>
+        </CardTitle>
         <p className="tw:text-sm tw:text-subtle">{m.push_opt_in_description()}</p>
 
         {error && (
@@ -152,7 +152,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
             )}
           </>
         )}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }

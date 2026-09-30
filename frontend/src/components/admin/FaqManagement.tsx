@@ -26,7 +26,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
 import {
   Dialog,
@@ -414,15 +414,15 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   return (
     <>
-      <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="tw:flex tw:items-center tw:justify-between">
+      <Card tone="secondary">
+        <CardHeader className="tw:flex tw:items-center tw:justify-between">
           <span className="tw:font-semibold">{m.admin_content_faq_section()}</span>
           <Button variant="outline-warning" size="sm" onClick={openAdd}>
             <Icon icon={PlusIcon} className="tw:me-1" />
             {m.admin_add_faq_item()}
           </Button>
-        </Card.Header>
-        <Card.Body className="tw:p-0">
+        </CardHeader>
+        <CardContent className="tw:p-0">
           {rowError && (
             <Alert variant="danger" className="tw:m-4 tw:py-1 tw:text-sm">
               {rowError}
@@ -469,7 +469,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               </Table>
             </div>
           )}
-        </Card.Body>
+        </CardContent>
       </Card>
 
       <Dialog

@@ -10,7 +10,7 @@ import {
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
 import {
   Dialog,
@@ -289,8 +289,8 @@ export default function MembersManagement({
   return (
     <>
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
-      <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="tw:pb-2">
+      <Card tone="secondary">
+        <CardHeader className="tw:pb-2">
           <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:mb-2">
             <span className="tw:font-semibold">{m.admin_members_tab()}</span>
             <div className="tw:flex tw:gap-2">
@@ -340,9 +340,9 @@ export default function MembersManagement({
               style={{ maxWidth: 280 }}
             />
           </div>
-        </Card.Header>
+        </CardHeader>
 
-        <Card.Body className="tw:p-0">
+        <CardContent className="tw:p-0">
           {createSuccess && (
             <Alert
               variant="success"
@@ -424,7 +424,7 @@ export default function MembersManagement({
             onNextPage={() => table.nextPage()}
             onPageSizeChange={(size) => table.setPageSize(size)}
           />
-        </Card.Body>
+        </CardContent>
       </Card>
 
       {deletingId && (

@@ -97,14 +97,14 @@ html[data-visual-theme="remuage"] .admin-mobile-toggle {
   border-color: var(--rem-rose);
 }
 
-html[data-visual-theme="remuage"] #admin .card {
+html[data-visual-theme="remuage"] #admin [data-slot="card"] {
   background: var(--adm-surface);
   border: 1px solid var(--adm-border);
   border-radius: var(--adm-radius-lg);
   box-shadow: 0 10px 26px rgba(23, 32, 51, 0.07);
 }
 
-html[data-visual-theme="remuage"] #admin .card-header {
+html[data-visual-theme="remuage"] #admin [data-slot="card-header"] {
   background: var(--adm-surface-2);
   border-bottom: 3px solid rgba(var(--adm-primary-rgb), 0.25);
 }
@@ -169,7 +169,7 @@ html[data-visual-theme="remuage"] #admin .badge.bg-warning {
   border: 1px solid #d39724 !important;
 }
 
-html[data-visual-theme="remuage"] #admin .list-group-item,
+html[data-visual-theme="remuage"] #admin [data-slot="presentation-list-item"],
 html[data-visual-theme="remuage"] #admin .dropdown-menu {
   color: var(--adm-text);
   background: var(--adm-surface);

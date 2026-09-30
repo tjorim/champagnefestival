@@ -6,7 +6,7 @@ import { useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
@@ -104,9 +104,9 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
   }
 
   return (
-    <Card bg="dark" text="white" border="secondary">
-      <Card.Header className="tw:font-semibold">{m.admin_content_settings_section()}</Card.Header>
-      <Card.Body>
+    <Card tone="secondary">
+      <CardHeader className="tw:font-semibold">{m.admin_content_settings_section()}</CardHeader>
+      <CardContent>
         {updateMutation.isError && (
           <Alert variant="danger" className="tw:py-1 tw:mb-4 tw:text-sm">
             {updateMutation.error instanceof Error
@@ -200,7 +200,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
             </Form>
           </>
         )}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }

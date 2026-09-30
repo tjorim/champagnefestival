@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -170,11 +170,11 @@ export default function EditionPollOptionsModal({
                   {kindOptions.length === 0 ? (
                     <p className="tw:text-sm tw:text-subtle">{m.admin_poll_no_options()}</p>
                   ) : (
-                    <ListGroup className="tw:mb-2">
+                    <PresentationList className="tw:mb-2">
                       {kindOptions.map((option) => (
-                        <ListGroup.Item
+                        <PresentationListItem
                           key={option.id}
-                          className="bg-dark tw:text-content border-secondary tw:flex tw:items-center tw:gap-2"
+                          className="tw:flex tw:items-center tw:gap-2"
                         >
                           {editingId === option.id ? (
                             <>
@@ -225,9 +225,9 @@ export default function EditionPollOptionsModal({
                               </Button>
                             </>
                           )}
-                        </ListGroup.Item>
+                        </PresentationListItem>
                       ))}
-                    </ListGroup>
+                    </PresentationList>
                   )}
                 </div>
               );

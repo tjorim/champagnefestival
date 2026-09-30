@@ -3,7 +3,7 @@ import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
@@ -96,9 +96,9 @@ export default function ScratchpadManagement({
   const isDirty = query.data != null && contentValue !== query.data.content;
 
   return (
-    <Card bg="dark" text="white" border="secondary">
-      <Card.Header className="tw:font-semibold">{m.admin_scratchpad_section()}</Card.Header>
-      <Card.Body>
+    <Card tone="secondary">
+      <CardHeader className="tw:font-semibold">{m.admin_scratchpad_section()}</CardHeader>
+      <CardContent>
         <p className="tw:text-subtle tw:text-sm">{m.admin_scratchpad_description()}</p>
         {editionId === "" ? (
           <p className="tw:text-subtle tw:mb-0">{m.admin_scratchpad_no_active_edition()}</p>
@@ -163,7 +163,7 @@ export default function ScratchpadManagement({
             )}
           </>
         )}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }

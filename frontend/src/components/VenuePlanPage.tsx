@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Spinner from "react-bootstrap/Spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
@@ -44,14 +44,14 @@ export default function VenuePlanPage() {
     <div className="site-container tw:mx-auto tw:w-full tw:py-4">
       <p className="tw:text-subtle">{m.venue_plan_description()}</p>
       {query.data.layouts.map((layout) => (
-        <Card bg="dark" text="white" className="tw:mb-6" key={layout.id}>
-          <Card.Header className="tw:flex tw:justify-between">
+        <Card className="tw:mb-6" key={layout.id}>
+          <CardHeader className="tw:flex tw:justify-between">
             <strong>
               {layout.room?.name ?? layout.label} — {layout.event_title}
             </strong>
             {layout.date && <Badge bg="secondary">{layout.date}</Badge>}
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             <div
               className="tw:relative border rounded tw:overflow-hidden"
               style={{
@@ -111,7 +111,7 @@ export default function VenuePlanPage() {
                 );
               })}
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
       ))}
     </div>

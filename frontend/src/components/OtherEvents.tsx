@@ -2,7 +2,7 @@ import { CalendarCheckIcon, CalendarDaysIcon, MapPinIcon, UsersIcon } from "luci
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent } from "@/components/ui/card";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import SectionHeading from "@/components/SectionHeading";
@@ -249,8 +249,8 @@ export default function OtherEvents() {
               )}
 
               {items.map((item) => (
-                <Card key={item.id} className="event-card tw:mb-4 border-0">
-                  <Card.Body>
+                <Card key={item.id} className="event-card tw:mb-4 tw:border-0">
+                  <CardContent>
                     <div className="tw:flex tw:justify-between tw:items-start tw:gap-4 tw:flex-wrap">
                       <div>
                         <h5 className="tw:mb-1">{getEditionTitle(item.editionType)}</h5>
@@ -304,7 +304,7 @@ export default function OtherEvents() {
                         </Button>
                       )}
                     </div>
-                  </Card.Body>
+                  </CardContent>
                 </Card>
               ))}
             </div>

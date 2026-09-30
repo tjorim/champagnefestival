@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { useRef, useState } from "react";
 import { m } from "@/paraglide/messages";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
@@ -130,8 +130,8 @@ const ContactForm = () => {
   });
 
   return (
-    <Card className="tw:mx-auto border-0 shadow">
-      <Card.Body className="tw:p-4 tw:site-md:p-6">
+    <Card className="tw:mx-auto tw:border-0 tw:shadow-lg">
+      <CardContent className="tw:p-4 tw:site-md:p-6">
         {isSubmitted ? (
           <Alert variant="success">{m.contact_success_message()}</Alert>
         ) : (
@@ -304,7 +304,7 @@ const ContactForm = () => {
             </Button>
           </Form>
         )}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 };

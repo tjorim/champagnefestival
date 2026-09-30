@@ -44,7 +44,7 @@ test.describe("Guest self-service (/me)", () => {
     await page.goto("/me?token=mock-token-reg-01");
 
     // Should show at least one registration card
-    await expect(page.locator(".card").first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-slot="card"]').first()).toBeVisible({ timeout: 10_000 });
 
     // Event titles from seed data should be present
     await expect(page.locator("text=Grand Opening")).toBeVisible();
@@ -54,7 +54,7 @@ test.describe("Guest self-service (/me)", () => {
     await page.goto("/me?token=mock-token-reg-01");
 
     // Wait for registrations to load
-    await expect(page.locator(".card").first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('[data-slot="card"]').first()).toBeVisible({ timeout: 10_000 });
 
     // Redeeming a magic link establishes a passwordless session (#953), so
     // the anonymous flow now shows "Sign out" here instead of "Request

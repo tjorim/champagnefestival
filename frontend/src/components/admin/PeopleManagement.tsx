@@ -27,9 +27,9 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -542,8 +542,8 @@ export default function PeopleManagement({
   return (
     <>
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
-      <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="tw:pb-2">
+      <Card tone="secondary">
+        <CardHeader className="tw:pb-2">
           <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:mb-2">
             <span className="tw:font-semibold">{m.admin_people_tab()}</span>
             <div className="tw:flex tw:gap-2">
@@ -598,9 +598,9 @@ export default function PeopleManagement({
               style={{ maxWidth: 240 }}
             />
           </div>
-        </Card.Header>
+        </CardHeader>
 
-        <Card.Body className="tw:p-0">
+        <CardContent className="tw:p-0">
           {mergeSuccess && (
             <Alert
               role="status"
@@ -703,7 +703,7 @@ export default function PeopleManagement({
             onNextPage={() => table.nextPage()}
             onPageSizeChange={(size) => table.setPageSize(size)}
           />
-        </Card.Body>
+        </CardContent>
       </Card>
 
       {mergeState && (
@@ -742,8 +742,8 @@ export default function PeopleManagement({
                 const variant = role === "canonical" ? "success" : "danger";
 
                 return (
-                  <Card key={role} bg="dark" border={variant} className="tw:mb-4">
-                    <Card.Header
+                  <Card key={role} tone={variant} className="tw:mb-4">
+                    <CardHeader
                       className={`border-${variant} text-${variant} tw:text-sm tw:font-semibold tw:flex tw:justify-between`}
                     >
                       <span>{label}</span>
@@ -761,8 +761,8 @@ export default function PeopleManagement({
                       >
                         <Icon icon={ArrowLeftRightIcon} />
                       </Button>
-                    </Card.Header>
-                    <Card.Body className="tw:py-2 tw:text-sm">
+                    </CardHeader>
+                    <CardContent className="tw:py-2 tw:text-sm">
                       <div className="tw:font-semibold">{person.name}</div>
                       <div className="tw:text-subtle">{person.email}</div>
                       {person.phone && <div className="tw:text-subtle">{person.phone}</div>}
@@ -779,7 +779,7 @@ export default function PeopleManagement({
                           </Badge>
                         ))}
                       </div>
-                    </Card.Body>
+                    </CardContent>
                   </Card>
                 );
               })}
@@ -933,12 +933,9 @@ export default function PeopleManagement({
               {!loadingPersonRegistrations &&
                 !personRegistrationsError &&
                 personRegistrations.length > 0 && (
-                  <ListGroup variant="flush">
+                  <PresentationList flush>
                     {personRegistrations.map((r) => (
-                      <ListGroup.Item
-                        key={r.id}
-                        className="bg-dark border-secondary tw:text-content tw:py-2"
-                      >
+                      <PresentationListItem key={r.id} className="tw:py-2">
                         <div className="tw:flex tw:justify-between tw:items-start tw:gap-2">
                           <div>
                             <div className="tw:font-semibold tw:text-sm">{r.eventTitle}</div>
@@ -990,9 +987,9 @@ export default function PeopleManagement({
                         <div className="tw:text-subtle" style={{ fontSize: "0.7rem" }}>
                           {new Date(r.createdAt).toLocaleDateString()}
                         </div>
-                      </ListGroup.Item>
+                      </PresentationListItem>
                     ))}
-                  </ListGroup>
+                  </PresentationList>
                 )}
             </DialogBody>
             <DialogFooter className="tw:flex-col tw:items-stretch">

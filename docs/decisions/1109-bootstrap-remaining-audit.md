@@ -63,6 +63,12 @@ PR satisfy its remaining gate. #1118–#1123 remain implementation prerequisites
 of #1111; this status does not authorize final removal. The original snapshot
 and inventories below remain historical context.
 
+#1118 is implemented locally; see the [card/list migration audit](1118-cards-lists.md).
+All 38 Bootstrap card/list imports across 31 files are replaced with owned
+presentation components. Theme selectors use stable slots; frozen exceptions
+decrease from 36 to 34. Keep active pending review and screenshot publication.
+#1111 remains blocked; no final vendor removal is authorized.
+
 ## Preferred implementation order and ownership
 
 | Order | Issue | Scope |

@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import type { FloorTable } from "@/types/admin";
 import type { Product } from "@/types/event";
 import type {
@@ -412,9 +412,9 @@ export default function BookingEditor({
               <p className="tw:text-sm tw:text-subtle">{m.admin_payment_history_empty()}</p>
             )}
             {ledgerQuery.data && ledgerQuery.data.length > 0 && (
-              <ListGroup variant="flush" className="tw:mb-4">
+              <PresentationList flush className="tw:mb-4">
                 {ledgerQuery.data.map((entry) => (
-                  <ListGroup.Item key={entry.id} className="tw:px-0 tw:py-1">
+                  <PresentationListItem key={entry.id} className="tw:px-0 tw:py-1">
                     <div className="tw:text-sm tw:flex tw:justify-between tw:flex-wrap tw:gap-2">
                       <span>
                         <strong>{transactionAmountLabel(entry.amount)}</strong>{" "}
@@ -426,9 +426,9 @@ export default function BookingEditor({
                         {entry.effectiveDate} · {entry.recordedBy}
                       </span>
                     </div>
-                  </ListGroup.Item>
+                  </PresentationListItem>
                 ))}
-              </ListGroup>
+              </PresentationList>
             )}
             {onAddTransaction && (
               <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-end">

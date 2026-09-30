@@ -29,7 +29,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -1058,8 +1058,8 @@ export default function RegistrationList({
 
   return (
     <>
-      <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="tw:pb-2">
+      <Card tone="secondary">
+        <CardHeader className="tw:pb-2">
           {/* Row 1: title + stats + add */}
           <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:mb-2">
             <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
@@ -1336,9 +1336,9 @@ export default function RegistrationList({
               </div>
             </div>
           )}
-        </Card.Header>
+        </CardHeader>
 
-        <Card.Body className="tw:p-0">
+        <CardContent className="tw:p-0">
           {sectionError && (
             <Alert
               role="alert"
@@ -1460,7 +1460,7 @@ export default function RegistrationList({
               </div>
             </div>
           )}
-        </Card.Body>
+        </CardContent>
       </Card>
 
       <RegistrationCreateModal

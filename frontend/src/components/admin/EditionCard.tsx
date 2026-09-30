@@ -14,8 +14,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import ListGroup from "react-bootstrap/ListGroup";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import {
@@ -170,8 +170,8 @@ export default function EditionCard({
   const collapseId = `edition-collapse-${edition.id}`;
 
   return (
-    <Card bg="dark" border="secondary" className="tw:mb-2">
-      <Card.Header className="tw:flex tw:justify-between tw:items-center tw:gap-2 tw:flex-wrap tw:py-2">
+    <Card tone="secondary" className="tw:mb-2">
+      <CardHeader className="tw:flex tw:justify-between tw:items-center tw:gap-2 tw:flex-wrap tw:py-2">
         <Button
           variant="link"
           className="tw:text-highlight tw:no-underline tw:p-0 tw:text-left tw:font-semibold"
@@ -274,10 +274,10 @@ export default function EditionCard({
             </Button>
           </span>
         )}
-      </Card.Header>
+      </CardHeader>
 
       {open && (
-        <Card.Body id={collapseId} className="tw:pt-2 tw:pb-2">
+        <CardContent id={collapseId} className="tw:pt-2 tw:pb-2">
           {(() => {
             const venue = venues.find((value) => value.id === edition.venue.id);
             if (!venue) return null;
@@ -314,11 +314,11 @@ export default function EditionCard({
               {m.admin_content_edition_no_events()}
             </p>
           ) : (
-            <ListGroup variant="flush" className="tw:mb-1">
+            <PresentationList flush className="tw:mb-1">
               {sortedEvents.map((event) => (
-                <ListGroup.Item
+                <PresentationListItem
                   key={event.id}
-                  className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0"
+                  className="tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0"
                 >
                   <span className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
                     <Badge bg="secondary" className="tw:text-micro">
@@ -365,11 +365,11 @@ export default function EditionCard({
                       <Icon icon={TrashIcon} />
                     </Button>
                   </span>
-                </ListGroup.Item>
+                </PresentationListItem>
               ))}
-            </ListGroup>
+            </PresentationList>
           )}
-        </Card.Body>
+        </CardContent>
       )}
 
       <EditionModal

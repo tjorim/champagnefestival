@@ -25,9 +25,9 @@ import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -583,8 +583,8 @@ export default function VenueManagement({
   );
 
   return (
-    <Card bg="dark" text="white" border="secondary">
-      <Card.Header className="tw:flex tw:items-center tw:justify-between">
+    <Card tone="secondary">
+      <CardHeader className="tw:flex tw:items-center tw:justify-between">
         <span className="tw:font-semibold">
           <Icon icon={MapPinIcon} className="tw:me-2" />
           {m.admin_venue_add()}
@@ -593,8 +593,8 @@ export default function VenueManagement({
           <Icon icon={PlusIcon} className="tw:me-1" />
           {m.admin_venue_add()}
         </Button>
-      </Card.Header>
-      <Card.Body className="tw:flex tw:flex-col tw:gap-4">
+      </CardHeader>
+      <CardContent className="tw:flex tw:flex-col tw:gap-4">
         {deleteVenueError && (
           <Alert
             role="alert"
@@ -639,14 +639,8 @@ export default function VenueManagement({
               .filter(Boolean)
               .join(", ");
             return (
-              <Card
-                key={venue.id}
-                bg="dark"
-                text="white"
-                border="secondary"
-                className={clsx(isArchived && "opacity-75")}
-              >
-                <Card.Header className="tw:flex tw:items-start tw:justify-between tw:gap-2">
+              <Card key={venue.id} tone="secondary" className={clsx(isArchived && "tw:opacity-75")}>
+                <CardHeader className="tw:flex tw:items-start tw:justify-between tw:gap-2">
                   <div>
                     <div className="tw:font-semibold">
                       {venue.name}
@@ -701,9 +695,9 @@ export default function VenueManagement({
                       </Button>
                     )}
                   </div>
-                </Card.Header>
+                </CardHeader>
                 {!isArchived && (
-                  <Card.Body className="tw:py-2">
+                  <CardContent className="tw:py-2">
                     <div className="tw:flex tw:items-center tw:justify-between tw:mb-1">
                       <span className="tw:text-subtle tw:text-sm tw:uppercase tw:font-semibold">
                         {m.admin_rooms_tab()}
@@ -722,13 +716,13 @@ export default function VenueManagement({
                         {m.admin_room_no_rooms()}
                       </p>
                     ) : (
-                      <ListGroup variant="flush" className="tw:mb-4">
+                      <PresentationList flush className="tw:mb-4">
                         {venueRooms.map((room) => (
-                          <ListGroup.Item
+                          <PresentationListItem
                             key={room.id}
                             className={clsx(
-                              "bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0",
-                              !room.active && "opacity-50",
+                              "tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0",
+                              !room.active && "tw:opacity-50",
                             )}
                           >
                             <span className="tw:flex tw:items-center tw:gap-2">
@@ -802,9 +796,9 @@ export default function VenueManagement({
                                 </>
                               )}
                             </span>
-                          </ListGroup.Item>
+                          </PresentationListItem>
                         ))}
-                      </ListGroup>
+                      </PresentationList>
                     )}
 
                     <div className="tw:flex tw:items-center tw:justify-between tw:mb-1">
@@ -825,13 +819,13 @@ export default function VenueManagement({
                         {m.admin_no_table_types()}
                       </p>
                     ) : (
-                      <ListGroup variant="flush" className="tw:mb-0">
+                      <PresentationList flush className="tw:mb-0">
                         {venueTableTypes.map((tt) => (
-                          <ListGroup.Item
+                          <PresentationListItem
                             key={tt.id}
                             className={clsx(
-                              "bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0",
-                              !tt.active && "opacity-50",
+                              "tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0",
+                              !tt.active && "tw:opacity-50",
                             )}
                           >
                             <span className="tw:flex tw:items-center tw:gap-2">
@@ -883,17 +877,17 @@ export default function VenueManagement({
                                 </>
                               )}
                             </span>
-                          </ListGroup.Item>
+                          </PresentationListItem>
                         ))}
-                      </ListGroup>
+                      </PresentationList>
                     )}
-                  </Card.Body>
+                  </CardContent>
                 )}
               </Card>
             );
           })
         )}
-      </Card.Body>
+      </CardContent>
 
       {/* Add Venue Modal */}
       <Dialog
