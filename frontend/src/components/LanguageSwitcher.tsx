@@ -1,8 +1,13 @@
-import clsx from "clsx";
+import { Globe, ChevronDown, Check } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
 import { getLocale, setLocale, isLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
-import { Dropdown, Button } from "react-bootstrap";
 
 const LanguageSwitcher = () => {
   const [preventHydrationIssue, setPreventHydrationIssue] = useState(false);
@@ -38,45 +43,47 @@ const LanguageSwitcher = () => {
 
   // Don't render anything during server-side rendering to prevent hydration issues
   if (!preventHydrationIssue) {
-    return <div className="mr-4"></div>;
+    return <div className="tw:mr-4" />;
   }
 
   return (
-    <Dropdown>
-      <Dropdown.Toggle
-        as={Button}
-        variant="dark"
-        size="sm"
-        className="site-lang-toggle"
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        data-tailwind-migrated="true"
+        className="site-lang-toggle tw:inline-flex tw:items-center tw:gap-2 tw:rounded tw:border tw:px-2 tw:py-1 tw:text-sm"
         aria-label={m.language_select()}
         title={m.language_select()}
       >
-        <i className="bi bi-globe2"></i>
-        <span className="d-none d-sm-inline ms-2">{currentLanguage.code.toUpperCase()}</span>
-        {/* Bootstrap dropdown toggle already includes a chevron */}
-      </Dropdown.Toggle>
-
-      <Dropdown.Menu className="min-width-220" align="end">
+        <Globe aria-hidden="true" className="tw:size-4" />
+        <span className="tw:hidden tw:sm:inline">{currentLanguage.code.toUpperCase()}</span>
+        <ChevronDown aria-hidden="true" className="tw:size-3" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent admin={false} align="end" className="tw:min-w-56">
         {languages.map((lang) => (
-          <Dropdown.Item
+          <DropdownMenuItem
             key={lang.code}
-            className={clsx(
-              "d-flex align-items-center px-4 py-3",
-              currentLang === lang.code && "bg-primary bg-opacity-10",
-            )}
-            as="button"
             onClick={() => changeLanguage(lang.code)}
+            className="tw:gap-3 tw:px-4 tw:py-3"
           >
-            <span className="me-3 fs-5">{lang.flag}</span>
+            <span className="tw:text-xl" aria-hidden="true">
+              {lang.flag}
+            </span>
             <div>
-              <div className="fw-medium">{lang.label}</div>
-              <div className="small text-muted">{lang.nativeName}</div>
+              <div className="tw:font-medium">{lang.label}</div>
+              <div className="tw:text-xs tw:text-muted-foreground tw:group-data-highlighted/dropdown-menu-item:text-accent-foreground">
+                {lang.nativeName}
+              </div>
             </div>
-            {currentLang === lang.code && <i className="bi bi-check ms-auto text-primary"></i>}
-          </Dropdown.Item>
+            {currentLang === lang.code && (
+              <Check
+                aria-hidden="true"
+                className="tw:ml-auto tw:size-4 tw:text-primary tw:group-data-highlighted/dropdown-menu-item:text-accent-foreground"
+              />
+            )}
+          </DropdownMenuItem>
         ))}
-      </Dropdown.Menu>
-    </Dropdown>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 };
 

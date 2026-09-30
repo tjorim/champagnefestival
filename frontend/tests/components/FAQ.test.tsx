@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { HttpResponse, http } from "msw";
 import { describe, it, expect } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { axe } from "jest-axe";
 import FAQ from "@/components/FAQ";
 import { server } from "@/mocks/server";
 
@@ -32,6 +34,24 @@ function renderFaq(): void {
 }
 
 describe("FAQ component", () => {
+  it("supports keyboard disclosure and keeps only one answer open", async () => {
+    server.use(http.get("/api/faq/active", () => HttpResponse.json(ITEMS)));
+    const user = userEvent.setup();
+    renderFaq();
+    const first = await screen.findByRole("button", { name: ITEMS[0]!.question });
+    first.focus();
+    await user.keyboard("{Enter}");
+    expect(first).toHaveAttribute("aria-expanded", "true");
+    screen.getByRole("button", { name: ITEMS[1]!.question }).focus();
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: ITEMS[1]!.question })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    expect((await axe(document.body)).violations).toEqual([]);
+  });
+
   it("renders active FAQ items from the API", async () => {
     server.use(http.get("/api/faq/active", () => HttpResponse.json(ITEMS)));
 
@@ -39,6 +59,7 @@ describe("FAQ component", () => {
 
     expect(await screen.findByText("What is the Champagnefestival?")).toBeInTheDocument();
     expect(screen.getByText("When does it take place?")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "What is the Champagnefestival?" }));
     expect(screen.getByText("An annual celebration of champagne.")).toBeInTheDocument();
   });
 

@@ -19,6 +19,7 @@ function DropdownMenuTrigger({ ...props }: MenuPrimitive.Trigger.Props) {
 }
 
 function DropdownMenuContent({
+  admin = true,
   align = "start",
   alignOffset = 0,
   side = "bottom",
@@ -26,28 +27,33 @@ function DropdownMenuContent({
   className,
   ...props
 }: MenuPrimitive.Popup.Props &
-  Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
+  Pick<MenuPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset"> & {
+    admin?: boolean;
+  }) {
+  const content = (
+    <>
+      <MenuPrimitive.Positioner
+        className="tw:isolate tw:z-popup tw:outline-none"
+        align={align}
+        alignOffset={alignOffset}
+        side={side}
+        sideOffset={sideOffset}
+      >
+        <MenuPrimitive.Popup
+          data-slot="dropdown-menu-content"
+          data-tailwind-migrated="true"
+          className={cn(
+            " tw:z-popup   tw:min-w-32  tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-md tw:bg-popover tw:p-1 tw:text-popover-foreground tw:shadow-md tw:ring-1 tw:ring-foreground/10 tw:duration-100 tw:outline-none           tw:data-closed:overflow-hidden  ",
+            className,
+          )}
+          {...props}
+        />
+      </MenuPrimitive.Positioner>
+    </>
+  );
   return (
     <MenuPrimitive.Portal>
-      <AdminThemeScope>
-        <MenuPrimitive.Positioner
-          className="tw:isolate tw:z-50 tw:outline-none"
-          align={align}
-          alignOffset={alignOffset}
-          side={side}
-          sideOffset={sideOffset}
-        >
-          <MenuPrimitive.Popup
-            data-slot="dropdown-menu-content"
-            data-tailwind-migrated="true"
-            className={cn(
-              " tw:z-50   tw:min-w-32  tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-md tw:bg-popover tw:p-1 tw:text-popover-foreground tw:shadow-md tw:ring-1 tw:ring-foreground/10 tw:duration-100 tw:outline-none           tw:data-closed:overflow-hidden  ",
-              className,
-            )}
-            {...props}
-          />
-        </MenuPrimitive.Positioner>
-      </AdminThemeScope>
+      {admin ? <AdminThemeScope>{content}</AdminThemeScope> : content}
     </MenuPrimitive.Portal>
   );
 }

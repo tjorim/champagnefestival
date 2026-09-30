@@ -62,6 +62,7 @@ vi.mock("@/paraglide/messages", () => ({
 }));
 
 async function openDeleteConfirm(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(screen.getByRole("tab", { name: "My Account" }));
   await user.click(screen.getByRole("button", { name: "Delete my account" }));
   return screen.getByRole("alertdialog");
 }
@@ -189,6 +190,7 @@ describe("MyAccountPage", () => {
   it("does not show the volunteer identity section for a non-volunteer account", async () => {
     render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
 
+    await userEvent.setup().click(screen.getByRole("tab", { name: "My Account" }));
     expect(await screen.findByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
     expect(screen.queryByText("My eID")).not.toBeInTheDocument();
   });
@@ -222,7 +224,9 @@ describe("MyAccountPage", () => {
 
     render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
 
+    await userEvent.setup().click(screen.getByRole("tab", { name: "My eID" }));
     expect(await screen.findByText("Register your volunteer record")).toBeInTheDocument();
+    await userEvent.setup().click(screen.getByRole("tab", { name: "My Account" }));
     expect(screen.getByRole("heading", { name: "Delete my account" })).toBeInTheDocument();
   });
 
@@ -265,6 +269,7 @@ describe("MyAccountPage", () => {
     const user = userEvent.setup();
     render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
 
+    await user.click(screen.getByRole("tab", { name: "My eID" }));
     expect(await screen.findByText("Update your eID document number")).toBeInTheDocument();
     const input = screen.getByLabelText("New eID document number");
     await user.type(input, "123456789103");
@@ -312,6 +317,7 @@ describe("MyAccountPage", () => {
     const user = userEvent.setup();
     render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
 
+    await user.click(screen.getByRole("tab", { name: "My eID" }));
     const input = await screen.findByLabelText("New eID document number");
     await user.type(input, "999999999999");
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -418,6 +424,7 @@ describe("MyAccountPage", () => {
     const user = userEvent.setup();
     render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
 
+    await user.click(screen.getByRole("tab", { name: "My eID" }));
     const dishOption = await screen.findByRole("radio", { name: "Vol-au-vent" });
     await user.click(dishOption);
 

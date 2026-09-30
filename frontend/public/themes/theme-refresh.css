@@ -166,51 +166,18 @@ body {
   border-radius: 999px;
 }
 
-/* Bootstrap Icons sit -0.125em below the baseline for inline-text use; inside a
-   flex-centered circle that reads as off-center, while zero overshoots the other way.
-   -0.06em lands optically centered; replaces the old per-glyph translateY nudge. */
-.icon-link .bi::before {
-  vertical-align: -0.06em;
-}
-
-/* Overrides Bootstrap's fixed btn-dark look so the language toggle follows the site theme instead of always looking dark. */
+/* Language-control colours follow the active runtime theme. */
 .site-lang-toggle {
-  --bs-btn-color: rgba(251, 246, 236, 0.86);
-  --bs-btn-bg: rgba(255, 255, 255, 0.04);
-  --bs-btn-border-color: rgba(255, 255, 255, 0.08);
-  --bs-btn-hover-color: var(--champagne);
-  --bs-btn-hover-bg: rgba(242, 216, 148, 0.1);
-  --bs-btn-hover-border-color: rgba(242, 216, 148, 0.1);
-  --bs-btn-active-color: var(--champagne);
-  --bs-btn-active-bg: rgba(242, 216, 148, 0.1);
-  --bs-btn-active-border-color: rgba(242, 216, 148, 0.1);
+  --language-control-color: rgba(251, 246, 236, 0.86);
+  --language-control-bg: rgba(255, 255, 255, 0.04);
+  --language-control-border-color: rgba(255, 255, 255, 0.08);
+  --language-control-hover-color: var(--champagne);
+  --language-control-hover-bg: rgba(242, 216, 148, 0.1);
+  --language-control-hover-border-color: rgba(242, 216, 148, 0.1);
 }
 
 .site-menu-button {
   font-size: 1.15rem;
-}
-
-.site-mobile-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  z-index: 1041;
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-0.35rem);
-  transition:
-    opacity 0.18s ease,
-    visibility 0.18s ease,
-    transform 0.18s ease;
-}
-
-.site-mobile-menu.is-open {
-  visibility: visible;
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
 }
 
 .site-mobile-menu-panel {
@@ -445,7 +412,7 @@ h2.section-header::after {
 .feature,
 main > .content-section .card,
 .event-card,
-.accordion,
+[data-slot="accordion"],
 .map-loading,
 .carousel-loading,
 .bubble-container-placeholder {
@@ -583,7 +550,7 @@ main > .content-section .card,
   border-bottom: 0;
 }
 
-.schedule-tabs .nav-link {
+.schedule-tabs [data-slot="tabs-trigger"] {
   min-width: 8rem;
   color: var(--text-muted);
   background: rgba(255, 255, 255, 0.04);
@@ -591,7 +558,7 @@ main > .content-section .card,
   border-radius: 8px;
 }
 
-.schedule-tabs .nav-link.active {
+.schedule-tabs [data-slot="tabs-trigger"][data-active] {
   color: #18130c;
   background: linear-gradient(135deg, var(--champagne), var(--champagne-deep));
   border-color: transparent;
@@ -631,30 +598,28 @@ main > .content-section .card,
   font-weight: 750;
 }
 
-.accordion {
-  --bs-accordion-border-width: 0;
-  --bs-accordion-border-radius: 8px;
+[data-slot="accordion"] {
   margin-top: 2rem;
   overflow: hidden;
 }
 
-.accordion-item {
+[data-slot="accordion-item"] {
   color: var(--text-color);
   background: transparent;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.accordion-button {
+[data-slot="accordion-trigger"] {
   color: var(--text-color);
   background: rgba(255, 255, 255, 0.03);
 }
 
-.accordion-button:not(.collapsed) {
+[data-slot="accordion-trigger"][aria-expanded="true"] {
   color: var(--champagne);
   background: rgba(242, 216, 148, 0.08);
 }
 
-.accordion-button:focus {
+[data-slot="accordion-trigger"]:focus {
   box-shadow: none;
 }
 
@@ -984,7 +949,7 @@ a:focus {
     overflow-x: auto;
   }
 
-  .schedule-tabs .nav-link {
+  .schedule-tabs [data-slot="tabs-trigger"] {
     min-width: 7.5rem;
   }
 
@@ -1110,15 +1075,12 @@ a:focus {
   }
 
   .site-lang-toggle {
-    --bs-btn-color: rgba(35, 29, 22, 0.86);
-    --bs-btn-bg: rgba(35, 29, 22, 0.04);
-    --bs-btn-border-color: rgba(35, 29, 22, 0.08);
-    --bs-btn-hover-color: var(--champagne);
-    --bs-btn-hover-bg: rgba(155, 111, 31, 0.1);
-    --bs-btn-hover-border-color: rgba(155, 111, 31, 0.1);
-    --bs-btn-active-color: var(--champagne);
-    --bs-btn-active-bg: rgba(155, 111, 31, 0.1);
-    --bs-btn-active-border-color: rgba(155, 111, 31, 0.1);
+    --language-control-color: rgba(35, 29, 22, 0.86);
+    --language-control-bg: rgba(35, 29, 22, 0.04);
+    --language-control-border-color: rgba(35, 29, 22, 0.08);
+    --language-control-hover-color: var(--champagne);
+    --language-control-hover-bg: rgba(155, 111, 31, 0.1);
+    --language-control-hover-border-color: rgba(155, 111, 31, 0.1);
   }
 
   .site-mobile-menu-panel {
@@ -1164,13 +1126,13 @@ a:focus {
   }
 
   .countdown-unit,
-  .schedule-tabs .nav-link,
-  .accordion-button {
+  .schedule-tabs [data-slot="tabs-trigger"],
+  [data-slot="accordion-trigger"] {
     background: rgba(255, 255, 255, 0.48);
     border-color: rgba(111, 76, 20, 0.12);
   }
 
-  .accordion-item {
+  [data-slot="accordion-item"] {
     border-bottom-color: rgba(111, 76, 20, 0.12);
   }
 

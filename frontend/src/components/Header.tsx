@@ -1,10 +1,10 @@
 import { m } from "@/paraglide/messages";
 import LanguageSwitcher from "./LanguageSwitcher";
-import Navbar from "react-bootstrap/Navbar";
-import Container from "react-bootstrap/Container";
+import { Dialog } from "@base-ui/react/dialog";
+import { Menu, X, ShieldCheck } from "lucide-react";
 import { navigationItems } from "@/config/navigation";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface HeaderProps {
   logoSrc?: string;
@@ -14,28 +14,28 @@ interface HeaderProps {
 const Header = ({ logoSrc = "/images/logo.svg", onBrandClick }: HeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (!menuOpen) return;
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setMenuOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [menuOpen]);
-
   return (
-    <Navbar fixed="top" variant="dark" className="site-header">
-      <Container className="d-flex justify-content-between align-items-center gap-3">
-        <Navbar.Brand href="#welcome" className="site-brand" onClick={onBrandClick}>
-          <img src={logoSrc} alt={m.header_logo_alt()} width="36" height="36" className="me-2" />
-          <span>{m.festival_name()}</span>
-        </Navbar.Brand>
+    <header
+      data-tailwind-migrated="true"
+      className="site-header tw:fixed tw:z-header tw:flex tw:items-center tw:riviera:site-lg:items-start"
+    >
+      <div className="site-header-container tw:mx-auto tw:flex tw:w-full tw:items-center tw:justify-between tw:gap-4 tw:px-3 tw:riviera:site-lg:grid tw:riviera:site-lg:p-0">
+        <a
+          href="#welcome"
+          className="site-brand tw:inline-flex tw:items-center tw:no-underline"
+          onClick={onBrandClick}
+        >
+          <img
+            src={logoSrc}
+            alt={m.header_logo_alt()}
+            width="36"
+            height="36"
+            className="tw:mr-2 tw:shrink-0"
+          />
+          <span className="tw:truncate">{m.festival_name()}</span>
+        </a>
 
-        <div className="site-nav d-none d-lg-flex align-items-center gap-2">
+        <div className="site-nav tw:hidden tw:site-lg:flex tw:riviera:site-lg:grid">
           {navigationItems.map((item) => (
             <a key={item.href} href={item.href} className="site-nav-link">
               {item.getLabel()}
@@ -43,48 +43,52 @@ const Header = ({ logoSrc = "/images/logo.svg", onBrandClick }: HeaderProps) => 
           ))}
         </div>
 
-        <div className="d-flex align-items-center gap-2">
+        <div className="tw:flex tw:items-center tw:gap-2">
           <LanguageSwitcher />
           <Link to="/admin" className="icon-link" aria-label={m.admin_title()}>
-            <i className="bi bi-shield-lock" aria-hidden="true" />
+            <ShieldCheck className="tw:size-4" aria-hidden="true" />
           </Link>
-          <button
-            type="button"
-            className="icon-link site-menu-button d-lg-none"
-            aria-label={m.admin_toggle_navigation()}
-            aria-expanded={menuOpen}
-            aria-controls="mobile-site-menu"
-            onClick={() => setMenuOpen((open) => !open)}
-          >
-            <i className={menuOpen ? "bi bi-x-lg" : "bi bi-list"} aria-hidden="true" />
-          </button>
-        </div>
-      </Container>
-
-      <div
-        id="mobile-site-menu"
-        className={`site-mobile-menu d-lg-none ${menuOpen ? "is-open" : ""}`}
-      >
-        <div className="container">
-          <nav className="site-mobile-menu-panel" aria-label="Mobile">
-            {navigationItems.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className="site-mobile-link"
-                onClick={() => setMenuOpen(false)}
-              >
-                {item.getLabel()}
-              </a>
-            ))}
-            <Link to="/admin" className="site-mobile-link" onClick={() => setMenuOpen(false)}>
-              <i className="bi bi-shield-lock me-2" aria-hidden="true" />
-              {m.admin_title()}
-            </Link>
-          </nav>
+          <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
+            <Dialog.Trigger
+              className="icon-link site-menu-button tw:site-lg:hidden"
+              aria-label={m.admin_toggle_navigation()}
+            >
+              <Menu aria-hidden="true" className="tw:size-5" />
+            </Dialog.Trigger>
+            <Dialog.Portal>
+              <Dialog.Backdrop className="tw:fixed tw:inset-0 tw:z-dialog tw:bg-foreground/50" />
+              <Dialog.Popup className="site-mobile-menu-panel tw:fixed tw:inset-x-3 tw:top-16 tw:z-popup tw:text-popover-foreground">
+                <Dialog.Title className="tw:px-4 tw:text-lg">{m.festival_name()}</Dialog.Title>
+                <Dialog.Close
+                  className="tw:absolute tw:top-4 tw:right-4 tw:border-0 tw:bg-transparent tw:text-foreground"
+                  aria-label={m.close()}
+                >
+                  <X aria-hidden="true" />
+                </Dialog.Close>
+                <nav
+                  aria-label={m.admin_toggle_navigation()}
+                  className="tw:flex tw:flex-col tw:gap-2"
+                >
+                  {navigationItems.map((item) => (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className="site-mobile-link"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      {item.getLabel()}
+                    </a>
+                  ))}
+                  <Link to="/admin" className="site-mobile-link" onClick={() => setMenuOpen(false)}>
+                    {m.admin_title()}
+                  </Link>
+                </nav>
+              </Dialog.Popup>
+            </Dialog.Portal>
+          </Dialog.Root>
         </div>
       </div>
-    </Navbar>
+    </header>
   );
 };
 

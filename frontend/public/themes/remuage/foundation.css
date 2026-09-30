@@ -107,7 +107,7 @@ html[data-visual-theme="remuage"] .site-header {
   backdrop-filter: blur(14px);
 }
 
-html[data-visual-theme="remuage"] .site-header .container {
+html[data-visual-theme="remuage"] .site-header .site-header-container {
   max-width: 1440px;
 }
 
@@ -190,34 +190,11 @@ html[data-visual-theme="remuage"] .icon-link:hover {
   border-color: var(--rem-blue);
 }
 
-html[data-visual-theme="remuage"] .site-mobile-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  z-index: 1041;
-  visibility: hidden;
+html[data-visual-theme="remuage"] .site-mobile-menu-panel {
   color: var(--rem-ink);
   background: var(--rem-paper);
   border-bottom: 5px solid var(--rem-grape);
   box-shadow: var(--rem-shadow);
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-0.4rem);
-  transition:
-    opacity 160ms ease,
-    visibility 160ms ease,
-    transform 160ms ease;
-}
-
-html[data-visual-theme="remuage"] .site-mobile-menu.is-open {
-  visibility: visible;
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-html[data-visual-theme="remuage"] .site-mobile-menu-panel {
   padding: 0.8rem 0 1rem;
 }
 

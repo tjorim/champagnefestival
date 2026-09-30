@@ -25,7 +25,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Nav from "react-bootstrap/Nav";
+import { Button as RoomButton } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
 import type { TableAllocation } from "@/types/registration";
@@ -856,38 +856,40 @@ export default function LayoutEditor({
               {activeLayoutDateLabel}
             </span>
           )}
-          <Nav
-            variant="pills"
-            activeKey={activeRoomId ?? ""}
-            onSelect={handleSelectRoom}
-            className="flex-wrap"
+          <div
+            data-tailwind-migrated="true"
+            className="tw:flex tw:flex-wrap tw:gap-1"
+            role="group"
+            aria-label={m.admin_rooms_tab()}
           >
             {rooms.map((room) => {
               const roomTableCount = layouts
                 .filter((l) => l.roomId === room.id)
                 .reduce((sum, l) => sum + tables.filter((t) => t.layoutId === l.id).length, 0);
               return (
-                <Nav.Item key={room.id}>
-                  <Nav.Link eventKey={room.id} className="py-1 px-2 small text-light">
+                <span key={room.id}>
+                  <RoomButton
+                    size="sm"
+                    variant={activeRoomId === room.id ? "default" : "ghost"}
+                    aria-pressed={activeRoomId === room.id}
+                    onClick={() => handleSelectRoom(room.id)}
+                  >
                     <span
-                      className="me-1 rounded-circle d-inline-block"
+                      className="tw:mr-1 tw:inline-block tw:size-2.5 tw:rounded-full"
                       style={{
-                        width: 10,
-                        height: 10,
                         background: room.color,
-                        verticalAlign: "middle",
                       }}
                       aria-hidden="true"
                     />
                     {room.name}
-                    <Badge bg="secondary" className="ms-1 fs-4xs">
+                    <span className="tw:ml-1 tw:rounded tw:bg-muted tw:px-1 tw:text-xs tw:text-muted-foreground">
                       {roomTableCount}
-                    </Badge>
-                  </Nav.Link>
-                </Nav.Item>
+                    </span>
+                  </RoomButton>
+                </span>
               );
             })}
-          </Nav>
+          </div>
           <div className="d-flex gap-2 align-items-center">
             <div className="btn-group btn-group-sm" role="group" aria-label="Layer">
               <Button

@@ -235,13 +235,6 @@ html[data-visual-theme="cuvee"] .bubble-background {
   border-radius: 999px;
 }
 
-/* Bootstrap Icons sit -0.125em below the baseline for inline-text use; inside a
-   flex-centered circle that reads as off-center. Zero overshoots (glyph reads high),
-   so meet in the middle. */
-.icon-link .bi::before {
-  vertical-align: -0.06em;
-}
-
 .icon-link:hover,
 .icon-link:focus-visible {
   color: var(--ink);
@@ -250,15 +243,12 @@ html[data-visual-theme="cuvee"] .bubble-background {
 }
 
 .site-lang-toggle {
-  --bs-btn-color: rgba(238, 231, 212, 0.85);
-  --bs-btn-bg: transparent;
-  --bs-btn-border-color: rgba(231, 201, 121, 0.3);
-  --bs-btn-hover-color: #241f14;
-  --bs-btn-hover-bg: #e7c979;
-  --bs-btn-hover-border-color: #e7c979;
-  --bs-btn-active-color: #241f14;
-  --bs-btn-active-bg: #e7c979;
-  --bs-btn-active-border-color: #e7c979;
+  --language-control-color: rgba(238, 231, 212, 0.85);
+  --language-control-bg: transparent;
+  --language-control-border-color: rgba(231, 201, 121, 0.3);
+  --language-control-hover-color: #241f14;
+  --language-control-hover-bg: #e7c979;
+  --language-control-hover-border-color: #e7c979;
 }
 
 .dropdown-menu-dark {
@@ -270,29 +260,6 @@ html[data-visual-theme="cuvee"] .bubble-background {
   --bs-dropdown-link-active-bg: #e7c979;
   border: 1px solid var(--gold-hairline);
   border-radius: 3px;
-}
-
-.site-mobile-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  z-index: 1041;
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-0.35rem);
-  transition:
-    opacity 0.18s ease,
-    visibility 0.18s ease,
-    transform 0.18s ease;
-}
-
-.site-mobile-menu.is-open {
-  visibility: visible;
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
 }
 
 .site-mobile-menu-panel {
@@ -701,7 +668,7 @@ h2.section-header::after {
   border-bottom: 1px solid var(--hairline-strong);
 }
 
-.schedule-tabs .nav-link {
+.schedule-tabs [data-slot="tabs-trigger"] {
   padding: 0.6rem 0.9rem;
   color: var(--ink-soft);
   font-size: 0.72rem;
@@ -714,13 +681,13 @@ h2.section-header::after {
   border-radius: 0;
 }
 
-.schedule-tabs .nav-link:hover,
-.schedule-tabs .nav-link:focus-visible {
+.schedule-tabs [data-slot="tabs-trigger"]:hover,
+.schedule-tabs [data-slot="tabs-trigger"]:focus-visible {
   color: var(--ink);
   border-bottom-color: var(--hairline-strong);
 }
 
-.schedule-tabs .nav-link.active {
+.schedule-tabs [data-slot="tabs-trigger"][data-active] {
   color: var(--ink);
   background: transparent;
   border-bottom-color: var(--foil-deep);
@@ -791,7 +758,7 @@ h2.section-header::after {
 
 /* --------------------------------------------------------------------- faq */
 
-.accordion-item {
+[data-slot="accordion-item"] {
   color: var(--ink);
   background: transparent;
   border: 0;
@@ -800,11 +767,11 @@ h2.section-header::after {
   box-shadow: none;
 }
 
-.accordion-item:last-of-type {
+[data-slot="accordion-item"]:last-of-type {
   border-bottom: 1px solid var(--hairline);
 }
 
-.accordion-button {
+[data-slot="accordion-trigger"] {
   color: var(--ink);
   font-family: var(--serif-display);
   font-size: 1.05rem;
@@ -814,18 +781,18 @@ h2.section-header::after {
   box-shadow: none;
 }
 
-.accordion-button:not(.collapsed) {
+[data-slot="accordion-trigger"][aria-expanded="true"] {
   color: #12322a;
   background: transparent;
   box-shadow: none;
 }
 
-.accordion-button:focus {
+[data-slot="accordion-trigger"]:focus {
   border-color: transparent;
   box-shadow: 0 0 0 2px var(--focus-ring-color);
 }
 
-.accordion-body {
+[data-slot="accordion-content"] {
   color: var(--ink-soft);
 }
 

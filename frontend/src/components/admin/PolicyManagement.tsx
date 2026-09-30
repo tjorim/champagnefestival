@@ -7,7 +7,7 @@ import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import Nav from "react-bootstrap/Nav";
+import { Button as LocaleButton } from "@/components/ui/button";
 import {
   Table,
   TableHeader,
@@ -423,17 +423,23 @@ export default function PolicyManagement({
                     </Badge>
                   ))}
                 </div>
-                <Nav
-                  variant="tabs"
-                  activeKey={locale}
-                  onSelect={(k) => setLocale((k as Locale) ?? "nl")}
+                <div
+                  data-tailwind-migrated="true"
+                  role="group"
+                  aria-label={m.language_select()}
+                  className="tw:flex tw:gap-1 tw:border-b tw:border-border"
                 >
                   {LOCALES.map((l) => (
-                    <Nav.Item key={l}>
-                      <Nav.Link eventKey={l}>{l.toUpperCase()}</Nav.Link>
-                    </Nav.Item>
+                    <LocaleButton
+                      key={l}
+                      variant={locale === l ? "default" : "ghost"}
+                      aria-pressed={locale === l}
+                      onClick={() => setLocale(l)}
+                    >
+                      {l.toUpperCase()}
+                    </LocaleButton>
                   ))}
-                </Nav>
+                </div>
                 <div className="border border-top-0 p-3">
                   <ButtonGroup size="sm" className="mb-2">
                     <Button

@@ -466,19 +466,17 @@ main {
 }
 
 /* Custom Accordion Styling */
-.accordion {
-  --bs-accordion-border-width: 0;
-  --bs-accordion-border-radius: 0.5rem;
+[data-slot="accordion"] {
   overflow: hidden;
   margin-top: 2rem;
 }
 
-.accordion-item {
+[data-slot="accordion-item"] {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Add brand colors to accordion focus */
-.accordion-button:focus {
+[data-slot="accordion-trigger"]:focus {
   box-shadow: none;
 }
 

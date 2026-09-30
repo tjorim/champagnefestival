@@ -61,17 +61,6 @@
     }
   },
   {
-    "files": ["src/components/LanguageSwitcher.tsx"],
-    "rules": {
-      "shadcn/no-unknown-classes": [
-        "error",
-        {
-          "allow": ["min-width-220", "mr-4"]
-        }
-      ]
-    }
-  },
-  {
     "files": ["src/components/MaintenancePage.tsx"],
     "rules": {
       "shadcn/no-inline-styles": "off",
@@ -534,17 +523,6 @@
         "error",
         {
           "allow": ["custom-class"]
-        }
-      ]
-    }
-  },
-  {
-    "files": ["src/components/FAQ.tsx"],
-    "rules": {
-      "shadcn/no-raw-colors": [
-        "error",
-        {
-          "allow": ["border-brand"]
         }
       ]
     }

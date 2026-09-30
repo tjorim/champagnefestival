@@ -18,9 +18,8 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import OverlayTrigger from "react-bootstrap/OverlayTrigger";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import Spinner from "react-bootstrap/Spinner";
-import Tooltip from "react-bootstrap/Tooltip";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Form from "react-bootstrap/Form";
 import { m } from "@/paraglide/messages";
@@ -353,25 +352,21 @@ export function ContentSection({
             </span>
           )}
           {editionsByItemId.has(item.id) ? (
-            <OverlayTrigger
-              placement="top"
-              overlay={
-                <Tooltip id={`editions-tooltip-${item.id}`}>
-                  {m.admin_content_used_in_editions()}: {editionsByItemId.get(item.id)!.join(", ")}
-                </Tooltip>
-              }
-            >
-              <span
+            <Tooltip>
+              <TooltipTrigger
+                aria-description={`${m.admin_content_used_in_editions()}: ${editionsByItemId.get(item.id)!.join(", ")}`}
+                render={<button type="button" />}
                 className={clsx(
-                  "text-truncate",
-                  isArchived ? "text-secondary" : "text-light",
-                  "text-decoration-underline",
+                  "tw:truncate tw:border-0 tw:bg-transparent tw:p-0 tw:underline tw:decoration-dotted",
+                  isArchived ? "tw:text-muted-foreground" : "tw:text-foreground",
                 )}
-                style={{ textDecorationStyle: "dotted", cursor: "help" }}
               >
                 {item.name}
-              </span>
-            </OverlayTrigger>
+              </TooltipTrigger>
+              <TooltipContent admin>
+                {m.admin_content_used_in_editions()}: {editionsByItemId.get(item.id)!.join(", ")}
+              </TooltipContent>
+            </Tooltip>
           ) : (
             <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>
               {item.name}

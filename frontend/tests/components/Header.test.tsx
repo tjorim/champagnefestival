@@ -1,9 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { axe } from "jest-axe";
 import Header from "@/components/Header";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    close: () => "Close",
     festival_name: () => "Champagnefestival",
     language_select: () => "Select language",
     header_logo_alt: () => "Champagnefestival logo",
@@ -33,6 +36,18 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 describe("Header component", () => {
+  it("opens an accessible mobile dialog, closes with Escape and returns focus", async () => {
+    const user = userEvent.setup();
+    render(<Header />);
+    const trigger = screen.getByRole("button", { name: "Toggle navigation" });
+    await user.click(trigger);
+    const dialog = await screen.findByRole("dialog");
+    expect((await axe(dialog)).violations).toEqual([]);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
   it("renders the festival name", () => {
     render(<Header />);
     expect(screen.getByText("Champagnefestival")).toBeInTheDocument();
@@ -70,7 +85,7 @@ describe("Header component", () => {
     expect(adminLinks.length).toBeGreaterThan(0);
     adminLinks.forEach((adminLink) => {
       expect(adminLink).toHaveAttribute("href", "/admin");
-      expect(adminLink.querySelector(".bi-shield-lock")).toBeInTheDocument();
+      expect(adminLink.querySelector("svg")).toBeInTheDocument();
     });
   });
 });

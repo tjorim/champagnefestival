@@ -103,8 +103,8 @@ test.describe("Remuage visual theme", () => {
     await expect(page.locator("#next-festival")).toHaveCSS("background-color", "rgb(72, 34, 77)");
     await expect(page.locator("#registrations")).toHaveCSS("background-color", "rgb(72, 34, 77)");
     await expect(page.locator("#other-events .alert-danger")).toHaveCount(0);
-    await page.locator("#faq .accordion-button").first().click();
-    await expect(page.locator("#faq .accordion-collapse.show")).toBeVisible();
+    await page.locator('#faq [data-slot="accordion-trigger"]').first().click();
+    await expect(page.locator('#faq [data-slot="accordion-content"]')).toBeVisible();
 
     await expectNoPageHorizontalScroll(page);
   });
@@ -165,14 +165,13 @@ test.describe("Remuage visual theme", () => {
     expect(rackBox!.x).toBeGreaterThanOrEqual(0);
     expect(rackBox!.x + rackBox!.width).toBeLessThanOrEqual(390);
 
-    const menu = page.locator(".site-mobile-menu");
+    const menu = page.getByRole("dialog");
     const menuButton = page.locator(".site-menu-button");
     await expect(menuButton).toBeVisible();
     await expect(menu).not.toBeVisible();
     await menuButton.click();
     await expect(menuButton).toHaveAttribute("aria-expanded", "true");
     await expect(menu).toBeVisible();
-    await expect(menu).toHaveClass(/is-open/);
     const firstMobileLinkBox = await menu.locator(".site-mobile-link").first().boundingBox();
     expect(firstMobileLinkBox).not.toBeNull();
     expect(firstMobileLinkBox!.x).toBeGreaterThanOrEqual(0);

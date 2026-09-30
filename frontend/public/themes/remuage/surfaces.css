@@ -7,7 +7,7 @@ html[data-visual-theme="remuage"] .schedule-tabs {
   scrollbar-width: thin;
 }
 
-html[data-visual-theme="remuage"] .schedule-tabs .nav-link {
+html[data-visual-theme="remuage"] .schedule-tabs [data-slot="tabs-trigger"] {
   min-height: 46px;
   color: var(--rem-muted);
   font-family: var(--rem-data);
@@ -19,12 +19,12 @@ html[data-visual-theme="remuage"] .schedule-tabs .nav-link {
   white-space: nowrap;
 }
 
-html[data-visual-theme="remuage"] .schedule-tabs .nav-link:hover {
+html[data-visual-theme="remuage"] .schedule-tabs [data-slot="tabs-trigger"]:hover {
   color: var(--rem-blue);
   border-color: var(--rem-blue) !important;
 }
 
-html[data-visual-theme="remuage"] .schedule-tabs .nav-link.active {
+html[data-visual-theme="remuage"] .schedule-tabs [data-slot="tabs-trigger"][data-active] {
   color: #fff;
   background: var(--rem-blue);
   border-color: var(--rem-blue) !important;
@@ -158,7 +158,7 @@ html[data-visual-theme="remuage"] .swiper-pagination-bullet-active {
     0 0 0 5px var(--rem-rose);
 }
 
-html[data-visual-theme="remuage"] .accordion {
+html[data-visual-theme="remuage"] [data-slot="accordion"] {
   overflow: hidden;
   background: transparent;
   border: 0;
@@ -166,7 +166,7 @@ html[data-visual-theme="remuage"] .accordion {
   box-shadow: none !important;
 }
 
-html[data-visual-theme="remuage"] .accordion-item {
+html[data-visual-theme="remuage"] [data-slot="accordion-item"] {
   margin-bottom: 0.65rem;
   overflow: hidden;
   background: var(--rem-paper);
@@ -174,7 +174,7 @@ html[data-visual-theme="remuage"] .accordion-item {
   border-radius: var(--rem-radius-small) !important;
 }
 
-html[data-visual-theme="remuage"] .accordion-button {
+html[data-visual-theme="remuage"] [data-slot="accordion-trigger"] {
   min-height: 54px;
   color: var(--rem-grape);
   font-weight: 750;
@@ -182,25 +182,17 @@ html[data-visual-theme="remuage"] .accordion-button {
   box-shadow: none !important;
 }
 
-html[data-visual-theme="remuage"] .accordion-button:not(.collapsed) {
+html[data-visual-theme="remuage"] [data-slot="accordion-trigger"][aria-expanded="true"] {
   color: #fff;
   background: var(--rem-blue);
 }
 
-html[data-visual-theme="remuage"] .accordion-button::after {
-  padding: 0.55rem;
-  background-color: var(--rem-paper);
-  background-position: center;
-  border: 1px solid var(--rem-line-strong);
-  border-radius: 50%;
-}
-
-html[data-visual-theme="remuage"] .accordion-body {
+html[data-visual-theme="remuage"] [data-slot="accordion-content"] {
   color: var(--rem-muted);
   background: var(--rem-paper);
 }
 
-html[data-visual-theme="remuage"] .accordion-body > div {
+html[data-visual-theme="remuage"] [data-slot="accordion-content"] > div {
   border-color: var(--rem-rose) !important;
 }
 
