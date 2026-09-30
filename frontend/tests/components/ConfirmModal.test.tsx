@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ComponentProps } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
@@ -16,9 +17,11 @@ vi.mock("@/paraglide/messages", () => ({
 function Harness({
   onConfirm,
   admin = false,
+  variant,
 }: {
   onConfirm: () => Promise<void>;
   admin?: boolean;
+  variant?: ComponentProps<typeof ConfirmModal>["variant"];
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -27,6 +30,7 @@ function Harness({
       <ConfirmModal
         show={show}
         admin={admin}
+        variant={variant}
         title="Delete booking?"
         body="This deletes the booking."
         errorFallback="Failed"
@@ -38,6 +42,18 @@ function Harness({
 }
 
 describe("ConfirmModal", () => {
+  it.each([
+    ["danger", "tw:bg-destructive/10", "tw:text-destructive"],
+    ["warning", "tw:bg-warning", "tw:text-warning-foreground"],
+    ["primary", "tw:bg-primary", "tw:text-primary-foreground"],
+  ] as const)("preserves the %s confirmation style", async (variant, background, foreground) => {
+    render(<Harness variant={variant} onConfirm={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Delete booking" }));
+    const confirm = screen.getByRole("button", { name: "Confirm" });
+    expect(confirm).toHaveClass(background, foreground);
+    if (variant !== "primary") expect(confirm).not.toHaveClass("tw:bg-primary");
+  });
+
   it.each([false, true])(
     "is accessible and scopes only admin confirmations to dark (admin=%s)",
     async (admin) => {
@@ -68,27 +84,30 @@ describe("ConfirmModal", () => {
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
   });
 
-  it("blocks dismissal and duplicate confirmation while pending, then closes on success", async () => {
-    let resolve!: () => void;
-    const onConfirm = vi.fn(
-      () =>
-        new Promise<void>((done) => {
-          resolve = done;
-        }),
-    );
-    render(<Harness onConfirm={onConfirm} />);
-    await userEvent.click(screen.getByRole("button", { name: "Delete booking" }));
-    await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Close" })).toBeDisabled();
-    await userEvent.keyboard("{Escape}");
-    fireEvent.click(document.querySelector('[data-slot="alert-dialog-overlay"]')!);
-    fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-    expect(screen.getByRole("alertdialog")).toBeInTheDocument();
-    expect(onConfirm).toHaveBeenCalledTimes(1);
-    await act(async () => resolve());
-    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
-  });
+  it.each(["danger", "warning"] as const)(
+    "blocks dismissal and duplicate %s confirmation while pending, then closes on success",
+    async (variant) => {
+      let resolve!: () => void;
+      const onConfirm = vi.fn(
+        () =>
+          new Promise<void>((done) => {
+            resolve = done;
+          }),
+      );
+      render(<Harness variant={variant} onConfirm={onConfirm} />);
+      await userEvent.click(screen.getByRole("button", { name: "Delete booking" }));
+      await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
+      expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Close" })).toBeDisabled();
+      await userEvent.keyboard("{Escape}");
+      fireEvent.click(document.querySelector('[data-slot="alert-dialog-overlay"]')!);
+      fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+      expect(screen.getByRole("alertdialog")).toBeInTheDocument();
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+      await act(async () => resolve());
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
+    },
+  );
 
   it("keeps errors visible and clears them before reopening", async () => {
     const onConfirm = vi.fn().mockRejectedValue(new Error("Server refused"));
