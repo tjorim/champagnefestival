@@ -13,7 +13,7 @@ interface SectionHeadingProps {
  */
 const SectionHeading: React.FC<SectionHeadingProps> = ({ id, title, subtitle, className = "" }) => {
   return (
-    <div className={`text-center ${className}`}>
+    <div className={`tw:text-center ${className}`}>
       <h2
         id={id}
         className="section-header"
@@ -23,7 +23,7 @@ const SectionHeading: React.FC<SectionHeadingProps> = ({ id, title, subtitle, cl
         {title}
       </h2>
       {subtitle && (
-        <p className="section-subtitle mx-auto mb-4" id={`${id}-subtitle`}>
+        <p className="section-subtitle tw:mx-auto tw:mb-6" id={`${id}-subtitle`}>
           {subtitle}
         </p>
       )}

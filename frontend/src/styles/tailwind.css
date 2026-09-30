@@ -35,7 +35,24 @@
 }
 
 @theme inline {
+  --breakpoint-site-sm: 36rem;
+  --breakpoint-site-md: 48rem;
   --breakpoint-site-lg: 62rem;
+  --breakpoint-site-xl: 75rem;
+  --breakpoint-site-2xl: 87.5rem;
+  --text-tiny: 0.7rem;
+  --text-micro: 0.65rem;
+  --text-plan: 0.55rem;
+  --spacing-content-md: var(--layout-column-md, 83.333333%);
+  --spacing-content-lg: var(--layout-column-lg, 66.666667%);
+  --spacing-column-gutter: var(--layout-column-gutter, 0.75rem);
+  --container-account: 33.75rem;
+  --color-content: var(--layout-content, var(--bs-light));
+  --color-contrast: var(--layout-contrast, var(--bs-dark));
+  --color-inverse: var(--layout-inverse, var(--bs-white));
+  --color-subtle: var(--layout-subtle, var(--bs-secondary));
+  --color-highlight: var(--layout-highlight, var(--bs-warning));
+  --color-info: var(--layout-info, var(--bs-info));
   --z-index-header: 1040;
   --z-index-dialog: 1055;
   --z-index-popup: 1060;
@@ -57,6 +74,7 @@
   --color-input: var(--surface-border);
   --color-ring: var(--surface-primary);
   --color-warning: var(--bs-warning);
+  --color-warning-foreground: var(--bs-dark);
   --color-progress-track: var(--bs-secondary);
   --color-success: var(--bs-success);
   --color-destructive: var(--surface-destructive);
@@ -165,4 +183,36 @@
 }
 [data-slot="accordion-content"] {
   padding: 1rem 1.25rem;
+}
+
+/* Content wrappers keep the original responsive widths; runtime themes own
+   their artwork and may override these widths. */
+.site-container {
+  padding-inline: 0.75rem;
+  max-width: 100%;
+}
+@media (min-width: 576px) {
+  .site-container {
+    max-width: 540px;
+  }
+}
+@media (min-width: 768px) {
+  .site-container {
+    max-width: 720px;
+  }
+}
+@media (min-width: 992px) {
+  .site-container {
+    max-width: 960px;
+  }
+}
+@media (min-width: 1200px) {
+  .site-container {
+    max-width: 1140px;
+  }
+}
+@media (min-width: 1400px) {
+  .site-container {
+    max-width: 1320px;
+  }
 }

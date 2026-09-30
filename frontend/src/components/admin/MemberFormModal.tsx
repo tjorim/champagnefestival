@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import {
   Dialog,
@@ -14,7 +13,6 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { devError } from "@/utils/devLog";
@@ -147,7 +145,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             {error && (
               <Alert
                 variant="danger"
-                className="py-2 small"
+                className="tw:py-2 tw:text-sm"
                 dismissible
                 onClose={() => setError(null)}
               >
@@ -155,8 +153,10 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               </Alert>
             )}
 
-            <Form.Group className="mb-3" controlId="member-name">
-              <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
+            <Form.Group className="tw:mb-4" controlId="member-name">
+              <Form.Label className="tw:text-subtle tw:text-sm">
+                {m.registration_name()} *
+              </Form.Label>
               <form.Field
                 name="name"
                 validators={[
@@ -173,7 +173,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                     <>
                       <Form.Control
                         type="text"
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         maxLength={200}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -191,10 +191,12 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               </form.Field>
             </Form.Group>
 
-            <Row className="mb-3">
-              <Col xs={12} md={6}>
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mb-4">
+              <div className="tw:w-full tw:site-md:w-6/12">
                 <Form.Group controlId="member-email">
-                  <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
+                  <Form.Label className="tw:text-subtle tw:text-sm">
+                    {m.registration_email()}
+                  </Form.Label>
                   <form.Field
                     name="email"
                     validators={[
@@ -213,7 +215,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                         <>
                           <Form.Control
                             type="email"
-                            className="bg-dark text-light border-secondary"
+                            className="bg-dark tw:text-content border-secondary"
                             maxLength={200}
                             value={field.value}
                             onChange={(e) => field.handleChange(e.target.value)}
@@ -230,15 +232,17 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                     }}
                   </form.Field>
                 </Form.Group>
-              </Col>
-              <Col xs={12} md={6}>
+              </div>
+              <div className="tw:w-full tw:site-md:w-6/12">
                 <Form.Group controlId="member-phone">
-                  <Form.Label className="text-secondary small">{m.registration_phone()}</Form.Label>
+                  <Form.Label className="tw:text-subtle tw:text-sm">
+                    {m.registration_phone()}
+                  </Form.Label>
                   <form.Field name="phone">
                     {(field) => (
                       <Form.Control
                         type="tel"
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         maxLength={50}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -247,12 +251,12 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                     )}
                   </form.Field>
                 </Form.Group>
-              </Col>
-            </Row>
+              </div>
+            </div>
 
             <form.Field name="preferredLanguage">
               {(field) => (
-                <Form.Group className="mb-3" controlId="member-preferred-language">
+                <Form.Group className="tw:mb-4" controlId="member-preferred-language">
                   <Form.Label>{m.registration_preferred_language()}</Form.Label>
                   <Form.Select
                     value={field.value ?? ""}
@@ -268,15 +272,15 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 </Form.Group>
               )}
             </form.Field>
-            <Form.Group className="mb-3" controlId="member-club">
-              <Form.Label className="text-secondary small fw-semibold text-warning-emphasis">
+            <Form.Group className="tw:mb-4" controlId="member-club">
+              <Form.Label className="tw:text-sm tw:font-semibold tw:text-highlight">
                 {m.admin_people_club_name_label()}
               </Form.Label>
               <form.Field name="clubName">
                 {(field) => (
                   <Form.Control
                     type="text"
-                    className="bg-dark text-light border-secondary border-warning"
+                    className="bg-dark tw:text-content border-secondary border-warning"
                     maxLength={200}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -286,15 +290,15 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               </form.Field>
             </Form.Group>
 
-            <Form.Group className="mb-3" controlId="member-address">
-              <Form.Label className="text-secondary small">
+            <Form.Group className="tw:mb-4" controlId="member-address">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_people_address_label()}
               </Form.Label>
               <form.Field name="address">
                 {(field) => (
                   <Form.Control
                     type="text"
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     maxLength={300}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -304,14 +308,16 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               </form.Field>
             </Form.Group>
 
-            <Form.Group className="mb-3" controlId="member-notes">
-              <Form.Label className="text-secondary small">{m.registration_notes()}</Form.Label>
+            <Form.Group className="tw:mb-4" controlId="member-notes">
+              <Form.Label className="tw:text-subtle tw:text-sm">
+                {m.registration_notes()}
+              </Form.Label>
               <form.Field name="notes">
                 {(field) => (
                   <Form.Control
                     as="textarea"
                     rows={4}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     maxLength={2000}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -326,7 +332,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 <Form.Check
                   type="switch"
                   id="member-active"
-                  className="text-secondary"
+                  className="tw:text-subtle"
                   label={m.admin_people_active_label()}
                   checked={field.value}
                   onChange={(e) => field.handleChange(e.target.checked)}
@@ -342,7 +348,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             <Button variant="warning" type="submit" disabled={isSubmitting || !nameValue?.trim()}>
               {isSubmitting ? (
                 <>
-                  <Spinner animation="border" size="sm" className="me-2" />
+                  <Spinner animation="border" size="sm" className="tw:me-2" />
                   {m.admin_save()}
                 </>
               ) : (

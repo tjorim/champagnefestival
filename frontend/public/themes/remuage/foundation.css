@@ -487,21 +487,22 @@ html[data-visual-theme="remuage"]
   .App:not(.standalone-app)
   > main#main-content
   > section
-  > .container {
+  > .site-container {
   width: 100%;
   max-width: 100%;
   height: 100%;
   padding-inline: clamp(1.25rem, 3vw, 3rem);
 }
 
-html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > section .col-lg-8,
 html[data-visual-theme="remuage"]
   .App:not(.standalone-app)
   > main#main-content
   > section
-  .col-md-10 {
+  .site-content-column {
   width: 100%;
   max-width: 100%;
+  --layout-column-md: 100%;
+  --layout-column-lg: 100%;
 }
 
 html[data-visual-theme="remuage"] .section-header {

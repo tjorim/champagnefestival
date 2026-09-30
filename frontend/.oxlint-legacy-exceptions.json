@@ -17,17 +17,6 @@
     }
   },
   {
-    "files": ["src/components/CheckInPage.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["width"]
-        }
-      ]
-    }
-  },
-  {
     "files": ["src/components/CheckInScanner.tsx"],
     "rules": {
       "shadcn/no-inline-styles": [
@@ -76,28 +65,6 @@
             "maintenance-page__flyer-trigger",
             "maintenance-page__scrim"
           ]
-        }
-      ]
-    }
-  },
-  {
-    "files": ["src/components/MapComponent.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["display", "height", "marginTop", "textDecoration", "width"]
-        }
-      ]
-    }
-  },
-  {
-    "files": ["src/components/MyAccountPage.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["maxWidth"]
         }
       ]
     }
@@ -490,17 +457,6 @@
         "error",
         {
           "allow": ["riviera-button--primary"]
-        }
-      ]
-    }
-  },
-  {
-    "files": ["src/main.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["position", "zIndex"]
         }
       ]
     }

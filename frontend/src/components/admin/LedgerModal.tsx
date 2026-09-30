@@ -177,24 +177,24 @@ export default function LedgerModal({
         </DialogHeader>
         <DialogBody className="tw:p-0">
           {loading && (
-            <div className="text-center py-4">
+            <div className="tw:text-center tw:py-6">
               <Spinner animation="border" size="sm" variant="warning" />
             </div>
           )}
           {!loading && error && (
-            <Alert role="alert" aria-live="assertive" variant="danger" className="m-3">
+            <Alert role="alert" aria-live="assertive" variant="danger" className="tw:m-4">
               {m.admin_payment_history_error()}
             </Alert>
           )}
           {!loading && !error && total === 0 && (
-            <p className="text-secondary text-center py-4 mb-0">
+            <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
               {m.admin_payment_history_empty()}
             </p>
           )}
           {!loading && !error && total > 0 && (
             <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
-                <caption className="visually-hidden">{m.admin_ledger_table_caption()}</caption>
+                <caption className="tw:sr-only">{m.admin_ledger_table_caption()}</caption>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>

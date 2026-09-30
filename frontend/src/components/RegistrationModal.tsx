@@ -291,15 +291,17 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
         <DialogBody>
           {!event ? (
-            <Alert variant="danger" className="mb-0">
+            <Alert variant="danger" className="tw:mb-0">
               <Icon icon={TriangleAlertIcon} className="tw:me-2" />
               {m.registration_error()}
             </Alert>
           ) : submitSuccess ? (
-            <Alert variant="success" className="mb-0">
+            <Alert variant="success" className="tw:mb-0">
               <Icon icon={CircleCheckIcon} className="tw:me-2" />
               {m.registration_success()}
-              <div className="mt-2">{m.registration_reference({ reference: registrationId })}</div>
+              <div className="tw:mt-2">
+                {m.registration_reference({ reference: registrationId })}
+              </div>
               <a href="/me" className="alert-link">
                 {m.registration_view_my_registrations()}
               </a>
@@ -319,7 +321,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                     aria-hidden="true"
                     tabIndex={-1}
                     autoComplete="off"
-                    className="d-none"
+                    className="tw:hidden"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                   />
@@ -339,7 +341,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 {(field) => {
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
-                    <Form.Group className="mb-3" controlId="res-name">
+                    <Form.Group className="tw:mb-4" controlId="res-name">
                       <Form.Label>{m.registration_name()} *</Form.Label>
                       <Form.Control
                         type="text"
@@ -376,7 +378,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 {(field) => {
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
-                    <Form.Group className="mb-3" controlId="res-email">
+                    <Form.Group className="tw:mb-4" controlId="res-email">
                       <Form.Label>{m.registration_email()} *</Form.Label>
                       <Form.Control
                         type="email"
@@ -410,7 +412,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 {(field) => {
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
-                    <Form.Group className="mb-3" controlId="res-phone">
+                    <Form.Group className="tw:mb-4" controlId="res-phone">
                       <Form.Label>{m.registration_phone()} *</Form.Label>
                       <Form.Control
                         type="tel"
@@ -448,7 +450,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 {(field) => {
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
-                    <Form.Group className="mb-3" controlId="res-guests">
+                    <Form.Group className="tw:mb-4" controlId="res-guests">
                       <Form.Label>{m.registration_guests()} *</Form.Label>
                       <Form.Control
                         type="number"
@@ -472,7 +474,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
               <form.Field name="preferredLanguage">
                 {(field) => (
-                  <Form.Group className="mb-3" controlId="res-preferred-language">
+                  <Form.Group className="tw:mb-4" controlId="res-preferred-language">
                     <Form.Label>{m.registration_preferred_language()}</Form.Label>
                     <Form.Select
                       value={field.value}
@@ -484,7 +486,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       <option value="fr">Français</option>
                       <option value="en">English</option>
                     </Form.Select>
-                    <Form.Text className="text-secondary">
+                    <Form.Text className="tw:text-subtle">
                       {m.registration_preferred_language_help()}
                     </Form.Text>
                   </Form.Group>
@@ -493,7 +495,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
               <form.Field name="marketingOptIn">
                 {(field) => (
-                  <Form.Group className="mb-3" controlId="res-marketing-opt-in">
+                  <Form.Group className="tw:mb-4" controlId="res-marketing-opt-in">
                     <Form.Check
                       id="res-marketing-opt-in-check"
                       type="checkbox"
@@ -502,7 +504,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       onChange={(e) => field.handleChange(e.target.checked)}
                       aria-describedby="res-marketing-opt-in-help"
                     />
-                    <Form.Text id="res-marketing-opt-in-help" className="text-secondary">
+                    <Form.Text id="res-marketing-opt-in-help" className="tw:text-subtle">
                       {m.registration_marketing_opt_in_help()}
                     </Form.Text>
                   </Form.Group>
@@ -510,11 +512,15 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               </form.Field>
 
               {showOrderItems && (
-                <fieldset className="mb-3">
-                  <legend className="fs-6 fw-semibold mb-1">{m.registration_order_title()}</legend>
-                  <p className="text-secondary small mb-2">{m.registration_order_description()}</p>
+                <fieldset className="tw:mb-4">
+                  <legend className="tw:text-base tw:font-semibold tw:mb-1">
+                    {m.registration_order_title()}
+                  </legend>
+                  <p className="tw:text-subtle tw:text-sm tw:mb-2">
+                    {m.registration_order_description()}
+                  </p>
                   {requiredProducts.length > 0 && !hasRequiredSelected && (
-                    <p className="text-warning small mb-2">
+                    <p className="tw:text-highlight tw:text-sm tw:mb-2">
                       {m.registration_order_required_hint({
                         products: requiredProducts.map((p) => p.name).join(", "),
                       })}
@@ -529,24 +535,24 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       !product.required && requiredProducts.length > 0 && !hasRequiredSelected;
                     const included = includedQuantities.get(product.id);
                     return (
-                      <div key={product.id} className="mb-2">
-                        <div className="d-flex align-items-center justify-content-between">
-                          <span className="tw:text-foreground small">
+                      <div key={product.id} className="tw:mb-2">
+                        <div className="tw:flex tw:items-center tw:justify-between">
+                          <span className="tw:text-foreground tw:text-sm">
                             {label}
                             {product.soldOut && (
                               <>
-                                <span className="badge bg-danger ms-2">
+                                <span className="badge bg-danger tw:ms-2">
                                   {m.registration_order_sold_out()}
                                 </span>
                                 {waitlistedProductIds.has(product.id) ? (
-                                  <span className="badge bg-success ms-2">
+                                  <span className="badge bg-success tw:ms-2">
                                     {m.registration_waitlist_joined()}
                                   </span>
                                 ) : (
                                   <Button
                                     variant="link"
                                     size="sm"
-                                    className="p-0 ms-2 align-baseline"
+                                    className="tw:p-0 tw:ms-2 align-baseline"
                                     disabled={joinWaitlistMutation.isPending}
                                     onClick={() => handleJoinWaitlist(product.id)}
                                   >
@@ -557,14 +563,14 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                             )}
                             {product.description && (
                               <span
-                                className="text-secondary d-block"
+                                className="tw:text-subtle tw:block"
                                 style={{ fontSize: "0.75rem" }}
                               >
                                 {product.description}
                               </span>
                             )}
                           </span>
-                          <div className="d-flex align-items-center gap-2">
+                          <div className="tw:flex tw:items-center tw:gap-2">
                             <Button
                               variant="outline-secondary"
                               size="sm"
@@ -597,12 +603,12 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                           </div>
                         </div>
                         {product.availableQuantity != null && (
-                          <div className="text-secondary small">
+                          <div className="tw:text-subtle tw:text-sm">
                             {m.registration_order_available()}: {product.availableQuantity}
                           </div>
                         )}
                         {included && (
-                          <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
+                          <div className="tw:text-subtle" style={{ fontSize: "0.75rem" }}>
                             {m.registration_order_included_note({
                               count: included.quantity,
                               source: included.sourceName,
@@ -616,14 +622,14 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               )}
 
               {waitlistError && (
-                <Alert variant="danger" className="py-2 small">
+                <Alert variant="danger" className="tw:py-2 tw:text-sm">
                   {waitlistError}
                 </Alert>
               )}
 
               <form.Field name="notes">
                 {(field) => (
-                  <Form.Group className="mb-3" controlId="res-notes">
+                  <Form.Group className="tw:mb-4" controlId="res-notes">
                     <Form.Label>{m.registration_notes()}</Form.Label>
                     <Form.Control
                       as="textarea"
@@ -636,7 +642,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <Form.Text id="res-notes-help" className="text-secondary">
+                    <Form.Text id="res-notes-help" className="tw:text-subtle">
                       {m.registration_notes_help()}
                     </Form.Text>
                   </Form.Group>
@@ -644,7 +650,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               </form.Field>
 
               {submitError && (
-                <Alert variant="danger" className="mb-3">
+                <Alert variant="danger" className="tw:mb-4">
                   <Icon icon={TriangleAlertIcon} className="tw:me-2" />
                   {submitError}
                 </Alert>
@@ -653,7 +659,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               <Button
                 type="submit"
                 variant="warning"
-                className="w-100"
+                className="tw:w-full"
                 disabled={isSubmitting}
                 aria-busy={isSubmitting}
               >
@@ -665,7 +671,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                       size="sm"
                       role="status"
                       aria-hidden="true"
-                      className="me-2"
+                      className="tw:me-2"
                     />
                     {m.registration_submitting()}
                   </>

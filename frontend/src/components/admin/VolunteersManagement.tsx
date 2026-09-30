@@ -144,10 +144,10 @@ export default function VolunteersManagement({
           cell: ({ row }) => {
             const volunteer = row.original;
             return (
-              <div className="fw-semibold d-flex align-items-center gap-1">
+              <div className="tw:font-semibold tw:flex tw:items-center tw:gap-1">
                 {volunteer.name}
                 {!volunteer.active && (
-                  <Badge bg="secondary" className="ms-1">
+                  <Badge bg="secondary" className="tw:ms-1">
                     {m.admin_people_inactive_badge_label()}
                   </Badge>
                 )}
@@ -174,18 +174,18 @@ export default function VolunteersManagement({
           header: m.admin_volunteers_help_periods_label(),
           enableSorting: false,
           cell: ({ row }) => (
-            <div className="d-flex flex-column gap-1 small">
+            <div className="tw:flex tw:flex-col tw:gap-1 tw:text-sm">
               {row.original.helpPeriods.length > 0 ? (
                 row.original.helpPeriods.map((period) => (
-                  <span key={period.id} className="text-secondary">
+                  <span key={period.id} className="tw:text-subtle">
                     {formatPeriod(period)}
                     {period.notes && (
-                      <span className="d-block text-secondary opacity-75">{period.notes}</span>
+                      <span className="tw:block tw:text-subtle opacity-75">{period.notes}</span>
                     )}
                   </span>
                 ))
               ) : (
-                <span className="text-secondary">{m.admin_volunteers_no_help_periods()}</span>
+                <span className="tw:text-subtle">{m.admin_volunteers_no_help_periods()}</span>
               )}
             </div>
           ),
@@ -197,7 +197,7 @@ export default function VolunteersManagement({
           cell: ({ row }) => {
             const volunteer = row.original;
             return (
-              <div className="d-flex flex-wrap gap-1">
+              <div className="tw:flex tw:flex-wrap tw:gap-1">
                 <Button
                   size="sm"
                   variant="outline-light"
@@ -252,10 +252,10 @@ export default function VolunteersManagement({
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="pb-2">
-          <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
-            <span className="fw-semibold">{m.admin_volunteers_tab()}</span>
-            <div className="d-flex gap-2">
+        <Card.Header className="tw:pb-2">
+          <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:mb-2">
+            <span className="tw:font-semibold">{m.admin_volunteers_tab()}</span>
+            <div className="tw:flex tw:gap-2">
               <Button
                 size="sm"
                 variant="outline-secondary"
@@ -281,19 +281,19 @@ export default function VolunteersManagement({
           {exportError && (
             <Alert
               variant="danger"
-              className="py-1 mb-2"
+              className="tw:py-1 tw:mb-2"
               dismissible
               onClose={() => setExportError("")}
             >
               {exportError}
             </Alert>
           )}
-          <div className="d-flex flex-wrap gap-2 align-items-center">
+          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
             <Form.Select
               size="sm"
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
-              className="bg-dark text-light border-secondary"
+              className="bg-dark tw:text-content border-secondary"
               style={{ maxWidth: 180 }}
               aria-label={m.admin_people_active_label()}
             >
@@ -307,18 +307,18 @@ export default function VolunteersManagement({
               placeholder={m.admin_volunteers_search_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="bg-dark text-light border-secondary"
+              className="bg-dark tw:text-content border-secondary"
               style={{ maxWidth: 280 }}
             />
           </div>
         </Card.Header>
 
-        <Card.Body className="p-0">
+        <Card.Body className="tw:p-0">
           {createSuccess && (
             <Alert
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setCreateSuccess(false)}
             >
               {m.admin_volunteers_create_success()}
@@ -328,7 +328,7 @@ export default function VolunteersManagement({
             <Alert
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setUpdateSuccess(false)}
             >
               {m.admin_volunteers_update_success()}
@@ -338,7 +338,7 @@ export default function VolunteersManagement({
             <Alert
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setDeleteSuccess(false)}
             >
               {m.admin_volunteers_delete_success()}
@@ -346,17 +346,17 @@ export default function VolunteersManagement({
           )}
 
           {isLoading ? (
-            <div className="text-center py-4">
+            <div className="tw:text-center tw:py-6">
               <Spinner animation="border" variant="primary" size="sm" />
             </div>
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
-            <p className="text-secondary text-center py-4 mb-0">
+            <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
               {m.admin_volunteers_no_results()}
             </p>
           ) : (
             <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
-                <caption className="visually-hidden">{m.admin_volunteers_table_caption()}</caption>
+                <caption className="tw:sr-only">{m.admin_volunteers_table_caption()}</caption>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
@@ -422,7 +422,7 @@ export default function VolunteersManagement({
               </Button>
               <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
                 {deleting ? (
-                  <Spinner as="span" animation="border" size="sm" className="me-1" />
+                  <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
                 ) : (
                   <Icon icon={TrashIcon} className="tw:me-1" />
                 )}

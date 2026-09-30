@@ -97,10 +97,11 @@
 }
 
 #admin .form-control.bg-dark,
-#admin .form-control.text-light {
+#admin .form-control.tw\:text-content {
   background-color: var(--adm-surface-2) !important;
   color: var(--adm-text) !important;
   border-color: var(--adm-border) !important;
+  --layout-content: var(--adm-text) !important;
 }
 
 #admin .form-control.border-secondary {
@@ -196,22 +197,25 @@
 
 /* ---- Badges — swap warning yellow for brand blue ---- */
 #admin .badge.bg-warning,
-#admin .badge.bg-warning.text-dark {
+#admin .badge.bg-warning.tw\:text-contrast {
   background: rgba(var(--adm-primary-rgb), 0.18) !important;
   color: var(--adm-primary) !important;
   border: 1px solid rgba(var(--adm-primary-rgb), 0.3) !important;
   /* reset text-dark override */
   --bs-badge-color: var(--adm-primary) !important;
+  --layout-contrast: var(--adm-primary) !important;
 }
 
 /* ---- Spinner — match brand ---- */
-#admin .spinner-border.text-warning {
+#admin .spinner-border.tw\:text-highlight {
   color: var(--adm-primary) !important;
+  --layout-highlight: var(--adm-primary) !important;
 }
 
 /* ---- text-warning overrides ---- */
-#admin .text-warning {
+#admin .tw\:text-highlight {
   color: var(--adm-primary) !important;
+  --layout-highlight: var(--adm-primary) !important;
 }
 
 /* ---- Success icon in auth bar ---- */
@@ -651,15 +655,17 @@
   filter: brightness(1.1);
 }
 
-[data-theme-scope="admin"] [data-slot="dialog-content"] .text-warning {
+[data-theme-scope="admin"] [data-slot="dialog-content"] .tw\:text-highlight {
   color: var(--adm-primary) !important;
+  --layout-highlight: var(--adm-primary) !important;
 }
 
 [data-theme-scope="admin"] [data-slot="dialog-content"] .badge.bg-warning,
-[data-theme-scope="admin"] [data-slot="dialog-content"] .badge.bg-warning.text-dark {
+[data-theme-scope="admin"] [data-slot="dialog-content"] .badge.bg-warning.tw\:text-contrast {
   background: rgba(var(--adm-primary-rgb), 0.18) !important;
   color: var(--adm-primary) !important;
   border: 1px solid rgba(var(--adm-primary-rgb), 0.3) !important;
+  --layout-contrast: var(--adm-primary) !important;
 }
 
 .admin-active-edition-strip {

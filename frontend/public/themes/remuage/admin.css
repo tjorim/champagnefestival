@@ -134,9 +134,10 @@ html[data-visual-theme="remuage"] #admin .table thead th {
 }
 
 html[data-visual-theme="remuage"] #admin .bg-dark,
-html[data-visual-theme="remuage"] #admin .text-light {
+html[data-visual-theme="remuage"] #admin .tw\:text-content {
   color: var(--adm-text) !important;
   background-color: var(--adm-surface) !important;
+  --layout-content: var(--adm-text) !important;
 }
 
 html[data-visual-theme="remuage"] #admin .border-secondary {

@@ -249,14 +249,14 @@ export default function EditionModal({
         >
           <DialogBody>
             {error && (
-              <Alert variant="danger" className="py-1 mb-3 small">
+              <Alert variant="danger" className="tw:py-1 tw:mb-4 tw:text-sm">
                 {error}
               </Alert>
             )}
 
             {!isEdit && (
-              <Form.Group className="mb-3" controlId="edition-id">
-                <Form.Label className="text-secondary small mb-1">ID</Form.Label>
+              <Form.Group className="tw:mb-4" controlId="edition-id">
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">ID</Form.Label>
                 <form.Field
                   name="id"
                   validators={[
@@ -272,7 +272,7 @@ export default function EditionModal({
                     return (
                       <>
                         <Form.Control
-                          className="bg-dark text-light border-secondary"
+                          className="bg-dark tw:text-content border-secondary"
                           placeholder="e.g. 2026-march"
                           autoFocus
                           value={field.value}
@@ -292,14 +292,14 @@ export default function EditionModal({
               </Form.Group>
             )}
 
-            <div className="d-flex gap-2 flex-wrap mb-3">
+            <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-4">
               <Form.Group style={{ maxWidth: "100px" }} controlId="edition-year">
-                <Form.Label className="text-secondary small mb-1">Year</Form.Label>
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">Year</Form.Label>
                 <form.Field name="year">
                   {(field) => (
                     <Form.Control
                       type="number"
-                      className="bg-dark text-light border-secondary"
+                      className="bg-dark tw:text-content border-secondary"
                       value={field.value}
                       onChange={(e) => field.handleChange(Number(e.target.value))}
                       onBlur={field.handleBlur}
@@ -311,7 +311,7 @@ export default function EditionModal({
                 style={{ minWidth: "140px", flex: "1 1 140px" }}
                 controlId="edition-month"
               >
-                <Form.Label className="text-secondary small mb-1">Month</Form.Label>
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">Month</Form.Label>
                 <form.Field
                   name="month"
                   validators={[
@@ -327,7 +327,7 @@ export default function EditionModal({
                     return (
                       <>
                         <Form.Control
-                          className="bg-dark text-light border-secondary"
+                          className="bg-dark tw:text-content border-secondary"
                           placeholder="e.g. march"
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -345,7 +345,7 @@ export default function EditionModal({
                 </form.Field>
               </Form.Group>
               <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }} controlId="edition-type">
-                <Form.Label className="text-secondary small mb-1">
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_edition_type_label()}
                 </Form.Label>
                 <form.Field name="editionType">
@@ -359,7 +359,7 @@ export default function EditionModal({
                         }
                       }}
                       onBlur={field.handleBlur}
-                      className="bg-dark text-light border-secondary"
+                      className="bg-dark tw:text-content border-secondary"
                     >
                       <option value="festival">{m.admin_edition_type_festival()}</option>
                       <option value="bourse">{m.admin_edition_type_bourse()}</option>
@@ -378,14 +378,14 @@ export default function EditionModal({
                     label={m.admin_content_edition_active()}
                     checked={field.value}
                     onChange={(e) => field.handleChange(e.target.checked)}
-                    className="text-light align-self-end mb-1"
+                    className="tw:text-content tw:self-end tw:mb-1"
                   />
                 )}
               </form.Field>
             </div>
 
-            <Form.Group className="mb-3" controlId="edition-venue">
-              <Form.Label className="text-secondary small mb-1">
+            <Form.Group className="tw:mb-4" controlId="edition-venue">
+              <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                 {m.admin_edition_venue_label()}
               </Form.Label>
               <form.Field
@@ -402,7 +402,7 @@ export default function EditionModal({
                   return (
                     <>
                       <Form.Select
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -427,27 +427,27 @@ export default function EditionModal({
               </form.Field>
             </Form.Group>
 
-            <div className="border border-secondary rounded p-3 mb-3">
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <div className="text-light small fw-semibold">
+            <div className="border border-secondary rounded tw:p-4 tw:mb-4">
+              <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
+                <div className="tw:text-content tw:text-sm tw:font-semibold">
                   {typeLabel(editionType)} {m.admin_edition_date_handling()}
                 </div>
-                <span className="text-secondary small">{m.admin_edition_dates_info()}</span>
+                <span className="tw:text-subtle tw:text-sm">{m.admin_edition_dates_info()}</span>
               </div>
               {isFestival ? (
-                <div className="row g-2">
+                <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2">
                   {["Friday", "Saturday", "Sunday"].map((label, index) => (
                     <Form.Group
                       as="div"
-                      className="col-md-4"
+                      className="tw:site-md:w-4/12"
                       key={label}
                       controlId={`edition-date-${label.toLowerCase()}`}
                     >
-                      <Form.Label className="text-secondary small mb-1">{label}</Form.Label>
+                      <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">{label}</Form.Label>
                       <Form.Control
                         type="date"
                         value={previewDates[index] ?? ""}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         readOnly
                         disabled={!previewDates[index]}
                       />
@@ -456,31 +456,33 @@ export default function EditionModal({
                 </div>
               ) : (
                 <Form.Group controlId="edition-standalone-date">
-                  <Form.Label className="text-secondary small mb-1">Edition date</Form.Label>
+                  <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+                    Edition date
+                  </Form.Label>
                   <Form.Control
                     type="date"
                     value={previewDates[0] ?? ""}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     readOnly
                     disabled={!previewDates[0]}
                   />
                 </Form.Group>
               )}
-              <div className="text-secondary small mt-2">
+              <div className="tw:text-subtle tw:text-sm tw:mt-2">
                 {isEdit
                   ? m.admin_edition_update_event_dates()
                   : m.admin_edition_create_first_then_events()}
               </div>
             </div>
 
-            <Form.Group className="mb-3" controlId="edition-co-organizer">
-              <Form.Label className="text-secondary small mb-1">
+            <Form.Group className="tw:mb-4" controlId="edition-co-organizer">
+              <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                 {m.admin_edition_co_organizer_label()}
               </Form.Label>
               <form.Field name="coOrganizerId">
                 {(field) => (
                   <Form.Select
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -496,17 +498,19 @@ export default function EditionModal({
                   </Form.Select>
                 )}
               </form.Field>
-              <div className="text-secondary small mt-1">{m.admin_edition_co_organizer_help()}</div>
+              <div className="tw:text-subtle tw:text-sm tw:mt-1">
+                {m.admin_edition_co_organizer_help()}
+              </div>
             </Form.Group>
 
             {isFestival && (
-              <Form.Group className="mb-3" controlId="edition-exhibitors">
-                <Form.Label className="text-secondary small mb-1">
+              <Form.Group className="tw:mb-4" controlId="edition-exhibitors">
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_edition_festival_exhibitors()}
                 </Form.Label>
                 {exhibitorsQuery.isPending ? (
-                  <div className="text-secondary small">
-                    <Spinner animation="border" size="sm" className="me-2" />
+                  <div className="tw:text-subtle tw:text-sm">
+                    <Spinner animation="border" size="sm" className="tw:me-2" />
                     {m.admin_edition_loading_exhibitors()}
                   </div>
                 ) : (
@@ -585,7 +589,7 @@ export default function EditionModal({
               disabled={saveEditionMutation.isPending}
             >
               {saveEditionMutation.isPending ? (
-                <Spinner as="span" animation="border" size="sm" className="me-1" />
+                <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
               ) : (
                 <Icon icon={SaveIcon} className="tw:me-1" />
               )}

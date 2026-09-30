@@ -338,14 +338,14 @@ export function ContentSection({
       <ListGroup.Item
         key={item.id}
         className={clsx(
-          "bg-dark border-secondary d-flex justify-content-between align-items-center gap-2",
+          "bg-dark border-secondary tw:flex tw:justify-between tw:items-center tw:gap-2",
           isArchived && "opacity-50",
         )}
       >
-        <span className="d-flex align-items-center gap-2 flex-grow-1 text-truncate">
+        <span className="tw:flex tw:items-center tw:gap-2 tw:grow tw:truncate">
           {item.image && (
             <span
-              className="d-inline-flex align-items-center justify-content-center"
+              className="tw:inline-flex tw:items-center tw:justify-center"
               style={{ width: 32, height: 32, flexShrink: 0 }}
             >
               {imageErrors.has(item.id) ? (
@@ -379,26 +379,30 @@ export function ContentSection({
               </TooltipContent>
             </Tooltip>
           ) : (
-            <span className={clsx("text-truncate", isArchived ? "text-secondary" : "text-light")}>
+            <span
+              className={clsx("tw:truncate", isArchived ? "tw:text-subtle" : "tw:text-content")}
+            >
               {item.name}
             </span>
           )}
           <Badge
             bg={typeBadgeVariant(item.type)}
-            className="flex-shrink-0"
+            className="tw:shrink-0"
             aria-label={`${m.admin_item_type()}: ${typeLabel(item.type)}`}
           >
             {typeLabel(item.type)}
           </Badge>
-          <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>
+          <small className="tw:text-subtle tw:truncate tw:hidden tw:site-md:inline">
+            {item.image}
+          </small>
           {item.contactPerson && (
-            <small className="text-secondary text-truncate d-none d-lg-inline">
+            <small className="tw:text-subtle tw:truncate tw:hidden tw:site-lg:inline">
               <Icon icon={UserIcon} className="tw:me-1" />
               {item.contactPerson.name}
             </small>
           )}
         </span>
-        <span className="d-flex gap-1 flex-shrink-0">
+        <span className="tw:flex tw:gap-1 tw:shrink-0">
           {!isArchived && (
             <Button
               variant="outline-secondary"
@@ -447,23 +451,23 @@ export function ContentSection({
 
   if (itemsQuery.isPending) {
     return (
-      <div className="text-center py-3">
+      <div className="tw:text-center tw:py-4">
         <Spinner animation="border" size="sm" variant="primary" />
-        <span className="ms-2 text-secondary">{m.admin_content_loading()}</span>
+        <span className="tw:ms-2 tw:text-subtle">{m.admin_content_loading()}</span>
       </div>
     );
   }
 
   return (
-    <div className="mb-4">
-      <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-        <h6 className="mb-0 text-primary">
+    <div className="tw:mb-6">
+      <div className="tw:flex tw:justify-between tw:items-center tw:mb-2 tw:flex-wrap tw:gap-2">
+        <h6 className="tw:mb-0 tw:text-primary">
           {title}
-          <Badge bg="secondary" className="ms-2">
+          <Badge bg="secondary" className="tw:ms-2">
             {totalActive}
           </Badge>
           {totalArchived > 0 && (
-            <Badge bg="dark" text="secondary" className="ms-1 border border-secondary">
+            <Badge bg="dark" text="secondary" className="tw:ms-1 border border-secondary">
               {totalArchived} {m.admin_content_archived_section()}
             </Badge>
           )}
@@ -473,7 +477,7 @@ export function ContentSection({
           {m.admin_content_add_item()}
         </Button>
       </div>
-      <div className="d-flex flex-wrap gap-2 align-items-center mb-2">
+      <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center tw:mb-2">
         <ButtonGroup size="sm">
           {(["all", "producer", "sponsor", "vendor"] as const).map((type) => (
             <Button
@@ -491,7 +495,7 @@ export function ContentSection({
           placeholder={m.admin_content_search_placeholder()}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="bg-dark text-light border-secondary"
+          className="bg-dark tw:text-content border-secondary"
           style={{ maxWidth: 260 }}
         />
         {typeFilter !== "all" && activeItems.length > 0 && (
@@ -508,7 +512,7 @@ export function ContentSection({
       </div>
 
       {itemsQuery.isError && (
-        <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-2">
+        <Alert role="alert" aria-live="assertive" variant="danger" className="tw:py-1 tw:mb-2">
           {m.admin_content_error_load()}
         </Alert>
       )}
@@ -517,7 +521,7 @@ export function ContentSection({
           role="alert"
           aria-live="assertive"
           variant="danger"
-          className="py-1 mb-2"
+          className="tw:py-1 tw:mb-2"
           dismissible
           onClose={() => setActionError(null)}
         >
@@ -526,19 +530,19 @@ export function ContentSection({
       )}
       <ListGroup variant="flush">{activeItems.map((item) => renderItemRow(item, false))}</ListGroup>
       {activeItems.length === 0 && archivedItems.length === 0 && (q || typeFilter !== "all") && (
-        <div className="text-center py-4 text-secondary">
-          <p className="mb-2 small">{m.admin_content_no_results()}</p>
+        <div className="tw:text-center tw:py-6 tw:text-subtle">
+          <p className="tw:mb-2 tw:text-sm">{m.admin_content_no_results()}</p>
           <Button variant="outline-secondary" size="sm" onClick={handleClearFilters}>
             {m.admin_content_clear_filters()}
           </Button>
         </div>
       )}
       {archivedItems.length > 0 && (
-        <div className="mt-2">
+        <div className="tw:mt-2">
           <Button
             variant="link"
             size="sm"
-            className="text-secondary px-0"
+            className="tw:text-subtle tw:px-0"
             onClick={() => setArchivedOpen((value) => !value)}
           >
             <Icon icon={archivedOpen ? ChevronDownIcon : ChevronRightIcon} className="tw:me-1" />
@@ -593,7 +597,7 @@ export function ContentSection({
             <Button variant="warning" onClick={handleBulkArchive} disabled={bulkArchiveInProgress}>
               {bulkArchiveInProgress && (
                 <span
-                  className="spinner-border spinner-border-sm me-2"
+                  className="spinner-border spinner-border-sm tw:me-2"
                   role="status"
                   aria-hidden="true"
                 />
@@ -681,10 +685,10 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
   }, [onEditionMutated, queryClient]);
 
   return (
-    <div className="mb-4">
-      <div className="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+    <div className="tw:mb-6">
+      <div className="tw:flex tw:justify-between tw:items-center tw:mb-2 tw:flex-wrap tw:gap-2">
         <div>
-          <h6 className="mb-1 text-primary">{m.admin_content_editions_section()}</h6>
+          <h6 className="tw:mb-1 tw:text-primary">{m.admin_content_editions_section()}</h6>
           <ButtonGroup size="sm">
             {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
               <Button
@@ -704,30 +708,30 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
       </div>
 
       {editionsQuery.isPending && (
-        <div className="text-center py-3">
+        <div className="tw:text-center tw:py-4">
           <Spinner animation="border" size="sm" variant="primary" />
-          <span className="ms-2 text-secondary">{m.admin_content_loading()}</span>
+          <span className="tw:ms-2 tw:text-subtle">{m.admin_content_loading()}</span>
         </div>
       )}
       {!editionsQuery.isPending && editionsQuery.isError && (
-        <Alert role="alert" aria-live="assertive" variant="danger" className="py-2 small">
+        <Alert role="alert" aria-live="assertive" variant="danger" className="tw:py-2 tw:text-sm">
           {m.admin_content_error_load()}
         </Alert>
       )}
       {!editionsQuery.isPending &&
         !editionsQuery.isError &&
         (editionsQuery.data ?? []).length === 0 && (
-          <p className="text-secondary fst-italic small">{m.admin_content_no_editions()}</p>
+          <p className="tw:text-subtle fst-italic tw:text-sm">{m.admin_content_no_editions()}</p>
         )}
       {!editionsQuery.isPending && !editionsQuery.isError && (
-        <div className="d-flex flex-column gap-3">
+        <div className="tw:flex tw:flex-col tw:gap-4">
           {(["festival", "bourse", "capsule_exchange"] as const).map((type) => {
             const grouped = groupedEditions[type];
             if (grouped.length === 0) return null;
             return (
               <div key={type}>
-                <div className="d-flex align-items-center gap-2 mb-2">
-                  <h6 className="mb-0 text-light">{editionTypeLabel(type)}</h6>
+                <div className="tw:flex tw:items-center tw:gap-2 tw:mb-2">
+                  <h6 className="tw:mb-0 tw:text-content">{editionTypeLabel(type)}</h6>
                   <Badge bg="secondary">{grouped.length}</Badge>
                 </div>
                 {grouped.map((edition) => (
@@ -768,7 +772,7 @@ export default function ContentManagement({
 }: ContentManagementProps) {
   return (
     <div>
-      <Card bg="dark" text="white" border="secondary" className="mb-3">
+      <Card bg="dark" text="white" border="secondary" className="tw:mb-4">
         <Card.Body>
           <ContentSection
             sectionKey="exhibitors"

@@ -367,7 +367,7 @@ export default function AdminSidebar({
               {canManageAdminSections ? m.admin_role_admin() : m.admin_role_volunteer()}
             </span>
           </div>
-          <div className="d-flex gap-2">
+          <div className="tw:flex tw:gap-2">
             <Button
               variant="outline-secondary"
               size="sm"
@@ -384,7 +384,7 @@ export default function AdminSidebar({
             <Button
               variant="outline-danger"
               size="sm"
-              className="flex-grow-1"
+              className="tw:grow"
               onClick={onLogout}
               disabled={isSigningOut}
               title={m.admin_logout()}
@@ -394,7 +394,7 @@ export default function AdminSidebar({
                   as="span"
                   animation="border"
                   size="sm"
-                  className="me-2"
+                  className="tw:me-2"
                   aria-hidden="true"
                 />
               ) : (

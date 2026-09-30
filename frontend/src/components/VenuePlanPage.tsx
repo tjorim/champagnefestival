@@ -33,7 +33,7 @@ export default function VenuePlanPage() {
   if (!edition) return <Alert variant="warning">{m.venue_plan_missing_edition()}</Alert>;
   if (query.isLoading)
     return (
-      <div className="text-center p-5">
+      <div className="tw:text-center tw:p-12">
         <Spinner />
       </div>
     );
@@ -41,11 +41,11 @@ export default function VenuePlanPage() {
   if (!query.data?.layouts.length) return <Alert variant="info">{m.venue_plan_empty()}</Alert>;
 
   return (
-    <div className="container py-3">
-      <p className="text-secondary">{m.venue_plan_description()}</p>
+    <div className="site-container tw:mx-auto tw:w-full tw:py-4">
+      <p className="tw:text-subtle">{m.venue_plan_description()}</p>
       {query.data.layouts.map((layout) => (
-        <Card bg="dark" text="white" className="mb-4" key={layout.id}>
-          <Card.Header className="d-flex justify-content-between">
+        <Card bg="dark" text="white" className="tw:mb-6" key={layout.id}>
+          <Card.Header className="tw:flex tw:justify-between">
             <strong>
               {layout.room?.name ?? layout.label} — {layout.event_title}
             </strong>
@@ -53,7 +53,7 @@ export default function VenuePlanPage() {
           </Card.Header>
           <Card.Body>
             <div
-              className="position-relative border rounded overflow-hidden"
+              className="tw:relative border rounded tw:overflow-hidden"
               style={{
                 width: "100%",
                 aspectRatio: `${layout.room?.width_m ?? 4} / ${layout.room?.length_m ?? 3}`,
@@ -67,7 +67,7 @@ export default function VenuePlanPage() {
               {layout.areas.map((area) => (
                 <div
                   key={area.id}
-                  className="position-absolute text-secondary small"
+                  className="tw:absolute tw:text-subtle tw:text-sm"
                   style={{
                     left: `${area.x}%`,
                     top: `${area.y}%`,
@@ -83,16 +83,16 @@ export default function VenuePlanPage() {
                 const occupied = item.occupied_seats;
                 const occupancyClass =
                   occupied > item.capacity
-                    ? "border-danger bg-danger bg-opacity-10 text-danger"
+                    ? "border-danger bg-danger bg-opacity-10 tw:text-destructive"
                     : item.exclusive || occupied === item.capacity
-                      ? "border-warning bg-warning bg-opacity-10 text-warning"
+                      ? "border-warning bg-warning bg-opacity-10 tw:text-highlight"
                       : occupied
-                        ? "border-success bg-dark text-success"
-                        : "border-secondary bg-dark text-light";
+                        ? "border-success bg-dark tw:text-success"
+                        : "border-secondary bg-dark tw:text-content";
                 return (
                   <div
                     key={item.id}
-                    className={`position-absolute border rounded px-2 py-1 text-center ${selected ? "border-warning bg-warning text-dark" : occupancyClass}`}
+                    className={`tw:absolute border rounded tw:px-2 tw:py-1 tw:text-center ${selected ? "border-warning bg-warning tw:text-contrast" : occupancyClass}`}
                     style={{
                       left: `${item.x}%`,
                       top: `${item.y}%`,
@@ -102,8 +102,8 @@ export default function VenuePlanPage() {
                     title={`${item.name}: ${occupied}/${item.capacity}`}
                     aria-current={selected ? "location" : undefined}
                   >
-                    <div className="fw-semibold small">{item.name}</div>
-                    <div className="small">
+                    <div className="tw:font-semibold tw:text-sm">{item.name}</div>
+                    <div className="tw:text-sm">
                       <Icon icon={UsersIcon} className="tw:me-1" />
                       {occupied}/{item.capacity}
                     </div>

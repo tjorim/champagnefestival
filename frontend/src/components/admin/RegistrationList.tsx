@@ -634,7 +634,7 @@ export default function RegistrationList({
             const isStandalone = isStandaloneRegistration(reg);
             return (
               <>
-                <div className="fw-semibold d-flex align-items-center gap-1">
+                <div className="tw:font-semibold tw:flex tw:items-center tw:gap-1">
                   {reg.person.name}
                   {isLinked && (
                     <span
@@ -654,9 +654,9 @@ export default function RegistrationList({
                     })()}
                   </Badge>
                 </div>
-                <div className="text-secondary small">{reg.person.email}</div>
+                <div className="tw:text-subtle tw:text-sm">{reg.person.email}</div>
                 {!isStandalone && reg.orderItems.length > 0 && (
-                  <div className="text-warning small">
+                  <div className="tw:text-highlight tw:text-sm">
                     <Icon icon={ShoppingCartIcon} className="tw:me-1" />
                     {reg.orderItems.filter((o) => o.delivered).length}/{reg.orderItems.length}{" "}
                     {m.admin_order_items()}
@@ -704,7 +704,7 @@ export default function RegistrationList({
                   <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
                 )}
                 {!isStandalone && reg.strapIssued && (
-                  <Badge bg="info" className="ms-1" title={m.admin_strap_issued()}>
+                  <Badge bg="info" className="tw:ms-1" title={m.admin_strap_issued()}>
                     <Icon icon={ContactRoundIcon} />
                     <span className="tw:sr-only">{m.admin_strap_issued()}</span>
                   </Badge>
@@ -726,11 +726,11 @@ export default function RegistrationList({
                 {reg.allocations?.length} {m.admin_tables_tab()}
               </span>
             ) : isStandalone && !(reg.bookedTableQuantity ?? 0) ? (
-              <span className="text-secondary small">—</span>
+              <span className="tw:text-subtle tw:text-sm">—</span>
             ) : (
               <Form.Select
                 size="sm"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 value={reg.tableId ?? ""}
                 onChange={(e) => handleAssignTable(reg.id, e.target.value)}
                 aria-label={m.admin_action_assign_table()}
@@ -764,7 +764,7 @@ export default function RegistrationList({
             const reg = row.original;
             const hasMoreActions = reg.status !== "cancelled" || reg.paymentStatus !== "paid";
             return (
-              <div className="d-flex flex-wrap gap-1">
+              <div className="tw:flex tw:flex-wrap tw:gap-1">
                 <Button
                   size="sm"
                   variant="outline-light"
@@ -1059,26 +1059,26 @@ export default function RegistrationList({
   return (
     <>
       <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="pb-2">
+        <Card.Header className="tw:pb-2">
           {/* Row 1: title + stats + add */}
-          <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
-            <div className="d-flex align-items-center gap-2 flex-wrap">
-              <span className="fw-semibold">{m.admin_registrations_tab_header()}</span>
-              <span className="text-secondary small">
-                <Badge bg="warning" text="dark" className="me-1">
+          <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:mb-2">
+            <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
+              <span className="tw:font-semibold">{m.admin_registrations_tab_header()}</span>
+              <span className="tw:text-subtle tw:text-sm">
+                <Badge bg="warning" text="dark" className="tw:me-1">
                   {statusCounts.pending}
                 </Badge>
                 {m.admin_filter_pending()}
-                <Badge bg="success" className="mx-1">
+                <Badge bg="success" className="tw:mx-1">
                   {statusCounts.confirmed}
                 </Badge>
                 {m.admin_filter_confirmed()}
-                <span className="ms-2 text-secondary">
+                <span className="tw:ms-2 tw:text-subtle">
                   · {statusCounts.all} {m.admin_filter_all()}
                 </span>
               </span>
             </div>
-            <div className="d-flex gap-2">
+            <div className="tw:flex tw:gap-2">
               <ColumnVisibilityDropdown table={table} tableId="registrations" />
               <Button
                 variant="outline-secondary"
@@ -1089,7 +1089,7 @@ export default function RegistrationList({
               >
                 {exportingAllCsv ? (
                   <span
-                    className="spinner-border spinner-border-sm me-1"
+                    className="spinner-border spinner-border-sm tw:me-1"
                     role="status"
                     aria-hidden="true"
                   />
@@ -1105,7 +1105,7 @@ export default function RegistrationList({
             </div>
           </div>
           {/* Row 2: filters + search */}
-          <div className="d-flex flex-wrap gap-2 align-items-center">
+          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
             <ButtonGroup size="sm">
               <Button
                 variant={editionFilter === "all" ? "primary" : "outline-secondary"}
@@ -1135,7 +1135,7 @@ export default function RegistrationList({
             {allocationOptions.length > 0 && (
               <Form.Select
                 size="sm"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 style={{ maxWidth: 200 }}
                 value={allocationFilter}
                 onChange={(e) => changeAllocationFilter(e.target.value)}
@@ -1183,32 +1183,34 @@ export default function RegistrationList({
               placeholder={m.admin_search_person_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="bg-dark text-light border-secondary"
+              className="bg-dark tw:text-content border-secondary"
               style={{ maxWidth: 220 }}
             />
           </div>
           {eventCapacityStats.length > 0 && (
-            <div className="mt-2 pt-2 border-top border-secondary">
-              <div className="d-flex flex-column gap-2">
+            <div className="tw:mt-2 tw:pt-2 border-top border-secondary">
+              <div className="tw:flex tw:flex-col tw:gap-2">
                 {eventCapacityStats.map((eventStats) => {
                   const checkInPercent =
                     eventStats.total > 0 ? (eventStats.checkedIn / eventStats.total) * 100 : 0;
 
                   return (
                     <div key={eventStats.eventId}>
-                      <div className="d-flex justify-content-between gap-2 small mb-1 flex-wrap">
-                        <span className="text-secondary text-truncate">
+                      <div className="tw:flex tw:justify-between tw:gap-2 tw:text-sm tw:mb-1 tw:flex-wrap">
+                        <span className="tw:text-subtle tw:truncate">
                           {eventCapacityStats.length > 1 && (
-                            <span className="fw-semibold text-light me-2">{eventStats.title}</span>
+                            <span className="tw:font-semibold tw:text-content tw:me-2">
+                              {eventStats.title}
+                            </span>
                           )}
                           {m.admin_checked_in()}: {eventStats.checkedIn}/{eventStats.total}{" "}
                           {m.admin_guests_count()}
                         </span>
-                        <span className="d-flex align-items-center gap-2">
+                        <span className="tw:flex tw:items-center tw:gap-2">
                           <Button
                             variant="outline-secondary"
                             size="sm"
-                            className="py-0 px-1"
+                            className="tw:py-0 tw:px-1"
                             disabled={exportingEventId === eventStats.eventId}
                             onClick={() => void handleExportEventCsv(eventStats.eventId)}
                             title={m.admin_registrations_export_event_csv()}
@@ -1235,7 +1237,7 @@ export default function RegistrationList({
               role="alert"
               aria-live="assertive"
               variant="danger"
-              className="py-1 mt-2 mb-0"
+              className="tw:py-1 tw:mt-2 tw:mb-0"
               dismissible
               onClose={() => setBulkError(null)}
             >
@@ -1247,7 +1249,7 @@ export default function RegistrationList({
               role="alert"
               aria-live="assertive"
               variant="danger"
-              className="py-1 mt-2 mb-0"
+              className="tw:py-1 tw:mt-2 tw:mb-0"
               dismissible
               onClose={() => setEventExportError(null)}
             >
@@ -1259,7 +1261,7 @@ export default function RegistrationList({
               role="alert"
               aria-live="assertive"
               variant="danger"
-              className="py-1 mt-2 mb-0"
+              className="tw:py-1 tw:mt-2 tw:mb-0"
               dismissible
               onClose={() => setCsvExportError(null)}
             >
@@ -1268,22 +1270,22 @@ export default function RegistrationList({
           )}
           {/* Bulk action bar */}
           {selectedIds.size > 0 && (
-            <div className="mt-2 pt-2 border-top border-secondary">
+            <div className="tw:mt-2 tw:pt-2 border-top border-secondary">
               {canExpandSelectionToAllMatching && (
-                <div className="d-flex align-items-center gap-2 flex-wrap small text-secondary mb-2">
+                <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap tw:text-sm tw:text-subtle tw:mb-2">
                   <span>
                     {m.admin_bulk_select_page_notice({ count: pageRegistrations.length })}
                   </span>
                   <Button
                     size="sm"
                     variant="link"
-                    className="p-0"
+                    className="tw:p-0"
                     onClick={() => void handleSelectAllMatching()}
                     disabled={isSelectingAllMatching}
                   >
                     {isSelectingAllMatching && (
                       <span
-                        className="spinner-border spinner-border-sm me-1"
+                        className="spinner-border spinner-border-sm tw:me-1"
                         role="status"
                         aria-hidden="true"
                       />
@@ -1297,15 +1299,15 @@ export default function RegistrationList({
                   role="alert"
                   aria-live="assertive"
                   variant="danger"
-                  className="py-1 mb-2"
+                  className="tw:py-1 tw:mb-2"
                   dismissible
                   onClose={() => setSelectAllMatchingError(null)}
                 >
                   {selectAllMatchingError}
                 </Alert>
               )}
-              <div className="d-flex align-items-center gap-2 flex-wrap">
-                <span className="text-secondary small">
+              <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
+                <span className="tw:text-subtle tw:text-sm">
                   {selectAllMatchingActive
                     ? m.admin_bulk_all_matching_selected({ total: selectedIds.size })
                     : m.admin_bulk_selected({ count: selectedIds.size })}
@@ -1326,7 +1328,7 @@ export default function RegistrationList({
                 <Button
                   size="sm"
                   variant="link"
-                  className="text-secondary ms-auto p-0"
+                  className="tw:text-subtle tw:ms-auto tw:p-0"
                   onClick={clearSelection}
                 >
                   {m.admin_bulk_clear()}
@@ -1336,34 +1338,36 @@ export default function RegistrationList({
           )}
         </Card.Header>
 
-        <Card.Body className="p-0">
+        <Card.Body className="tw:p-0">
           {sectionError && (
             <Alert
               role="alert"
               aria-live="assertive"
               variant="danger"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={onClearSectionError}
             >
               {sectionError}
             </Alert>
           )}
           {pageQuery.isLoading ? (
-            <p className="text-secondary text-center py-4 mb-0">
+            <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
               <span
-                className="spinner-border spinner-border-sm me-2"
+                className="spinner-border spinner-border-sm tw:me-2"
                 role="status"
                 aria-hidden="true"
               />
               {m.admin_search_person_placeholder()}…
             </p>
           ) : pageQuery.isError ? (
-            <p className="text-danger text-center py-4 mb-0">{m.admin_error_load_data()}</p>
+            <p className="tw:text-destructive tw:text-center tw:py-6 tw:mb-0">
+              {m.admin_error_load_data()}
+            </p>
           ) : table.getRowModel().rows.length === 0 ? (
             hasActiveRegistrationFilters ? (
-              <div className="text-secondary text-center py-4 px-3">
-                <p className="mb-2">{m.admin_no_registration_filter_matches()}</p>
+              <div className="tw:text-subtle tw:text-center tw:py-6 tw:px-4">
+                <p className="tw:mb-2">{m.admin_no_registration_filter_matches()}</p>
                 <Button
                   variant="outline-secondary"
                   size="sm"
@@ -1373,7 +1377,9 @@ export default function RegistrationList({
                 </Button>
               </div>
             ) : (
-              <p className="text-secondary text-center py-4 mb-0">{m.admin_no_registrations()}</p>
+              <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
+                {m.admin_no_registrations()}
+              </p>
             )
           ) : (
             <div data-tailwind-migrated="true" className="tw:w-full">
@@ -1485,7 +1491,7 @@ export default function RegistrationList({
           <DialogBody>
             {m.admin_bulk_confirm_action({ count: selectedIds.size })}
             {bulkProgress && (
-              <div className="mt-2 text-secondary small">
+              <div className="tw:mt-2 tw:text-subtle tw:text-sm">
                 {m.admin_bulk_progress({ done: bulkProgress.done, total: bulkProgress.total })}
               </div>
             )}
@@ -1505,7 +1511,7 @@ export default function RegistrationList({
             >
               {bulkInProgress && (
                 <span
-                  className="spinner-border spinner-border-sm me-2"
+                  className="spinner-border spinner-border-sm tw:me-2"
                   role="status"
                   aria-hidden="true"
                 />

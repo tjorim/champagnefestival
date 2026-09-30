@@ -141,10 +141,10 @@ export default function MembersManagement({
           cell: ({ row }) => {
             const member = row.original;
             return (
-              <div className="fw-semibold d-flex align-items-center gap-1">
+              <div className="tw:font-semibold tw:flex tw:items-center tw:gap-1">
                 {member.name}
                 {!member.active && (
-                  <Badge bg="secondary" className="ms-1">
+                  <Badge bg="secondary" className="tw:ms-1">
                     {m.admin_people_inactive_badge_label()}
                   </Badge>
                 )}
@@ -177,7 +177,7 @@ export default function MembersManagement({
             const notes = row.original.notes;
             const preview = truncateText(notes);
             return (
-              <span className="small text-secondary" title={notes || undefined}>
+              <span className="tw:text-sm tw:text-subtle" title={notes || undefined}>
                 {preview || "—"}
               </span>
             );
@@ -195,7 +195,7 @@ export default function MembersManagement({
           cell: ({ row }) => {
             const member = row.original;
             return (
-              <div className="d-flex flex-wrap gap-1">
+              <div className="tw:flex tw:flex-wrap tw:gap-1">
                 {member.email && (
                   <Button
                     size="sm"
@@ -290,10 +290,10 @@ export default function MembersManagement({
     <>
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
       <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="pb-2">
-          <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
-            <span className="fw-semibold">{m.admin_members_tab()}</span>
-            <div className="d-flex gap-2">
+        <Card.Header className="tw:pb-2">
+          <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:mb-2">
+            <span className="tw:font-semibold">{m.admin_members_tab()}</span>
+            <div className="tw:flex tw:gap-2">
               <ColumnVisibilityDropdown table={table} tableId="members" />
               <Button
                 size="sm"
@@ -317,12 +317,12 @@ export default function MembersManagement({
               </Button>
             </div>
           </div>
-          <div className="d-flex flex-wrap gap-2 align-items-center">
+          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
             <Form.Select
               size="sm"
               value={activeFilter}
               onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
-              className="bg-dark text-light border-secondary"
+              className="bg-dark tw:text-content border-secondary"
               style={{ maxWidth: 180 }}
               aria-label={m.admin_people_active_label()}
             >
@@ -336,18 +336,18 @@ export default function MembersManagement({
               placeholder={m.admin_members_search_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="bg-dark text-light border-secondary"
+              className="bg-dark tw:text-content border-secondary"
               style={{ maxWidth: 280 }}
             />
           </div>
         </Card.Header>
 
-        <Card.Body className="p-0">
+        <Card.Body className="tw:p-0">
           {createSuccess && (
             <Alert
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setCreateSuccess(false)}
             >
               {m.admin_members_create_success()}
@@ -357,7 +357,7 @@ export default function MembersManagement({
             <Alert
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setUpdateSuccess(false)}
             >
               {m.admin_members_update_success()}
@@ -367,7 +367,7 @@ export default function MembersManagement({
             <Alert
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setDeleteSuccess(false)}
             >
               {m.admin_members_delete_success()}
@@ -375,15 +375,17 @@ export default function MembersManagement({
           )}
 
           {isLoading ? (
-            <div className="text-center py-4">
+            <div className="tw:text-center tw:py-6">
               <Spinner animation="border" variant="primary" size="sm" />
             </div>
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
-            <p className="text-secondary text-center py-4 mb-0">{m.admin_members_no_results()}</p>
+            <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
+              {m.admin_members_no_results()}
+            </p>
           ) : (
             <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
-                <caption className="visually-hidden">{m.admin_members_table_caption()}</caption>
+                <caption className="tw:sr-only">{m.admin_members_table_caption()}</caption>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
@@ -441,7 +443,7 @@ export default function MembersManagement({
             </DialogHeader>
             <DialogBody>
               {deleteError && (
-                <Alert variant="danger" className="py-2 small">
+                <Alert variant="danger" className="tw:py-2 tw:text-sm">
                   {deleteError}
                 </Alert>
               )}
@@ -458,7 +460,7 @@ export default function MembersManagement({
               <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleting}>
                 {deleting ? (
                   <>
-                    <Spinner animation="border" size="sm" className="me-2" />
+                    <Spinner animation="border" size="sm" className="tw:me-2" />
                     {m.admin_delete()}
                   </>
                 ) : (

@@ -82,36 +82,36 @@ export default function WaitlistManagement({
 
   return (
     <Card bg="dark" text="white" border="secondary">
-      <Card.Header className="fw-semibold">{m.admin_waitlist_section()}</Card.Header>
+      <Card.Header className="tw:font-semibold">{m.admin_waitlist_section()}</Card.Header>
       <Card.Body>
-        <p className="text-secondary small">{m.admin_waitlist_description()}</p>
+        <p className="tw:text-subtle tw:text-sm">{m.admin_waitlist_description()}</p>
         {entries.isPending && <Spinner animation="border" size="sm" />}
         {entries.isError && <Alert variant="danger">{m.admin_error_load_waitlist()}</Alert>}
         {(handled.isError || removed.isError) && (
           <Alert variant="danger">{m.admin_error_handle_waitlist_entry()}</Alert>
         )}
         {entries.data?.length === 0 && (
-          <p className="text-secondary mb-0">{m.admin_waitlist_empty()}</p>
+          <p className="tw:text-subtle tw:mb-0">{m.admin_waitlist_empty()}</p>
         )}
         {entries.data?.map((entry) => (
-          <article key={entry.id} className="border-bottom border-secondary pb-3 mb-3">
-            <div className="d-flex justify-content-between gap-3 flex-wrap">
+          <article key={entry.id} className="border-bottom border-secondary tw:pb-4 tw:mb-4">
+            <div className="tw:flex tw:justify-between tw:gap-4 tw:flex-wrap">
               <div>
-                <span className="badge bg-secondary me-2">
+                <span className="badge bg-secondary tw:me-2">
                   {entry.eventTitle} — {entry.productName}
                 </span>
                 <div>
                   <strong>{entry.name}</strong> <a href={`mailto:${entry.email}`}>{entry.email}</a>
                   {entry.phone && <> · {entry.phone}</>}
                 </div>
-                <div className="small text-secondary">
+                <div className="tw:text-sm tw:text-subtle">
                   {m.admin_waitlist_guest_count({ count: entry.guestCount })} ·{" "}
                   {new Date(entry.createdAt).toLocaleString()}
                 </div>
               </div>
-              <div className="d-flex align-items-start gap-2">
+              <div className="tw:flex tw:items-start tw:gap-2">
                 {entry.handledAt ? (
-                  <span className="text-success">{m.admin_waitlist_handled()}</span>
+                  <span className="tw:text-success">{m.admin_waitlist_handled()}</span>
                 ) : (
                   <Button
                     size="sm"
@@ -127,7 +127,7 @@ export default function WaitlistManagement({
               </div>
             </div>
             {entry.notes && (
-              <p className="mt-2 mb-0 small" style={{ whiteSpace: "pre-wrap" }}>
+              <p className="tw:mt-2 tw:mb-0 tw:text-sm" style={{ whiteSpace: "pre-wrap" }}>
                 {entry.notes}
               </p>
             )}

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Container from "react-bootstrap/Container";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { clearSignOutReason, peekSignOutReason } from "@/utils/signOutReason";
@@ -20,13 +19,13 @@ export default function AdminLoginForm() {
   }, []);
 
   return (
-    <Container>
-      <h2 id="admin-title" className="text-center mb-4 text-warning">
+    <div className="site-container tw:mx-auto tw:w-full">
+      <h2 id="admin-title" className="tw:text-center tw:mb-6 tw:text-highlight">
         <Icon icon={ShieldIcon} className="tw:me-2" />
         {m.admin_title()}
       </h2>
-      <div className="row justify-content-center">
-        <div className="col-12 col-sm-8 col-md-6 col-lg-4 text-center">
+      <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
+        <div className="tw:w-full tw:site-sm:w-8/12 tw:site-md:w-6/12 tw:site-lg:w-4/12 tw:text-center">
           {signOutReason === "session-expired" && !auth.authError ? (
             <Alert variant="info">
               <Icon icon={HistoryIcon} className="tw:me-2" />
@@ -35,10 +34,10 @@ export default function AdminLoginForm() {
           ) : null}
           {auth.authError ? (
             <Alert variant="danger" dismissible onClose={auth.clearAuthError}>
-              <Alert.Heading as="h3" className="h6">
+              <Alert.Heading as="h3" className="tw:text-base tw:font-medium tw:leading-tight">
                 {m.auth_error_title()}
               </Alert.Heading>
-              <p className="mb-0">{auth.authError}</p>
+              <p className="tw:mb-0">{auth.authError}</p>
             </Alert>
           ) : null}
           <Button variant="warning" onClick={() => auth.login()} disabled={auth.isSigningIn}>
@@ -48,7 +47,7 @@ export default function AdminLoginForm() {
                   as="span"
                   animation="border"
                   size="sm"
-                  className="me-2"
+                  className="tw:me-2"
                   aria-hidden="true"
                 />
                 {m.auth_signing_in()}
@@ -59,6 +58,6 @@ export default function AdminLoginForm() {
           </Button>
         </div>
       </div>
-    </Container>
+    </div>
   );
 }

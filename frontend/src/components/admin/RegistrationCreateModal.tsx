@@ -183,7 +183,7 @@ export default function RegistrationCreateModal({
             {error && (
               <Alert
                 variant="danger"
-                className="py-2 small"
+                className="tw:py-2 tw:text-sm"
                 dismissible
                 onClose={() => createRegistrationMutation.reset()}
               >
@@ -191,21 +191,21 @@ export default function RegistrationCreateModal({
               </Alert>
             )}
 
-            <Form.Group className="mb-3" controlId="registration-event">
-              <Form.Label className="text-secondary small">{m.admin_event_label()}</Form.Label>
+            <Form.Group className="tw:mb-4" controlId="registration-event">
+              <Form.Label className="tw:text-subtle tw:text-sm">{m.admin_event_label()}</Form.Label>
               {loadingEvents ? (
-                <div className="text-secondary small">
-                  <Spinner animation="border" size="sm" className="me-2" />
+                <div className="tw:text-subtle tw:text-sm">
+                  <Spinner animation="border" size="sm" className="tw:me-2" />
                   {m.admin_loading_events()}
                 </div>
               ) : eventsQuery.isError ? (
-                <div className="text-danger small d-flex align-items-center gap-2">
+                <div className="tw:text-destructive tw:text-sm tw:flex tw:items-center tw:gap-2">
                   <Icon icon={TriangleAlertIcon} />
                   {m.admin_error_load_events()}
                   <Button
                     variant="link"
                     size="sm"
-                    className="p-0 text-warning"
+                    className="tw:p-0 tw:text-highlight"
                     onClick={() => void eventsQuery.refetch()}
                   >
                     {m.admin_retry()}
@@ -215,7 +215,7 @@ export default function RegistrationCreateModal({
                 <form.Field name="eventId">
                   {(field) => (
                     <Form.Select
-                      className="bg-dark text-light border-secondary"
+                      className="bg-dark tw:text-content border-secondary"
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -239,7 +239,7 @@ export default function RegistrationCreateModal({
               ) : (
                 <Form.Select
                   value=""
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   disabled
                   aria-label={m.admin_event_label()}
                 >
@@ -248,8 +248,10 @@ export default function RegistrationCreateModal({
               )}
             </Form.Group>
 
-            <Form.Group className="mb-3" controlId="registration-person">
-              <Form.Label className="text-secondary small">{m.admin_person_label()} *</Form.Label>
+            <Form.Group className="tw:mb-4" controlId="registration-person">
+              <Form.Label className="tw:text-subtle tw:text-sm">
+                {m.admin_person_label()} *
+              </Form.Label>
               <form.Field name="personOption">
                 {(field) => (
                   <Combobox
@@ -300,13 +302,15 @@ export default function RegistrationCreateModal({
 
             <form.Field name="guestCount">
               {(field) => (
-                <Form.Group className="mb-3" controlId="registration-guest-count">
-                  <Form.Label className="text-secondary small">{m.admin_guests_count()}</Form.Label>
+                <Form.Group className="tw:mb-4" controlId="registration-guest-count">
+                  <Form.Label className="tw:text-subtle tw:text-sm">
+                    {m.admin_guests_count()}
+                  </Form.Label>
                   <Form.Control
                     type="number"
                     min={1}
                     max={20}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     value={field.value}
                     onChange={(e) => field.handleChange(Number(e.target.value))}
                     onBlur={field.handleBlur}
@@ -318,11 +322,11 @@ export default function RegistrationCreateModal({
             <form.Field name="notes">
               {(field) => (
                 <Form.Group controlId="registration-notes">
-                  <Form.Label className="text-secondary small">{m.admin_notes()}</Form.Label>
+                  <Form.Label className="tw:text-subtle tw:text-sm">{m.admin_notes()}</Form.Label>
                   <Form.Control
                     as="textarea"
                     rows={2}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -342,7 +346,7 @@ export default function RegistrationCreateModal({
               disabled={isSubmitting || !watchedPersonOption || !hasValidEventSelection}
             >
               {isSubmitting ? (
-                <Spinner as="span" animation="border" size="sm" className="me-1" />
+                <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
               ) : (
                 <Icon icon={SaveIcon} className="tw:me-1" />
               )}

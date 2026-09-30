@@ -116,15 +116,15 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                 <div className="events-list">
                   {sortedEvents.map((event) => {
                     return (
-                      <Card key={event.id} className="event-card mb-3 border-0">
+                      <Card key={event.id} className="event-card tw:mb-4 border-0">
                         <Card.Body>
-                          <div className="d-flex justify-content-between align-items-start gap-3">
-                            <div className="event-time me-3 text-nowrap">
+                          <div className="tw:flex tw:justify-between tw:items-start tw:gap-4">
+                            <div className="event-time tw:me-4 tw:whitespace-nowrap">
                               {event.endTime ? (
                                 <>
                                   <div title={m.schedule_start_time()}>{event.startTime}</div>
                                   <div title={m.schedule_end_time()}>{event.endTime}</div>
-                                  <span className="visually-hidden">
+                                  <span className="tw:sr-only">
                                     {m.schedule_time_range({
                                       start: event.startTime,
                                       end: event.endTime,
@@ -135,23 +135,23 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                                 <span title={m.schedule_time()}>{event.startTime}</span>
                               )}
                             </div>
-                            <div className="flex-grow-1">
-                              <h5 className="event-title mb-1">{event.title}</h5>
-                              <Badge bg={getCategoryColor(event.category)} className="mb-2">
+                            <div className="tw:grow">
+                              <h5 className="event-title tw:mb-1">{event.title}</h5>
+                              <Badge bg={getCategoryColor(event.category)} className="tw:mb-2">
                                 {getCategoryLabel(event.category)}
                               </Badge>
                               {event.registrationRequired ? (
-                                <Badge bg="warning" className="mb-2 ms-2">
+                                <Badge bg="warning" className="tw:mb-2 tw:ms-2">
                                   {m.schedule_registration()}
                                 </Badge>
                               ) : (
                                 event.products.length > 0 && (
-                                  <Badge bg="info" text="dark" className="mb-2 ms-2">
+                                  <Badge bg="info" text="dark" className="tw:mb-2 tw:ms-2">
                                     {m.schedule_order_available()}
                                   </Badge>
                                 )
                               )}
-                              <p className="event-description mb-1">{event.description}</p>
+                              <p className="event-description tw:mb-1">{event.description}</p>
                             </div>
                           </div>
                         </Card.Body>
@@ -160,7 +160,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                   })}
                 </div>
               ) : (
-                <p className="text-center mb-0">{m.schedule_no_events()}</p>
+                <p className="tw:text-center tw:mb-0">{m.schedule_no_events()}</p>
               )}
             </TabsContent>
           );

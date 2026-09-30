@@ -96,11 +96,11 @@ function AppSuspense({ children, errorFallbackText }: AppSuspenseProps) {
   return (
     <SuspenseWithBoundary
       fallback={
-        <div className="text-center p-4">
+        <div className="tw:text-center tw:p-6">
           <Spinner animation="border" variant="light" />
         </div>
       }
-      errorFallback={<div className="text-center p-4">{errorFallbackText}</div>}
+      errorFallback={<div className="tw:text-center tw:p-6">{errorFallbackText}</div>}
     >
       {children}
     </SuspenseWithBoundary>
@@ -110,13 +110,13 @@ function AppSuspense({ children, errorFallbackText }: AppSuspenseProps) {
 /** Minimal top-bar shown on standalone admin / check-in pages */
 function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) {
   return (
-    <nav className="standalone-navbar navbar fixed-top px-3 py-2">
-      <div className="container-fluid d-flex justify-content-between align-items-center gap-2">
-        <span className="standalone-navbar-brand navbar-brand fw-bold mb-0">
+    <nav className="standalone-navbar tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:fixed tw:inset-x-0 tw:top-0 tw:z-header tw:px-4 tw:py-2">
+      <div className="site-fluid-container tw:mx-auto tw:w-full tw:px-3 tw:flex tw:justify-between tw:items-center tw:gap-2">
+        <span className="standalone-navbar-brand tw:me-4 tw:whitespace-nowrap tw:text-xl tw:font-bold tw:mb-0">
           <Icon icon={icon} className="tw:me-2" />
           {title}
         </span>
-        <div className="standalone-navbar-actions d-flex gap-2 align-items-center">
+        <div className="standalone-navbar-actions tw:flex tw:gap-2 tw:items-center">
           <LanguageSwitcher />
           <Link to="/" className="btn btn-sm btn-outline-secondary">
             <Icon icon={ArrowLeftIcon} className="tw:me-1" />
@@ -432,7 +432,7 @@ function App() {
             <p className="hero-subtitle">{m.welcome_subtitle()}</p>
             <a
               href="#next-festival"
-              className="btn bg-brand-gradient text-white rounded-pill border-0 py-2 px-4 fw-bold"
+              className="btn bg-brand-gradient tw:text-inverse rounded-pill border-0 tw:py-2 tw:px-6 tw:font-bold"
             >
               {m.welcome_learn_more()}
               <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
@@ -459,11 +459,11 @@ function App() {
 
         {/* What we do */}
         <section id="what-we-do" className="content-section">
-          <div className="container text-center">
+          <div className="site-container tw:mx-auto tw:w-full tw:text-center">
             {/* Replaced h2 with SectionHeading */}
             <SectionHeading id="what-we-do-heading" title={m.what_we_do_title()} />
-            <div className="row justify-content-center">
-              <div className="col-md-10 col-lg-8">
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
+              <div className="site-content-column tw:site-md:w-content-md tw:site-lg:w-content-lg">
                 <p>
                   {m.what_we_do_description({
                     dateRange: formatDateRange(edition.dates, getLocale() as "en" | "fr" | "nl"),
@@ -513,24 +513,20 @@ function App() {
 
         {/* Next Festival with Countdown */}
         <section id="next-festival" className="content-section highlight-section">
-          <div className="container text-center">
+          <div className="site-container tw:mx-auto tw:w-full tw:text-center">
             {/* Replaced h2 with SectionHeading */}
             <SectionHeading id="next-festival-heading" title={m.next_festival_title()} />
-            <div className="row justify-content-center">
-              <div className="col-md-10 col-lg-8">
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
+              <div className="site-content-column tw:site-md:w-content-md tw:site-lg:w-content-lg">
                 {hasEdition ? (
                   <>
                     <AppSuspense errorFallbackText={m.error_countdown()}>
                       <Countdown targetDate={festivalDate} endDate={festivalEndDate} />
                     </AppSuspense>
-                    <p className="mb-4" style={{ position: "relative", zIndex: 50 }}>
-                      {m.next_festival_description()}
-                    </p>
+                    <p className="tw:relative tw:z-50 tw:mb-6">{m.next_festival_description()}</p>
                   </>
                 ) : (
-                  <p className="mb-4" style={{ position: "relative", zIndex: 50 }}>
-                    {m.next_festival_none()}
-                  </p>
+                  <p className="tw:relative tw:z-50 tw:mb-6">{m.next_festival_none()}</p>
                 )}
               </div>
             </div>
@@ -539,17 +535,17 @@ function App() {
 
         {/* Schedule Section */}
         <section id="schedule" className="content-section">
-          <div className="container">
+          <div className="site-container tw:mx-auto tw:w-full">
             {/* Replaced h2 with SectionHeading */}
             <SectionHeading
               id="schedule-heading"
               title={m.schedule_title()}
               subtitle={m.schedule_description()}
             />
-            <div className="row justify-content-center">
-              <div className="col-md-10 col-lg-8">
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
+              <div className="site-content-column tw:site-md:w-content-md tw:site-lg:w-content-lg">
                 {hasLoadError ? (
-                  <Alert variant="danger" className="mb-0">
+                  <Alert variant="danger" className="tw:mb-0">
                     {m.error_schedule()}
                   </Alert>
                 ) : (
@@ -569,7 +565,7 @@ function App() {
 
         {/* Producers Carousel */}
         <section id="producers" className="content-section">
-          <div className="container text-center">
+          <div className="site-container tw:mx-auto tw:w-full tw:text-center">
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading id="producers-heading" title={m.producers_title()} />
             {/* Removed redundant <p> tag */}
@@ -579,11 +575,11 @@ function App() {
 
         {/* FAQ Section */}
         <section id="faq" className="content-section">
-          <div className="container">
+          <div className="site-container tw:mx-auto tw:w-full">
             {/* Replaced h2 with SectionHeading */}
             <SectionHeading id="faq-heading" title={m.faq_title()} />
-            <div className="row justify-content-center">
-              <div className="col-md-10 col-lg-8">
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
+              <div className="site-content-column tw:site-md:w-content-md tw:site-lg:w-content-lg">
                 <AppSuspense errorFallbackText={m.error_faq()}>
                   <FAQ />
                 </AppSuspense>
@@ -594,17 +590,17 @@ function App() {
 
         {/* Interactive Map - Moved here */}
         <section id="map" className="content-section">
-          <div className="container">
+          <div className="site-container tw:mx-auto tw:w-full">
             {/* Replaced h2 with SectionHeading */}
             <SectionHeading id="map-heading" title={m.location_title()} />
-            <div className="row justify-content-center">
-              <div className="col-md-10 col-lg-8">
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
+              <div className="site-content-column tw:site-md:w-content-md tw:site-lg:w-content-lg">
                 <SuspenseWithBoundary
                   fallback={
-                    <div className="map-loading d-flex align-items-center justify-content-center py-5">
-                      <div className="text-center">
+                    <div className="map-loading tw:flex tw:items-center tw:justify-center tw:py-12">
+                      <div className="tw:text-center">
                         <Spinner animation="border" variant="primary" />
-                        <p className="mt-2">{m.loading()}</p>
+                        <p className="tw:mt-2">{m.loading()}</p>
                       </div>
                     </div>
                   }
@@ -626,7 +622,7 @@ function App() {
 
         {/* Sponsors Carousel */}
         <section id="sponsors" className="content-section highlight-section">
-          <div className="container text-center">
+          <div className="site-container tw:mx-auto tw:w-full tw:text-center">
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading id="sponsors-heading" title={m.sponsors_title()} />
             {/* Removed redundant <p> tag */}
@@ -636,7 +632,7 @@ function App() {
 
         {/* Contact Form */}
         <section id="contact" className="content-section">
-          <div className="container">
+          <div className="site-container tw:mx-auto tw:w-full">
             {/* Replaced h2 with SectionHeading and added subtitle */}
             <SectionHeading
               id="contact-heading"
@@ -644,8 +640,8 @@ function App() {
               subtitle={m.contact_intro()}
             />
             {/* Removed redundant <p> tag */}
-            <div className="row justify-content-center">
-              <div className="col-md-10 col-lg-8">
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
+              <div className="site-content-column tw:site-md:w-content-md tw:site-lg:w-content-lg">
                 <AppSuspense errorFallbackText={m.error_contact()}>
                   <ContactForm />
                 </AppSuspense>
@@ -657,10 +653,10 @@ function App() {
         {/* Web Push opt-in (#941) — self-contained, renders nothing when
             unsupported or VAPID isn't configured server-side. */}
         <section id="notifications" className="content-section">
-          <div className="container">
+          <div className="site-container tw:mx-auto tw:w-full">
             <SectionHeading id="notifications-heading" title={m.push_section_heading()} />
-            <div className="row justify-content-center">
-              <div className="col-md-10 col-lg-6">
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
+              <div className="tw:site-md:w-10/12 tw:site-lg:w-6/12">
                 <PushOptIn />
               </div>
             </div>
@@ -669,7 +665,7 @@ function App() {
 
         {/* VIP Registrations Section */}
         <section id="registrations" className="content-section highlight-section">
-          <div className="container text-center">
+          <div className="site-container tw:mx-auto tw:w-full tw:text-center">
             <SectionHeading
               id="registrations-heading"
               title={m.registration_title()}
@@ -677,7 +673,7 @@ function App() {
             />
             <button
               type="button"
-              className="btn btn-warning btn-lg rounded-pill px-5 fw-bold"
+              className="btn btn-warning btn-lg rounded-pill tw:px-12 tw:font-bold"
               onClick={() => setShowRegistrationModal(true)}
               disabled={registrableEvents.length === 0}
             >

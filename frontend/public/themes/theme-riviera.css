@@ -410,7 +410,7 @@ html[data-visual-theme="riviera"] .bubble-background {
   padding: clamp(4rem, 8vw, 7rem) 0;
 }
 
-.content-section > .container {
+.content-section > .site-container {
   position: relative;
   padding: clamp(1.25rem, 4vw, 3.5rem);
   background: rgba(255, 250, 240, 0.76);
@@ -420,11 +420,11 @@ html[data-visual-theme="riviera"] .bubble-background {
   backdrop-filter: blur(12px);
 }
 
-.content-section:nth-of-type(even) > .container {
+.content-section:nth-of-type(even) > .site-container {
   transform: rotate(-0.45deg);
 }
 
-.content-section:nth-of-type(odd) > .container {
+.content-section:nth-of-type(odd) > .site-container {
   transform: rotate(0.35deg);
 }
 
@@ -537,7 +537,7 @@ html[data-visual-theme="riviera"] .bubble-background {
   color: var(--text-muted);
 }
 
-.highlight-section > .container {
+.highlight-section > .site-container {
   background:
     linear-gradient(135deg, rgba(255, 209, 102, 0.28), rgba(255, 250, 240, 0.86)),
     repeating-linear-gradient(-45deg, rgba(0, 127, 131, 0.08) 0 1rem, transparent 1rem 2rem);
@@ -715,17 +715,18 @@ html[data-visual-theme="riviera"] .bubble-background {
   box-shadow: var(--shadow-sm);
 }
 
-.standalone-document-main #privacy-policy .col-lg-8,
+.standalone-document-main #privacy-policy .site-content-column,
 .standalone-main #check-in .bg-dark,
 .standalone-main #my-registrations .bg-dark {
   color: var(--text-color) !important;
   background-color: var(--surface-color-strong) !important;
 }
 
-.standalone-main #check-in .text-light,
-.standalone-main #my-registrations .text-light,
-.standalone-document-main #privacy-policy .text-light {
+.standalone-main #check-in .tw\:text-content,
+.standalone-main #my-registrations .tw\:text-content,
+.standalone-document-main #privacy-policy .tw\:text-content {
   color: var(--text-color) !important;
+  --layout-content: var(--text-color) !important;
 }
 
 .standalone-main #check-in .form-control,
@@ -760,9 +761,9 @@ html[data-visual-theme="riviera"] .bubble-background {
     font-size: clamp(1.85rem, 8.5vw, 2.25rem);
   }
 
-  .content-section > .container,
-  .content-section:nth-of-type(even) > .container,
-  .content-section:nth-of-type(odd) > .container {
+  .content-section > .site-container,
+  .content-section:nth-of-type(even) > .site-container,
+  .content-section:nth-of-type(odd) > .site-container {
     transform: none;
   }
 
@@ -776,7 +777,7 @@ html[data-visual-theme="riviera"] .bubble-background {
     transform: none;
   }
 
-  .event-card .d-flex {
+  .event-card .tw\:flex {
     flex-direction: column;
   }
 

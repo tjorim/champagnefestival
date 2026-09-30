@@ -269,7 +269,7 @@ export default function ComposerManagement({
             }
             if (item.channels.includes("push")) {
               return (
-                <span className="small text-secondary">
+                <span className="tw:text-sm tw:text-subtle">
                   {m.admin_composer_estimated_audience({ count: item.estimated_push_audience })}
                 </span>
               );
@@ -279,16 +279,14 @@ export default function ComposerManagement({
         }),
         columnHelper.display({
           id: "actions",
-          header: () => (
-            <span className="visually-hidden">{m.admin_composer_column_actions()}</span>
-          ),
+          header: () => <span className="tw:sr-only">{m.admin_composer_column_actions()}</span>,
           enableSorting: false,
           meta: { tdClassName: "tw:text-right" },
           cell: ({ row }) => {
             const item = row.original;
             return (
               item.state === "draft" && (
-                <div className="d-flex gap-2 justify-content-end">
+                <div className="tw:flex tw:gap-2 tw:justify-end">
                   <Button size="sm" variant="outline-secondary" onClick={() => startEdit(item)}>
                     {m.admin_composer_edit_button()}
                   </Button>
@@ -309,7 +307,9 @@ export default function ComposerManagement({
   return (
     <Card className="admin-card">
       <Card.Header>
-        <h2 className="h5 mb-0">{m.admin_composer_section()}</h2>
+        <h2 className="tw:text-xl tw:font-medium tw:leading-tight tw:mb-0">
+          {m.admin_composer_section()}
+        </h2>
       </Card.Header>
       <Card.Body>
         {error && <Alert variant="danger">{error}</Alert>}
@@ -321,7 +321,7 @@ export default function ComposerManagement({
             void form.handleSubmit();
           }}
         >
-          <div className="d-flex gap-2 mb-2">
+          <div className="tw:flex tw:gap-2 tw:mb-2">
             {(["nl", "en", "fr"] as const).map((locale) => (
               <Button
                 key={locale}
@@ -334,7 +334,7 @@ export default function ComposerManagement({
               </Button>
             ))}
           </div>
-          <Form.Group className="mb-2" controlId="composer-title">
+          <Form.Group className="tw:mb-2" controlId="composer-title">
             <Form.Label>{m.admin_composer_title_label()}</Form.Label>
             <form.Field name={`title_${preview}`}>
               {(field) => (
@@ -347,7 +347,7 @@ export default function ComposerManagement({
               )}
             </form.Field>
           </Form.Group>
-          <Form.Group className="mb-2" controlId="composer-body">
+          <Form.Group className="tw:mb-2" controlId="composer-body">
             <Form.Label>{m.admin_composer_body_label()}</Form.Label>
             <form.Field name={`body_${preview}`}>
               {(field) => (
@@ -363,8 +363,8 @@ export default function ComposerManagement({
             </form.Field>
           </Form.Group>
 
-          <div className="row g-2 mb-2">
-            <Form.Group className="col-md-4" controlId="composer-level">
+          <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-2">
+            <Form.Group className="tw:site-md:w-4/12" controlId="composer-level">
               <Form.Label>{m.admin_composer_level_label()}</Form.Label>
               <form.Field name="level">
                 {(field) => (
@@ -380,7 +380,7 @@ export default function ComposerManagement({
                 )}
               </form.Field>
             </Form.Group>
-            <Form.Group className="col-md-8" controlId="composer-link-url">
+            <Form.Group className="tw:site-md:w-8/12" controlId="composer-link-url">
               <Form.Label>{m.admin_composer_link_url_label()}</Form.Label>
               <form.Field name="link_url">
                 {(field) => (
@@ -398,8 +398,8 @@ export default function ComposerManagement({
 
           <form.Field name="channels">
             {(field) => (
-              <div className="mb-3">
-                <Form.Label className="d-block">{m.admin_composer_channels_label()}</Form.Label>
+              <div className="tw:mb-4">
+                <Form.Label className="tw:block">{m.admin_composer_channels_label()}</Form.Label>
                 <Form.Check
                   inline
                   type="checkbox"
@@ -432,7 +432,7 @@ export default function ComposerManagement({
             )}
           </form.Field>
 
-          <div className="d-flex gap-2">
+          <div className="tw:flex tw:gap-2">
             <Button
               type="submit"
               variant="warning"
@@ -456,7 +456,9 @@ export default function ComposerManagement({
         </Form>
 
         {items.length === 0 ? (
-          <p className="text-center text-secondary mt-4 mb-0">{m.admin_composer_empty()}</p>
+          <p className="tw:text-center tw:text-subtle tw:mt-6 tw:mb-0">
+            {m.admin_composer_empty()}
+          </p>
         ) : (
           <div data-tailwind-migrated="true" className="tw:w-full">
             <Table>

@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import {
   Dialog,
@@ -14,7 +13,6 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import type { Person, VolunteerHelpPeriod } from "@/types/person";
@@ -183,7 +181,7 @@ export default function VolunteerFormModal({
             {error && (
               <Alert
                 variant="danger"
-                className="py-2 small"
+                className="tw:py-2 tw:text-sm"
                 dismissible
                 onClose={() => setError(null)}
               >
@@ -193,8 +191,8 @@ export default function VolunteerFormModal({
 
             <form.Field name="name">
               {(field) => (
-                <Form.Group className="mb-3" controlId="volunteer-name">
-                  <Form.Label className="text-secondary small">
+                <Form.Group className="tw:mb-4" controlId="volunteer-name">
+                  <Form.Label className="tw:text-subtle tw:text-sm">
                     {m.registration_name()} *
                   </Form.Label>
                   <Form.Control
@@ -202,7 +200,7 @@ export default function VolunteerFormModal({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     required
                     maxLength={200}
                   />
@@ -212,8 +210,8 @@ export default function VolunteerFormModal({
 
             <form.Field name="address">
               {(field) => (
-                <Form.Group className="mb-3" controlId="volunteer-address">
-                  <Form.Label className="text-secondary small">
+                <Form.Group className="tw:mb-4" controlId="volunteer-address">
+                  <Form.Label className="tw:text-subtle tw:text-sm">
                     {m.admin_people_address_label()}
                   </Form.Label>
                   <Form.Control
@@ -221,19 +219,19 @@ export default function VolunteerFormModal({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     maxLength={300}
                   />
                 </Form.Group>
               )}
             </form.Field>
 
-            <Row className="mb-3">
-              <Col xs={12} md={6}>
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mb-4">
+              <div className="tw:w-full tw:site-md:w-6/12">
                 <form.Field name="nationalRegisterNumber">
                   {(field) => (
                     <Form.Group controlId="volunteer-national-register-number">
-                      <Form.Label className="text-secondary small">
+                      <Form.Label className="tw:text-subtle tw:text-sm">
                         {m.admin_people_national_register_number_label()} *
                       </Form.Label>
                       <Form.Control
@@ -241,19 +239,19 @@ export default function VolunteerFormModal({
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value.slice(0, 20))}
                         onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         required
                         maxLength={20}
                       />
                     </Form.Group>
                   )}
                 </form.Field>
-              </Col>
-              <Col xs={12} md={6}>
+              </div>
+              <div className="tw:w-full tw:site-md:w-6/12">
                 <form.Field name="eidDocumentNumber">
                   {(field) => (
                     <Form.Group controlId="volunteer-eid-document-number">
-                      <Form.Label className="text-secondary small">
+                      <Form.Label className="tw:text-subtle tw:text-sm">
                         {m.admin_people_eid_document_number_label()} *
                       </Form.Label>
                       <Form.Control
@@ -261,19 +259,19 @@ export default function VolunteerFormModal({
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         required
                         maxLength={50}
                       />
                     </Form.Group>
                   )}
                 </form.Field>
-              </Col>
-            </Row>
+              </div>
+            </div>
 
-            <div className="mb-3">
-              <div className="d-flex justify-content-between align-items-center mb-2">
-                <Form.Label className="text-secondary small mb-0">
+            <div className="tw:mb-4">
+              <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-0">
                   {m.admin_volunteers_help_periods_label()} *
                 </Form.Label>
                 <Button
@@ -288,13 +286,15 @@ export default function VolunteerFormModal({
               </div>
 
               {helpPeriods.length === 0 ? (
-                <div className="text-secondary small">{m.admin_volunteers_no_help_periods()}</div>
+                <div className="tw:text-subtle tw:text-sm">
+                  {m.admin_volunteers_no_help_periods()}
+                </div>
               ) : (
-                <div className="d-flex flex-column gap-2">
+                <div className="tw:flex tw:flex-col tw:gap-2">
                   {helpPeriods.map((period, index) => (
-                    <div key={index} className="border border-secondary rounded p-3">
-                      <div className="d-flex justify-content-between align-items-center mb-2">
-                        <span className="text-secondary small">#{index + 1}</span>
+                    <div key={index} className="border border-secondary rounded tw:p-4">
+                      <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
+                        <span className="tw:text-subtle tw:text-sm">#{index + 1}</span>
                         <Button
                           type="button"
                           variant="outline-danger"
@@ -306,10 +306,10 @@ export default function VolunteerFormModal({
                           {m.admin_volunteers_remove_help_period()}
                         </Button>
                       </div>
-                      <Row>
-                        <Col xs={12} md={6}>
+                      <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter">
+                        <div className="tw:w-full tw:site-md:w-6/12">
                           <Form.Group controlId={`volunteer-period-start-${index}`}>
-                            <Form.Label className="text-secondary small">
+                            <Form.Label className="tw:text-subtle tw:text-sm">
                               {m.admin_volunteers_period_start_label()} *
                             </Form.Label>
                             <Form.Control
@@ -321,14 +321,14 @@ export default function VolunteerFormModal({
                                   firstHelpDay: e.target.value,
                                 })
                               }
-                              className="bg-dark text-light border-secondary"
+                              className="bg-dark tw:text-content border-secondary"
                               required
                             />
                           </Form.Group>
-                        </Col>
-                        <Col xs={12} md={6}>
+                        </div>
+                        <div className="tw:w-full tw:site-md:w-6/12">
                           <Form.Group controlId={`volunteer-period-end-${index}`}>
-                            <Form.Label className="text-secondary small">
+                            <Form.Label className="tw:text-subtle tw:text-sm">
                               {m.admin_volunteers_period_end_label()}
                             </Form.Label>
                             <Form.Control
@@ -341,13 +341,13 @@ export default function VolunteerFormModal({
                                 })
                               }
                               min={period.firstHelpDay || undefined}
-                              className="bg-dark text-light border-secondary"
+                              className="bg-dark tw:text-content border-secondary"
                             />
                           </Form.Group>
-                        </Col>
-                      </Row>
-                      <Form.Group className="mt-2" controlId={`volunteer-period-notes-${index}`}>
-                        <Form.Label className="text-secondary small">
+                        </div>
+                      </div>
+                      <Form.Group className="tw:mt-2" controlId={`volunteer-period-notes-${index}`}>
+                        <Form.Label className="tw:text-subtle tw:text-sm">
                           {m.admin_volunteers_period_notes_label()}
                         </Form.Label>
                         <Form.Control
@@ -361,7 +361,7 @@ export default function VolunteerFormModal({
                             })
                           }
                           placeholder={m.admin_volunteers_period_notes_placeholder()}
-                          className="bg-dark text-light border-secondary"
+                          className="bg-dark tw:text-content border-secondary"
                           maxLength={2000}
                         />
                       </Form.Group>
@@ -379,7 +379,7 @@ export default function VolunteerFormModal({
                   label={m.admin_people_active_label()}
                   checked={field.value}
                   onChange={(e) => field.handleChange(e.target.checked)}
-                  className="text-secondary small"
+                  className="tw:text-subtle tw:text-sm"
                 />
               )}
             </form.Field>
@@ -401,7 +401,7 @@ export default function VolunteerFormModal({
               }
             >
               {isSubmitting ? (
-                <Spinner as="span" animation="border" size="sm" className="me-1" />
+                <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
               ) : (
                 <Icon icon={SaveIcon} className="tw:me-1" />
               )}

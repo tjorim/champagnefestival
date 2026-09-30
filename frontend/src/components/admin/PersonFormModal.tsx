@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Col from "react-bootstrap/Col";
 import Form from "react-bootstrap/Form";
 import {
   Dialog,
@@ -14,7 +13,6 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
@@ -205,7 +203,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             {error && (
               <Alert
                 variant="danger"
-                className="py-2 small"
+                className="tw:py-2 tw:text-sm"
                 dismissible
                 onClose={() => setError(null)}
               >
@@ -213,8 +211,10 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               </Alert>
             )}
 
-            <Form.Group className="mb-3" controlId="person-name">
-              <Form.Label className="text-secondary small">{m.registration_name()} *</Form.Label>
+            <Form.Group className="tw:mb-4" controlId="person-name">
+              <Form.Label className="tw:text-subtle tw:text-sm">
+                {m.registration_name()} *
+              </Form.Label>
               <form.Field
                 name="name"
                 validators={[
@@ -231,7 +231,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                     <>
                       <Form.Control
                         type="text"
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         maxLength={200}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -249,10 +249,12 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               </form.Field>
             </Form.Group>
 
-            <Row className="mb-3">
-              <Col xs={12} md={6}>
+            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mb-4">
+              <div className="tw:w-full tw:site-md:w-6/12">
                 <Form.Group controlId="person-email">
-                  <Form.Label className="text-secondary small">{m.registration_email()}</Form.Label>
+                  <Form.Label className="tw:text-subtle tw:text-sm">
+                    {m.registration_email()}
+                  </Form.Label>
                   <form.Field
                     name="email"
                     validators={[
@@ -271,7 +273,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                         <>
                           <Form.Control
                             type="email"
-                            className="bg-dark text-light border-secondary"
+                            className="bg-dark tw:text-content border-secondary"
                             maxLength={200}
                             value={field.value}
                             onChange={(e) => field.handleChange(e.target.value)}
@@ -288,15 +290,17 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                     }}
                   </form.Field>
                 </Form.Group>
-              </Col>
-              <Col xs={12} md={6}>
+              </div>
+              <div className="tw:w-full tw:site-md:w-6/12">
                 <Form.Group controlId="person-phone">
-                  <Form.Label className="text-secondary small">{m.registration_phone()}</Form.Label>
+                  <Form.Label className="tw:text-subtle tw:text-sm">
+                    {m.registration_phone()}
+                  </Form.Label>
                   <form.Field name="phone">
                     {(field) => (
                       <Form.Control
                         type="tel"
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         maxLength={50}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -305,18 +309,18 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                     )}
                   </form.Field>
                 </Form.Group>
-              </Col>
-            </Row>
+              </div>
+            </div>
 
-            <Form.Group className="mb-3" controlId="person-address">
-              <Form.Label className="text-secondary small">
+            <Form.Group className="tw:mb-4" controlId="person-address">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_people_address_label()}
               </Form.Label>
               <form.Field name="address">
                 {(field) => (
                   <Form.Control
                     type="text"
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     maxLength={300}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -328,7 +332,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
 
             <form.Field name="preferredLanguage">
               {(field) => (
-                <Form.Group className="mb-3" controlId="person-preferred-language">
+                <Form.Group className="tw:mb-4" controlId="person-preferred-language">
                   <Form.Label>{m.registration_preferred_language()}</Form.Label>
                   <Form.Select
                     value={field.value ?? ""}
@@ -344,15 +348,15 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 </Form.Group>
               )}
             </form.Field>
-            <Form.Group className="mb-3" controlId="person-club">
-              <Form.Label className="text-secondary small">
+            <Form.Group className="tw:mb-4" controlId="person-club">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_people_club_name_label()}
               </Form.Label>
               <form.Field name="clubName">
                 {(field) => (
                   <Form.Control
                     type="text"
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     maxLength={200}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -362,11 +366,11 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               </form.Field>
             </Form.Group>
 
-            <Form.Group className="mb-3" controlId="person-roles">
-              <Form.Label className="text-secondary small">
+            <Form.Group className="tw:mb-4" controlId="person-roles">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_people_roles_label()}
               </Form.Label>
-              <div className="d-flex flex-wrap gap-2 mb-2">
+              <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mb-2">
                 {KNOWN_ROLES.map((role) => (
                   <Button
                     key={role}
@@ -383,7 +387,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 {(field) => (
                   <Form.Control
                     type="text"
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     placeholder={m.admin_people_roles_placeholder()}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -393,14 +397,14 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               </form.Field>
             </Form.Group>
 
-            <Form.Group className="mb-3" controlId="person-notes">
-              <Form.Label className="text-secondary small">{m.admin_notes()}</Form.Label>
+            <Form.Group className="tw:mb-4" controlId="person-notes">
+              <Form.Label className="tw:text-subtle tw:text-sm">{m.admin_notes()}</Form.Label>
               <form.Field name="notes">
                 {(field) => (
                   <Form.Control
                     as="textarea"
                     rows={2}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     maxLength={2000}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -418,7 +422,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   label={m.admin_people_active_label()}
                   checked={field.value}
                   onChange={(e) => field.handleChange(e.target.checked)}
-                  className="text-secondary small"
+                  className="tw:text-subtle tw:text-sm"
                 />
               )}
             </form.Field>
@@ -435,7 +439,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               disabled={isSubmitting || !nameValue?.trim()}
             >
               {isSubmitting ? (
-                <Spinner as="span" animation="border" size="sm" className="me-1" />
+                <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
               ) : (
                 <Icon icon={SaveIcon} className="tw:me-1" />
               )}

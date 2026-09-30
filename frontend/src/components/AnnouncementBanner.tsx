@@ -91,10 +91,7 @@ export default function AnnouncementBanner() {
                         onClick={() => setDetailsOpen(true)}
                       >
                         {item.text}
-                        <span className="visually-hidden">
-                          {" "}
-                          — {m.announcement_ticker_item_hint()}
-                        </span>
+                        <span className="tw:sr-only"> — {m.announcement_ticker_item_hint()}</span>
                       </button>
                     ) : (
                       <span className="announcement-ticker__item-content">{item.text}</span>
@@ -117,10 +114,10 @@ export default function AnnouncementBanner() {
             <DialogTitle id={titleId}>{m.announcement_dialog_title()}</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <ul className="announcement-dialog-list list-unstyled mb-0">
+            <ul className="announcement-dialog-list list-unstyled tw:mb-0">
               {data.map((item) => (
                 <li key={item.id} className={`announcement-dialog-item announcement-${item.level}`}>
-                  <p className="mb-2">{item.text}</p>
+                  <p className="tw:mb-2">{item.text}</p>
                   {item.link_url && item.link_label && (
                     <Button href={item.link_url} variant="primary" size="sm">
                       {item.link_label}

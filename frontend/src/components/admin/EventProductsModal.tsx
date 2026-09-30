@@ -300,16 +300,18 @@ export default function EventProductsModal({
           void form.handleSubmit();
         }}
         noValidate
-        className="border-top border-secondary pt-3 mt-2"
+        className="border-top border-secondary tw:pt-4 tw:mt-2"
       >
-        <div className="d-flex gap-2 flex-wrap mb-2">
+        <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
           <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }} controlId="product-name">
-            <Form.Label className="text-secondary small mb-1">{m.admin_products_name()}</Form.Label>
+            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+              {m.admin_products_name()}
+            </Form.Label>
             <form.Field name="name">
               {(field) => (
                 <Form.Control
                   size="sm"
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   autoFocus
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -322,14 +324,14 @@ export default function EventProductsModal({
             style={{ minWidth: "200px", flex: "2 1 200px" }}
             controlId="product-description"
           >
-            <Form.Label className="text-secondary small mb-1">
+            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_products_description()}
             </Form.Label>
             <form.Field name="description">
               {(field) => (
                 <Form.Control
                   size="sm"
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   maxLength={300}
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -339,7 +341,7 @@ export default function EventProductsModal({
             </form.Field>
           </Form.Group>
           <Form.Group style={{ maxWidth: "120px" }} controlId="product-price">
-            <Form.Label className="text-secondary small mb-1">
+            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_products_price()}
             </Form.Label>
             <form.Field name="price">
@@ -349,7 +351,7 @@ export default function EventProductsModal({
                   min={0}
                   step="0.01"
                   size="sm"
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -358,14 +360,14 @@ export default function EventProductsModal({
             </form.Field>
           </Form.Group>
           <Form.Group style={{ maxWidth: "160px" }} controlId="product-category">
-            <Form.Label className="text-secondary small mb-1">
+            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_products_category()}
             </Form.Label>
             <form.Field name="category">
               {(field) => (
                 <Form.Select
                   size="sm"
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value as OrderItemCategory)}
                   onBlur={field.handleBlur}
@@ -379,7 +381,7 @@ export default function EventProductsModal({
           </Form.Group>
         </div>
 
-        <div className="d-flex flex-wrap gap-4 mb-1">
+        <div className="tw:flex tw:flex-wrap tw:gap-6 tw:mb-1">
           <form.Field name="purchasable">
             {(field) => (
               <Form.Check
@@ -412,10 +414,12 @@ export default function EventProductsModal({
             )}
           </form.Field>
         </div>
-        <div className="text-secondary small mb-1">{m.admin_products_purchasable_help()}</div>
+        <div className="tw:text-subtle tw:text-sm tw:mb-1">
+          {m.admin_products_purchasable_help()}
+        </div>
         <form.Subscribe selector={(s) => s.values.purchasable}>
           {(purchasable) => (
-            <div className="text-secondary small mb-2">
+            <div className="tw:text-subtle tw:text-sm tw:mb-2">
               {purchasable
                 ? m.admin_products_required_help()
                 : m.admin_products_required_needs_purchasable()}
@@ -423,16 +427,16 @@ export default function EventProductsModal({
           )}
         </form.Subscribe>
 
-        <div className="d-flex gap-2 flex-wrap mb-2">
+        <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
           <Form.Group style={{ maxWidth: "160px" }} controlId="product-unit">
-            <Form.Label className="text-secondary small mb-1">
+            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_inventory_unit()}
             </Form.Label>
             <form.Field name="unit">
               {(field) => (
                 <Form.Select
                   size="sm"
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value as ProductFormState["unit"])}
                   onBlur={field.handleBlur}
@@ -445,7 +449,7 @@ export default function EventProductsModal({
             </form.Field>
           </Form.Group>
           <Form.Group style={{ maxWidth: "160px" }} controlId="product-stock">
-            <Form.Label className="text-secondary small mb-1">
+            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_inventory_stock()}
             </Form.Label>
             <form.Field name="stock">
@@ -455,7 +459,7 @@ export default function EventProductsModal({
                   min={0}
                   step={1}
                   size="sm"
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -464,14 +468,16 @@ export default function EventProductsModal({
             </form.Field>
           </Form.Group>
         </div>
-        <Form.Text className="d-block mb-2">{m.admin_inventory_unlimited_help()}</Form.Text>
-        <fieldset className="mb-3">
-          <legend className="h6">{m.admin_inventory_inclusions()}</legend>
+        <Form.Text className="tw:block tw:mb-2">{m.admin_inventory_unlimited_help()}</Form.Text>
+        <fieldset className="tw:mb-4">
+          <legend className="tw:text-base tw:font-medium tw:leading-tight">
+            {m.admin_inventory_inclusions()}
+          </legend>
           {inclusions.map((edge, index) => (
-            <div className="d-flex flex-wrap gap-2 mb-2 align-items-start" key={index}>
+            <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mb-2 tw:items-start" key={index}>
               <Form.Select
                 size="sm"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 style={{ minWidth: "180px", flex: "2 1 180px" }}
                 aria-label={m.admin_products_bundle_target()}
                 value={edge.product_id}
@@ -494,7 +500,7 @@ export default function EventProductsModal({
                 min={1}
                 step={1}
                 size="sm"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 style={{ maxWidth: "90px" }}
                 aria-label={m.admin_inventory_included_quantity()}
                 value={edge.quantity}
@@ -510,7 +516,7 @@ export default function EventProductsModal({
                 min={1}
                 step={1}
                 size="sm"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 style={{ maxWidth: "90px" }}
                 aria-label={m.admin_inventory_per_quantity()}
                 value={edge.per_quantity}
@@ -523,7 +529,7 @@ export default function EventProductsModal({
               />
               <Form.Select
                 size="sm"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 style={{ maxWidth: "140px" }}
                 aria-label={m.admin_inventory_rounding()}
                 value={edge.rounding}
@@ -547,8 +553,10 @@ export default function EventProductsModal({
               </Button>
             </div>
           ))}
-          <Form.Text className="d-block mb-2">{m.admin_inventory_ratio_help()}</Form.Text>
-          <Form.Text className="d-block mb-2">{m.admin_inventory_hidden_target_help()}</Form.Text>
+          <Form.Text className="tw:block tw:mb-2">{m.admin_inventory_ratio_help()}</Form.Text>
+          <Form.Text className="tw:block tw:mb-2">
+            {m.admin_inventory_hidden_target_help()}
+          </Form.Text>
           <Button
             type="button"
             onClick={() =>
@@ -564,8 +572,10 @@ export default function EventProductsModal({
           </Button>
         </fieldset>
         {editingId && (
-          <fieldset className="mb-3">
-            <legend className="h6">{m.admin_inventory_existing_bookings()}</legend>
+          <fieldset className="tw:mb-4">
+            <legend className="tw:text-base tw:font-medium tw:leading-tight">
+              {m.admin_inventory_existing_bookings()}
+            </legend>
             <form.Field name="updateExistingContents">
               {(field) => (
                 <Form.Check
@@ -590,7 +600,7 @@ export default function EventProductsModal({
           </fieldset>
         )}
 
-        <div className="d-flex gap-2 justify-content-end">
+        <div className="tw:flex tw:gap-2 tw:justify-end">
           <Button variant="outline-secondary" size="sm" onClick={() => setFormOpen(false)}>
             {m.close()}
           </Button>
@@ -617,13 +627,13 @@ export default function EventProductsModal({
     return (
       <ListGroup.Item
         key={product.id}
-        className="bg-dark border-secondary d-flex flex-column gap-1 py-1 px-0 text-light"
+        className="bg-dark border-secondary tw:flex tw:flex-col tw:gap-1 tw:py-1 tw:px-0 tw:text-content"
       >
-        <div className="d-flex justify-content-between align-items-center gap-2">
-          <span className="d-flex align-items-center gap-2 text-truncate flex-wrap">
-            <span className="text-light">
+        <div className="tw:flex tw:justify-between tw:items-center tw:gap-2">
+          <span className="tw:flex tw:items-center tw:gap-2 tw:truncate tw:flex-wrap">
+            <span className="tw:text-content">
               {product.name}
-              <span className="d-block small text-secondary">
+              <span className="tw:block tw:text-sm tw:text-subtle">
                 {m.admin_inventory_reserved()} {product.reservedQuantity ?? 0} /{" "}
                 {product.stock ?? m.admin_inventory_unlimited()}
                 {(product.shortage ?? 0) > 0
@@ -631,25 +641,25 @@ export default function EventProductsModal({
                   : ""}
               </span>
             </span>
-            <Badge bg={product.purchasable ? "success" : "secondary"} className="fs-3xs">
+            <Badge bg={product.purchasable ? "success" : "secondary"} className="tw:text-micro">
               {product.purchasable ? m.admin_products_purchasable() : m.admin_products_hidden()}
             </Badge>
             {soldOut && (
-              <Badge bg="danger" className="fs-3xs">
+              <Badge bg="danger" className="tw:text-micro">
                 {m.admin_products_sold_out()}
               </Badge>
             )}
-            <Badge bg="secondary" className="fs-3xs text-capitalize">
+            <Badge bg="secondary" className="tw:text-micro tw:capitalize">
               {categoryLabel(product.category)}
             </Badge>
             {product.required && (
-              <Badge bg="warning" text="dark" className="fs-3xs">
+              <Badge bg="warning" text="dark" className="tw:text-micro">
                 {m.admin_products_required_badge()}
               </Badge>
             )}
-            <span className="text-secondary small">€{product.price.toFixed(2)}</span>
+            <span className="tw:text-subtle tw:text-sm">€{product.price.toFixed(2)}</span>
           </span>
-          <span className="d-flex gap-1 flex-shrink-0">
+          <span className="tw:flex tw:gap-1 tw:shrink-0">
             <Button
               size="sm"
               variant="outline-secondary"
@@ -671,7 +681,7 @@ export default function EventProductsModal({
           </span>
         </div>
         {includedTarget && product.includedPerGuests && (
-          <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
+          <div className="tw:text-subtle" style={{ fontSize: "0.75rem" }}>
             {m.admin_products_bundle_note({
               target: includedTarget.name,
               ratio: product.includedPerGuests,
@@ -697,15 +707,20 @@ export default function EventProductsModal({
           </DialogHeader>
           <DialogBody>
             {preview && (
-              <section className="border rounded p-3 mb-3" aria-label={m.admin_inventory_review()}>
-                <h3 className="h6">{m.admin_inventory_review()}</h3>
+              <section
+                className="border rounded tw:p-4 tw:mb-4"
+                aria-label={m.admin_inventory_review()}
+              >
+                <h3 className="tw:text-base tw:font-medium tw:leading-tight">
+                  {m.admin_inventory_review()}
+                </h3>
                 <p>
                   {preview.payload.name}: €{preview.payload.price.toFixed(2)};{" "}
                   {m.admin_inventory_stock()}:{" "}
                   {preview.payload.stock ?? m.admin_inventory_unlimited()}
                 </p>
                 {preview.result.bookings.map((b) => (
-                  <div key={b.id} className="mb-2">
+                  <div key={b.id} className="tw:mb-2">
                     <strong>{b.id}</strong>: €{b.before_total} → €{b.after_total};{" "}
                     {m.admin_inventory_paid()} €{b.amount_paid}; {m.admin_inventory_refund()} €
                     {b.refund_due}
@@ -760,28 +775,28 @@ export default function EventProductsModal({
               </section>
             )}
 
-            <p className="text-secondary small mb-3">{m.admin_products_help()}</p>
+            <p className="tw:text-subtle tw:text-sm tw:mb-4">{m.admin_products_help()}</p>
 
             {error && (
-              <Alert variant="danger" className="py-1 mb-2">
+              <Alert variant="danger" className="tw:py-1 tw:mb-2">
                 {error}
               </Alert>
             )}
 
             {productsQuery.isPending ? (
-              <div className="text-center py-3">
+              <div className="tw:text-center tw:py-4">
                 <Spinner animation="border" size="sm" variant="warning" />
               </div>
             ) : productsQuery.isError ? (
-              <Alert variant="danger" className="py-1 mb-2">
+              <Alert variant="danger" className="tw:py-1 tw:mb-2">
                 {m.admin_content_error_load()}
               </Alert>
             ) : (
               <>
                 {products.length === 0 ? (
-                  <p className="text-secondary fst-italic small">{m.admin_products_empty()}</p>
+                  <p className="tw:text-subtle fst-italic tw:text-sm">{m.admin_products_empty()}</p>
                 ) : (
-                  <ListGroup variant="flush" className="mb-2">
+                  <ListGroup variant="flush" className="tw:mb-2">
                     {products.map((product) => renderRow(product))}
                   </ListGroup>
                 )}

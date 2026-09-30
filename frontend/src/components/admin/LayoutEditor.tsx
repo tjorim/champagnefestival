@@ -230,14 +230,14 @@ function DraggableTable({
           ? "border-success"
           : "border-secondary";
   const bgCls = isSelected
-    ? "bg-warning bg-opacity-25 text-warning"
+    ? "bg-warning bg-opacity-25 tw:text-highlight"
     : isOverfilled
-      ? "bg-danger bg-opacity-10 text-danger"
+      ? "bg-danger bg-opacity-10 tw:text-destructive"
       : isFull
-        ? "bg-warning bg-opacity-10 text-warning"
+        ? "bg-warning bg-opacity-10 tw:text-highlight"
         : assignedCount > 0
-          ? "bg-success bg-opacity-10 text-success"
-          : "bg-dark text-secondary";
+          ? "bg-success bg-opacity-10 tw:text-success"
+          : "bg-dark tw:text-subtle";
 
   return (
     <div
@@ -248,7 +248,7 @@ function DraggableTable({
         onClick();
       }}
       className={clsx(
-        "position-absolute d-flex flex-column align-items-center justify-content-center border text-center",
+        "tw:absolute tw:flex tw:flex-col tw:items-center tw:justify-center border tw:text-center",
         shape === "round" ? "rounded-circle" : "rounded",
         borderCls,
         bgCls,
@@ -283,8 +283,8 @@ function DraggableTable({
       }
     >
       <Icon icon={UsersIcon} className="tw:text-xl" />
-      <span className="small fw-semibold fs-2xs">{table.name}</span>
-      <span className="fs-3xs">
+      <span className="tw:text-sm tw:font-semibold tw:text-tiny">{table.name}</span>
+      <span className="tw:text-micro">
         {assignedCount}/{table.capacity}
       </span>
     </div>
@@ -326,8 +326,8 @@ function DraggableArea({
 
   const borderCls = isSelected ? "border-warning" : "border-info";
   const bgCls = isSelected
-    ? "bg-warning bg-opacity-25 text-warning"
-    : "bg-info bg-opacity-10 text-info";
+    ? "bg-warning bg-opacity-25 tw:text-highlight"
+    : "bg-info bg-opacity-10 tw:text-info";
   const fadedStyle = !isInteractive ? { opacity: 0.25, pointerEvents: "none" as const } : {};
 
   return (
@@ -339,7 +339,7 @@ function DraggableArea({
         onClick();
       }}
       className={clsx(
-        "position-absolute d-flex flex-column align-items-center justify-content-center border text-center rounded",
+        "tw:absolute tw:flex tw:flex-col tw:items-center tw:justify-center border tw:text-center rounded",
         borderCls,
         bgCls,
       )}
@@ -373,10 +373,12 @@ function DraggableArea({
       }
     >
       <AreaIcon name={area.icon} className="tw:text-xs" />
-      <span className="fw-semibold text-truncate w-100 text-center px-1 fs-3xs">{area.label}</span>
+      <span className="tw:font-semibold tw:truncate tw:w-full tw:text-center tw:px-1 tw:text-micro">
+        {area.label}
+      </span>
       {assignedLabel && (
         <span
-          className="text-truncate w-100 text-center px-1 fs-5xs"
+          className="tw:truncate tw:w-full tw:text-center tw:px-1 tw:text-plan"
           style={{ opacity: 0.85 }}
           title={assignedLabel}
         >
@@ -471,15 +473,15 @@ function RoomCanvas({
   const isEmpty = roomTables.length === 0 && roomAreas.length === 0;
 
   return (
-    <div className="overflow-auto pb-2">
-      <p className="text-secondary small mb-1">
+    <div className="tw:overflow-auto tw:pb-2">
+      <p className="tw:text-subtle tw:text-sm tw:mb-1">
         {room.widthM} m × {room.lengthM} m
-        <span className="ms-2">
+        <span className="tw:ms-2">
           <Icon icon={InfoIcon} className="tw:me-1" />
           {m.admin_table_move_hint()}
         </span>
       </p>
-      <p className="visually-hidden">{m.admin_layout_keyboard_hint()}</p>
+      <p className="tw:sr-only">{m.admin_layout_keyboard_hint()}</p>
       <DragDropProvider sensors={SENSORS} modifiers={modifiers} onDragEnd={handleDragEnd}>
         <div
           ref={canvasRef}
@@ -487,7 +489,7 @@ function RoomCanvas({
             onSelectTable(null);
             onSelectArea(null);
           }}
-          className="position-relative border rounded"
+          className="tw:relative border rounded"
           style={{
             width: canvasW,
             height: canvasH,
@@ -501,9 +503,9 @@ function RoomCanvas({
           aria-label={room.name}
         >
           {isEmpty && (
-            <div className="position-absolute top-50 start-50 translate-middle text-secondary text-center pe-none">
+            <div className="tw:absolute tw:top-1/2 tw:left-1/2 tw:-translate-x-1/2 tw:-translate-y-1/2 tw:text-subtle tw:text-center tw:pointer-events-none">
               <Icon icon={Grid3X3Icon} className="tw:text-5xl" />
-              <p className="mt-2 small">{m.admin_no_tables()}</p>
+              <p className="tw:mt-2 tw:text-sm">{m.admin_no_tables()}</p>
             </div>
           )}
           {roomTables.map((table) => {
@@ -866,10 +868,10 @@ export default function LayoutEditor({
   return (
     <div>
       {/* Tab bar: one tab per room */}
-      <Card bg="dark" text="white" border="secondary" className="mb-3">
-        <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
+      <Card bg="dark" text="white" border="secondary" className="tw:mb-4">
+        <Card.Header className="tw:flex tw:items-center tw:justify-between tw:flex-wrap tw:gap-2">
           {activeLayoutDateLabel && (
-            <span className="text-secondary small d-none d-md-inline">
+            <span className="tw:text-subtle tw:text-sm tw:hidden tw:site-md:inline">
               <Icon icon={CalendarIcon} className="tw:me-1" />
               {activeLayoutDateLabel}
             </span>
@@ -908,7 +910,7 @@ export default function LayoutEditor({
               );
             })}
           </div>
-          <div className="d-flex gap-2 align-items-center">
+          <div className="tw:flex tw:gap-2 tw:items-center">
             <div className="btn-group btn-group-sm" role="group" aria-label="Layer">
               <Button
                 variant={layer === "seating" ? "warning" : "outline-secondary"}
@@ -971,24 +973,24 @@ export default function LayoutEditor({
           </div>
         </Card.Header>
 
-        <Card.Body className="p-2">
+        <Card.Body className="tw:p-2">
           {rooms.length === 0 ? (
-            <p className="text-secondary text-center small mb-0">
+            <p className="tw:text-subtle tw:text-center tw:text-sm tw:mb-0">
               <Icon icon={InfoIcon} className="tw:me-1" />
               {m.admin_room_no_rooms()}
             </p>
           ) : activeRoom ? (
             <div>
-              <div className="d-flex align-items-center justify-content-between mb-2">
-                <div className="d-flex align-items-center gap-2">
-                  <span className="fw-semibold" style={{ color: activeRoom.color }}>
+              <div className="tw:flex tw:items-center tw:justify-between tw:mb-2">
+                <div className="tw:flex tw:items-center tw:gap-2">
+                  <span className="tw:font-semibold" style={{ color: activeRoom.color }}>
                     <Icon icon={BuildingIcon} className="tw:me-1" />
                     {activeRoom.name}
                   </span>
                   {/* Day / layout selector */}
-                  <div className="d-flex flex-wrap gap-1 align-items-center">
+                  <div className="tw:flex tw:flex-wrap tw:gap-1 tw:items-center">
                     {roomLayouts.map((layout) => (
-                      <div key={layout.id} className="d-flex align-items-center gap-0">
+                      <div key={layout.id} className="tw:flex tw:items-center tw:gap-0">
                         <Button
                           size="sm"
                           variant={activeLayoutId === layout.id ? "warning" : "outline-secondary"}
@@ -1017,7 +1019,7 @@ export default function LayoutEditor({
                       </div>
                     ))}
                     {roomLayouts.length === 0 && (
-                      <span className="text-secondary small">{m.admin_no_layouts()}</span>
+                      <span className="tw:text-subtle tw:text-sm">{m.admin_no_layouts()}</span>
                     )}
                     <Button
                       size="sm"
@@ -1074,7 +1076,9 @@ export default function LayoutEditor({
                   onMoveArea={onMoveArea}
                 />
               ) : (
-                <p className="text-secondary text-center small py-4 mb-0">{m.admin_no_layouts()}</p>
+                <p className="tw:text-subtle tw:text-center tw:text-sm tw:py-6 tw:mb-0">
+                  {m.admin_no_layouts()}
+                </p>
               )}
             </div>
           ) : null}
@@ -1083,18 +1087,18 @@ export default function LayoutEditor({
 
       {/* Selected table detail */}
       {selectedTableData && (
-        <Card bg="dark" text="white" border="warning" className="mb-3">
-          <Card.Header className="d-flex align-items-center justify-content-between border-warning">
-            <span className="fw-semibold">
+        <Card bg="dark" text="white" border="warning" className="tw:mb-4">
+          <Card.Header className="tw:flex tw:items-center tw:justify-between border-warning">
+            <span className="tw:font-semibold">
               <Icon icon={TableIcon} className="tw:me-2" />
               {m.admin_table_label()}: {selectedTableData.name}
             </span>
-            <div className="d-flex gap-2 align-items-center">
+            <div className="tw:flex tw:gap-2 tw:items-center">
               <Badge bg="secondary">
                 {selectedTableData.capacity} {m.admin_guests_count()}
               </Badge>
               {selectedType && (
-                <Badge bg="secondary" className="text-light">
+                <Badge bg="secondary" className="tw:text-content">
                   {selectedType.name}
                 </Badge>
               )}
@@ -1123,7 +1127,7 @@ export default function LayoutEditor({
                     <Icon icon={RotateCcwIcon} />
                   </Button>
                   <span
-                    className="text-secondary small"
+                    className="tw:text-subtle tw:text-sm"
                     style={{ minWidth: "3.5rem", textAlign: "center" }}
                   >
                     {Math.round(selectedTableData.rotation)}°
@@ -1158,22 +1162,22 @@ export default function LayoutEditor({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="py-1 mb-2 small"
+                className="tw:py-1 tw:mb-2 tw:text-sm"
               >
                 {updateTableError}
               </Alert>
             )}
             {allocationError && (
-              <Alert role="alert" variant="danger" className="py-1 mb-2 small">
+              <Alert role="alert" variant="danger" className="tw:py-1 tw:mb-2 tw:text-sm">
                 {allocationError}
               </Alert>
             )}
-            <Form.Group className="mb-3" controlId="table-name-edit">
-              <Form.Label className="text-secondary small">{m.admin_table_name()}</Form.Label>
+            <Form.Group className="tw:mb-4" controlId="table-name-edit">
+              <Form.Label className="tw:text-subtle tw:text-sm">{m.admin_table_name()}</Form.Label>
               <Form.Control
                 size="sm"
                 type="text"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 defaultValue={selectedTableData.name}
                 onBlur={async (e) => {
                   const val = e.target.value.trim();
@@ -1191,13 +1195,13 @@ export default function LayoutEditor({
                 key={`name-${selectedTableData.id}`}
               />
             </Form.Group>
-            <Form.Group className="mb-3" controlId="table-type-select">
-              <Form.Label className="text-secondary small">
+            <Form.Group className="tw:mb-4" controlId="table-type-select">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_table_type_label()}
               </Form.Label>
               <Form.Select
                 size="sm"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 value={selectedTableData.tableTypeId}
                 onChange={async (e) => {
                   setUpdateTableError(null);
@@ -1226,13 +1230,13 @@ export default function LayoutEditor({
               </Form.Select>
             </Form.Group>
             {selectedRegistrations.length === 0 ? (
-              <p className="text-secondary mb-0">{m.admin_unassigned()}</p>
+              <p className="tw:text-subtle tw:mb-0">{m.admin_unassigned()}</p>
             ) : (
-              <ListGroup variant="flush" className="mb-3">
+              <ListGroup variant="flush" className="tw:mb-4">
                 {selectedRegistrations.map((r) => (
-                  <ListGroup.Item key={r.id} className="bg-dark text-light border-secondary">
-                    <div className="d-flex flex-wrap align-items-center gap-2">
-                      <span className="fw-semibold me-auto">{r.person.name}</span>
+                  <ListGroup.Item key={r.id} className="bg-dark tw:text-content border-secondary">
+                    <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
+                      <span className="tw:font-semibold tw:me-auto">{r.person.name}</span>
                       {(() => {
                         const allocation = r.allocations?.find(
                           (item) => item.tableId === selectedTableData.id,
@@ -1247,7 +1251,7 @@ export default function LayoutEditor({
                               max={20}
                               defaultValue={allocation.guestCount}
                               disabled={allocationPending || allocation.exclusive}
-                              className="bg-dark text-light border-secondary"
+                              className="bg-dark tw:text-content border-secondary"
                               style={{ width: "5rem" }}
                               onBlur={(event) => {
                                 const guestCount = Number(event.currentTarget.value);
@@ -1320,11 +1324,11 @@ export default function LayoutEditor({
                 ))}
               </ListGroup>
             )}
-            <div className="border-top border-secondary pt-3 mt-3">
-              <Form.Label className="text-secondary small">
+            <div className="border-top border-secondary tw:pt-4 tw:mt-4">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_assign_booking()}
               </Form.Label>
-              <div className="d-flex flex-wrap gap-2">
+              <div className="tw:flex tw:flex-wrap tw:gap-2">
                 <Form.Select
                   aria-label={m.admin_layout_assign_booking()}
                   value={bookingToAssign}
@@ -1391,13 +1395,13 @@ export default function LayoutEditor({
 
       {/* Selected area detail */}
       {selectedAreaData && (
-        <Card bg="dark" text="white" border="info" className="mb-3">
-          <Card.Header className="d-flex align-items-center justify-content-between border-info">
-            <span className="fw-semibold">
+        <Card bg="dark" text="white" border="info" className="tw:mb-4">
+          <Card.Header className="tw:flex tw:items-center tw:justify-between border-info">
+            <span className="tw:font-semibold">
               <AreaIcon name={selectedAreaData.icon} className="tw:me-2" />
               {m.admin_layout_area_label_prefix()} {selectedAreaData.label}
             </span>
-            <div className="d-flex gap-2 align-items-center">
+            <div className="tw:flex tw:gap-2 tw:items-center">
               <Button
                 variant="outline-secondary"
                 size="sm"
@@ -1408,7 +1412,7 @@ export default function LayoutEditor({
                 <Icon icon={RotateCcwIcon} />
               </Button>
               <span
-                className="text-secondary small"
+                className="tw:text-subtle tw:text-sm"
                 style={{ minWidth: "3.5rem", textAlign: "center" }}
               >
                 {Math.round(selectedAreaData.rotation)}°
@@ -1439,7 +1443,7 @@ export default function LayoutEditor({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="py-1 mb-2 small"
+                className="tw:py-1 tw:mb-2 tw:text-sm"
                 dismissible
                 onClose={() => setAssignAreaError(null)}
               >
@@ -1451,21 +1455,21 @@ export default function LayoutEditor({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="py-1 mb-2 small"
+                className="tw:py-1 tw:mb-2 tw:text-sm"
                 dismissible
                 onClose={() => setResizeAreaError(null)}
               >
                 {resizeAreaError}
               </Alert>
             )}
-            <Form.Group className="mb-3" controlId="area-label">
-              <Form.Label className="text-secondary small">
+            <Form.Group className="tw:mb-4" controlId="area-label">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_area_form_label()}
               </Form.Label>
               <Form.Control
                 size="sm"
                 type="text"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 defaultValue={selectedAreaData.label}
                 onBlur={(e) => {
                   const newLabel = e.target.value.trim();
@@ -1476,9 +1480,9 @@ export default function LayoutEditor({
                 key={selectedAreaData.id}
               />
             </Form.Group>
-            <div className="d-flex gap-2 mb-3">
-              <Form.Group controlId="area-width" className="flex-fill">
-                <Form.Label className="text-secondary small">
+            <div className="tw:flex tw:gap-2 tw:mb-4">
+              <Form.Group controlId="area-width" className="tw:flex-1">
+                <Form.Label className="tw:text-subtle tw:text-sm">
                   {m.admin_layout_area_width_m()}
                 </Form.Label>
                 <Form.Control
@@ -1487,7 +1491,7 @@ export default function LayoutEditor({
                   min={0.1}
                   max={50}
                   step={0.1}
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   defaultValue={selectedAreaData.widthM}
                   onBlur={async (e) => {
                     const val = parseFloat(e.target.value);
@@ -1505,8 +1509,8 @@ export default function LayoutEditor({
                   key={`w-${selectedAreaData.id}`}
                 />
               </Form.Group>
-              <Form.Group controlId="area-length" className="flex-fill">
-                <Form.Label className="text-secondary small">
+              <Form.Group controlId="area-length" className="tw:flex-1">
+                <Form.Label className="tw:text-subtle tw:text-sm">
                   {m.admin_layout_area_length_m()}
                 </Form.Label>
                 <Form.Control
@@ -1515,7 +1519,7 @@ export default function LayoutEditor({
                   min={0.1}
                   max={50}
                   step={0.1}
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   defaultValue={selectedAreaData.lengthM}
                   onBlur={async (e) => {
                     const val = parseFloat(e.target.value);
@@ -1534,15 +1538,15 @@ export default function LayoutEditor({
                 />
               </Form.Group>
             </div>
-            <Form.Group className="mb-3" controlId="area-icon">
-              <Form.Label className="text-secondary small">
+            <Form.Group className="tw:mb-4" controlId="area-icon">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_area_form_icon()}
               </Form.Label>
-              <div className="d-flex gap-2 align-items-center">
+              <div className="tw:flex tw:gap-2 tw:items-center">
                 <AreaIcon name={selectedAreaData.icon} className="tw:text-primary" />
                 <Form.Select
                   size="sm"
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                   value={selectedAreaData.icon || "bi-shop"}
                   onChange={async (e) => {
                     const newIcon = e.target.value;
@@ -1571,12 +1575,12 @@ export default function LayoutEditor({
               </div>
             </Form.Group>
             <Form.Group controlId="area-assign-item">
-              <Form.Label className="text-secondary small">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_area_assigned_to()}
               </Form.Label>
               <Form.Select
                 size="sm"
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 value={selectedAreaData.exhibitorId ? `e:${selectedAreaData.exhibitorId}` : ""}
                 onChange={async (ev) => {
                   const val = ev.target.value;
@@ -1609,14 +1613,14 @@ export default function LayoutEditor({
               </Form.Select>
             </Form.Group>
             {tablesInSelectedArea.length > 0 && (
-              <div className="mt-3 pt-3 border-top border-secondary">
-                <p className="text-secondary small mb-2">
+              <div className="tw:mt-4 tw:pt-4 border-top border-secondary">
+                <p className="tw:text-subtle tw:text-sm tw:mb-2">
                   <Icon icon={Grid3X3Icon} className="tw:me-1" />
                   {m.admin_layout_tables_in_stand()}{" "}
                   <Badge bg="info" text="dark">
                     {tablesInSelectedArea.length}
                   </Badge>
-                  <span className="ms-2 text-secondary">
+                  <span className="tw:ms-2 tw:text-subtle">
                     {tablesInSelectedArea.reduce((s, t) => s + t.capacity, 0)}{" "}
                     {m.admin_layout_places_total()}
                   </span>
@@ -1625,11 +1629,11 @@ export default function LayoutEditor({
                   {tablesInSelectedArea.map((t) => (
                     <ListGroup.Item
                       key={t.id}
-                      className="bg-dark text-light border-secondary py-1 px-2 small"
+                      className="bg-dark tw:text-content border-secondary tw:py-1 tw:px-2 tw:text-sm"
                     >
                       <Icon icon={Grid3X3Icon} className="tw:me-1 tw:text-muted-foreground" />
                       {t.name}
-                      <Badge bg="secondary" className="ms-2 fs-3xs">
+                      <Badge bg="secondary" className="tw:ms-2 tw:text-micro">
                         {t.capacity} {m.admin_layout_capacity_abbrev()}
                       </Badge>
                     </ListGroup.Item>
@@ -1658,17 +1662,17 @@ export default function LayoutEditor({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="py-1 mb-3 small"
+                className="tw:py-1 tw:mb-4 tw:text-sm"
               >
                 {addLayoutError}
               </Alert>
             )}
-            <Form.Group className="mb-3" controlId="layout-day">
+            <Form.Group className="tw:mb-4" controlId="layout-day">
               <Form.Label>{m.admin_layout_day_label()}</Form.Label>
               <Form.Select
                 value={newLayout.eventId}
                 onChange={(e) => setNewLayout((p) => ({ ...p, eventId: e.target.value }))}
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
               >
                 {dayOptions.map((day) => (
                   <option key={day.eventId} value={day.eventId}>
@@ -1682,7 +1686,7 @@ export default function LayoutEditor({
               <Form.Select
                 value={newLayout.copyFromLayoutId}
                 onChange={(e) => setNewLayout((p) => ({ ...p, copyFromLayoutId: e.target.value }))}
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
               >
                 <option value="">{m.admin_layout_copy_from_empty()}</option>
                 {roomLayouts.map((layout) => (
@@ -1693,11 +1697,11 @@ export default function LayoutEditor({
               </Form.Select>
             </Form.Group>
             {newLayout.copyFromLayoutId && (
-              <div className="mt-3 d-flex flex-column gap-2">
+              <div className="tw:mt-4 tw:flex tw:flex-col tw:gap-2">
                 <Form.Check
                   id="layout-copy-tables"
                   type="checkbox"
-                  className="small"
+                  className="tw:text-sm"
                   checked={newLayout.copyTables}
                   onChange={(e) =>
                     setNewLayout((p) => ({ ...p, copyTables: e.currentTarget.checked }))
@@ -1707,7 +1711,7 @@ export default function LayoutEditor({
                 <Form.Check
                   id="layout-copy-areas"
                   type="checkbox"
-                  className="small"
+                  className="tw:text-sm"
                   checked={newLayout.copyAreas}
                   onChange={(e) =>
                     setNewLayout((p) => ({
@@ -1718,7 +1722,9 @@ export default function LayoutEditor({
                   label={m.admin_layout_copy_areas()}
                 />
                 {newLayout.copyAreas && (
-                  <div className="text-secondary small">{m.admin_layout_copy_areas_hint()}</div>
+                  <div className="tw:text-subtle tw:text-sm">
+                    {m.admin_layout_copy_areas_hint()}
+                  </div>
                 )}
               </div>
             )}
@@ -1751,29 +1757,29 @@ export default function LayoutEditor({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="py-1 mb-3 small"
+                className="tw:py-1 tw:mb-4 tw:text-sm"
               >
                 {addAreaError}
               </Alert>
             )}
-            <Form.Group className="mb-3" controlId="area-new-label">
+            <Form.Group className="tw:mb-4" controlId="area-new-label">
               <Form.Label>{m.admin_layout_area_form_label()}</Form.Label>
               <Form.Control
                 type="text"
                 value={newArea.label}
                 onChange={(e) => setNewArea((p) => ({ ...p, label: e.target.value }))}
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 placeholder={m.admin_layout_area_label_placeholder()}
               />
             </Form.Group>
-            <Form.Group className="mb-3" controlId="area-new-icon">
+            <Form.Group className="tw:mb-4" controlId="area-new-icon">
               <Form.Label>{m.admin_layout_area_form_icon()}</Form.Label>
-              <div className="d-flex gap-2 align-items-center">
+              <div className="tw:flex tw:gap-2 tw:items-center">
                 <AreaIcon name={newArea.icon} className="tw:text-2xl tw:text-primary" />
                 <Form.Select
                   value={newArea.icon}
                   onChange={(e) => setNewArea((p) => ({ ...p, icon: e.target.value }))}
-                  className="bg-dark text-light border-secondary"
+                  className="bg-dark tw:text-content border-secondary"
                 >
                   {getAreaIcons().map((ic) => (
                     <option key={ic.value} value={ic.value}>
@@ -1783,7 +1789,7 @@ export default function LayoutEditor({
                 </Form.Select>
               </div>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="area-new-assign">
+            <Form.Group className="tw:mb-4" controlId="area-new-assign">
               <Form.Label>{m.admin_layout_area_assigned_to_optional()}</Form.Label>
               <Form.Select
                 value={newArea.assignedType ? `${newArea.assignedType}:${newArea.assignedId}` : ""}
@@ -1802,7 +1808,7 @@ export default function LayoutEditor({
                     }));
                   }
                 }}
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
               >
                 <option value="">{m.admin_layout_area_none()}</option>
                 {exhibitors.filter((e) => e.active).length > 0 && (
@@ -1818,8 +1824,8 @@ export default function LayoutEditor({
                 )}
               </Form.Select>
             </Form.Group>
-            <div className="row g-3">
-              <div className="col">
+            <div className="tw:flex tw:flex-wrap tw:-mx-2 tw:*:w-full tw:*:px-2 tw:gap-y-4">
+              <div className="tw:min-w-0 tw:flex-1">
                 <Form.Group controlId="area-new-width">
                   <Form.Label>{m.admin_layout_area_width_m()}</Form.Label>
                   <Form.Control
@@ -1829,11 +1835,11 @@ export default function LayoutEditor({
                     step={0.5}
                     value={newArea.widthM}
                     onChange={(e) => setNewArea((p) => ({ ...p, widthM: Number(e.target.value) }))}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                   />
                 </Form.Group>
               </div>
-              <div className="col">
+              <div className="tw:min-w-0 tw:flex-1">
                 <Form.Group controlId="area-new-length">
                   <Form.Label>{m.admin_layout_area_length_m()}</Form.Label>
                   <Form.Control
@@ -1843,7 +1849,7 @@ export default function LayoutEditor({
                     step={0.5}
                     value={newArea.lengthM}
                     onChange={(e) => setNewArea((p) => ({ ...p, lengthM: Number(e.target.value) }))}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                   />
                 </Form.Group>
               </div>
@@ -1877,27 +1883,27 @@ export default function LayoutEditor({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="py-1 mb-3 small"
+                className="tw:py-1 tw:mb-4 tw:text-sm"
               >
                 {addTableError}
               </Alert>
             )}
-            <Form.Group className="mb-3" controlId="table-name">
+            <Form.Group className="tw:mb-4" controlId="table-name">
               <Form.Label>{m.admin_table_name()}</Form.Label>
               <Form.Control
                 type="text"
                 value={newTable.name}
                 onChange={(e) => setNewTable((p) => ({ ...p, name: e.target.value }))}
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
                 placeholder={m.admin_table_name_placeholder()}
               />
             </Form.Group>
-            <Form.Group className="mb-3" controlId="table-type">
+            <Form.Group className="tw:mb-4" controlId="table-type">
               <Form.Label>{m.admin_table_type_select()}</Form.Label>
               <Form.Select
                 value={newTable.tableTypeId}
                 onChange={(e) => setNewTable((p) => ({ ...p, tableTypeId: e.target.value }))}
-                className="bg-dark text-light border-secondary"
+                className="bg-dark tw:text-content border-secondary"
               >
                 <option value="">— {m.admin_table_type_select()} —</option>
                 {tableTypes

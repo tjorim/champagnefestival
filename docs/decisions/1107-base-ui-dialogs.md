@@ -71,3 +71,19 @@ contact save establishes a pristine baseline only when no newer edits were
 entered while it was pending. Mutation payloads and retry policies are unchanged.
 Regression tests cover refreshed identities, reopen/record switches, pristine
 settings refreshes, successful saves, and editing during an in-flight save.
+
+## Review follow-up: warning confirmations
+
+The [Worktime review](https://github.com/tjorim/worktime/pull/1399#discussion_r4149432719)
+also applies to CF: mapping every non-danger confirmation to the default button
+removed the warning distinction. `ConfirmModal` now maps warning confirmations
+to an owned warning Button variant, using the semantic warning background and
+warning-foreground tokens, including hover and keyboard-focus states. Primary
+confirmations retain the default variant and danger retains destructive styling.
+Existing over-capacity, policy-publication, venue-archive and table-dimension
+callers retain their warning cue without changing callbacks or write contracts.
+Regression coverage checks all three variants and pending warning confirmations.
+
+The picker-clipping finding does not share CF's implementation: Combobox menus
+are portalled outside the dialog's scrolling viewport, and DialogBody does not
+introduce a clipping overflow rule.

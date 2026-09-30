@@ -178,14 +178,14 @@ export default function RegistrationDetail({
               variant="danger"
               dismissible={Boolean(onClearActionError)}
               onClose={onClearActionError}
-              className="mb-3"
+              className="tw:mb-4"
               role="alert"
             >
               {actionError}
             </Alert>
           )}
 
-          <div className="d-flex flex-wrap gap-2 mb-3">
+          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mb-4">
             <Badge
               bg={
                 registration.status === "confirmed"
@@ -216,7 +216,7 @@ export default function RegistrationDetail({
                   ? m.admin_payment_partial()
                   : m.admin_payment_unpaid()}
               {registration.amountDue != null && (
-                <span className="ms-1 fw-normal">
+                <span className="tw:ms-1 tw:font-normal">
                   {m.admin_registration_amount_due({
                     amount: registration.amountDue.toFixed(2),
                   })}
@@ -228,7 +228,7 @@ export default function RegistrationDetail({
                 <Icon icon={CircleCheckIcon} className="tw:me-1" />
                 {m.admin_checked_in()}
                 {registration.checkedInAt && (
-                  <span className="ms-1 fw-normal">
+                  <span className="tw:ms-1 tw:font-normal">
                     {new Date(registration.checkedInAt).toLocaleTimeString()}
                   </span>
                 )}
@@ -248,13 +248,13 @@ export default function RegistrationDetail({
           </div>
 
           {emailDuplicates.length > 0 && (
-            <Alert variant="warning" className="py-2 mb-3">
-              <div className="fw-semibold mb-1">
+            <Alert variant="warning" className="tw:py-2 tw:mb-4">
+              <div className="tw:font-semibold tw:mb-1">
                 <Icon icon={TriangleAlertIcon} className="tw:me-1" />
                 {m.admin_people_duplicates_title()}
               </div>
-              <div className="small mb-2">{m.admin_people_duplicates_same_email()}</div>
-              <div className="d-flex flex-wrap gap-2">
+              <div className="tw:text-sm tw:mb-2">{m.admin_people_duplicates_same_email()}</div>
+              <div className="tw:flex tw:flex-wrap tw:gap-2">
                 {emailDuplicates.map((dup) => (
                   <Button
                     key={dup.id}
@@ -270,29 +270,29 @@ export default function RegistrationDetail({
             </Alert>
           )}
 
-          <ListGroup variant="flush" className="mb-3">
-            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-              <span className="text-secondary">{m.registration_email()}</span>
-              <a href={`mailto:${registration.person.email}`} className="text-warning">
+          <ListGroup variant="flush" className="tw:mb-4">
+            <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+              <span className="tw:text-subtle">{m.registration_email()}</span>
+              <a href={`mailto:${registration.person.email}`} className="tw:text-highlight">
                 {registration.person.email}
               </a>
             </ListGroup.Item>
             {!onSaveBooking && (
-              <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-                <span className="text-secondary">{m.admin_guests_count()}</span>
+              <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+                <span className="tw:text-subtle">{m.admin_guests_count()}</span>
                 <span aria-label={m.admin_guests_count()}>{registration.guestCount}</span>
               </ListGroup.Item>
             )}
-            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-              <span className="text-secondary">{m.registration_phone()}</span>
+            <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+              <span className="tw:text-subtle">{m.registration_phone()}</span>
               <span>{registration.person.phone}</span>
             </ListGroup.Item>
-            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-              <span className="text-secondary">{m.admin_event_label()}</span>
+            <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+              <span className="tw:text-subtle">{m.admin_event_label()}</span>
               <span>{registration.event?.title ?? registration.eventId}</span>
             </ListGroup.Item>
-            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-              <span className="text-secondary">{m.registration_edition_type_label()}</span>
+            <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+              <span className="tw:text-subtle">{m.registration_edition_type_label()}</span>
               <span>
                 {(() => {
                   const et = registration.event?.edition?.editionType;
@@ -303,7 +303,7 @@ export default function RegistrationDetail({
               </span>
             </ListGroup.Item>
             {onSaveBooking && (
-              <ListGroup.Item className="bg-dark text-light border-secondary">
+              <ListGroup.Item className="bg-dark tw:text-content border-secondary">
                 <BookingEditor
                   key={`${registration.id}:${registration.updatedAt}`}
                   registration={registration}
@@ -316,21 +316,21 @@ export default function RegistrationDetail({
               </ListGroup.Item>
             )}
             {!onSaveBooking && registration.notes && (
-              <ListGroup.Item className="bg-dark text-light border-secondary">
-                <span className="text-secondary d-block mb-1">{m.admin_notes()}</span>
-                <span className="small">{registration.notes}</span>
+              <ListGroup.Item className="bg-dark tw:text-content border-secondary">
+                <span className="tw:text-subtle tw:block tw:mb-1">{m.admin_notes()}</span>
+                <span className="tw:text-sm">{registration.notes}</span>
               </ListGroup.Item>
             )}
           </ListGroup>
 
           {registration.person.email && (
-            <section className="mb-4" aria-labelledby="registration-email-heading">
-              <h6 id="registration-email-heading" className="text-warning mb-2">
+            <section className="tw:mb-6" aria-labelledby="registration-email-heading">
+              <h6 id="registration-email-heading" className="tw:text-highlight tw:mb-2">
                 <Icon icon={MailIcon} className="tw:me-2" />
                 {m.admin_email_registration_title()}
               </h6>
-              <div className="d-flex flex-wrap align-items-end gap-2">
-                <Form.Group controlId="registration-email-template" className="flex-grow-1">
+              <div className="tw:flex tw:flex-wrap tw:items-end tw:gap-2">
+                <Form.Group controlId="registration-email-template" className="tw:grow">
                   <Form.Label>{m.admin_email_template_label()}</Form.Label>
                   <Form.Select
                     value={emailTemplate}
@@ -357,8 +357,8 @@ export default function RegistrationDetail({
           )}
 
           {!simpleRsvp && registration.orderItems.length > 0 && (
-            <div className="mb-4">
-              <h6 className="text-warning mb-2">
+            <div className="tw:mb-6">
+              <h6 className="tw:text-highlight tw:mb-2">
                 <Icon icon={ShoppingBasketIcon} className="tw:me-2" />
                 {m.admin_bottle_fulfillment()}
               </h6>
@@ -366,22 +366,22 @@ export default function RegistrationDetail({
                 {registration.orderItems.map((item) => (
                   <ListGroup.Item
                     key={item.productId}
-                    className="bg-dark text-light border-secondary d-flex align-items-center justify-content-between"
+                    className="bg-dark tw:text-content border-secondary tw:flex tw:items-center tw:justify-between"
                   >
                     <span>
                       {item.name}{" "}
-                      <Badge bg="secondary" className="ms-1">
+                      <Badge bg="secondary" className="tw:ms-1">
                         ×{item.quantity}
                       </Badge>
                     </span>
-                    <div className="d-flex align-items-center gap-2">
+                    <div className="tw:flex tw:items-center tw:gap-2">
                       <Badge bg={item.delivered ? "success" : "secondary"}>
                         {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
                       </Badge>
                       <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
                         {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                       </Badge>
-                      <div className="d-flex align-items-center gap-1">
+                      <div className="tw:flex tw:items-center tw:gap-1">
                         <Button
                           size="sm"
                           variant="outline-secondary"
@@ -394,7 +394,7 @@ export default function RegistrationDetail({
                         <Form.Control
                           key={item.deliveredQuantity}
                           aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
-                          className="text-center"
+                          className="tw:text-center"
                           inputMode="numeric"
                           min={0}
                           max={item.quantity}
@@ -440,12 +440,12 @@ export default function RegistrationDetail({
             </div>
           )}
 
-          <div className="mb-4">
-            <h6 className="text-warning mb-2">
+          <div className="tw:mb-6">
+            <h6 className="tw:text-highlight tw:mb-2">
               <Icon icon={UserCheckIcon} className="tw:me-2" />
               {m.admin_check_in_title()}
             </h6>
-            <div className="d-flex gap-2 flex-wrap">
+            <div className="tw:flex tw:gap-2 tw:flex-wrap">
               {!registration.checkedIn && (
                 <Button
                   variant="outline-success"
@@ -470,21 +470,21 @@ export default function RegistrationDetail({
           </div>
 
           {registration.checkInToken && (
-            <div className="text-center">
-              <h6 className="text-warning mb-2">
+            <div className="tw:text-center">
+              <h6 className="tw:text-highlight tw:mb-2">
                 <Icon icon={QrCodeIcon} className="tw:me-2" />
                 {m.admin_qr_code()}
               </h6>
-              <p className="text-secondary small mb-3">{m.admin_qr_scan_info()}</p>
-              <div className="d-inline-block p-3 bg-white rounded">
+              <p className="tw:text-subtle tw:text-sm tw:mb-4">{m.admin_qr_scan_info()}</p>
+              <div className="tw:inline-block tw:p-4 bg-white rounded">
                 <QRCodeSVG value={checkInUrl} size={180} level="M" includeMargin={false} />
               </div>
-              <div className="mt-2">
+              <div className="tw:mt-2">
                 <a
                   href={checkInUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-secondary small text-break"
+                  className="tw:text-subtle tw:text-sm tw:break-words"
                 >
                   {checkInUrl}
                 </a>

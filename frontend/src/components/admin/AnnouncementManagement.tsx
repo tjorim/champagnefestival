@@ -298,7 +298,7 @@ export default function AnnouncementManagement({
           cell: ({ row }) =>
             (["nl", "en", "fr"] as const).map((locale) => (
               <Badge
-                className="me-1"
+                className="tw:me-1"
                 bg={row.original[`text_${locale}`] ? "success" : "secondary"}
                 key={locale}
               >
@@ -357,7 +357,9 @@ export default function AnnouncementManagement({
   return (
     <Card className="admin-card">
       <Card.Header>
-        <h2 className="h5 mb-0">{m.admin_announcements_section()}</h2>
+        <h2 className="tw:text-xl tw:font-medium tw:leading-tight tw:mb-0">
+          {m.admin_announcements_section()}
+        </h2>
       </Card.Header>
       <Card.Body>
         {error && <Alert variant="danger">{error}</Alert>}
@@ -367,9 +369,9 @@ export default function AnnouncementManagement({
             void form.handleSubmit();
           }}
         >
-          <div className="row g-2">
+          <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2">
             {(["nl", "en", "fr"] as const).map((locale) => (
-              <Form.Group className="col-md-4" key={locale}>
+              <Form.Group className="tw:site-md:w-4/12" key={locale}>
                 <Form.Label>
                   {m.admin_announcement_text_label({ locale: locale.toUpperCase() })}
                 </Form.Label>
@@ -386,8 +388,8 @@ export default function AnnouncementManagement({
               </Form.Group>
             ))}
           </div>
-          <div className="row g-2 mt-1">
-            <Form.Group className="col-md-3">
+          <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mt-1">
+            <Form.Group className="tw:site-md:w-3/12">
               <Form.Label>{m.admin_announcement_level_label()}</Form.Label>
               <form.Field name="level">
                 {(field) => (
@@ -403,7 +405,7 @@ export default function AnnouncementManagement({
                 )}
               </form.Field>
             </Form.Group>
-            <Form.Group className="col-md-3">
+            <Form.Group className="tw:site-md:w-3/12">
               <Form.Label>{m.admin_announcement_starts_label()}</Form.Label>
               <form.Field name="starts_at">
                 {(field) => (
@@ -416,7 +418,7 @@ export default function AnnouncementManagement({
                 )}
               </form.Field>
             </Form.Group>
-            <Form.Group className="col-md-3">
+            <Form.Group className="tw:site-md:w-3/12">
               <Form.Label>{m.admin_announcement_ends_label()}</Form.Label>
               <form.Field name="ends_at">
                 {(field) => (
@@ -429,7 +431,7 @@ export default function AnnouncementManagement({
                 )}
               </form.Field>
             </Form.Group>
-            <Form.Group className="col-md-3">
+            <Form.Group className="tw:site-md:w-3/12">
               <Form.Label>{m.admin_announcement_link_url_label()}</Form.Label>
               <form.Field name="link_url">
                 {(field) => (
@@ -443,9 +445,9 @@ export default function AnnouncementManagement({
               </form.Field>
             </Form.Group>
           </div>
-          <div className="row g-2 mt-1">
+          <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mt-1">
             {(["nl", "en", "fr"] as const).map((locale) => (
-              <Form.Group className="col-md-4" key={locale}>
+              <Form.Group className="tw:site-md:w-4/12" key={locale}>
                 <Form.Label>
                   {m.admin_announcement_link_label_field({ locale: locale.toUpperCase() })}
                 </Form.Label>
@@ -464,14 +466,14 @@ export default function AnnouncementManagement({
           <form.Field name="active">
             {(field) => (
               <Form.Check
-                className="mt-3"
+                className="tw:mt-4"
                 label={m.admin_announcement_publish_immediately()}
                 checked={field.value}
                 onChange={(event) => field.handleChange(event.target.checked)}
               />
             )}
           </form.Field>
-          <div className="d-flex gap-2 mt-3">
+          <div className="tw:flex tw:gap-2 tw:mt-4">
             <Button type="submit" disabled={save.isPending}>
               {editing ? m.admin_save() : m.admin_create_action()}
             </Button>
@@ -490,7 +492,7 @@ export default function AnnouncementManagement({
         </Form>
         <hr />
         <Form.Select
-          className="mb-3 w-auto"
+          className="tw:mb-4 tw:w-auto"
           aria-label={m.admin_announcement_preview_language_label()}
           value={preview}
           onChange={(event) => setPreview(event.target.value as typeof preview)}

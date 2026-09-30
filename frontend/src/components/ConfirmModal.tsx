@@ -109,7 +109,9 @@ export default function ConfirmModal({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={pending}>{m.admin_action_cancel()}</AlertDialogCancel>
           <Button
-            variant={variant === "danger" ? "destructive" : "default"}
+            variant={
+              variant === "danger" ? "destructive" : variant === "warning" ? "warning" : "default"
+            }
             onClick={() => void handleConfirm()}
             disabled={pending}
           >

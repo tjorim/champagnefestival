@@ -141,8 +141,8 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           noValidate
         >
           <DialogBody>
-            <Form.Group className="mb-3" controlId="item-name">
-              <Form.Label className="text-secondary small">
+            <Form.Group className="tw:mb-4" controlId="item-name">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_content_name_placeholder()}
               </Form.Label>
               <form.Field
@@ -159,7 +159,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   return (
                     <>
                       <Form.Control
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         autoFocus
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -176,8 +176,8 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                 }}
               </form.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="item-image">
-              <Form.Label className="text-secondary small">
+            <Form.Group className="tw:mb-4" controlId="item-image">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_content_image_url_placeholder()}
               </Form.Label>
               <form.Field
@@ -195,7 +195,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   return (
                     <>
                       <Form.Control
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -211,8 +211,10 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                 }}
               </form.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="item-website">
-              <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
+            <Form.Group className="tw:mb-4" controlId="item-website">
+              <Form.Label className="tw:text-subtle tw:text-sm">
+                {m.admin_item_website_url()}
+              </Form.Label>
               <form.Field
                 name="website"
                 validators={[
@@ -231,7 +233,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                     <>
                       <Form.Control
                         type="url"
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         placeholder="https://…"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -248,12 +250,12 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                 }}
               </form.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="item-type">
-              <Form.Label className="text-secondary small">{m.admin_item_type()}</Form.Label>
+            <Form.Group className="tw:mb-4" controlId="item-type">
+              <Form.Label className="tw:text-subtle tw:text-sm">{m.admin_item_type()}</Form.Label>
               <form.Field name="type">
                 {(field) => (
                   <Form.Select
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -266,7 +268,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               </form.Field>
             </Form.Group>
             <Form.Group controlId="item-contact-person">
-              <Form.Label className="text-secondary small">
+              <Form.Label className="tw:text-subtle tw:text-sm">
                 {m.admin_item_contact_person()}
               </Form.Label>
               <form.Field name="contactOption">

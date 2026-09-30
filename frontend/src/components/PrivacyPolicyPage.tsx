@@ -1,7 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import Container from "react-bootstrap/Container";
-import Col from "react-bootstrap/Col";
-import Row from "react-bootstrap/Row";
 import Spinner from "react-bootstrap/Spinner";
 import Alert from "react-bootstrap/Alert";
 import { m } from "@/paraglide/messages";
@@ -36,13 +33,13 @@ export default function PrivacyPolicyPage() {
   });
 
   return (
-    <section id="privacy-policy" className="py-5">
-      <Container>
-        <Row className="justify-content-center">
-          <Col xs={12} md={10} lg={8}>
-            <h1 className="mb-2 text-warning">{m.privacy_title()}</h1>
+    <section id="privacy-policy" className="tw:py-12">
+      <div className="site-container tw:mx-auto tw:w-full">
+        <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
+          <div className="tw:w-full site-content-column tw:site-md:w-content-md tw:site-lg:w-content-lg">
+            <h1 className="tw:mb-2 tw:text-highlight">{m.privacy_title()}</h1>
             {query.data && (
-              <p className="text-secondary mb-4">
+              <p className="tw:text-subtle tw:mb-6">
                 {m.privacy_last_updated()}:{" "}
                 {new Date(query.data.published_at).toLocaleDateString(locale, {
                   year: "numeric",
@@ -52,7 +49,7 @@ export default function PrivacyPolicyPage() {
             )}
 
             {query.isLoading && (
-              <div className="text-center py-5">
+              <div className="tw:text-center tw:py-12">
                 <Spinner animation="border" role="status" aria-label="Loading" />
               </div>
             )}
@@ -66,13 +63,13 @@ export default function PrivacyPolicyPage() {
             )}
 
             {settings.public_email && (
-              <a href={`mailto:${settings.public_email}`} className="text-decoration-none">
+              <a href={`mailto:${settings.public_email}`} className="tw:no-underline">
                 {settings.public_email}
               </a>
             )}
-          </Col>
-        </Row>
-      </Container>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
