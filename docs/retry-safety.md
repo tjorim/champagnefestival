@@ -302,3 +302,12 @@ payment history cannot be silently lost by deleting the booking.
 `payment_transactions` is created directly in migration 001 (no production
 data predates it, so there was nothing to backfill from a prior mutable
 `amount_paid` total — every booking's ledger simply starts empty).
+
+### Admin form draft preservation (2026-09-30)
+
+Event form hydration and application-settings refreshes preserve unsaved drafts.
+The settings save still sends one explicit `PUT /api/settings` with `retry: false`;
+its success handler only updates the local pristine baseline when the user has
+not entered newer edits during the request. No automatic retry, write queue,
+version precondition or server retry-safety guarantee is added. Ambiguous write
+outcomes still require reading and reconciling as documented for updates above.

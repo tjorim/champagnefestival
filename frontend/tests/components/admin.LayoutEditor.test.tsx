@@ -172,7 +172,15 @@ function renderLayoutEditor(overrides: RenderOverrides = {}) {
       changeNote: null,
       createdBy: "admin",
       createdAt: "2026-01-01T00:00:00Z",
-      snapshot: { tables: [], areas: [], room: { widthM: 10, lengthM: 8 } },
+      snapshot: {
+        tables: [],
+        areas: [],
+        room: {
+          close: () => "Close",
+          widthM: 10,
+          lengthM: 8,
+        },
+      },
     }),
     onRestoreRevision: vi.fn().mockResolvedValue(undefined),
   };
@@ -438,7 +446,7 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
 
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     expect(dialog.getByText("admin_layout_table_delete_confirm")).toBeInTheDocument();
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
 
@@ -457,10 +465,10 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
 
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
 
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     expect(callbacks.onDeleteTable).not.toHaveBeenCalled();
   });
 
@@ -477,7 +485,7 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
 
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     expect(dialog.getByText("admin_layout_area_delete_confirm")).toBeInTheDocument();
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
 
@@ -497,10 +505,10 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
 
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
 
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     expect(callbacks.onDeleteArea).not.toHaveBeenCalled();
   });
 
@@ -510,7 +518,7 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "admin_delete" }));
 
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     expect(dialog.getByText("admin_layout_delete_confirm")).toBeInTheDocument();
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
 
@@ -523,10 +531,10 @@ describe("LayoutEditor", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "admin_delete" }));
 
-    const dialog = within(await screen.findByRole("dialog"));
+    const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_cancel" }));
 
-    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());
     expect(callbacks.onDeleteLayout).not.toHaveBeenCalled();
   });
 

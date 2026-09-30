@@ -1,7 +1,13 @@
 import { Fragment, useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+} from "@/components/ui/dialog";
 
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
@@ -100,30 +106,32 @@ export default function AnnouncementBanner() {
           )}
         </div>
       </div>
-      <Modal
-        show={detailsOpen}
-        onHide={() => setDetailsOpen(false)}
-        aria-labelledby={titleId}
-        centered
+      <Dialog
+        open={detailsOpen}
+        onOpenChange={(open) => {
+          if (!open) setDetailsOpen(false);
+        }}
       >
-        <Modal.Header closeButton>
-          <Modal.Title id={titleId}>{m.announcement_dialog_title()}</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <ul className="announcement-dialog-list list-unstyled mb-0">
-            {data.map((item) => (
-              <li key={item.id} className={`announcement-dialog-item announcement-${item.level}`}>
-                <p className="mb-2">{item.text}</p>
-                {item.link_url && item.link_label && (
-                  <Button href={item.link_url} variant="primary" size="sm">
-                    {item.link_label}
-                  </Button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </Modal.Body>
-      </Modal>
+        <DialogContent size="default">
+          <DialogHeader>
+            <DialogTitle id={titleId}>{m.announcement_dialog_title()}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            <ul className="announcement-dialog-list list-unstyled mb-0">
+              {data.map((item) => (
+                <li key={item.id} className={`announcement-dialog-item announcement-${item.level}`}>
+                  <p className="mb-2">{item.text}</p>
+                  {item.link_url && item.link_label && (
+                    <Button href={item.link_url} variant="primary" size="sm">
+                      {item.link_label}
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </DialogBody>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

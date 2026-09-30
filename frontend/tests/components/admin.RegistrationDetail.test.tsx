@@ -627,7 +627,12 @@ describe("RegistrationDetail", () => {
   it("calls onClose when the footer close button is clicked", () => {
     const { onClose } = renderDetail();
 
-    fireEvent.click(screen.getByRole("button", { name: "close" }));
+    fireEvent.click(
+      within(screen.getByRole("dialog").querySelector('[data-slot="dialog-footer"]')!).getByRole(
+        "button",
+        { name: "close" },
+      ),
+    );
 
     expect(onClose).toHaveBeenCalledTimes(1);
   });

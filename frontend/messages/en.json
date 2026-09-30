@@ -1158,5 +1158,8 @@
   "admin_inventory_shortage": "Shortage",
   "admin_inventory_unlimited": "Unlimited",
   "admin_inventory_confirm_shortage": "Keep existing bookings despite shortages and stop further sales of unavailable products.",
-  "admin_inventory_available": "Available"
+  "admin_inventory_available": "Available",
+  "admin_action_clear_selection": "Clear selection",
+  "admin_action_show_options": "Show options",
+  "admin_action_remove_selection": "Remove selection"
 }

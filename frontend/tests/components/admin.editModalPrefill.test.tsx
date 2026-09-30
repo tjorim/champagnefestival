@@ -9,7 +9,7 @@
  * empty, and saving wrote the blank values over the record.
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import EditionModal from "@/components/admin/EditionModal";
@@ -87,8 +87,13 @@ const existingItem = {
   website: "https://example.com",
   type: "producer",
   active: true,
-  contactPersonId: null,
-  contactPerson: null,
+  contactPersonId: "person-01",
+  contactPerson: {
+    id: "person-01",
+    name: "Alice Dupont",
+    email: "alice@example.com",
+    phone: "0400000000",
+  },
 } as unknown as ItemDraft;
 
 function withQuery(ui: React.ReactElement) {
@@ -98,7 +103,7 @@ function withQuery(ui: React.ReactElement) {
 /** The modals render through a portal, so query the document rather than the container. */
 function modalInputValues(): string[] {
   return Array.from(
-    document.querySelectorAll<HTMLInputElement>(".modal-body input.form-control"),
+    document.querySelectorAll<HTMLInputElement>('[data-slot="dialog-body"] input.form-control'),
   ).map((input) => input.value);
 }
 
@@ -120,6 +125,57 @@ describe("admin edit modals prefill from the record being edited", () => {
     expect(screen.getByLabelText("admin_content_event_start_time")).toHaveValue("18:00");
     expect(screen.getByLabelText("admin_content_event_end_time")).toHaveValue("22:00");
     expect(screen.getByLabelText("admin_event_date")).toHaveValue("2027-03-07");
+  });
+
+  it.each(["event", "dates"])(
+    "EventModal preserves edits when %s identity refreshes",
+    (changed) => {
+      const props = {
+        show: true,
+        edition,
+        initial: existingEvent,
+        onSave: vi.fn(),
+        onHide: vi.fn(),
+      };
+      const { rerender } = render(<EventModal {...props} />);
+      const title = screen.getByLabelText("admin_content_event_title");
+      fireEvent.change(title, { target: { value: "Unsaved title" } });
+      rerender(
+        <EventModal
+          {...props}
+          initial={
+            changed === "event"
+              ? { ...existingEvent, description: "Updated on the server" }
+              : existingEvent
+          }
+          edition={changed === "dates" ? { ...edition, dates: [...edition.dates] } : edition}
+        />,
+      );
+      expect(title).toHaveValue("Unsaved title");
+    },
+  );
+
+  it("EventModal resets on reopening and switching records while open", () => {
+    const props = { show: true, edition, initial: existingEvent, onSave: vi.fn(), onHide: vi.fn() };
+    const { rerender } = render(<EventModal {...props} />);
+    fireEvent.change(screen.getByLabelText("admin_content_event_title"), {
+      target: { value: "Abandoned" },
+    });
+    rerender(<EventModal {...props} show={false} />);
+    rerender(<EventModal {...props} />);
+    expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("Grand Opening");
+    fireEvent.change(screen.getByLabelText("admin_content_event_title"), {
+      target: { value: "Another draft" },
+    });
+    rerender(
+      <EventModal
+        {...props}
+        initial={{ ...existingEvent, id: "event-02", title: "Second event" }}
+      />,
+    );
+    expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("Second event");
+    rerender(<EventModal {...props} initial={null} />);
+    expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("");
   });
 
   it("EditionModal keeps the edition's values after the exhibitors query settles", async () => {
@@ -203,6 +259,9 @@ describe("admin edit modals prefill from the record being edited", () => {
       "/img/moet.png",
     );
     expect(screen.getByLabelText("admin_item_type")).toHaveValue("producer");
+    expect(screen.getByRole("combobox", { name: "admin_item_contact_person" })).toHaveValue(
+      "Alice Dupont",
+    );
   });
 
   it("MemberFormModal keeps the member's values", async () => {

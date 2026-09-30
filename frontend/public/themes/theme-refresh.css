@@ -854,18 +854,6 @@ main > .content-section .card,
   opacity: 1;
 }
 
-.modal-backdrop.show {
-  opacity: 0.75;
-}
-
-.modal-close-btn {
-  transition: opacity 0.2s;
-}
-
-.modal-close-btn:hover {
-  opacity: 0.9;
-}
-
 .fs-xs {
   font-size: 0.8rem;
 }

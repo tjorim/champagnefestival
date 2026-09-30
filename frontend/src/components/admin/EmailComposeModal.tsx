@@ -2,7 +2,14 @@ import { useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
 import { buildMailto, MAILTO_MAX_LENGTH, type EmailDraft } from "@/utils/emailComposer";
 
@@ -26,47 +33,54 @@ export default function EmailComposeModal({ draft, onClose }: Props) {
     }
   };
   return (
-    <Modal show onHide={onClose} centered aria-labelledby="email-compose-title">
-      <Modal.Header closeButton>
-        <Modal.Title id="email-compose-title">{m.admin_email_preview_title()}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        {tooLong && <Alert variant="warning">{m.admin_email_too_long()}</Alert>}
-        <Form.Group className="mb-3" controlId="email-compose-recipient">
-          <Form.Label>{m.admin_email_to_label()}</Form.Label>
-          <Form.Control readOnly value={draft.recipient} />
-        </Form.Group>
-        <Form.Group className="mb-3" controlId="email-compose-subject">
-          <Form.Label>{m.admin_email_subject_label()}</Form.Label>
-          <Form.Control readOnly value={draft.subject} />
-        </Form.Group>
-        <Form.Group controlId="email-compose-body">
-          <Form.Label>{m.admin_email_body_label()}</Form.Label>
-          <Form.Control as="textarea" rows={10} readOnly value={draft.body} />
-        </Form.Group>
-        {copyStatus === "copied" && (
-          <Alert variant="success" className="mt-3 mb-0">
-            {m.admin_email_copied()}
-          </Alert>
-        )}
-        {copyStatus === "failed" && (
-          <Alert variant="danger" className="mt-3 mb-0" role="alert">
-            {m.admin_email_copy_failed()}
-          </Alert>
-        )}
-      </Modal.Body>
-      <Modal.Footer>
-        <Button variant="outline-secondary" onClick={onClose}>
-          {m.close()}
-        </Button>
-        {tooLong ? (
-          <Button onClick={() => void copy()}>{m.admin_email_copy_text()}</Button>
-        ) : (
-          <Button as="a" href={mailto}>
-            {m.admin_email_open_client()}
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent admin size="default">
+        <DialogHeader>
+          <DialogTitle id="email-compose-title">{m.admin_email_preview_title()}</DialogTitle>
+        </DialogHeader>
+        <DialogBody>
+          {tooLong && <Alert variant="warning">{m.admin_email_too_long()}</Alert>}
+          <Form.Group className="mb-3" controlId="email-compose-recipient">
+            <Form.Label>{m.admin_email_to_label()}</Form.Label>
+            <Form.Control readOnly value={draft.recipient} />
+          </Form.Group>
+          <Form.Group className="mb-3" controlId="email-compose-subject">
+            <Form.Label>{m.admin_email_subject_label()}</Form.Label>
+            <Form.Control readOnly value={draft.subject} />
+          </Form.Group>
+          <Form.Group controlId="email-compose-body">
+            <Form.Label>{m.admin_email_body_label()}</Form.Label>
+            <Form.Control as="textarea" rows={10} readOnly value={draft.body} />
+          </Form.Group>
+          {copyStatus === "copied" && (
+            <Alert variant="success" className="mt-3 mb-0">
+              {m.admin_email_copied()}
+            </Alert>
+          )}
+          {copyStatus === "failed" && (
+            <Alert variant="danger" className="mt-3 mb-0" role="alert">
+              {m.admin_email_copy_failed()}
+            </Alert>
+          )}
+        </DialogBody>
+        <DialogFooter>
+          <Button variant="outline-secondary" onClick={onClose}>
+            {m.close()}
           </Button>
-        )}
-      </Modal.Footer>
-    </Modal>
+          {tooLong ? (
+            <Button onClick={() => void copy()}>{m.admin_email_copy_text()}</Button>
+          ) : (
+            <Button as="a" href={mailto}>
+              {m.admin_email_open_client()}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -25,7 +25,7 @@ interface ConfirmRequest {
  * The caller renders `confirmDialog` and awaits `confirm(...)`, which resolves
  * `true` on confirm and `false` on cancel, dismiss, or supersede.
  */
-export function useConfirmDialog() {
+export function useConfirmDialog({ admin = false }: { admin?: boolean } = {}) {
   const [request, setRequest] = useState<ConfirmRequest | null>(null);
   const resolveRef = useRef<((confirmed: boolean) => void) | null>(null);
 
@@ -65,6 +65,7 @@ export function useConfirmDialog() {
 
   const confirmDialog = request ? (
     <ConfirmModal
+      admin={admin}
       show
       title={request.title}
       body={request.body}

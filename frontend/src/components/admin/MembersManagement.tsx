@@ -10,7 +10,14 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Spinner from "react-bootstrap/Spinner";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
@@ -417,49 +424,51 @@ export default function MembersManagement({
       </Card>
 
       {deletingId && (
-        <Modal
-          show
-          onHide={() => {
-            if (!deleting) setDeletingId(null);
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open)
+              (() => {
+                if (!deleting) setDeletingId(null);
+              })();
           }}
-          centered
         >
-          <Modal.Header closeButton className="bg-dark border-secondary">
-            <Modal.Title className="fs-6 text-warning">
-              {m.admin_members_delete_title()}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body className="bg-dark">
-            {deleteError && (
-              <Alert variant="danger" className="py-2 small">
-                {deleteError}
-              </Alert>
-            )}
-            <p>{m.admin_members_delete_confirm()}</p>
-          </Modal.Body>
-          <Modal.Footer className="bg-dark border-secondary">
-            <Button
-              variant="outline-secondary"
-              onClick={() => setDeletingId(null)}
-              disabled={deleting}
-            >
-              {m.admin_action_cancel()}
-            </Button>
-            <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleting}>
-              {deleting ? (
-                <>
-                  <Spinner animation="border" size="sm" className="me-2" />
-                  {m.admin_delete()}
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-trash me-1" aria-hidden="true" />
-                  {m.admin_members_delete_title()}
-                </>
+          <DialogContent admin size="default">
+            <DialogHeader>
+              <DialogTitle>{m.admin_members_delete_title()}</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              {deleteError && (
+                <Alert variant="danger" className="py-2 small">
+                  {deleteError}
+                </Alert>
               )}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+              <p>{m.admin_members_delete_confirm()}</p>
+            </DialogBody>
+            <DialogFooter>
+              <Button
+                variant="outline-secondary"
+                onClick={() => setDeletingId(null)}
+                disabled={deleting}
+              >
+                {m.admin_action_cancel()}
+              </Button>
+              <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleting}>
+                {deleting ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-2" />
+                    {m.admin_delete()}
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-trash me-1" aria-hidden="true" />
+                    {m.admin_members_delete_title()}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       <MemberFormModal

@@ -502,9 +502,6 @@ main {
 }
 
 /* Darker backdrop for better focus */
-.modal-backdrop.show {
-  opacity: 0.75;
-}
 
 /* Enhanced accessibility features */
 

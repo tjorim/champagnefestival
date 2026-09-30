@@ -15,7 +15,14 @@ import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
 import ConfirmModal from "@/components/ConfirmModal";
@@ -865,521 +872,543 @@ export default function VenueManagement({
       </Card.Body>
 
       {/* Add Venue Modal */}
-      <Modal
-        show={showVenueModal}
-        onHide={() => setShowVenueModal(false)}
-        centered
-        aria-labelledby="add-venue-modal-title"
+      <Dialog
+        open={showVenueModal}
+        onOpenChange={(open) => {
+          if (!open) setShowVenueModal(false);
+        }}
       >
-        <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title id="add-venue-modal-title">
-            {editingVenueId ? `${m.admin_edit()} ${venueValues.name}` : m.admin_venue_add()}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="bg-dark text-light">
-          {addVenueError && (
-            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
-              {addVenueError}
-            </Alert>
-          )}
-          <Form.Group className="mb-3" controlId="venue-name">
-            <Form.Label>{m.admin_venue_name_label()}</Form.Label>
-            <venueForm.Field name="name">
-              {(field) => (
-                <Form.Control
-                  type="text"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                  placeholder={m.admin_venue_name_placeholder()}
-                />
-              )}
-            </venueForm.Field>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="venue-address">
-            <Form.Label>{m.admin_venue_address_label()}</Form.Label>
-            <venueForm.Field name="address">
-              {(field) => (
-                <Form.Control
-                  type="text"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                />
-              )}
-            </venueForm.Field>
-          </Form.Group>
-          <div className="row g-2 mb-3">
-            <div className="col">
-              <Form.Group controlId="venue-city">
-                <Form.Label>{m.admin_venue_city_label()}</Form.Label>
-                <venueForm.Field name="city">
-                  {(field) => (
-                    <Form.Control
-                      type="text"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      className="bg-dark text-light border-secondary"
-                    />
-                  )}
-                </venueForm.Field>
-              </Form.Group>
-            </div>
-            <div className="col-auto">
-              <Form.Group controlId="venue-postal-code">
-                <Form.Label>{m.admin_venue_postal_code_label()}</Form.Label>
-                <venueForm.Field name="postalCode">
-                  {(field) => (
-                    <Form.Control
-                      type="text"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      className="bg-dark text-light border-secondary"
-                      style={{ width: "7rem" }}
-                    />
-                  )}
-                </venueForm.Field>
-              </Form.Group>
-            </div>
-          </div>
-          <Form.Group className="mb-3" controlId="venue-country">
-            <Form.Label>{m.admin_venue_country_label()}</Form.Label>
-            <venueForm.Field name="country">
-              {(field) => (
-                <Form.Control
-                  type="text"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                />
-              )}
-            </venueForm.Field>
-          </Form.Group>
-          <div className="row g-2">
-            <div className="col">
-              <Form.Group controlId="venue-latitude">
-                <Form.Label>{m.admin_venue_latitude_label()}</Form.Label>
-                <venueForm.Field name="lat">
-                  {(field) => (
-                    <Form.Control
-                      type="number"
-                      step="any"
-                      min={-90}
-                      max={90}
-                      value={field.value}
-                      onChange={(e) =>
-                        field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
-                      }
-                      onBlur={field.handleBlur}
-                      className="bg-dark text-light border-secondary"
-                    />
-                  )}
-                </venueForm.Field>
-              </Form.Group>
-            </div>
-            <div className="col">
-              <Form.Group controlId="venue-longitude">
-                <Form.Label>{m.admin_venue_longitude_label()}</Form.Label>
-                <venueForm.Field name="lng">
-                  {(field) => (
-                    <Form.Control
-                      type="number"
-                      step="any"
-                      min={-180}
-                      max={180}
-                      value={field.value}
-                      onChange={(e) =>
-                        field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
-                      }
-                      onBlur={field.handleBlur}
-                      className="bg-dark text-light border-secondary"
-                    />
-                  )}
-                </venueForm.Field>
-              </Form.Group>
-            </div>
-          </div>
-          {previewCoordinates && (
-            <div className="mt-3">
-              <div className="text-secondary small mb-1">{m.admin_venue_map_preview()}</div>
-              <Suspense
-                fallback={
-                  <div className="ratio ratio-16x9 rounded border border-secondary d-flex align-items-center justify-content-center">
-                    {m.loading()}
-                  </div>
-                }
+        <DialogContent admin size="default">
+          <DialogHeader>
+            <DialogTitle id="add-venue-modal-title">
+              {editingVenueId ? `${m.admin_edit()} ${venueValues.name}` : m.admin_venue_add()}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {addVenueError && (
+              <Alert
+                role="alert"
+                aria-live="assertive"
+                variant="danger"
+                className="py-1 mb-3 small"
               >
-                <MapComponent
-                  location={venueValues.name}
-                  address={venueValues.address}
-                  city={venueValues.city}
-                  postalCode={venueValues.postalCode}
-                  country={venueValues.country}
-                  coordinates={previewCoordinates}
-                />
-              </Suspense>
-            </div>
-          )}
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="secondary" onClick={() => setShowVenueModal(false)}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button variant="warning" onClick={handleSaveVenue} disabled={!venueFormIsValid}>
-            {m.admin_save()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
-
-      {/* Add/Edit Room Modal */}
-      <Modal
-        show={showRoomModal}
-        onHide={() => setShowRoomModal(false)}
-        centered
-        aria-labelledby="room-modal-title"
-      >
-        <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title id="room-modal-title">
-            {editingRoomId ? m.admin_edit_room() : m.admin_room_add()}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="bg-dark text-light">
-          {addRoomError && (
-            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
-              {addRoomError}
-            </Alert>
-          )}
-          <Form.Group className="mb-3" controlId="room-venue">
-            <Form.Label>{m.admin_room_venue_label()}</Form.Label>
-            <roomForm.Field name="venueId">
-              {(field) => (
-                <Form.Select
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                >
-                  {venues
-                    .filter((v) => v.active)
-                    .map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
-                </Form.Select>
-              )}
-            </roomForm.Field>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="room-name">
-            <Form.Label>{m.admin_room_name_label()}</Form.Label>
-            <roomForm.Field name="name">
-              {(field) => (
-                <Form.Control
-                  type="text"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                  placeholder={m.admin_room_name_placeholder()}
-                />
-              )}
-            </roomForm.Field>
-          </Form.Group>
-          <div className="row g-2 mb-3">
-            <div className="col">
-              <Form.Group controlId="room-width">
-                <Form.Label>{m.admin_room_width_label()}</Form.Label>
-                <roomForm.Field name="widthM">
-                  {(field) => (
-                    <Form.Control
-                      type="number"
-                      min={1}
-                      max={500}
-                      required
-                      value={field.value}
-                      onChange={(e) =>
-                        field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
-                      }
-                      onBlur={field.handleBlur}
-                      className="bg-dark text-light border-secondary"
-                    />
-                  )}
-                </roomForm.Field>
-              </Form.Group>
-            </div>
-            <div className="col">
-              <Form.Group controlId="room-length">
-                <Form.Label>{m.admin_room_length_label()}</Form.Label>
-                <roomForm.Field name="lengthM">
-                  {(field) => (
-                    <Form.Control
-                      type="number"
-                      min={1}
-                      max={500}
-                      required
-                      value={field.value}
-                      onChange={(e) =>
-                        field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
-                      }
-                      onBlur={field.handleBlur}
-                      className="bg-dark text-light border-secondary"
-                    />
-                  )}
-                </roomForm.Field>
-              </Form.Group>
-            </div>
-          </div>
-          <Form.Group controlId="room-color">
-            <Form.Label>{m.admin_room_color_label()}</Form.Label>
-            <roomForm.Field name="color">
-              {(field) => (
-                <div className="d-flex gap-2 align-items-center">
-                  <Form.Control
-                    type="color"
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                    style={{ width: 48, height: 38, padding: 2 }}
-                  />
+                {addVenueError}
+              </Alert>
+            )}
+            <Form.Group className="mb-3" controlId="venue-name">
+              <Form.Label>{m.admin_venue_name_label()}</Form.Label>
+              <venueForm.Field name="name">
+                {(field) => (
                   <Form.Control
                     type="text"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                     className="bg-dark text-light border-secondary"
-                    style={{ fontFamily: "monospace" }}
+                    placeholder={m.admin_venue_name_placeholder()}
                   />
-                </div>
-              )}
-            </roomForm.Field>
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="secondary" onClick={() => setShowRoomModal(false)}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button variant="warning" onClick={handleSaveRoom} disabled={!isRoomFormValid()}>
-            {m.admin_save()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+                )}
+              </venueForm.Field>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="venue-address">
+              <Form.Label>{m.admin_venue_address_label()}</Form.Label>
+              <venueForm.Field name="address">
+                {(field) => (
+                  <Form.Control
+                    type="text"
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="bg-dark text-light border-secondary"
+                  />
+                )}
+              </venueForm.Field>
+            </Form.Group>
+            <div className="row g-2 mb-3">
+              <div className="col">
+                <Form.Group controlId="venue-city">
+                  <Form.Label>{m.admin_venue_city_label()}</Form.Label>
+                  <venueForm.Field name="city">
+                    {(field) => (
+                      <Form.Control
+                        type="text"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        className="bg-dark text-light border-secondary"
+                      />
+                    )}
+                  </venueForm.Field>
+                </Form.Group>
+              </div>
+              <div className="col-auto">
+                <Form.Group controlId="venue-postal-code">
+                  <Form.Label>{m.admin_venue_postal_code_label()}</Form.Label>
+                  <venueForm.Field name="postalCode">
+                    {(field) => (
+                      <Form.Control
+                        type="text"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        className="bg-dark text-light border-secondary"
+                        style={{ width: "7rem" }}
+                      />
+                    )}
+                  </venueForm.Field>
+                </Form.Group>
+              </div>
+            </div>
+            <Form.Group className="mb-3" controlId="venue-country">
+              <Form.Label>{m.admin_venue_country_label()}</Form.Label>
+              <venueForm.Field name="country">
+                {(field) => (
+                  <Form.Control
+                    type="text"
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="bg-dark text-light border-secondary"
+                  />
+                )}
+              </venueForm.Field>
+            </Form.Group>
+            <div className="row g-2">
+              <div className="col">
+                <Form.Group controlId="venue-latitude">
+                  <Form.Label>{m.admin_venue_latitude_label()}</Form.Label>
+                  <venueForm.Field name="lat">
+                    {(field) => (
+                      <Form.Control
+                        type="number"
+                        step="any"
+                        min={-90}
+                        max={90}
+                        value={field.value}
+                        onChange={(e) =>
+                          field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        onBlur={field.handleBlur}
+                        className="bg-dark text-light border-secondary"
+                      />
+                    )}
+                  </venueForm.Field>
+                </Form.Group>
+              </div>
+              <div className="col">
+                <Form.Group controlId="venue-longitude">
+                  <Form.Label>{m.admin_venue_longitude_label()}</Form.Label>
+                  <venueForm.Field name="lng">
+                    {(field) => (
+                      <Form.Control
+                        type="number"
+                        step="any"
+                        min={-180}
+                        max={180}
+                        value={field.value}
+                        onChange={(e) =>
+                          field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        onBlur={field.handleBlur}
+                        className="bg-dark text-light border-secondary"
+                      />
+                    )}
+                  </venueForm.Field>
+                </Form.Group>
+              </div>
+            </div>
+            {previewCoordinates && (
+              <div className="mt-3">
+                <div className="text-secondary small mb-1">{m.admin_venue_map_preview()}</div>
+                <Suspense
+                  fallback={
+                    <div className="ratio ratio-16x9 rounded border border-secondary d-flex align-items-center justify-content-center">
+                      {m.loading()}
+                    </div>
+                  }
+                >
+                  <MapComponent
+                    location={venueValues.name}
+                    address={venueValues.address}
+                    city={venueValues.city}
+                    postalCode={venueValues.postalCode}
+                    country={venueValues.country}
+                    coordinates={previewCoordinates}
+                  />
+                </Suspense>
+              </div>
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowVenueModal(false)}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button variant="warning" onClick={handleSaveVenue} disabled={!venueFormIsValid}>
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add/Edit Room Modal */}
+      <Dialog
+        open={showRoomModal}
+        onOpenChange={(open) => {
+          if (!open) setShowRoomModal(false);
+        }}
+      >
+        <DialogContent admin size="default">
+          <DialogHeader>
+            <DialogTitle id="room-modal-title">
+              {editingRoomId ? m.admin_edit_room() : m.admin_room_add()}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {addRoomError && (
+              <Alert
+                role="alert"
+                aria-live="assertive"
+                variant="danger"
+                className="py-1 mb-3 small"
+              >
+                {addRoomError}
+              </Alert>
+            )}
+            <Form.Group className="mb-3" controlId="room-venue">
+              <Form.Label>{m.admin_room_venue_label()}</Form.Label>
+              <roomForm.Field name="venueId">
+                {(field) => (
+                  <Form.Select
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="bg-dark text-light border-secondary"
+                  >
+                    {venues
+                      .filter((v) => v.active)
+                      .map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                  </Form.Select>
+                )}
+              </roomForm.Field>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="room-name">
+              <Form.Label>{m.admin_room_name_label()}</Form.Label>
+              <roomForm.Field name="name">
+                {(field) => (
+                  <Form.Control
+                    type="text"
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="bg-dark text-light border-secondary"
+                    placeholder={m.admin_room_name_placeholder()}
+                  />
+                )}
+              </roomForm.Field>
+            </Form.Group>
+            <div className="row g-2 mb-3">
+              <div className="col">
+                <Form.Group controlId="room-width">
+                  <Form.Label>{m.admin_room_width_label()}</Form.Label>
+                  <roomForm.Field name="widthM">
+                    {(field) => (
+                      <Form.Control
+                        type="number"
+                        min={1}
+                        max={500}
+                        required
+                        value={field.value}
+                        onChange={(e) =>
+                          field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        onBlur={field.handleBlur}
+                        className="bg-dark text-light border-secondary"
+                      />
+                    )}
+                  </roomForm.Field>
+                </Form.Group>
+              </div>
+              <div className="col">
+                <Form.Group controlId="room-length">
+                  <Form.Label>{m.admin_room_length_label()}</Form.Label>
+                  <roomForm.Field name="lengthM">
+                    {(field) => (
+                      <Form.Control
+                        type="number"
+                        min={1}
+                        max={500}
+                        required
+                        value={field.value}
+                        onChange={(e) =>
+                          field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
+                        }
+                        onBlur={field.handleBlur}
+                        className="bg-dark text-light border-secondary"
+                      />
+                    )}
+                  </roomForm.Field>
+                </Form.Group>
+              </div>
+            </div>
+            <Form.Group controlId="room-color">
+              <Form.Label>{m.admin_room_color_label()}</Form.Label>
+              <roomForm.Field name="color">
+                {(field) => (
+                  <div className="d-flex gap-2 align-items-center">
+                    <Form.Control
+                      type="color"
+                      value={field.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      style={{ width: 48, height: 38, padding: 2 }}
+                    />
+                    <Form.Control
+                      type="text"
+                      value={field.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                      className="bg-dark text-light border-secondary"
+                      style={{ fontFamily: "monospace" }}
+                    />
+                  </div>
+                )}
+              </roomForm.Field>
+            </Form.Group>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowRoomModal(false)}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button variant="warning" onClick={handleSaveRoom} disabled={!isRoomFormValid()}>
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add/Edit Table Type Modal */}
-      <Modal
-        show={showTableTypeModal}
-        onHide={() => setShowTableTypeModal(false)}
-        centered
-        aria-labelledby="table-type-modal-title"
+      <Dialog
+        open={showTableTypeModal}
+        onOpenChange={(open) => {
+          if (!open) setShowTableTypeModal(false);
+        }}
       >
-        <Modal.Header closeButton className="bg-dark text-light border-secondary">
-          <Modal.Title id="table-type-modal-title">
-            {editingTableTypeId ? m.admin_edit_table_type() : m.admin_add_table_type()}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="bg-dark text-light">
-          {addTableTypeError && (
-            <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-3 small">
-              {addTableTypeError}
-            </Alert>
-          )}
-          <Form.Group className="mb-3" controlId="tt-venue">
-            <Form.Label>{m.admin_room_venue_label()}</Form.Label>
-            <tableTypeForm.Field name="venueId">
-              {(field) => (
-                <Form.Select
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                >
-                  <option value="">— {m.admin_room_venue_label()} —</option>
-                  {venues
-                    .filter((v) => v.active || v.id === field.value)
-                    .map((v) => (
-                      <option key={v.id} value={v.id}>
-                        {v.name}
-                      </option>
-                    ))}
-                </Form.Select>
-              )}
-            </tableTypeForm.Field>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="tt-name">
-            <Form.Label>{m.admin_table_type_name_label()}</Form.Label>
-            <tableTypeForm.Field name="name">
-              {(field) => (
-                <Form.Control
-                  type="text"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                  placeholder={m.admin_table_type_name_placeholder()}
-                />
-              )}
-            </tableTypeForm.Field>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="tt-shape">
-            <Form.Label>{m.admin_table_shape_label()}</Form.Label>
-            <tableTypeForm.Field name="shape">
-              {(field) => (
-                <Form.Select
-                  value={field.value}
-                  onChange={(e) => {
-                    const s = e.target.value as "rectangle" | "round";
-                    field.handleChange(s);
-                    // Same reasoning as emptyTableTypeForm: a shape switch invalidates
-                    // whatever dimensions were entered, and no generic replacement is
-                    // defensible (#833/#835) — blank them rather than inventing values.
-                    tableTypeForm.setFieldValue("widthM", "");
-                    tableTypeForm.setFieldValue("lengthM", "");
-                  }}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                >
-                  <option value="rectangle">{m.admin_table_shape_rectangle()}</option>
-                  <option value="round">{m.admin_table_shape_round()}</option>
-                </Form.Select>
-              )}
-            </tableTypeForm.Field>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="tt-height-type">
-            <Form.Label>{m.admin_table_height_type_label()}</Form.Label>
-            <tableTypeForm.Field name="heightType">
-              {(field) => (
-                <Form.Select
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value as "low" | "high")}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                >
-                  <option value="low">{m.admin_table_height_type_low()}</option>
-                  <option value="high">{m.admin_table_height_type_high()}</option>
-                </Form.Select>
-              )}
-            </tableTypeForm.Field>
-          </Form.Group>
-          {tableTypeValues.shape === "round" ? (
-            <Form.Group className="mb-3" controlId="tt-diameter">
-              <Form.Label>{m.admin_table_diameter_label()}</Form.Label>
-              <tableTypeForm.Field name="widthM">
+        <DialogContent admin size="default">
+          <DialogHeader>
+            <DialogTitle id="table-type-modal-title">
+              {editingTableTypeId ? m.admin_edit_table_type() : m.admin_add_table_type()}
+            </DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {addTableTypeError && (
+              <Alert
+                role="alert"
+                aria-live="assertive"
+                variant="danger"
+                className="py-1 mb-3 small"
+              >
+                {addTableTypeError}
+              </Alert>
+            )}
+            <Form.Group className="mb-3" controlId="tt-venue">
+              <Form.Label>{m.admin_room_venue_label()}</Form.Label>
+              <tableTypeForm.Field name="venueId">
+                {(field) => (
+                  <Form.Select
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="bg-dark text-light border-secondary"
+                  >
+                    <option value="">— {m.admin_room_venue_label()} —</option>
+                    {venues
+                      .filter((v) => v.active || v.id === field.value)
+                      .map((v) => (
+                        <option key={v.id} value={v.id}>
+                          {v.name}
+                        </option>
+                      ))}
+                  </Form.Select>
+                )}
+              </tableTypeForm.Field>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="tt-name">
+              <Form.Label>{m.admin_table_type_name_label()}</Form.Label>
+              <tableTypeForm.Field name="name">
+                {(field) => (
+                  <Form.Control
+                    type="text"
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                    className="bg-dark text-light border-secondary"
+                    placeholder={m.admin_table_type_name_placeholder()}
+                  />
+                )}
+              </tableTypeForm.Field>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="tt-shape">
+              <Form.Label>{m.admin_table_shape_label()}</Form.Label>
+              <tableTypeForm.Field name="shape">
+                {(field) => (
+                  <Form.Select
+                    value={field.value}
+                    onChange={(e) => {
+                      const s = e.target.value as "rectangle" | "round";
+                      field.handleChange(s);
+                      // Same reasoning as emptyTableTypeForm: a shape switch invalidates
+                      // whatever dimensions were entered, and no generic replacement is
+                      // defensible (#833/#835) — blank them rather than inventing values.
+                      tableTypeForm.setFieldValue("widthM", "");
+                      tableTypeForm.setFieldValue("lengthM", "");
+                    }}
+                    onBlur={field.handleBlur}
+                    className="bg-dark text-light border-secondary"
+                  >
+                    <option value="rectangle">{m.admin_table_shape_rectangle()}</option>
+                    <option value="round">{m.admin_table_shape_round()}</option>
+                  </Form.Select>
+                )}
+              </tableTypeForm.Field>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="tt-height-type">
+              <Form.Label>{m.admin_table_height_type_label()}</Form.Label>
+              <tableTypeForm.Field name="heightType">
+                {(field) => (
+                  <Form.Select
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value as "low" | "high")}
+                    onBlur={field.handleBlur}
+                    className="bg-dark text-light border-secondary"
+                  >
+                    <option value="low">{m.admin_table_height_type_low()}</option>
+                    <option value="high">{m.admin_table_height_type_high()}</option>
+                  </Form.Select>
+                )}
+              </tableTypeForm.Field>
+            </Form.Group>
+            {tableTypeValues.shape === "round" ? (
+              <Form.Group className="mb-3" controlId="tt-diameter">
+                <Form.Label>{m.admin_table_diameter_label()}</Form.Label>
+                <tableTypeForm.Field name="widthM">
+                  {(field) => (
+                    <Form.Control
+                      type="number"
+                      min={0.1}
+                      max={20}
+                      step={0.1}
+                      required
+                      value={field.value}
+                      onChange={(e) => {
+                        const raw = e.target.value;
+                        const v = raw === "" ? "" : Number(raw);
+                        field.handleChange(v);
+                        tableTypeForm.setFieldValue("lengthM", v);
+                      }}
+                      onBlur={field.handleBlur}
+                      className="bg-dark text-light border-secondary"
+                    />
+                  )}
+                </tableTypeForm.Field>
+              </Form.Group>
+            ) : (
+              <div className="row g-2 mb-3">
+                <div className="col">
+                  <Form.Group controlId="tt-width">
+                    <Form.Label>{m.admin_table_width_label()}</Form.Label>
+                    <tableTypeForm.Field name="widthM">
+                      {(field) => (
+                        <Form.Control
+                          type="number"
+                          min={0.1}
+                          max={20}
+                          step={0.1}
+                          required
+                          value={field.value}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            field.handleChange(raw === "" ? "" : Number(raw));
+                          }}
+                          onBlur={field.handleBlur}
+                          className="bg-dark text-light border-secondary"
+                        />
+                      )}
+                    </tableTypeForm.Field>
+                  </Form.Group>
+                </div>
+                <div className="col">
+                  <Form.Group controlId="tt-length">
+                    <Form.Label>{m.admin_table_length_label()}</Form.Label>
+                    <tableTypeForm.Field name="lengthM">
+                      {(field) => (
+                        <Form.Control
+                          type="number"
+                          min={0.1}
+                          max={20}
+                          step={0.1}
+                          required
+                          value={field.value}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            field.handleChange(raw === "" ? "" : Number(raw));
+                          }}
+                          onBlur={field.handleBlur}
+                          className="bg-dark text-light border-secondary"
+                        />
+                      )}
+                    </tableTypeForm.Field>
+                  </Form.Group>
+                </div>
+              </div>
+            )}
+            <Form.Group controlId="tt-max-capacity">
+              <Form.Label>{m.admin_table_type_max_capacity()}</Form.Label>
+              <tableTypeForm.Field name="capacity">
                 {(field) => (
                   <Form.Control
                     type="number"
-                    min={0.1}
-                    max={20}
-                    step={0.1}
-                    required
+                    min={1}
+                    max={50}
                     value={field.value}
-                    onChange={(e) => {
-                      const raw = e.target.value;
-                      const v = raw === "" ? "" : Number(raw);
-                      field.handleChange(v);
-                      tableTypeForm.setFieldValue("lengthM", v);
-                    }}
+                    onChange={(e) => field.handleChange(Number(e.target.value))}
                     onBlur={field.handleBlur}
                     className="bg-dark text-light border-secondary"
                   />
                 )}
               </tableTypeForm.Field>
             </Form.Group>
-          ) : (
-            <div className="row g-2 mb-3">
-              <div className="col">
-                <Form.Group controlId="tt-width">
-                  <Form.Label>{m.admin_table_width_label()}</Form.Label>
-                  <tableTypeForm.Field name="widthM">
-                    {(field) => (
-                      <Form.Control
-                        type="number"
-                        min={0.1}
-                        max={20}
-                        step={0.1}
-                        required
-                        value={field.value}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          field.handleChange(raw === "" ? "" : Number(raw));
-                        }}
-                        onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
-                      />
-                    )}
-                  </tableTypeForm.Field>
-                </Form.Group>
-              </div>
-              <div className="col">
-                <Form.Group controlId="tt-length">
-                  <Form.Label>{m.admin_table_length_label()}</Form.Label>
-                  <tableTypeForm.Field name="lengthM">
-                    {(field) => (
-                      <Form.Control
-                        type="number"
-                        min={0.1}
-                        max={20}
-                        step={0.1}
-                        required
-                        value={field.value}
-                        onChange={(e) => {
-                          const raw = e.target.value;
-                          field.handleChange(raw === "" ? "" : Number(raw));
-                        }}
-                        onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
-                      />
-                    )}
-                  </tableTypeForm.Field>
-                </Form.Group>
-              </div>
-            </div>
-          )}
-          <Form.Group controlId="tt-max-capacity">
-            <Form.Label>{m.admin_table_type_max_capacity()}</Form.Label>
-            <tableTypeForm.Field name="capacity">
-              {(field) => (
-                <Form.Control
-                  type="number"
-                  min={1}
-                  max={50}
-                  value={field.value}
-                  onChange={(e) => field.handleChange(Number(e.target.value))}
-                  onBlur={field.handleBlur}
-                  className="bg-dark text-light border-secondary"
-                />
-              )}
-            </tableTypeForm.Field>
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="secondary" onClick={() => setShowTableTypeModal(false)}>
-            {m.admin_action_cancel()}
-          </Button>
-          <Button
-            variant="warning"
-            onClick={handleSaveTableType}
-            disabled={
-              !tableTypeValues.name.trim() ||
-              !tableTypeValues.venueId ||
-              tableTypeValues.capacity < 1 ||
-              !Number.isInteger(tableTypeValues.capacity) ||
-              typeof tableTypeValues.widthM !== "number" ||
-              tableTypeValues.widthM <= 0 ||
-              typeof tableTypeValues.lengthM !== "number" ||
-              tableTypeValues.lengthM <= 0
-            }
-          >
-            {m.admin_save()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="secondary" onClick={() => setShowTableTypeModal(false)}>
+              {m.admin_action_cancel()}
+            </Button>
+            <Button
+              variant="warning"
+              onClick={handleSaveTableType}
+              disabled={
+                !tableTypeValues.name.trim() ||
+                !tableTypeValues.venueId ||
+                tableTypeValues.capacity < 1 ||
+                !Number.isInteger(tableTypeValues.capacity) ||
+                typeof tableTypeValues.widthM !== "number" ||
+                tableTypeValues.widthM <= 0 ||
+                typeof tableTypeValues.lengthM !== "number" ||
+                tableTypeValues.lengthM <= 0
+              }
+            >
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {confirmArchiveVenueId && (
         <ConfirmModal
+          admin
           show
           title={m.admin_venue_archive_title()}
           body={m.admin_venue_archive_confirm()}
@@ -1393,6 +1422,7 @@ export default function VenueManagement({
       )}
       {confirmDeleteVenueId && (
         <ConfirmModal
+          admin
           show
           title={m.admin_venue_delete_title()}
           body={m.admin_venue_delete_confirm()}
@@ -1403,6 +1433,7 @@ export default function VenueManagement({
       )}
       {tableTypeDimensionConfirm && (
         <ConfirmModal
+          admin
           show
           title={m.admin_table_type_dimension_change_title()}
           body={m.admin_table_type_dimension_change_confirm({
@@ -1424,6 +1455,7 @@ export default function VenueManagement({
       )}
       {confirmDeleteTableTypeId && (
         <ConfirmModal
+          admin
           show
           title={m.admin_table_type_delete_title()}
           body={m.admin_table_type_delete_confirm()}

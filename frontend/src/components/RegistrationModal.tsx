@@ -1,7 +1,14 @@
 import { useMutation } from "@tanstack/react-query";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useState, useCallback, useMemo, useRef } from "react";
-import Modal from "react-bootstrap/Modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
@@ -259,418 +266,419 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
   }, [form, onHide]);
 
   return (
-    <Modal
-      show={show}
-      onHide={handleClose}
-      size="lg"
-      centered
-      aria-labelledby="registration-modal-title"
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) handleClose();
+      }}
     >
-      <Modal.Header closeButton className="bg-dark text-light border-secondary">
-        <Modal.Title id="registration-modal-title">
-          <i className="bi bi-ticket-perforated-fill text-warning me-2" aria-hidden="true" />
-          {event?.title ?? m.registration_modal_title()}
-        </Modal.Title>
-      </Modal.Header>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle id="registration-modal-title">
+            <i className="bi bi-ticket-perforated-fill text-warning me-2" aria-hidden="true" />
+            {event?.title ?? m.registration_modal_title()}
+          </DialogTitle>
+        </DialogHeader>
 
-      <Modal.Body className="bg-dark text-light">
-        {!event ? (
-          <Alert variant="danger" className="mb-0">
-            <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-            {m.registration_error()}
-          </Alert>
-        ) : submitSuccess ? (
-          <Alert variant="success" className="mb-0">
-            <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
-            {m.registration_success()}
-            <div className="mt-2">{m.registration_reference({ reference: registrationId })}</div>
-            <a href="/me" className="alert-link">
-              {m.registration_view_my_registrations()}
-            </a>
-          </Alert>
-        ) : (
-          <Form
-            onSubmit={(e) => {
-              e.preventDefault();
-              void form.handleSubmit();
-            }}
-            noValidate
-          >
-            <form.Field name="honeypot">
-              {(field) => (
-                <Form.Control
-                  type="text"
-                  aria-hidden="true"
-                  tabIndex={-1}
-                  autoComplete="off"
-                  className="d-none"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                />
-              )}
-            </form.Field>
-
-            <form.Field
-              name="name"
-              validators={[
-                {
-                  run: ({ value }) =>
-                    !value?.trim() ? m.registration_errors_name_required() : undefined,
-                  triggers: ["change"],
-                },
-              ]}
-            >
-              {(field) => {
-                const showErr = field.meta.isTouched && field.errors.length > 0;
-                return (
-                  <Form.Group className="mb-3" controlId="res-name">
-                    <Form.Label>{m.registration_name()} *</Form.Label>
-                    <Form.Control
-                      type="text"
-                      isInvalid={showErr}
-                      className="bg-dark text-light border-secondary"
-                      autoComplete="name"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
-                );
+        <DialogBody>
+          {!event ? (
+            <Alert variant="danger" className="mb-0">
+              <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+              {m.registration_error()}
+            </Alert>
+          ) : submitSuccess ? (
+            <Alert variant="success" className="mb-0">
+              <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
+              {m.registration_success()}
+              <div className="mt-2">{m.registration_reference({ reference: registrationId })}</div>
+              <a href="/me" className="alert-link">
+                {m.registration_view_my_registrations()}
+              </a>
+            </Alert>
+          ) : (
+            <Form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void form.handleSubmit();
               }}
-            </form.Field>
-
-            <form.Field
-              name="email"
-              validators={[
-                {
-                  run: ({ value }) => {
-                    if (!value?.trim()) return m.registration_errors_email_required();
-                    if (!EMAIL_REGEX.test(value)) return m.registration_errors_email_invalid();
-                    return undefined;
-                  },
-                  triggers: ["change"],
-                },
-              ]}
+              noValidate
             >
-              {(field) => {
-                const showErr = field.meta.isTouched && field.errors.length > 0;
-                return (
-                  <Form.Group className="mb-3" controlId="res-email">
-                    <Form.Label>{m.registration_email()} *</Form.Label>
-                    <Form.Control
-                      type="email"
-                      isInvalid={showErr}
-                      className="bg-dark text-light border-secondary"
-                      autoComplete="email"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
-                );
-              }}
-            </form.Field>
-
-            <form.Field
-              name="phone"
-              validators={[
-                {
-                  run: ({ value }) =>
-                    !value?.trim() ? m.registration_errors_phone_required() : undefined,
-                  triggers: ["change"],
-                },
-              ]}
-            >
-              {(field) => {
-                const showErr = field.meta.isTouched && field.errors.length > 0;
-                return (
-                  <Form.Group className="mb-3" controlId="res-phone">
-                    <Form.Label>{m.registration_phone()} *</Form.Label>
-                    <Form.Control
-                      type="tel"
-                      isInvalid={showErr}
-                      className="bg-dark text-light border-secondary"
-                      autoComplete="tel"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
-                );
-              }}
-            </form.Field>
-
-            <form.Field
-              name="guestCount"
-              validators={[
-                {
-                  run: ({ value }) => {
-                    if (!value && value !== 0) return m.registration_errors_guests_required();
-                    if (value < MIN_GUESTS) return m.registration_errors_guests_min();
-                    if (value > MAX_GUESTS) return m.registration_errors_guests_max();
-                    return undefined;
-                  },
-                  triggers: ["change"],
-                },
-              ]}
-            >
-              {(field) => {
-                const showErr = field.meta.isTouched && field.errors.length > 0;
-                return (
-                  <Form.Group className="mb-3" controlId="res-guests">
-                    <Form.Label>{m.registration_guests()} *</Form.Label>
-                    <Form.Control
-                      type="number"
-                      isInvalid={showErr}
-                      min={MIN_GUESTS}
-                      max={MAX_GUESTS}
-                      className="bg-dark text-light border-secondary"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(Number(e.target.value))}
-                      onBlur={field.handleBlur}
-                    />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
-                );
-              }}
-            </form.Field>
-
-            <form.Field name="preferredLanguage">
-              {(field) => (
-                <Form.Group className="mb-3" controlId="res-preferred-language">
-                  <Form.Label>{m.registration_preferred_language()}</Form.Label>
-                  <Form.Select
-                    value={field.value}
-                    onChange={(event) =>
-                      field.handleChange(event.target.value as "nl" | "fr" | "en")
-                    }
-                  >
-                    <option value="nl">Nederlands</option>
-                    <option value="fr">Français</option>
-                    <option value="en">English</option>
-                  </Form.Select>
-                  <Form.Text className="text-secondary">
-                    {m.registration_preferred_language_help()}
-                  </Form.Text>
-                </Form.Group>
-              )}
-            </form.Field>
-
-            <form.Field name="marketingOptIn">
-              {(field) => (
-                <Form.Group className="mb-3" controlId="res-marketing-opt-in">
-                  <Form.Check
-                    id="res-marketing-opt-in-check"
-                    type="checkbox"
-                    label={m.registration_marketing_opt_in()}
-                    checked={field.value}
-                    onChange={(e) => field.handleChange(e.target.checked)}
-                    aria-describedby="res-marketing-opt-in-help"
-                  />
-                  <Form.Text id="res-marketing-opt-in-help" className="text-secondary">
-                    {m.registration_marketing_opt_in_help()}
-                  </Form.Text>
-                </Form.Group>
-              )}
-            </form.Field>
-
-            {showOrderItems && (
-              <fieldset className="mb-3">
-                <legend className="fs-6 fw-semibold mb-1">{m.registration_order_title()}</legend>
-                <p className="text-secondary small mb-2">{m.registration_order_description()}</p>
-                {requiredProducts.length > 0 && !hasRequiredSelected && (
-                  <p className="text-warning small mb-2">
-                    {m.registration_order_required_hint({
-                      products: requiredProducts.map((p) => p.name).join(", "),
-                    })}
-                  </p>
-                )}
-
-                {purchasableProducts.map((product) => {
-                  const currentItem = orderItems.find((o) => o.productId === product.id);
-                  const qty = currentItem?.quantity ?? 0;
-                  const label = `${product.name} - €${product.price}`;
-                  const isLockedOptional =
-                    !product.required && requiredProducts.length > 0 && !hasRequiredSelected;
-                  const included = includedQuantities.get(product.id);
-                  return (
-                    <div key={product.id} className="mb-2">
-                      <div className="d-flex align-items-center justify-content-between">
-                        <span className="text-light small">
-                          {label}
-                          {product.soldOut && (
-                            <>
-                              <span className="badge bg-danger ms-2">
-                                {m.registration_order_sold_out()}
-                              </span>
-                              {waitlistedProductIds.has(product.id) ? (
-                                <span className="badge bg-success ms-2">
-                                  {m.registration_waitlist_joined()}
-                                </span>
-                              ) : (
-                                <Button
-                                  variant="link"
-                                  size="sm"
-                                  className="p-0 ms-2 align-baseline"
-                                  disabled={joinWaitlistMutation.isPending}
-                                  onClick={() => handleJoinWaitlist(product.id)}
-                                >
-                                  {m.registration_waitlist_join()}
-                                </Button>
-                              )}
-                            </>
-                          )}
-                          {product.description && (
-                            <span
-                              className="text-secondary d-block"
-                              style={{ fontSize: "0.75rem" }}
-                            >
-                              {product.description}
-                            </span>
-                          )}
-                        </span>
-                        <div className="d-flex align-items-center gap-2">
-                          <Button
-                            variant="outline-secondary"
-                            size="sm"
-                            onClick={() => handleQuantityChange(product.id, qty - 1)}
-                            disabled={qty === 0}
-                            aria-label={`Decrease quantity of ${label}`}
-                          >
-                            <i className="bi bi-dash" aria-hidden="true" />
-                          </Button>
-                          <span
-                            className="text-light"
-                            style={{ minWidth: "1.5rem", textAlign: "center" }}
-                          >
-                            {qty}
-                          </span>
-                          <Button
-                            variant="outline-warning"
-                            size="sm"
-                            onClick={() => handleQuantityChange(product.id, qty + 1)}
-                            disabled={
-                              isLockedOptional ||
-                              product.soldOut ||
-                              (product.availableQuantity != null &&
-                                qty + (included?.quantity ?? 0) >= product.availableQuantity)
-                            }
-                            aria-label={`Increase quantity of ${label}`}
-                          >
-                            <i className="bi bi-plus" aria-hidden="true" />
-                          </Button>
-                        </div>
-                      </div>
-                      {product.availableQuantity != null && (
-                        <div className="text-secondary small">
-                          {m.registration_order_available()}: {product.availableQuantity}
-                        </div>
-                      )}
-                      {included && (
-                        <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
-                          {m.registration_order_included_note({
-                            count: included.quantity,
-                            source: included.sourceName,
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </fieldset>
-            )}
-
-            {waitlistError && (
-              <Alert variant="danger" className="py-2 small">
-                {waitlistError}
-              </Alert>
-            )}
-
-            <form.Field name="notes">
-              {(field) => (
-                <Form.Group className="mb-3" controlId="res-notes">
-                  <Form.Label>{m.registration_notes()}</Form.Label>
+              <form.Field name="honeypot">
+                {(field) => (
                   <Form.Control
-                    as="textarea"
-                    rows={3}
-                    maxLength={4000}
-                    aria-describedby="res-notes-help"
-                    placeholder={m.registration_notes_placeholder()}
-                    className="bg-dark text-light border-secondary"
+                    type="text"
+                    aria-hidden="true"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    className="d-none"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
                   />
-                  <Form.Text id="res-notes-help" className="text-secondary">
-                    {m.registration_notes_help()}
-                  </Form.Text>
-                </Form.Group>
-              )}
-            </form.Field>
+                )}
+              </form.Field>
 
-            {submitError && (
-              <Alert variant="danger" className="mb-3">
-                <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
-                {submitError}
-              </Alert>
-            )}
+              <form.Field
+                name="name"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.registration_errors_name_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <Form.Group className="mb-3" controlId="res-name">
+                      <Form.Label>{m.registration_name()} *</Form.Label>
+                      <Form.Control
+                        type="text"
+                        isInvalid={showErr}
+                        className="tw:bg-popover tw:text-foreground tw:border-border"
+                        autoComplete="name"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.errors[0]?.message}
+                        </Form.Control.Feedback>
+                      )}
+                    </Form.Group>
+                  );
+                }}
+              </form.Field>
 
-            <Button
-              type="submit"
-              variant="warning"
-              className="w-100"
-              disabled={isSubmitting}
-              aria-busy={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="me-2"
-                  />
-                  {m.registration_submitting()}
-                </>
-              ) : (
-                <>
-                  <i className="bi bi-calendar-check me-2" aria-hidden="true" />
-                  {m.registration_submit()}
-                </>
+              <form.Field
+                name="email"
+                validators={[
+                  {
+                    run: ({ value }) => {
+                      if (!value?.trim()) return m.registration_errors_email_required();
+                      if (!EMAIL_REGEX.test(value)) return m.registration_errors_email_invalid();
+                      return undefined;
+                    },
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <Form.Group className="mb-3" controlId="res-email">
+                      <Form.Label>{m.registration_email()} *</Form.Label>
+                      <Form.Control
+                        type="email"
+                        isInvalid={showErr}
+                        className="tw:bg-popover tw:text-foreground tw:border-border"
+                        autoComplete="email"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.errors[0]?.message}
+                        </Form.Control.Feedback>
+                      )}
+                    </Form.Group>
+                  );
+                }}
+              </form.Field>
+
+              <form.Field
+                name="phone"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.registration_errors_phone_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <Form.Group className="mb-3" controlId="res-phone">
+                      <Form.Label>{m.registration_phone()} *</Form.Label>
+                      <Form.Control
+                        type="tel"
+                        isInvalid={showErr}
+                        className="tw:bg-popover tw:text-foreground tw:border-border"
+                        autoComplete="tel"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.errors[0]?.message}
+                        </Form.Control.Feedback>
+                      )}
+                    </Form.Group>
+                  );
+                }}
+              </form.Field>
+
+              <form.Field
+                name="guestCount"
+                validators={[
+                  {
+                    run: ({ value }) => {
+                      if (!value && value !== 0) return m.registration_errors_guests_required();
+                      if (value < MIN_GUESTS) return m.registration_errors_guests_min();
+                      if (value > MAX_GUESTS) return m.registration_errors_guests_max();
+                      return undefined;
+                    },
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <Form.Group className="mb-3" controlId="res-guests">
+                      <Form.Label>{m.registration_guests()} *</Form.Label>
+                      <Form.Control
+                        type="number"
+                        isInvalid={showErr}
+                        min={MIN_GUESTS}
+                        max={MAX_GUESTS}
+                        className="tw:bg-popover tw:text-foreground tw:border-border"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(Number(e.target.value))}
+                        onBlur={field.handleBlur}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.errors[0]?.message}
+                        </Form.Control.Feedback>
+                      )}
+                    </Form.Group>
+                  );
+                }}
+              </form.Field>
+
+              <form.Field name="preferredLanguage">
+                {(field) => (
+                  <Form.Group className="mb-3" controlId="res-preferred-language">
+                    <Form.Label>{m.registration_preferred_language()}</Form.Label>
+                    <Form.Select
+                      value={field.value}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value as "nl" | "fr" | "en")
+                      }
+                    >
+                      <option value="nl">Nederlands</option>
+                      <option value="fr">Français</option>
+                      <option value="en">English</option>
+                    </Form.Select>
+                    <Form.Text className="text-secondary">
+                      {m.registration_preferred_language_help()}
+                    </Form.Text>
+                  </Form.Group>
+                )}
+              </form.Field>
+
+              <form.Field name="marketingOptIn">
+                {(field) => (
+                  <Form.Group className="mb-3" controlId="res-marketing-opt-in">
+                    <Form.Check
+                      id="res-marketing-opt-in-check"
+                      type="checkbox"
+                      label={m.registration_marketing_opt_in()}
+                      checked={field.value}
+                      onChange={(e) => field.handleChange(e.target.checked)}
+                      aria-describedby="res-marketing-opt-in-help"
+                    />
+                    <Form.Text id="res-marketing-opt-in-help" className="text-secondary">
+                      {m.registration_marketing_opt_in_help()}
+                    </Form.Text>
+                  </Form.Group>
+                )}
+              </form.Field>
+
+              {showOrderItems && (
+                <fieldset className="mb-3">
+                  <legend className="fs-6 fw-semibold mb-1">{m.registration_order_title()}</legend>
+                  <p className="text-secondary small mb-2">{m.registration_order_description()}</p>
+                  {requiredProducts.length > 0 && !hasRequiredSelected && (
+                    <p className="text-warning small mb-2">
+                      {m.registration_order_required_hint({
+                        products: requiredProducts.map((p) => p.name).join(", "),
+                      })}
+                    </p>
+                  )}
+
+                  {purchasableProducts.map((product) => {
+                    const currentItem = orderItems.find((o) => o.productId === product.id);
+                    const qty = currentItem?.quantity ?? 0;
+                    const label = `${product.name} - €${product.price}`;
+                    const isLockedOptional =
+                      !product.required && requiredProducts.length > 0 && !hasRequiredSelected;
+                    const included = includedQuantities.get(product.id);
+                    return (
+                      <div key={product.id} className="mb-2">
+                        <div className="d-flex align-items-center justify-content-between">
+                          <span className="tw:text-foreground small">
+                            {label}
+                            {product.soldOut && (
+                              <>
+                                <span className="badge bg-danger ms-2">
+                                  {m.registration_order_sold_out()}
+                                </span>
+                                {waitlistedProductIds.has(product.id) ? (
+                                  <span className="badge bg-success ms-2">
+                                    {m.registration_waitlist_joined()}
+                                  </span>
+                                ) : (
+                                  <Button
+                                    variant="link"
+                                    size="sm"
+                                    className="p-0 ms-2 align-baseline"
+                                    disabled={joinWaitlistMutation.isPending}
+                                    onClick={() => handleJoinWaitlist(product.id)}
+                                  >
+                                    {m.registration_waitlist_join()}
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            {product.description && (
+                              <span
+                                className="text-secondary d-block"
+                                style={{ fontSize: "0.75rem" }}
+                              >
+                                {product.description}
+                              </span>
+                            )}
+                          </span>
+                          <div className="d-flex align-items-center gap-2">
+                            <Button
+                              variant="outline-secondary"
+                              size="sm"
+                              onClick={() => handleQuantityChange(product.id, qty - 1)}
+                              disabled={qty === 0}
+                              aria-label={`Decrease quantity of ${label}`}
+                            >
+                              <i className="bi bi-dash" aria-hidden="true" />
+                            </Button>
+                            <span
+                              className="tw:text-foreground"
+                              style={{ minWidth: "1.5rem", textAlign: "center" }}
+                            >
+                              {qty}
+                            </span>
+                            <Button
+                              variant="outline-warning"
+                              size="sm"
+                              onClick={() => handleQuantityChange(product.id, qty + 1)}
+                              disabled={
+                                isLockedOptional ||
+                                product.soldOut ||
+                                (product.availableQuantity != null &&
+                                  qty + (included?.quantity ?? 0) >= product.availableQuantity)
+                              }
+                              aria-label={`Increase quantity of ${label}`}
+                            >
+                              <i className="bi bi-plus" aria-hidden="true" />
+                            </Button>
+                          </div>
+                        </div>
+                        {product.availableQuantity != null && (
+                          <div className="text-secondary small">
+                            {m.registration_order_available()}: {product.availableQuantity}
+                          </div>
+                        )}
+                        {included && (
+                          <div className="text-secondary" style={{ fontSize: "0.75rem" }}>
+                            {m.registration_order_included_note({
+                              count: included.quantity,
+                              source: included.sourceName,
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </fieldset>
               )}
+
+              {waitlistError && (
+                <Alert variant="danger" className="py-2 small">
+                  {waitlistError}
+                </Alert>
+              )}
+
+              <form.Field name="notes">
+                {(field) => (
+                  <Form.Group className="mb-3" controlId="res-notes">
+                    <Form.Label>{m.registration_notes()}</Form.Label>
+                    <Form.Control
+                      as="textarea"
+                      rows={3}
+                      maxLength={4000}
+                      aria-describedby="res-notes-help"
+                      placeholder={m.registration_notes_placeholder()}
+                      className="tw:bg-popover tw:text-foreground tw:border-border"
+                      value={field.value}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      onBlur={field.handleBlur}
+                    />
+                    <Form.Text id="res-notes-help" className="text-secondary">
+                      {m.registration_notes_help()}
+                    </Form.Text>
+                  </Form.Group>
+                )}
+              </form.Field>
+
+              {submitError && (
+                <Alert variant="danger" className="mb-3">
+                  <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                  {submitError}
+                </Alert>
+              )}
+
+              <Button
+                type="submit"
+                variant="warning"
+                className="w-100"
+                disabled={isSubmitting}
+                aria-busy={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                      className="me-2"
+                    />
+                    {m.registration_submitting()}
+                  </>
+                ) : (
+                  <>
+                    <i className="bi bi-calendar-check me-2" aria-hidden="true" />
+                    {m.registration_submit()}
+                  </>
+                )}
+              </Button>
+            </Form>
+          )}
+        </DialogBody>
+
+        {submitSuccess && (
+          <DialogFooter>
+            <Button variant="outline-secondary" onClick={handleClose}>
+              {m.close()}
             </Button>
-          </Form>
+          </DialogFooter>
         )}
-      </Modal.Body>
-
-      {submitSuccess && (
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-light" onClick={handleClose}>
-            {m.close()}
-          </Button>
-        </Modal.Footer>
-      )}
-    </Modal>
+      </DialogContent>
+    </Dialog>
   );
 }

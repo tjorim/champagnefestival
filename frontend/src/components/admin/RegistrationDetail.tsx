@@ -4,7 +4,14 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
@@ -120,360 +127,363 @@ export default function RegistrationDetail({
   });
 
   return (
-    <Modal
-      show
-      onHide={onClose}
-      size="lg"
-      centered
-      aria-labelledby="res-detail-modal-title"
-      dialogClassName="admin-dialog"
+    <Dialog
+      open={true}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
     >
-      <Modal.Header closeButton className="bg-dark text-light border-secondary">
-        <Modal.Title id="res-detail-modal-title">
-          <i className="bi bi-person-fill me-2" aria-hidden="true" />
-          {registration.person.name}
-        </Modal.Title>
-      </Modal.Header>
+      <DialogContent admin size="lg">
+        <DialogHeader>
+          <DialogTitle id="res-detail-modal-title">
+            <i className="bi bi-person-fill me-2" aria-hidden="true" />
+            {registration.person.name}
+          </DialogTitle>
+        </DialogHeader>
 
-      <Modal.Body className="bg-dark text-light">
-        {(registration.refundDue ?? 0) > 0 && (
-          <Alert variant="warning">
-            {m.admin_inventory_refund()}: €{registration.refundDue?.toFixed(2)}
-          </Alert>
-        )}
-        {changedPrices.length > 0 && (
-          <Alert variant="info">
-            {m.admin_inventory_price_difference()}
-            {changedPrices.map((price) => (
-              <div key={price.name}>
-                {price.name}: €{price.booked.toFixed(2)} → €{price.current.toFixed(2)}
-              </div>
-            ))}
-          </Alert>
-        )}
-        <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
-        {actionError && (
-          <Alert
-            variant="danger"
-            dismissible={Boolean(onClearActionError)}
-            onClose={onClearActionError}
-            className="mb-3"
-            role="alert"
-          >
-            {actionError}
-          </Alert>
-        )}
+        <DialogBody>
+          {(registration.refundDue ?? 0) > 0 && (
+            <Alert variant="warning">
+              {m.admin_inventory_refund()}: €{registration.refundDue?.toFixed(2)}
+            </Alert>
+          )}
+          {changedPrices.length > 0 && (
+            <Alert variant="info">
+              {m.admin_inventory_price_difference()}
+              {changedPrices.map((price) => (
+                <div key={price.name}>
+                  {price.name}: €{price.booked.toFixed(2)} → €{price.current.toFixed(2)}
+                </div>
+              ))}
+            </Alert>
+          )}
+          <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
+          {actionError && (
+            <Alert
+              variant="danger"
+              dismissible={Boolean(onClearActionError)}
+              onClose={onClearActionError}
+              className="mb-3"
+              role="alert"
+            >
+              {actionError}
+            </Alert>
+          )}
 
-        <div className="d-flex flex-wrap gap-2 mb-3">
-          <Badge
-            bg={
-              registration.status === "confirmed"
-                ? "success"
+          <div className="d-flex flex-wrap gap-2 mb-3">
+            <Badge
+              bg={
+                registration.status === "confirmed"
+                  ? "success"
+                  : registration.status === "cancelled"
+                    ? "danger"
+                    : "warning"
+              }
+            >
+              {registration.status === "confirmed"
+                ? m.admin_status_confirmed()
                 : registration.status === "cancelled"
-                  ? "danger"
-                  : "warning"
-            }
-          >
-            {registration.status === "confirmed"
-              ? m.admin_status_confirmed()
-              : registration.status === "cancelled"
-                ? m.admin_status_cancelled()
-                : m.admin_status_pending()}
-          </Badge>
-          <Badge
-            bg={
-              registration.paymentStatus === "paid"
-                ? "success"
+                  ? m.admin_status_cancelled()
+                  : m.admin_status_pending()}
+            </Badge>
+            <Badge
+              bg={
+                registration.paymentStatus === "paid"
+                  ? "success"
+                  : registration.paymentStatus === "partial"
+                    ? "warning"
+                    : "secondary"
+              }
+            >
+              {registration.paymentStatus === "paid"
+                ? m.admin_payment_paid()
                 : registration.paymentStatus === "partial"
-                  ? "warning"
-                  : "secondary"
-            }
-          >
-            {registration.paymentStatus === "paid"
-              ? m.admin_payment_paid()
-              : registration.paymentStatus === "partial"
-                ? m.admin_payment_partial()
-                : m.admin_payment_unpaid()}
-            {registration.amountDue != null && (
-              <span className="ms-1 fw-normal">
-                {m.admin_registration_amount_due({
-                  amount: registration.amountDue.toFixed(2),
-                })}
-              </span>
-            )}
-          </Badge>
-          {registration.checkedIn ? (
-            <Badge bg="success">
-              <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
-              {m.admin_checked_in()}
-              {registration.checkedInAt && (
+                  ? m.admin_payment_partial()
+                  : m.admin_payment_unpaid()}
+              {registration.amountDue != null && (
                 <span className="ms-1 fw-normal">
-                  {new Date(registration.checkedInAt).toLocaleTimeString()}
+                  {m.admin_registration_amount_due({
+                    amount: registration.amountDue.toFixed(2),
+                  })}
                 </span>
               )}
             </Badge>
-          ) : (
-            <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
-          )}
-          {!simpleRsvp &&
-            (registration.strapIssued ? (
-              <Badge bg="info">
-                <i className="bi bi-person-badge-fill me-1" aria-hidden="true" />
-                {m.admin_strap_issued()}
+            {registration.checkedIn ? (
+              <Badge bg="success">
+                <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
+                {m.admin_checked_in()}
+                {registration.checkedInAt && (
+                  <span className="ms-1 fw-normal">
+                    {new Date(registration.checkedInAt).toLocaleTimeString()}
+                  </span>
+                )}
               </Badge>
             ) : (
-              <Badge bg="secondary">{m.admin_strap_not_issued()}</Badge>
-            ))}
-        </div>
-
-        {emailDuplicates.length > 0 && (
-          <Alert variant="warning" className="py-2 mb-3">
-            <div className="fw-semibold mb-1">
-              <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
-              {m.admin_people_duplicates_title()}
-            </div>
-            <div className="small mb-2">{m.admin_people_duplicates_same_email()}</div>
-            <div className="d-flex flex-wrap gap-2">
-              {emailDuplicates.map((dup) => (
-                <Button
-                  key={dup.id}
-                  size="sm"
-                  variant="warning"
-                  onClick={() => onMergeDuplicate?.(registration.personId, dup.id)}
-                >
-                  <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
-                  {m.admin_people_merge_title()}: {dup.name}
-                </Button>
+              <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
+            )}
+            {!simpleRsvp &&
+              (registration.strapIssued ? (
+                <Badge bg="info">
+                  <i className="bi bi-person-badge-fill me-1" aria-hidden="true" />
+                  {m.admin_strap_issued()}
+                </Badge>
+              ) : (
+                <Badge bg="secondary">{m.admin_strap_not_issued()}</Badge>
               ))}
-            </div>
-          </Alert>
-        )}
+          </div>
 
-        <ListGroup variant="flush" className="mb-3">
-          <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.registration_email()}</span>
-            <a href={`mailto:${registration.person.email}`} className="text-warning">
-              {registration.person.email}
-            </a>
-          </ListGroup.Item>
-          {!onSaveBooking && (
+          {emailDuplicates.length > 0 && (
+            <Alert variant="warning" className="py-2 mb-3">
+              <div className="fw-semibold mb-1">
+                <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
+                {m.admin_people_duplicates_title()}
+              </div>
+              <div className="small mb-2">{m.admin_people_duplicates_same_email()}</div>
+              <div className="d-flex flex-wrap gap-2">
+                {emailDuplicates.map((dup) => (
+                  <Button
+                    key={dup.id}
+                    size="sm"
+                    variant="warning"
+                    onClick={() => onMergeDuplicate?.(registration.personId, dup.id)}
+                  >
+                    <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
+                    {m.admin_people_merge_title()}: {dup.name}
+                  </Button>
+                ))}
+              </div>
+            </Alert>
+          )}
+
+          <ListGroup variant="flush" className="mb-3">
             <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-              <span className="text-secondary">{m.admin_guests_count()}</span>
-              <span aria-label={m.admin_guests_count()}>{registration.guestCount}</span>
+              <span className="text-secondary">{m.registration_email()}</span>
+              <a href={`mailto:${registration.person.email}`} className="text-warning">
+                {registration.person.email}
+              </a>
             </ListGroup.Item>
-          )}
-          <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.registration_phone()}</span>
-            <span>{registration.person.phone}</span>
-          </ListGroup.Item>
-          <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.admin_event_label()}</span>
-            <span>{registration.event?.title ?? registration.eventId}</span>
-          </ListGroup.Item>
-          <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
-            <span className="text-secondary">{m.registration_edition_type_label()}</span>
-            <span>
-              {(() => {
-                const et = registration.event?.edition?.editionType;
-                if (et === "bourse") return m.admin_edition_type_bourse();
-                if (et === "capsule_exchange") return m.admin_edition_type_capsule_exchange();
-                return m.admin_edition_type_festival();
-              })()}
-            </span>
-          </ListGroup.Item>
-          {onSaveBooking && (
-            <ListGroup.Item className="bg-dark text-light border-secondary">
-              <BookingEditor
-                key={`${registration.id}:${registration.updatedAt}`}
-                registration={registration}
-                registrations={registrations}
-                authHeaders={authHeaders}
-                tables={sortedTables}
-                onSave={onSaveBooking}
-                onAddTransaction={onAddTransaction}
-              />
+            {!onSaveBooking && (
+              <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
+                <span className="text-secondary">{m.admin_guests_count()}</span>
+                <span aria-label={m.admin_guests_count()}>{registration.guestCount}</span>
+              </ListGroup.Item>
+            )}
+            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
+              <span className="text-secondary">{m.registration_phone()}</span>
+              <span>{registration.person.phone}</span>
             </ListGroup.Item>
-          )}
-          {!onSaveBooking && registration.notes && (
-            <ListGroup.Item className="bg-dark text-light border-secondary">
-              <span className="text-secondary d-block mb-1">{m.admin_notes()}</span>
-              <span className="small">{registration.notes}</span>
+            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
+              <span className="text-secondary">{m.admin_event_label()}</span>
+              <span>{registration.event?.title ?? registration.eventId}</span>
             </ListGroup.Item>
-          )}
-        </ListGroup>
+            <ListGroup.Item className="bg-dark text-light border-secondary d-flex justify-content-between">
+              <span className="text-secondary">{m.registration_edition_type_label()}</span>
+              <span>
+                {(() => {
+                  const et = registration.event?.edition?.editionType;
+                  if (et === "bourse") return m.admin_edition_type_bourse();
+                  if (et === "capsule_exchange") return m.admin_edition_type_capsule_exchange();
+                  return m.admin_edition_type_festival();
+                })()}
+              </span>
+            </ListGroup.Item>
+            {onSaveBooking && (
+              <ListGroup.Item className="bg-dark text-light border-secondary">
+                <BookingEditor
+                  key={`${registration.id}:${registration.updatedAt}`}
+                  registration={registration}
+                  registrations={registrations}
+                  authHeaders={authHeaders}
+                  tables={sortedTables}
+                  onSave={onSaveBooking}
+                  onAddTransaction={onAddTransaction}
+                />
+              </ListGroup.Item>
+            )}
+            {!onSaveBooking && registration.notes && (
+              <ListGroup.Item className="bg-dark text-light border-secondary">
+                <span className="text-secondary d-block mb-1">{m.admin_notes()}</span>
+                <span className="small">{registration.notes}</span>
+              </ListGroup.Item>
+            )}
+          </ListGroup>
 
-        {registration.person.email && (
-          <section className="mb-4" aria-labelledby="registration-email-heading">
-            <h6 id="registration-email-heading" className="text-warning mb-2">
-              <i className="bi bi-envelope me-2" aria-hidden="true" />
-              {m.admin_email_registration_title()}
-            </h6>
-            <div className="d-flex flex-wrap align-items-end gap-2">
-              <Form.Group controlId="registration-email-template" className="flex-grow-1">
-                <Form.Label>{m.admin_email_template_label()}</Form.Label>
-                <Form.Select
-                  value={emailTemplate}
-                  onChange={(event) =>
-                    setEmailTemplate(event.target.value as RegistrationEmailTemplate)
+          {registration.person.email && (
+            <section className="mb-4" aria-labelledby="registration-email-heading">
+              <h6 id="registration-email-heading" className="text-warning mb-2">
+                <i className="bi bi-envelope me-2" aria-hidden="true" />
+                {m.admin_email_registration_title()}
+              </h6>
+              <div className="d-flex flex-wrap align-items-end gap-2">
+                <Form.Group controlId="registration-email-template" className="flex-grow-1">
+                  <Form.Label>{m.admin_email_template_label()}</Form.Label>
+                  <Form.Select
+                    value={emailTemplate}
+                    onChange={(event) =>
+                      setEmailTemplate(event.target.value as RegistrationEmailTemplate)
+                    }
+                  >
+                    <option value="general">{m.admin_email_template_general()}</option>
+                    <option value="order">{m.admin_email_template_order()}</option>
+                    <option value="payment">{m.admin_email_template_payment()}</option>
+                    <option value="event">{m.admin_email_template_event()}</option>
+                  </Form.Select>
+                </Form.Group>
+                <Button
+                  variant="outline-warning"
+                  onClick={() =>
+                    setEmailDraft(buildRegistrationEmailDraft(registration, emailTemplate))
                   }
                 >
-                  <option value="general">{m.admin_email_template_general()}</option>
-                  <option value="order">{m.admin_email_template_order()}</option>
-                  <option value="payment">{m.admin_email_template_payment()}</option>
-                  <option value="event">{m.admin_email_template_event()}</option>
-                </Form.Select>
-              </Form.Group>
-              <Button
-                variant="outline-warning"
-                onClick={() =>
-                  setEmailDraft(buildRegistrationEmailDraft(registration, emailTemplate))
-                }
-              >
-                {m.admin_email_preview_action()}
-              </Button>
-            </div>
-          </section>
-        )}
+                  {m.admin_email_preview_action()}
+                </Button>
+              </div>
+            </section>
+          )}
 
-        {!simpleRsvp && registration.orderItems.length > 0 && (
+          {!simpleRsvp && registration.orderItems.length > 0 && (
+            <div className="mb-4">
+              <h6 className="text-warning mb-2">
+                <i className="bi bi-basket-fill me-2" aria-hidden="true" />
+                {m.admin_bottle_fulfillment()}
+              </h6>
+              <ListGroup>
+                {registration.orderItems.map((item) => (
+                  <ListGroup.Item
+                    key={item.productId}
+                    className="bg-dark text-light border-secondary d-flex align-items-center justify-content-between"
+                  >
+                    <span>
+                      {item.name}{" "}
+                      <Badge bg="secondary" className="ms-1">
+                        ×{item.quantity}
+                      </Badge>
+                    </span>
+                    <div className="d-flex align-items-center gap-2">
+                      <Badge bg={item.delivered ? "success" : "secondary"}>
+                        {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
+                      </Badge>
+                      <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
+                        {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
+                      </Badge>
+                      <div className="d-flex align-items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline-secondary"
+                          onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
+                          disabled={item.deliveredQuantity <= 0}
+                          title={m.admin_mark_not_delivered()}
+                        >
+                          <i className="bi bi-dash" aria-hidden="true" />
+                        </Button>
+                        <Form.Control
+                          key={item.deliveredQuantity}
+                          aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
+                          className="text-center"
+                          inputMode="numeric"
+                          min={0}
+                          max={item.quantity}
+                          onBlur={(event) => {
+                            const value = Number(event.currentTarget.value);
+                            if (Number.isFinite(value)) {
+                              const bounded = Math.max(
+                                0,
+                                Math.min(item.quantity, Math.trunc(value)),
+                              );
+                              event.currentTarget.value = String(bounded);
+                              if (bounded !== item.deliveredQuantity) {
+                                handleSetDeliveredQuantity(item.productId, bounded);
+                              }
+                            } else {
+                              event.currentTarget.value = String(item.deliveredQuantity);
+                            }
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.currentTarget.blur();
+                            }
+                          }}
+                          size="sm"
+                          style={{ width: "5rem" }}
+                          type="number"
+                          defaultValue={item.deliveredQuantity}
+                        />
+                        <Button
+                          size="sm"
+                          variant={item.delivered ? "success" : "outline-success"}
+                          onClick={() => handleAdjustDeliveredQuantity(item.productId, 1)}
+                          disabled={item.deliveredQuantity >= item.quantity}
+                          title={m.admin_mark_delivered()}
+                        >
+                          <i className="bi bi-plus" aria-hidden="true" />
+                        </Button>
+                      </div>
+                    </div>
+                  </ListGroup.Item>
+                ))}
+              </ListGroup>
+            </div>
+          )}
+
           <div className="mb-4">
             <h6 className="text-warning mb-2">
-              <i className="bi bi-basket-fill me-2" aria-hidden="true" />
-              {m.admin_bottle_fulfillment()}
+              <i className="bi bi-person-check-fill me-2" aria-hidden="true" />
+              {m.admin_check_in_title()}
             </h6>
-            <ListGroup>
-              {registration.orderItems.map((item) => (
-                <ListGroup.Item
-                  key={item.productId}
-                  className="bg-dark text-light border-secondary d-flex align-items-center justify-content-between"
+            <div className="d-flex gap-2 flex-wrap">
+              {!registration.checkedIn && (
+                <Button
+                  variant="outline-success"
+                  size="sm"
+                  onClick={() => onCheckIn(registration.id)}
                 >
-                  <span>
-                    {item.name}{" "}
-                    <Badge bg="secondary" className="ms-1">
-                      ×{item.quantity}
-                    </Badge>
-                  </span>
-                  <div className="d-flex align-items-center gap-2">
-                    <Badge bg={item.delivered ? "success" : "secondary"}>
-                      {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
-                    </Badge>
-                    <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
-                      {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
-                    </Badge>
-                    <div className="d-flex align-items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="outline-secondary"
-                        onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
-                        disabled={item.deliveredQuantity <= 0}
-                        title={m.admin_mark_not_delivered()}
-                      >
-                        <i className="bi bi-dash" aria-hidden="true" />
-                      </Button>
-                      <Form.Control
-                        key={item.deliveredQuantity}
-                        aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
-                        className="text-center"
-                        inputMode="numeric"
-                        min={0}
-                        max={item.quantity}
-                        onBlur={(event) => {
-                          const value = Number(event.currentTarget.value);
-                          if (Number.isFinite(value)) {
-                            const bounded = Math.max(0, Math.min(item.quantity, Math.trunc(value)));
-                            event.currentTarget.value = String(bounded);
-                            if (bounded !== item.deliveredQuantity) {
-                              handleSetDeliveredQuantity(item.productId, bounded);
-                            }
-                          } else {
-                            event.currentTarget.value = String(item.deliveredQuantity);
-                          }
-                        }}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter") {
-                            event.currentTarget.blur();
-                          }
-                        }}
-                        size="sm"
-                        style={{ width: "5rem" }}
-                        type="number"
-                        defaultValue={item.deliveredQuantity}
-                      />
-                      <Button
-                        size="sm"
-                        variant={item.delivered ? "success" : "outline-success"}
-                        onClick={() => handleAdjustDeliveredQuantity(item.productId, 1)}
-                        disabled={item.deliveredQuantity >= item.quantity}
-                        title={m.admin_mark_delivered()}
-                      >
-                        <i className="bi bi-plus" aria-hidden="true" />
-                      </Button>
-                    </div>
-                  </div>
-                </ListGroup.Item>
-              ))}
-            </ListGroup>
-          </div>
-        )}
-
-        <div className="mb-4">
-          <h6 className="text-warning mb-2">
-            <i className="bi bi-person-check-fill me-2" aria-hidden="true" />
-            {m.admin_check_in_title()}
-          </h6>
-          <div className="d-flex gap-2 flex-wrap">
-            {!registration.checkedIn && (
-              <Button
-                variant="outline-success"
-                size="sm"
-                onClick={() => onCheckIn(registration.id)}
-              >
-                <i className="bi bi-box-arrow-in-right me-1" aria-hidden="true" />
-                {m.admin_mark_checked_in()}
-              </Button>
-            )}
-            {!simpleRsvp && !registration.strapIssued && (
-              <Button
-                variant="outline-info"
-                size="sm"
-                onClick={() => onIssueStrap(registration.id)}
-              >
-                <i className="bi bi-person-badge me-1" aria-hidden="true" />
-                {m.admin_issue_strap()}
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {registration.checkInToken && (
-          <div className="text-center">
-            <h6 className="text-warning mb-2">
-              <i className="bi bi-qr-code me-2" aria-hidden="true" />
-              {m.admin_qr_code()}
-            </h6>
-            <p className="text-secondary small mb-3">{m.admin_qr_scan_info()}</p>
-            <div className="d-inline-block p-3 bg-white rounded">
-              <QRCodeSVG value={checkInUrl} size={180} level="M" includeMargin={false} />
-            </div>
-            <div className="mt-2">
-              <a
-                href={checkInUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-secondary small text-break"
-              >
-                {checkInUrl}
-              </a>
+                  <i className="bi bi-box-arrow-in-right me-1" aria-hidden="true" />
+                  {m.admin_mark_checked_in()}
+                </Button>
+              )}
+              {!simpleRsvp && !registration.strapIssued && (
+                <Button
+                  variant="outline-info"
+                  size="sm"
+                  onClick={() => onIssueStrap(registration.id)}
+                >
+                  <i className="bi bi-person-badge me-1" aria-hidden="true" />
+                  {m.admin_issue_strap()}
+                </Button>
+              )}
             </div>
           </div>
-        )}
-      </Modal.Body>
 
-      <Modal.Footer className="bg-dark border-secondary">
-        <Button variant="outline-secondary" onClick={onClose}>
-          {m.close()}
-        </Button>
-      </Modal.Footer>
-    </Modal>
+          {registration.checkInToken && (
+            <div className="text-center">
+              <h6 className="text-warning mb-2">
+                <i className="bi bi-qr-code me-2" aria-hidden="true" />
+                {m.admin_qr_code()}
+              </h6>
+              <p className="text-secondary small mb-3">{m.admin_qr_scan_info()}</p>
+              <div className="d-inline-block p-3 bg-white rounded">
+                <QRCodeSVG value={checkInUrl} size={180} level="M" includeMargin={false} />
+              </div>
+              <div className="mt-2">
+                <a
+                  href={checkInUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-secondary small text-break"
+                >
+                  {checkInUrl}
+                </a>
+              </div>
+            </div>
+          )}
+        </DialogBody>
+
+        <DialogFooter>
+          <Button variant="outline-secondary" onClick={onClose}>
+            {m.close()}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

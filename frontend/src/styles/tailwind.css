@@ -35,6 +35,8 @@
 }
 
 @theme inline {
+  --z-index-dialog: 1055;
+  --z-index-popup: 1060;
   --color-background: var(--surface-background);
   --color-foreground: var(--surface-foreground);
   --color-primary: var(--surface-primary);

@@ -6,7 +6,14 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Card from "react-bootstrap/Card";
 import Form from "react-bootstrap/Form";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Spinner from "react-bootstrap/Spinner";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
@@ -390,31 +397,38 @@ export default function VolunteersManagement({
       </Card>
 
       {deletingId && (
-        <Modal show onHide={() => setDeletingId(null)} centered>
-          <Modal.Header closeButton className="bg-dark border-secondary">
-            <Modal.Title className="text-danger fs-6">
-              <i className="bi bi-trash me-2" aria-hidden="true" />
-              {m.admin_volunteers_delete_title()}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body className="bg-dark text-light">
-            {deleteError && <Alert variant="danger">{deleteError}</Alert>}
-            <p>{m.admin_volunteers_delete_confirm()}</p>
-          </Modal.Body>
-          <Modal.Footer className="bg-dark border-secondary">
-            <Button variant="outline-secondary" size="sm" onClick={() => setDeletingId(null)}>
-              {m.admin_action_cancel()}
-            </Button>
-            <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
-              {deleting ? (
-                <Spinner as="span" animation="border" size="sm" className="me-1" />
-              ) : (
-                <i className="bi bi-trash me-1" aria-hidden="true" />
-              )}
-              {m.admin_action_confirm()}
-            </Button>
-          </Modal.Footer>
-        </Modal>
+        <Dialog
+          open={true}
+          onOpenChange={(open) => {
+            if (!open) setDeletingId(null);
+          }}
+        >
+          <DialogContent admin size="default">
+            <DialogHeader>
+              <DialogTitle className="tw:text-destructive">
+                <i className="bi bi-trash me-2" aria-hidden="true" />
+                {m.admin_volunteers_delete_title()}
+              </DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              {deleteError && <Alert variant="danger">{deleteError}</Alert>}
+              <p>{m.admin_volunteers_delete_confirm()}</p>
+            </DialogBody>
+            <DialogFooter>
+              <Button variant="outline-secondary" size="sm" onClick={() => setDeletingId(null)}>
+                {m.admin_action_cancel()}
+              </Button>
+              <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
+                {deleting ? (
+                  <Spinner as="span" animation="border" size="sm" className="me-1" />
+                ) : (
+                  <i className="bi bi-trash me-1" aria-hidden="true" />
+                )}
+                {m.admin_action_confirm()}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       <VolunteerFormModal

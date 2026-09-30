@@ -3,41 +3,27 @@ import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import Modal from "./AdminModal";
-import Select, { type SingleValue, type StylesConfig } from "react-select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxContent,
+  ComboboxList,
+  ComboboxItem,
+  ComboboxEmpty,
+} from "@/components/ui/combobox";
+import { LoaderCircleIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
 import type { ItemDraft } from "./itemTypes";
 import { fetchAdminPersonOptions, type PersonOption } from "@/utils/adminRegistrationApi";
-
-const darkSelectStyles: StylesConfig<PersonOption, false> = {
-  control: (base) => ({
-    ...base,
-    backgroundColor: "#212529",
-    borderColor: "#6c757d",
-    color: "#f8f9fa",
-    minHeight: "34px",
-  }),
-  menu: (base) => ({
-    ...base,
-    backgroundColor: "#212529",
-    border: "1px solid #6c757d",
-    zIndex: 9999,
-  }),
-  option: (base, state) => ({
-    ...base,
-    backgroundColor: state.isFocused ? "#343a40" : "#212529",
-    color: "#f8f9fa",
-    cursor: "pointer",
-  }),
-  singleValue: (base) => ({ ...base, color: "#f8f9fa" }),
-  input: (base) => ({ ...base, color: "#f8f9fa" }),
-  placeholder: (base) => ({ ...base, color: "#6c757d" }),
-  indicatorSeparator: (base) => ({ ...base, backgroundColor: "#6c757d" }),
-  dropdownIndicator: (base) => ({ ...base, color: "#6c757d" }),
-  clearIndicator: (base) => ({ ...base, color: "#6c757d" }),
-  noOptionsMessage: (base) => ({ ...base, color: "#adb5bd" }),
-};
 
 interface ItemModalProps {
   show: boolean;
@@ -70,7 +56,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             email: cp.email ?? "",
             phone: cp.phone ?? "",
           }
-        : null) as SingleValue<PersonOption>,
+        : null) as PersonOption | null,
     };
   }, [initial]);
 
@@ -134,182 +120,213 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const loadingPersons = personOptionsQuery.isFetching;
 
   return (
-    <Modal show={show} onHide={onHide} centered size="lg" dialogClassName="admin-dialog">
-      <Modal.Header closeButton className="bg-dark border-secondary">
-        <Modal.Title className="text-warning fs-6">
-          {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}
-        </Modal.Title>
-      </Modal.Header>
-      <Form
-        onSubmit={(e) => {
-          e.preventDefault();
-          void form.handleSubmit();
-        }}
-        noValidate
-      >
-        <Modal.Body className="bg-dark">
-          <Form.Group className="mb-3" controlId="item-name">
-            <Form.Label className="text-secondary small">
-              {m.admin_content_name_placeholder()}
-            </Form.Label>
-            <form.Field
-              name="name"
-              validators={[
-                {
-                  run: ({ value }) => (!value?.trim() ? m.admin_item_name_required() : undefined),
-                  triggers: ["change"],
-                },
-              ]}
-            >
-              {(field) => {
-                const showErr = field.meta.isTouched && field.errors.length > 0;
-                return (
-                  <>
-                    <Form.Control
-                      className="bg-dark text-light border-secondary"
-                      autoFocus
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
+    <Dialog
+      open={show}
+      onOpenChange={(open) => {
+        if (!open) onHide();
+      }}
+    >
+      <DialogContent admin size="lg">
+        <DialogHeader>
+          <DialogTitle>
+            {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}
+          </DialogTitle>
+        </DialogHeader>
+        <Form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void form.handleSubmit();
+          }}
+          noValidate
+        >
+          <DialogBody>
+            <Form.Group className="mb-3" controlId="item-name">
+              <Form.Label className="text-secondary small">
+                {m.admin_content_name_placeholder()}
+              </Form.Label>
+              <form.Field
+                name="name"
+                validators={[
+                  {
+                    run: ({ value }) => (!value?.trim() ? m.admin_item_name_required() : undefined),
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        className="bg-dark text-light border-secondary"
+                        autoFocus
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.errors[0]?.message}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="item-image">
+              <Form.Label className="text-secondary small">
+                {m.admin_content_image_url_placeholder()}
+              </Form.Label>
+              <form.Field
+                name="image"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      !value?.trim() ? m.admin_item_image_required() : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        className="bg-dark text-light border-secondary"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.errors[0]?.message}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="item-website">
+              <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
+              <form.Field
+                name="website"
+                validators={[
+                  {
+                    run: ({ value }) =>
+                      value && !/^https?:\/\/.+/.test(value)
+                        ? m.admin_item_url_invalid()
+                        : undefined,
+                    triggers: ["change"],
+                  },
+                ]}
+              >
+                {(field) => {
+                  const showErr = field.meta.isTouched && field.errors.length > 0;
+                  return (
+                    <>
+                      <Form.Control
+                        type="url"
+                        className="bg-dark text-light border-secondary"
+                        placeholder="https://…"
+                        value={field.value}
+                        onChange={(e) => field.handleChange(e.target.value)}
+                        onBlur={field.handleBlur}
+                        isInvalid={showErr}
+                      />
+                      {showErr && (
+                        <Form.Control.Feedback type="invalid">
+                          {field.errors[0]?.message}
+                        </Form.Control.Feedback>
+                      )}
+                    </>
+                  );
+                }}
+              </form.Field>
+            </Form.Group>
+            <Form.Group className="mb-3" controlId="item-type">
+              <Form.Label className="text-secondary small">{m.admin_item_type()}</Form.Label>
+              <form.Field name="type">
+                {(field) => (
+                  <Form.Select
+                    className="bg-dark text-light border-secondary"
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  >
+                    <option value="vendor">{m.admin_item_vendor()}</option>
+                    <option value="producer">{m.admin_item_producer()}</option>
+                    <option value="sponsor">{m.admin_item_sponsor()}</option>
+                  </Form.Select>
+                )}
+              </form.Field>
+            </Form.Group>
+            <Form.Group controlId="item-contact-person">
+              <Form.Label className="text-secondary small">
+                {m.admin_item_contact_person()}
+              </Form.Label>
+              <form.Field name="contactOption">
+                {(field) => (
+                  <Combobox
+                    items={personOptions}
+                    value={field.value}
+                    onValueChange={(option) => field.handleChange(option)}
+                    onInputValueChange={setPersonQuery}
+                    filter={null}
+                    itemToStringLabel={(option: PersonOption) => option.label}
+                    isItemEqualToValue={(a: PersonOption, b: PersonOption) => a.value === b.value}
+                  >
+                    <ComboboxInput
+                      id="item-contact-person"
+                      aria-label={m.admin_item_contact_person()}
+                      showClear
                       onBlur={field.handleBlur}
-                      isInvalid={showErr}
-                    />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </>
-                );
-              }}
-            </form.Field>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="item-image">
-            <Form.Label className="text-secondary small">
-              {m.admin_content_image_url_placeholder()}
-            </Form.Label>
-            <form.Field
-              name="image"
-              validators={[
-                {
-                  run: ({ value }) => (!value?.trim() ? m.admin_item_image_required() : undefined),
-                  triggers: ["change"],
-                },
-              ]}
-            >
-              {(field) => {
-                const showErr = field.meta.isTouched && field.errors.length > 0;
-                return (
-                  <>
-                    <Form.Control
-                      className="bg-dark text-light border-secondary"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      isInvalid={showErr}
-                    />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </>
-                );
-              }}
-            </form.Field>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="item-website">
-            <Form.Label className="text-secondary small">{m.admin_item_website_url()}</Form.Label>
-            <form.Field
-              name="website"
-              validators={[
-                {
-                  run: ({ value }) =>
-                    value && !/^https?:\/\/.+/.test(value) ? m.admin_item_url_invalid() : undefined,
-                  triggers: ["change"],
-                },
-              ]}
-            >
-              {(field) => {
-                const showErr = field.meta.isTouched && field.errors.length > 0;
-                return (
-                  <>
-                    <Form.Control
-                      type="url"
-                      className="bg-dark text-light border-secondary"
-                      placeholder="https://…"
-                      value={field.value}
-                      onChange={(e) => field.handleChange(e.target.value)}
-                      onBlur={field.handleBlur}
-                      isInvalid={showErr}
-                    />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </>
-                );
-              }}
-            </form.Field>
-          </Form.Group>
-          <Form.Group className="mb-3" controlId="item-type">
-            <Form.Label className="text-secondary small">{m.admin_item_type()}</Form.Label>
-            <form.Field name="type">
-              {(field) => (
-                <Form.Select
-                  className="bg-dark text-light border-secondary"
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                >
-                  <option value="vendor">{m.admin_item_vendor()}</option>
-                  <option value="producer">{m.admin_item_producer()}</option>
-                  <option value="sponsor">{m.admin_item_sponsor()}</option>
-                </Form.Select>
-              )}
-            </form.Field>
-          </Form.Group>
-          <Form.Group controlId="item-contact-person">
-            <Form.Label className="text-secondary small">
-              {m.admin_item_contact_person()}
-            </Form.Label>
-            <form.Field name="contactOption">
-              {(field) => (
-                <Select<PersonOption, false>
-                  inputId="item-contact-person"
-                  isClearable
-                  options={personOptions}
-                  value={field.value}
-                  onChange={(option) => field.handleChange(option)}
-                  onBlur={field.handleBlur}
-                  onInputChange={(v) => setPersonQuery(v)}
-                  inputValue={personQuery}
-                  isLoading={loadingPersons}
-                  filterOption={null}
-                  styles={darkSelectStyles}
-                  placeholder={m.admin_search_person_placeholder()}
-                  classNamePrefix="rs"
-                  formatOptionLabel={(opt) => (
-                    <div>
-                      <div>{opt.label}</div>
-                      {opt.sub && <small className="text-secondary">{opt.sub}</small>}
-                    </div>
-                  )}
-                />
-              )}
-            </form.Field>
-          </Form.Group>
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>
-            {m.close()}
-          </Button>
-          <Button type="submit" variant="warning" size="sm">
-            <i className="bi bi-floppy me-1" aria-hidden="true" />
-            {m.admin_save()}
-          </Button>
-        </Modal.Footer>
-      </Form>
-    </Modal>
+                      placeholder={m.admin_search_person_placeholder()}
+                      aria-busy={loadingPersons}
+                    >
+                      {loadingPersons && (
+                        <LoaderCircleIcon
+                          className="tw:size-4 tw:animate-spin tw:text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </ComboboxInput>
+                    <ComboboxContent>
+                      {!loadingPersons && (
+                        <ComboboxEmpty>{m.admin_people_no_results()}</ComboboxEmpty>
+                      )}
+                      <ComboboxList>
+                        {(opt: PersonOption) => (
+                          <ComboboxItem key={opt.value} value={opt}>
+                            <div>
+                              <div>{opt.label}</div>
+                              {opt.sub && (
+                                <small className="tw:text-muted-foreground">{opt.sub}</small>
+                              )}
+                            </div>
+                          </ComboboxItem>
+                        )}
+                      </ComboboxList>
+                    </ComboboxContent>
+                  </Combobox>
+                )}
+              </form.Field>
+            </Form.Group>
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+              {m.close()}
+            </Button>
+            <Button type="submit" variant="warning" size="sm">
+              <i className="bi bi-floppy me-1" aria-hidden="true" />
+              {m.admin_save()}
+            </Button>
+          </DialogFooter>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 }

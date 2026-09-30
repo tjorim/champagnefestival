@@ -839,48 +839,7 @@ h2.section-header::after {
   border-radius: 3px;
 }
 
-.modal-content {
-  position: relative;
-  color: var(--ink);
-  background: linear-gradient(180deg, #faf5e6, #f1e9d2);
-  border: 1px solid var(--hairline-strong);
-  border-radius: 3px;
-  box-shadow: var(--shadow-lg);
-}
-
-.modal-content::before {
-  position: absolute;
-  inset: 0.55rem;
-  z-index: 0;
-  pointer-events: none;
-  content: "";
-  border: 1px solid rgba(180, 137, 46, 0.4);
-  border-radius: 2px;
-}
-
-.modal-header,
-.modal-footer {
-  border-color: var(--hairline);
-}
-
-.modal-title {
-  color: var(--ink);
-  font-family: var(--serif-display);
-  font-weight: 600;
-}
-
 /* RegistrationModal and other content hard-coded to the dark palette */
-.modal-content .bg-dark {
-  background-color: transparent !important;
-}
-
-.modal-content .text-light {
-  color: var(--ink) !important;
-}
-
-.modal-content .border-secondary {
-  border-color: var(--hairline) !important;
-}
 
 /* ----------------------------------------------------------------- forms */
 
@@ -1007,8 +966,7 @@ h2.section-header::after {
 /* Bootstrap warning-yellow reads as foil gold on label stock */
 .standalone-main .text-warning,
 .standalone-document-main .text-warning,
-.content-section .text-warning,
-.modal-content .text-warning {
+.content-section .text-warning {
   color: var(--foil-deep) !important;
 }
 
@@ -1035,8 +993,7 @@ h2.section-header::after {
    lazy-loaded after this sheet.
    ================================================================== */
 
-html[data-visual-theme="cuvee"] #admin,
-html[data-visual-theme="cuvee"] .admin-dialog {
+html[data-visual-theme="cuvee"] #admin {
   --adm-primary: #8a6414;
   --adm-secondary: #12322a;
   --adm-primary-rgb: 138, 100, 20;
@@ -1202,30 +1159,25 @@ html[data-visual-theme="cuvee"] #admin .table thead th {
 }
 
 /* ---- Hard-coded dark utilities in admin markup ---- */
-html[data-visual-theme="cuvee"] #admin .bg-dark,
-html[data-visual-theme="cuvee"] .admin-dialog .bg-dark {
+html[data-visual-theme="cuvee"] #admin .bg-dark {
   color: var(--adm-text);
   background-color: var(--adm-surface) !important;
 }
 
-html[data-visual-theme="cuvee"] #admin .text-light,
-html[data-visual-theme="cuvee"] .admin-dialog .text-light {
+html[data-visual-theme="cuvee"] #admin .text-light {
   color: var(--adm-text) !important;
 }
 
-html[data-visual-theme="cuvee"] #admin .border-secondary,
-html[data-visual-theme="cuvee"] .admin-dialog .border-secondary {
+html[data-visual-theme="cuvee"] #admin .border-secondary {
   border-color: var(--adm-border) !important;
 }
 
-html[data-visual-theme="cuvee"] #admin .list-group-item,
-html[data-visual-theme="cuvee"] .admin-dialog .list-group-item {
+html[data-visual-theme="cuvee"] #admin .list-group-item {
   color: var(--adm-text);
   background-color: transparent;
 }
 
-html[data-visual-theme="cuvee"] #admin .dropdown-menu,
-html[data-visual-theme="cuvee"] .admin-dialog .dropdown-menu {
+html[data-visual-theme="cuvee"] #admin .dropdown-menu {
   --bs-dropdown-bg: #fffdf4;
   --bs-dropdown-link-color: #241f14;
   --bs-dropdown-link-hover-bg: #f1e9d2;

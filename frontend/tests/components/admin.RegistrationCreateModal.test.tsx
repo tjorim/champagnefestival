@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
@@ -8,6 +9,10 @@ import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    admin_action_clear_selection: () => "Clear selection",
+    admin_action_show_options: () => "Show options",
+    admin_people_no_results: () => "No people found",
+    close: () => "Close",
     admin_create_registration: () => "Create registration",
     admin_error_create_registration: () => "Could not create registration",
     admin_event_label: () => "Event",
@@ -57,6 +62,38 @@ describe("RegistrationCreateModal", () => {
     expect(eventSelect).toBeDisabled();
     expect(screen.getByRole("option", { name: "No schedule events yet." })).toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Event ID / title")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
+  });
+  it("uses debounced server search, selects by keyboard and clears the selected person", async () => {
+    const queries: string[] = [];
+    server.use(
+      http.get("/api/people", ({ request }) => {
+        queries.push(new URL(request.url).searchParams.get("q") ?? "");
+        // The server's result need not contain the literal search text.
+        return HttpResponse.json([
+          { id: "person-1", name: "Alice", email: "alice@example.com", phone: "123" },
+        ]);
+      }),
+    );
+    render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <RegistrationCreateModal
+          show
+          authHeaders={() => ({})}
+          onSaved={() => {}}
+          onHide={() => {}}
+        />
+      </QueryClientProvider>,
+    );
+    const input = screen.getByRole("combobox", { name: "Person" });
+    await userEvent.type(input, "alternate spelling");
+    const option = await screen.findByRole("option", { name: /Alice/ });
+    expect(option).toHaveTextContent("alice@example.com");
+    expect(queries).toContain("alternate spelling");
+    await userEvent.keyboard("{ArrowDown}{Enter}");
+    await waitFor(() => expect(input).toHaveValue("Alice"));
+    await userEvent.click(screen.getByRole("button", { name: "Clear selection" }));
+    expect(input).toHaveValue("");
     expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
   });
 });

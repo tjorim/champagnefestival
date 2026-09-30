@@ -1158,5 +1158,8 @@
   "admin_inventory_shortage": "Tekort",
   "admin_inventory_unlimited": "Onbeperkt",
   "admin_inventory_confirm_shortage": "Behoud bestaande boekingen ondanks tekorten en stop verdere verkoop van niet-beschikbare producten.",
-  "admin_inventory_available": "Beschikbaar"
+  "admin_inventory_available": "Beschikbaar",
+  "admin_action_clear_selection": "Selectie wissen",
+  "admin_action_show_options": "Opties tonen",
+  "admin_action_remove_selection": "Selectie verwijderen"
 }

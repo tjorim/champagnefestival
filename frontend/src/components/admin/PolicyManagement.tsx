@@ -136,7 +136,7 @@ export default function PolicyManagement({
   const [locale, setLocale] = useState<Locale>("nl");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState("");
-  const { confirm, confirmDialog } = useConfirmDialog();
+  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Derived rather than a static template: `useForm` re-applies `defaultValues`

@@ -6,7 +6,14 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import ListGroup from "react-bootstrap/ListGroup";
-import Modal from "./AdminModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogBody,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
@@ -82,7 +89,7 @@ export default function EventProductsModal({
   onProductsChanged,
 }: EventProductsModalProps) {
   const queryClient = useQueryClient();
-  const { confirm, confirmDialog } = useConfirmDialog();
+  const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -676,132 +683,130 @@ export default function EventProductsModal({
 
   return (
     <>
-      <Modal
-        show={show}
-        onHide={onHide}
-        centered
-        size="lg"
-
-        dialogClassName="admin-dialog"
+      <Dialog
+        open={show}
+        onOpenChange={(open) => {
+          if (!open) onHide();
+        }}
       >
-        <Modal.Header closeButton className="bg-dark border-secondary">
-          <Modal.Title className="text-warning fs-6">
-            {m.admin_products_title({ event: event?.title ?? "" })}
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="bg-dark">
-          {preview && (
-            <section className="border rounded p-3 mb-3" aria-label={m.admin_inventory_review()}>
-              <h3 className="h6">{m.admin_inventory_review()}</h3>
-              <p>
-                {preview.payload.name}: €{preview.payload.price.toFixed(2)};{" "}
-                {m.admin_inventory_stock()}:{" "}
-                {preview.payload.stock ?? m.admin_inventory_unlimited()}
-              </p>
-              {preview.result.bookings.map((b) => (
-                <div key={b.id} className="mb-2">
-                  <strong>{b.id}</strong>: €{b.before_total} → €{b.after_total};{" "}
-                  {m.admin_inventory_paid()} €{b.amount_paid}; {m.admin_inventory_refund()} €
-                  {b.refund_due}
-                  <div>
-                    {b.before_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")} →{" "}
-                    {b.after_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")}
+        <DialogContent admin size="lg">
+          <DialogHeader>
+            <DialogTitle>{m.admin_products_title({ event: event?.title ?? "" })}</DialogTitle>
+          </DialogHeader>
+          <DialogBody>
+            {preview && (
+              <section className="border rounded p-3 mb-3" aria-label={m.admin_inventory_review()}>
+                <h3 className="h6">{m.admin_inventory_review()}</h3>
+                <p>
+                  {preview.payload.name}: €{preview.payload.price.toFixed(2)};{" "}
+                  {m.admin_inventory_stock()}:{" "}
+                  {preview.payload.stock ?? m.admin_inventory_unlimited()}
+                </p>
+                {preview.result.bookings.map((b) => (
+                  <div key={b.id} className="mb-2">
+                    <strong>{b.id}</strong>: €{b.before_total} → €{b.after_total};{" "}
+                    {m.admin_inventory_paid()} €{b.amount_paid}; {m.admin_inventory_refund()} €
+                    {b.refund_due}
+                    <div>
+                      {b.before_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")} →{" "}
+                      {b.after_items.map((i) => `${i.name}: ${i.quantity}`).join(", ")}
+                    </div>
                   </div>
-                </div>
-              ))}
-              {preview.result.shortages.map((s, i) => (
-                <Alert variant="warning" key={i}>
-                  {s.name}: {m.admin_inventory_reserved()} {s.reserved} / {s.stock};{" "}
-                  {m.admin_inventory_shortage()} {s.shortage}
-                </Alert>
-              ))}
-              {preview.result.shortages.length > 0 && (
-                <Form.Check
-                  id="confirm-stock-shortage"
-                  label={m.admin_inventory_confirm_shortage()}
-                  checked={confirmShortage}
-                  onChange={(e) => setConfirmShortage(e.target.checked)}
-                />
-              )}
-              <Button
-                disabled={
-                  saveMutation.isPending ||
-                  (preview.result.shortages.length > 0 && !confirmShortage)
-                }
-                onClick={async () => {
-                  try {
-                    const saved = await saveMutation.mutateAsync({
-                      ...preview.payload,
-                      previewToken: preview.result.preview_token,
-                      confirmShortage,
-                    });
-                    updateQueryData(saved);
-                    setPreview(null);
-                    setFormOpen(false);
-                    setEditingId(null);
-                    onProductsChanged?.();
-                  } catch (err) {
-                    setError(err instanceof Error ? err.message : m.admin_content_error_save());
-                    setPreview(null);
+                ))}
+                {preview.result.shortages.map((s, i) => (
+                  <Alert variant="warning" key={i}>
+                    {s.name}: {m.admin_inventory_reserved()} {s.reserved} / {s.stock};{" "}
+                    {m.admin_inventory_shortage()} {s.shortage}
+                  </Alert>
+                ))}
+                {preview.result.shortages.length > 0 && (
+                  <Form.Check
+                    id="confirm-stock-shortage"
+                    label={m.admin_inventory_confirm_shortage()}
+                    checked={confirmShortage}
+                    onChange={(e) => setConfirmShortage(e.target.checked)}
+                  />
+                )}
+                <Button
+                  disabled={
+                    saveMutation.isPending ||
+                    (preview.result.shortages.length > 0 && !confirmShortage)
                   }
-                }}
+                  onClick={async () => {
+                    try {
+                      const saved = await saveMutation.mutateAsync({
+                        ...preview.payload,
+                        previewToken: preview.result.preview_token,
+                        confirmShortage,
+                      });
+                      updateQueryData(saved);
+                      setPreview(null);
+                      setFormOpen(false);
+                      setEditingId(null);
+                      onProductsChanged?.();
+                    } catch (err) {
+                      setError(err instanceof Error ? err.message : m.admin_content_error_save());
+                      setPreview(null);
+                    }
+                  }}
+                >
+                  {m.admin_save()}
+                </Button>
+                <Button variant="outline-secondary" onClick={() => setPreview(null)}>
+                  {m.close()}
+                </Button>
+              </section>
+            )}
+
+            <p className="text-secondary small mb-3">{m.admin_products_help()}</p>
+
+            {error && (
+              <Alert variant="danger" className="py-1 mb-2">
+                {error}
+              </Alert>
+            )}
+
+            {productsQuery.isPending ? (
+              <div className="text-center py-3">
+                <Spinner animation="border" size="sm" variant="warning" />
+              </div>
+            ) : productsQuery.isError ? (
+              <Alert variant="danger" className="py-1 mb-2">
+                {m.admin_content_error_load()}
+              </Alert>
+            ) : (
+              <>
+                {products.length === 0 ? (
+                  <p className="text-secondary fst-italic small">{m.admin_products_empty()}</p>
+                ) : (
+                  <ListGroup variant="flush" className="mb-2">
+                    {products.map((product) => renderRow(product))}
+                  </ListGroup>
+                )}
+              </>
+            )}
+
+            {formOpen && editingId === null && !preview ? (
+              renderForm()
+            ) : (
+              <Button
+                variant="outline-secondary"
+                size="sm"
+                onClick={openAdd}
+                disabled={productsQuery.isPending || productsQuery.isError || formOpen}
               >
-                {m.admin_save()}
+                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                {m.admin_products_add()}
               </Button>
-              <Button variant="outline-secondary" onClick={() => setPreview(null)}>
-                {m.close()}
-              </Button>
-            </section>
-          )}
-
-          <p className="text-secondary small mb-3">{m.admin_products_help()}</p>
-
-          {error && (
-            <Alert variant="danger" className="py-1 mb-2">
-              {error}
-            </Alert>
-          )}
-
-          {productsQuery.isPending ? (
-            <div className="text-center py-3">
-              <Spinner animation="border" size="sm" variant="warning" />
-            </div>
-          ) : productsQuery.isError ? (
-            <Alert variant="danger" className="py-1 mb-2">
-              {m.admin_content_error_load()}
-            </Alert>
-          ) : (
-            <>
-              {products.length === 0 ? (
-                <p className="text-secondary fst-italic small">{m.admin_products_empty()}</p>
-              ) : (
-                <ListGroup variant="flush" className="mb-2">
-                  {products.map((product) => renderRow(product))}
-                </ListGroup>
-              )}
-            </>
-          )}
-
-          {formOpen && editingId === null && !preview ? (
-            renderForm()
-          ) : (
-            <Button
-              variant="outline-secondary"
-              size="sm"
-              onClick={openAdd}
-              disabled={productsQuery.isPending || productsQuery.isError || formOpen}
-            >
-              <i className="bi bi-plus-lg me-1" aria-hidden="true" />
-              {m.admin_products_add()}
+            )}
+          </DialogBody>
+          <DialogFooter>
+            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+              {m.close()}
             </Button>
-          )}
-        </Modal.Body>
-        <Modal.Footer className="bg-dark border-secondary">
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>
-            {m.close()}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {confirmDialog}
     </>
   );
