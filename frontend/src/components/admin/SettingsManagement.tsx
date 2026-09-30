@@ -73,21 +73,34 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value }) => {
-      await updateMutation.mutateAsync({
+      const saved = await updateMutation.mutateAsync({
         public_email: value.publicEmail,
         public_phone: value.publicPhone,
         facebook_url: value.facebookUrl,
       });
+      // A completed save establishes a new baseline only if no newer edits
+      // were entered while the request was in flight.
+      const current = form.state.values;
+      if (
+        current.publicEmail === value.publicEmail &&
+        current.publicPhone === value.publicPhone &&
+        current.facebookUrl === value.facebookUrl
+      ) {
+        form.reset({
+          publicEmail: saved.public_email,
+          publicPhone: saved.public_phone,
+          facebookUrl: saved.facebook_url,
+        });
+      }
     },
   });
 
-  // Seed the editable fields once the settings load. Reset during render
-  // (comparing against the previous query data) rather than in an effect,
-  // since this only needs to react to that data actually changing.
+  // Refresh pristine forms after loading or syncing settings. Dirty contact
+  // drafts survive unrelated maintenance-mode changes and background refetches.
   const [prevSettingsData, setPrevSettingsData] = useState(settingsQuery.data);
   if (settingsQuery.data !== prevSettingsData) {
     setPrevSettingsData(settingsQuery.data);
-    if (settingsQuery.data) form.reset(defaultValues);
+    if (settingsQuery.data && !form.state.isDirty) form.reset(defaultValues);
   }
 
   return (

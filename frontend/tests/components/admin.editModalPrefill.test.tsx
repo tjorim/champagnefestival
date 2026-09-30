@@ -9,7 +9,7 @@
  * empty, and saving wrote the blank values over the record.
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import EditionModal from "@/components/admin/EditionModal";
@@ -125,6 +125,57 @@ describe("admin edit modals prefill from the record being edited", () => {
     expect(screen.getByLabelText("admin_content_event_start_time")).toHaveValue("18:00");
     expect(screen.getByLabelText("admin_content_event_end_time")).toHaveValue("22:00");
     expect(screen.getByLabelText("admin_event_date")).toHaveValue("2027-03-07");
+  });
+
+  it.each(["event", "dates"])(
+    "EventModal preserves edits when %s identity refreshes",
+    (changed) => {
+      const props = {
+        show: true,
+        edition,
+        initial: existingEvent,
+        onSave: vi.fn(),
+        onHide: vi.fn(),
+      };
+      const { rerender } = render(<EventModal {...props} />);
+      const title = screen.getByLabelText("admin_content_event_title");
+      fireEvent.change(title, { target: { value: "Unsaved title" } });
+      rerender(
+        <EventModal
+          {...props}
+          initial={
+            changed === "event"
+              ? { ...existingEvent, description: "Updated on the server" }
+              : existingEvent
+          }
+          edition={changed === "dates" ? { ...edition, dates: [...edition.dates] } : edition}
+        />,
+      );
+      expect(title).toHaveValue("Unsaved title");
+    },
+  );
+
+  it("EventModal resets on reopening and switching records while open", () => {
+    const props = { show: true, edition, initial: existingEvent, onSave: vi.fn(), onHide: vi.fn() };
+    const { rerender } = render(<EventModal {...props} />);
+    fireEvent.change(screen.getByLabelText("admin_content_event_title"), {
+      target: { value: "Abandoned" },
+    });
+    rerender(<EventModal {...props} show={false} />);
+    rerender(<EventModal {...props} />);
+    expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("Grand Opening");
+    fireEvent.change(screen.getByLabelText("admin_content_event_title"), {
+      target: { value: "Another draft" },
+    });
+    rerender(
+      <EventModal
+        {...props}
+        initial={{ ...existingEvent, id: "event-02", title: "Second event" }}
+      />,
+    );
+    expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("Second event");
+    rerender(<EventModal {...props} initial={null} />);
+    expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("");
   });
 
   it("EditionModal keeps the edition's values after the exhibitors query settles", async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
@@ -83,13 +83,18 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
     },
   });
 
-  // Re-open should always start from the record again, discarding edits that were
-  // abandoned by closing the modal — `defaultValues` alone can't do that, because
-  // the library skips re-seeding a form the user has already touched.
-  useEffect(() => {
-    if (!show) return;
-    form.reset(defaultValues);
-  }, [defaultValues, form, show]);
+  // Seed a new editing session, not a refreshed object for the same record.
+  // Explicit reset is needed on reopen because touched forms retain their draft.
+  const target = { show, editionId: edition.id, eventId: initial?.id ?? null };
+  const [previousTarget, setPreviousTarget] = useState(target);
+  if (
+    show !== previousTarget.show ||
+    target.editionId !== previousTarget.editionId ||
+    target.eventId !== previousTarget.eventId
+  ) {
+    setPreviousTarget(target);
+    if (show) form.reset(defaultValues);
+  }
 
   // Keep standalone date field in sync with derived date
   useEffect(() => {

@@ -55,3 +55,19 @@ admin/public dialogs, confirmations and the searchable picker. Browser coverage
 checks the public registration dialog's focus trap, scroll lock, dismissal and
 focus return alongside submission, mobile bounds, runtime themes and legacy
 stylesheet coexistence.
+
+## Review follow-up: draft preservation
+
+The related Worktime review exposed an existing reset-on-refresh path in CF's
+EventModal. Event forms now reset only when opening or switching event/edition
+IDs; rebuilding an event object or date array leaves the open draft intact.
+Reopening still discards abandoned edits and starts from the current record.
+Standalone event dates retain their existing synchronization with edition dates.
+
+SettingsManagement had the same data-loss pattern outside the modal migration:
+an unrelated maintenance-mode refresh reset unsaved contact fields. Settings
+now refresh pristine forms while preserving dirty contact drafts. A successful
+contact save establishes a pristine baseline only when no newer edits were
+entered while it was pending. Mutation payloads and retry policies are unchanged.
+Regression tests cover refreshed identities, reopen/record switches, pristine
+settings refreshes, successful saves, and editing during an in-flight save.
