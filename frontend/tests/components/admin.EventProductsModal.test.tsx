@@ -1,3 +1,5 @@
+import { readAdminOptions } from "../helpers/adminSelect";
+import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
@@ -152,7 +154,7 @@ describe("EventProductsModal", () => {
     );
 
     fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
-    fireEvent.click(screen.getByLabelText("admin_products_purchasable_label"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "admin_products_purchasable_label" }));
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
     await screen.findByText("admin_inventory_review");
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
@@ -180,15 +182,15 @@ describe("EventProductsModal", () => {
     await screen.findByText("VIP Entry");
 
     fireEvent.click(screen.getByLabelText("Edit VIP Entry"));
-    const requiredCheckbox = screen.getByLabelText(
-      "admin_products_required_label",
-    ) as HTMLInputElement;
-    expect(requiredCheckbox.checked).toBe(true);
+    const requiredCheckbox = screen.getByRole("checkbox", {
+      name: "admin_products_required_label",
+    });
+    expect(requiredCheckbox).toBeChecked();
 
-    fireEvent.click(screen.getByLabelText("admin_products_purchasable_label"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "admin_products_purchasable_label" }));
 
-    expect(requiredCheckbox.checked).toBe(false);
-    expect(requiredCheckbox).toBeDisabled();
+    expect(requiredCheckbox).not.toBeChecked();
+    expect(requiredCheckbox).toHaveAttribute("aria-disabled", "true");
     expect(screen.getByText("admin_products_required_needs_purchasable")).toBeInTheDocument();
   });
 
@@ -332,11 +334,9 @@ describe("EventProductsModal", () => {
     fireEvent.change(screen.getByLabelText("admin_products_price"), {
       target: { value: "200" },
     });
-    fireEvent.click(screen.getByLabelText("admin_products_required_label"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "admin_products_required_label" }));
     fireEvent.click(screen.getByRole("button", { name: "admin_inventory_add_inclusion" }));
-    fireEvent.change(screen.getByLabelText("admin_products_bundle_target"), {
-      target: { value: "prod-bottle" },
-    });
+    await selectAdminOption(screen.getByLabelText("admin_products_bundle_target"), "prod-bottle");
     fireEvent.change(screen.getByLabelText("admin_inventory_per_quantity"), {
       target: { value: "2" },
     });
@@ -374,7 +374,7 @@ describe("EventProductsModal", () => {
     fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
     fireEvent.click(screen.getByRole("button", { name: "admin_inventory_add_inclusion" }));
     const select = screen.getByLabelText("admin_products_bundle_target") as HTMLSelectElement;
-    const optionLabels = Array.from(select.options).map((o) => o.textContent);
+    const optionLabels = (await readAdminOptions(select)).map((o) => o.label);
     expect(optionLabels).not.toContain("Champagne Bottle");
   });
 
@@ -421,7 +421,7 @@ describe("EventProductsModal", () => {
     await screen.findByText("admin_inventory_review");
     expect(saved).toBeNull();
     expect(screen.getByRole("button", { name: "admin_save" })).toBeDisabled();
-    fireEvent.click(screen.getByLabelText("admin_inventory_confirm_shortage"));
+    fireEvent.click(screen.getByRole("checkbox", { name: "admin_inventory_confirm_shortage" }));
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
     await waitFor(() =>
       expect(saved).toMatchObject({

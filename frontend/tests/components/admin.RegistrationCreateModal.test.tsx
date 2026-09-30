@@ -54,13 +54,13 @@ describe("RegistrationCreateModal", () => {
       </QueryClientProvider>,
     );
 
-    await screen.findByRole("option", { name: "No schedule events yet." });
+    await screen.findByRole("combobox", { name: "Event" });
 
     expect(capturedRegistrationRequired).toBe("true");
 
     const [eventSelect] = screen.getAllByRole("combobox");
     expect(eventSelect).toBeDisabled();
-    expect(screen.getByRole("option", { name: "No schedule events yet." })).toBeInTheDocument();
+    expect(eventSelect).toHaveTextContent("No schedule events yet.");
     expect(screen.queryByPlaceholderText("Event ID / title")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Create" })).toBeDisabled();
   });

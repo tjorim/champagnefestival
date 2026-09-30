@@ -1,3 +1,10 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminSelect,
+  AdminOption,
+  AdminInput,
+} from "@/components/admin/AdminFields";
 /**
  * AuditLogViewer — read-only browser for the operational audit trail.
  *
@@ -10,7 +17,7 @@ import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import Spinner from "react-bootstrap/Spinner";
 import {
   Table,
@@ -75,8 +82,8 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
     staleTime: 10 * 1000,
   });
 
-  const handleResourceTypeChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setResourceType(e.target.value);
+  const handleResourceTypeChange = useCallback((value: string) => {
+    setResourceType(value);
     setPage(1);
   }, []);
 
@@ -131,84 +138,84 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
         </h2>
       </div>
 
-      <Form className="tw:flex tw:flex-wrap tw:gap-4 tw:mb-4">
-        <Form.Group controlId="audit-resource-type">
-          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
+      <form className="tw:flex tw:flex-wrap tw:gap-4 tw:mb-4">
+        <AdminField controlId="audit-resource-type">
+          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_resource_type()}
-          </Form.Label>
-          <Form.Select
+          </AdminLabel>
+          <AdminSelect
             size="sm"
             value={resourceType}
-            onChange={handleResourceTypeChange}
-            style={{ minWidth: 180 }}
+            onValueChange={handleResourceTypeChange}
+            className="tw:min-w-45"
           >
-            <option value="">{m.admin_audit_filter_all()}</option>
+            <AdminOption value="">{m.admin_audit_filter_all()}</AdminOption>
             {(resourceTypesQuery.data ?? []).map((type) => (
-              <option key={type} value={type}>
+              <AdminOption key={type} value={type}>
                 {type}
-              </option>
+              </AdminOption>
             ))}
-          </Form.Select>
-        </Form.Group>
-        <Form.Group controlId="audit-resource-id">
-          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
+          </AdminSelect>
+        </AdminField>
+        <AdminField controlId="audit-resource-id">
+          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_resource_id()}
-          </Form.Label>
-          <Form.Control
+          </AdminLabel>
+          <AdminInput
             size="sm"
             type="text"
             value={resourceId}
             onChange={handleResourceIdChange}
             placeholder={m.admin_audit_filter_resource_id_placeholder()}
-            style={{ minWidth: 200 }}
+            className="tw:min-w-50"
           />
-        </Form.Group>
-        <Form.Group controlId="audit-actor">
-          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
+        </AdminField>
+        <AdminField controlId="audit-actor">
+          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_actor()}
-          </Form.Label>
-          <Form.Control
+          </AdminLabel>
+          <AdminInput
             size="sm"
             type="text"
             value={actor}
             onChange={handleActorChange}
             placeholder={m.admin_audit_filter_actor_placeholder()}
-            style={{ minWidth: 200 }}
+            className="tw:min-w-50"
           />
-        </Form.Group>
-        <Form.Group controlId="audit-action">
-          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
+        </AdminField>
+        <AdminField controlId="audit-action">
+          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_action()}
-          </Form.Label>
-          <Form.Control
+          </AdminLabel>
+          <AdminInput
             size="sm"
             type="text"
             value={action}
             onChange={handleActionChange}
             placeholder={m.admin_audit_filter_action_placeholder()}
-            style={{ minWidth: 180 }}
+            className="tw:min-w-45"
           />
-        </Form.Group>
-        <Form.Group controlId="audit-since">
-          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
+        </AdminField>
+        <AdminField controlId="audit-since">
+          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_since()}
-          </Form.Label>
-          <Form.Control size="sm" type="date" value={since} onChange={handleSinceChange} />
-        </Form.Group>
-        <Form.Group controlId="audit-until">
-          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
+          </AdminLabel>
+          <AdminInput size="sm" type="date" value={since} onChange={handleSinceChange} />
+        </AdminField>
+        <AdminField controlId="audit-until">
+          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_until()}
-          </Form.Label>
-          <Form.Control size="sm" type="date" value={until} onChange={handleUntilChange} />
-        </Form.Group>
+          </AdminLabel>
+          <AdminInput size="sm" type="date" value={until} onChange={handleUntilChange} />
+        </AdminField>
         {hasFilters && (
-          <Form.Group className="tw:self-end">
+          <AdminField className="tw:self-end">
             <Button variant="outline-secondary" size="sm" onClick={handleClearFilters}>
               {m.admin_content_clear_filters()}
             </Button>
-          </Form.Group>
+          </AdminField>
         )}
-      </Form>
+      </form>
 
       {entriesQuery.error && (
         <Alert variant="danger" className="tw:mb-4">

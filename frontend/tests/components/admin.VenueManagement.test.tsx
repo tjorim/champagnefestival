@@ -1,3 +1,4 @@
+import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi, afterEach } from "vitest";
@@ -227,7 +228,7 @@ describe("VenueManagement", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders a venue card with its location line, room list, and an archived badge on inactive venues", () => {
+  it("renders a venue card with its location line, room list, and an archived badge on inactive venues", async () => {
     renderVenueManagement();
 
     const activeScope = within(venueCard("Grand Hall"));
@@ -240,7 +241,7 @@ describe("VenueManagement", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides the rooms/table-types body for an archived venue", () => {
+  it("hides the rooms/table-types body for an archived venue", async () => {
     renderVenueManagement();
 
     const archivedScope = within(venueCard("Old Barn"));
@@ -248,7 +249,7 @@ describe("VenueManagement", () => {
     expect(archivedScope.queryByText("admin_table_types_tab")).not.toBeInTheDocument();
   });
 
-  it("shows the empty state when there are no venues", () => {
+  it("shows the empty state when there are no venues", async () => {
     renderVenueManagement({ venues: [], rooms: [], tableTypes: [] });
     expect(screen.getByText("admin_no_venues")).toBeInTheDocument();
   });
@@ -375,7 +376,7 @@ describe("VenueManagement", () => {
     await waitFor(() => expect(onDelete).toHaveBeenCalledWith("venue-2"));
   });
 
-  it("calls onRestore immediately with no confirm prompt", () => {
+  it("calls onRestore immediately with no confirm prompt", async () => {
     const { onRestore } = renderVenueManagement();
 
     fireEvent.click(
@@ -495,7 +496,7 @@ describe("VenueManagement", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
-  it("shows a placeholder-dimensions indicator for rooms with unconfirmed dimensions", () => {
+  it("shows a placeholder-dimensions indicator for rooms with unconfirmed dimensions", async () => {
     renderVenueManagement({
       rooms: [{ ...room1, dimensionsPlaceholder: true }, room2],
     });
@@ -507,7 +508,7 @@ describe("VenueManagement", () => {
   // Table types (nested under each venue, #858)
   // ---------------------------------------------------------------------------
 
-  it("renders table type rows within the venue card, with the archived one dimmed", () => {
+  it("renders table type rows within the venue card, with the archived one dimmed", async () => {
     renderVenueManagement();
 
     const activeScope = within(venueCard("Grand Hall"));
@@ -527,7 +528,7 @@ describe("VenueManagement", () => {
     const saveButton = dialogScope.getByRole("button", { name: "admin_save" });
     expect(saveButton).toBeDisabled();
     await waitFor(() =>
-      expect(dialogScope.getByLabelText("admin_room_venue_label")).toHaveValue("venue-1"),
+      expect(dialogScope.getByLabelText("admin_room_venue_label")).toHaveTextContent("Grand Hall"),
     );
 
     fireEvent.change(dialogScope.getByLabelText("admin_table_type_name_label"), {
@@ -571,9 +572,7 @@ describe("VenueManagement", () => {
     fireEvent.change(dialogScope.getByLabelText("admin_table_width_label"), {
       target: { value: "0.8" },
     });
-    fireEvent.change(dialogScope.getByLabelText("admin_table_shape_label"), {
-      target: { value: "round" },
-    });
+    await selectAdminOption(dialogScope.getByLabelText("admin_table_shape_label"), "round");
 
     // Switching shape invalidates whatever was entered — no generic replacement
     // is defensible (#833/#835), so it blanks rather than inventing a diameter.
@@ -655,9 +654,7 @@ describe("VenueManagement", () => {
     await waitFor(() =>
       expect(dialogScope.getByLabelText("admin_table_width_label")).toHaveValue(0.7),
     );
-    fireEvent.change(dialogScope.getByLabelText("admin_table_shape_label"), {
-      target: { value: "round" },
-    });
+    await selectAdminOption(dialogScope.getByLabelText("admin_table_shape_label"), "round");
     // Switching shape blanks the dimensions (see the shape-swap test above), so a
     // diameter has to be re-entered before Save is even enabled.
     fireEvent.change(dialogScope.getByLabelText("admin_table_diameter_label"), {
@@ -725,7 +722,7 @@ describe("VenueManagement", () => {
     await waitFor(() => expect(onUpdateTableType).toHaveBeenCalled());
   });
 
-  it("archives an active table type immediately, with no confirm prompt", () => {
+  it("archives an active table type immediately, with no confirm prompt", async () => {
     const { onArchiveTableType } = renderVenueManagement();
 
     fireEvent.click(
@@ -736,7 +733,7 @@ describe("VenueManagement", () => {
     expect(onArchiveTableType).toHaveBeenCalledWith("tt-1");
   });
 
-  it("restores an archived table type immediately, with no confirm prompt, and hides the edit button on archived rows", () => {
+  it("restores an archived table type immediately, with no confirm prompt, and hides the edit button on archived rows", async () => {
     const { onRestoreTableType } = renderVenueManagement();
 
     const row = listItem("Retired Round");

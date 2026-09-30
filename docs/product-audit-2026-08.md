@@ -1,6 +1,6 @@
 # Product audit and remaining work
 
-Updated 2026-09-30. This is the current scope, dependency and preferred-order
+Updated 2026-10-01. This is the current scope, dependency and preferred-order
 record for the August 2026 audit and communications roadmap. GitHub issues
 hold discussion and workflow state; decision documents hold current contracts.
 
@@ -27,6 +27,7 @@ listing does not assign a new priority.
 
 - #1103 — remaining Bootstrap migration: #1109 completed the planning audit and split implementation into #1117, #1118, #1119, #1120, #1121, #1122, #1123. Follow the [preferred order and ownership](decisions/1109-bootstrap-remaining-audit.md); all seven groups are prerequisites of #1111; #1110 has completed the SVG icon prerequisite. Planning completion does not satisfy their implementation or final removal acceptance gates.
 
+- [#1119 — admin form controls](https://github.com/tjorim/champagnefestival/issues/1119): local implementation replaces all 28 scoped Bootstrap Form imports with owned Field/Input/Textarea/Select/Checkbox/Switch controls, preserves TanStack state and write ownership, and reduces frozen exceptions from 34 to 17. [Implementation and validation audit](decisions/1119-admin-forms.md). Keep active pending review and screenshot publication; #1111 remains blocked.
 - [#1118 — cards and lists](https://github.com/tjorim/champagnefestival/issues/1118): local implementation replaces all scoped Bootstrap Card/ListGroup renderers with owned Card slots and semantic lists, retains theme artwork and domain behavior, and reduces frozen exceptions from 36 to 34. [Implementation and validation audit](decisions/1118-cards-lists.md). Keep active pending review and screenshot publication; #1111 remains blocked.
 - [#1117 — layout and utility classes](https://github.com/tjorim/champagnefestival/issues/1117): local implementation removes all scoped Container/Row/Col imports and ordinary static application utilities, preserves site breakpoints and theme geometry, and reduces frozen exceptions from 40 to 36. [Implementation and validation audit](decisions/1117-layout-utilities.md). Keep active until review and generated public/admin light/dark desktop/mobile screenshots are attached to the eventual PR; #1111 remains blocked.
 

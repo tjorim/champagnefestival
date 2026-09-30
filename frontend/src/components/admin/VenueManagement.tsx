@@ -1,4 +1,11 @@
 import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminSelect,
+  AdminOption,
+} from "@/components/admin/AdminFields";
+import {
   ArchiveIcon,
   CircleIcon,
   InfoIcon,
@@ -26,7 +33,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -728,14 +735,11 @@ export default function VenueManagement({
                             <span className="tw:flex tw:items-center tw:gap-2">
                               <span
                                 aria-hidden="true"
-                                style={{
-                                  display: "inline-block",
-                                  width: 10,
-                                  height: 10,
-                                  borderRadius: "50%",
-                                  background: room.color,
-                                  flexShrink: 0,
-                                }}
+                                className="tw:inline-block tw:size-2.5 tw:rounded-full tw:shrink-0"
+
+                                /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
+                                style={{ background: room.color }}
+                                /* oxlint-enable shadcn/no-inline-styles */
                               />
                               {room.name}
                               {room.dimensionsPlaceholder && (
@@ -913,91 +917,90 @@ export default function VenueManagement({
                 {addVenueError}
               </Alert>
             )}
-            <Form.Group className="tw:mb-4" controlId="venue-name">
-              <Form.Label>{m.admin_venue_name_label()}</Form.Label>
+            <AdminField className="tw:mb-4" controlId="venue-name">
+              <AdminLabel>{m.admin_venue_name_label()}</AdminLabel>
               <venueForm.Field name="name">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="text"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     placeholder={m.admin_venue_name_placeholder()}
                   />
                 )}
               </venueForm.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="venue-address">
-              <Form.Label>{m.admin_venue_address_label()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="venue-address">
+              <AdminLabel>{m.admin_venue_address_label()}</AdminLabel>
               <venueForm.Field name="address">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="text"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                   />
                 )}
               </venueForm.Field>
-            </Form.Group>
+            </AdminField>
             <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-4">
               <div className="tw:min-w-0 tw:flex-1">
-                <Form.Group controlId="venue-city">
-                  <Form.Label>{m.admin_venue_city_label()}</Form.Label>
+                <AdminField controlId="venue-city">
+                  <AdminLabel>{m.admin_venue_city_label()}</AdminLabel>
                   <venueForm.Field name="city">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         type="text"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                       />
                     )}
                   </venueForm.Field>
-                </Form.Group>
+                </AdminField>
               </div>
               <div className="tw:w-auto tw:flex-none">
-                <Form.Group controlId="venue-postal-code">
-                  <Form.Label>{m.admin_venue_postal_code_label()}</Form.Label>
+                <AdminField controlId="venue-postal-code">
+                  <AdminLabel>{m.admin_venue_postal_code_label()}</AdminLabel>
                   <venueForm.Field name="postalCode">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         type="text"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        className="bg-dark tw:text-content border-secondary"
-                        style={{ width: "7rem" }}
+                        className="tw:bg-muted tw:text-content tw:border-input tw:w-28"
                       />
                     )}
                   </venueForm.Field>
-                </Form.Group>
+                </AdminField>
               </div>
             </div>
-            <Form.Group className="tw:mb-4" controlId="venue-country">
-              <Form.Label>{m.admin_venue_country_label()}</Form.Label>
+            <AdminField className="tw:mb-4" controlId="venue-country">
+              <AdminLabel>{m.admin_venue_country_label()}</AdminLabel>
               <venueForm.Field name="country">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="text"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                   />
                 )}
               </venueForm.Field>
-            </Form.Group>
+            </AdminField>
             <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2">
               <div className="tw:min-w-0 tw:flex-1">
-                <Form.Group controlId="venue-latitude">
-                  <Form.Label>{m.admin_venue_latitude_label()}</Form.Label>
+                <AdminField controlId="venue-latitude">
+                  <AdminLabel>{m.admin_venue_latitude_label()}</AdminLabel>
                   <venueForm.Field name="lat">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         type="number"
                         step="any"
                         min={-90}
@@ -1007,18 +1010,18 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                       />
                     )}
                   </venueForm.Field>
-                </Form.Group>
+                </AdminField>
               </div>
               <div className="tw:min-w-0 tw:flex-1">
-                <Form.Group controlId="venue-longitude">
-                  <Form.Label>{m.admin_venue_longitude_label()}</Form.Label>
+                <AdminField controlId="venue-longitude">
+                  <AdminLabel>{m.admin_venue_longitude_label()}</AdminLabel>
                   <venueForm.Field name="lng">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         type="number"
                         step="any"
                         min={-180}
@@ -1028,11 +1031,11 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                       />
                     )}
                   </venueForm.Field>
-                </Form.Group>
+                </AdminField>
               </div>
             </div>
             {previewCoordinates && (
@@ -1094,49 +1097,49 @@ export default function VenueManagement({
                 {addRoomError}
               </Alert>
             )}
-            <Form.Group className="tw:mb-4" controlId="room-venue">
-              <Form.Label>{m.admin_room_venue_label()}</Form.Label>
+            <AdminField className="tw:mb-4" controlId="room-venue">
+              <AdminLabel>{m.admin_room_venue_label()}</AdminLabel>
               <roomForm.Field name="venueId">
                 {(field) => (
-                  <Form.Select
+                  <AdminSelect
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                   >
                     {venues
                       .filter((v) => v.active)
                       .map((v) => (
-                        <option key={v.id} value={v.id}>
+                        <AdminOption key={v.id} value={v.id}>
                           {v.name}
-                        </option>
+                        </AdminOption>
                       ))}
-                  </Form.Select>
+                  </AdminSelect>
                 )}
               </roomForm.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="room-name">
-              <Form.Label>{m.admin_room_name_label()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="room-name">
+              <AdminLabel>{m.admin_room_name_label()}</AdminLabel>
               <roomForm.Field name="name">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="text"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     placeholder={m.admin_room_name_placeholder()}
                   />
                 )}
               </roomForm.Field>
-            </Form.Group>
+            </AdminField>
             <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-4">
               <div className="tw:min-w-0 tw:flex-1">
-                <Form.Group controlId="room-width">
-                  <Form.Label>{m.admin_room_width_label()}</Form.Label>
+                <AdminField controlId="room-width">
+                  <AdminLabel>{m.admin_room_width_label()}</AdminLabel>
                   <roomForm.Field name="widthM">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         type="number"
                         min={1}
                         max={500}
@@ -1146,18 +1149,18 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                       />
                     )}
                   </roomForm.Field>
-                </Form.Group>
+                </AdminField>
               </div>
               <div className="tw:min-w-0 tw:flex-1">
-                <Form.Group controlId="room-length">
-                  <Form.Label>{m.admin_room_length_label()}</Form.Label>
+                <AdminField controlId="room-length">
+                  <AdminLabel>{m.admin_room_length_label()}</AdminLabel>
                   <roomForm.Field name="lengthM">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         type="number"
                         min={1}
                         max={500}
@@ -1167,37 +1170,36 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                       />
                     )}
                   </roomForm.Field>
-                </Form.Group>
+                </AdminField>
               </div>
             </div>
-            <Form.Group controlId="room-color">
-              <Form.Label>{m.admin_room_color_label()}</Form.Label>
+            <AdminField controlId="room-color">
+              <AdminLabel>{m.admin_room_color_label()}</AdminLabel>
               <roomForm.Field name="color">
                 {(field) => (
                   <div className="tw:flex tw:gap-2 tw:items-center">
-                    <Form.Control
+                    <AdminInput
                       type="color"
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
-                      style={{ width: 48, height: 38, padding: 2 }}
+                      className="tw:w-12 tw:h-9.5 tw:p-0.5"
                     />
-                    <Form.Control
+                    <AdminInput
                       type="text"
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
-                      className="bg-dark tw:text-content border-secondary"
-                      style={{ fontFamily: "monospace" }}
+                      className="tw:bg-muted tw:text-content tw:border-input tw:font-mono"
                     />
                   </div>
                 )}
               </roomForm.Field>
-            </Form.Group>
+            </AdminField>
           </DialogBody>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setShowRoomModal(false)}>
@@ -1234,51 +1236,51 @@ export default function VenueManagement({
                 {addTableTypeError}
               </Alert>
             )}
-            <Form.Group className="tw:mb-4" controlId="tt-venue">
-              <Form.Label>{m.admin_room_venue_label()}</Form.Label>
+            <AdminField className="tw:mb-4" controlId="tt-venue">
+              <AdminLabel>{m.admin_room_venue_label()}</AdminLabel>
               <tableTypeForm.Field name="venueId">
                 {(field) => (
-                  <Form.Select
+                  <AdminSelect
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                   >
-                    <option value="">— {m.admin_room_venue_label()} —</option>
+                    <AdminOption value="">— {m.admin_room_venue_label()} —</AdminOption>
                     {venues
                       .filter((v) => v.active || v.id === field.value)
                       .map((v) => (
-                        <option key={v.id} value={v.id}>
+                        <AdminOption key={v.id} value={v.id}>
                           {v.name}
-                        </option>
+                        </AdminOption>
                       ))}
-                  </Form.Select>
+                  </AdminSelect>
                 )}
               </tableTypeForm.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="tt-name">
-              <Form.Label>{m.admin_table_type_name_label()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="tt-name">
+              <AdminLabel>{m.admin_table_type_name_label()}</AdminLabel>
               <tableTypeForm.Field name="name">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="text"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     placeholder={m.admin_table_type_name_placeholder()}
                   />
                 )}
               </tableTypeForm.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="tt-shape">
-              <Form.Label>{m.admin_table_shape_label()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="tt-shape">
+              <AdminLabel>{m.admin_table_shape_label()}</AdminLabel>
               <tableTypeForm.Field name="shape">
                 {(field) => (
-                  <Form.Select
+                  <AdminSelect
                     value={field.value}
-                    onChange={(e) => {
-                      const s = e.target.value as "rectangle" | "round";
+                    onValueChange={(e) => {
+                      const s = e as "rectangle" | "round";
                       field.handleChange(s);
                       // Same reasoning as emptyTableTypeForm: a shape switch invalidates
                       // whatever dimensions were entered, and no generic replacement is
@@ -1287,36 +1289,36 @@ export default function VenueManagement({
                       tableTypeForm.setFieldValue("lengthM", "");
                     }}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                   >
-                    <option value="rectangle">{m.admin_table_shape_rectangle()}</option>
-                    <option value="round">{m.admin_table_shape_round()}</option>
-                  </Form.Select>
+                    <AdminOption value="rectangle">{m.admin_table_shape_rectangle()}</AdminOption>
+                    <AdminOption value="round">{m.admin_table_shape_round()}</AdminOption>
+                  </AdminSelect>
                 )}
               </tableTypeForm.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="tt-height-type">
-              <Form.Label>{m.admin_table_height_type_label()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="tt-height-type">
+              <AdminLabel>{m.admin_table_height_type_label()}</AdminLabel>
               <tableTypeForm.Field name="heightType">
                 {(field) => (
-                  <Form.Select
+                  <AdminSelect
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value as "low" | "high")}
+                    onValueChange={(e) => field.handleChange(e as "low" | "high")}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                   >
-                    <option value="low">{m.admin_table_height_type_low()}</option>
-                    <option value="high">{m.admin_table_height_type_high()}</option>
-                  </Form.Select>
+                    <AdminOption value="low">{m.admin_table_height_type_low()}</AdminOption>
+                    <AdminOption value="high">{m.admin_table_height_type_high()}</AdminOption>
+                  </AdminSelect>
                 )}
               </tableTypeForm.Field>
-            </Form.Group>
+            </AdminField>
             {tableTypeValues.shape === "round" ? (
-              <Form.Group className="tw:mb-4" controlId="tt-diameter">
-                <Form.Label>{m.admin_table_diameter_label()}</Form.Label>
+              <AdminField className="tw:mb-4" controlId="tt-diameter">
+                <AdminLabel>{m.admin_table_diameter_label()}</AdminLabel>
                 <tableTypeForm.Field name="widthM">
                   {(field) => (
-                    <Form.Control
+                    <AdminInput
                       type="number"
                       min={0.1}
                       max={20}
@@ -1330,19 +1332,19 @@ export default function VenueManagement({
                         tableTypeForm.setFieldValue("lengthM", v);
                       }}
                       onBlur={field.handleBlur}
-                      className="bg-dark tw:text-content border-secondary"
+                      className="tw:bg-muted tw:text-content tw:border-input"
                     />
                   )}
                 </tableTypeForm.Field>
-              </Form.Group>
+              </AdminField>
             ) : (
               <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-4">
                 <div className="tw:min-w-0 tw:flex-1">
-                  <Form.Group controlId="tt-width">
-                    <Form.Label>{m.admin_table_width_label()}</Form.Label>
+                  <AdminField controlId="tt-width">
+                    <AdminLabel>{m.admin_table_width_label()}</AdminLabel>
                     <tableTypeForm.Field name="widthM">
                       {(field) => (
-                        <Form.Control
+                        <AdminInput
                           type="number"
                           min={0.1}
                           max={20}
@@ -1354,18 +1356,18 @@ export default function VenueManagement({
                             field.handleChange(raw === "" ? "" : Number(raw));
                           }}
                           onBlur={field.handleBlur}
-                          className="bg-dark tw:text-content border-secondary"
+                          className="tw:bg-muted tw:text-content tw:border-input"
                         />
                       )}
                     </tableTypeForm.Field>
-                  </Form.Group>
+                  </AdminField>
                 </div>
                 <div className="tw:min-w-0 tw:flex-1">
-                  <Form.Group controlId="tt-length">
-                    <Form.Label>{m.admin_table_length_label()}</Form.Label>
+                  <AdminField controlId="tt-length">
+                    <AdminLabel>{m.admin_table_length_label()}</AdminLabel>
                     <tableTypeForm.Field name="lengthM">
                       {(field) => (
-                        <Form.Control
+                        <AdminInput
                           type="number"
                           min={0.1}
                           max={20}
@@ -1377,30 +1379,30 @@ export default function VenueManagement({
                             field.handleChange(raw === "" ? "" : Number(raw));
                           }}
                           onBlur={field.handleBlur}
-                          className="bg-dark tw:text-content border-secondary"
+                          className="tw:bg-muted tw:text-content tw:border-input"
                         />
                       )}
                     </tableTypeForm.Field>
-                  </Form.Group>
+                  </AdminField>
                 </div>
               </div>
             )}
-            <Form.Group controlId="tt-max-capacity">
-              <Form.Label>{m.admin_table_type_max_capacity()}</Form.Label>
+            <AdminField controlId="tt-max-capacity">
+              <AdminLabel>{m.admin_table_type_max_capacity()}</AdminLabel>
               <tableTypeForm.Field name="capacity">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="number"
                     min={1}
                     max={50}
                     value={field.value}
                     onChange={(e) => field.handleChange(Number(e.target.value))}
                     onBlur={field.handleBlur}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                   />
                 )}
               </tableTypeForm.Field>
-            </Form.Group>
+            </AdminField>
           </DialogBody>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setShowTableTypeModal(false)}>

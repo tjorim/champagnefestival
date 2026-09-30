@@ -69,6 +69,14 @@ presentation components. Theme selectors use stable slots; frozen exceptions
 decrease from 36 to 34. Keep active pending review and screenshot publication.
 #1111 remains blocked; no final vendor removal is authorized.
 
+#1119 is implemented locally (2026-10-01); see the [admin form migration audit](1119-admin-forms.md).
+All 28 scoped Bootstrap Form imports are replaced with owned field/control primitives;
+all 21 TanStack Form source importers and domain submission ownership remain.
+Obsolete admin form selectors are removed; public form selectors retain #1120 ownership.
+Frozen exception entries decrease from 34 to 17, with dynamic floor-plan/room-colour
+exceptions narrowly documented in source. Keep active pending review and screenshot
+publication; #1111 remains blocked by its remaining prerequisites and cleanup gates.
+
 ## Preferred implementation order and ownership
 
 | Order | Issue | Scope |

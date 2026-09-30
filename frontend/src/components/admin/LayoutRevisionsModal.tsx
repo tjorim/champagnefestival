@@ -1,3 +1,11 @@
+import {
+  AdminInput,
+  AdminField,
+  AdminLabel,
+  AdminSelect,
+  AdminOption,
+  AdminCheck,
+} from "@/components/admin/AdminFields";
 import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -5,7 +13,7 @@ import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -336,7 +344,7 @@ export default function LayoutRevisionsModal({
           <p className="tw:text-subtle tw:text-sm">{m.admin_layout_revisions_scope_note()}</p>
 
           {/* Save */}
-          <Form
+          <form
             className="tw:flex tw:flex-wrap tw:gap-2 tw:items-start tw:mb-4"
             onSubmit={(e) => {
               e.preventDefault();
@@ -345,8 +353,8 @@ export default function LayoutRevisionsModal({
           >
             <saveForm.Field name="label">
               {(field) => (
-                <Form.Control
-                  style={{ flex: "1 1 220px" }}
+                <AdminInput
+                  className="tw:grow-1 tw:shrink-1 tw:basis-55"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder={m.admin_layout_revisions_label_placeholder()}
@@ -357,8 +365,8 @@ export default function LayoutRevisionsModal({
             </saveForm.Field>
             <saveForm.Field name="changeNote">
               {(field) => (
-                <Form.Control
-                  style={{ flex: "2 1 280px" }}
+                <AdminInput
+                  className="tw:grow-2 tw:shrink-1 tw:basis-70"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder={m.admin_layout_revisions_change_note_placeholder()}
@@ -369,7 +377,7 @@ export default function LayoutRevisionsModal({
             <Button type="submit" variant="success" disabled={saving || !saveLabelValue.trim()}>
               {saving ? m.admin_layout_revisions_saving() : m.admin_layout_revisions_save()}
             </Button>
-          </Form>
+          </form>
           {saveError && (
             <Alert variant="danger" className="tw:py-2 tw:text-sm">
               {saveError}
@@ -421,44 +429,44 @@ export default function LayoutRevisionsModal({
             <>
               <h6 className="tw:text-base">{m.admin_layout_revisions_compare_title()}</h6>
               <div className="tw:flex tw:gap-4 tw:flex-wrap tw:mb-4">
-                <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
-                  <Form.Label className="tw:text-sm tw:text-subtle">
+                <AdminField className="tw:min-w-40 tw:grow-1 tw:shrink-1 tw:basis-40">
+                  <AdminLabel className="tw:text-sm tw:text-subtle">
                     {m.admin_layout_revisions_compare_from()}
-                  </Form.Label>
-                  <Form.Select
+                  </AdminLabel>
+                  <AdminSelect
                     aria-label={m.admin_layout_revisions_compare_from()}
                     value={compareFrom}
-                    onChange={(e) => setCompareFrom(e.target.value)}
+                    onValueChange={(e) => setCompareFrom(e)}
                   >
-                    <option value={CURRENT_REF}>
+                    <AdminOption value={CURRENT_REF}>
                       {m.admin_layout_revisions_compare_current()}
-                    </option>
+                    </AdminOption>
                     {revisionOptions.map((revision) => (
-                      <option key={revision.id} value={String(revision.revisionNumber)}>
+                      <AdminOption key={revision.id} value={String(revision.revisionNumber)}>
                         #{revision.revisionNumber} {revision.label}
-                      </option>
+                      </AdminOption>
                     ))}
-                  </Form.Select>
-                </Form.Group>
-                <Form.Group style={{ minWidth: "160px", flex: "1 1 160px" }}>
-                  <Form.Label className="tw:text-sm tw:text-subtle">
+                  </AdminSelect>
+                </AdminField>
+                <AdminField className="tw:min-w-40 tw:grow-1 tw:shrink-1 tw:basis-40">
+                  <AdminLabel className="tw:text-sm tw:text-subtle">
                     {m.admin_layout_revisions_compare_to()}
-                  </Form.Label>
-                  <Form.Select
+                  </AdminLabel>
+                  <AdminSelect
                     aria-label={m.admin_layout_revisions_compare_to()}
                     value={compareTo}
-                    onChange={(e) => setCompareTo(e.target.value)}
+                    onValueChange={(e) => setCompareTo(e)}
                   >
-                    <option value={CURRENT_REF}>
+                    <AdminOption value={CURRENT_REF}>
                       {m.admin_layout_revisions_compare_current()}
-                    </option>
+                    </AdminOption>
                     {revisionOptions.map((revision) => (
-                      <option key={revision.id} value={String(revision.revisionNumber)}>
+                      <AdminOption key={revision.id} value={String(revision.revisionNumber)}>
                         #{revision.revisionNumber} {revision.label}
-                      </option>
+                      </AdminOption>
                     ))}
-                  </Form.Select>
-                </Form.Group>
+                  </AdminSelect>
+                </AdminField>
               </div>
               {diffLoading ? (
                 <div className="tw:text-center tw:py-2">
@@ -562,12 +570,12 @@ export default function LayoutRevisionsModal({
                             </li>
                           ))}
                         </ul>
-                        <Form.Check
+                        <AdminCheck
                           type="checkbox"
                           id="layout-revision-resolve-allocations"
                           label={m.admin_layout_revisions_restore_override_checkbox()}
                           checked={resolveAllocations}
-                          onChange={(e) => setResolveAllocations(e.target.checked)}
+                          onCheckedChange={(e) => setResolveAllocations(e)}
                         />
                       </Alert>
                     )}

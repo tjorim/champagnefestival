@@ -1,7 +1,8 @@
+import { AdminField, AdminLabel, AdminInput, AdminTextarea } from "@/components/admin/AdminFields";
 import { useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import {
   Dialog,
   DialogContent,
@@ -45,18 +46,18 @@ export default function EmailComposeModal({ draft, onClose }: Props) {
         </DialogHeader>
         <DialogBody>
           {tooLong && <Alert variant="warning">{m.admin_email_too_long()}</Alert>}
-          <Form.Group className="tw:mb-4" controlId="email-compose-recipient">
-            <Form.Label>{m.admin_email_to_label()}</Form.Label>
-            <Form.Control readOnly value={draft.recipient} />
-          </Form.Group>
-          <Form.Group className="tw:mb-4" controlId="email-compose-subject">
-            <Form.Label>{m.admin_email_subject_label()}</Form.Label>
-            <Form.Control readOnly value={draft.subject} />
-          </Form.Group>
-          <Form.Group controlId="email-compose-body">
-            <Form.Label>{m.admin_email_body_label()}</Form.Label>
-            <Form.Control as="textarea" rows={10} readOnly value={draft.body} />
-          </Form.Group>
+          <AdminField className="tw:mb-4" controlId="email-compose-recipient">
+            <AdminLabel>{m.admin_email_to_label()}</AdminLabel>
+            <AdminInput readOnly value={draft.recipient} />
+          </AdminField>
+          <AdminField className="tw:mb-4" controlId="email-compose-subject">
+            <AdminLabel>{m.admin_email_subject_label()}</AdminLabel>
+            <AdminInput readOnly value={draft.subject} />
+          </AdminField>
+          <AdminField controlId="email-compose-body">
+            <AdminLabel>{m.admin_email_body_label()}</AdminLabel>
+            <AdminTextarea rows={10} readOnly value={draft.body} />
+          </AdminField>
           {copyStatus === "copied" && (
             <Alert variant="success" className="tw:mt-4 tw:mb-0">
               {m.admin_email_copied()}

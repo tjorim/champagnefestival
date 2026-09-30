@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import AuditLogViewer from "@/components/admin/AuditLogViewer";
@@ -69,7 +69,9 @@ describe("AuditLogViewer", () => {
     fetchAuditEntries.mockResolvedValue([]);
     renderAuditLogViewer();
 
-    await waitFor(() => expect(screen.getByRole("option", { name: "venue" })).toBeInTheDocument());
+    await waitFor(() => expect(fetchAuditResourceTypes).toHaveBeenCalled());
+    fireEvent.click(screen.getByRole("combobox", { name: "admin_audit_filter_resource_type" }));
+    expect(await screen.findByRole("option", { name: "venue" })).toBeInTheDocument();
     expect(screen.getByRole("option", { name: "table" })).toBeInTheDocument();
   });
 });

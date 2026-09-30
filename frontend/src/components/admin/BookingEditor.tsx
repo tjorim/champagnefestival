@@ -1,9 +1,18 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminSelect,
+  AdminOption,
+  AdminTextarea,
+  AdminDescription,
+} from "@/components/admin/AdminFields";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import type { FloorTable } from "@/types/admin";
 import type { Product } from "@/types/event";
@@ -220,11 +229,11 @@ export default function BookingEditor({
         {m.admin_booking_editor()}
       </h6>
       <div className="tw:flex tw:flex-wrap tw:-mx-2 tw:*:w-full tw:*:px-2 tw:gap-y-4">
-        <Form.Group className="tw:site-sm:w-4/12">
-          <Form.Label>{m.admin_guests_count()}</Form.Label>
+        <AdminField className="tw:site-sm:w-4/12">
+          <AdminLabel>{m.admin_guests_count()}</AdminLabel>
           <form.Field name="guestCount">
             {(field) => (
-              <Form.Control
+              <AdminInput
                 aria-label={m.admin_guests_count()}
                 type="number"
                 min={1}
@@ -235,24 +244,24 @@ export default function BookingEditor({
               />
             )}
           </form.Field>
-        </Form.Group>
-        <Form.Group className="tw:site-sm:w-4/12">
-          <Form.Label>{m.admin_status_label()}</Form.Label>
+        </AdminField>
+        <AdminField className="tw:site-sm:w-4/12">
+          <AdminLabel>{m.admin_status_label()}</AdminLabel>
           <form.Field name="status">
             {(field) => (
-              <Form.Select
+              <AdminSelect
                 aria-label={m.admin_status_label()}
                 value={field.value}
-                onChange={(event) => field.handleChange(event.target.value as RegistrationStatus)}
+                onValueChange={(event) => field.handleChange(event as RegistrationStatus)}
                 onBlur={field.handleBlur}
               >
-                <option value="pending">{m.admin_status_pending()}</option>
-                <option value="confirmed">{m.admin_status_confirmed()}</option>
-                <option value="cancelled">{m.admin_status_cancelled()}</option>
-              </Form.Select>
+                <AdminOption value="pending">{m.admin_status_pending()}</AdminOption>
+                <AdminOption value="confirmed">{m.admin_status_confirmed()}</AdminOption>
+                <AdminOption value="cancelled">{m.admin_status_cancelled()}</AdminOption>
+              </AdminSelect>
             )}
           </form.Field>
-        </Form.Group>
+        </AdminField>
         <div className="tw:site-sm:w-4/12 tw:text-sm tw:self-end">
           <div>
             {m.admin_booking_total()}: €{amountDue.toFixed(2)}
@@ -270,11 +279,11 @@ export default function BookingEditor({
           )}
         </div>
         {products.map((product) => (
-          <Form.Group className="tw:site-sm:w-6/12" key={product.id}>
-            <Form.Label>
+          <AdminField className="tw:site-sm:w-6/12" key={product.id}>
+            <AdminLabel>
               {product.name} · €{(bookedPrices[product.id] ?? product.price).toFixed(2)}
-            </Form.Label>
-            <Form.Control
+            </AdminLabel>
+            <AdminInput
               aria-label={`${m.admin_booking_quantity()} ${product.name}`}
               type="number"
               min={0}
@@ -283,14 +292,13 @@ export default function BookingEditor({
               value={quantities[product.id] ?? 0}
               onChange={(event) => setProductQuantity(product.id, Number(event.target.value))}
             />
-          </Form.Group>
+          </AdminField>
         ))}
-        <Form.Group className="tw:w-full">
-          <Form.Label>{m.admin_notes()}</Form.Label>
+        <AdminField className="tw:w-full">
+          <AdminLabel>{m.admin_notes()}</AdminLabel>
           <form.Field name="notes">
             {(field) => (
-              <Form.Control
-                as="textarea"
+              <AdminTextarea
                 rows={3}
                 value={field.value}
                 onChange={(event) => field.handleChange(event.target.value)}
@@ -298,7 +306,7 @@ export default function BookingEditor({
               />
             )}
           </form.Field>
-        </Form.Group>
+        </AdminField>
       </div>
 
       <fieldset className="tw:mt-4">
@@ -320,12 +328,12 @@ export default function BookingEditor({
             key={`${entry.tableId}:${index}`}
             className="tw:flex tw:gap-2 tw:mb-2 tw:items-center"
           >
-            <Form.Select
+            <AdminSelect
               aria-label={m.admin_inventory_unit_table()}
               value={entry.tableId}
-              onChange={(event) => changeAllocation(index, { tableId: event.target.value })}
+              onValueChange={(event) => changeAllocation(index, { tableId: event })}
             >
-              <option value="">{m.admin_unassigned()}</option>
+              <AdminOption value="">{m.admin_unassigned()}</AdminOption>
               {tables
                 .filter(
                   (table) =>
@@ -333,16 +341,16 @@ export default function BookingEditor({
                     !allocations.some((item) => item.tableId === table.id),
                 )
                 .map((table) => (
-                  <option key={table.id} value={table.id}>
+                  <AdminOption key={table.id} value={table.id}>
                     {table.name} (
                     {m.admin_table_capacity_remaining({
                       count: Math.max(0, table.capacity - (tableOccupancy.get(table.id) ?? 0)),
                     })}
                     )
-                  </option>
+                  </AdminOption>
                 ))}
-            </Form.Select>
-            <Form.Control
+            </AdminSelect>
+            <AdminInput
               type="number"
               min={tableQuantity ? 0 : 1}
               max={20}
@@ -351,7 +359,7 @@ export default function BookingEditor({
               onChange={(event) =>
                 changeAllocation(index, { guestCount: Number(event.target.value) })
               }
-              style={{ maxWidth: "6rem" }}
+              className="tw:max-w-24"
             />
             <Button
               variant="outline-danger"
@@ -432,17 +440,17 @@ export default function BookingEditor({
             )}
             {onAddTransaction && (
               <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-end">
-                <Form.Group>
-                  <Form.Label className="tw:text-sm tw:mb-1">
+                <AdminField>
+                  <AdminLabel className="tw:text-sm tw:mb-1">
                     {m.admin_payment_amount_label()}
-                  </Form.Label>
+                  </AdminLabel>
                   <transactionForm.Field name="amount">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         size="sm"
                         type="number"
                         step="0.01"
-                        style={{ maxWidth: "8rem" }}
+                        className="tw:max-w-32"
                         aria-label={m.admin_payment_amount_label()}
                         value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
@@ -450,15 +458,17 @@ export default function BookingEditor({
                       />
                     )}
                   </transactionForm.Field>
-                  <Form.Text className="tw:text-sm">{m.admin_payment_amount_help()}</Form.Text>
-                </Form.Group>
-                <Form.Group>
-                  <Form.Label className="tw:text-sm tw:mb-1">
+                  <AdminDescription className="tw:text-sm">
+                    {m.admin_payment_amount_help()}
+                  </AdminDescription>
+                </AdminField>
+                <AdminField>
+                  <AdminLabel className="tw:text-sm tw:mb-1">
                     {m.admin_payment_transaction_date()}
-                  </Form.Label>
+                  </AdminLabel>
                   <transactionForm.Field name="date">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         size="sm"
                         type="date"
                         required
@@ -469,17 +479,17 @@ export default function BookingEditor({
                       />
                     )}
                   </transactionForm.Field>
-                </Form.Group>
-                <Form.Group>
-                  <Form.Label className="tw:text-sm tw:mb-1">
+                </AdminField>
+                <AdminField>
+                  <AdminLabel className="tw:text-sm tw:mb-1">
                     {m.admin_payment_reference_label()}
-                  </Form.Label>
+                  </AdminLabel>
                   <transactionForm.Field name="reference">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         size="sm"
                         type="text"
-                        style={{ maxWidth: "10rem" }}
+                        className="tw:max-w-40"
                         aria-label={m.admin_payment_reference_label()}
                         value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
@@ -487,17 +497,17 @@ export default function BookingEditor({
                       />
                     )}
                   </transactionForm.Field>
-                </Form.Group>
-                <Form.Group>
-                  <Form.Label className="tw:text-sm tw:mb-1">
+                </AdminField>
+                <AdminField>
+                  <AdminLabel className="tw:text-sm tw:mb-1">
                     {m.admin_payment_note_label()}
-                  </Form.Label>
+                  </AdminLabel>
                   <transactionForm.Field name="note">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         size="sm"
                         type="text"
-                        style={{ maxWidth: "12rem" }}
+                        className="tw:max-w-48"
                         aria-label={m.admin_payment_note_label()}
                         value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
@@ -505,7 +515,7 @@ export default function BookingEditor({
                       />
                     )}
                   </transactionForm.Field>
-                </Form.Group>
+                </AdminField>
                 <Button
                   size="sm"
                   disabled={

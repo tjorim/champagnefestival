@@ -1,3 +1,11 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminSelect,
+  AdminOption,
+  AdminCheck,
+} from "@/components/admin/AdminFields";
 import { useCallback, useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -5,7 +13,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import {
   Table,
   TableHeader,
@@ -363,7 +371,7 @@ export default function AnnouncementManagement({
       </CardHeader>
       <CardContent>
         {error && <Alert variant="danger">{error}</Alert>}
-        <Form
+        <form
           onSubmit={(event) => {
             event.preventDefault();
             void form.handleSubmit();
@@ -371,13 +379,13 @@ export default function AnnouncementManagement({
         >
           <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2">
             {(["nl", "en", "fr"] as const).map((locale) => (
-              <Form.Group className="tw:site-md:w-4/12" key={locale}>
-                <Form.Label>
+              <AdminField className="tw:site-md:w-4/12" key={locale}>
+                <AdminLabel>
                   {m.admin_announcement_text_label({ locale: locale.toUpperCase() })}
-                </Form.Label>
+                </AdminLabel>
                 <form.Field name={`text_${locale}`}>
                   {(field) => (
-                    <Form.Control
+                    <AdminInput
                       maxLength={500}
                       value={field.value ?? ""}
                       onChange={(event) => field.handleChange(event.target.value)}
@@ -385,31 +393,33 @@ export default function AnnouncementManagement({
                     />
                   )}
                 </form.Field>
-              </Form.Group>
+              </AdminField>
             ))}
           </div>
           <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mt-1">
-            <Form.Group className="tw:site-md:w-3/12">
-              <Form.Label>{m.admin_announcement_level_label()}</Form.Label>
+            <AdminField className="tw:site-md:w-3/12">
+              <AdminLabel>{m.admin_announcement_level_label()}</AdminLabel>
               <form.Field name="level">
                 {(field) => (
-                  <Form.Select
+                  <AdminSelect
                     value={field.value}
-                    onChange={(event) => field.handleChange(event.target.value as Draft["level"])}
+                    onValueChange={(event) => field.handleChange(event as Draft["level"])}
                     onBlur={field.handleBlur}
                   >
-                    <option value="info">{m.admin_announcement_level_info()}</option>
-                    <option value="warning">{m.admin_announcement_level_warning()}</option>
-                    <option value="urgent">{m.admin_announcement_level_urgent()}</option>
-                  </Form.Select>
+                    <AdminOption value="info">{m.admin_announcement_level_info()}</AdminOption>
+                    <AdminOption value="warning">
+                      {m.admin_announcement_level_warning()}
+                    </AdminOption>
+                    <AdminOption value="urgent">{m.admin_announcement_level_urgent()}</AdminOption>
+                  </AdminSelect>
                 )}
               </form.Field>
-            </Form.Group>
-            <Form.Group className="tw:site-md:w-3/12">
-              <Form.Label>{m.admin_announcement_starts_label()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:site-md:w-3/12">
+              <AdminLabel>{m.admin_announcement_starts_label()}</AdminLabel>
               <form.Field name="starts_at">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="datetime-local"
                     value={localDate(field.value)}
                     onChange={(event) => field.handleChange(event.target.value || null)}
@@ -417,12 +427,12 @@ export default function AnnouncementManagement({
                   />
                 )}
               </form.Field>
-            </Form.Group>
-            <Form.Group className="tw:site-md:w-3/12">
-              <Form.Label>{m.admin_announcement_ends_label()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:site-md:w-3/12">
+              <AdminLabel>{m.admin_announcement_ends_label()}</AdminLabel>
               <form.Field name="ends_at">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="datetime-local"
                     value={localDate(field.value)}
                     onChange={(event) => field.handleChange(event.target.value || null)}
@@ -430,12 +440,12 @@ export default function AnnouncementManagement({
                   />
                 )}
               </form.Field>
-            </Form.Group>
-            <Form.Group className="tw:site-md:w-3/12">
-              <Form.Label>{m.admin_announcement_link_url_label()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:site-md:w-3/12">
+              <AdminLabel>{m.admin_announcement_link_url_label()}</AdminLabel>
               <form.Field name="link_url">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="url"
                     value={field.value ?? ""}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -443,33 +453,33 @@ export default function AnnouncementManagement({
                   />
                 )}
               </form.Field>
-            </Form.Group>
+            </AdminField>
           </div>
           <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mt-1">
             {(["nl", "en", "fr"] as const).map((locale) => (
-              <Form.Group className="tw:site-md:w-4/12" key={locale}>
-                <Form.Label>
+              <AdminField className="tw:site-md:w-4/12" key={locale}>
+                <AdminLabel>
                   {m.admin_announcement_link_label_field({ locale: locale.toUpperCase() })}
-                </Form.Label>
+                </AdminLabel>
                 <form.Field name={`link_label_${locale}`}>
                   {(field) => (
-                    <Form.Control
+                    <AdminInput
                       value={field.value ?? ""}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
                   )}
                 </form.Field>
-              </Form.Group>
+              </AdminField>
             ))}
           </div>
           <form.Field name="active">
             {(field) => (
-              <Form.Check
+              <AdminCheck
                 className="tw:mt-4"
                 label={m.admin_announcement_publish_immediately()}
                 checked={field.value}
-                onChange={(event) => field.handleChange(event.target.checked)}
+                onCheckedChange={(event) => field.handleChange(event)}
               />
             )}
           </form.Field>
@@ -489,18 +499,18 @@ export default function AnnouncementManagement({
               </Button>
             )}
           </div>
-        </Form>
+        </form>
         <hr />
-        <Form.Select
+        <AdminSelect
           className="tw:mb-4 tw:w-auto"
           aria-label={m.admin_announcement_preview_language_label()}
           value={preview}
-          onChange={(event) => setPreview(event.target.value as typeof preview)}
+          onValueChange={(event) => setPreview(event as typeof preview)}
         >
-          <option value="nl">{m.admin_announcement_preview_nl()}</option>
-          <option value="en">{m.admin_announcement_preview_en()}</option>
-          <option value="fr">{m.admin_announcement_preview_fr()}</option>
-        </Form.Select>
+          <AdminOption value="nl">{m.admin_announcement_preview_nl()}</AdminOption>
+          <AdminOption value="en">{m.admin_announcement_preview_en()}</AdminOption>
+          <AdminOption value="fr">{m.admin_announcement_preview_fr()}</AdminOption>
+        </AdminSelect>
         <div data-tailwind-migrated="true" className="tw:w-full">
           <Table>
             <TableHeader>

@@ -40,7 +40,7 @@ function SelectTrigger({
       data-tailwind-migrated="true"
       data-size={size}
       className={cn(
-        "tw:flex tw:w-fit tw:items-center tw:justify-between tw:gap-1.5 tw:rounded-md tw:border tw:border-input tw:bg-transparent tw:py-2 tw:pr-2 tw:pl-2.5 tw:text-sm tw:whitespace-nowrap tw:shadow-xs tw:outline-none tw:focus-visible:border-ring tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:disabled:cursor-not-allowed tw:disabled:opacity-50 tw:aria-invalid:border-destructive tw:aria-invalid:ring-3 tw:aria-invalid:ring-destructive/20 tw:data-placeholder:text-muted-foreground tw:dark:bg-input/30 tw:dark:hover:bg-input/50 tw:dark:aria-invalid:border-destructive/50 tw:dark:aria-invalid:ring-destructive/40",
+        "tw:flex tw:w-fit tw:items-center tw:justify-between tw:gap-1.5 tw:rounded-md tw:border tw:border-input tw:bg-transparent tw:py-2 tw:pr-2 tw:pl-2.5 tw:text-sm tw:shadow-xs tw:outline-none tw:focus-visible:border-ring tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:disabled:cursor-not-allowed tw:disabled:opacity-50 tw:aria-invalid:border-destructive tw:aria-invalid:ring-3 tw:aria-invalid:ring-destructive/20 tw:data-placeholder:text-muted-foreground tw:dark:bg-input/30 tw:dark:hover:bg-input/50 tw:dark:aria-invalid:border-destructive/50 tw:dark:aria-invalid:ring-destructive/40",
         className,
       )}
       {...props}
@@ -78,14 +78,14 @@ function SelectContent({
           align={align}
           alignOffset={alignOffset}
           alignItemWithTrigger={alignItemWithTrigger}
-          className="tw:isolate tw:z-50"
+          className="tw:isolate tw:z-popup"
         >
           <SelectPrimitive.Popup
             data-slot="select-content"
             data-tailwind-migrated="true"
             data-align-trigger={alignItemWithTrigger}
             className={cn(
-              " tw:relative tw:isolate tw:z-50   tw:min-w-36  tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-md tw:bg-popover tw:text-popover-foreground tw:shadow-md tw:ring-1 tw:ring-foreground/10 tw:duration-100             ",
+              " tw:relative tw:isolate tw:z-popup   tw:min-w-36 tw:max-h-80 tw:max-w-sm  tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-md tw:bg-popover tw:text-popover-foreground tw:shadow-md tw:ring-1 tw:ring-foreground/10 tw:duration-100             ",
               className,
             )}
             {...props}
@@ -120,7 +120,7 @@ function SelectItem({ className, children, ...props }: SelectPrimitive.Item.Prop
       )}
       {...props}
     >
-      <SelectPrimitive.ItemText className="tw:flex tw:flex-1 tw:shrink-0 tw:gap-2 tw:whitespace-nowrap">
+      <SelectPrimitive.ItemText className="tw:flex tw:flex-1 tw:min-w-0 tw:gap-2 tw:break-words">
         {children}
       </SelectPrimitive.ItemText>
       <SelectPrimitive.ItemIndicator

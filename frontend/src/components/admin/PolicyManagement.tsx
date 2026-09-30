@@ -1,3 +1,4 @@
+import { AdminTextarea, AdminLabel } from "@/components/admin/AdminFields";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -6,7 +7,7 @@ import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import { Button as LocaleButton } from "@/components/ui/button";
 import {
   Table,
@@ -519,9 +520,9 @@ export default function PolicyManagement({
                   </ButtonGroup>
                   <form.Field name={locale}>
                     {(field) => (
-                      <Form.Control
+                      <AdminTextarea
                         ref={textareaRef}
-                        as="textarea"
+
                         rows={12}
                         className="font-monospace"
                         value={field.value}
@@ -532,12 +533,12 @@ export default function PolicyManagement({
                   </form.Field>
                   <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mt-4">
                     <div className="tw:site-md:w-6/12">
-                      <Form.Label className="tw:text-sm tw:text-subtle">
+                      <AdminLabel className="tw:text-sm tw:text-subtle">
                         {m.admin_policy_preview_label()}
-                      </Form.Label>
+                      </AdminLabel>
                       <div
-                        className="border rounded tw:p-4 bg-body-tertiary"
-                        style={{ minHeight: "8rem" }}
+                        className="border rounded tw:p-4 bg-body-tertiary tw:min-h-32"
+
                         // Trusted: `preview` is always the sanitized HTML the
                         // backend's shared render_markdown() returned. Blanked
                         // here (not via setState in the effect above) once the
@@ -549,13 +550,12 @@ export default function PolicyManagement({
                       />
                     </div>
                     <div className="tw:site-md:w-6/12">
-                      <Form.Label className="tw:text-sm tw:text-subtle">
+                      <AdminLabel className="tw:text-sm tw:text-subtle">
                         {m.admin_policy_change_summary_label()}
-                      </Form.Label>
+                      </AdminLabel>
                       <form.Field name="changeSummary">
                         {(field) => (
-                          <Form.Control
-                            as="textarea"
+                          <AdminTextarea
                             rows={4}
                             value={field.value}
                             onChange={(event) => field.handleChange(event.target.value)}

@@ -1,3 +1,4 @@
+import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import { FileSpreadsheetIcon, PencilIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { AdminSortableHeader } from "./AdminSortableHeader";
@@ -7,7 +8,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import {
   Dialog,
   DialogContent,
@@ -289,26 +290,25 @@ export default function VolunteersManagement({
             </Alert>
           )}
           <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
-            <Form.Select
+            <AdminSelect
               size="sm"
               value={activeFilter}
-              onChange={(e) => setActiveFilter(e.target.value as ActiveFilter)}
-              className="bg-dark tw:text-content border-secondary"
-              style={{ maxWidth: 180 }}
+              onValueChange={(e) => setActiveFilter(e as ActiveFilter)}
+              className="tw:bg-muted tw:text-content tw:border-input tw:max-w-45"
+
               aria-label={m.admin_people_active_label()}
             >
-              <option value="all">{m.admin_volunteers_filter_all()}</option>
-              <option value="active">{m.admin_volunteers_filter_active()}</option>
-              <option value="inactive">{m.admin_volunteers_filter_inactive()}</option>
-            </Form.Select>
-            <Form.Control
+              <AdminOption value="all">{m.admin_volunteers_filter_all()}</AdminOption>
+              <AdminOption value="active">{m.admin_volunteers_filter_active()}</AdminOption>
+              <AdminOption value="inactive">{m.admin_volunteers_filter_inactive()}</AdminOption>
+            </AdminSelect>
+            <AdminInput
               size="sm"
               type="search"
               placeholder={m.admin_volunteers_search_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="bg-dark tw:text-content border-secondary"
-              style={{ maxWidth: 280 }}
+              className="tw:bg-muted tw:text-content tw:border-input tw:max-w-70"
             />
           </div>
         </CardHeader>

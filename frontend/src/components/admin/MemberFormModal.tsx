@@ -1,10 +1,20 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminError,
+  AdminSelect,
+  AdminOption,
+  AdminTextarea,
+  AdminCheck,
+} from "@/components/admin/AdminFields";
 import { CircleCheckIcon, ContactRoundIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import {
   Dialog,
   DialogContent,
@@ -134,7 +144,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           </DialogTitle>
         </DialogHeader>
 
-        <Form
+        <form
           onSubmit={(e) => {
             e.preventDefault();
             void form.handleSubmit();
@@ -153,10 +163,10 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               </Alert>
             )}
 
-            <Form.Group className="tw:mb-4" controlId="member-name">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            <AdminField className="tw:mb-4" controlId="member-name">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.registration_name()} *
-              </Form.Label>
+              </AdminLabel>
               <form.Field
                 name="name"
                 validators={[
@@ -171,32 +181,28 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
-                      <Form.Control
+                      <AdminInput
                         type="text"
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                         maxLength={200}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        isInvalid={showErr}
+                        aria-invalid={showErr}
                       />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
+                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                     </>
                   );
                 }}
               </form.Field>
-            </Form.Group>
+            </AdminField>
 
             <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mb-4">
               <div className="tw:w-full tw:site-md:w-6/12">
-                <Form.Group controlId="member-email">
-                  <Form.Label className="tw:text-subtle tw:text-sm">
+                <AdminField controlId="member-email">
+                  <AdminLabel className="tw:text-subtle tw:text-sm">
                     {m.registration_email()}
-                  </Form.Label>
+                  </AdminLabel>
                   <form.Field
                     name="email"
                     validators={[
@@ -213,36 +219,32 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                       const showErr = field.meta.isTouched && field.errors.length > 0;
                       return (
                         <>
-                          <Form.Control
+                          <AdminInput
                             type="email"
-                            className="bg-dark tw:text-content border-secondary"
+                            className="tw:bg-muted tw:text-content tw:border-input"
                             maxLength={200}
                             value={field.value}
                             onChange={(e) => field.handleChange(e.target.value)}
                             onBlur={field.handleBlur}
-                            isInvalid={showErr}
+                            aria-invalid={showErr}
                           />
-                          {showErr && (
-                            <Form.Control.Feedback type="invalid">
-                              {field.errors[0]?.message}
-                            </Form.Control.Feedback>
-                          )}
+                          {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                         </>
                       );
                     }}
                   </form.Field>
-                </Form.Group>
+                </AdminField>
               </div>
               <div className="tw:w-full tw:site-md:w-6/12">
-                <Form.Group controlId="member-phone">
-                  <Form.Label className="tw:text-subtle tw:text-sm">
+                <AdminField controlId="member-phone">
+                  <AdminLabel className="tw:text-subtle tw:text-sm">
                     {m.registration_phone()}
-                  </Form.Label>
+                  </AdminLabel>
                   <form.Field name="phone">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         type="tel"
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                         maxLength={50}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -250,37 +252,37 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                       />
                     )}
                   </form.Field>
-                </Form.Group>
+                </AdminField>
               </div>
             </div>
 
             <form.Field name="preferredLanguage">
               {(field) => (
-                <Form.Group className="tw:mb-4" controlId="member-preferred-language">
-                  <Form.Label>{m.registration_preferred_language()}</Form.Label>
-                  <Form.Select
+                <AdminField className="tw:mb-4" controlId="member-preferred-language">
+                  <AdminLabel>{m.registration_preferred_language()}</AdminLabel>
+                  <AdminSelect
                     value={field.value ?? ""}
-                    onChange={(event) =>
-                      field.handleChange((event.target.value || null) as "nl" | "fr" | "en" | null)
+                    onValueChange={(event) =>
+                      field.handleChange((event || null) as "nl" | "fr" | "en" | null)
                     }
                   >
-                    <option value="">{m.admin_email_language_unknown()}</option>
-                    <option value="nl">Nederlands</option>
-                    <option value="fr">Français</option>
-                    <option value="en">English</option>
-                  </Form.Select>
-                </Form.Group>
+                    <AdminOption value="">{m.admin_email_language_unknown()}</AdminOption>
+                    <AdminOption value="nl">Nederlands</AdminOption>
+                    <AdminOption value="fr">Français</AdminOption>
+                    <AdminOption value="en">English</AdminOption>
+                  </AdminSelect>
+                </AdminField>
               )}
             </form.Field>
-            <Form.Group className="tw:mb-4" controlId="member-club">
-              <Form.Label className="tw:text-sm tw:font-semibold tw:text-highlight">
+            <AdminField className="tw:mb-4" controlId="member-club">
+              <AdminLabel className="tw:text-sm tw:font-semibold tw:text-highlight">
                 {m.admin_people_club_name_label()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field name="clubName">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="text"
-                    className="bg-dark tw:text-content border-secondary border-warning"
+                    className="tw:bg-muted tw:text-content tw:border-input tw:border-warning"
                     maxLength={200}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -288,17 +290,17 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                   />
                 )}
               </form.Field>
-            </Form.Group>
+            </AdminField>
 
-            <Form.Group className="tw:mb-4" controlId="member-address">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            <AdminField className="tw:mb-4" controlId="member-address">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_people_address_label()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field name="address">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="text"
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     maxLength={300}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -306,18 +308,17 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                   />
                 )}
               </form.Field>
-            </Form.Group>
+            </AdminField>
 
-            <Form.Group className="tw:mb-4" controlId="member-notes">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            <AdminField className="tw:mb-4" controlId="member-notes">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.registration_notes()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field name="notes">
                 {(field) => (
-                  <Form.Control
-                    as="textarea"
+                  <AdminTextarea
                     rows={4}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     maxLength={2000}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -325,17 +326,17 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                   />
                 )}
               </form.Field>
-            </Form.Group>
+            </AdminField>
 
             <form.Field name="active">
               {(field) => (
-                <Form.Check
+                <AdminCheck
                   type="switch"
                   id="member-active"
                   className="tw:text-subtle"
                   label={m.admin_people_active_label()}
                   checked={field.value}
-                  onChange={(e) => field.handleChange(e.target.checked)}
+                  onCheckedChange={(e) => field.handleChange(e)}
                 />
               )}
             </form.Field>
@@ -359,7 +360,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               )}
             </Button>
           </DialogFooter>
-        </Form>
+        </form>
       </DialogContent>
     </Dialog>
   );

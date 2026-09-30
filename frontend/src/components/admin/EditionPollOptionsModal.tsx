@@ -1,9 +1,16 @@
+import {
+  AdminInput,
+  AdminField,
+  AdminLabel,
+  AdminSelect,
+  AdminOption,
+} from "@/components/admin/AdminFields";
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -178,9 +185,9 @@ export default function EditionPollOptionsModal({
                         >
                           {editingId === option.id ? (
                             <>
-                              <Form.Control
+                              <AdminInput
                                 size="sm"
-                                className="bg-dark tw:text-content border-secondary"
+                                className="tw:bg-muted tw:text-content tw:border-input"
                                 value={editingLabel}
                                 onChange={(e) => setEditingLabel(e.target.value)}
                                 maxLength={200}
@@ -233,50 +240,50 @@ export default function EditionPollOptionsModal({
               );
             })
           )}
-          <Form
+          <form
             onSubmit={(e) => {
               e.preventDefault();
               void addForm.handleSubmit();
             }}
-            className="tw:flex tw:gap-2 tw:items-end tw:flex-wrap border-top border-secondary tw:pt-4"
+            className="tw:flex tw:gap-2 tw:items-end tw:flex-wrap border-top tw:border-input tw:pt-4"
           >
-            <Form.Group controlId="poll-option-add-kind">
-              <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
+            <AdminField controlId="poll-option-add-kind">
+              <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
                 {m.admin_poll_add_kind_label()}
-              </Form.Label>
+              </AdminLabel>
               <addForm.Field name="kind">
                 {(field) => (
-                  <Form.Select
+                  <AdminSelect
                     size="sm"
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value as PollOptionKind)}
+                    onValueChange={(e) => field.handleChange(e as PollOptionKind)}
                   >
                     {KINDS.map((kind) => (
-                      <option key={kind} value={kind}>
+                      <AdminOption key={kind} value={kind}>
                         {kindLabel(kind)}
-                      </option>
+                      </AdminOption>
                     ))}
-                  </Form.Select>
+                  </AdminSelect>
                 )}
               </addForm.Field>
-            </Form.Group>
-            <Form.Group controlId="poll-option-add-label" className="tw:grow">
-              <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
+            </AdminField>
+            <AdminField controlId="poll-option-add-label" className="tw:grow">
+              <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
                 {m.admin_poll_add_label_label()}
-              </Form.Label>
+              </AdminLabel>
               <addForm.Field name="label">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     size="sm"
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     maxLength={200}
                   />
                 )}
               </addForm.Field>
-            </Form.Group>
+            </AdminField>
             <Button
               type="submit"
               size="sm"
@@ -285,7 +292,7 @@ export default function EditionPollOptionsModal({
             >
               {m.admin_poll_add_button()}
             </Button>
-          </Form>
+          </form>
         </DialogBody>
         {confirmDialog}
       </DialogContent>

@@ -1,3 +1,4 @@
+import { AdminField, AdminLabel, AdminInput, AdminTextarea } from "@/components/admin/AdminFields";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -27,7 +28,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import {
   Dialog,
   DialogContent,
@@ -495,25 +496,24 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               <div className="tw:text-highlight tw:text-sm tw:font-semibold tw:mb-2">
                 {m.admin_faq_locale_nl_label()}
               </div>
-              <Form.Group className="tw:mb-4" controlId="faq-question-nl">
-                <Form.Label>{m.admin_faq_question_label()}</Form.Label>
-                <Form.Control
+              <AdminField className="tw:mb-4" controlId="faq-question-nl">
+                <AdminLabel>{m.admin_faq_question_label()}</AdminLabel>
+                <AdminInput
                   type="text"
                   value={form.questionNl}
                   onChange={(e) => setForm((p) => ({ ...p, questionNl: e.target.value }))}
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                 />
-              </Form.Group>
-              <Form.Group controlId="faq-answer-nl">
-                <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
-                <Form.Control
-                  as="textarea"
+              </AdminField>
+              <AdminField controlId="faq-answer-nl">
+                <AdminLabel>{m.admin_faq_answer_label()}</AdminLabel>
+                <AdminTextarea
                   rows={3}
                   value={form.answerNl}
                   onChange={(e) => setForm((p) => ({ ...p, answerNl: e.target.value }))}
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                 />
-              </Form.Group>
+              </AdminField>
             </div>
 
             <div className="tw:mb-6">
@@ -523,25 +523,24 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               <div className="tw:text-subtle tw:text-sm tw:mb-2">
                 {m.admin_faq_locale_optional_hint()}
               </div>
-              <Form.Group className="tw:mb-4" controlId="faq-question-en">
-                <Form.Label>{m.admin_faq_question_label()}</Form.Label>
-                <Form.Control
+              <AdminField className="tw:mb-4" controlId="faq-question-en">
+                <AdminLabel>{m.admin_faq_question_label()}</AdminLabel>
+                <AdminInput
                   type="text"
                   value={form.questionEn}
                   onChange={(e) => setForm((p) => ({ ...p, questionEn: e.target.value }))}
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                 />
-              </Form.Group>
-              <Form.Group controlId="faq-answer-en">
-                <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
-                <Form.Control
-                  as="textarea"
+              </AdminField>
+              <AdminField controlId="faq-answer-en">
+                <AdminLabel>{m.admin_faq_answer_label()}</AdminLabel>
+                <AdminTextarea
                   rows={3}
                   value={form.answerEn}
                   onChange={(e) => setForm((p) => ({ ...p, answerEn: e.target.value }))}
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                 />
-              </Form.Group>
+              </AdminField>
             </div>
 
             <div>
@@ -551,25 +550,24 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               <div className="tw:text-subtle tw:text-sm tw:mb-2">
                 {m.admin_faq_locale_optional_hint()}
               </div>
-              <Form.Group className="tw:mb-4" controlId="faq-question-fr">
-                <Form.Label>{m.admin_faq_question_label()}</Form.Label>
-                <Form.Control
+              <AdminField className="tw:mb-4" controlId="faq-question-fr">
+                <AdminLabel>{m.admin_faq_question_label()}</AdminLabel>
+                <AdminInput
                   type="text"
                   value={form.questionFr}
                   onChange={(e) => setForm((p) => ({ ...p, questionFr: e.target.value }))}
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                 />
-              </Form.Group>
-              <Form.Group controlId="faq-answer-fr">
-                <Form.Label>{m.admin_faq_answer_label()}</Form.Label>
-                <Form.Control
-                  as="textarea"
+              </AdminField>
+              <AdminField controlId="faq-answer-fr">
+                <AdminLabel>{m.admin_faq_answer_label()}</AdminLabel>
+                <AdminTextarea
                   rows={3}
                   value={form.answerFr}
                   onChange={(e) => setForm((p) => ({ ...p, answerFr: e.target.value }))}
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                 />
-              </Form.Group>
+              </AdminField>
             </div>
           </DialogBody>
           <DialogFooter>

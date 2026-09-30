@@ -103,7 +103,9 @@ function withQuery(ui: React.ReactElement) {
 /** The modals render through a portal, so query the document rather than the container. */
 function modalInputValues(): string[] {
   return Array.from(
-    document.querySelectorAll<HTMLInputElement>('[data-slot="dialog-body"] input.form-control'),
+    document.querySelectorAll<HTMLInputElement>(
+      '[data-slot="dialog-body"] input[data-slot="input"]',
+    ),
   ).map((input) => input.value);
 }
 
@@ -198,7 +200,7 @@ describe("admin edit modals prefill from the record being edited", () => {
     });
     expect(screen.getByLabelText("Month")).toHaveValue("march");
     expect(screen.getByLabelText("Year")).toHaveValue(2027);
-    expect(screen.getByLabelText("admin_edition_venue_label")).toHaveValue("venue-01");
+    expect(screen.getByLabelText("admin_edition_venue_label")).toHaveTextContent("Brussels Expo");
   });
 
   it("EditionModal defaults a new edition's venue once the venues arrive", async () => {
@@ -217,7 +219,9 @@ describe("admin edit modals prefill from the record being edited", () => {
       ),
     );
 
-    expect(screen.getByLabelText("admin_edition_venue_label")).toHaveValue("");
+    expect(screen.getByLabelText("admin_edition_venue_label")).toHaveTextContent(
+      "admin_edition_venue_placeholder",
+    );
 
     rerender(
       withQuery(
@@ -233,7 +237,7 @@ describe("admin edit modals prefill from the record being edited", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText("admin_edition_venue_label")).toHaveValue("venue-01");
+      expect(screen.getByLabelText("admin_edition_venue_label")).toHaveTextContent("Brussels Expo");
     });
   });
 
@@ -258,7 +262,7 @@ describe("admin edit modals prefill from the record being edited", () => {
     expect(screen.getByLabelText("admin_content_image_url_placeholder")).toHaveValue(
       "/img/moet.png",
     );
-    expect(screen.getByLabelText("admin_item_type")).toHaveValue("producer");
+    expect(screen.getByLabelText("admin_item_type")).toHaveTextContent("admin_item_producer");
     expect(screen.getByRole("combobox", { name: "admin_item_contact_person" })).toHaveValue(
       "Alice Dupont",
     );

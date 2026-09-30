@@ -1,3 +1,4 @@
+import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import MembersManagement from "@/components/admin/MembersManagement";
@@ -66,7 +67,7 @@ function renderMembersManagement(opts: RenderOpts = {}) {
 }
 
 describe("MembersManagement — rendering", () => {
-  it("renders member rows with name, email, phone, club name, notes, and registration count", () => {
+  it("renders member rows with name, email, phone, club name, notes, and registration count", async () => {
     renderMembersManagement({
       members: [makeMember({ id: "m1" })],
       registrationCountByPersonId: { m1: 5 },
@@ -82,13 +83,13 @@ describe("MembersManagement — rendering", () => {
     expect(scoped.getByText("5")).toBeInTheDocument();
   });
 
-  it("shows a loading spinner instead of the table when isLoading is true", () => {
+  it("shows a loading spinner instead of the table when isLoading is true", async () => {
     renderMembersManagement({ isLoading: true, members: [] });
     expect(document.querySelector(".spinner-border")).toBeTruthy();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("shows the no-results message when members is empty and not loading", () => {
+  it("shows the no-results message when members is empty and not loading", async () => {
     renderMembersManagement({ members: [], isLoading: false });
     expect(screen.getByText("admin_members_no_results")).toBeInTheDocument();
   });
@@ -155,7 +156,7 @@ describe("MembersManagement — client-side pagination", () => {
     makeMember({ id: `m${i}`, name: `Member ${String(i).padStart(2, "0")}` }),
   );
 
-  it("shows only the first page of rows and pages through the rest", () => {
+  it("shows only the first page of rows and pages through the rest", async () => {
     renderMembersManagement({ members: manyMembers });
 
     expect(screen.getByText("Member 00")).toBeInTheDocument();
@@ -172,7 +173,7 @@ describe("MembersManagement — client-side pagination", () => {
     expect(screen.getByText("Member 24")).toBeInTheDocument();
   });
 
-  it("exports every filtered row as CSV, not just the rendered page", () => {
+  it("exports every filtered row as CSV, not just the rendered page", async () => {
     renderMembersManagement({ members: manyMembers });
 
     fireEvent.click(screen.getByRole("button", { name: "admin_export_csv" }));
@@ -184,7 +185,7 @@ describe("MembersManagement — client-side pagination", () => {
 });
 
 describe("MembersManagement — active/inactive filter", () => {
-  it("filters rows to only inactive members when 'inactive' is selected", () => {
+  it("filters rows to only inactive members when 'inactive' is selected", async () => {
     renderMembersManagement({
       members: [
         makeMember({ id: "m1", name: "Active Ann", active: true }),
@@ -195,9 +196,10 @@ describe("MembersManagement — active/inactive filter", () => {
     expect(screen.getByText("Active Ann")).toBeInTheDocument();
     expect(screen.getByText("Inactive Ian")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("combobox", { name: "admin_people_active_label" }), {
-      target: { value: "inactive" },
-    });
+    await selectAdminOption(
+      screen.getByRole("combobox", { name: "admin_people_active_label" }),
+      "inactive",
+    );
 
     expect(screen.queryByText("Active Ann")).not.toBeInTheDocument();
     expect(screen.getByText("Inactive Ian")).toBeInTheDocument();
@@ -205,7 +207,7 @@ describe("MembersManagement — active/inactive filter", () => {
 });
 
 describe("MembersManagement — email action", () => {
-  it("shows an accessible email action only when the member has an address", () => {
+  it("shows an accessible email action only when the member has an address", async () => {
     renderMembersManagement({
       members: [makeMember(), makeMember({ id: "no-email", name: "No Email", email: "" })],
     });

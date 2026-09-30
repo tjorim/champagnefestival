@@ -1,3 +1,5 @@
+import { readAdminOptions } from "../helpers/adminSelect";
+import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -237,11 +239,11 @@ function realisticFixture(): Required<
 describe("getDayLabel", () => {
   const dayOptions = [{ eventId: "event-1", date: "2026-08-01", label: "Saturday — 08:00" }];
 
-  it("prefers the active edition's day-option label when the event is found", () => {
+  it("prefers the active edition's day-option label when the event is found", async () => {
     expect(getDayLabel(makeLayout({ eventId: "event-1" }), dayOptions)).toBe("Saturday — 08:00");
   });
 
-  it("falls back to the layout's own event title and date when the event belongs to a different edition", () => {
+  it("falls back to the layout's own event title and date when the event belongs to a different edition", async () => {
     const lastYear = makeLayout({
       eventId: "event-old",
       eventTitle: "Breakfast tasting",
@@ -252,7 +254,7 @@ describe("getDayLabel", () => {
     );
   });
 
-  it("falls back to the layout's own label when neither the day option nor an event title is available", () => {
+  it("falls back to the layout's own label when neither the day option nor an event title is available", async () => {
     const noTitle = makeLayout({
       eventId: "event-old",
       eventTitle: "",
@@ -272,12 +274,12 @@ describe("LayoutEditor", () => {
     previewLayoutRestore.mockReset();
   });
 
-  it("renders the empty state when there are no rooms", () => {
+  it("renders the empty state when there are no rooms", async () => {
     renderLayoutEditor();
     expect(screen.getByText("admin_room_no_rooms")).toBeInTheDocument();
   });
 
-  it("renders a realistic fixture: room tab and table names appear", () => {
+  it("renders a realistic fixture: room tab and table names appear", async () => {
     renderLayoutEditor(realisticFixture());
     // "Main Hall" appears both in the room tab and the active-room header.
     expect(screen.getAllByText("Main Hall").length).toBeGreaterThan(0);
@@ -289,9 +291,10 @@ describe("LayoutEditor", () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
     fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
-    fireEvent.change(screen.getByRole("combobox", { name: "admin_layout_assign_booking" }), {
-      target: { value: "reg-1" },
-    });
+    await selectAdminOption(
+      screen.getByRole("combobox", { name: "admin_layout_assign_booking" }),
+      "reg-1",
+    );
     fireEvent.click(screen.getByRole("button", { name: "admin_layout_assign_booking" }));
     await waitFor(() =>
       expect(callbacks.onSaveAllocations).toHaveBeenCalledWith("reg-1", [
@@ -308,9 +311,10 @@ describe("LayoutEditor", () => {
     });
     const { callbacks } = renderLayoutEditor(fixture);
     fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
-    fireEvent.change(screen.getByRole("combobox", { name: "admin_layout_move_booking Jane Doe" }), {
-      target: { value: "table-2" },
-    });
+    await selectAdminOption(
+      screen.getByRole("combobox", { name: "admin_layout_move_booking Jane Doe" }),
+      "table-2",
+    );
     await waitFor(() =>
       expect(callbacks.onSaveAllocations).toHaveBeenCalledWith("reg-1", [
         { tableId: "table-2", guestCount: 2, exclusive: false },
@@ -321,7 +325,7 @@ describe("LayoutEditor", () => {
     await waitFor(() => expect(callbacks.onSaveAllocations).toHaveBeenLastCalledWith("reg-1", []));
   });
 
-  it("switches rooms when a different room tab is clicked", () => {
+  it("switches rooms when a different room tab is clicked", async () => {
     const fixture = realisticFixture();
     fixture.rooms = [makeRoom(), makeRoom2()];
     fixture.layouts = [makeLayout(), makeLayout2()];
@@ -343,7 +347,7 @@ describe("LayoutEditor", () => {
     expect(screen.queryByText("Table A")).not.toBeInTheDocument();
   });
 
-  it("add-table modal derives capacity from the selected type", () => {
+  it("add-table modal derives capacity from the selected type", async () => {
     const fixture = realisticFixture();
     fixture.tableTypes = [makeTableType({ id: "tt-1", name: "Round 8", capacity: 8 })];
     const { callbacks } = renderLayoutEditor(fixture);
@@ -359,9 +363,7 @@ describe("LayoutEditor", () => {
     fireEvent.change(within(dialog).getByLabelText("admin_table_name"), {
       target: { value: "New Table" },
     });
-    fireEvent.change(within(dialog).getByLabelText("admin_table_type_select"), {
-      target: { value: "tt-1" },
-    });
+    await selectAdminOption(within(dialog).getByLabelText("admin_table_type_select"), "tt-1");
     expect(saveButton).not.toBeDisabled();
 
     fireEvent.click(saveButton);
@@ -369,7 +371,7 @@ describe("LayoutEditor", () => {
     expect(callbacks.onAddTable).toHaveBeenCalledWith("New Table", "layout-1", "tt-1");
   });
 
-  it("add-table modal: filters the table type select to the active room's venue", () => {
+  it("add-table modal: filters the table type select to the active room's venue", async () => {
     const fixture = realisticFixture();
     fixture.tableTypes = [
       makeTableType({ id: "tt-1", name: "Round 8" }),
@@ -381,12 +383,12 @@ describe("LayoutEditor", () => {
 
     const dialog = screen.getByRole("dialog");
     const select = within(dialog).getByLabelText("admin_table_type_select") as HTMLSelectElement;
-    const optionValues = Array.from(select.options).map((o) => o.value);
+    const optionValues = (await readAdminOptions(select)).map((o) => o.value);
     expect(optionValues).toContain("tt-1");
     expect(optionValues).not.toContain("tt-2");
   });
 
-  it("selected-table detail: filters the change-type select to the active room's venue", () => {
+  it("selected-table detail: filters the change-type select to the active room's venue", async () => {
     const fixture = realisticFixture();
     fixture.tableTypes = [
       makeTableType({ id: "tt-1", name: "Round 8" }),
@@ -397,12 +399,12 @@ describe("LayoutEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
 
     const select = screen.getByLabelText("admin_layout_table_type_label") as HTMLSelectElement;
-    const optionValues = Array.from(select.options).map((o) => o.value);
+    const optionValues = (await readAdminOptions(select)).map((o) => o.value);
     expect(optionValues).toContain("tt-1");
     expect(optionValues).not.toContain("tt-2");
   });
 
-  it("add-area modal: Save disabled until label filled, then calls onAddArea", () => {
+  it("add-area modal: Save disabled until label filled, then calls onAddArea", async () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);
 
@@ -620,11 +622,9 @@ describe("LayoutEditor", () => {
         ).toBeInTheDocument(),
       );
 
-      fireEvent.change(
+      await selectAdminOption(
         dialog.getByRole("combobox", { name: "admin_layout_revisions_compare_from" }),
-        {
-          target: { value: "1" },
-        },
+        "1",
       );
 
       await waitFor(() =>
