@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { expect, it } from "vitest";
@@ -48,4 +48,37 @@ it("opens an admin tooltip from keyboard focus and carries portal scope", async 
   expect((await axe(tooltip)).violations).toEqual([]);
   await user.keyboard("{Escape}");
   expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+});
+
+it("dismisses a tooltip when the pointer leaves its trigger", async () => {
+  const user = userEvent.setup();
+  render(
+    <Tooltip>
+      <TooltipTrigger>Producer</TooltipTrigger>
+      <TooltipContent>Used in editions: 2026</TooltipContent>
+    </Tooltip>,
+  );
+  const trigger = screen.getByRole("button", { name: "Producer" });
+  await user.hover(trigger);
+  expect(await screen.findByRole("tooltip")).toBeVisible();
+  await user.unhover(trigger);
+  await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
+});
+
+it("dismisses a tooltip when keyboard focus moves away", async () => {
+  const user = userEvent.setup();
+  render(
+    <>
+      <Tooltip>
+        <TooltipTrigger>Producer</TooltipTrigger>
+        <TooltipContent>Used in editions: 2026</TooltipContent>
+      </Tooltip>
+      <button>Next control</button>
+    </>,
+  );
+  await user.tab();
+  expect(await screen.findByRole("tooltip")).toBeVisible();
+  await user.tab();
+  expect(screen.getByRole("button", { name: "Next control" })).toHaveFocus();
+  await waitFor(() => expect(screen.queryByRole("tooltip")).not.toBeInTheDocument());
 });

@@ -51,11 +51,13 @@ No write endpoint, payload, retry policy or mutation ownership changes.
 
 Component tests cover keyboard activation, single-open answers, focus return,
 hidden/inert account panels, retained search input, progress values and tooltip
-portal scope, with jest-axe checks for the migrated primitives. Existing admin
-accessibility checks remain in place.
+portal scope and dismissal on pointer exit, blur and Escape, with jest-axe checks
+for the migrated primitives. Existing admin accessibility checks remain in place.
 
 `e2e/public-widgets.spec.ts` exercises menus, tabs and FAQ under all five themes
 at 1440px and 390px, checks horizontal overflow and public portal ownership,
+asserts that tab selection changes the computed theme surface and deselection
+restores it, verifies FAQ chevron rotation on expansion and collapse,
 and saves full-page PNGs as Playwright attachments. Remuage's existing suite
 also checks its desktop composition, 320px minimum width, mobile dialog and
 registration/standalone/admin theme behaviour.

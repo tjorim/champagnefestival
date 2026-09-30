@@ -1,4 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
+
+// Exclude focus outlines: selection must change the theme surface itself.
+async function tabSurface(tab: Locator) {
+  return tab.evaluate((element) => {
+    const style = getComputedStyle(element);
+    return [style.color, style.backgroundColor, style.backgroundImage, style.borderBottomColor];
+  });
+}
 
 for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage"]) {
   for (const width of [1440, 390]) {
@@ -36,15 +44,30 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage"]) {
       }
       const tabs = page.locator("#schedule").getByRole("tab");
       await expect(tabs.first()).toBeVisible();
+      const inactiveSurface = await tabSurface(tabs.nth(1));
       await tabs.first().focus();
       await page.keyboard.press("ArrowRight");
       await expect(tabs.nth(1)).toBeFocused();
       await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "true");
-      await expect(page.locator("#schedule").getByRole("tabpanel")).toBeVisible();
+      await expect.poll(() => tabSurface(tabs.nth(1))).not.toEqual(inactiveSurface);
+      await page.keyboard.press("ArrowLeft");
+      await expect(tabs.nth(1)).toHaveAttribute("aria-selected", "false");
+      await expect.poll(() => tabSurface(tabs.nth(1))).toEqual(inactiveSurface);
+      await page.keyboard.press("ArrowRight");
+      const panelId = await tabs.nth(1).getAttribute("aria-controls");
+      expect(panelId).toBeTruthy();
+      await expect(page.locator(`[id="${panelId}"]`)).toBeVisible();
       const faq = page.locator('#faq [data-slot="accordion-trigger"]').first();
+      const chevron = faq.locator("svg");
+      await expect(chevron).toHaveCSS("transform", "none");
       await faq.focus();
       await page.keyboard.press("Enter");
       await expect(faq).toHaveAttribute("aria-expanded", "true");
+      await expect(chevron).toHaveCSS("transform", "matrix(-1, 0, 0, -1, 0, 0)");
+      await page.keyboard.press("Enter");
+      await expect(faq).toHaveAttribute("aria-expanded", "false");
+      await expect(chevron).toHaveCSS("transform", "none");
+      await page.keyboard.press("Enter");
       await expect(page.locator('#faq [data-slot="accordion-content"]')).toBeVisible();
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
         true,
