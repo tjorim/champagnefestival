@@ -1,3 +1,13 @@
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  EyeIcon,
+  EyeOffIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 /**
  * FaqManagement — CRUD for the public FAQ section's question/answer pairs.
  *
@@ -315,7 +325,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                 aria-label={m.admin_faq_move_up()}
                 title={m.admin_faq_move_up()}
               >
-                <i className="bi bi-caret-up-fill" aria-hidden="true" />
+                <Icon icon={ChevronUpIcon} />
               </Button>
               <Button
                 size="sm"
@@ -326,7 +336,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                 aria-label={m.admin_faq_move_down()}
                 title={m.admin_faq_move_down()}
               >
-                <i className="bi bi-caret-down-fill" aria-hidden="true" />
+                <Icon icon={ChevronDownIcon} />
               </Button>
             </div>
           ),
@@ -370,7 +380,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                   aria-label={m.admin_edit()}
                   title={m.admin_edit()}
                 >
-                  <i className="bi bi-pencil" aria-hidden="true" />
+                  <Icon icon={PencilIcon} />
                 </Button>
                 <Button
                   size="sm"
@@ -380,7 +390,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                   aria-label={item.active ? m.admin_content_archive() : m.admin_content_restore()}
                   title={item.active ? m.admin_content_archive() : m.admin_content_restore()}
                 >
-                  <i className={item.active ? "bi bi-eye-slash" : "bi bi-eye"} aria-hidden="true" />
+                  <Icon icon={item.active ? EyeOffIcon : EyeIcon} />
                 </Button>
                 <Button
                   size="sm"
@@ -390,7 +400,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                   aria-label={m.admin_delete()}
                   title={m.admin_delete()}
                 >
-                  <i className="bi bi-trash" aria-hidden="true" />
+                  <Icon icon={TrashIcon} />
                 </Button>
               </div>
             );
@@ -408,7 +418,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
         <Card.Header className="d-flex align-items-center justify-content-between">
           <span className="fw-semibold">{m.admin_content_faq_section()}</span>
           <Button variant="outline-warning" size="sm" onClick={openAdd}>
-            <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+            <Icon icon={PlusIcon} className="tw:me-1" />
             {m.admin_add_faq_item()}
           </Button>
         </Card.Header>

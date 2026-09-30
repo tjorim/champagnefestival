@@ -1,3 +1,21 @@
+import {
+  ArrowLeftRightIcon,
+  CalendarCheckIcon,
+  CheckIcon,
+  CircleCheckIcon,
+  ClipboardIcon,
+  EyeIcon,
+  FileSpreadsheetIcon,
+  MailIcon,
+  NotebookTextIcon,
+  PencilIcon,
+  TrashIcon,
+  TriangleAlertIcon,
+  UserPlusIcon,
+  UserRoundCogIcon,
+  UsersIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useState, useCallback, useMemo, useEffect } from "react";
 import {
@@ -340,7 +358,7 @@ export default function PeopleManagement({
                 </div>
                 {isDuplicate && (
                   <div className="text-warning small">
-                    <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
+                    <Icon icon={TriangleAlertIcon} className="tw:me-1" />
                     {m.admin_people_duplicates_same_email()}
                   </div>
                 )}
@@ -396,7 +414,7 @@ export default function PeopleManagement({
                     title={m.admin_people_view_registrations()}
                     aria-label={`${m.admin_people_view_registrations()}: ${person.name}`}
                   >
-                    <i className="bi bi-eye" aria-hidden="true" />
+                    <Icon icon={EyeIcon} />
                   </Button>
                 )}
               </>
@@ -433,7 +451,7 @@ export default function PeopleManagement({
                     title={m.admin_email_compose_for({ name: person.name })}
                     aria-label={m.admin_email_compose_for({ name: person.name })}
                   >
-                    <i className="bi bi-envelope" aria-hidden="true" />
+                    <Icon icon={MailIcon} />
                   </Button>
                 )}
                 <Button
@@ -446,7 +464,7 @@ export default function PeopleManagement({
                   title={m.admin_people_edit_title()}
                   aria-label={m.admin_people_edit_title()}
                 >
-                  <i className="bi bi-pencil" aria-hidden="true" />
+                  <Icon icon={PencilIcon} />
                 </Button>
                 <Button
                   size="sm"
@@ -458,7 +476,7 @@ export default function PeopleManagement({
                   title={m.admin_people_delete_title()}
                   aria-label={m.admin_people_delete_title()}
                 >
-                  <i className="bi bi-trash" aria-hidden="true" />
+                  <Icon icon={TrashIcon} />
                 </Button>
                 {duplicates.map((dup) => (
                   <Button
@@ -468,7 +486,7 @@ export default function PeopleManagement({
                     onClick={() => openMerge(person, dup)}
                     title={`${m.admin_people_merge_title()}: ${dup.name}`}
                   >
-                    <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
+                    <Icon icon={UserRoundCogIcon} className="tw:me-1" />
                     {m.admin_people_merge_title()}
                   </Button>
                 ))}
@@ -538,7 +556,7 @@ export default function PeopleManagement({
                   setShowForm(true);
                 }}
               >
-                <i className="bi bi-person-plus me-1" aria-hidden="true" />
+                <Icon icon={UserPlusIcon} className="tw:me-1" />
                 {m.admin_people_add_person()}
               </Button>
             </div>
@@ -567,10 +585,7 @@ export default function PeopleManagement({
               title={m.admin_people_copy_emails_tooltip()}
               aria-label={`${m.admin_people_copy_emails_tooltip()} (${filteredEmails.length})`}
             >
-              <i
-                className={`bi ${copySuccess ? "bi-check2" : "bi-clipboard-fill"} me-1`}
-                aria-hidden="true"
-              />
+              <Icon icon={copySuccess ? CheckIcon : ClipboardIcon} className="tw:me-1" />
               {copySuccess ? m.admin_people_emails_copied() : `${filteredEmails.length}`}
             </Button>
             <Form.Control
@@ -697,7 +712,7 @@ export default function PeopleManagement({
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle id="merge-modal-title">
-                <i className="bi bi-person-fill-gear me-2" aria-hidden="true" />
+                <Icon icon={UserRoundCogIcon} className="tw:me-2" />
                 {m.admin_people_merge_title()}
               </DialogTitle>
             </DialogHeader>
@@ -738,7 +753,7 @@ export default function PeopleManagement({
                           })
                         }
                       >
-                        <i className="bi bi-arrow-left-right" aria-hidden="true" />
+                        <Icon icon={ArrowLeftRightIcon} />
                       </Button>
                     </Card.Header>
                     <Card.Body className="py-2 small">
@@ -779,7 +794,7 @@ export default function PeopleManagement({
                   />
                 ) : (
                   <>
-                    <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
+                    <Icon icon={UserRoundCogIcon} className="tw:me-1" />
                     {m.admin_people_merge_confirm()}
                   </>
                 )}
@@ -800,7 +815,7 @@ export default function PeopleManagement({
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle className="tw:text-destructive">
-                <i className="bi bi-trash me-2" aria-hidden="true" />
+                <Icon icon={TrashIcon} className="tw:me-2" />
                 {m.admin_people_delete_title()}
               </DialogTitle>
             </DialogHeader>
@@ -820,7 +835,7 @@ export default function PeopleManagement({
                 {deleting ? (
                   <Spinner as="span" animation="border" size="sm" className="me-1" />
                 ) : (
-                  <i className="bi bi-trash me-1" aria-hidden="true" />
+                  <Icon icon={TrashIcon} className="tw:me-1" />
                 )}
                 {m.admin_action_confirm()}
               </Button>
@@ -851,7 +866,7 @@ export default function PeopleManagement({
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle>
-                <i className="bi bi-calendar-check me-2" aria-hidden="true" />
+                <Icon icon={CalendarCheckIcon} className="tw:me-2" />
                 {m.admin_people_registrations_modal_title()} — {viewRegistrationsPerson.name}
               </DialogTitle>
             </DialogHeader>
@@ -922,7 +937,7 @@ export default function PeopleManagement({
                           <div>
                             <div className="fw-semibold small">{r.eventTitle}</div>
                             <div className="text-secondary small">
-                              <i className="bi bi-people me-1" aria-hidden="true" />
+                              <Icon icon={UsersIcon} className="tw:me-1" />
                               {r.guestCount}
                               <span className="ms-2">€{r.amountPaid.toFixed(2)}</span>
                             </div>
@@ -960,7 +975,7 @@ export default function PeopleManagement({
                             </Badge>
                             {r.checkedIn && (
                               <Badge bg="success">
-                                <i className="bi bi-check2-circle me-1" aria-hidden="true" />
+                                <Icon icon={CircleCheckIcon} className="tw:me-1" />
                                 {m.admin_checked_in()}
                               </Badge>
                             )}
@@ -993,7 +1008,7 @@ export default function PeopleManagement({
                     }}
                     title={m.admin_payment_view_ledger()}
                   >
-                    <i className="bi bi-journal-text me-1" aria-hidden="true" />
+                    <Icon icon={NotebookTextIcon} className="tw:me-1" />
                     {m.admin_payment_view_ledger()}
                   </Button>
                   <Button
@@ -1006,7 +1021,7 @@ export default function PeopleManagement({
                     {exportingLedger ? (
                       <Spinner as="span" animation="border" size="sm" className="me-1" />
                     ) : (
-                      <i className="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true" />
+                      <Icon icon={FileSpreadsheetIcon} className="tw:me-1" />
                     )}
                     {m.admin_people_export_ledger()}
                   </Button>

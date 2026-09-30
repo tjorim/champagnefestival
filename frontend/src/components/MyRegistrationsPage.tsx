@@ -1,3 +1,14 @@
+import {
+  CalendarDaysIcon,
+  CircleCheckIcon,
+  InboxIcon,
+  LogOutIcon,
+  MailOpenIcon,
+  RefreshCwIcon,
+  TriangleAlertIcon,
+  UsersIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -390,7 +401,7 @@ export default function MyRegistrationsPage() {
             <div id="email-error" role="alert">
               {error && (
                 <Alert variant="danger" className="mb-3">
-                  <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                  <Icon icon={TriangleAlertIcon} className="tw:me-2" />
                   {error}
                 </Alert>
               )}
@@ -423,7 +434,7 @@ export default function MyRegistrationsPage() {
                 </>
               ) : (
                 <>
-                  <i className="bi bi-envelope-paper me-2" aria-hidden="true" />
+                  <Icon icon={MailOpenIcon} className="tw:me-2" />
                   {m.my_registrations_request_link()}
                 </>
               )}
@@ -493,14 +504,14 @@ export default function MyRegistrationsPage() {
 
           {tokenError && (
             <Alert variant="danger" className="mb-3" role="alert">
-              <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+              <Icon icon={TriangleAlertIcon} className="tw:me-2" />
               {tokenError}
             </Alert>
           )}
 
           {oidcError && (
             <Alert variant="danger" className="mb-3" role="alert">
-              <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+              <Icon icon={TriangleAlertIcon} className="tw:me-2" />
               {m.my_registrations_error()}
             </Alert>
           )}
@@ -509,7 +520,7 @@ export default function MyRegistrationsPage() {
             <>
               {registrations !== null && registrations.length === 0 ? (
                 <Alert variant="info" className="text-center">
-                  <i className="bi bi-inbox me-2" aria-hidden="true" />
+                  <Icon icon={InboxIcon} className="tw:me-2" />
                   {m.my_registrations_no_results()}
                 </Alert>
               ) : registrations !== null ? (
@@ -559,7 +570,7 @@ export default function MyRegistrationsPage() {
                     <Card key={registration.id} bg="dark" text="white" border="secondary">
                       <Card.Header className="d-flex align-items-center justify-content-between">
                         <span className="fw-semibold">
-                          <i className="bi bi-calendar-event me-2" aria-hidden="true" />
+                          <Icon icon={CalendarDaysIcon} className="tw:me-2" />
                           {registration.eventTitle}
                         </span>
                         <span className="text-secondary small">
@@ -618,13 +629,13 @@ export default function MyRegistrationsPage() {
                           </Badge>
                           {registration.checkedIn && (
                             <Badge bg="success">
-                              <i className="bi bi-check2-circle me-1" aria-hidden="true" />
+                              <Icon icon={CircleCheckIcon} className="tw:me-1" />
                               {m.admin_checked_in()}
                             </Badge>
                           )}
                         </div>
                         <div className="text-secondary small">
-                          <i className="bi bi-people me-1" aria-hidden="true" />
+                          <Icon icon={UsersIcon} className="tw:me-1" />
                           {registration.guestCount} {m.my_registrations_guests_label()}
                         </div>
                         {registration.eventDate && (
@@ -689,7 +700,7 @@ export default function MyRegistrationsPage() {
 
               {showSignOut && signOutError && (
                 <Alert variant="danger" className="mt-3 mb-0" role="alert">
-                  <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                  <Icon icon={TriangleAlertIcon} className="tw:me-2" />
                   {signOutError}
                 </Alert>
               )}
@@ -711,7 +722,7 @@ export default function MyRegistrationsPage() {
                       aria-hidden="true"
                     />
                   ) : (
-                    <i className="bi bi-box-arrow-right me-2" aria-hidden="true" />
+                    <Icon icon={LogOutIcon} className="tw:me-2" />
                   )}
                   {m.my_registrations_sign_out()}
                 </Button>
@@ -723,7 +734,7 @@ export default function MyRegistrationsPage() {
                     className="mt-3 w-100"
                     onClick={resetToRequestForm}
                   >
-                    <i className="bi bi-arrow-repeat me-2" aria-hidden="true" />
+                    <Icon icon={RefreshCwIcon} className="tw:me-2" />
                     {m.my_registrations_request_new_link()}
                   </Button>
                 )

@@ -1,3 +1,5 @@
+import { CircleArrowDownIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 interface RemuageHeroProps {
   festivalName: string;
   title: string;
@@ -24,7 +26,7 @@ const RemuageHero = ({
         <div className="remuage-hero__actions">
           <a href="#next-festival" className="btn remuage-button remuage-button--primary">
             {learnMoreLabel}
-            <i className="bi bi-arrow-down-circle ms-2" aria-hidden="true" />
+            <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
           </a>
           <a href="#schedule" className="btn remuage-button remuage-button--secondary">
             {scheduleLabel}

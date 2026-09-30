@@ -45,7 +45,7 @@
   /* icon inherits gradient, so reset it */
 }
 
-#admin h2#admin-title i {
+#admin h2#admin-title svg {
   -webkit-text-fill-color: initial;
   background: none;
   color: var(--adm-primary);
@@ -215,20 +215,8 @@
 }
 
 /* ---- Success icon in auth bar ---- */
-#admin .bi-check-circle-fill.text-success {
+#admin .lucide-circle-check.tw\:text-success {
   color: var(--adm-success) !important;
-}
-
-/* ---- Spinning refresh icon ---- */
-@keyframes adm-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-#admin .spin {
-  display: inline-block;
-  animation: adm-spin 700ms linear infinite;
 }
 
 /* ---- Reduced motion ---- */
@@ -291,12 +279,9 @@
   flex-shrink: 0;
 }
 
-.admin-sidebar-brand i {
+.admin-sidebar-brand svg {
   font-size: 1rem;
-  background: linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--adm-primary);
   flex-shrink: 0;
 }
 
@@ -353,7 +338,7 @@
   border-left: 2px solid transparent;
 }
 
-.admin-nav-item i {
+.admin-nav-item svg {
   font-size: 0.85rem;
   flex-shrink: 0;
   opacity: 0.7;
@@ -373,7 +358,7 @@
   font-weight: 500;
 }
 
-.admin-nav-item.is-active i {
+.admin-nav-item.is-active svg {
   opacity: 1;
 }
 
@@ -452,7 +437,7 @@
   color: #6b6b6b;
 }
 
-.admin-auth-status .bi-check-circle-fill {
+.admin-auth-status .lucide-circle-check {
   color: #4caf82 !important;
   font-size: 0.7rem;
 }

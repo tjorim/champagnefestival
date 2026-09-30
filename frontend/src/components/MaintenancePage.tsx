@@ -1,3 +1,5 @@
+import { ExternalLinkIcon, ImageIcon, XIcon, ZoomInIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { m } from "@/paraglide/messages";
 import { usePublicSettings } from "@/hooks/useMaintenanceMode";
@@ -304,7 +306,7 @@ export default function MaintenancePage() {
             rel="noopener noreferrer"
             className="btn btn-lg maintenance-page__cta"
           >
-            <i className="bi bi-facebook me-2" aria-hidden="true" />
+            <Icon icon={ExternalLinkIcon} className="tw:me-2" />
             {m.maintenance_facebook_cta()}
           </a>
         )}
@@ -326,7 +328,7 @@ export default function MaintenancePage() {
                 color: "#8a7554",
               }}
             >
-              <i className="bi bi-image" style={{ fontSize: "2rem" }} aria-hidden="true" />
+              <Icon icon={ImageIcon} className="tw:text-3xl" />
               <span style={{ fontSize: "0.9rem", padding: "0 1rem", textAlign: "center" }}>
                 {m.maintenance_flyer_placeholder()}
               </span>
@@ -359,7 +361,7 @@ export default function MaintenancePage() {
               }}
             />
             <span className="maintenance-page__flyer-overlay" aria-hidden="true">
-              <i className="bi bi-zoom-in" style={{ fontSize: "1.75rem", color: "#fff8ec" }} />
+              <Icon icon={ZoomInIcon} className="tw:text-3xl tw:text-primary-foreground" />
             </span>
           </button>
         )}
@@ -401,7 +403,7 @@ export default function MaintenancePage() {
               cursor: "pointer",
             }}
           >
-            <i className="bi bi-x-lg" aria-hidden="true" />
+            <Icon icon={XIcon} />
           </button>
           <img
             src={FLYER_SRC}

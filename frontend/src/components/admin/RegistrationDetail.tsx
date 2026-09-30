@@ -1,3 +1,18 @@
+import {
+  CircleCheckIcon,
+  ContactRoundIcon,
+  LogInIcon,
+  MailIcon,
+  MinusIcon,
+  PlusIcon,
+  QrCodeIcon,
+  ShoppingBasketIcon,
+  TriangleAlertIcon,
+  UserCheckIcon,
+  UserIcon,
+  UserRoundCogIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useCallback, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
@@ -136,7 +151,7 @@ export default function RegistrationDetail({
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle id="res-detail-modal-title">
-            <i className="bi bi-person-fill me-2" aria-hidden="true" />
+            <Icon icon={UserIcon} className="tw:me-2" />
             {registration.person.name}
           </DialogTitle>
         </DialogHeader>
@@ -210,7 +225,7 @@ export default function RegistrationDetail({
             </Badge>
             {registration.checkedIn ? (
               <Badge bg="success">
-                <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
+                <Icon icon={CircleCheckIcon} className="tw:me-1" />
                 {m.admin_checked_in()}
                 {registration.checkedInAt && (
                   <span className="ms-1 fw-normal">
@@ -224,7 +239,7 @@ export default function RegistrationDetail({
             {!simpleRsvp &&
               (registration.strapIssued ? (
                 <Badge bg="info">
-                  <i className="bi bi-person-badge-fill me-1" aria-hidden="true" />
+                  <Icon icon={ContactRoundIcon} className="tw:me-1" />
                   {m.admin_strap_issued()}
                 </Badge>
               ) : (
@@ -235,7 +250,7 @@ export default function RegistrationDetail({
           {emailDuplicates.length > 0 && (
             <Alert variant="warning" className="py-2 mb-3">
               <div className="fw-semibold mb-1">
-                <i className="bi bi-exclamation-triangle-fill me-1" aria-hidden="true" />
+                <Icon icon={TriangleAlertIcon} className="tw:me-1" />
                 {m.admin_people_duplicates_title()}
               </div>
               <div className="small mb-2">{m.admin_people_duplicates_same_email()}</div>
@@ -247,7 +262,7 @@ export default function RegistrationDetail({
                     variant="warning"
                     onClick={() => onMergeDuplicate?.(registration.personId, dup.id)}
                   >
-                    <i className="bi bi-person-fill-gear me-1" aria-hidden="true" />
+                    <Icon icon={UserRoundCogIcon} className="tw:me-1" />
                     {m.admin_people_merge_title()}: {dup.name}
                   </Button>
                 ))}
@@ -311,7 +326,7 @@ export default function RegistrationDetail({
           {registration.person.email && (
             <section className="mb-4" aria-labelledby="registration-email-heading">
               <h6 id="registration-email-heading" className="text-warning mb-2">
-                <i className="bi bi-envelope me-2" aria-hidden="true" />
+                <Icon icon={MailIcon} className="tw:me-2" />
                 {m.admin_email_registration_title()}
               </h6>
               <div className="d-flex flex-wrap align-items-end gap-2">
@@ -344,7 +359,7 @@ export default function RegistrationDetail({
           {!simpleRsvp && registration.orderItems.length > 0 && (
             <div className="mb-4">
               <h6 className="text-warning mb-2">
-                <i className="bi bi-basket-fill me-2" aria-hidden="true" />
+                <Icon icon={ShoppingBasketIcon} className="tw:me-2" />
                 {m.admin_bottle_fulfillment()}
               </h6>
               <ListGroup>
@@ -374,7 +389,7 @@ export default function RegistrationDetail({
                           disabled={item.deliveredQuantity <= 0}
                           title={m.admin_mark_not_delivered()}
                         >
-                          <i className="bi bi-dash" aria-hidden="true" />
+                          <Icon icon={MinusIcon} />
                         </Button>
                         <Form.Control
                           key={item.deliveredQuantity}
@@ -415,7 +430,7 @@ export default function RegistrationDetail({
                           disabled={item.deliveredQuantity >= item.quantity}
                           title={m.admin_mark_delivered()}
                         >
-                          <i className="bi bi-plus" aria-hidden="true" />
+                          <Icon icon={PlusIcon} />
                         </Button>
                       </div>
                     </div>
@@ -427,7 +442,7 @@ export default function RegistrationDetail({
 
           <div className="mb-4">
             <h6 className="text-warning mb-2">
-              <i className="bi bi-person-check-fill me-2" aria-hidden="true" />
+              <Icon icon={UserCheckIcon} className="tw:me-2" />
               {m.admin_check_in_title()}
             </h6>
             <div className="d-flex gap-2 flex-wrap">
@@ -437,7 +452,7 @@ export default function RegistrationDetail({
                   size="sm"
                   onClick={() => onCheckIn(registration.id)}
                 >
-                  <i className="bi bi-box-arrow-in-right me-1" aria-hidden="true" />
+                  <Icon icon={LogInIcon} className="tw:me-1" />
                   {m.admin_mark_checked_in()}
                 </Button>
               )}
@@ -447,7 +462,7 @@ export default function RegistrationDetail({
                   size="sm"
                   onClick={() => onIssueStrap(registration.id)}
                 >
-                  <i className="bi bi-person-badge me-1" aria-hidden="true" />
+                  <Icon icon={ContactRoundIcon} className="tw:me-1" />
                   {m.admin_issue_strap()}
                 </Button>
               )}
@@ -457,7 +472,7 @@ export default function RegistrationDetail({
           {registration.checkInToken && (
             <div className="text-center">
               <h6 className="text-warning mb-2">
-                <i className="bi bi-qr-code me-2" aria-hidden="true" />
+                <Icon icon={QrCodeIcon} className="tw:me-2" />
                 {m.admin_qr_code()}
               </h6>
               <p className="text-secondary small mb-3">{m.admin_qr_scan_info()}</p>

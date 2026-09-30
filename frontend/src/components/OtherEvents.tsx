@@ -1,3 +1,5 @@
+import { CalendarCheckIcon, CalendarDaysIcon, MapPinIcon, UsersIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Card from "react-bootstrap/Card";
@@ -254,16 +256,16 @@ export default function OtherEvents() {
                         <h5 className="mb-1">{getEditionTitle(item.editionType)}</h5>
                         <p className="mb-1 fw-semibold">{item.event.title}</p>
                         <p className="mb-1 text-muted">
-                          <i className="bi bi-calendar-event me-2" aria-hidden="true" />
+                          <Icon icon={CalendarDaysIcon} className="tw:me-2" />
                           {formatDate(item.event.date)} • {item.event.startTime}
                         </p>
                         <p className="mb-1 text-muted">
-                          <i className="bi bi-geo-alt me-2" aria-hidden="true" />
+                          <Icon icon={MapPinIcon} className="tw:me-2" />
                           {item.venueName}
                         </p>
                         {item.coOrganizerName && (
                           <p className="mb-1 text-muted">
-                            <i className="bi bi-people me-2" aria-hidden="true" />
+                            <Icon icon={UsersIcon} className="tw:me-2" />
                             {m.other_events_co_organized_with()}{" "}
                             {item.coOrganizerWebsite ? (
                               <a
@@ -290,7 +292,7 @@ export default function OtherEvents() {
                           )}
                           onClick={() => setSelectedEvent(item.event)}
                         >
-                          <i className="bi bi-calendar-check me-2" aria-hidden="true" />
+                          <Icon icon={CalendarCheckIcon} className="tw:me-2" />
                           {item.event.registrationsCloseAt &&
                           new Date(item.event.registrationsCloseAt).getTime() <= now
                             ? m.registration_closed()

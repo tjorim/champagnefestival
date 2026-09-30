@@ -1,3 +1,18 @@
+import {
+  CheckIcon,
+  CircleCheckIcon,
+  ContactRoundIcon,
+  DownloadIcon,
+  Ellipsis,
+  Euro,
+  FileSpreadsheetIcon,
+  LogInIcon,
+  PlusIcon,
+  QrCodeIcon,
+  ShoppingCartIcon,
+  X,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -22,7 +37,6 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button as TableButton } from "@/components/ui/button";
-import { Ellipsis, X, Euro } from "lucide-react";
 import Form from "react-bootstrap/Form";
 import {
   Dialog,
@@ -623,11 +637,13 @@ export default function RegistrationList({
                 <div className="fw-semibold d-flex align-items-center gap-1">
                   {reg.person.name}
                   {isLinked && (
-                    <i
-                      className="bi bi-person-badge text-info"
+                    <span
+                      role="img"
                       title={m.admin_linked_exhibitor_title()}
                       aria-label={m.admin_allocation_contact_aria()}
-                    />
+                    >
+                      <Icon icon={ContactRoundIcon} className="tw:text-primary" />
+                    </span>
                   )}
                   <Badge bg={isStandalone ? "info" : "warning"} text="dark">
                     {(() => {
@@ -641,7 +657,7 @@ export default function RegistrationList({
                 <div className="text-secondary small">{reg.person.email}</div>
                 {!isStandalone && reg.orderItems.length > 0 && (
                   <div className="text-warning small">
-                    <i className="bi bi-cart-fill me-1" aria-hidden="true" />
+                    <Icon icon={ShoppingCartIcon} className="tw:me-1" />
                     {reg.orderItems.filter((o) => o.delivered).length}/{reg.orderItems.length}{" "}
                     {m.admin_order_items()}
                   </div>
@@ -681,15 +697,16 @@ export default function RegistrationList({
               <>
                 {reg.checkedIn ? (
                   <Badge bg="success">
-                    <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
+                    <Icon icon={CircleCheckIcon} className="tw:me-1" />
                     {m.admin_checked_in()}
                   </Badge>
                 ) : (
                   <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
                 )}
                 {!isStandalone && reg.strapIssued && (
-                  <Badge bg="info" className="ms-1">
-                    <i className="bi bi-person-badge-fill" aria-hidden="true" />
+                  <Badge bg="info" className="ms-1" title={m.admin_strap_issued()}>
+                    <Icon icon={ContactRoundIcon} />
+                    <span className="tw:sr-only">{m.admin_strap_issued()}</span>
                   </Badge>
                 )}
               </>
@@ -755,7 +772,7 @@ export default function RegistrationList({
                   title={m.admin_qr_code()}
                   aria-label={m.admin_qr_code()}
                 >
-                  <i className="bi bi-qr-code" aria-hidden="true" />
+                  <Icon icon={QrCodeIcon} />
                 </Button>
                 {reg.status === "pending" && (
                   <Button
@@ -765,7 +782,7 @@ export default function RegistrationList({
                     title={m.admin_action_confirm()}
                     aria-label={m.admin_action_confirm()}
                   >
-                    <i className="bi bi-check-lg" aria-hidden="true" />
+                    <Icon icon={CheckIcon} />
                   </Button>
                 )}
                 {!reg.checkedIn && (
@@ -777,7 +794,7 @@ export default function RegistrationList({
                     title={m.admin_mark_checked_in()}
                     aria-label={m.admin_mark_checked_in()}
                   >
-                    <i className="bi bi-box-arrow-in-right" aria-hidden="true" />
+                    <Icon icon={LogInIcon} />
                   </Button>
                 )}
                 {reg.checkedIn && !reg.strapIssued && !isStandaloneRegistration(reg) && (
@@ -789,7 +806,7 @@ export default function RegistrationList({
                     title={m.admin_issue_strap()}
                     aria-label={m.admin_issue_strap()}
                   >
-                    <i className="bi bi-person-badge" aria-hidden="true" />
+                    <Icon icon={ContactRoundIcon} />
                   </Button>
                 )}
                 {hasMoreActions && (
@@ -1077,12 +1094,12 @@ export default function RegistrationList({
                     aria-hidden="true"
                   />
                 ) : (
-                  <i className="bi bi-download me-1" aria-hidden="true" />
+                  <Icon icon={DownloadIcon} className="tw:me-1" />
                 )}
                 {m.admin_export_csv()}
               </Button>
               <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
-                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                <Icon icon={PlusIcon} className="tw:me-1" />
                 {m.admin_add_registration()}
               </Button>
             </div>
@@ -1199,7 +1216,7 @@ export default function RegistrationList({
                               event: eventStats.title,
                             })}
                           >
-                            <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" />
+                            <Icon icon={FileSpreadsheetIcon} />
                           </Button>
                         </span>
                       </div>

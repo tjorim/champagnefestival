@@ -1,3 +1,5 @@
+import { CircleArrowDownIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 interface RivieraHeroProps {
   festivalName: string;
   title: string;
@@ -24,7 +26,7 @@ const RivieraHero = ({
         <div className="riviera-hero__actions">
           <a href="#next-festival" className="btn riviera-button riviera-button--primary">
             {learnMoreLabel}
-            <i className="bi bi-arrow-down-circle ms-2" aria-hidden="true" />
+            <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
           </a>
           <a href="#schedule" className="btn riviera-button riviera-button--secondary">
             {scheduleLabel}

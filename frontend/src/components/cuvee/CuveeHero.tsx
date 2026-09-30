@@ -1,3 +1,5 @@
+import { CircleArrowDownIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 interface CuveeHeroProps {
   festivalName: string;
   title: string;
@@ -32,7 +34,7 @@ const CuveeHero = ({
         <div className="cuvee-hero__actions">
           <a href="#next-festival" className="btn cuvee-button">
             {learnMoreLabel}
-            <i className="bi bi-arrow-down-circle ms-2" aria-hidden="true" />
+            <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
           </a>
           <a href="#schedule" className="btn cuvee-button cuvee-button--ghost">
             {scheduleLabel}

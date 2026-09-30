@@ -1,3 +1,5 @@
+import { FileSpreadsheetIcon, PencilIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useState, useMemo, useCallback } from "react";
 import { type FilterFn, type SortingState } from "@tanstack/react-table";
@@ -206,7 +208,7 @@ export default function VolunteersManagement({
                   title={m.admin_volunteers_edit_title()}
                   aria-label={m.admin_volunteers_edit_title()}
                 >
-                  <i className="bi bi-pencil" aria-hidden="true" />
+                  <Icon icon={PencilIcon} />
                 </Button>
                 <Button
                   size="sm"
@@ -218,7 +220,7 @@ export default function VolunteersManagement({
                   title={m.admin_volunteers_delete_title()}
                   aria-label={m.admin_volunteers_delete_title()}
                 >
-                  <i className="bi bi-trash" aria-hidden="true" />
+                  <Icon icon={TrashIcon} />
                 </Button>
               </div>
             );
@@ -260,7 +262,7 @@ export default function VolunteersManagement({
                 onClick={() => void handleExportCsv()}
                 disabled={exporting}
               >
-                <i className="bi bi-file-earmark-spreadsheet me-1" aria-hidden="true" />
+                <Icon icon={FileSpreadsheetIcon} className="tw:me-1" />
                 {m.admin_volunteers_export_csv()}
               </Button>
               <Button
@@ -271,7 +273,7 @@ export default function VolunteersManagement({
                   setShowForm(true);
                 }}
               >
-                <i className="bi bi-hand-thumbs-up me-1" aria-hidden="true" />
+                <Icon icon={ThumbsUpIcon} className="tw:me-1" />
                 {m.admin_volunteers_add()}
               </Button>
             </div>
@@ -406,7 +408,7 @@ export default function VolunteersManagement({
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle className="tw:text-destructive">
-                <i className="bi bi-trash me-2" aria-hidden="true" />
+                <Icon icon={TrashIcon} className="tw:me-2" />
                 {m.admin_volunteers_delete_title()}
               </DialogTitle>
             </DialogHeader>
@@ -422,7 +424,7 @@ export default function VolunteersManagement({
                 {deleting ? (
                   <Spinner as="span" animation="border" size="sm" className="me-1" />
                 ) : (
-                  <i className="bi bi-trash me-1" aria-hidden="true" />
+                  <Icon icon={TrashIcon} className="tw:me-1" />
                 )}
                 {m.admin_action_confirm()}
               </Button>

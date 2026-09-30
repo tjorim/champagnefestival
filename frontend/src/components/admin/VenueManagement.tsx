@@ -1,3 +1,16 @@
+import {
+  ArchiveIcon,
+  CircleIcon,
+  InfoIcon,
+  MapPinIcon,
+  PencilIcon,
+  PlusIcon,
+  RotateCcwIcon,
+  SquareIcon,
+  TrashIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 /**
  * VenueManagement — CRUD for venues and the rooms and table types they own.
  *
@@ -573,11 +586,11 @@ export default function VenueManagement({
     <Card bg="dark" text="white" border="secondary">
       <Card.Header className="d-flex align-items-center justify-content-between">
         <span className="fw-semibold">
-          <i className="bi bi-geo-alt me-2" aria-hidden="true" />
+          <Icon icon={MapPinIcon} className="tw:me-2" />
           {m.admin_venue_add()}
         </span>
         <Button variant="outline-warning" size="sm" onClick={openAddVenue}>
-          <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+          <Icon icon={PlusIcon} className="tw:me-1" />
           {m.admin_venue_add()}
         </Button>
       </Card.Header>
@@ -599,7 +612,7 @@ export default function VenueManagement({
         )}
         {venues.length === 0 ? (
           <p className="text-secondary text-center small my-3">
-            <i className="bi bi-info-circle me-1" aria-hidden="true" />
+            <Icon icon={InfoIcon} className="tw:me-1" />
             {m.admin_no_venues()}
           </p>
         ) : (
@@ -638,7 +651,7 @@ export default function VenueManagement({
                       aria-label={`${m.admin_edit()} ${venue.name}`}
                       title={m.admin_edit()}
                     >
-                      <i className="bi bi-pencil" aria-hidden="true" />
+                      <Icon icon={PencilIcon} />
                     </Button>
                     {isArchived ? (
                       <>
@@ -649,7 +662,7 @@ export default function VenueManagement({
                           aria-label={m.admin_content_restore()}
                           title={m.admin_content_restore()}
                         >
-                          <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                          <Icon icon={RotateCcwIcon} />
                         </Button>
                         <Button
                           variant="outline-danger"
@@ -658,7 +671,7 @@ export default function VenueManagement({
                           aria-label={m.admin_delete()}
                           title={m.admin_delete()}
                         >
-                          <i className="bi bi-trash" aria-hidden="true" />
+                          <Icon icon={TrashIcon} />
                         </Button>
                       </>
                     ) : (
@@ -669,7 +682,7 @@ export default function VenueManagement({
                         aria-label={m.admin_content_archive()}
                         title={m.admin_content_archive()}
                       >
-                        <i className="bi bi-archive" aria-hidden="true" />
+                        <Icon icon={ArchiveIcon} />
                       </Button>
                     )}
                   </div>
@@ -685,7 +698,7 @@ export default function VenueManagement({
                         size="sm"
                         onClick={() => openAddRoom(venue.id)}
                       >
-                        <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                        <Icon icon={PlusIcon} className="tw:me-1" />
                         {m.admin_room_add()}
                       </Button>
                     </div>
@@ -717,11 +730,16 @@ export default function VenueManagement({
                               />
                               {room.name}
                               {room.dimensionsPlaceholder && (
-                                <i
-                                  className="bi bi-exclamation-triangle-fill fs-5xs text-warning"
+                                <span
+                                  role="img"
                                   aria-label={m.admin_room_dimensions_placeholder_badge()}
                                   title={m.admin_room_dimensions_placeholder_hint()}
-                                />
+                                >
+                                  <Icon
+                                    icon={TriangleAlertIcon}
+                                    className="tw:text-xs tw:text-warning"
+                                  />
+                                </span>
                               )}
                             </span>
                             <span className="d-flex gap-1 flex-shrink-0">
@@ -734,7 +752,7 @@ export default function VenueManagement({
                                     aria-label={m.admin_edit()}
                                     title={m.admin_edit()}
                                   >
-                                    <i className="bi bi-pencil" aria-hidden="true" />
+                                    <Icon icon={PencilIcon} />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -743,7 +761,7 @@ export default function VenueManagement({
                                     aria-label={m.admin_content_archive()}
                                     title={m.admin_content_archive()}
                                   >
-                                    <i className="bi bi-archive" aria-hidden="true" />
+                                    <Icon icon={ArchiveIcon} />
                                   </Button>
                                 </>
                               ) : (
@@ -755,10 +773,7 @@ export default function VenueManagement({
                                     aria-label={m.admin_content_restore()}
                                     title={m.admin_content_restore()}
                                   >
-                                    <i
-                                      className="bi bi-arrow-counterclockwise"
-                                      aria-hidden="true"
-                                    />
+                                    <Icon icon={RotateCcwIcon} />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -767,7 +782,7 @@ export default function VenueManagement({
                                     aria-label={`${m.admin_delete()} ${room.name}`}
                                     title={m.admin_delete()}
                                   >
-                                    <i className="bi bi-trash" aria-hidden="true" />
+                                    <Icon icon={TrashIcon} />
                                   </Button>
                                 </>
                               )}
@@ -786,7 +801,7 @@ export default function VenueManagement({
                         size="sm"
                         onClick={() => openAddTableType(venue.id)}
                       >
-                        <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                        <Icon icon={PlusIcon} className="tw:me-1" />
                         {m.admin_add_table_type()}
                       </Button>
                     </div>
@@ -805,10 +820,7 @@ export default function VenueManagement({
                             )}
                           >
                             <span className="d-flex align-items-center gap-2">
-                              <i
-                                className={tt.shape === "round" ? "bi bi-circle" : "bi bi-square"}
-                                aria-hidden="true"
-                              />
+                              <Icon icon={tt.shape === "round" ? CircleIcon : SquareIcon} />
                               {tt.name}
                             </span>
                             <span className="d-flex gap-1 flex-shrink-0">
@@ -821,7 +833,7 @@ export default function VenueManagement({
                                     aria-label={m.admin_edit()}
                                     title={m.admin_edit()}
                                   >
-                                    <i className="bi bi-pencil" aria-hidden="true" />
+                                    <Icon icon={PencilIcon} />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -830,7 +842,7 @@ export default function VenueManagement({
                                     aria-label={m.admin_content_archive()}
                                     title={m.admin_content_archive()}
                                   >
-                                    <i className="bi bi-archive" aria-hidden="true" />
+                                    <Icon icon={ArchiveIcon} />
                                   </Button>
                                 </>
                               ) : (
@@ -842,10 +854,7 @@ export default function VenueManagement({
                                     aria-label={m.admin_content_restore()}
                                     title={m.admin_content_restore()}
                                   >
-                                    <i
-                                      className="bi bi-arrow-counterclockwise"
-                                      aria-hidden="true"
-                                    />
+                                    <Icon icon={RotateCcwIcon} />
                                   </Button>
                                   <Button
                                     size="sm"
@@ -854,7 +863,7 @@ export default function VenueManagement({
                                     aria-label={`${m.admin_delete()} ${tt.name}`}
                                     title={m.admin_delete()}
                                   >
-                                    <i className="bi bi-trash" aria-hidden="true" />
+                                    <Icon icon={TrashIcon} />
                                   </Button>
                                 </>
                               )}

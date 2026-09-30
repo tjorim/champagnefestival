@@ -1,3 +1,5 @@
+import { InfoIcon, VideoOffIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
 import Alert from "react-bootstrap/Alert";
@@ -209,13 +211,13 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
 
       {status === "permission-denied" && (
         <Alert variant="warning" className="mt-2 mb-0">
-          <i className="bi bi-camera-video-off me-2" aria-hidden="true" />
+          <Icon icon={VideoOffIcon} className="tw:me-2" />
           {m.checkin_scanner_permission_denied()}
         </Alert>
       )}
       {(status === "error" || status === "unsupported") && (
         <Alert variant="secondary" className="mt-2 mb-0">
-          <i className="bi bi-info-circle me-2" aria-hidden="true" />
+          <Icon icon={InfoIcon} className="tw:me-2" />
           {m.checkin_scanner_unavailable()}
         </Alert>
       )}

@@ -47,7 +47,7 @@ html[data-visual-theme="remuage"] .admin-sidebar-brand {
 }
 
 html[data-visual-theme="remuage"] .admin-sidebar-brand h2#admin-title,
-html[data-visual-theme="remuage"] .admin-sidebar-brand h2#admin-title i {
+html[data-visual-theme="remuage"] .admin-sidebar-brand h2#admin-title svg {
   color: #fff !important;
 }
 

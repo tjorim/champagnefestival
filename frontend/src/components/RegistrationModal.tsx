@@ -1,3 +1,12 @@
+import {
+  CalendarCheckIcon,
+  CircleCheckIcon,
+  MinusIcon,
+  PlusIcon,
+  TicketIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useMutation } from "@tanstack/react-query";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useState, useCallback, useMemo, useRef } from "react";
@@ -275,7 +284,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       <DialogContent size="lg">
         <DialogHeader>
           <DialogTitle id="registration-modal-title">
-            <i className="bi bi-ticket-perforated-fill text-warning me-2" aria-hidden="true" />
+            <Icon icon={TicketIcon} className="tw:text-warning tw:me-2" />
             {event?.title ?? m.registration_modal_title()}
           </DialogTitle>
         </DialogHeader>
@@ -283,12 +292,12 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         <DialogBody>
           {!event ? (
             <Alert variant="danger" className="mb-0">
-              <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+              <Icon icon={TriangleAlertIcon} className="tw:me-2" />
               {m.registration_error()}
             </Alert>
           ) : submitSuccess ? (
             <Alert variant="success" className="mb-0">
-              <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
+              <Icon icon={CircleCheckIcon} className="tw:me-2" />
               {m.registration_success()}
               <div className="mt-2">{m.registration_reference({ reference: registrationId })}</div>
               <a href="/me" className="alert-link">
@@ -563,7 +572,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                               disabled={qty === 0}
                               aria-label={`Decrease quantity of ${label}`}
                             >
-                              <i className="bi bi-dash" aria-hidden="true" />
+                              <Icon icon={MinusIcon} />
                             </Button>
                             <span
                               className="tw:text-foreground"
@@ -583,7 +592,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                               }
                               aria-label={`Increase quantity of ${label}`}
                             >
-                              <i className="bi bi-plus" aria-hidden="true" />
+                              <Icon icon={PlusIcon} />
                             </Button>
                           </div>
                         </div>
@@ -636,7 +645,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
               {submitError && (
                 <Alert variant="danger" className="mb-3">
-                  <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                  <Icon icon={TriangleAlertIcon} className="tw:me-2" />
                   {submitError}
                 </Alert>
               )}
@@ -662,7 +671,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-calendar-check me-2" aria-hidden="true" />
+                    <Icon icon={CalendarCheckIcon} className="tw:me-2" />
                     {m.registration_submit()}
                   </>
                 )}

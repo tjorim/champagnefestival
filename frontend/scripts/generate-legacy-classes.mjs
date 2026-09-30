@@ -7,7 +7,6 @@ import selectorParser from "postcss-selector-parser";
 const root = resolve(import.meta.dirname, "..");
 const sources = [
   "node_modules/bootstrap/dist/css/bootstrap.css",
-  "node_modules/bootstrap-icons/font/bootstrap-icons.css",
   "node_modules/leaflet/dist/leaflet.css",
   "node_modules/swiper/swiper.css",
   "src/components/admin/admin.css",

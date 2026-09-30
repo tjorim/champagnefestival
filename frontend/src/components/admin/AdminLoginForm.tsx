@@ -1,3 +1,5 @@
+import { HistoryIcon, ShieldIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Alert from "react-bootstrap/Alert";
@@ -20,14 +22,14 @@ export default function AdminLoginForm() {
   return (
     <Container>
       <h2 id="admin-title" className="text-center mb-4 text-warning">
-        <i className="bi bi-shield-lock me-2" aria-hidden="true" />
+        <Icon icon={ShieldIcon} className="tw:me-2" />
         {m.admin_title()}
       </h2>
       <div className="row justify-content-center">
         <div className="col-12 col-sm-8 col-md-6 col-lg-4 text-center">
           {signOutReason === "session-expired" && !auth.authError ? (
             <Alert variant="info">
-              <i className="bi bi-clock-history me-2" aria-hidden="true" />
+              <Icon icon={HistoryIcon} className="tw:me-2" />
               {m.auth_session_expired_notice()}
             </Alert>
           ) : null}

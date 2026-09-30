@@ -1,3 +1,5 @@
+import { FileSpreadsheetIcon, NotebookTextIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 /**
  * AnalyticsDashboard — cross-edition attendance/check-in trend view.
  *
@@ -291,7 +293,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                       edition: `${edition.year} ${edition.month}`,
                     })}
                   >
-                    <i className="bi bi-journal-text" aria-hidden="true" />
+                    <Icon icon={NotebookTextIcon} />
                   </Button>
                   <Button
                     variant="outline-secondary"
@@ -307,7 +309,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                     {exportingEditionId === edition.editionId ? (
                       <Spinner as="span" animation="border" size="sm" />
                     ) : (
-                      <i className="bi bi-file-earmark-spreadsheet" aria-hidden="true" />
+                      <Icon icon={FileSpreadsheetIcon} />
                     )}
                   </Button>
                 </TableCell>

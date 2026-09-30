@@ -1,3 +1,14 @@
+import {
+  ArchiveIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  PencilIcon,
+  PlusIcon,
+  RotateCcwIcon,
+  TrashIcon,
+  UserIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 /**
  * ContentManagement — admin tab for editing producers, sponsors, and editions.
  */
@@ -382,7 +393,7 @@ export function ContentSection({
           <small className="text-secondary text-truncate d-none d-md-inline">{item.image}</small>
           {item.contactPerson && (
             <small className="text-secondary text-truncate d-none d-lg-inline">
-              <i className="bi bi-person me-1" aria-hidden="true" />
+              <Icon icon={UserIcon} className="tw:me-1" />
               {item.contactPerson.name}
             </small>
           )}
@@ -395,7 +406,7 @@ export function ContentSection({
               onClick={() => openEdit(item)}
               aria-label={`Edit ${item.name}`}
             >
-              <i className="bi bi-pencil" aria-hidden="true" />
+              <Icon icon={PencilIcon} />
             </Button>
           )}
           {!isArchived ? (
@@ -406,7 +417,7 @@ export function ContentSection({
               aria-label={`${m.admin_content_archive()} ${item.name}`}
               title={m.admin_content_archive()}
             >
-              <i className="bi bi-archive" aria-hidden="true" />
+              <Icon icon={ArchiveIcon} />
             </Button>
           ) : (
             <>
@@ -417,7 +428,7 @@ export function ContentSection({
                 aria-label={`${m.admin_content_restore()} ${item.name}`}
                 title={m.admin_content_restore()}
               >
-                <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                <Icon icon={RotateCcwIcon} />
               </Button>
               <Button
                 variant="outline-danger"
@@ -425,7 +436,7 @@ export function ContentSection({
                 onClick={() => handleDelete(item.id)}
                 aria-label={`${m.admin_delete()} ${item.name}`}
               >
-                <i className="bi bi-trash" aria-hidden="true" />
+                <Icon icon={TrashIcon} />
               </Button>
             </>
           )}
@@ -458,7 +469,7 @@ export function ContentSection({
           )}
         </h6>
         <Button variant="outline-primary" size="sm" onClick={openAdd}>
-          <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+          <Icon icon={PlusIcon} className="tw:me-1" />
           {m.admin_content_add_item()}
         </Button>
       </div>
@@ -490,7 +501,7 @@ export function ContentSection({
             onClick={() => setBulkArchiveOpen(true)}
             title={m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
           >
-            <i className="bi bi-archive me-1" aria-hidden="true" />
+            <Icon icon={ArchiveIcon} className="tw:me-1" />
             {m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
           </Button>
         )}
@@ -530,10 +541,7 @@ export function ContentSection({
             className="text-secondary px-0"
             onClick={() => setArchivedOpen((value) => !value)}
           >
-            <i
-              className={`bi bi-chevron-${archivedOpen ? "down" : "right"} me-1`}
-              aria-hidden="true"
-            />
+            <Icon icon={archivedOpen ? ChevronDownIcon : ChevronRightIcon} className="tw:me-1" />
             {m.admin_content_archived_section()}
           </Button>
           {archivedOpen && (
@@ -690,7 +698,7 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
           </ButtonGroup>
         </div>
         <Button size="sm" variant="outline-primary" onClick={() => setAddModalOpen(true)}>
-          <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+          <Icon icon={PlusIcon} className="tw:me-1" />
           {m.admin_content_edition_add()}
         </Button>
       </div>

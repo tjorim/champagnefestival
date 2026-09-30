@@ -1,3 +1,23 @@
+import {
+  ChevronDown,
+  ChevronUp,
+  CircleAlertIcon,
+  CircleCheckIcon,
+  ContactRoundIcon,
+  InfoIcon,
+  MapIcon,
+  MinusIcon,
+  OctagonXIcon,
+  PlusIcon,
+  ScanQrCodeIcon,
+  Search,
+  ShoppingCartIcon,
+  TriangleAlertIcon,
+  UserCheckIcon,
+  UserIcon,
+  WifiOffIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
@@ -11,7 +31,6 @@ import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import Form from "react-bootstrap/Form";
 import { Button as SearchButton } from "@/components/ui/button";
-import { Search, ChevronDown, ChevronUp } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
@@ -85,20 +104,20 @@ function CheckInCard({
         )}
       >
         <span className="fw-semibold fs-5">
-          <i className="bi bi-person-fill me-2" aria-hidden="true" />
+          <Icon icon={UserIcon} className="tw:me-2" />
           {registration.name}
         </span>
         <div className="d-flex gap-2 flex-wrap">
           {isCancelled && <Badge bg="danger">{m.admin_status_cancelled()}</Badge>}
           {registration.checkedIn && (
             <Badge bg="success">
-              <i className="bi bi-check-circle-fill me-1" aria-hidden="true" />
+              <Icon icon={CircleCheckIcon} className="tw:me-1" />
               {m.admin_checked_in()}
             </Badge>
           )}
           {registration.strapIssued && (
             <Badge bg="info">
-              <i className="bi bi-person-badge-fill me-1" aria-hidden="true" />
+              <Icon icon={ContactRoundIcon} className="tw:me-1" />
               {m.admin_strap_issued()}
             </Badge>
           )}
@@ -111,14 +130,14 @@ function CheckInCard({
             <Alert variant="success" className="mb-3">
               <div className="d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <span>
-                  <i className="bi bi-check-circle-fill me-2" aria-hidden="true" />
+                  <Icon icon={CircleCheckIcon} className="tw:me-2" />
                   <strong>{m.checkin_success()}</strong>
                   {registration.strapIssued && (
                     <div className="mt-1">{m.checkin_strap_issued()}</div>
                   )}
                 </span>
                 <Button variant="outline-success" size="sm" onClick={onReturnToScanner}>
-                  <i className="bi bi-qr-code-scan me-2" aria-hidden="true" />
+                  <Icon icon={ScanQrCodeIcon} className="tw:me-2" />
                   {m.checkin_scan_next()}
                 </Button>
               </div>
@@ -131,7 +150,7 @@ function CheckInCard({
             search={{ edition: registration.editionId, table: registration.tableId }}
             className="btn btn-outline-warning w-100 mb-3"
           >
-            <i className="bi bi-map me-2" aria-hidden="true" />
+            <Icon icon={MapIcon} className="tw:me-2" />
             {m.venue_plan_show_table()}
           </Link>
         )}
@@ -139,13 +158,13 @@ function CheckInCard({
         <div role="alert" aria-live="assertive">
           {isCancelled && (
             <Alert variant="danger" className="mb-3">
-              <i className="bi bi-x-octagon-fill me-2" aria-hidden="true" />
+              <Icon icon={OctagonXIcon} className="tw:me-2" />
               {m.admin_status_cancelled()}
             </Alert>
           )}
           {isAlreadyCheckedIn && !success && registration.checkedInAt && (
             <Alert variant="warning" className="mb-3">
-              <i className="bi bi-exclamation-circle-fill me-2" aria-hidden="true" />
+              <Icon icon={CircleAlertIcon} className="tw:me-2" />
               {m.checkin_already_in()} {new Date(registration.checkedInAt).toLocaleTimeString()}
             </Alert>
           )}
@@ -171,7 +190,7 @@ function CheckInCard({
         {registration.orderItems.length > 0 && (
           <div className="mt-3">
             <p className="fw-semibold text-warning mb-2">
-              <i className="bi bi-cart-fill me-2" aria-hidden="true" />
+              <Icon icon={ShoppingCartIcon} className="tw:me-2" />
               {m.checkin_order_items()}
             </p>
             <ListGroup variant="flush">
@@ -202,7 +221,7 @@ function CheckInCard({
                         }
                         title={m.admin_mark_not_delivered()}
                       >
-                        <i className="bi bi-dash" aria-hidden="true" />
+                        <Icon icon={MinusIcon} />
                         <span className="visually-hidden">{m.admin_mark_not_delivered()}</span>
                       </Button>
                       <Form.Control
@@ -246,7 +265,7 @@ function CheckInCard({
                         }
                         title={m.admin_mark_delivered()}
                       >
-                        <i className="bi bi-plus" aria-hidden="true" />
+                        <Icon icon={PlusIcon} />
                         <span className="visually-hidden">{m.admin_mark_delivered()}</span>
                       </Button>
                     </div>
@@ -256,7 +275,7 @@ function CheckInCard({
             </ListGroup>
             {!canManageEntranceActions && registration.checkedIn && registration.strapIssued && (
               <div className="small text-secondary mt-2">
-                <i className="bi bi-info-circle me-1" aria-hidden="true" />
+                <Icon icon={InfoIcon} className="tw:me-1" />
                 {m.checkin_actions_login_required()}
               </div>
             )}
@@ -278,7 +297,7 @@ function CheckInCard({
                   className="me-2"
                 />
               ) : (
-                <i className="bi bi-person-check-fill me-2" aria-hidden="true" />
+                <Icon icon={UserCheckIcon} className="tw:me-2" />
               )}
               {m.checkin_do_checkin()}
             </Button>
@@ -300,7 +319,7 @@ function CheckInCard({
                   className="me-2"
                 />
               ) : (
-                <i className="bi bi-person-badge-fill me-2" aria-hidden="true" />
+                <Icon icon={ContactRoundIcon} className="tw:me-2" />
               )}
               {m.admin_issue_strap()}
             </Button>
@@ -584,13 +603,13 @@ export default function CheckInPage() {
     <section id="check-in" className="py-5" aria-labelledby="checkin-title">
       <Container>
         <h2 id="checkin-title" className="text-center mb-4 text-warning">
-          <i className="bi bi-qr-code-scan me-2" aria-hidden="true" />
+          <Icon icon={ScanQrCodeIcon} className="tw:me-2" />
           {m.checkin_title()}
         </h2>
 
         {!isOnline && (
           <Alert variant="danger" className="text-center" role="status">
-            <i className="bi bi-wifi-off me-2" aria-hidden="true" />
+            <Icon icon={WifiOffIcon} className="tw:me-2" />
             {m.checkin_offline_banner()}
           </Alert>
         )}
@@ -619,7 +638,7 @@ export default function CheckInPage() {
                   <CheckInScanner onDecode={handleScanDecode} />
 
                   <Alert variant="warning" className="text-center">
-                    <i className="bi bi-info-circle me-2" aria-hidden="true" />
+                    <Icon icon={InfoIcon} className="tw:me-2" />
                     {m.checkin_scan_prompt()}
                   </Alert>
 
@@ -721,10 +740,7 @@ export default function CheckInPage() {
 
                           {volunteerSearchQuery.isError && (
                             <Alert variant="danger" className="mt-3 mb-0" role="alert">
-                              <i
-                                className="bi bi-exclamation-triangle-fill me-2"
-                                aria-hidden="true"
-                              />
+                              <Icon icon={TriangleAlertIcon} className="tw:me-2" />
                               {volunteerSearchQuery.error.message === SESSION_EXPIRED_ERROR
                                 ? m.checkin_manual_search_session_expired()
                                 : volunteerSearchQuery.error.message === UNAUTHORIZED_ERROR
@@ -786,7 +802,7 @@ export default function CheckInPage() {
 
               {(mutationError || queryError) && (
                 <Alert variant="danger" role="alert">
-                  <i className="bi bi-exclamation-triangle-fill me-2" aria-hidden="true" />
+                  <Icon icon={TriangleAlertIcon} className="tw:me-2" />
                   {mutationError || queryError}
                 </Alert>
               )}

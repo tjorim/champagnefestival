@@ -1,3 +1,15 @@
+import {
+  ChevronDownIcon,
+  ChevronRightIcon,
+  CoffeeIcon,
+  MapPinIcon,
+  PencilIcon,
+  PlusIcon,
+  ShoppingBasketIcon,
+  TrashIcon,
+  TriangleAlertIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
@@ -167,7 +179,7 @@ export default function EditionCard({
           aria-expanded={open}
           aria-controls={collapseId}
         >
-          <i className={`bi bi-chevron-${open ? "down" : "right"} me-2`} aria-hidden="true" />
+          <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} className="tw:me-2" />
           {edition.id}
         </Button>
         <span className="d-flex align-items-center gap-2 flex-wrap">
@@ -204,13 +216,13 @@ export default function EditionCard({
         {eventsQuery.isFetching && <Spinner animation="border" size="sm" variant="warning" />}
         {saveError && (
           <span className="text-danger small">
-            <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
+            <Icon icon={TriangleAlertIcon} className="tw:me-1" />
             {saveError}
           </span>
         )}
         {deleteError && (
           <span className="text-danger small">
-            <i className="bi bi-exclamation-triangle me-1" aria-hidden="true" />
+            <Icon icon={TriangleAlertIcon} className="tw:me-1" />
             {deleteError}
           </span>
         )}
@@ -242,7 +254,7 @@ export default function EditionCard({
               aria-label={`${m.admin_poll_kind_dish()} / ${m.admin_poll_kind_soup()} / ${m.admin_poll_kind_dinner()} — ${edition.id}`}
               title={m.admin_poll_modal_title({ edition: edition.id })}
             >
-              <i className="bi bi-cup-hot" aria-hidden="true" />
+              <Icon icon={CoffeeIcon} />
             </Button>
             <Button
               size="sm"
@@ -250,7 +262,7 @@ export default function EditionCard({
               onClick={() => setEditionModalOpen(true)}
               aria-label={`${m.admin_edit()} ${edition.id}`}
             >
-              <i className="bi bi-pencil" aria-hidden="true" />
+              <Icon icon={PencilIcon} />
             </Button>
             <Button
               size="sm"
@@ -258,7 +270,7 @@ export default function EditionCard({
               onClick={() => setConfirmDelete(true)}
               aria-label={`${m.admin_delete()} ${edition.id}`}
             >
-              <i className="bi bi-trash" aria-hidden="true" />
+              <Icon icon={TrashIcon} />
             </Button>
           </span>
         )}
@@ -271,7 +283,7 @@ export default function EditionCard({
             if (!venue) return null;
             return (
               <p className="text-secondary small mb-2">
-                <i className="bi bi-geo-alt me-1" aria-hidden="true" />
+                <Icon icon={MapPinIcon} className="tw:me-1" />
                 {[venue.name, venue.address, venue.city, venue.country].filter(Boolean).join(", ")}
                 {!venue.active && (
                   <Badge bg="secondary" className="ms-2 fs-3xs">
@@ -285,7 +297,7 @@ export default function EditionCard({
           <div className="d-flex justify-content-between align-items-center mb-1">
             <h6 className="text-warning mb-0 small">{m.admin_content_edition_schedule()}</h6>
             <Button size="sm" variant="outline-secondary" onClick={openAddEvent}>
-              <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+              <Icon icon={PlusIcon} className="tw:me-1" />
               {m.admin_content_edition_add_event()}
             </Button>
           </div>
@@ -330,7 +342,7 @@ export default function EditionCard({
                       aria-label={`${m.admin_content_edition_manage_products()} ${event.title}`}
                       title={m.admin_content_edition_manage_products()}
                     >
-                      <i className="bi bi-basket" aria-hidden="true" />
+                      <Icon icon={ShoppingBasketIcon} />
                     </Button>
                     <Button
                       size="sm"
@@ -338,7 +350,7 @@ export default function EditionCard({
                       onClick={() => openEditEvent(event)}
                       aria-label={`Edit event ${event.title}`}
                     >
-                      <i className="bi bi-pencil" aria-hidden="true" />
+                      <Icon icon={PencilIcon} />
                     </Button>
                     <Button
                       size="sm"
@@ -346,7 +358,7 @@ export default function EditionCard({
                       onClick={() => handleRemoveEvent(event.id)}
                       aria-label={`Delete event ${event.title}`}
                     >
-                      <i className="bi bi-trash" aria-hidden="true" />
+                      <Icon icon={TrashIcon} />
                     </Button>
                   </span>
                 </ListGroup.Item>

@@ -1,3 +1,5 @@
+import { SaveIcon, UserPlusIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
@@ -187,7 +189,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
-            <i className="bi bi-person-plus me-2" aria-hidden="true" />
+            <Icon icon={UserPlusIcon} className="tw:me-2" />
             {isEdit ? m.admin_people_edit_title() : m.admin_people_create_title()}
           </DialogTitle>
         </DialogHeader>
@@ -435,7 +437,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               {isSubmitting ? (
                 <Spinner as="span" animation="border" size="sm" className="me-1" />
               ) : (
-                <i className="bi bi-floppy me-1" aria-hidden="true" />
+                <Icon icon={SaveIcon} className="tw:me-1" />
               )}
               {m.admin_people_save()}
             </Button>

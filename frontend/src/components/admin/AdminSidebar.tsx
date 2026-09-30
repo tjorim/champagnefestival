@@ -1,3 +1,36 @@
+import {
+  BuildingIcon,
+  CalendarCheckIcon,
+  CalendarDaysIcon,
+  CalendarIcon,
+  ChartColumnIcon,
+  ChartNoAxesCombinedIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CircleCheckIcon,
+  CircleHelpIcon,
+  ContactRoundIcon,
+  Grid3X3Icon,
+  HourglassIcon,
+  LayersIcon,
+  LogOutIcon,
+  MailIcon,
+  MapPinIcon,
+  MegaphoneIcon,
+  MenuIcon,
+  NotebookTextIcon,
+  RotateCwIcon,
+  SendIcon,
+  ShieldIcon,
+  SlidersHorizontalIcon,
+  StoreIcon,
+  ThumbsUpIcon,
+  UserIcon,
+  UsersIcon,
+  XIcon,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import React from "react";
 import clsx from "clsx";
 import Button from "react-bootstrap/Button";
@@ -6,7 +39,7 @@ import { m } from "@/paraglide/messages";
 
 interface SidebarItemProps {
   itemKey: string;
-  icon: string;
+  icon: LucideIcon;
   label: string;
   count?: number;
   activeKey: string;
@@ -33,7 +66,7 @@ function SidebarItem({
         setSidebarOpen(false);
       }}
     >
-      <i className={clsx("bi", icon)} aria-hidden="true" />
+      <Icon icon={icon} />
       <span>{label}</span>
       {count > 0 && <span className="admin-nav-count">{count}</span>}
     </button>
@@ -42,7 +75,7 @@ function SidebarItem({
 
 interface SidebarGroupProps {
   groupKey: string;
-  icon: string;
+  icon: LucideIcon;
   label: string;
   itemKeys: string[];
   children: React.ReactNode;
@@ -70,14 +103,11 @@ function SidebarGroup({
         aria-expanded={expandedGroups.has(groupKey)}
         aria-controls={`admin-nav-sub-${groupKey}`}
       >
-        <i className={clsx("bi", icon)} aria-hidden="true" />
+        <Icon icon={icon} />
         <span>{label}</span>
-        <i
-          className={clsx(
-            "bi admin-nav-chevron",
-            expandedGroups.has(groupKey) ? "bi-chevron-up" : "bi-chevron-down",
-          )}
-          aria-hidden="true"
+        <Icon
+          icon={expandedGroups.has(groupKey) ? ChevronUpIcon : ChevronDownIcon}
+          className="admin-nav-chevron"
         />
       </button>
       {expandedGroups.has(groupKey) && (
@@ -139,7 +169,7 @@ export default function AdminSidebar({
       <aside className={clsx("admin-sidebar", sidebarOpen && "admin-sidebar-open")}>
         {/* Brand */}
         <div className="admin-sidebar-brand">
-          <i className="bi bi-shield-lock" aria-hidden="true" />
+          <Icon icon={ShieldIcon} />
           <h2 id="admin-title">{m.admin_title()}</h2>
         </div>
 
@@ -152,7 +182,7 @@ export default function AdminSidebar({
         >
           <SidebarItem
             itemKey="registrations"
-            icon="bi-calendar-check"
+            icon={CalendarCheckIcon}
             label={m.admin_registrations_tab()}
             count={registrationCount}
             {...itemProps}
@@ -162,27 +192,27 @@ export default function AdminSidebar({
             <>
               <SidebarItem
                 itemKey="waitlist"
-                icon="bi-hourglass-split"
+                icon={HourglassIcon}
                 label={m.admin_waitlist_section()}
                 {...itemProps}
               />
 
               <SidebarItem
                 itemKey="scratchpad"
-                icon="bi-journal-text"
+                icon={NotebookTextIcon}
                 label={m.admin_scratchpad_section()}
                 {...itemProps}
               />
               <SidebarGroup
                 groupKey="events"
-                icon="bi-calendar-event"
+                icon={CalendarDaysIcon}
                 label={m.admin_events_group()}
                 itemKeys={["editions"]}
                 {...groupProps}
               >
                 <SidebarItem
                   itemKey="editions"
-                  icon="bi-calendar3"
+                  icon={CalendarIcon}
                   label={m.admin_content_editions_section()}
                   {...itemProps}
                 />
@@ -190,7 +220,7 @@ export default function AdminSidebar({
 
               <SidebarGroup
                 groupKey="content"
-                icon="bi-collection"
+                icon={LayersIcon}
                 label={m.admin_content_tab()}
                 itemKeys={[
                   "exhibitors",
@@ -205,43 +235,43 @@ export default function AdminSidebar({
               >
                 <SidebarItem
                   itemKey="exhibitors"
-                  icon="bi-shop"
+                  icon={StoreIcon}
                   label={m.admin_content_exhibitors_section()}
                   {...itemProps}
                 />
                 <SidebarItem
                   itemKey="faq"
-                  icon="bi-question-circle"
+                  icon={CircleHelpIcon}
                   label={m.admin_content_faq_section()}
                   {...itemProps}
                 />
                 <SidebarItem
                   itemKey="announcements"
-                  icon="bi-megaphone"
+                  icon={MegaphoneIcon}
                   label={m.admin_announcements_section()}
                   {...itemProps}
                 />
                 <SidebarItem
                   itemKey="composer"
-                  icon="bi-send"
+                  icon={SendIcon}
                   label={m.admin_composer_section()}
                   {...itemProps}
                 />
                 <SidebarItem
                   itemKey="policies"
-                  icon="bi-shield-lock"
+                  icon={ShieldIcon}
                   label={m.admin_policies_section()}
                   {...itemProps}
                 />
                 <SidebarItem
                   itemKey="contact-messages"
-                  icon="bi-envelope"
+                  icon={MailIcon}
                   label={m.admin_contact_messages_section()}
                   {...itemProps}
                 />
                 <SidebarItem
                   itemKey="settings"
-                  icon="bi-sliders"
+                  icon={SlidersHorizontalIcon}
                   label={m.admin_content_settings_section()}
                   {...itemProps}
                 />
@@ -249,20 +279,20 @@ export default function AdminSidebar({
 
               <SidebarGroup
                 groupKey="venue"
-                icon="bi-geo-alt"
+                icon={MapPinIcon}
                 label={m.admin_venue_group()}
                 itemKeys={["venues", "floor-plans"]}
                 {...groupProps}
               >
                 <SidebarItem
                   itemKey="venues"
-                  icon="bi-building"
+                  icon={BuildingIcon}
                   label={m.admin_venues_rooms_tab()}
                   {...itemProps}
                 />
                 <SidebarItem
                   itemKey="floor-plans"
-                  icon="bi-grid-3x3-gap"
+                  icon={Grid3X3Icon}
                   label={m.admin_floor_plans_tab()}
                   {...itemProps}
                 />
@@ -270,28 +300,28 @@ export default function AdminSidebar({
 
               <SidebarGroup
                 groupKey="people"
-                icon="bi-people"
+                icon={UsersIcon}
                 label={m.admin_people_tab()}
                 itemKeys={["directory", "members", "volunteers"]}
                 {...groupProps}
               >
                 <SidebarItem
                   itemKey="directory"
-                  icon="bi-person"
+                  icon={UserIcon}
                   label={m.admin_directory_tab()}
                   count={peopleCount}
                   {...itemProps}
                 />
                 <SidebarItem
                   itemKey="members"
-                  icon="bi-person-badge"
+                  icon={ContactRoundIcon}
                   label={m.admin_members_tab()}
                   count={membersCount}
                   {...itemProps}
                 />
                 <SidebarItem
                   itemKey="volunteers"
-                  icon="bi-hand-thumbs-up"
+                  icon={ThumbsUpIcon}
                   label={m.admin_volunteers_tab()}
                   count={volunteerCount}
                   {...itemProps}
@@ -303,20 +333,20 @@ export default function AdminSidebar({
           {canManageAdminSections && (
             <SidebarGroup
               groupKey="insights"
-              icon="bi-graph-up"
+              icon={ChartNoAxesCombinedIcon}
               label={m.admin_insights_group()}
               itemKeys={["analytics", "audit-log"]}
               {...groupProps}
             >
               <SidebarItem
                 itemKey="analytics"
-                icon="bi-bar-chart"
+                icon={ChartColumnIcon}
                 label={m.admin_analytics_tab()}
                 {...itemProps}
               />
               <SidebarItem
                 itemKey="audit-log"
-                icon="bi-journal-text"
+                icon={NotebookTextIcon}
                 label={m.admin_audit_log_tab()}
                 {...itemProps}
               />
@@ -327,7 +357,7 @@ export default function AdminSidebar({
         {/* Footer: status + actions */}
         <div className="admin-sidebar-footer">
           <div className="admin-auth-status">
-            <i className="bi bi-check-circle-fill" aria-hidden="true" />
+            <Icon icon={CircleCheckIcon} />
             {/* Which account is signed in matters here: role decides which sections
                 exist at all, so "why can't I see X" starts with "who am I?". */}
             <span className="admin-auth-account" title={accountLabel ?? undefined}>
@@ -346,10 +376,7 @@ export default function AdminSidebar({
               title={m.admin_refresh()}
               aria-label={m.admin_refresh()}
             >
-              <i
-                className={clsx("bi bi-arrow-clockwise", isAnyFetching && "spin")}
-                aria-hidden="true"
-              />
+              <Icon icon={RotateCwIcon} className={clsx(isAnyFetching && "tw:animate-spin")} />
             </Button>
             {/* Labeled, not icon-only: this sits next to Refresh and is destructive
                 (it ends the session and discards loaded work), so it must not be a
@@ -371,7 +398,7 @@ export default function AdminSidebar({
                   aria-hidden="true"
                 />
               ) : (
-                <i className="bi bi-box-arrow-right me-2" aria-hidden="true" />
+                <Icon icon={LogOutIcon} className="tw:me-2" />
               )}
               {isSigningOut ? m.auth_signing_out() : m.admin_logout()}
             </Button>
@@ -387,7 +414,7 @@ export default function AdminSidebar({
         aria-expanded={sidebarOpen}
         aria-controls="admin-content"
       >
-        <i className={clsx("bi", sidebarOpen ? "bi-x-lg" : "bi-list")} aria-hidden="true" />
+        <Icon icon={sidebarOpen ? XIcon : MenuIcon} />
       </button>
     </>
   );

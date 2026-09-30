@@ -1,3 +1,5 @@
+import { CircleAlertIcon, SendIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { useRef, useState } from "react";
@@ -145,7 +147,7 @@ const ContactForm = () => {
           >
             {generalError && (
               <Alert variant="danger" className="d-flex align-items-center">
-                <i className="bi bi-exclamation-circle me-2"></i>
+                <Icon icon={CircleAlertIcon} className="tw:me-2" />
                 <span>{generalError}</span>
               </Alert>
             )}
@@ -295,7 +297,7 @@ const ContactForm = () => {
                 </span>
               ) : (
                 <span className="d-flex align-items-center justify-content-center">
-                  <i className="bi bi-send me-2"></i>
+                  <Icon icon={SendIcon} className="tw:me-2" />
                   {m.contact_submit()}
                 </span>
               )}
