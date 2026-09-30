@@ -3,7 +3,7 @@ import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -234,9 +234,9 @@ export default function LayoutCompareModal({
               {tableDiff.length > 0 && (
                 <>
                   <h6 className="tw:text-base">{m.admin_layout_compare_tables()}</h6>
-                  <ListGroup variant="flush" className="tw:mb-4">
+                  <PresentationList flush className="tw:mb-4">
                     {tableDiff.map((row) => (
-                      <ListGroup.Item
+                      <PresentationListItem
                         key={row.name}
                         className="tw:flex tw:justify-between tw:items-start tw:gap-2"
                       >
@@ -249,25 +249,25 @@ export default function LayoutCompareModal({
                           )}
                         </div>
                         {statusBadge(row.status)}
-                      </ListGroup.Item>
+                      </PresentationListItem>
                     ))}
-                  </ListGroup>
+                  </PresentationList>
                 </>
               )}
               {areaDiff.length > 0 && (
                 <>
                   <h6 className="tw:text-base">{m.admin_layout_compare_areas()}</h6>
-                  <ListGroup variant="flush">
+                  <PresentationList flush>
                     {areaDiff.map((row) => (
-                      <ListGroup.Item
+                      <PresentationListItem
                         key={row.label}
                         className="tw:flex tw:justify-between tw:items-center tw:gap-2"
                       >
                         <span className="tw:text-sm">{row.label}</span>
                         {statusBadge(row.status)}
-                      </ListGroup.Item>
+                      </PresentationListItem>
                     ))}
-                  </ListGroup>
+                  </PresentationList>
                 </>
               )}
             </>

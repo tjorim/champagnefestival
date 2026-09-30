@@ -46,7 +46,7 @@ html[data-visual-theme="remuage"] .event-card {
   box-shadow: 0 7px 18px rgba(23, 32, 51, 0.07);
 }
 
-html[data-visual-theme="remuage"] .event-card .card-body {
+html[data-visual-theme="remuage"] .event-card [data-slot="card-content"] {
   padding: 1rem 1.1rem;
 }
 
@@ -221,7 +221,7 @@ html[data-visual-theme="remuage"] .map-error {
 
 /* ------------------------------------------------------------------ forms + registration */
 
-html[data-visual-theme="remuage"] #contact .card {
+html[data-visual-theme="remuage"] #contact [data-slot="card"] {
   color: var(--rem-ink);
   background: var(--rem-paper);
   border: 1px solid var(--rem-line) !important;
@@ -339,7 +339,7 @@ html[data-visual-theme="remuage"] .standalone-app h3 {
   font-weight: 850;
 }
 
-html[data-visual-theme="remuage"] .standalone-app .card {
+html[data-visual-theme="remuage"] .standalone-app [data-slot="card"] {
   color: var(--rem-ink) !important;
   background: var(--rem-paper) !important;
   border: 1px solid var(--rem-line) !important;
@@ -347,8 +347,8 @@ html[data-visual-theme="remuage"] .standalone-app .card {
   box-shadow: 0 12px 32px rgba(23, 32, 51, 0.08);
 }
 
-html[data-visual-theme="remuage"] .standalone-app .card-header,
-html[data-visual-theme="remuage"] .standalone-app .card-footer {
+html[data-visual-theme="remuage"] .standalone-app [data-slot="card-header"],
+html[data-visual-theme="remuage"] .standalone-app [data-slot="card-footer"] {
   color: var(--rem-ink) !important;
   background: var(--rem-rack) !important;
   border-color: var(--rem-line) !important;
@@ -356,14 +356,14 @@ html[data-visual-theme="remuage"] .standalone-app .card-footer {
 
 html[data-visual-theme="remuage"] .standalone-app .bg-dark,
 html[data-visual-theme="remuage"] .standalone-app .tw\:text-content,
-html[data-visual-theme="remuage"] .standalone-app .list-group-item.bg-dark {
+html[data-visual-theme="remuage"] .standalone-app [data-slot="presentation-list-item"] {
   color: var(--rem-ink) !important;
   background-color: var(--rem-paper) !important;
   --layout-content: var(--rem-ink) !important;
 }
 
 html[data-visual-theme="remuage"] .standalone-app .border-secondary,
-html[data-visual-theme="remuage"] .standalone-app .list-group-item {
+html[data-visual-theme="remuage"] .standalone-app [data-slot="presentation-list-item"] {
   border-color: var(--rem-line) !important;
 }
 
@@ -385,14 +385,14 @@ html[data-visual-theme="remuage"] .standalone-app .btn-warning {
   border-color: var(--rem-blue) !important;
 }
 
-html[data-visual-theme="remuage"] #my-registrations .card {
+html[data-visual-theme="remuage"] #my-registrations [data-slot="card"] {
   position: relative;
   overflow: visible;
   border-left: 7px solid var(--rem-blue) !important;
 }
 
-html[data-visual-theme="remuage"] #my-registrations .card::before,
-html[data-visual-theme="remuage"] #my-registrations .card::after {
+html[data-visual-theme="remuage"] #my-registrations [data-slot="card"]::before,
+html[data-visual-theme="remuage"] #my-registrations [data-slot="card"]::after {
   position: absolute;
   left: -0.75rem;
   width: 1.3rem;
@@ -402,10 +402,10 @@ html[data-visual-theme="remuage"] #my-registrations .card::after {
   border-radius: 50%;
 }
 
-html[data-visual-theme="remuage"] #my-registrations .card::before {
+html[data-visual-theme="remuage"] #my-registrations [data-slot="card"]::before {
   top: 22%;
 }
-html[data-visual-theme="remuage"] #my-registrations .card::after {
+html[data-visual-theme="remuage"] #my-registrations [data-slot="card"]::after {
   bottom: 22%;
 }
 

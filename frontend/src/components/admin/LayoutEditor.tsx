@@ -32,9 +32,9 @@ import { RestrictToElement } from "@dnd-kit/dom/modifiers";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -868,8 +868,8 @@ export default function LayoutEditor({
   return (
     <div>
       {/* Tab bar: one tab per room */}
-      <Card bg="dark" text="white" border="secondary" className="tw:mb-4">
-        <Card.Header className="tw:flex tw:items-center tw:justify-between tw:flex-wrap tw:gap-2">
+      <Card tone="secondary" className="tw:mb-4">
+        <CardHeader className="tw:flex tw:items-center tw:justify-between tw:flex-wrap tw:gap-2">
           {activeLayoutDateLabel && (
             <span className="tw:text-subtle tw:text-sm tw:hidden tw:site-md:inline">
               <Icon icon={CalendarIcon} className="tw:me-1" />
@@ -971,9 +971,9 @@ export default function LayoutEditor({
               </Button>
             )}
           </div>
-        </Card.Header>
+        </CardHeader>
 
-        <Card.Body className="tw:p-2">
+        <CardContent className="tw:p-2">
           {rooms.length === 0 ? (
             <p className="tw:text-subtle tw:text-center tw:text-sm tw:mb-0">
               <Icon icon={InfoIcon} className="tw:me-1" />
@@ -1082,13 +1082,13 @@ export default function LayoutEditor({
               )}
             </div>
           ) : null}
-        </Card.Body>
+        </CardContent>
       </Card>
 
       {/* Selected table detail */}
       {selectedTableData && (
-        <Card bg="dark" text="white" border="warning" className="tw:mb-4">
-          <Card.Header className="tw:flex tw:items-center tw:justify-between border-warning">
+        <Card tone="warning" className="tw:mb-4">
+          <CardHeader className="tw:flex tw:items-center tw:justify-between tw:border-warning">
             <span className="tw:font-semibold">
               <Icon icon={TableIcon} className="tw:me-2" />
               {m.admin_table_label()}: {selectedTableData.name}
@@ -1155,8 +1155,8 @@ export default function LayoutEditor({
                 <Icon icon={TrashIcon} />
               </Button>
             </div>
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             {updateTableError && (
               <Alert
                 role="alert"
@@ -1232,9 +1232,9 @@ export default function LayoutEditor({
             {selectedRegistrations.length === 0 ? (
               <p className="tw:text-subtle tw:mb-0">{m.admin_unassigned()}</p>
             ) : (
-              <ListGroup variant="flush" className="tw:mb-4">
+              <PresentationList flush className="tw:mb-4">
                 {selectedRegistrations.map((r) => (
-                  <ListGroup.Item key={r.id} className="bg-dark tw:text-content border-secondary">
+                  <PresentationListItem key={r.id} className="tw:border-border">
                     <div className="tw:flex tw:flex-wrap tw:items-center tw:gap-2">
                       <span className="tw:font-semibold tw:me-auto">{r.person.name}</span>
                       {(() => {
@@ -1320,9 +1320,9 @@ export default function LayoutEditor({
                         );
                       })()}
                     </div>
-                  </ListGroup.Item>
+                  </PresentationListItem>
                 ))}
-              </ListGroup>
+              </PresentationList>
             )}
             <div className="border-top border-secondary tw:pt-4 tw:mt-4">
               <Form.Label className="tw:text-subtle tw:text-sm">
@@ -1389,14 +1389,14 @@ export default function LayoutEditor({
                 </Button>
               </div>
             </div>
-          </Card.Body>
+          </CardContent>
         </Card>
       )}
 
       {/* Selected area detail */}
       {selectedAreaData && (
-        <Card bg="dark" text="white" border="info" className="tw:mb-4">
-          <Card.Header className="tw:flex tw:items-center tw:justify-between border-info">
+        <Card tone="info" className="tw:mb-4">
+          <CardHeader className="tw:flex tw:items-center tw:justify-between tw:border-info">
             <span className="tw:font-semibold">
               <AreaIcon name={selectedAreaData.icon} className="tw:me-2" />
               {m.admin_layout_area_label_prefix()} {selectedAreaData.label}
@@ -1436,8 +1436,8 @@ export default function LayoutEditor({
                 <Icon icon={TrashIcon} />
               </Button>
             </div>
-          </Card.Header>
-          <Card.Body>
+          </CardHeader>
+          <CardContent>
             {assignAreaError && (
               <Alert
                 role="alert"
@@ -1625,23 +1625,20 @@ export default function LayoutEditor({
                     {m.admin_layout_places_total()}
                   </span>
                 </p>
-                <ListGroup variant="flush">
+                <PresentationList flush>
                   {tablesInSelectedArea.map((t) => (
-                    <ListGroup.Item
-                      key={t.id}
-                      className="bg-dark tw:text-content border-secondary tw:py-1 tw:px-2 tw:text-sm"
-                    >
+                    <PresentationListItem key={t.id} className="tw:py-1 tw:px-2 tw:text-sm">
                       <Icon icon={Grid3X3Icon} className="tw:me-1 tw:text-muted-foreground" />
                       {t.name}
                       <Badge bg="secondary" className="tw:ms-2 tw:text-micro">
                         {t.capacity} {m.admin_layout_capacity_abbrev()}
                       </Badge>
-                    </ListGroup.Item>
+                    </PresentationListItem>
                   ))}
-                </ListGroup>
+                </PresentationList>
               </div>
             )}
-          </Card.Body>
+          </CardContent>
         </Card>
       )}
 

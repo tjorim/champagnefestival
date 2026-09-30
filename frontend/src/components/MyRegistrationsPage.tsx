@@ -16,9 +16,9 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -532,8 +532,8 @@ export default function MyRegistrationsPage() {
               ) : registrations !== null ? (
                 <div className="tw:flex tw:flex-col tw:gap-4">
                   {auth.isAuthenticated && registrations.length > 0 && (
-                    <Card bg="dark" text="white" border="secondary">
-                      <Card.Body>
+                    <Card tone="secondary">
+                      <CardContent>
                         <Form.Label htmlFor="my-registrations-language">
                           {m.registration_preferred_language()}
                         </Form.Label>
@@ -569,12 +569,12 @@ export default function MyRegistrationsPage() {
                             {m.my_account_preference_error()}
                           </div>
                         )}
-                      </Card.Body>
+                      </CardContent>
                     </Card>
                   )}
                   {registrations.map((registration) => (
-                    <Card key={registration.id} bg="dark" text="white" border="secondary">
-                      <Card.Header className="tw:flex tw:items-center tw:justify-between">
+                    <Card key={registration.id} tone="secondary">
+                      <CardHeader className="tw:flex tw:items-center tw:justify-between">
                         <span className="tw:font-semibold">
                           <Icon icon={CalendarDaysIcon} className="tw:me-2" />
                           {registration.eventTitle}
@@ -582,8 +582,8 @@ export default function MyRegistrationsPage() {
                         <span className="tw:text-subtle tw:text-sm">
                           {new Date(registration.createdAt).toLocaleDateString()}
                         </span>
-                      </Card.Header>
-                      <Card.Body className="tw:pb-2">
+                      </CardHeader>
+                      <CardContent className="tw:pb-2">
                         {registration.status !== "cancelled" && (
                           <div className="tw:text-center tw:mb-4">
                             <QRCodeSVG
@@ -672,22 +672,22 @@ export default function MyRegistrationsPage() {
                           </Button>
                         )}
                         {registration.orderItems.some((item) => item.visible) && (
-                          <ListGroup variant="flush" className="tw:mt-2">
+                          <PresentationList flush className="tw:mt-2">
                             {registration.orderItems
                               .filter((item) => item.visible)
                               .map((item, idx) => (
-                                <ListGroup.Item
+                                <PresentationListItem
                                   key={`${item.productId}-${idx}`}
-                                  className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:items-center tw:px-0 tw:py-1"
+                                  className="tw:flex tw:justify-between tw:items-center tw:px-0 tw:py-1"
                                 >
                                   <span className="tw:text-sm">
                                     {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
                                   </span>
-                                </ListGroup.Item>
+                                </PresentationListItem>
                               ))}
-                          </ListGroup>
+                          </PresentationList>
                         )}
-                      </Card.Body>
+                      </CardContent>
                     </Card>
                   ))}
                   <Alert variant="info" className="tw:mb-0">

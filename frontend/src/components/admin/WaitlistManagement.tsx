@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import {
@@ -81,9 +81,9 @@ export default function WaitlistManagement({
   });
 
   return (
-    <Card bg="dark" text="white" border="secondary">
-      <Card.Header className="tw:font-semibold">{m.admin_waitlist_section()}</Card.Header>
-      <Card.Body>
+    <Card tone="secondary">
+      <CardHeader className="tw:font-semibold">{m.admin_waitlist_section()}</CardHeader>
+      <CardContent>
         <p className="tw:text-subtle tw:text-sm">{m.admin_waitlist_description()}</p>
         {entries.isPending && <Spinner animation="border" size="sm" />}
         {entries.isError && <Alert variant="danger">{m.admin_error_load_waitlist()}</Alert>}
@@ -133,7 +133,7 @@ export default function WaitlistManagement({
             )}
           </article>
         ))}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }

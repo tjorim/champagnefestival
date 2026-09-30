@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent } from "@/components/ui/card";
 import Badge from "react-bootstrap/Badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
@@ -116,8 +116,8 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                 <div className="events-list">
                   {sortedEvents.map((event) => {
                     return (
-                      <Card key={event.id} className="event-card tw:mb-4 border-0">
-                        <Card.Body>
+                      <Card key={event.id} className="event-card tw:mb-4 tw:border-0">
+                        <CardContent>
                           <div className="tw:flex tw:justify-between tw:items-start tw:gap-4">
                             <div className="event-time tw:me-4 tw:whitespace-nowrap">
                               {event.endTime ? (
@@ -154,7 +154,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                               <p className="event-description tw:mb-1">{event.description}</p>
                             </div>
                           </div>
-                        </Card.Body>
+                        </CardContent>
                       </Card>
                     );
                   })}

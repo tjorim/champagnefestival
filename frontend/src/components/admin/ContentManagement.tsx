@@ -19,8 +19,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
-import ListGroup from "react-bootstrap/ListGroup";
+import { Card, CardContent } from "@/components/ui/card";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -335,11 +335,11 @@ export function ContentSection({
 
   function renderItemRow(item: ItemDraft, isArchived: boolean) {
     return (
-      <ListGroup.Item
+      <PresentationListItem
         key={item.id}
         className={clsx(
-          "bg-dark border-secondary tw:flex tw:justify-between tw:items-center tw:gap-2",
-          isArchived && "opacity-50",
+          "tw:flex tw:justify-between tw:items-center tw:gap-2",
+          isArchived && "tw:opacity-50",
         )}
       >
         <span className="tw:flex tw:items-center tw:gap-2 tw:grow tw:truncate">
@@ -445,7 +445,7 @@ export function ContentSection({
             </>
           )}
         </span>
-      </ListGroup.Item>
+      </PresentationListItem>
     );
   }
 
@@ -528,7 +528,9 @@ export function ContentSection({
           {actionError}
         </Alert>
       )}
-      <ListGroup variant="flush">{activeItems.map((item) => renderItemRow(item, false))}</ListGroup>
+      <PresentationList flush>
+        {activeItems.map((item) => renderItemRow(item, false))}
+      </PresentationList>
       {activeItems.length === 0 && archivedItems.length === 0 && (q || typeFilter !== "all") && (
         <div className="tw:text-center tw:py-6 tw:text-subtle">
           <p className="tw:mb-2 tw:text-sm">{m.admin_content_no_results()}</p>
@@ -549,9 +551,9 @@ export function ContentSection({
             {m.admin_content_archived_section()}
           </Button>
           {archivedOpen && (
-            <ListGroup variant="flush">
+            <PresentationList flush>
               {archivedItems.map((item) => renderItemRow(item, true))}
-            </ListGroup>
+            </PresentationList>
           )}
         </div>
       )}
@@ -772,8 +774,8 @@ export default function ContentManagement({
 }: ContentManagementProps) {
   return (
     <div>
-      <Card bg="dark" text="white" border="secondary" className="tw:mb-4">
-        <Card.Body>
+      <Card tone="secondary" className="tw:mb-4">
+        <CardContent>
           <ContentSection
             sectionKey="exhibitors"
             title={m.admin_content_exhibitors_section()}
@@ -787,7 +789,7 @@ export default function ContentManagement({
             venues={venues}
             onEditionMutated={onEditionMutated}
           />
-        </Card.Body>
+        </CardContent>
       </Card>
     </div>
   );

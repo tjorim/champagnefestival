@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Form from "react-bootstrap/Form";
 import {
   Table,
@@ -355,13 +355,13 @@ export default function AnnouncementManagement({
   const table = useAppTable({ data: items, columns, getRowId: (row) => row.id }, () => ({}));
 
   return (
-    <Card className="admin-card">
-      <Card.Header>
+    <Card>
+      <CardHeader>
         <h2 className="tw:text-xl tw:font-medium tw:leading-tight tw:mb-0">
           {m.admin_announcements_section()}
         </h2>
-      </Card.Header>
-      <Card.Body>
+      </CardHeader>
+      <CardContent>
         {error && <Alert variant="danger">{error}</Alert>}
         <Form
           onSubmit={(event) => {
@@ -527,7 +527,7 @@ export default function AnnouncementManagement({
             </TableBody>
           </Table>
         </div>
-      </Card.Body>
+      </CardContent>
       {confirmDialog}
     </Card>
   );

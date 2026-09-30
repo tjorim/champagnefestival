@@ -7,7 +7,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -625,9 +625,9 @@ export default function EventProductsModal({
     const soldOut = product.purchasable && product.soldOut;
     const isBeingEdited = formOpen && editingId === product.id;
     return (
-      <ListGroup.Item
+      <PresentationListItem
         key={product.id}
-        className="bg-dark border-secondary tw:flex tw:flex-col tw:gap-1 tw:py-1 tw:px-0 tw:text-content"
+        className="tw:flex tw:flex-col tw:gap-1 tw:py-1 tw:px-0 tw:text-card-foreground"
       >
         <div className="tw:flex tw:justify-between tw:items-center tw:gap-2">
           <span className="tw:flex tw:items-center tw:gap-2 tw:truncate tw:flex-wrap">
@@ -689,7 +689,7 @@ export default function EventProductsModal({
           </div>
         )}
         {isBeingEdited && !preview && renderForm()}
-      </ListGroup.Item>
+      </PresentationListItem>
     );
   }
 
@@ -796,9 +796,9 @@ export default function EventProductsModal({
                 {products.length === 0 ? (
                   <p className="tw:text-subtle fst-italic tw:text-sm">{m.admin_products_empty()}</p>
                 ) : (
-                  <ListGroup variant="flush" className="tw:mb-2">
+                  <PresentationList flush className="tw:mb-2">
                     {products.map((product) => renderRow(product))}
-                  </ListGroup>
+                  </PresentationList>
                 )}
               </>
             )}

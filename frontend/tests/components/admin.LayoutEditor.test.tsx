@@ -441,7 +441,7 @@ describe("LayoutEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
 
     const detailHeading = screen.getByText("admin_table_label: Table A");
-    const card = detailHeading.closest(".card") as HTMLElement;
+    const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
     expect(card).not.toBeNull();
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
@@ -460,7 +460,7 @@ describe("LayoutEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
 
     const detailHeading = screen.getByText("admin_table_label: Table A");
-    const card = detailHeading.closest(".card") as HTMLElement;
+    const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
     expect(card).not.toBeNull();
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
@@ -480,7 +480,7 @@ describe("LayoutEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "admin_layout_area_label_prefix Stand 1" }));
 
     const detailHeading = screen.getByText("admin_layout_area_label_prefix Stand 1");
-    const card = detailHeading.closest(".card") as HTMLElement;
+    const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
     expect(card).not.toBeNull();
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));
@@ -500,7 +500,7 @@ describe("LayoutEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "admin_layout_area_label_prefix Stand 1" }));
 
     const detailHeading = screen.getByText("admin_layout_area_label_prefix Stand 1");
-    const card = detailHeading.closest(".card") as HTMLElement;
+    const card = detailHeading.closest('[data-slot="card"]') as HTMLElement;
     expect(card).not.toBeNull();
 
     fireEvent.click(within(card).getByRole("button", { name: "admin_delete" }));

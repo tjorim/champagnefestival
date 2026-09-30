@@ -216,3 +216,67 @@
     max-width: 1320px;
   }
 }
+
+/* Owned card/list surfaces replace Bootstrap's component rules. Theme artwork
+   can override these defaults through the same stable presentation slots. */
+[data-slot="card"] {
+  border-radius: 0.375rem;
+  color: var(--surface-foreground);
+  background: var(--surface-muted);
+  border: 1px solid var(--surface-border);
+}
+[data-slot="card"][data-tone="warning"] {
+  border-color: var(--bs-warning);
+}
+[data-slot="card"][data-tone="success"] {
+  border-color: var(--bs-success);
+}
+[data-slot="card"][data-tone="info"] {
+  border-color: var(--bs-info);
+}
+[data-slot="card-header"],
+[data-slot="card-footer"] {
+  padding: 0.5rem 1rem;
+  background: var(--surface-muted);
+}
+[data-slot="card-header"] {
+  border-bottom: 1px solid var(--surface-border);
+}
+[data-slot="card-footer"] {
+  border-top: 1px solid var(--surface-border);
+}
+[data-slot="presentation-list"] {
+  border-radius: 0.375rem;
+}
+[data-slot="presentation-list-item"] {
+  padding: 0.5rem 1rem;
+  color: var(--surface-foreground);
+  background: var(--surface-muted);
+  border: 1px solid var(--surface-border);
+}
+[data-slot="presentation-list-item"] + [data-slot="presentation-list-item"] {
+  border-top: 0;
+}
+[data-slot="presentation-list"][data-flush] > [data-slot="presentation-list-item"] {
+  border-inline: 0;
+  border-radius: 0;
+}
+[data-slot="presentation-list"][data-flush] > [data-slot="presentation-list-item"]:first-child {
+  border-top: 0;
+}
+[data-slot="presentation-list"][data-flush] > [data-slot="presentation-list-item"]:last-child {
+  border-bottom: 0;
+}
+[data-slot="card"][data-tone="danger"] {
+  border-color: var(--surface-destructive);
+}
+
+[data-slot="card-content"] {
+  padding: 1rem;
+}
+[data-slot="card-header"] {
+  border-radius: 0.375rem 0.375rem 0 0;
+}
+[data-slot="card-footer"] {
+  border-radius: 0 0 0.375rem 0.375rem;
+}

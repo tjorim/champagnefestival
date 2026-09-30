@@ -410,7 +410,7 @@ h2.section-header::after {
 }
 
 .feature,
-main > .content-section .card,
+main > .content-section [data-slot="card"],
 .event-card,
 [data-slot="accordion"],
 .map-loading,
@@ -461,13 +461,13 @@ main > .content-section .card,
 
 .feature p,
 .event-description,
-main > .content-section .card p,
+main > .content-section [data-slot="card"] p,
 .event-card p {
   color: var(--text-muted);
   line-height: 1.65;
 }
 
-main > .content-section .card,
+main > .content-section [data-slot="card"],
 .event-card {
   color: var(--text-color);
   background-color: var(--surface-color);
@@ -571,7 +571,7 @@ main > .content-section .card,
   overflow: hidden;
 }
 
-.event-card .card-body {
+.event-card [data-slot="card-content"] {
   padding: 1.25rem;
 }
 
@@ -984,7 +984,7 @@ a:focus {
   }
 
   .feature,
-  .event-card .card-body {
+  .event-card [data-slot="card-content"] {
     padding: 1rem;
   }
 }

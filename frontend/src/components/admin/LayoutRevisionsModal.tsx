@@ -6,7 +6,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -141,9 +141,12 @@ function statusBadge(status: DiffStatus) {
 function DiffRowsList({ rows }: { rows: DiffRow[] }) {
   if (rows.length === 0) return null;
   return (
-    <ListGroup variant="flush" className="tw:mb-4">
+    <PresentationList flush className="tw:mb-4">
       {rows.map((row) => (
-        <ListGroup.Item key={row.id} className="tw:flex tw:justify-between tw:items-start tw:gap-2">
+        <PresentationListItem
+          key={row.id}
+          className="tw:flex tw:justify-between tw:items-start tw:gap-2"
+        >
           <div>
             <div className="tw:font-semibold tw:text-sm">{row.name}</div>
             {row.changes.length > 0 && (
@@ -151,9 +154,9 @@ function DiffRowsList({ rows }: { rows: DiffRow[] }) {
             )}
           </div>
           {statusBadge(row.status)}
-        </ListGroup.Item>
+        </PresentationListItem>
       ))}
-    </ListGroup>
+    </PresentationList>
   );
 }
 
@@ -385,9 +388,9 @@ export default function LayoutRevisionsModal({
           ) : revisions.length === 0 ? (
             <p className="tw:text-subtle tw:text-sm">{m.admin_layout_revisions_empty()}</p>
           ) : (
-            <ListGroup variant="flush" className="tw:mb-4">
+            <PresentationList flush className="tw:mb-4">
               {revisionOptions.map((revision) => (
-                <ListGroup.Item
+                <PresentationListItem
                   key={revision.id}
                   className="tw:flex tw:justify-between tw:items-center tw:gap-2"
                 >
@@ -408,9 +411,9 @@ export default function LayoutRevisionsModal({
                   >
                     {m.admin_layout_revisions_restore()}
                   </Button>
-                </ListGroup.Item>
+                </PresentationListItem>
               ))}
-            </ListGroup>
+            </PresentationList>
           )}
 
           {/* Compare */}

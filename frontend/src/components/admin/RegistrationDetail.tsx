@@ -18,7 +18,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
-import ListGroup from "react-bootstrap/ListGroup";
+import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
   DialogContent,
@@ -270,28 +270,28 @@ export default function RegistrationDetail({
             </Alert>
           )}
 
-          <ListGroup variant="flush" className="tw:mb-4">
-            <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+          <PresentationList flush className="tw:mb-4">
+            <PresentationListItem className="tw:flex tw:justify-between">
               <span className="tw:text-subtle">{m.registration_email()}</span>
               <a href={`mailto:${registration.person.email}`} className="tw:text-highlight">
                 {registration.person.email}
               </a>
-            </ListGroup.Item>
+            </PresentationListItem>
             {!onSaveBooking && (
-              <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+              <PresentationListItem className="tw:flex tw:justify-between">
                 <span className="tw:text-subtle">{m.admin_guests_count()}</span>
                 <span aria-label={m.admin_guests_count()}>{registration.guestCount}</span>
-              </ListGroup.Item>
+              </PresentationListItem>
             )}
-            <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+            <PresentationListItem className="tw:flex tw:justify-between">
               <span className="tw:text-subtle">{m.registration_phone()}</span>
               <span>{registration.person.phone}</span>
-            </ListGroup.Item>
-            <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+            </PresentationListItem>
+            <PresentationListItem className="tw:flex tw:justify-between">
               <span className="tw:text-subtle">{m.admin_event_label()}</span>
               <span>{registration.event?.title ?? registration.eventId}</span>
-            </ListGroup.Item>
-            <ListGroup.Item className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between">
+            </PresentationListItem>
+            <PresentationListItem className="tw:flex tw:justify-between">
               <span className="tw:text-subtle">{m.registration_edition_type_label()}</span>
               <span>
                 {(() => {
@@ -301,9 +301,9 @@ export default function RegistrationDetail({
                   return m.admin_edition_type_festival();
                 })()}
               </span>
-            </ListGroup.Item>
+            </PresentationListItem>
             {onSaveBooking && (
-              <ListGroup.Item className="bg-dark tw:text-content border-secondary">
+              <PresentationListItem className="tw:border-border">
                 <BookingEditor
                   key={`${registration.id}:${registration.updatedAt}`}
                   registration={registration}
@@ -313,15 +313,15 @@ export default function RegistrationDetail({
                   onSave={onSaveBooking}
                   onAddTransaction={onAddTransaction}
                 />
-              </ListGroup.Item>
+              </PresentationListItem>
             )}
             {!onSaveBooking && registration.notes && (
-              <ListGroup.Item className="bg-dark tw:text-content border-secondary">
+              <PresentationListItem className="tw:border-border">
                 <span className="tw:text-subtle tw:block tw:mb-1">{m.admin_notes()}</span>
                 <span className="tw:text-sm">{registration.notes}</span>
-              </ListGroup.Item>
+              </PresentationListItem>
             )}
-          </ListGroup>
+          </PresentationList>
 
           {registration.person.email && (
             <section className="tw:mb-6" aria-labelledby="registration-email-heading">
@@ -362,11 +362,11 @@ export default function RegistrationDetail({
                 <Icon icon={ShoppingBasketIcon} className="tw:me-2" />
                 {m.admin_bottle_fulfillment()}
               </h6>
-              <ListGroup>
+              <PresentationList>
                 {registration.orderItems.map((item) => (
-                  <ListGroup.Item
+                  <PresentationListItem
                     key={item.productId}
-                    className="bg-dark tw:text-content border-secondary tw:flex tw:items-center tw:justify-between"
+                    className="tw:flex tw:items-center tw:justify-between"
                   >
                     <span>
                       {item.name}{" "}
@@ -434,9 +434,9 @@ export default function RegistrationDetail({
                         </Button>
                       </div>
                     </div>
-                  </ListGroup.Item>
+                  </PresentationListItem>
                 ))}
-              </ListGroup>
+              </PresentationList>
             </div>
           )}
 

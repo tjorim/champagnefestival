@@ -1,5 +1,5 @@
 import React from "react";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent } from "@/components/ui/card";
 import { m } from "@/paraglide/messages";
 import { contactConfig } from "@/config/contact";
 
@@ -17,8 +17,8 @@ interface LocationInfoProps {
  */
 const LocationInfo: React.FC<LocationInfoProps> = ({ location }) => {
   return (
-    <Card className="border-0 shadow-sm">
-      <Card.Body className="tw:p-6">
+    <Card className="tw:border-0 tw:shadow-sm">
+      <CardContent className="tw:p-6">
         <h3 className="tw:mb-4">{location.venueName}</h3>
         <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter">
           <div className="tw:w-full tw:site-md:w-6/12 tw:mb-4 tw:site-md:mb-0">
@@ -38,7 +38,7 @@ const LocationInfo: React.FC<LocationInfoProps> = ({ location }) => {
             </div>
           </div>
         </div>
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 };

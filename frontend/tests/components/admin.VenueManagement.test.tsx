@@ -206,19 +206,19 @@ function renderVenueManagement(overrides: RenderOverrides = {}) {
 
 /** Each venue renders as its own nested `.card`; scope to it via a name inside it. */
 function venueCard(name: string): HTMLElement {
-  return screen.getByText(name).closest(".card") as HTMLElement;
+  return screen.getByText(name).closest('[data-slot="card"]') as HTMLElement;
 }
 
 /** Venue-level actions (Archive/Restore/Delete) live in that card's header, not its
  * body — scoping here avoids ambiguity with the same-labelled room/table-type actions
  * inside the body's list groups. */
 function venueCardHeader(name: string): HTMLElement {
-  return screen.getByText(name).closest(".card-header") as HTMLElement;
+  return screen.getByText(name).closest('[data-slot="card-header"]') as HTMLElement;
 }
 
 /** Room and table-type rows are `ListGroup.Item`s; scope to the specific row via its name. */
 function listItem(name: string): HTMLElement {
-  return screen.getByText(name).closest(".list-group-item") as HTMLElement;
+  return screen.getByText(name).closest('[data-slot="presentation-list-item"]') as HTMLElement;
 }
 
 describe("VenueManagement", () => {

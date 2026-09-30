@@ -41,7 +41,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { devError } from "@/utils/devLog";
 import { recordSignOutReason } from "@/utils/signOutReason";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent } from "@/components/ui/card";
 
 function activeEditionLabel(edition: { editionType: string; year: number }): string {
   // The admin strip follows whichever edition is next, so it can't assume festival.
@@ -544,8 +544,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <ScratchpadManagement authHeaders={authHeaders} editionId={activeEdition.id} />
                 )}
                 {canManageAdminSections && activeKey === "exhibitors" && (
-                  <Card bg="dark" text="white" border="secondary" className="tw:mb-4">
-                    <Card.Body>
+                  <Card tone="secondary" className="tw:mb-4">
+                    <CardContent>
                       <ContentSection
                         sectionKey="exhibitors"
                         title={m.admin_content_exhibitors_section()}
@@ -553,12 +553,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                         onItemSaved={handleExhibitorSaved}
                         onItemDeleted={handleExhibitorDeleted}
                       />
-                    </Card.Body>
+                    </CardContent>
                   </Card>
                 )}
                 {canManageAdminSections && activeKey === "editions" && (
-                  <Card bg="dark" text="white" border="secondary" className="tw:mb-4">
-                    <Card.Body>
+                  <Card tone="secondary" className="tw:mb-4">
+                    <CardContent>
                       <EditionsSection
                         authHeaders={authHeaders}
                         venues={venues}
@@ -571,7 +571,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                           ]);
                         }}
                       />
-                    </Card.Body>
+                    </CardContent>
                   </Card>
                 )}
                 {canManageAdminSections && activeKey === "floor-plans" && (

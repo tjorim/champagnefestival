@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Card from "react-bootstrap/Card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
@@ -54,9 +54,9 @@ export default function ContactMessagesManagement({
   });
 
   return (
-    <Card bg="dark" text="white" border="secondary">
-      <Card.Header className="tw:font-semibold">{m.admin_contact_messages_section()}</Card.Header>
-      <Card.Body>
+    <Card tone="secondary">
+      <CardHeader className="tw:font-semibold">{m.admin_contact_messages_section()}</CardHeader>
+      <CardContent>
         {messages.isPending && <Spinner animation="border" size="sm" />}
         {messages.isError && (
           <Alert variant="danger">{m.admin_error_load_contact_messages()}</Alert>
@@ -94,7 +94,7 @@ export default function ContactMessagesManagement({
             </p>
           </article>
         ))}
-      </Card.Body>
+      </CardContent>
     </Card>
   );
 }
