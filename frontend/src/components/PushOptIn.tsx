@@ -58,11 +58,13 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
   return (
     <Card bg="dark" text="white" border="secondary">
       <Card.Body>
-        <Card.Title className="h6">{m.push_opt_in_title()}</Card.Title>
-        <p className="small text-secondary">{m.push_opt_in_description()}</p>
+        <Card.Title className="tw:text-base tw:font-medium tw:leading-tight">
+          {m.push_opt_in_title()}
+        </Card.Title>
+        <p className="tw:text-sm tw:text-subtle">{m.push_opt_in_description()}</p>
 
         {error && (
-          <Alert variant="danger" className="small py-2" role="alert">
+          <Alert variant="danger" className="tw:text-sm tw:py-2" role="alert">
             {m.push_opt_in_error()}
           </Alert>
         )}
@@ -72,7 +74,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
             <Form.Check
               type="checkbox"
               id="push-opt-in-consent"
-              className="small mb-2"
+              className="tw:text-sm tw:mb-2"
               label={m.push_opt_in_consent_label()}
               checked={consentChecked}
               onChange={(e) => setConsentChecked(e.target.checked)}
@@ -88,7 +90,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
                   as="span"
                   animation="border"
                   size="sm"
-                  className="me-2"
+                  className="tw:me-2"
                   aria-hidden="true"
                 />
               )}
@@ -97,10 +99,10 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
           </>
         ) : (
           <>
-            <p className="small text-success mb-2" role="status">
+            <p className="tw:text-sm tw:text-success tw:mb-2" role="status">
               {m.push_opt_in_subscribed_status()}
             </p>
-            <div className="d-flex gap-2 flex-wrap">
+            <div className="tw:flex tw:gap-2 tw:flex-wrap">
               <Button
                 variant="outline-secondary"
                 size="sm"
@@ -112,7 +114,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
                     as="span"
                     animation="border"
                     size="sm"
-                    className="me-2"
+                    className="tw:me-2"
                     aria-hidden="true"
                   />
                 )}
@@ -130,7 +132,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
                       as="span"
                       animation="border"
                       size="sm"
-                      className="me-2"
+                      className="tw:me-2"
                       aria-hidden="true"
                     />
                   )}
@@ -139,12 +141,12 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
               )}
             </div>
             {testStatus === "sent" && (
-              <p className="small text-success mt-2 mb-0" role="status">
+              <p className="tw:text-sm tw:text-success tw:mt-2 tw:mb-0" role="status">
                 {m.push_test_send_success()}
               </p>
             )}
             {testStatus === "error" && (
-              <p className="small text-danger mt-2 mb-0" role="alert">
+              <p className="tw:text-sm tw:text-destructive tw:mt-2 tw:mb-0" role="alert">
                 {m.push_opt_in_error()}
               </p>
             )}

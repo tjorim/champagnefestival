@@ -11,7 +11,7 @@ export async function legacyStyleChanges(page: Page) {
     // Migrated components intentionally depend on Tailwind. Compare only legacy
     // subtrees; inherited properties also change below a migrated ancestor.
     const elements = [...document.querySelectorAll("*")].filter(
-      (element) => !element.closest('[data-tailwind-migrated="true"]'),
+      (element) => !element.closest('[data-tailwind-migrated="true"], [class*="tw:"]'),
     );
     const properties = [
       "display",

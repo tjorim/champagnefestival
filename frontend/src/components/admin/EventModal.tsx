@@ -133,9 +133,9 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
           noValidate
         >
           <DialogBody>
-            <div className="d-flex gap-2 flex-wrap mb-3">
+            <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-4">
               <Form.Group controlId="event-title" style={{ minWidth: "240px", flex: "2 1 240px" }}>
-                <Form.Label className="text-secondary small mb-1">
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_content_event_title()}
                 </Form.Label>
                 <form.Field
@@ -154,7 +154,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                       <>
                         <Form.Control
                           size="sm"
-                          className="bg-dark text-light border-secondary"
+                          className="bg-dark tw:text-content border-secondary"
                           autoFocus
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -175,14 +175,14 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 controlId="event-category"
                 style={{ minWidth: "160px", flex: "1 1 160px" }}
               >
-                <Form.Label className="text-secondary small mb-1">
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_content_event_category()}
                 </Form.Label>
                 <form.Field name="category">
                   {(field) => (
                     <Form.Control
                       size="sm"
-                      className="bg-dark text-light border-secondary"
+                      className="bg-dark tw:text-content border-secondary"
                       placeholder={m.admin_event_category_placeholder()}
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -193,9 +193,9 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Group>
             </div>
 
-            <div className="d-flex gap-2 flex-wrap mb-3">
+            <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-4">
               <Form.Group controlId="event-date" style={{ maxWidth: "180px" }}>
-                <Form.Label className="text-secondary small mb-1">
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_event_date()}
                 </Form.Label>
                 <form.Field
@@ -214,7 +214,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                         <Form.Control
                           type="date"
                           size="sm"
-                          className="bg-dark text-light border-secondary"
+                          className="bg-dark tw:text-content border-secondary"
                           readOnly={!isFestival && Boolean(derivedStandaloneDate)}
                           isInvalid={showErr}
                           value={effectiveDate}
@@ -232,7 +232,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 </form.Field>
               </Form.Group>
               <Form.Group controlId="event-start-time" style={{ maxWidth: "140px" }}>
-                <Form.Label className="text-secondary small mb-1">
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_content_event_start_time()}
                 </Form.Label>
                 <form.Field
@@ -252,7 +252,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                         <Form.Control
                           type="time"
                           size="sm"
-                          className="bg-dark text-light border-secondary"
+                          className="bg-dark tw:text-content border-secondary"
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
@@ -269,7 +269,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                 </form.Field>
               </Form.Group>
               <Form.Group controlId="event-end-time" style={{ maxWidth: "140px" }}>
-                <Form.Label className="text-secondary small mb-1">
+                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_content_event_end_time()}
                 </Form.Label>
                 <form.Field name="endTime">
@@ -277,7 +277,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     <Form.Control
                       type="time"
                       size="sm"
-                      className="bg-dark text-light border-secondary"
+                      className="bg-dark tw:text-content border-secondary"
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -287,8 +287,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </Form.Group>
             </div>
 
-            <Form.Group controlId="event-description" className="mb-3">
-              <Form.Label className="text-secondary small mb-1">
+            <Form.Group controlId="event-description" className="tw:mb-4">
+              <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                 {m.admin_content_event_description()}
               </Form.Label>
               <form.Field name="description">
@@ -297,7 +297,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     as="textarea"
                     size="sm"
                     rows={2}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -314,14 +314,14 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                   label={m.admin_content_event_requires_registration()}
                   checked={field.value}
                   onChange={(e) => field.handleChange(e.target.checked)}
-                  className="text-light mb-2"
+                  className="tw:text-content tw:mb-2"
                 />
               )}
             </form.Field>
             {registrationRequired && (
-              <div className="d-flex gap-2 flex-wrap mb-2">
+              <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
                 <Form.Group style={{ maxWidth: "280px" }} controlId="event-registrations-open-from">
-                  <Form.Label className="text-secondary small mb-1">
+                  <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                     {m.admin_content_edition_registration_opens()}
                   </Form.Label>
                   <form.Field name="registrationsOpenFrom">
@@ -329,7 +329,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                       <Form.Control
                         type="datetime-local"
                         size="sm"
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -338,7 +338,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                   </form.Field>
                 </Form.Group>
                 <Form.Group style={{ maxWidth: "280px" }} controlId="event-registrations-close-at">
-                  <Form.Label className="text-secondary small mb-1">
+                  <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
                     {m.admin_content_edition_registration_closes()}
                   </Form.Label>
                   <form.Field name="registrationsCloseAt">
@@ -346,7 +346,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                       <Form.Control
                         type="datetime-local"
                         size="sm"
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -358,7 +358,9 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             )}
 
             {!isFestival && (
-              <div className="text-secondary small mt-2">{m.admin_event_standalone_help()}</div>
+              <div className="tw:text-subtle tw:text-sm tw:mt-2">
+                {m.admin_event_standalone_help()}
+              </div>
             )}
           </DialogBody>
           <DialogFooter>

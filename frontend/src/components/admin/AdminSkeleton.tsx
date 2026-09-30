@@ -35,7 +35,7 @@ export default function AdminSkeleton({ variant, rows = 6 }: AdminSkeletonProps)
     // One live region for the whole pane: the bars are decorative, so screen
     // readers get a single "loading" announcement rather than a stream of noise.
     <div className="admin-skeleton" role="status" aria-busy="true">
-      <span className="visually-hidden">{m.admin_loading()}</span>
+      <span className="tw:sr-only">{m.admin_loading()}</span>
 
       <div className="admin-skeleton-toolbar" aria-hidden="true">
         <div className="admin-skeleton-bar" style={{ width: "9rem", height: "2rem" }} />

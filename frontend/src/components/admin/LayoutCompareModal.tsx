@@ -193,10 +193,10 @@ export default function LayoutCompareModal({
           <DialogTitle>{m.admin_layout_compare_title()}</DialogTitle>
         </DialogHeader>
         <DialogBody>
-          <p className="text-secondary small">{m.admin_layout_compare_scope_note()}</p>
-          <div className="d-flex gap-3 flex-wrap mb-3">
+          <p className="tw:text-subtle tw:text-sm">{m.admin_layout_compare_scope_note()}</p>
+          <div className="tw:flex tw:gap-4 tw:flex-wrap tw:mb-4">
             <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
-              <Form.Label className="small text-secondary">
+              <Form.Label className="tw:text-sm tw:text-subtle">
                 {m.admin_layout_compare_baseline()}
               </Form.Label>
               <Form.Select value={baselineId} onChange={(e) => setBaselineId(e.target.value)}>
@@ -208,7 +208,7 @@ export default function LayoutCompareModal({
               </Form.Select>
             </Form.Group>
             <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
-              <Form.Label className="small text-secondary">
+              <Form.Label className="tw:text-sm tw:text-subtle">
                 {m.admin_layout_compare_current()}
               </Form.Label>
               <Form.Select value={currentId} onChange={(e) => setCurrentId(e.target.value)}>
@@ -222,24 +222,30 @@ export default function LayoutCompareModal({
           </div>
 
           {baselineId === currentId ? (
-            <p className="text-secondary small mb-0">{m.admin_layout_compare_same_plan()}</p>
+            <p className="tw:text-subtle tw:text-sm tw:mb-0">
+              {m.admin_layout_compare_same_plan()}
+            </p>
           ) : tableDiff.length === 0 && areaDiff.length === 0 ? (
-            <p className="text-secondary small mb-0">{m.admin_layout_compare_no_changes()}</p>
+            <p className="tw:text-subtle tw:text-sm tw:mb-0">
+              {m.admin_layout_compare_no_changes()}
+            </p>
           ) : (
             <>
               {tableDiff.length > 0 && (
                 <>
-                  <h6 className="fs-6">{m.admin_layout_compare_tables()}</h6>
-                  <ListGroup variant="flush" className="mb-3">
+                  <h6 className="tw:text-base">{m.admin_layout_compare_tables()}</h6>
+                  <ListGroup variant="flush" className="tw:mb-4">
                     {tableDiff.map((row) => (
                       <ListGroup.Item
                         key={row.name}
-                        className="d-flex justify-content-between align-items-start gap-2"
+                        className="tw:flex tw:justify-between tw:items-start tw:gap-2"
                       >
                         <div>
-                          <div className="fw-semibold small">{row.name}</div>
+                          <div className="tw:font-semibold tw:text-sm">{row.name}</div>
                           {row.changes.length > 0 && (
-                            <div className="text-secondary small">{row.changes.join(", ")}</div>
+                            <div className="tw:text-subtle tw:text-sm">
+                              {row.changes.join(", ")}
+                            </div>
                           )}
                         </div>
                         {statusBadge(row.status)}
@@ -250,14 +256,14 @@ export default function LayoutCompareModal({
               )}
               {areaDiff.length > 0 && (
                 <>
-                  <h6 className="fs-6">{m.admin_layout_compare_areas()}</h6>
+                  <h6 className="tw:text-base">{m.admin_layout_compare_areas()}</h6>
                   <ListGroup variant="flush">
                     {areaDiff.map((row) => (
                       <ListGroup.Item
                         key={row.label}
-                        className="d-flex justify-content-between align-items-center gap-2"
+                        className="tw:flex tw:justify-between tw:items-center tw:gap-2"
                       >
-                        <span className="small">{row.label}</span>
+                        <span className="tw:text-sm">{row.label}</span>
                         {statusBadge(row.status)}
                       </ListGroup.Item>
                     ))}

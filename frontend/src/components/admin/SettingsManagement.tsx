@@ -105,17 +105,17 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
 
   return (
     <Card bg="dark" text="white" border="secondary">
-      <Card.Header className="fw-semibold">{m.admin_content_settings_section()}</Card.Header>
+      <Card.Header className="tw:font-semibold">{m.admin_content_settings_section()}</Card.Header>
       <Card.Body>
         {updateMutation.isError && (
-          <Alert variant="danger" className="py-1 mb-3 small">
+          <Alert variant="danger" className="tw:py-1 tw:mb-4 tw:text-sm">
             {updateMutation.error instanceof Error
               ? updateMutation.error.message
               : m.admin_error_update_settings()}
           </Alert>
         )}
         {settingsQuery.isError ? (
-          <Alert variant="danger" className="py-1 mb-0 small">
+          <Alert variant="danger" className="tw:py-1 tw:mb-0 tw:text-sm">
             {m.admin_error_load_settings()}
           </Alert>
         ) : settingsQuery.isPending ? (
@@ -130,10 +130,10 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
               disabled={updateMutation.isPending}
               onChange={(e) => updateMutation.mutate({ maintenance_mode: e.target.checked })}
             />
-            <div className="text-secondary small mt-2">
+            <div className="tw:text-subtle tw:text-sm tw:mt-2">
               {m.admin_settings_maintenance_mode_help()}
             </div>
-            <hr className="border-secondary my-4" />
+            <hr className="border-secondary tw:my-6" />
             <Form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -142,7 +142,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
             >
               <form.Field name="publicEmail">
                 {(field) => (
-                  <Form.Group className="mb-3" controlId="public-email">
+                  <Form.Group className="tw:mb-4" controlId="public-email">
                     <Form.Label>{m.admin_settings_public_email_label()}</Form.Label>
                     <Form.Control
                       type="email"
@@ -151,7 +151,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <Form.Text className="text-secondary">
+                    <Form.Text className="tw:text-subtle">
                       {m.admin_settings_public_email_help()}
                     </Form.Text>
                   </Form.Group>
@@ -159,7 +159,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
               </form.Field>
               <form.Field name="publicPhone">
                 {(field) => (
-                  <Form.Group className="mb-3" controlId="public-phone">
+                  <Form.Group className="tw:mb-4" controlId="public-phone">
                     <Form.Label>{m.admin_settings_public_phone_label()}</Form.Label>
                     <Form.Control
                       type="tel"
@@ -168,7 +168,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <Form.Text className="text-secondary">
+                    <Form.Text className="tw:text-subtle">
                       {m.admin_settings_public_phone_help()}
                     </Form.Text>
                   </Form.Group>
@@ -176,7 +176,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
               </form.Field>
               <form.Field name="facebookUrl">
                 {(field) => (
-                  <Form.Group className="mb-3" controlId="facebook-url">
+                  <Form.Group className="tw:mb-4" controlId="facebook-url">
                     <Form.Label>{m.admin_settings_facebook_url_label()}</Form.Label>
                     <Form.Control
                       type="url"
@@ -186,7 +186,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <Form.Text className="text-secondary">
+                    <Form.Text className="tw:text-subtle">
                       {m.admin_settings_facebook_url_help()}
                     </Form.Text>
                   </Form.Group>

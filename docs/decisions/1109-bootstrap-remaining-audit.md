@@ -53,6 +53,16 @@ Bootstrap's vendor class from that list; record declining source references,
 owned selectors and frozen exceptions during migration. The vendor entries
 can disappear only when #1111 removes the stylesheet and generator.
 
+## Implementation status (2026-09-30)
+
+#1117 is implemented locally; see the [layout migration audit](1117-layout-utilities.md)
+for current source/selector counts, retained ownership and verification. All
+Container/Row/Col imports and ordinary application layout utilities are replaced.
+Keep it in the active order until review and screenshot publication on the eventual
+PR satisfy its remaining gate. #1118–#1123 remain implementation prerequisites
+of #1111; this status does not authorize final removal. The original snapshot
+and inventories below remain historical context.
+
 ## Preferred implementation order and ownership
 
 | Order | Issue | Scope |

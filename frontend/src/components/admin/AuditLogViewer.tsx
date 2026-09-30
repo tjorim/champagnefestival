@@ -125,13 +125,15 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
 
   return (
     <div>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <h2 className="h4 mb-0">{m.admin_audit_log_title()}</h2>
+      <div className="tw:flex tw:justify-between tw:items-center tw:mb-4">
+        <h2 className="tw:text-2xl tw:font-medium tw:leading-tight tw:mb-0">
+          {m.admin_audit_log_title()}
+        </h2>
       </div>
 
-      <Form className="d-flex flex-wrap gap-3 mb-3">
+      <Form className="tw:flex tw:flex-wrap tw:gap-4 tw:mb-4">
         <Form.Group controlId="audit-resource-type">
-          <Form.Label className="small text-secondary mb-1">
+          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_resource_type()}
           </Form.Label>
           <Form.Select
@@ -149,7 +151,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
           </Form.Select>
         </Form.Group>
         <Form.Group controlId="audit-resource-id">
-          <Form.Label className="small text-secondary mb-1">
+          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_resource_id()}
           </Form.Label>
           <Form.Control
@@ -162,7 +164,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
           />
         </Form.Group>
         <Form.Group controlId="audit-actor">
-          <Form.Label className="small text-secondary mb-1">
+          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_actor()}
           </Form.Label>
           <Form.Control
@@ -175,7 +177,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
           />
         </Form.Group>
         <Form.Group controlId="audit-action">
-          <Form.Label className="small text-secondary mb-1">
+          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_action()}
           </Form.Label>
           <Form.Control
@@ -188,19 +190,19 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
           />
         </Form.Group>
         <Form.Group controlId="audit-since">
-          <Form.Label className="small text-secondary mb-1">
+          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_since()}
           </Form.Label>
           <Form.Control size="sm" type="date" value={since} onChange={handleSinceChange} />
         </Form.Group>
         <Form.Group controlId="audit-until">
-          <Form.Label className="small text-secondary mb-1">
+          <Form.Label className="tw:text-sm tw:text-subtle tw:mb-1">
             {m.admin_audit_filter_until()}
           </Form.Label>
           <Form.Control size="sm" type="date" value={until} onChange={handleUntilChange} />
         </Form.Group>
         {hasFilters && (
-          <Form.Group className="align-self-end">
+          <Form.Group className="tw:self-end">
             <Button variant="outline-secondary" size="sm" onClick={handleClearFilters}>
               {m.admin_content_clear_filters()}
             </Button>
@@ -209,23 +211,23 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
       </Form>
 
       {entriesQuery.error && (
-        <Alert variant="danger" className="mb-3">
+        <Alert variant="danger" className="tw:mb-4">
           {m.admin_error_load_data()}
         </Alert>
       )}
 
       {entriesQuery.isPending ? (
-        <div className="text-center py-5">
+        <div className="tw:text-center tw:py-12">
           <Spinner animation="border" variant="primary" role="status">
-            <span className="visually-hidden">{m.admin_loading()}</span>
+            <span className="tw:sr-only">{m.admin_loading()}</span>
           </Spinner>
         </div>
       ) : entries.length === 0 ? (
-        <p className="text-secondary">{m.admin_audit_no_entries()}</p>
+        <p className="tw:text-subtle">{m.admin_audit_no_entries()}</p>
       ) : (
         <>
           <Table>
-            <caption className="visually-hidden">{m.admin_audit_table_caption()}</caption>
+            <caption className="tw:sr-only">{m.admin_audit_table_caption()}</caption>
             <TableHeader>
               <TableRow>
                 <TableHead scope="col">{m.admin_audit_column_timestamp()}</TableHead>
@@ -252,7 +254,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             </TableBody>
           </Table>
 
-          <div className="d-flex justify-content-between align-items-center">
+          <div className="tw:flex tw:justify-between tw:items-center">
             <Button
               variant="outline-secondary"
               size="sm"
@@ -261,7 +263,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             >
               {m.admin_audit_previous_page()}
             </Button>
-            <span className="text-secondary small">{m.admin_audit_page_label({ page })}</span>
+            <span className="tw:text-subtle tw:text-sm">{m.admin_audit_page_label({ page })}</span>
             <Button
               variant="outline-secondary"
               size="sm"

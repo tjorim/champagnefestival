@@ -369,30 +369,32 @@ export default function PolicyManagement({
   return (
     <Card className="admin-card">
       <Card.Header>
-        <h2 className="h5 mb-0">{m.admin_policies_section()}</h2>
+        <h2 className="tw:text-xl tw:font-medium tw:leading-tight tw:mb-0">
+          {m.admin_policies_section()}
+        </h2>
       </Card.Header>
       <Card.Body>
         {error && <Alert variant="danger">{error}</Alert>}
         {query.isError && <Alert variant="danger">{m.admin_error_load_policy()}</Alert>}
         {policy && (
           <>
-            <div className="d-flex justify-content-between align-items-center mb-3">
+            <div className="tw:flex tw:justify-between tw:items-center tw:mb-4">
               <div>
                 <strong>{policy.title_en ?? policy.title_nl}</strong>{" "}
-                <span className="text-secondary">
+                <span className="tw:text-subtle">
                   {m.admin_policy_required_locales_label()}{" "}
                   {LOCALES.map((l) => (
                     <Badge
                       key={l}
                       bg={policy.required_locales.includes(l) ? "info" : "secondary"}
-                      className="me-1"
+                      className="tw:me-1"
                     >
                       {l}
                     </Badge>
                   ))}
                 </span>
                 {published && (
-                  <div className="text-secondary small">
+                  <div className="tw:text-subtle tw:text-sm">
                     {m.admin_policy_currently_published({
                       version: published.version_number,
                       date: published.published_at
@@ -411,13 +413,13 @@ export default function PolicyManagement({
 
             {draft ? (
               <>
-                <div className="mb-2 text-secondary small">
+                <div className="tw:mb-2 tw:text-subtle tw:text-sm">
                   {m.admin_policy_editing_draft_label({ version: draft.version_number })}{" "}
                   {LOCALES.map((l) => (
                     <Badge
                       key={l}
                       bg={values[l]?.trim() ? "success" : "secondary"}
-                      className="me-1"
+                      className="tw:me-1"
                     >
                       {l}
                     </Badge>
@@ -440,8 +442,8 @@ export default function PolicyManagement({
                     </LocaleButton>
                   ))}
                 </div>
-                <div className="border border-top-0 p-3">
-                  <ButtonGroup size="sm" className="mb-2">
+                <div className="border border-top-0 tw:p-4">
+                  <ButtonGroup size="sm" className="tw:mb-2">
                     <Button
                       variant="outline-secondary"
                       onClick={() =>
@@ -528,13 +530,13 @@ export default function PolicyManagement({
                       />
                     )}
                   </form.Field>
-                  <div className="row mt-3">
-                    <div className="col-md-6">
-                      <Form.Label className="small text-secondary">
+                  <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mt-4">
+                    <div className="tw:site-md:w-6/12">
+                      <Form.Label className="tw:text-sm tw:text-subtle">
                         {m.admin_policy_preview_label()}
                       </Form.Label>
                       <div
-                        className="border rounded p-3 bg-body-tertiary"
+                        className="border rounded tw:p-4 bg-body-tertiary"
                         style={{ minHeight: "8rem" }}
                         // Trusted: `preview` is always the sanitized HTML the
                         // backend's shared render_markdown() returned. Blanked
@@ -546,8 +548,8 @@ export default function PolicyManagement({
                         }}
                       />
                     </div>
-                    <div className="col-md-6">
-                      <Form.Label className="small text-secondary">
+                    <div className="tw:site-md:w-6/12">
+                      <Form.Label className="tw:text-sm tw:text-subtle">
                         {m.admin_policy_change_summary_label()}
                       </Form.Label>
                       <form.Field name="changeSummary">
@@ -564,7 +566,7 @@ export default function PolicyManagement({
                       </form.Field>
                     </div>
                   </div>
-                  <div className="d-flex gap-2 mt-3">
+                  <div className="tw:flex tw:gap-2 tw:mt-4">
                     <Button disabled={saveDraft.isPending} onClick={handleSaveDraft}>
                       {m.admin_policy_save_draft_action()}
                     </Button>
@@ -590,7 +592,9 @@ export default function PolicyManagement({
             )}
 
             <hr />
-            <h3 className="h6">{m.admin_policy_version_history_heading()}</h3>
+            <h3 className="tw:text-base tw:font-medium tw:leading-tight">
+              {m.admin_policy_version_history_heading()}
+            </h3>
             <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
                 <TableHeader>
@@ -618,7 +622,7 @@ export default function PolicyManagement({
               </Table>
             </div>
             {contentFor(published, locale) === "" && published && (
-              <p className="text-secondary small">
+              <p className="tw:text-subtle tw:text-sm">
                 {m.admin_policy_no_published_content({ locale: locale.toUpperCase() })}
               </p>
             )}

@@ -3,7 +3,6 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -161,7 +160,7 @@ export default function MyAccountPage() {
   const volunteerSection = (
     <>
       {identityMutation.isPending ? (
-        <div className="d-flex align-items-center justify-content-center gap-2 text-secondary mb-3">
+        <div className="tw:flex tw:items-center tw:justify-center tw:gap-2 tw:text-subtle tw:mb-4">
           <Spinner animation="border" size="sm" />
         </div>
       ) : identityMutation.isError && !identity ? (
@@ -169,16 +168,18 @@ export default function MyAccountPage() {
       ) : identity?.linked ? (
         <>
           <Alert variant="secondary">
-            <h3 className="h6">{m.my_eid_identity_heading()}</h3>
-            <dl className="row mb-0 small">
-              <dt className="col-5">{m.my_eid_niss_label()}</dt>
-              <dd className="col-7">
+            <h3 className="tw:text-base tw:font-medium tw:leading-tight">
+              {m.my_eid_identity_heading()}
+            </h3>
+            <dl className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mb-0 tw:text-sm">
+              <dt className="tw:w-5/12">{m.my_eid_niss_label()}</dt>
+              <dd className="tw:w-7/12">
                 {identity.nationalRegisterNumber
                   ? formatNiss(identity.nationalRegisterNumber)
                   : "—"}
               </dd>
-              <dt className="col-5 mb-0">{m.my_eid_eid_label()}</dt>
-              <dd className="col-7 mb-0">
+              <dt className="tw:w-5/12 tw:mb-0">{m.my_eid_eid_label()}</dt>
+              <dd className="tw:w-7/12 tw:mb-0">
                 {identity.eidDocumentNumber ? formatEidNumber(identity.eidDocumentNumber) : "—"}
               </dd>
             </dl>
@@ -190,16 +191,18 @@ export default function MyAccountPage() {
 
           {!pollOptionsMutation.isPending && poll && poll.options.length > 0 && (
             <Alert variant="secondary">
-              <h3 className="h6">{m.my_poll_heading()}</h3>
-              <p className="small mb-3">{m.my_poll_description()}</p>
+              <h3 className="tw:text-base tw:font-medium tw:leading-tight">
+                {m.my_poll_heading()}
+              </h3>
+              <p className="tw:text-sm tw:mb-4">{m.my_poll_description()}</p>
               {(["dish", "soup"] as const).map((kind) => {
                 const kindOptions = poll.options.filter((o) => o.kind === kind);
                 if (kindOptions.length === 0) return null;
                 const selectedId =
                   kind === "dish" ? poll.selections.dishOptionId : poll.selections.soupOptionId;
                 return (
-                  <Form.Group key={kind} className="mb-3">
-                    <Form.Label className="fw-semibold small">
+                  <Form.Group key={kind} className="tw:mb-4">
+                    <Form.Label className="tw:font-semibold tw:text-sm">
                       {kind === "dish" ? m.my_poll_dish_label() : m.my_poll_soup_label()}
                     </Form.Label>
                     {kindOptions.map((option) => (
@@ -226,8 +229,10 @@ export default function MyAccountPage() {
                 );
               })}
               {poll.options.some((o) => o.kind === "dinner") && (
-                <Form.Group className="mb-2">
-                  <Form.Label className="fw-semibold small">{m.my_poll_dinner_label()}</Form.Label>
+                <Form.Group className="tw:mb-2">
+                  <Form.Label className="tw:font-semibold tw:text-sm">
+                    {m.my_poll_dinner_label()}
+                  </Form.Label>
                   {poll.options
                     .filter((o) => o.kind === "dinner")
                     .map((option) => {
@@ -255,7 +260,7 @@ export default function MyAccountPage() {
                 </Form.Group>
               )}
               {pollSelectionsMutation.isError && (
-                <Alert variant="danger" className="py-2 small mb-0">
+                <Alert variant="danger" className="tw:py-2 tw:text-sm tw:mb-0">
                   {pollSelectionsMutation.error instanceof Error
                     ? pollSelectionsMutation.error.message
                     : m.my_poll_save_error()}
@@ -265,15 +270,17 @@ export default function MyAccountPage() {
           )}
 
           <Alert variant="secondary">
-            <h3 className="h6">{m.my_eid_correction_heading()}</h3>
-            <p className="small mb-3">{m.my_eid_correction_description()}</p>
+            <h3 className="tw:text-base tw:font-medium tw:leading-tight">
+              {m.my_eid_correction_heading()}
+            </h3>
+            <p className="tw:text-sm tw:mb-4">{m.my_eid_correction_description()}</p>
             <Form
               onSubmit={(event) => {
                 event.preventDefault();
                 void correctionForm.handleSubmit();
               }}
             >
-              <Form.Group className="mb-3" controlId="my-eid-new-number">
+              <Form.Group className="tw:mb-4" controlId="my-eid-new-number">
                 <Form.Label>{m.my_eid_new_number_label()}</Form.Label>
                 <correctionForm.Field name="newEidDocumentNumber">
                   {(field) => (
@@ -293,7 +300,7 @@ export default function MyAccountPage() {
                 </correctionForm.Field>
               </Form.Group>
               {(correctionValidationError || correctionMutation.isError) && (
-                <Alert variant="danger" className="py-2 small">
+                <Alert variant="danger" className="tw:py-2 tw:text-sm">
                   {correctionValidationError ||
                     (correctionMutation.error instanceof Error
                       ? correctionMutation.error.message
@@ -301,7 +308,7 @@ export default function MyAccountPage() {
                 </Alert>
               )}
               {correctionMutation.isSuccess && (
-                <Alert variant="success" className="py-2 small mb-3">
+                <Alert variant="success" className="tw:py-2 tw:text-sm tw:mb-4">
                   {m.my_eid_correction_success()}
                 </Alert>
               )}
@@ -320,15 +327,17 @@ export default function MyAccountPage() {
         </>
       ) : (
         <Alert variant="secondary">
-          <h3 className="h6">{m.my_eid_register_heading()}</h3>
-          <p className="small mb-3">{m.my_eid_register_description()}</p>
+          <h3 className="tw:text-base tw:font-medium tw:leading-tight">
+            {m.my_eid_register_heading()}
+          </h3>
+          <p className="tw:text-sm tw:mb-4">{m.my_eid_register_description()}</p>
           <Form
             onSubmit={(event) => {
               event.preventDefault();
               void registerForm.handleSubmit();
             }}
           >
-            <Form.Group className="mb-3" controlId="my-eid-name">
+            <Form.Group className="tw:mb-4" controlId="my-eid-name">
               <Form.Label>{m.my_eid_name_label()}</Form.Label>
               <registerForm.Field name="name">
                 {(field) => (
@@ -341,7 +350,7 @@ export default function MyAccountPage() {
                 )}
               </registerForm.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="my-eid-niss">
+            <Form.Group className="tw:mb-4" controlId="my-eid-niss">
               <Form.Label>{m.my_eid_niss_label()}</Form.Label>
               <registerForm.Field name="nationalRegisterNumber">
                 {(field) => (
@@ -359,7 +368,7 @@ export default function MyAccountPage() {
                 )}
               </registerForm.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="my-eid-eid">
+            <Form.Group className="tw:mb-4" controlId="my-eid-eid">
               <Form.Label>{m.my_eid_eid_label()}</Form.Label>
               <registerForm.Field name="eidDocumentNumber">
                 {(field) => (
@@ -379,7 +388,7 @@ export default function MyAccountPage() {
               </registerForm.Field>
             </Form.Group>
             {(registerValidationError || registerMutation.isError) && (
-              <Alert variant="danger" className="py-2 small">
+              <Alert variant="danger" className="tw:py-2 tw:text-sm">
                 {registerValidationError ||
                   (registerMutation.error instanceof Error
                     ? registerMutation.error.message
@@ -402,8 +411,10 @@ export default function MyAccountPage() {
 
   const accountSection = (
     <Alert variant="secondary">
-      <h3 className="h6">{m.my_account_delete_heading()}</h3>
-      <p className="small mb-3">{m.my_account_delete_description()}</p>
+      <h3 className="tw:text-base tw:font-medium tw:leading-tight">
+        {m.my_account_delete_heading()}
+      </h3>
+      <p className="tw:text-sm tw:mb-4">{m.my_account_delete_description()}</p>
       <Button variant="outline-danger" size="sm" onClick={() => setShowDeleteConfirm(true)}>
         {m.my_account_delete_button()}
       </Button>
@@ -419,8 +430,11 @@ export default function MyAccountPage() {
     tabs.push({ key: "account", title: m.my_account_title(), content: accountSection });
 
   return (
-    <Container className="py-5" style={{ maxWidth: "540px" }}>
-      <h1 id="my-account-title" className="h4 mb-4 text-center">
+    <div className="site-container tw:mx-auto tw:w-full tw:max-w-account tw:py-12">
+      <h1
+        id="my-account-title"
+        className="tw:text-2xl tw:font-medium tw:leading-tight tw:mb-6 tw:text-center"
+      >
         {m.my_account_title()}
       </h1>
 
@@ -431,14 +445,14 @@ export default function MyAccountPage() {
       )}
 
       {isSigningOut ? (
-        <div className="d-flex align-items-center justify-content-center gap-2 text-secondary">
+        <div className="tw:flex tw:items-center tw:justify-center tw:gap-2 tw:text-subtle">
           <Spinner animation="border" size="sm" />
           {m.auth_signing_out()}
         </div>
       ) : (
         <>
           {accountLabel && (
-            <p className="text-center text-secondary mb-4">
+            <p className="tw:text-center tw:text-subtle tw:mb-6">
               {m.my_account_signed_in_as({ account: accountLabel })}
             </p>
           )}
@@ -472,6 +486,6 @@ export default function MyAccountPage() {
         onConfirm={handleDelete}
         onHide={() => setShowDeleteConfirm(false)}
       />
-    </Container>
+    </div>
   );
 }

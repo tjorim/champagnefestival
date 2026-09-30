@@ -348,16 +348,16 @@ export default function PeopleManagement({
             const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
             return (
               <>
-                <div className="fw-semibold d-flex align-items-center gap-1">
+                <div className="tw:font-semibold tw:flex tw:items-center tw:gap-1">
                   {person.name}
                   {!person.active && (
-                    <Badge bg="secondary" className="ms-1">
+                    <Badge bg="secondary" className="tw:ms-1">
                       {m.admin_people_inactive_badge_label()}
                     </Badge>
                   )}
                 </div>
                 {isDuplicate && (
-                  <div className="text-warning small">
+                  <div className="tw:text-highlight tw:text-sm">
                     <Icon icon={TriangleAlertIcon} className="tw:me-1" />
                     {m.admin_people_duplicates_same_email()}
                   </div>
@@ -381,9 +381,9 @@ export default function PeopleManagement({
           header: m.admin_people_roles_label(),
           enableSorting: false,
           cell: ({ row }) => (
-            <div className="d-flex flex-wrap gap-1">
+            <div className="tw:flex tw:flex-wrap tw:gap-1">
               {row.original.roles.map((role) => (
-                <Badge key={role} bg="secondary" className="text-capitalize">
+                <Badge key={role} bg="secondary" className="tw:capitalize">
                   {role}
                 </Badge>
               ))}
@@ -409,7 +409,7 @@ export default function PeopleManagement({
                   <Button
                     size="sm"
                     variant="link"
-                    className="text-secondary p-0 ms-1"
+                    className="tw:text-subtle tw:p-0 tw:ms-1"
                     onClick={() => setViewRegistrationsPerson(person)}
                     title={m.admin_people_view_registrations()}
                     aria-label={`${m.admin_people_view_registrations()}: ${person.name}`}
@@ -434,7 +434,7 @@ export default function PeopleManagement({
                 )
               : [];
             return (
-              <div className="d-flex flex-wrap gap-1">
+              <div className="tw:flex tw:flex-wrap tw:gap-1">
                 {person.email && (
                   <Button
                     size="sm"
@@ -543,10 +543,10 @@ export default function PeopleManagement({
     <>
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
       <Card bg="dark" text="white" border="secondary">
-        <Card.Header className="pb-2">
-          <div className="d-flex align-items-center justify-content-between gap-2 mb-2">
-            <span className="fw-semibold">{m.admin_people_tab()}</span>
-            <div className="d-flex gap-2">
+        <Card.Header className="tw:pb-2">
+          <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:mb-2">
+            <span className="tw:font-semibold">{m.admin_people_tab()}</span>
+            <div className="tw:flex tw:gap-2">
               <ColumnVisibilityDropdown table={table} tableId="people" />
               <Button
                 size="sm"
@@ -561,18 +561,18 @@ export default function PeopleManagement({
               </Button>
             </div>
           </div>
-          <div className="d-flex flex-wrap gap-2 align-items-center">
+          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
             <Form.Select
               size="sm"
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="bg-dark text-light border-secondary"
+              className="bg-dark tw:text-content border-secondary"
               style={{ maxWidth: 160 }}
               aria-label={m.admin_people_roles_label()}
             >
               <option value="all">{m.admin_people_all_roles()}</option>
               {allRoles.map((role) => (
-                <option key={role} value={role} className="text-capitalize">
+                <option key={role} value={role} className="tw:capitalize">
                   {role}
                 </option>
               ))}
@@ -594,20 +594,20 @@ export default function PeopleManagement({
               placeholder={m.admin_search_person_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="bg-dark text-light border-secondary"
+              className="bg-dark tw:text-content border-secondary"
               style={{ maxWidth: 240 }}
             />
           </div>
         </Card.Header>
 
-        <Card.Body className="p-0">
+        <Card.Body className="tw:p-0">
           {mergeSuccess && (
             <Alert
               role="status"
               aria-live="polite"
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setMergeSuccess(false)}
             >
               {m.admin_people_merge_success()}
@@ -619,7 +619,7 @@ export default function PeopleManagement({
               aria-live="polite"
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setCreateSuccess(false)}
             >
               {m.admin_people_create_success()}
@@ -631,7 +631,7 @@ export default function PeopleManagement({
               aria-live="polite"
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setUpdateSuccess(false)}
             >
               {m.admin_people_update_success()}
@@ -643,7 +643,7 @@ export default function PeopleManagement({
               aria-live="polite"
               variant="success"
               dismissible
-              className="m-3 mb-0"
+              className="tw:m-4 tw:mb-0"
               onClose={() => setDeleteSuccess(false)}
             >
               {m.admin_people_delete_success()}
@@ -651,13 +651,17 @@ export default function PeopleManagement({
           )}
 
           {isLoading || peopleSearchQuery.isLoading ? (
-            <div className="text-center py-4">
+            <div className="tw:text-center tw:py-6">
               <Spinner animation="border" variant="primary" size="sm" />
             </div>
           ) : peopleSearchQuery.isError ? (
-            <p className="text-danger text-center py-4 mb-0">{m.admin_error_load_data()}</p>
+            <p className="tw:text-destructive tw:text-center tw:py-6 tw:mb-0">
+              {m.admin_error_load_data()}
+            </p>
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
-            <p className="text-secondary text-center py-4 mb-0">{m.admin_people_no_results()}</p>
+            <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
+              {m.admin_people_no_results()}
+            </p>
           ) : (
             <div data-tailwind-migrated="true" className="tw:w-full">
               <Table>
@@ -724,7 +728,9 @@ export default function PeopleManagement({
                 </Alert>
               )}
 
-              <p className="text-secondary small mb-3">{m.admin_people_duplicates_same_email()}</p>
+              <p className="tw:text-subtle tw:text-sm tw:mb-4">
+                {m.admin_people_duplicates_same_email()}
+              </p>
 
               {(["canonical", "duplicate"] as const).map((role) => {
                 const person = mergeState[role];
@@ -736,9 +742,9 @@ export default function PeopleManagement({
                 const variant = role === "canonical" ? "success" : "danger";
 
                 return (
-                  <Card key={role} bg="dark" border={variant} className="mb-3">
+                  <Card key={role} bg="dark" border={variant} className="tw:mb-4">
                     <Card.Header
-                      className={`border-${variant} text-${variant} small fw-semibold d-flex justify-content-between`}
+                      className={`border-${variant} text-${variant} tw:text-sm tw:font-semibold tw:flex tw:justify-between`}
                     >
                       <span>{label}</span>
                       <Button
@@ -756,11 +762,11 @@ export default function PeopleManagement({
                         <Icon icon={ArrowLeftRightIcon} />
                       </Button>
                     </Card.Header>
-                    <Card.Body className="py-2 small">
-                      <div className="fw-semibold">{person.name}</div>
-                      <div className="text-secondary">{person.email}</div>
-                      {person.phone && <div className="text-secondary">{person.phone}</div>}
-                      <div className="mt-1">
+                    <Card.Body className="tw:py-2 tw:text-sm">
+                      <div className="tw:font-semibold">{person.name}</div>
+                      <div className="tw:text-subtle">{person.email}</div>
+                      {person.phone && <div className="tw:text-subtle">{person.phone}</div>}
+                      <div className="tw:mt-1">
                         <Badge
                           bg={resCount > 0 ? "warning" : "secondary"}
                           text={resCount > 0 ? "dark" : undefined}
@@ -768,7 +774,7 @@ export default function PeopleManagement({
                           {resCount} {m.admin_people_registrations_count()}
                         </Badge>
                         {person.roles.map((r) => (
-                          <Badge key={r} bg="secondary" className="ms-1 text-capitalize">
+                          <Badge key={r} bg="secondary" className="tw:ms-1 tw:capitalize">
                             {r}
                           </Badge>
                         ))}
@@ -833,7 +839,7 @@ export default function PeopleManagement({
               </Button>
               <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
                 {deleting ? (
-                  <Spinner as="span" animation="border" size="sm" className="me-1" />
+                  <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
                 ) : (
                   <Icon icon={TrashIcon} className="tw:me-1" />
                 )}
@@ -872,26 +878,26 @@ export default function PeopleManagement({
             </DialogHeader>
             <DialogBody className="tw:p-0">
               {loadingPersonRegistrations && (
-                <div className="text-center py-4">
+                <div className="tw:text-center tw:py-6">
                   <Spinner animation="border" size="sm" variant="warning" />
                 </div>
               )}
               {!loadingPersonRegistrations && personRegistrationsError && (
-                <Alert role="alert" aria-live="assertive" variant="danger" className="m-3">
+                <Alert role="alert" aria-live="assertive" variant="danger" className="tw:m-4">
                   {m.admin_people_registrations_load_error()}
                 </Alert>
               )}
               {!loadingPersonRegistrations &&
                 !personRegistrationsError &&
                 personRegistrations.length === 0 && (
-                  <p className="text-secondary text-center py-4 mb-0">
+                  <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
                     {m.admin_people_registrations_empty()}
                   </p>
                 )}
               {!loadingPersonRegistrations &&
                 !personRegistrationsError &&
                 personRegistrations.length > 0 && (
-                  <div className="px-3 pt-3 small text-secondary">
+                  <div className="tw:px-4 tw:pt-4 tw:text-sm tw:text-subtle">
                     <div>
                       {m.admin_people_total_paid({
                         amount: personPaymentTotals.grandTotal.toFixed(2),
@@ -918,7 +924,7 @@ export default function PeopleManagement({
                     )}
                     {personPaymentTotals.byEdition.length > 1 &&
                       personPaymentTotals.byEdition.map((edition) => (
-                        <div key={edition.label} className="ms-2">
+                        <div key={edition.label} className="tw:ms-2">
                           {edition.label}: €{edition.totalPaid.toFixed(2)}
                         </div>
                       ))}
@@ -931,18 +937,18 @@ export default function PeopleManagement({
                     {personRegistrations.map((r) => (
                       <ListGroup.Item
                         key={r.id}
-                        className="bg-dark border-secondary text-light py-2"
+                        className="bg-dark border-secondary tw:text-content tw:py-2"
                       >
-                        <div className="d-flex justify-content-between align-items-start gap-2">
+                        <div className="tw:flex tw:justify-between tw:items-start tw:gap-2">
                           <div>
-                            <div className="fw-semibold small">{r.eventTitle}</div>
-                            <div className="text-secondary small">
+                            <div className="tw:font-semibold tw:text-sm">{r.eventTitle}</div>
+                            <div className="tw:text-subtle tw:text-sm">
                               <Icon icon={UsersIcon} className="tw:me-1" />
                               {r.guestCount}
-                              <span className="ms-2">€{r.amountPaid.toFixed(2)}</span>
+                              <span className="tw:ms-2">€{r.amountPaid.toFixed(2)}</span>
                             </div>
                           </div>
-                          <div className="d-flex gap-1 flex-wrap justify-content-end">
+                          <div className="tw:flex tw:gap-1 tw:flex-wrap tw:justify-end">
                             <Badge
                               bg={
                                 r.status === "confirmed"
@@ -981,7 +987,7 @@ export default function PeopleManagement({
                             )}
                           </div>
                         </div>
-                        <div className="text-secondary" style={{ fontSize: "0.7rem" }}>
+                        <div className="tw:text-subtle" style={{ fontSize: "0.7rem" }}>
                           {new Date(r.createdAt).toLocaleDateString()}
                         </div>
                       </ListGroup.Item>
@@ -991,12 +997,17 @@ export default function PeopleManagement({
             </DialogBody>
             <DialogFooter className="tw:flex-col tw:items-stretch">
               {ledgerExportError && (
-                <Alert role="alert" aria-live="assertive" variant="danger" className="py-2 mb-2">
+                <Alert
+                  role="alert"
+                  aria-live="assertive"
+                  variant="danger"
+                  className="tw:py-2 tw:mb-2"
+                >
                   {ledgerExportError}
                 </Alert>
               )}
-              <div className="d-flex justify-content-between gap-2">
-                <div className="d-flex gap-2">
+              <div className="tw:flex tw:justify-between tw:gap-2">
+                <div className="tw:flex tw:gap-2">
                   <Button
                     variant="outline-secondary"
                     size="sm"
@@ -1019,7 +1030,7 @@ export default function PeopleManagement({
                     title={m.admin_people_export_ledger()}
                   >
                     {exportingLedger ? (
-                      <Spinner as="span" animation="border" size="sm" className="me-1" />
+                      <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
                     ) : (
                       <Icon icon={FileSpreadsheetIcon} className="tw:me-1" />
                     )}

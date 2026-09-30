@@ -474,17 +474,20 @@ main > .content-section .card,
   border-radius: 8px;
 }
 
-.text-muted,
-.text-secondary {
+.tw\:text-subtle,
+.tw\:text-subtle {
   color: var(--text-muted) !important;
+  --layout-subtle: var(--text-muted) !important;
+  --layout-subtle: var(--text-muted) !important;
 }
 
-.text-warning,
+.tw\:text-highlight,
 .text-brand,
 .gradient-text {
   color: var(--champagne) !important;
   -webkit-text-fill-color: currentColor;
   background: none;
+  --layout-highlight: var(--champagne) !important;
 }
 
 .countdown {
@@ -797,12 +800,13 @@ main > .content-section .card,
   padding-top: clamp(3rem, 7vw, 5rem) !important;
 }
 
-.standalone-document-main #privacy-policy .col-lg-8 {
+.standalone-document-main #privacy-policy .site-content-column {
   padding: clamp(1.25rem, 3vw, 2rem);
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   box-shadow: var(--shadow);
+  --layout-column-gutter: clamp(1.25rem, 3vw, 2rem);
 }
 
 .standalone-document-main #privacy-policy h1 {
@@ -817,38 +821,6 @@ main > .content-section .card,
 .standalone-document-main #privacy-policy hr {
   border-color: var(--border-color);
   opacity: 1;
-}
-
-.fs-xs {
-  font-size: 0.8rem;
-}
-
-.fs-2xs {
-  font-size: 0.7rem;
-}
-
-.fs-3xs {
-  font-size: 0.65rem;
-}
-
-.fs-4xs {
-  font-size: 0.6rem;
-}
-
-.fs-5xs {
-  font-size: 0.55rem;
-}
-
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  white-space: nowrap;
-  border-width: 0;
-  clip: rect(0, 0, 0, 0);
 }
 
 [aria-live="polite"],
@@ -912,7 +884,7 @@ a:focus {
     padding: 3.25rem 0;
   }
 
-  .container {
+  .site-container {
     width: 100%;
     padding-right: 1rem;
     padding-left: 1rem;
@@ -953,7 +925,7 @@ a:focus {
     min-width: 7.5rem;
   }
 
-  .event-card .d-flex {
+  .event-card .tw\:flex {
     align-items: flex-start !important;
   }
 
@@ -966,7 +938,7 @@ a:focus {
     min-height: auto;
   }
 
-  .standalone-navbar .container-fluid {
+  .standalone-navbar .site-fluid-container {
     align-items: flex-start !important;
   }
 
@@ -1154,12 +1126,13 @@ a:focus {
     box-shadow: 0 10px 28px rgb(86 58 18 / 0.12);
   }
 
-  .standalone-document-main #privacy-policy .col-lg-8 {
+  .standalone-document-main #privacy-policy .site-content-column {
     background: rgba(255, 252, 245, 0.94);
   }
 
-  .standalone-document-main #privacy-policy .text-light {
+  .standalone-document-main #privacy-policy .tw\:text-content {
     color: var(--text-color) !important;
+    --layout-content: var(--text-color) !important;
   }
 
   .standalone-main #check-in .bg-dark,
@@ -1168,9 +1141,10 @@ a:focus {
     background-color: var(--surface-color-strong) !important;
   }
 
-  .standalone-main #check-in .text-light,
-  .standalone-main #my-registrations .text-light {
+  .standalone-main #check-in .tw\:text-content,
+  .standalone-main #my-registrations .tw\:text-content {
     color: var(--text-color) !important;
+    --layout-content: var(--text-color) !important;
   }
 
   .standalone-main #check-in .border-secondary,

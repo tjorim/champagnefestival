@@ -170,11 +170,11 @@ export default function EditionCard({
   const collapseId = `edition-collapse-${edition.id}`;
 
   return (
-    <Card bg="dark" border="secondary" className="mb-2">
-      <Card.Header className="d-flex justify-content-between align-items-center gap-2 flex-wrap py-2">
+    <Card bg="dark" border="secondary" className="tw:mb-2">
+      <Card.Header className="tw:flex tw:justify-between tw:items-center tw:gap-2 tw:flex-wrap tw:py-2">
         <Button
           variant="link"
-          className="text-warning text-decoration-none p-0 text-start fw-semibold"
+          className="tw:text-highlight tw:no-underline tw:p-0 tw:text-left tw:font-semibold"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls={collapseId}
@@ -182,17 +182,17 @@ export default function EditionCard({
           <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} className="tw:me-2" />
           {edition.id}
         </Button>
-        <span className="d-flex align-items-center gap-2 flex-wrap">
+        <span className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
           <Badge bg={typeDisplay.bg}>{typeDisplay.label}</Badge>
           {startDate && endDate ? (
-            <span className="text-secondary small">
+            <span className="tw:text-subtle tw:text-sm">
               {startDate.toLocaleDateString()}
               {startDate.getTime() !== endDate.getTime()
                 ? ` – ${endDate.toLocaleDateString()}`
                 : ""}
             </span>
           ) : (
-            <span className="text-secondary small">
+            <span className="tw:text-subtle tw:text-sm">
               {m.admin_edition_dates_defined_by_events()}
             </span>
           )}
@@ -215,19 +215,19 @@ export default function EditionCard({
         )}
         {eventsQuery.isFetching && <Spinner animation="border" size="sm" variant="warning" />}
         {saveError && (
-          <span className="text-danger small">
+          <span className="tw:text-destructive tw:text-sm">
             <Icon icon={TriangleAlertIcon} className="tw:me-1" />
             {saveError}
           </span>
         )}
         {deleteError && (
-          <span className="text-danger small">
+          <span className="tw:text-destructive tw:text-sm">
             <Icon icon={TriangleAlertIcon} className="tw:me-1" />
             {deleteError}
           </span>
         )}
         {confirmDelete ? (
-          <span className="d-flex align-items-center gap-1">
+          <span className="tw:flex tw:items-center tw:gap-1">
             <Button size="sm" variant="danger" onClick={handleDelete} disabled={deleting}>
               {deleting && (
                 <Spinner
@@ -236,7 +236,7 @@ export default function EditionCard({
                   size="sm"
                   role="status"
                   aria-hidden="true"
-                  className="me-1"
+                  className="tw:me-1"
                 />
               )}
               {m.admin_action_confirm()}
@@ -246,7 +246,7 @@ export default function EditionCard({
             </Button>
           </span>
         ) : (
-          <span className="d-flex gap-1">
+          <span className="tw:flex tw:gap-1">
             <Button
               size="sm"
               variant="outline-secondary"
@@ -277,16 +277,16 @@ export default function EditionCard({
       </Card.Header>
 
       {open && (
-        <Card.Body id={collapseId} className="pt-2 pb-2">
+        <Card.Body id={collapseId} className="tw:pt-2 tw:pb-2">
           {(() => {
             const venue = venues.find((value) => value.id === edition.venue.id);
             if (!venue) return null;
             return (
-              <p className="text-secondary small mb-2">
+              <p className="tw:text-subtle tw:text-sm tw:mb-2">
                 <Icon icon={MapPinIcon} className="tw:me-1" />
                 {[venue.name, venue.address, venue.city, venue.country].filter(Boolean).join(", ")}
                 {!venue.active && (
-                  <Badge bg="secondary" className="ms-2 fs-3xs">
+                  <Badge bg="secondary" className="tw:ms-2 tw:text-micro">
                     {m.admin_venue_archived_badge()}
                   </Badge>
                 )}
@@ -294,8 +294,10 @@ export default function EditionCard({
             );
           })()}
 
-          <div className="d-flex justify-content-between align-items-center mb-1">
-            <h6 className="text-warning mb-0 small">{m.admin_content_edition_schedule()}</h6>
+          <div className="tw:flex tw:justify-between tw:items-center tw:mb-1">
+            <h6 className="tw:text-highlight tw:mb-0 tw:text-sm">
+              {m.admin_content_edition_schedule()}
+            </h6>
             <Button size="sm" variant="outline-secondary" onClick={openAddEvent}>
               <Icon icon={PlusIcon} className="tw:me-1" />
               {m.admin_content_edition_add_event()}
@@ -303,38 +305,40 @@ export default function EditionCard({
           </div>
 
           {eventsQuery.isPending ? (
-            <div className="text-secondary small py-2">
-              <Spinner animation="border" size="sm" className="me-2" />
+            <div className="tw:text-subtle tw:text-sm tw:py-2">
+              <Spinner animation="border" size="sm" className="tw:me-2" />
               {m.admin_loading_events()}
             </div>
           ) : sortedEvents.length === 0 ? (
-            <p className="text-secondary fst-italic small">{m.admin_content_edition_no_events()}</p>
+            <p className="tw:text-subtle fst-italic tw:text-sm">
+              {m.admin_content_edition_no_events()}
+            </p>
           ) : (
-            <ListGroup variant="flush" className="mb-1">
+            <ListGroup variant="flush" className="tw:mb-1">
               {sortedEvents.map((event) => (
                 <ListGroup.Item
                   key={event.id}
-                  className="bg-dark text-light border-secondary d-flex justify-content-between align-items-center gap-2 py-1 px-0"
+                  className="bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0"
                 >
-                  <span className="d-flex align-items-center gap-2 flex-wrap">
-                    <Badge bg="secondary" className="fs-3xs">
+                  <span className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
+                    <Badge bg="secondary" className="tw:text-micro">
                       {event.date}
                     </Badge>
-                    <span className="text-secondary small">
+                    <span className="tw:text-subtle tw:text-sm">
                       {event.startTime}
                       {event.endTime ? `–${event.endTime}` : ""}
                     </span>
                     <span>{event.title}</span>
-                    <Badge bg="info" text="dark" className="text-capitalize fs-3xs">
+                    <Badge bg="info" text="dark" className="tw:capitalize tw:text-micro">
                       {event.category}
                     </Badge>
                     {event.registrationRequired && (
-                      <Badge bg="warning" text="dark" className="fs-3xs">
+                      <Badge bg="warning" text="dark" className="tw:text-micro">
                         {m.schedule_registration()}
                       </Badge>
                     )}
                   </span>
-                  <span className="d-flex gap-1 flex-shrink-0">
+                  <span className="tw:flex tw:gap-1 tw:shrink-0">
                     <Button
                       size="sm"
                       variant="outline-secondary"

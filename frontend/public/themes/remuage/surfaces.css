@@ -73,8 +73,9 @@ html[data-visual-theme="remuage"] .event-card h5 {
 }
 
 html[data-visual-theme="remuage"] .event-description,
-html[data-visual-theme="remuage"] .event-card .text-muted {
+html[data-visual-theme="remuage"] .event-card .tw\:text-subtle {
   color: var(--rem-muted) !important;
+  --layout-subtle: var(--rem-muted) !important;
 }
 
 html[data-visual-theme="remuage"] .badge {
@@ -354,10 +355,11 @@ html[data-visual-theme="remuage"] .standalone-app .card-footer {
 }
 
 html[data-visual-theme="remuage"] .standalone-app .bg-dark,
-html[data-visual-theme="remuage"] .standalone-app .text-light,
+html[data-visual-theme="remuage"] .standalone-app .tw\:text-content,
 html[data-visual-theme="remuage"] .standalone-app .list-group-item.bg-dark {
   color: var(--rem-ink) !important;
   background-color: var(--rem-paper) !important;
+  --layout-content: var(--rem-ink) !important;
 }
 
 html[data-visual-theme="remuage"] .standalone-app .border-secondary,
@@ -365,13 +367,16 @@ html[data-visual-theme="remuage"] .standalone-app .list-group-item {
   border-color: var(--rem-line) !important;
 }
 
-html[data-visual-theme="remuage"] .standalone-app .text-secondary,
-html[data-visual-theme="remuage"] .standalone-app .text-muted {
+html[data-visual-theme="remuage"] .standalone-app .tw\:text-subtle,
+html[data-visual-theme="remuage"] .standalone-app .tw\:text-subtle {
   color: var(--rem-muted) !important;
+  --layout-subtle: var(--rem-muted) !important;
+  --layout-subtle: var(--rem-muted) !important;
 }
 
-html[data-visual-theme="remuage"] .standalone-app .text-warning {
+html[data-visual-theme="remuage"] .standalone-app .tw\:text-highlight {
   color: var(--rem-blue) !important;
+  --layout-highlight: var(--rem-blue) !important;
 }
 
 html[data-visual-theme="remuage"] .standalone-app .btn-warning {
@@ -404,10 +409,11 @@ html[data-visual-theme="remuage"] #my-registrations .card::after {
   bottom: 22%;
 }
 
-html[data-visual-theme="remuage"] .standalone-document-main #privacy-policy .col-lg-8 {
+html[data-visual-theme="remuage"] .standalone-document-main #privacy-policy .site-content-column {
   padding: clamp(1.5rem, 4vw, 3.5rem);
   background: var(--rem-paper);
   border-top: 8px solid var(--rem-blue);
   border-radius: var(--rem-radius);
   box-shadow: var(--rem-shadow);
+  --layout-column-gutter: clamp(1.5rem, 4vw, 3.5rem);
 }

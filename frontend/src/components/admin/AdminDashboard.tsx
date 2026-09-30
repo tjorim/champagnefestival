@@ -406,9 +406,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   if (auth.isLoading) {
     return (
-      <div className="py-5 text-center">
+      <div className="tw:py-12 tw:text-center">
         <Spinner animation="border" variant="warning" role="status">
-          <span className="visually-hidden">{m.admin_loading()}</span>
+          <span className="tw:sr-only">{m.admin_loading()}</span>
         </Spinner>
       </div>
     );
@@ -421,7 +421,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       data-theme-mode="dark"
       data-bs-theme="dark"
       aria-labelledby="admin-title"
-      className={isAuthenticated ? "admin-authenticated" : "py-5"}
+      className={isAuthenticated ? "admin-authenticated" : "tw:py-12"}
     >
       {!isAuthenticated ? (
         /* ---- Login (OIDC redirect) ---- */
@@ -464,16 +464,16 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             {activeEdition.id !== "" && (
               <button
                 type="button"
-                className="admin-active-edition-strip text-start mb-3"
+                className="admin-active-edition-strip tw:text-left tw:mb-4"
                 onClick={() => {
                   setActiveKey("registrations");
                   setApplyActiveEditionFilterRequest((current) => current + 1);
                 }}
                 aria-label={m.admin_active_edition_apply_filter()}
               >
-                <span className="fw-semibold">{activeEditionLabel(activeEdition)}</span>
+                <span className="tw:font-semibold">{activeEditionLabel(activeEdition)}</span>
                 {isActiveEditionDay && (
-                  <span className="text-warning">
+                  <span className="tw:text-highlight">
                     {m.admin_active_edition_day_progress({
                       current: activeDayIndex + 1,
                       total: activeEditionDateKeys.length,
@@ -496,7 +496,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             {isRenewingSession && (
               // Renewal is quick but not instant; without this the dashboard just
               // sits there, which reads as a hang rather than as recovery.
-              <Alert variant="info" className="mb-4 d-flex align-items-center gap-2">
+              <Alert variant="info" className="tw:mb-6 tw:flex tw:items-center tw:gap-2">
                 <Spinner animation="border" size="sm" aria-hidden="true" />
                 {m.admin_session_renewing()}
               </Alert>
@@ -504,7 +504,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             {globalError && (
               <Alert
                 variant="danger"
-                className="mb-4"
+                className="tw:mb-6"
                 dismissible
                 onClose={() => setGlobalError("")}
               >
@@ -544,7 +544,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <ScratchpadManagement authHeaders={authHeaders} editionId={activeEdition.id} />
                 )}
                 {canManageAdminSections && activeKey === "exhibitors" && (
-                  <Card bg="dark" text="white" border="secondary" className="mb-3">
+                  <Card bg="dark" text="white" border="secondary" className="tw:mb-4">
                     <Card.Body>
                       <ContentSection
                         sectionKey="exhibitors"
@@ -557,7 +557,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   </Card>
                 )}
                 {canManageAdminSections && activeKey === "editions" && (
-                  <Card bg="dark" text="white" border="secondary" className="mb-3">
+                  <Card bg="dark" text="white" border="secondary" className="tw:mb-4">
                     <Card.Body>
                       <EditionsSection
                         authHeaders={authHeaders}
@@ -680,7 +680,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <PolicyManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "settings" && (
-                  <div className="d-flex flex-column gap-3">
+                  <div className="tw:flex tw:flex-col tw:gap-4">
                     <SettingsManagement authHeaders={authHeaders} />
                     <PushOptIn authHeaders={authHeaders} />
                   </div>

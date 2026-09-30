@@ -125,7 +125,7 @@ html[data-visual-theme="remuage"] .bubble {
     border-width: 3px;
   }
 
-  html[data-visual-theme="remuage"] .event-card .d-flex.justify-content-between {
+  html[data-visual-theme="remuage"] .event-card .tw\:flex.tw\:justify-between {
     align-items: flex-start !important;
   }
 
@@ -138,7 +138,7 @@ html[data-visual-theme="remuage"] .bubble {
     min-height: 340px;
   }
 
-  html[data-visual-theme="remuage"] .standalone-navbar .container-fluid {
+  html[data-visual-theme="remuage"] .standalone-navbar .site-fluid-container {
     align-items: flex-start !important;
     flex-wrap: wrap;
   }

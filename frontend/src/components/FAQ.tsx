@@ -22,14 +22,14 @@ const FAQ: React.FC = () => {
 
   if (hasLoadError) {
     return (
-      <Alert variant="danger" className="text-center mb-0">
+      <Alert variant="danger" className="tw:text-center tw:mb-0">
         {m.error_faq()}
       </Alert>
     );
   }
 
   if (isLoaded && items.length === 0) {
-    return <p className="text-secondary text-center mb-0">{m.faq_empty()}</p>;
+    return <p className="tw:text-subtle tw:text-center tw:mb-0">{m.faq_empty()}</p>;
   }
 
   return (

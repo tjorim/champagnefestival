@@ -31,7 +31,7 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
 
   return (
     <div
-      className={`position-relative ${className}`}
+      className={`tw:relative ${className}`}
       style={fill ? { width: "100%", height: "100%" } : undefined}
     >
       {aspectRatio && !fill && <div style={{ paddingBottom: aspectRatio }} aria-hidden="true" />}
@@ -43,7 +43,7 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
         sizes={sizes}
         width={width}
         height={height}
-        className={clsx("object-cover", fill ? "position-absolute w-100 h-100" : "w-100")}
+        className={clsx("object-cover", fill ? "tw:absolute tw:w-full tw:h-full" : "tw:w-full")}
         style={{
           objectFit: "cover",
           top: 0,

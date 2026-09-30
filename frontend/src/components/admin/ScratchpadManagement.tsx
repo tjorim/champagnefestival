@@ -97,11 +97,11 @@ export default function ScratchpadManagement({
 
   return (
     <Card bg="dark" text="white" border="secondary">
-      <Card.Header className="fw-semibold">{m.admin_scratchpad_section()}</Card.Header>
+      <Card.Header className="tw:font-semibold">{m.admin_scratchpad_section()}</Card.Header>
       <Card.Body>
-        <p className="text-secondary small">{m.admin_scratchpad_description()}</p>
+        <p className="tw:text-subtle tw:text-sm">{m.admin_scratchpad_description()}</p>
         {editionId === "" ? (
-          <p className="text-secondary mb-0">{m.admin_scratchpad_no_active_edition()}</p>
+          <p className="tw:text-subtle tw:mb-0">{m.admin_scratchpad_no_active_edition()}</p>
         ) : (
           <>
             {query.isError && <Alert variant="danger">{m.admin_error_load_scratchpad()}</Alert>}
@@ -126,7 +126,7 @@ export default function ScratchpadManagement({
                   void form.handleSubmit();
                 }}
               >
-                <Form.Group className="mb-3" controlId="admin-scratchpad-content">
+                <Form.Group className="tw:mb-4" controlId="admin-scratchpad-content">
                   <form.Field name="content">
                     {(field) => (
                       <Form.Control
@@ -138,7 +138,7 @@ export default function ScratchpadManagement({
                           setSaved(false);
                         }}
                         placeholder={m.admin_scratchpad_placeholder()}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         style={{ fontFamily: "monospace" }}
                         maxLength={20000}
                       />
@@ -152,7 +152,7 @@ export default function ScratchpadManagement({
                 >
                   {saveMutation.isPending ? (
                     <>
-                      <Spinner as="span" animation="border" size="sm" className="me-1" />
+                      <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
                       {m.admin_scratchpad_saving()}
                     </>
                   ) : (

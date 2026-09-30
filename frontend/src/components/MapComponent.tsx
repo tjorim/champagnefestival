@@ -88,8 +88,8 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   if (!validCoordinates) {
     return (
-      <div className="ratio ratio-16x9 rounded overflow-hidden border d-flex align-items-center justify-content-center bg-light">
-        <p className="text-muted">{m.error_loading_map()}</p>
+      <div className="tw:aspect-video rounded tw:overflow-hidden border tw:flex tw:items-center tw:justify-center bg-light">
+        <p className="tw:text-subtle">{m.error_loading_map()}</p>
       </div>
     );
   }
@@ -99,14 +99,14 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   return (
     <div
-      className="ratio ratio-16x9 rounded overflow-hidden border position-relative"
+      className="tw:aspect-video rounded tw:overflow-hidden border tw:relative"
       aria-label={m.location_map_label()}
     >
       <MapContainer
         center={[coordinates.lat, coordinates.lng]}
         zoom={16}
         scrollWheelZoom={false}
-        style={{ width: "100%", height: "100%" }}
+        className="tw:absolute tw:inset-0 tw:size-full"
         aria-label={m.location_map_title()}
         aria-describedby={descriptionId}
       >
@@ -129,7 +129,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
                 href={mapsUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                style={{ display: "inline-block", textDecoration: "none", marginTop: 8 }}
+                className="tw:mt-2 tw:inline-block tw:no-underline"
               >
                 {m.location_open_in_maps()}
               </a>
@@ -137,7 +137,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
           </Popup>
         </Marker>
       </MapContainer>
-      <div id={descriptionId} className="visually-hidden">
+      <div id={descriptionId} className="tw:sr-only">
         {location}: {[address, postalCode, city, country].filter(Boolean).join(", ")}
       </div>
     </div>

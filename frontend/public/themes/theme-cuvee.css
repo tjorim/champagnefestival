@@ -504,7 +504,7 @@ html[data-visual-theme="cuvee"] .bubble-background {
   padding: clamp(3.25rem, 7vw, 5.5rem) 0;
 }
 
-.content-section > .container {
+.content-section > .site-container {
   position: relative;
   max-width: 62rem;
   padding: clamp(2rem, 5vw, 3.5rem);
@@ -515,7 +515,7 @@ html[data-visual-theme="cuvee"] .bubble-background {
   box-shadow: var(--shadow);
 }
 
-.content-section > .container::before {
+.content-section > .site-container::before {
   position: absolute;
   inset: 0.6rem;
   z-index: 0;
@@ -526,17 +526,18 @@ html[data-visual-theme="cuvee"] .bubble-background {
 }
 
 /* Foil label for highlight sections: gold wash + stronger gold frame */
-.highlight-section > .container {
+.highlight-section > .site-container {
   background: linear-gradient(180deg, #f7edcf, #efe0b4);
   border-color: rgba(138, 100, 20, 0.5);
 }
 
-.highlight-section > .container::before {
+.highlight-section > .site-container::before {
   border-color: rgba(138, 100, 20, 0.55);
 }
 
-.content-section .text-muted {
+.content-section .tw\:text-subtle {
   color: var(--ink-soft) !important;
+  --layout-subtle: var(--ink-soft) !important;
 }
 
 /* Section headings: centered serif with flanking hairlines */
@@ -878,8 +879,9 @@ h2.section-header::after {
 }
 
 .site-footer .footer-link,
-.site-footer .text-white {
+.site-footer .tw\:text-inverse {
   color: var(--foil-bright) !important;
+  --layout-inverse: var(--foil-bright) !important;
 }
 
 /* ------------------------------------------------------ standalone pages */
@@ -920,9 +922,10 @@ h2.section-header::after {
   background-color: var(--label-bright) !important;
 }
 
-.standalone-main .text-light,
-.standalone-document-main .text-light {
+.standalone-main .tw\:text-content,
+.standalone-document-main .tw\:text-content {
   color: var(--ink) !important;
+  --layout-content: var(--ink) !important;
 }
 
 .standalone-main .border-secondary,
@@ -931,10 +934,11 @@ h2.section-header::after {
 }
 
 /* Bootstrap warning-yellow reads as foil gold on label stock */
-.standalone-main .text-warning,
-.standalone-document-main .text-warning,
-.content-section .text-warning {
+.standalone-main .tw\:text-highlight,
+.standalone-document-main .tw\:text-highlight,
+.content-section .tw\:text-highlight {
   color: var(--foil-deep) !important;
+  --layout-highlight: var(--foil-deep) !important;
 }
 
 .standalone-document-main #privacy-policy h1 {
@@ -942,13 +946,14 @@ h2.section-header::after {
   font-weight: 600;
 }
 
-.standalone-document-main #privacy-policy .col-lg-8 {
+.standalone-document-main #privacy-policy .site-content-column {
   padding: clamp(1.5rem, 4vw, 2.5rem);
   color: var(--ink);
   background: linear-gradient(180deg, #f8f3e4, #f1e9d2);
   border: 1px solid var(--hairline-strong);
   border-radius: 3px;
   box-shadow: var(--shadow);
+  --layout-column-gutter: clamp(1.5rem, 4vw, 2.5rem);
 }
 
 /* ==================================================================
@@ -1131,8 +1136,9 @@ html[data-visual-theme="cuvee"] #admin .bg-dark {
   background-color: var(--adm-surface) !important;
 }
 
-html[data-visual-theme="cuvee"] #admin .text-light {
+html[data-visual-theme="cuvee"] #admin .tw\:text-content {
   color: var(--adm-text) !important;
+  --layout-content: var(--adm-text) !important;
 }
 
 html[data-visual-theme="cuvee"] #admin .border-secondary {
@@ -1210,7 +1216,7 @@ html[data-visual-theme="cuvee"] .viz-root {
     padding-top: 3.5rem;
   }
 
-  .event-card .d-flex {
+  .event-card .tw\:flex {
     flex-direction: column;
   }
 

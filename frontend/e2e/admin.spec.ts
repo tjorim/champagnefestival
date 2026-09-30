@@ -8,7 +8,7 @@ test.describe("Admin dashboard", () => {
 
   test("admin page loads with title", async ({ page }) => {
     // Standalone nav bar should show the admin title
-    await expect(page.locator("nav.navbar").first()).toBeVisible();
+    await expect(page.locator("nav.standalone-navbar").first()).toBeVisible();
   });
 
   test("back to site link is available", async ({ page }) => {

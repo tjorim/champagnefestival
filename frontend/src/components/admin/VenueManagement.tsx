@@ -584,8 +584,8 @@ export default function VenueManagement({
 
   return (
     <Card bg="dark" text="white" border="secondary">
-      <Card.Header className="d-flex align-items-center justify-content-between">
-        <span className="fw-semibold">
+      <Card.Header className="tw:flex tw:items-center tw:justify-between">
+        <span className="tw:font-semibold">
           <Icon icon={MapPinIcon} className="tw:me-2" />
           {m.admin_venue_add()}
         </span>
@@ -594,24 +594,39 @@ export default function VenueManagement({
           {m.admin_venue_add()}
         </Button>
       </Card.Header>
-      <Card.Body className="d-flex flex-column gap-3">
+      <Card.Body className="tw:flex tw:flex-col tw:gap-4">
         {deleteVenueError && (
-          <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-0 small">
+          <Alert
+            role="alert"
+            aria-live="assertive"
+            variant="danger"
+            className="tw:py-1 tw:mb-0 tw:text-sm"
+          >
             {deleteVenueError}
           </Alert>
         )}
         {deleteRoomError && (
-          <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-0 small">
+          <Alert
+            role="alert"
+            aria-live="assertive"
+            variant="danger"
+            className="tw:py-1 tw:mb-0 tw:text-sm"
+          >
             {deleteRoomError}
           </Alert>
         )}
         {deleteTableTypeError && (
-          <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-0 small">
+          <Alert
+            role="alert"
+            aria-live="assertive"
+            variant="danger"
+            className="tw:py-1 tw:mb-0 tw:text-sm"
+          >
             {deleteTableTypeError}
           </Alert>
         )}
         {venues.length === 0 ? (
-          <p className="text-secondary text-center small my-3">
+          <p className="tw:text-subtle tw:text-center tw:text-sm tw:my-4">
             <Icon icon={InfoIcon} className="tw:me-1" />
             {m.admin_no_venues()}
           </p>
@@ -631,19 +646,19 @@ export default function VenueManagement({
                 border="secondary"
                 className={clsx(isArchived && "opacity-75")}
               >
-                <Card.Header className="d-flex align-items-start justify-content-between gap-2">
+                <Card.Header className="tw:flex tw:items-start tw:justify-between tw:gap-2">
                   <div>
-                    <div className="fw-semibold">
+                    <div className="tw:font-semibold">
                       {venue.name}
                       {isArchived && (
-                        <Badge bg="secondary" className="ms-2 fs-2xs">
+                        <Badge bg="secondary" className="tw:ms-2 tw:text-tiny">
                           {m.admin_venue_archived_badge()}
                         </Badge>
                       )}
                     </div>
-                    <div className="text-secondary small">{locationLine || "—"}</div>
+                    <div className="tw:text-subtle tw:text-sm">{locationLine || "—"}</div>
                   </div>
-                  <div className="d-flex gap-1 flex-shrink-0">
+                  <div className="tw:flex tw:gap-1 tw:shrink-0">
                     <Button
                       variant="outline-secondary"
                       size="sm"
@@ -688,9 +703,9 @@ export default function VenueManagement({
                   </div>
                 </Card.Header>
                 {!isArchived && (
-                  <Card.Body className="py-2">
-                    <div className="d-flex align-items-center justify-content-between mb-1">
-                      <span className="text-secondary small text-uppercase fw-semibold">
+                  <Card.Body className="tw:py-2">
+                    <div className="tw:flex tw:items-center tw:justify-between tw:mb-1">
+                      <span className="tw:text-subtle tw:text-sm tw:uppercase tw:font-semibold">
                         {m.admin_rooms_tab()}
                       </span>
                       <Button
@@ -703,20 +718,20 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueRooms.length === 0 ? (
-                      <p className="text-secondary small fst-italic mb-3">
+                      <p className="tw:text-subtle tw:text-sm fst-italic tw:mb-4">
                         {m.admin_room_no_rooms()}
                       </p>
                     ) : (
-                      <ListGroup variant="flush" className="mb-3">
+                      <ListGroup variant="flush" className="tw:mb-4">
                         {venueRooms.map((room) => (
                           <ListGroup.Item
                             key={room.id}
                             className={clsx(
-                              "bg-dark text-light border-secondary d-flex justify-content-between align-items-center gap-2 py-1 px-0",
+                              "bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0",
                               !room.active && "opacity-50",
                             )}
                           >
-                            <span className="d-flex align-items-center gap-2">
+                            <span className="tw:flex tw:items-center tw:gap-2">
                               <span
                                 aria-hidden="true"
                                 style={{
@@ -742,7 +757,7 @@ export default function VenueManagement({
                                 </span>
                               )}
                             </span>
-                            <span className="d-flex gap-1 flex-shrink-0">
+                            <span className="tw:flex tw:gap-1 tw:shrink-0">
                               {room.active ? (
                                 <>
                                   <Button
@@ -792,8 +807,8 @@ export default function VenueManagement({
                       </ListGroup>
                     )}
 
-                    <div className="d-flex align-items-center justify-content-between mb-1">
-                      <span className="text-secondary small text-uppercase fw-semibold">
+                    <div className="tw:flex tw:items-center tw:justify-between tw:mb-1">
+                      <span className="tw:text-subtle tw:text-sm tw:uppercase tw:font-semibold">
                         {m.admin_table_types_tab()}
                       </span>
                       <Button
@@ -806,24 +821,24 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueTableTypes.length === 0 ? (
-                      <p className="text-secondary small fst-italic mb-0">
+                      <p className="tw:text-subtle tw:text-sm fst-italic tw:mb-0">
                         {m.admin_no_table_types()}
                       </p>
                     ) : (
-                      <ListGroup variant="flush" className="mb-0">
+                      <ListGroup variant="flush" className="tw:mb-0">
                         {venueTableTypes.map((tt) => (
                           <ListGroup.Item
                             key={tt.id}
                             className={clsx(
-                              "bg-dark text-light border-secondary d-flex justify-content-between align-items-center gap-2 py-1 px-0",
+                              "bg-dark tw:text-content border-secondary tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0",
                               !tt.active && "opacity-50",
                             )}
                           >
-                            <span className="d-flex align-items-center gap-2">
+                            <span className="tw:flex tw:items-center tw:gap-2">
                               <Icon icon={tt.shape === "round" ? CircleIcon : SquareIcon} />
                               {tt.name}
                             </span>
-                            <span className="d-flex gap-1 flex-shrink-0">
+                            <span className="tw:flex tw:gap-1 tw:shrink-0">
                               {tt.active ? (
                                 <>
                                   <Button
@@ -899,12 +914,12 @@ export default function VenueManagement({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="py-1 mb-3 small"
+                className="tw:py-1 tw:mb-4 tw:text-sm"
               >
                 {addVenueError}
               </Alert>
             )}
-            <Form.Group className="mb-3" controlId="venue-name">
+            <Form.Group className="tw:mb-4" controlId="venue-name">
               <Form.Label>{m.admin_venue_name_label()}</Form.Label>
               <venueForm.Field name="name">
                 {(field) => (
@@ -913,13 +928,13 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     placeholder={m.admin_venue_name_placeholder()}
                   />
                 )}
               </venueForm.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="venue-address">
+            <Form.Group className="tw:mb-4" controlId="venue-address">
               <Form.Label>{m.admin_venue_address_label()}</Form.Label>
               <venueForm.Field name="address">
                 {(field) => (
@@ -928,13 +943,13 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                   />
                 )}
               </venueForm.Field>
             </Form.Group>
-            <div className="row g-2 mb-3">
-              <div className="col">
+            <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-4">
+              <div className="tw:min-w-0 tw:flex-1">
                 <Form.Group controlId="venue-city">
                   <Form.Label>{m.admin_venue_city_label()}</Form.Label>
                   <venueForm.Field name="city">
@@ -944,13 +959,13 @@ export default function VenueManagement({
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                       />
                     )}
                   </venueForm.Field>
                 </Form.Group>
               </div>
-              <div className="col-auto">
+              <div className="tw:w-auto tw:flex-none">
                 <Form.Group controlId="venue-postal-code">
                   <Form.Label>{m.admin_venue_postal_code_label()}</Form.Label>
                   <venueForm.Field name="postalCode">
@@ -960,7 +975,7 @@ export default function VenueManagement({
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                         style={{ width: "7rem" }}
                       />
                     )}
@@ -968,7 +983,7 @@ export default function VenueManagement({
                 </Form.Group>
               </div>
             </div>
-            <Form.Group className="mb-3" controlId="venue-country">
+            <Form.Group className="tw:mb-4" controlId="venue-country">
               <Form.Label>{m.admin_venue_country_label()}</Form.Label>
               <venueForm.Field name="country">
                 {(field) => (
@@ -977,13 +992,13 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                   />
                 )}
               </venueForm.Field>
             </Form.Group>
-            <div className="row g-2">
-              <div className="col">
+            <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2">
+              <div className="tw:min-w-0 tw:flex-1">
                 <Form.Group controlId="venue-latitude">
                   <Form.Label>{m.admin_venue_latitude_label()}</Form.Label>
                   <venueForm.Field name="lat">
@@ -998,13 +1013,13 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                       />
                     )}
                   </venueForm.Field>
                 </Form.Group>
               </div>
-              <div className="col">
+              <div className="tw:min-w-0 tw:flex-1">
                 <Form.Group controlId="venue-longitude">
                   <Form.Label>{m.admin_venue_longitude_label()}</Form.Label>
                   <venueForm.Field name="lng">
@@ -1019,7 +1034,7 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                       />
                     )}
                   </venueForm.Field>
@@ -1027,11 +1042,13 @@ export default function VenueManagement({
               </div>
             </div>
             {previewCoordinates && (
-              <div className="mt-3">
-                <div className="text-secondary small mb-1">{m.admin_venue_map_preview()}</div>
+              <div className="tw:mt-4">
+                <div className="tw:text-subtle tw:text-sm tw:mb-1">
+                  {m.admin_venue_map_preview()}
+                </div>
                 <Suspense
                   fallback={
-                    <div className="ratio ratio-16x9 rounded border border-secondary d-flex align-items-center justify-content-center">
+                    <div className="ratio ratio-16x9 rounded border border-secondary tw:flex tw:items-center tw:justify-center">
                       {m.loading()}
                     </div>
                   }
@@ -1078,12 +1095,12 @@ export default function VenueManagement({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="py-1 mb-3 small"
+                className="tw:py-1 tw:mb-4 tw:text-sm"
               >
                 {addRoomError}
               </Alert>
             )}
-            <Form.Group className="mb-3" controlId="room-venue">
+            <Form.Group className="tw:mb-4" controlId="room-venue">
               <Form.Label>{m.admin_room_venue_label()}</Form.Label>
               <roomForm.Field name="venueId">
                 {(field) => (
@@ -1091,7 +1108,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                   >
                     {venues
                       .filter((v) => v.active)
@@ -1104,7 +1121,7 @@ export default function VenueManagement({
                 )}
               </roomForm.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="room-name">
+            <Form.Group className="tw:mb-4" controlId="room-name">
               <Form.Label>{m.admin_room_name_label()}</Form.Label>
               <roomForm.Field name="name">
                 {(field) => (
@@ -1113,14 +1130,14 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     placeholder={m.admin_room_name_placeholder()}
                   />
                 )}
               </roomForm.Field>
             </Form.Group>
-            <div className="row g-2 mb-3">
-              <div className="col">
+            <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-4">
+              <div className="tw:min-w-0 tw:flex-1">
                 <Form.Group controlId="room-width">
                   <Form.Label>{m.admin_room_width_label()}</Form.Label>
                   <roomForm.Field name="widthM">
@@ -1135,13 +1152,13 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                       />
                     )}
                   </roomForm.Field>
                 </Form.Group>
               </div>
-              <div className="col">
+              <div className="tw:min-w-0 tw:flex-1">
                 <Form.Group controlId="room-length">
                   <Form.Label>{m.admin_room_length_label()}</Form.Label>
                   <roomForm.Field name="lengthM">
@@ -1156,7 +1173,7 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="bg-dark text-light border-secondary"
+                        className="bg-dark tw:text-content border-secondary"
                       />
                     )}
                   </roomForm.Field>
@@ -1167,7 +1184,7 @@ export default function VenueManagement({
               <Form.Label>{m.admin_room_color_label()}</Form.Label>
               <roomForm.Field name="color">
                 {(field) => (
-                  <div className="d-flex gap-2 align-items-center">
+                  <div className="tw:flex tw:gap-2 tw:items-center">
                     <Form.Control
                       type="color"
                       value={field.value}
@@ -1180,7 +1197,7 @@ export default function VenueManagement({
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
-                      className="bg-dark text-light border-secondary"
+                      className="bg-dark tw:text-content border-secondary"
                       style={{ fontFamily: "monospace" }}
                     />
                   </div>
@@ -1218,12 +1235,12 @@ export default function VenueManagement({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="py-1 mb-3 small"
+                className="tw:py-1 tw:mb-4 tw:text-sm"
               >
                 {addTableTypeError}
               </Alert>
             )}
-            <Form.Group className="mb-3" controlId="tt-venue">
+            <Form.Group className="tw:mb-4" controlId="tt-venue">
               <Form.Label>{m.admin_room_venue_label()}</Form.Label>
               <tableTypeForm.Field name="venueId">
                 {(field) => (
@@ -1231,7 +1248,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                   >
                     <option value="">— {m.admin_room_venue_label()} —</option>
                     {venues
@@ -1245,7 +1262,7 @@ export default function VenueManagement({
                 )}
               </tableTypeForm.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="tt-name">
+            <Form.Group className="tw:mb-4" controlId="tt-name">
               <Form.Label>{m.admin_table_type_name_label()}</Form.Label>
               <tableTypeForm.Field name="name">
                 {(field) => (
@@ -1254,13 +1271,13 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                     placeholder={m.admin_table_type_name_placeholder()}
                   />
                 )}
               </tableTypeForm.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="tt-shape">
+            <Form.Group className="tw:mb-4" controlId="tt-shape">
               <Form.Label>{m.admin_table_shape_label()}</Form.Label>
               <tableTypeForm.Field name="shape">
                 {(field) => (
@@ -1276,7 +1293,7 @@ export default function VenueManagement({
                       tableTypeForm.setFieldValue("lengthM", "");
                     }}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                   >
                     <option value="rectangle">{m.admin_table_shape_rectangle()}</option>
                     <option value="round">{m.admin_table_shape_round()}</option>
@@ -1284,7 +1301,7 @@ export default function VenueManagement({
                 )}
               </tableTypeForm.Field>
             </Form.Group>
-            <Form.Group className="mb-3" controlId="tt-height-type">
+            <Form.Group className="tw:mb-4" controlId="tt-height-type">
               <Form.Label>{m.admin_table_height_type_label()}</Form.Label>
               <tableTypeForm.Field name="heightType">
                 {(field) => (
@@ -1292,7 +1309,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value as "low" | "high")}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                   >
                     <option value="low">{m.admin_table_height_type_low()}</option>
                     <option value="high">{m.admin_table_height_type_high()}</option>
@@ -1301,7 +1318,7 @@ export default function VenueManagement({
               </tableTypeForm.Field>
             </Form.Group>
             {tableTypeValues.shape === "round" ? (
-              <Form.Group className="mb-3" controlId="tt-diameter">
+              <Form.Group className="tw:mb-4" controlId="tt-diameter">
                 <Form.Label>{m.admin_table_diameter_label()}</Form.Label>
                 <tableTypeForm.Field name="widthM">
                   {(field) => (
@@ -1319,14 +1336,14 @@ export default function VenueManagement({
                         tableTypeForm.setFieldValue("lengthM", v);
                       }}
                       onBlur={field.handleBlur}
-                      className="bg-dark text-light border-secondary"
+                      className="bg-dark tw:text-content border-secondary"
                     />
                   )}
                 </tableTypeForm.Field>
               </Form.Group>
             ) : (
-              <div className="row g-2 mb-3">
-                <div className="col">
+              <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-4">
+                <div className="tw:min-w-0 tw:flex-1">
                   <Form.Group controlId="tt-width">
                     <Form.Label>{m.admin_table_width_label()}</Form.Label>
                     <tableTypeForm.Field name="widthM">
@@ -1343,13 +1360,13 @@ export default function VenueManagement({
                             field.handleChange(raw === "" ? "" : Number(raw));
                           }}
                           onBlur={field.handleBlur}
-                          className="bg-dark text-light border-secondary"
+                          className="bg-dark tw:text-content border-secondary"
                         />
                       )}
                     </tableTypeForm.Field>
                   </Form.Group>
                 </div>
-                <div className="col">
+                <div className="tw:min-w-0 tw:flex-1">
                   <Form.Group controlId="tt-length">
                     <Form.Label>{m.admin_table_length_label()}</Form.Label>
                     <tableTypeForm.Field name="lengthM">
@@ -1366,7 +1383,7 @@ export default function VenueManagement({
                             field.handleChange(raw === "" ? "" : Number(raw));
                           }}
                           onBlur={field.handleBlur}
-                          className="bg-dark text-light border-secondary"
+                          className="bg-dark tw:text-content border-secondary"
                         />
                       )}
                     </tableTypeForm.Field>
@@ -1385,7 +1402,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(Number(e.target.value))}
                     onBlur={field.handleBlur}
-                    className="bg-dark text-light border-secondary"
+                    className="bg-dark tw:text-content border-secondary"
                   />
                 )}
               </tableTypeForm.Field>

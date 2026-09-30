@@ -130,8 +130,8 @@ const ContactForm = () => {
   });
 
   return (
-    <Card className="mx-auto border-0 shadow">
-      <Card.Body className="p-3 p-md-4">
+    <Card className="tw:mx-auto border-0 shadow">
+      <Card.Body className="tw:p-4 tw:site-md:p-6">
         {isSubmitted ? (
           <Alert variant="success">{m.contact_success_message()}</Alert>
         ) : (
@@ -140,13 +140,13 @@ const ContactForm = () => {
               e.preventDefault();
               void form.handleSubmit();
             }}
-            className="my-3"
+            className="tw:my-4"
             name="contact-form"
             autoComplete="on"
             noValidate
           >
             {generalError && (
-              <Alert variant="danger" className="d-flex align-items-center">
+              <Alert variant="danger" className="tw:flex tw:items-center">
                 <Icon icon={CircleAlertIcon} className="tw:me-2" />
                 <span>{generalError}</span>
               </Alert>
@@ -155,7 +155,7 @@ const ContactForm = () => {
             {/* Hidden honeypot field to catch bots - placed early to trap bots */}
             <form.Field name="honeypot">
               {(field) => (
-                <div className="d-none">
+                <div className="tw:hidden">
                   <Form.Control
                     type="text"
                     autoComplete="off"
@@ -181,7 +181,7 @@ const ContactForm = () => {
               {(field) => {
                 const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
-                  <Form.Group className="mb-3 text-start">
+                  <Form.Group className="tw:mb-4 tw:text-left">
                     <Form.Label htmlFor="name">{m.contact_name()}</Form.Label>
                     <Form.Control
                       id="name"
@@ -220,7 +220,7 @@ const ContactForm = () => {
               {(field) => {
                 const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
-                  <Form.Group className="mb-3 text-start">
+                  <Form.Group className="tw:mb-4 tw:text-left">
                     <Form.Label htmlFor="email">{m.contact_email()}</Form.Label>
                     <Form.Control
                       id="email"
@@ -257,7 +257,7 @@ const ContactForm = () => {
               {(field) => {
                 const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
-                  <Form.Group className="mb-3 text-start">
+                  <Form.Group className="tw:mb-4 tw:text-left">
                     <Form.Label htmlFor="message">{m.contact_message()}</Form.Label>
                     <Form.Control
                       as="textarea"
@@ -285,18 +285,18 @@ const ContactForm = () => {
             <Button
               type="submit"
               variant="dark"
-              className="btn w-100 bg-brand-gradient text-white"
+              className="btn tw:w-full bg-brand-gradient tw:text-inverse"
               disabled={isSubmitting}
               aria-busy={isSubmitting ? "true" : "false"}
               aria-live="polite"
             >
               {isSubmitting ? (
-                <span className="d-flex align-items-center justify-content-center">
-                  <Spinner animation="border" size="sm" className="me-2" />
+                <span className="tw:flex tw:items-center tw:justify-center">
+                  <Spinner animation="border" size="sm" className="tw:me-2" />
                   {m.contact_submitting()}
                 </span>
               ) : (
-                <span className="d-flex align-items-center justify-content-center">
+                <span className="tw:flex tw:items-center tw:justify-center">
                   <Icon icon={SendIcon} className="tw:me-2" />
                   {m.contact_submit()}
                 </span>

@@ -169,9 +169,9 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
   }, []);
 
   return (
-    <div className="mb-3">
+    <div className="tw:mb-4">
       <div
-        className="position-relative rounded overflow-hidden bg-black"
+        className="tw:relative rounded tw:overflow-hidden bg-black"
         style={{ aspectRatio: "4 / 3" }}
       >
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
@@ -180,43 +180,43 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
           muted
           playsInline
           aria-hidden="true"
-          className="w-100 h-100"
+          className="tw:w-full tw:h-full"
           style={{ objectFit: "cover", display: status === "scanning" ? "block" : "none" }}
         />
-        <canvas ref={canvasRef} className="d-none" aria-hidden="true" />
+        <canvas ref={canvasRef} className="tw:hidden" aria-hidden="true" />
         {status === "scanning" && (
           <div
-            className="position-absolute top-50 start-50 translate-middle border border-warning border-3 rounded"
+            className="tw:absolute tw:top-1/2 tw:left-1/2 tw:-translate-x-1/2 tw:-translate-y-1/2 border border-warning border-3 rounded"
             style={{ width: "60%", aspectRatio: "1 / 1", pointerEvents: "none" }}
             aria-hidden="true"
           />
         )}
         {status === "starting" && (
-          <div className="d-flex flex-column align-items-center justify-content-center h-100 text-secondary">
+          <div className="tw:flex tw:flex-col tw:items-center tw:justify-center tw:h-full tw:text-subtle">
             <Spinner animation="border" variant="warning" role="status">
-              <span className="visually-hidden">{m.checkin_scanner_starting()}</span>
+              <span className="tw:sr-only">{m.checkin_scanner_starting()}</span>
             </Spinner>
-            <p className="mt-2 mb-0 small">{m.checkin_scanner_starting()}</p>
+            <p className="tw:mt-2 tw:mb-0 tw:text-sm">{m.checkin_scanner_starting()}</p>
           </div>
         )}
       </div>
 
       <div role="status" aria-live="polite">
         {status === "scanning" && (
-          <p className="text-secondary text-center small mt-2 mb-0">
+          <p className="tw:text-subtle tw:text-center tw:text-sm tw:mt-2 tw:mb-0">
             {m.checkin_scanner_scanning()}
           </p>
         )}
       </div>
 
       {status === "permission-denied" && (
-        <Alert variant="warning" className="mt-2 mb-0">
+        <Alert variant="warning" className="tw:mt-2 tw:mb-0">
           <Icon icon={VideoOffIcon} className="tw:me-2" />
           {m.checkin_scanner_permission_denied()}
         </Alert>
       )}
       {(status === "error" || status === "unsupported") && (
-        <Alert variant="secondary" className="mt-2 mb-0">
+        <Alert variant="secondary" className="tw:mt-2 tw:mb-0">
           <Icon icon={InfoIcon} className="tw:me-2" />
           {m.checkin_scanner_unavailable()}
         </Alert>

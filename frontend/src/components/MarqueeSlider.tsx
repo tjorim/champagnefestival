@@ -156,7 +156,7 @@ function MarqueeSlider({ items = [] }: MarqueeSliderProps) {
 
   return (
     <div
-      className="marquee-slider mx-auto my-4"
+      className="marquee-slider tw:mx-auto tw:my-6"
       onFocusCapture={pauseForFocus}
       onBlurCapture={resumeAfterFocus}
       onMouseEnter={pauseForPointer}
@@ -201,17 +201,17 @@ function MarqueeSlider({ items = [] }: MarqueeSliderProps) {
             spaceBetween: 16,
           },
         }}
-        className="py-2 pb-5" // Added padding at bottom for pagination
+        className="tw:py-2 tw:pb-12" // Added padding at bottom for pagination
       >
         {carouselItems.map((item, index) => (
           <SwiperSlide key={`${item.id}-${index}`}>
-            <div className="marquee-card h-100">
-              <div className="marquee-logo-frame overflow-hidden shadow-sm mb-2">
-                <div className="position-relative w-100 h-100">
+            <div className="marquee-card tw:h-full">
+              <div className="marquee-logo-frame tw:overflow-hidden shadow-sm tw:mb-2">
+                <div className="tw:relative tw:w-full tw:h-full">
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="marquee-logo-image w-100 h-100 object-fit-contain"
+                    className="marquee-logo-image tw:w-full tw:h-full object-fit-contain"
                     onError={(e) => {
                       // Quietly set a fallback image without console errors
                       e.currentTarget.src = "/images/logo.svg";
@@ -221,7 +221,7 @@ function MarqueeSlider({ items = [] }: MarqueeSliderProps) {
                   />
                 </div>
               </div>
-              <h5 className="marquee-logo-title text-center small">{item.name}</h5>
+              <h5 className="marquee-logo-title tw:text-center tw:text-sm">{item.name}</h5>
             </div>
           </SwiperSlide>
         ))}

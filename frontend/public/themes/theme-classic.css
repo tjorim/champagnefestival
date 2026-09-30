@@ -345,7 +345,7 @@ main {
     padding: 3rem 0;
   }
 
-  .container {
+  .site-container {
     width: 100%;
     padding: 0 1rem;
   }
@@ -382,22 +382,6 @@ main {
 }
 
 /* Sub-scale font size utilities (below Bootstrap's fs-6 / 1rem) */
-.fs-xs {
-  font-size: 0.8rem;
-}
-.fs-2xs {
-  font-size: 0.7rem;
-}
-.fs-3xs {
-  font-size: 0.65rem;
-}
-.fs-4xs {
-  font-size: 0.6rem;
-}
-.fs-5xs {
-  font-size: 0.55rem;
-}
-
 /* Bootstrap theme is now set via data-bs-theme="dark" on the HTML element */
 [data-visual-theme="classic"] {
   /* Override Bootstrap variables with our brand colors */
@@ -504,18 +488,6 @@ main {
 /* Enhanced accessibility features */
 
 /* Visually hidden elements (for screen readers) */
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
-
 /* ARIA live regions */
 [aria-live="polite"],
 [aria-live="assertive"] {

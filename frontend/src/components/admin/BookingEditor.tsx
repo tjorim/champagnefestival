@@ -216,11 +216,11 @@ export default function BookingEditor({
 
   return (
     <section aria-labelledby="booking-editor-heading">
-      <h6 id="booking-editor-heading" className="text-warning">
+      <h6 id="booking-editor-heading" className="tw:text-highlight">
         {m.admin_booking_editor()}
       </h6>
-      <div className="row g-3">
-        <Form.Group className="col-sm-4">
+      <div className="tw:flex tw:flex-wrap tw:-mx-2 tw:*:w-full tw:*:px-2 tw:gap-y-4">
+        <Form.Group className="tw:site-sm:w-4/12">
           <Form.Label>{m.admin_guests_count()}</Form.Label>
           <form.Field name="guestCount">
             {(field) => (
@@ -236,7 +236,7 @@ export default function BookingEditor({
             )}
           </form.Field>
         </Form.Group>
-        <Form.Group className="col-sm-4">
+        <Form.Group className="tw:site-sm:w-4/12">
           <Form.Label>{m.admin_status_label()}</Form.Label>
           <form.Field name="status">
             {(field) => (
@@ -253,7 +253,7 @@ export default function BookingEditor({
             )}
           </form.Field>
         </Form.Group>
-        <div className="col-sm-4 small align-self-end">
+        <div className="tw:site-sm:w-4/12 tw:text-sm tw:self-end">
           <div>
             {m.admin_booking_total()}: €{amountDue.toFixed(2)}
           </div>
@@ -270,7 +270,7 @@ export default function BookingEditor({
           )}
         </div>
         {products.map((product) => (
-          <Form.Group className="col-sm-6" key={product.id}>
+          <Form.Group className="tw:site-sm:w-6/12" key={product.id}>
             <Form.Label>
               {product.name} · €{(bookedPrices[product.id] ?? product.price).toFixed(2)}
             </Form.Label>
@@ -285,7 +285,7 @@ export default function BookingEditor({
             />
           </Form.Group>
         ))}
-        <Form.Group className="col-12">
+        <Form.Group className="tw:w-full">
           <Form.Label>{m.admin_notes()}</Form.Label>
           <form.Field name="notes">
             {(field) => (
@@ -301,9 +301,9 @@ export default function BookingEditor({
         </Form.Group>
       </div>
 
-      <fieldset className="mt-3">
-        <legend className="fs-6">{m.admin_action_assign_table()}</legend>
-        <p className="small">
+      <fieldset className="tw:mt-4">
+        <legend className="tw:text-base">{m.admin_action_assign_table()}</legend>
+        <p className="tw:text-sm">
           {m.admin_allocation_progress({
             assigned,
             total: allocationTotal,
@@ -316,7 +316,10 @@ export default function BookingEditor({
           </Alert>
         )}
         {allocations.map((entry, index) => (
-          <div key={`${entry.tableId}:${index}`} className="d-flex gap-2 mb-2 align-items-center">
+          <div
+            key={`${entry.tableId}:${index}`}
+            className="tw:flex tw:gap-2 tw:mb-2 tw:items-center"
+          >
             <Form.Select
               aria-label={m.admin_inventory_unit_table()}
               value={entry.tableId}
@@ -360,7 +363,7 @@ export default function BookingEditor({
         ))}
         <Button
           variant="outline-secondary"
-          className="me-2"
+          className="tw:me-2"
           disabled={assigned >= allocationTotal}
           onClick={() =>
             form.pushFieldValue("allocations", {
@@ -388,33 +391,38 @@ export default function BookingEditor({
         </Button>
       </fieldset>
 
-      <fieldset className="mt-3">
-        <Button variant="link" size="sm" className="px-0" onClick={() => setShowLedger((v) => !v)}>
+      <fieldset className="tw:mt-4">
+        <Button
+          variant="link"
+          size="sm"
+          className="tw:px-0"
+          onClick={() => setShowLedger((v) => !v)}
+        >
           {showLedger ? m.admin_payment_history_hide() : m.admin_payment_history_show()}
         </Button>
         {showLedger && (
           <>
-            {ledgerQuery.isLoading && <p className="small">{m.loading()}</p>}
+            {ledgerQuery.isLoading && <p className="tw:text-sm">{m.loading()}</p>}
             {ledgerQuery.isError && (
-              <Alert variant="danger" className="mb-2">
+              <Alert variant="danger" className="tw:mb-2">
                 {m.admin_payment_history_error()}
               </Alert>
             )}
             {ledgerQuery.data && ledgerQuery.data.length === 0 && (
-              <p className="small text-secondary">{m.admin_payment_history_empty()}</p>
+              <p className="tw:text-sm tw:text-subtle">{m.admin_payment_history_empty()}</p>
             )}
             {ledgerQuery.data && ledgerQuery.data.length > 0 && (
-              <ListGroup variant="flush" className="mb-3">
+              <ListGroup variant="flush" className="tw:mb-4">
                 {ledgerQuery.data.map((entry) => (
-                  <ListGroup.Item key={entry.id} className="px-0 py-1">
-                    <div className="small d-flex justify-content-between flex-wrap gap-2">
+                  <ListGroup.Item key={entry.id} className="tw:px-0 tw:py-1">
+                    <div className="tw:text-sm tw:flex tw:justify-between tw:flex-wrap tw:gap-2">
                       <span>
                         <strong>{transactionAmountLabel(entry.amount)}</strong>{" "}
                         {entry.amount >= 0 ? "+" : ""}€{entry.amount.toFixed(2)}
                         {entry.reference ? ` · ${entry.reference}` : ""}
                         {entry.note ? ` · ${entry.note}` : ""}
                       </span>
-                      <span className="text-secondary">
+                      <span className="tw:text-subtle">
                         {entry.effectiveDate} · {entry.recordedBy}
                       </span>
                     </div>
@@ -423,9 +431,11 @@ export default function BookingEditor({
               </ListGroup>
             )}
             {onAddTransaction && (
-              <div className="d-flex flex-wrap gap-2 align-items-end">
+              <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-end">
                 <Form.Group>
-                  <Form.Label className="small mb-1">{m.admin_payment_amount_label()}</Form.Label>
+                  <Form.Label className="tw:text-sm tw:mb-1">
+                    {m.admin_payment_amount_label()}
+                  </Form.Label>
                   <transactionForm.Field name="amount">
                     {(field) => (
                       <Form.Control
@@ -440,10 +450,10 @@ export default function BookingEditor({
                       />
                     )}
                   </transactionForm.Field>
-                  <Form.Text className="small">{m.admin_payment_amount_help()}</Form.Text>
+                  <Form.Text className="tw:text-sm">{m.admin_payment_amount_help()}</Form.Text>
                 </Form.Group>
                 <Form.Group>
-                  <Form.Label className="small mb-1">
+                  <Form.Label className="tw:text-sm tw:mb-1">
                     {m.admin_payment_transaction_date()}
                   </Form.Label>
                   <transactionForm.Field name="date">
@@ -461,7 +471,7 @@ export default function BookingEditor({
                   </transactionForm.Field>
                 </Form.Group>
                 <Form.Group>
-                  <Form.Label className="small mb-1">
+                  <Form.Label className="tw:text-sm tw:mb-1">
                     {m.admin_payment_reference_label()}
                   </Form.Label>
                   <transactionForm.Field name="reference">
@@ -479,7 +489,9 @@ export default function BookingEditor({
                   </transactionForm.Field>
                 </Form.Group>
                 <Form.Group>
-                  <Form.Label className="small mb-1">{m.admin_payment_note_label()}</Form.Label>
+                  <Form.Label className="tw:text-sm tw:mb-1">
+                    {m.admin_payment_note_label()}
+                  </Form.Label>
                   <transactionForm.Field name="note">
                     {(field) => (
                       <Form.Control
@@ -506,7 +518,7 @@ export default function BookingEditor({
               </div>
             )}
             {transactionError && (
-              <Alert variant="danger" className="mt-2 mb-0">
+              <Alert variant="danger" className="tw:mt-2 tw:mb-0">
                 {transactionError}
               </Alert>
             )}
