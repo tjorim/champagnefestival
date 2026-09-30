@@ -6,8 +6,7 @@ import Button from "react-bootstrap/Button";
 import Container from "react-bootstrap/Container";
 import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
-import Tab from "react-bootstrap/Tab";
-import Tabs from "react-bootstrap/Tabs";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteMyAccount } from "@/utils/meApi";
@@ -445,11 +444,18 @@ export default function MyAccountPage() {
           )}
 
           {tabs.length > 1 ? (
-            <Tabs defaultActiveKey="registrations" className="mb-3">
+            <Tabs defaultValue="registrations">
+              <TabsList className="tw:mb-3">
+                {tabs.map((tab) => (
+                  <TabsTrigger key={tab.key} value={tab.key}>
+                    {tab.title}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
               {tabs.map((tab) => (
-                <Tab key={tab.key} eventKey={tab.key} title={tab.title}>
-                  <div className="pt-3">{tab.content}</div>
-                </Tab>
+                <TabsContent key={tab.key} value={tab.key} keepMounted>
+                  <div className="tw:pt-3">{tab.content}</div>
+                </TabsContent>
               ))}
             </Tabs>
           ) : (

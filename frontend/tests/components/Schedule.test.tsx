@@ -1,5 +1,7 @@
 import { render, screen, fireEvent } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { axe } from "jest-axe";
 import Schedule from "@/components/Schedule";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -76,6 +78,22 @@ const mockEvents = [
 ];
 
 describe("Schedule component", () => {
+  it("links panels to tabs and switches with the keyboard without axe violations", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<Schedule events={mockEvents} />);
+    const friday = screen.getByRole("tab", { name: /Friday/ });
+    friday.focus();
+    await user.keyboard("{ArrowRight}");
+    expect(screen.getByRole("tab", { name: /Saturday/ })).toHaveFocus();
+    expect(screen.getByRole("heading", { name: "Party" })).toBeVisible();
+    expect((await axe(container)).violations).toEqual([]);
+  });
+
+  it("shows the empty programme message when no dates are available", () => {
+    render(<Schedule events={[]} />);
+    expect(screen.getByText("No events")).toBeInTheDocument();
+  });
+
   it("renders day tabs", () => {
     render(<Schedule events={mockEvents} />);
     expect(screen.getByText("Friday")).toBeInTheDocument();

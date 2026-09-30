@@ -1,5 +1,10 @@
 import React from "react";
-import Accordion from "react-bootstrap/Accordion";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
 import Alert from "react-bootstrap/Alert";
 
 import { useFaq } from "@/hooks/useFaq";
@@ -28,16 +33,16 @@ const FAQ: React.FC = () => {
   }
 
   return (
-    <Accordion className="rounded-lg shadow-lg">
+    <Accordion className="tw:overflow-hidden">
       {items.map((item) => (
-        <Accordion.Item key={item.id} eventKey={item.id}>
-          <Accordion.Header>{item.question}</Accordion.Header>
-          <Accordion.Body>
-            <div className="py-2 border-start border-3 ps-3 border-brand text-start">
+        <AccordionItem key={item.id} value={item.id}>
+          <AccordionTrigger>{item.question}</AccordionTrigger>
+          <AccordionContent>
+            <div className="tw:border-l-2 tw:border-primary tw:py-2 tw:pl-3 tw:text-left">
               <p>{item.answer}</p>
             </div>
-          </Accordion.Body>
-        </Accordion.Item>
+          </AccordionContent>
+        </AccordionItem>
       ))}
     </Accordion>
   );

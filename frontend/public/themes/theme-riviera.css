@@ -183,46 +183,13 @@ html[data-visual-theme="riviera"] .bubble-background {
   border-radius: 999px;
 }
 
-/* Bootstrap Icons sit -0.125em below the baseline for inline-text use; inside a
-   flex-centered circle that reads as off-center. Zero overshoots (glyph reads high),
-   so meet in the middle. */
-.icon-link .bi::before {
-  vertical-align: -0.06em;
-}
-
 .site-lang-toggle {
-  --bs-btn-color: var(--ink);
-  --bs-btn-bg: #fffaf0;
-  --bs-btn-border-color: rgba(18, 50, 59, 0.15);
-  --bs-btn-hover-color: #fffaf0;
-  --bs-btn-hover-bg: var(--primary-color);
-  --bs-btn-hover-border-color: var(--primary-color);
-  --bs-btn-active-color: #fffaf0;
-  --bs-btn-active-bg: var(--primary-color);
-  --bs-btn-active-border-color: var(--primary-color);
-}
-
-.site-mobile-menu {
-  position: absolute;
-  top: 100%;
-  right: 0;
-  left: 0;
-  z-index: 1041;
-  visibility: hidden;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(-0.35rem);
-  transition:
-    opacity 0.18s ease,
-    visibility 0.18s ease,
-    transform 0.18s ease;
-}
-
-.site-mobile-menu.is-open {
-  visibility: visible;
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
+  --language-control-color: var(--ink);
+  --language-control-bg: #fffaf0;
+  --language-control-border-color: rgba(18, 50, 59, 0.15);
+  --language-control-hover-color: #fffaf0;
+  --language-control-hover-bg: var(--primary-color);
+  --language-control-hover-border-color: var(--primary-color);
 }
 
 .site-mobile-menu-panel {
@@ -242,7 +209,7 @@ html[data-visual-theme="riviera"] .bubble-background {
     padding-left: 18rem;
   }
 
-  html[data-visual-theme="riviera"] .site-header.navbar {
+  html[data-visual-theme="riviera"] .site-header {
     top: 1rem;
     right: auto;
     bottom: 1rem;
@@ -257,14 +224,6 @@ html[data-visual-theme="riviera"] .bubble-background {
     box-shadow:
       10px 10px 0 rgba(0, 127, 131, 0.18),
       0 24px 54px rgba(18, 50, 59, 0.16);
-  }
-
-  html[data-visual-theme="riviera"] .site-header .container {
-    /* !important needed: the markup's d-flex utility is itself !important */
-    display: grid !important;
-    gap: 1rem;
-    width: 100%;
-    padding: 0;
   }
 
   html[data-visual-theme="riviera"] .site-brand {
@@ -623,7 +582,7 @@ html[data-visual-theme="riviera"] .bubble-background {
   border-radius: 1.3rem;
 }
 
-.schedule-tabs .nav-link {
+.schedule-tabs [data-slot="tabs-trigger"] {
   color: var(--ink);
   font-weight: 900;
   background: #fffaf0;
@@ -631,7 +590,7 @@ html[data-visual-theme="riviera"] .bubble-background {
   border-radius: 1rem;
 }
 
-.schedule-tabs .nav-link.active {
+.schedule-tabs [data-slot="tabs-trigger"][data-active] {
   color: #fffaf0;
   background: var(--primary-color);
   border-color: rgba(18, 50, 59, 0.58);
@@ -690,7 +649,7 @@ html[data-visual-theme="riviera"] .bubble-background {
 }
 
 .event-title,
-.accordion-button {
+[data-slot="accordion-trigger"] {
   color: var(--ink);
   font-weight: 950;
 }
@@ -701,7 +660,7 @@ html[data-visual-theme="riviera"] .bubble-background {
   border-radius: 999px;
 }
 
-.accordion-item,
+[data-slot="accordion-item"],
 .card,
 .marquee-card {
   color: var(--ink);
@@ -711,11 +670,11 @@ html[data-visual-theme="riviera"] .bubble-background {
   box-shadow: 7px 7px 0 rgba(0, 127, 131, 0.12);
 }
 
-.accordion-button {
+[data-slot="accordion-trigger"] {
   background: #fffaf0;
 }
 
-.accordion-button:not(.collapsed) {
+[data-slot="accordion-trigger"][aria-expanded="true"] {
   color: #fffaf0;
   background: var(--primary-color);
 }

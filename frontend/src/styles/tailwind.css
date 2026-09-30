@@ -35,6 +35,8 @@
 }
 
 @theme inline {
+  --breakpoint-site-lg: 62rem;
+  --z-index-header: 1040;
   --z-index-dialog: 1055;
   --z-index-popup: 1060;
   --color-background: var(--surface-background);
@@ -54,5 +56,113 @@
   --color-border: var(--surface-border);
   --color-input: var(--surface-border);
   --color-ring: var(--surface-primary);
+  --color-warning: var(--bs-warning);
+  --color-progress-track: var(--bs-secondary);
+  --color-success: var(--bs-success);
   --color-destructive: var(--surface-destructive);
+}
+
+/* Runtime themes retain their language-control colours after Bootstrap's button
+   renderer is removed. Theme variables remain the source of truth. */
+.site-lang-toggle {
+  color: var(--language-control-color, var(--bs-white));
+  background: var(--language-control-bg, var(--bs-dark));
+  border-color: var(--language-control-border-color, var(--bs-dark));
+}
+.site-lang-toggle:hover,
+.site-lang-toggle[data-popup-open] {
+  color: var(--language-control-hover-color, var(--bs-white));
+  background: var(--language-control-hover-bg, var(--bs-dark));
+  border-color: var(--language-control-hover-border-color, var(--bs-dark));
+}
+[data-slot="accordion-trigger"][aria-expanded="true"] > svg {
+  transform: rotate(180deg);
+}
+
+/* Structural utilities coexist with theme-owned widget surfaces. These defaults
+   precede the runtime stylesheet so each theme can retain its existing shapes. */
+[data-slot="tabs-list"] {
+  border-bottom: 1px solid var(--surface-border);
+}
+[data-slot="tabs-trigger"] {
+  padding: 0.5rem 1rem;
+  color: var(--surface-primary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0.375rem 0.375rem 0 0;
+}
+[data-slot="tabs-trigger"][data-active] {
+  color: var(--surface-foreground);
+  background: var(--surface-background);
+  border-color: var(--surface-border) var(--surface-border) transparent;
+}
+[data-slot="accordion-item"] {
+  color: var(--surface-foreground);
+  background: var(--surface-muted);
+  border-bottom: 1px solid var(--surface-border);
+}
+[data-slot="accordion-trigger"] {
+  padding: 1rem 1.25rem;
+  font-size: 1rem;
+  color: inherit;
+  background: transparent;
+  border: 0;
+}
+
+@custom-variant riviera (&:where(html[data-visual-theme="riviera"] *));
+/* Default navbar geometry formerly supplied by Bootstrap. Runtime themes may
+   override it, including Riviera's desktop sidebar and Remuage's wide header. */
+.site-header {
+  top: 0;
+  right: 0;
+  left: 0;
+  padding: 0.5rem 0;
+}
+
+.site-brand {
+  font-size: 1.25rem;
+}
+.site-nav {
+  align-items: center;
+  gap: 0.5rem;
+}
+@media (min-width: 576px) {
+  .site-header-container {
+    max-width: 540px;
+  }
+}
+@media (min-width: 768px) {
+  .site-header-container {
+    max-width: 720px;
+  }
+}
+@media (min-width: 992px) {
+  .site-header-container {
+    max-width: 960px;
+  }
+}
+@media (min-width: 1200px) {
+  .site-header-container {
+    max-width: 1140px;
+  }
+}
+@media (min-width: 1400px) {
+  .site-header-container {
+    max-width: 1320px;
+  }
+}
+
+.site-mobile-menu-panel {
+  background: var(--surface-muted);
+  padding: 0.75rem;
+  border: 1px solid var(--surface-border);
+  border-radius: 0.5rem;
+}
+
+[data-slot="accordion"] {
+  border-radius: 0.5rem;
+  box-shadow: var(--shadow-lg);
+}
+[data-slot="accordion-content"] {
+  padding: 1rem 1.25rem;
 }

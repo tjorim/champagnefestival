@@ -32,7 +32,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import ProgressBar from "react-bootstrap/ProgressBar";
+import { Progress } from "@/components/ui/progress";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
@@ -1203,10 +1203,8 @@ export default function RegistrationList({
                           </Button>
                         </span>
                       </div>
-                      <ProgressBar
-                        now={checkInPercent}
-                        variant="success"
-                        className="bg-secondary"
+                      <Progress
+                        value={checkInPercent}
                         aria-label={`${eventStats.title}: ${eventStats.checkedIn}/${eventStats.total} ${m.admin_checked_in()}`}
                       />
                     </div>

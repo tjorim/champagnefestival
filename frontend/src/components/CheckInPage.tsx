@@ -10,7 +10,9 @@ import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import ListGroup from "react-bootstrap/ListGroup";
 import Form from "react-bootstrap/Form";
-import Collapse from "react-bootstrap/Collapse";
+import { Button as SearchButton } from "@/components/ui/button";
+import { Search, ChevronDown, ChevronUp } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -621,151 +623,155 @@ export default function CheckInPage() {
                     {m.checkin_scan_prompt()}
                   </Alert>
 
-                  <Card bg="dark" text="white" border="secondary" className="mb-3">
-                    <Card.Header className="bg-dark border-secondary p-0">
-                      <Button
-                        variant="link"
-                        className="w-100 text-start text-warning text-decoration-none p-3 d-flex justify-content-between align-items-center"
-                        onClick={() => setSearchOpen((open) => !open)}
-                        aria-expanded={searchOpen}
-                        aria-controls="manual-checkin-search"
-                      >
-                        <span>
-                          <i className="bi bi-search me-2" aria-hidden="true" />
-                          {m.checkin_manual_search_title()}
-                        </span>
-                        <i
-                          className={clsx("bi", searchOpen ? "bi-chevron-up" : "bi-chevron-down")}
-                          aria-hidden="true"
-                        />
-                      </Button>
-                    </Card.Header>
-                    <Collapse in={searchOpen}>
-                      <Card.Body id="manual-checkin-search">
-                        {!auth.isAuthenticated && (
-                          <Alert
-                            variant="info"
-                            className="d-flex justify-content-between align-items-center gap-3 flex-wrap"
-                          >
-                            <span>{m.checkin_manual_search_login_required()}</span>
-                            <Button
-                              variant="outline-warning"
-                              size="sm"
-                              onClick={() => auth.login(returnTo)}
-                              disabled={auth.isSigningIn}
+                  <Collapsible open={searchOpen} onOpenChange={setSearchOpen}>
+                    <Card bg="dark" text="white" border="secondary" className="mb-3">
+                      <Card.Header className="bg-dark border-secondary p-0">
+                        <CollapsibleTrigger
+                          render={<SearchButton variant="ghost" />}
+                          className="tw:flex tw:w-full tw:items-center tw:justify-between tw:p-4 tw:text-left tw:text-warning"
+                          aria-expanded={searchOpen}
+                          aria-controls="manual-checkin-search"
+                        >
+                          <span>
+                            <Search className="tw:mr-2 tw:inline tw:size-4" aria-hidden="true" />
+                            {m.checkin_manual_search_title()}
+                          </span>
+                          {searchOpen ? (
+                            <ChevronUp aria-hidden="true" className="tw:size-4" />
+                          ) : (
+                            <ChevronDown aria-hidden="true" className="tw:size-4" />
+                          )}
+                        </CollapsibleTrigger>
+                      </Card.Header>
+                      <CollapsibleContent id="manual-checkin-search" keepMounted>
+                        <Card.Body>
+                          {!auth.isAuthenticated && (
+                            <Alert
+                              variant="info"
+                              className="d-flex justify-content-between align-items-center gap-3 flex-wrap"
                             >
-                              {auth.isSigningIn ? (
-                                <>
-                                  <Spinner
-                                    as="span"
-                                    animation="border"
-                                    size="sm"
-                                    className="me-2"
-                                    aria-hidden="true"
-                                  />
-                                  {m.auth_signing_in()}
-                                </>
-                              ) : (
-                                m.admin_login_button()
-                              )}
-                            </Button>
-                          </Alert>
-                        )}
-                        {auth.isAuthenticated && !canManageEntranceActions && (
-                          <Alert variant="warning">{m.checkin_manual_search_unauthorized()}</Alert>
-                        )}
+                              <span>{m.checkin_manual_search_login_required()}</span>
+                              <Button
+                                variant="outline-warning"
+                                size="sm"
+                                onClick={() => auth.login(returnTo)}
+                                disabled={auth.isSigningIn}
+                              >
+                                {auth.isSigningIn ? (
+                                  <>
+                                    <Spinner
+                                      as="span"
+                                      animation="border"
+                                      size="sm"
+                                      className="me-2"
+                                      aria-hidden="true"
+                                    />
+                                    {m.auth_signing_in()}
+                                  </>
+                                ) : (
+                                  m.admin_login_button()
+                                )}
+                              </Button>
+                            </Alert>
+                          )}
+                          {auth.isAuthenticated && !canManageEntranceActions && (
+                            <Alert variant="warning">
+                              {m.checkin_manual_search_unauthorized()}
+                            </Alert>
+                          )}
 
-                        <Form.Group controlId="manual-checkin-query">
-                          <Form.Label>{m.checkin_manual_search_label()}</Form.Label>
-                          <Form.Control
-                            type="search"
-                            value={searchTerm}
-                            onChange={(event) => {
-                              setSearchTerm(event.currentTarget.value);
-                              setManualRegistration(null);
-                              setSuccess(false);
-                              setAlreadyCheckedIn(false);
-                            }}
-                            placeholder={m.checkin_manual_search_placeholder()}
-                            disabled={!canManageEntranceActions}
-                          />
-                          <Form.Text className="text-secondary">
-                            {m.checkin_manual_search_help()}
-                          </Form.Text>
-                        </Form.Group>
-
-                        {showSearchHint && (
-                          <div className="text-secondary mt-3">
-                            {m.checkin_manual_search_min_chars()}
-                          </div>
-                        )}
-
-                        {volunteerSearchQuery.isFetching && (
-                          <div className="text-secondary mt-3" role="status" aria-live="polite">
-                            <Spinner
-                              as="span"
-                              animation="border"
-                              size="sm"
-                              role="status"
-                              aria-hidden="true"
-                              className="me-2"
+                          <Form.Group controlId="manual-checkin-query">
+                            <Form.Label>{m.checkin_manual_search_label()}</Form.Label>
+                            <Form.Control
+                              type="search"
+                              value={searchTerm}
+                              onChange={(event) => {
+                                setSearchTerm(event.currentTarget.value);
+                                setManualRegistration(null);
+                                setSuccess(false);
+                                setAlreadyCheckedIn(false);
+                              }}
+                              placeholder={m.checkin_manual_search_placeholder()}
+                              disabled={!canManageEntranceActions}
                             />
-                            {m.checkin_manual_search_loading()}
-                          </div>
-                        )}
+                            <Form.Text className="text-secondary">
+                              {m.checkin_manual_search_help()}
+                            </Form.Text>
+                          </Form.Group>
 
-                        {volunteerSearchQuery.isError && (
-                          <Alert variant="danger" className="mt-3 mb-0" role="alert">
-                            <i
-                              className="bi bi-exclamation-triangle-fill me-2"
-                              aria-hidden="true"
-                            />
-                            {volunteerSearchQuery.error.message === SESSION_EXPIRED_ERROR
-                              ? m.checkin_manual_search_session_expired()
-                              : volunteerSearchQuery.error.message === UNAUTHORIZED_ERROR
-                                ? m.checkin_manual_search_unauthorized()
-                                : volunteerSearchQuery.error.message}
-                          </Alert>
-                        )}
-
-                        {!volunteerSearchQuery.isFetching &&
-                          debouncedSearchTerm.length >= 2 &&
-                          searchResults.length === 0 &&
-                          !volunteerSearchQuery.isError && (
+                          {showSearchHint && (
                             <div className="text-secondary mt-3">
-                              {m.checkin_manual_search_no_results()}
+                              {m.checkin_manual_search_min_chars()}
                             </div>
                           )}
 
-                        {searchResults.length > 0 && (
-                          <ListGroup className="mt-3">
-                            {searchResults.map((result) => (
-                              <ListGroup.Item
-                                key={result.id}
-                                action
-                                variant="dark"
-                                className="border-secondary d-flex justify-content-between align-items-center gap-3"
-                                onClick={() => handleSelectManualRegistration(result)}
-                              >
-                                <span>
-                                  <span className="fw-semibold d-block">{result.name}</span>
-                                  <span className="text-secondary small">
-                                    {result.eventTitle || result.eventId} · {m.checkin_guests()}:{" "}
-                                    {result.guestCount}
+                          {volunteerSearchQuery.isFetching && (
+                            <div className="text-secondary mt-3" role="status" aria-live="polite">
+                              <Spinner
+                                as="span"
+                                animation="border"
+                                size="sm"
+                                role="status"
+                                aria-hidden="true"
+                                className="me-2"
+                              />
+                              {m.checkin_manual_search_loading()}
+                            </div>
+                          )}
+
+                          {volunteerSearchQuery.isError && (
+                            <Alert variant="danger" className="mt-3 mb-0" role="alert">
+                              <i
+                                className="bi bi-exclamation-triangle-fill me-2"
+                                aria-hidden="true"
+                              />
+                              {volunteerSearchQuery.error.message === SESSION_EXPIRED_ERROR
+                                ? m.checkin_manual_search_session_expired()
+                                : volunteerSearchQuery.error.message === UNAUTHORIZED_ERROR
+                                  ? m.checkin_manual_search_unauthorized()
+                                  : volunteerSearchQuery.error.message}
+                            </Alert>
+                          )}
+
+                          {!volunteerSearchQuery.isFetching &&
+                            debouncedSearchTerm.length >= 2 &&
+                            searchResults.length === 0 &&
+                            !volunteerSearchQuery.isError && (
+                              <div className="text-secondary mt-3">
+                                {m.checkin_manual_search_no_results()}
+                              </div>
+                            )}
+
+                          {searchResults.length > 0 && (
+                            <ListGroup className="mt-3">
+                              {searchResults.map((result) => (
+                                <ListGroup.Item
+                                  key={result.id}
+                                  action
+                                  variant="dark"
+                                  className="border-secondary d-flex justify-content-between align-items-center gap-3"
+                                  onClick={() => handleSelectManualRegistration(result)}
+                                >
+                                  <span>
+                                    <span className="fw-semibold d-block">{result.name}</span>
+                                    <span className="text-secondary small">
+                                      {result.eventTitle || result.eventId} · {m.checkin_guests()}:{" "}
+                                      {result.guestCount}
+                                    </span>
                                   </span>
-                                </span>
-                                <Badge bg={result.checkedIn ? "success" : "secondary"}>
-                                  {result.checkedIn
-                                    ? m.admin_checked_in()
-                                    : m.checkin_manual_not_checked_in()}
-                                </Badge>
-                              </ListGroup.Item>
-                            ))}
-                          </ListGroup>
-                        )}
-                      </Card.Body>
-                    </Collapse>
-                  </Card>
+                                  <Badge bg={result.checkedIn ? "success" : "secondary"}>
+                                    {result.checkedIn
+                                      ? m.admin_checked_in()
+                                      : m.checkin_manual_not_checked_in()}
+                                  </Badge>
+                                </ListGroup.Item>
+                              ))}
+                            </ListGroup>
+                          )}
+                        </Card.Body>
+                      </CollapsibleContent>
+                    </Card>
+                  </Collapsible>
                 </>
               )}
 

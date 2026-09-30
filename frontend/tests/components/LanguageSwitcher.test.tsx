@@ -43,7 +43,7 @@ describe("LanguageSwitcher component", () => {
     await act(async () => {});
     fireEvent.click(screen.getByRole("button", { name: /select language/i }));
     // Click French option (nativeName 'Français' is unique)
-    fireEvent.click(screen.getByText("Français").closest("button")!);
+    fireEvent.click(screen.getByText("Français").closest('[role="menuitem"]')!);
     expect(setLocale).toHaveBeenCalledWith("fr");
   });
 
@@ -52,7 +52,7 @@ describe("LanguageSwitcher component", () => {
     await act(async () => {});
     fireEvent.click(screen.getByRole("button", { name: /select language/i }));
     // The active language (nl) should have the highlighted class
-    const dutchItem = screen.getByText("Nederlands").closest("button");
-    expect(dutchItem).toHaveClass("bg-primary");
+    const dutchItem = screen.getByText("Nederlands").closest('[role="menuitem"]');
+    expect(dutchItem?.querySelector("svg")).toBeInTheDocument();
   });
 });

@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from "react";
-import { Tab, Nav, Card, Badge } from "react-bootstrap";
+import Card from "react-bootstrap/Card";
+import Badge from "react-bootstrap/Badge";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import type { Event } from "@/types/event";
@@ -17,12 +19,6 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
   }, [events]);
 
   const [activeDay, setActiveDay] = useState(days[0]?.id ?? 1);
-
-  const sortedEvents = useMemo(() => {
-    const activeDate = days.find((day) => day.id === activeDay)?.date;
-    const dayEvents = events.filter((event) => event.date === activeDate);
-    return [...dayEvents].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  }, [activeDay, days, events]);
 
   const getCategoryColor = (category: Event["category"]) => {
     switch (category) {
@@ -81,15 +77,19 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
     }
   };
 
+  if (days.length === 0) {
+    return <p className="tw:mb-0 tw:text-center">{m.schedule_no_events()}</p>;
+  }
+
   return (
     <div className="schedule-container">
-      <Tab.Container activeKey={activeDay} onSelect={(k) => k && setActiveDay(Number(k))}>
-        <Nav variant="tabs" className="schedule-tabs mb-4 justify-content-center">
+      <Tabs value={activeDay} onValueChange={(value) => setActiveDay(Number(value))}>
+        <TabsList className="schedule-tabs tw:mb-4 tw:justify-center">
           {days.map((day) => (
-            <Nav.Item key={day.id}>
-              <Nav.Link eventKey={day.id} className="px-4">
+            <div key={day.id}>
+              <TabsTrigger value={day.id}>
                 {getDayName(day.date)}
-                <span className="d-block small">
+                <span className="tw:block tw:text-sm">
                   {(() => {
                     try {
                       return new Date(day.date + "T00:00:00").toLocaleDateString(getLocale(), {
@@ -101,66 +101,71 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                     }
                   })()}
                 </span>
-              </Nav.Link>
-            </Nav.Item>
+              </TabsTrigger>
+            </div>
           ))}
-        </Nav>
+        </TabsList>
 
-        <Tab.Content>
-          <Tab.Pane eventKey={activeDay} active={true}>
-            {sortedEvents.length > 0 ? (
-              <div className="events-list">
-                {sortedEvents.map((event) => {
-                  return (
-                    <Card key={event.id} className="event-card mb-3 border-0">
-                      <Card.Body>
-                        <div className="d-flex justify-content-between align-items-start gap-3">
-                          <div className="event-time me-3 text-nowrap">
-                            {event.endTime ? (
-                              <>
-                                <div title={m.schedule_start_time()}>{event.startTime}</div>
-                                <div title={m.schedule_end_time()}>{event.endTime}</div>
-                                <span className="visually-hidden">
-                                  {m.schedule_time_range({
-                                    start: event.startTime,
-                                    end: event.endTime,
-                                  })}
-                                </span>
-                              </>
-                            ) : (
-                              <span title={m.schedule_time()}>{event.startTime}</span>
-                            )}
-                          </div>
-                          <div className="flex-grow-1">
-                            <h5 className="event-title mb-1">{event.title}</h5>
-                            <Badge bg={getCategoryColor(event.category)} className="mb-2">
-                              {getCategoryLabel(event.category)}
-                            </Badge>
-                            {event.registrationRequired ? (
-                              <Badge bg="warning" className="mb-2 ms-2">
-                                {m.schedule_registration()}
+        {days.map((day) => {
+          const sortedEvents = events
+            .filter((event) => event.date === day.date)
+            .sort((a, b) => a.startTime.localeCompare(b.startTime));
+          return (
+            <TabsContent key={day.id} value={day.id}>
+              {sortedEvents.length > 0 ? (
+                <div className="events-list">
+                  {sortedEvents.map((event) => {
+                    return (
+                      <Card key={event.id} className="event-card mb-3 border-0">
+                        <Card.Body>
+                          <div className="d-flex justify-content-between align-items-start gap-3">
+                            <div className="event-time me-3 text-nowrap">
+                              {event.endTime ? (
+                                <>
+                                  <div title={m.schedule_start_time()}>{event.startTime}</div>
+                                  <div title={m.schedule_end_time()}>{event.endTime}</div>
+                                  <span className="visually-hidden">
+                                    {m.schedule_time_range({
+                                      start: event.startTime,
+                                      end: event.endTime,
+                                    })}
+                                  </span>
+                                </>
+                              ) : (
+                                <span title={m.schedule_time()}>{event.startTime}</span>
+                              )}
+                            </div>
+                            <div className="flex-grow-1">
+                              <h5 className="event-title mb-1">{event.title}</h5>
+                              <Badge bg={getCategoryColor(event.category)} className="mb-2">
+                                {getCategoryLabel(event.category)}
                               </Badge>
-                            ) : (
-                              event.products.length > 0 && (
-                                <Badge bg="info" text="dark" className="mb-2 ms-2">
-                                  {m.schedule_order_available()}
+                              {event.registrationRequired ? (
+                                <Badge bg="warning" className="mb-2 ms-2">
+                                  {m.schedule_registration()}
                                 </Badge>
-                              )
-                            )}
-                            <p className="event-description mb-1">{event.description}</p>
+                              ) : (
+                                event.products.length > 0 && (
+                                  <Badge bg="info" text="dark" className="mb-2 ms-2">
+                                    {m.schedule_order_available()}
+                                  </Badge>
+                                )
+                              )}
+                              <p className="event-description mb-1">{event.description}</p>
+                            </div>
                           </div>
-                        </div>
-                      </Card.Body>
-                    </Card>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="text-center mb-0">{m.schedule_no_events()}</p>
-            )}
-          </Tab.Pane>
-        </Tab.Content>
-      </Tab.Container>
+                        </Card.Body>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-center mb-0">{m.schedule_no_events()}</p>
+              )}
+            </TabsContent>
+          );
+        })}
+      </Tabs>
     </div>
   );
 };
