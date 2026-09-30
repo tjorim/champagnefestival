@@ -1,4 +1,11 @@
 import {
+  AdminField,
+  AdminLabel,
+  AdminSelect,
+  AdminOption,
+  AdminInput,
+} from "@/components/admin/AdminFields";
+import {
   CircleCheckIcon,
   ContactRoundIcon,
   LogInIcon,
@@ -17,7 +24,7 @@ import { useCallback, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -330,20 +337,18 @@ export default function RegistrationDetail({
                 {m.admin_email_registration_title()}
               </h6>
               <div className="tw:flex tw:flex-wrap tw:items-end tw:gap-2">
-                <Form.Group controlId="registration-email-template" className="tw:grow">
-                  <Form.Label>{m.admin_email_template_label()}</Form.Label>
-                  <Form.Select
+                <AdminField controlId="registration-email-template" className="tw:grow">
+                  <AdminLabel>{m.admin_email_template_label()}</AdminLabel>
+                  <AdminSelect
                     value={emailTemplate}
-                    onChange={(event) =>
-                      setEmailTemplate(event.target.value as RegistrationEmailTemplate)
-                    }
+                    onValueChange={(event) => setEmailTemplate(event as RegistrationEmailTemplate)}
                   >
-                    <option value="general">{m.admin_email_template_general()}</option>
-                    <option value="order">{m.admin_email_template_order()}</option>
-                    <option value="payment">{m.admin_email_template_payment()}</option>
-                    <option value="event">{m.admin_email_template_event()}</option>
-                  </Form.Select>
-                </Form.Group>
+                    <AdminOption value="general">{m.admin_email_template_general()}</AdminOption>
+                    <AdminOption value="order">{m.admin_email_template_order()}</AdminOption>
+                    <AdminOption value="payment">{m.admin_email_template_payment()}</AdminOption>
+                    <AdminOption value="event">{m.admin_email_template_event()}</AdminOption>
+                  </AdminSelect>
+                </AdminField>
                 <Button
                   variant="outline-warning"
                   onClick={() =>
@@ -391,10 +396,10 @@ export default function RegistrationDetail({
                         >
                           <Icon icon={MinusIcon} />
                         </Button>
-                        <Form.Control
+                        <AdminInput
                           key={item.deliveredQuantity}
                           aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
-                          className="tw:text-center"
+                          className="tw:text-center tw:w-20"
                           inputMode="numeric"
                           min={0}
                           max={item.quantity}
@@ -419,7 +424,7 @@ export default function RegistrationDetail({
                             }
                           }}
                           size="sm"
-                          style={{ width: "5rem" }}
+
                           type="number"
                           defaultValue={item.deliveredQuantity}
                         />

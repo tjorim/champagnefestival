@@ -1,9 +1,17 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminError,
+  AdminTextarea,
+  AdminCheck,
+} from "@/components/admin/AdminFields";
 import { SaveIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import {
   Dialog,
   DialogContent,
@@ -125,7 +133,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             {isEdit ? m.admin_content_edition_edit_event() : m.admin_content_edition_add_event()}
           </DialogTitle>
         </DialogHeader>
-        <Form
+        <form
           onSubmit={(e) => {
             e.preventDefault();
             void form.handleSubmit();
@@ -134,10 +142,13 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
         >
           <DialogBody>
             <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-4">
-              <Form.Group controlId="event-title" style={{ minWidth: "240px", flex: "2 1 240px" }}>
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+              <AdminField
+                controlId="event-title"
+                className="tw:min-w-60 tw:grow-2 tw:shrink-1 tw:basis-60"
+              >
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_content_event_title()}
-                </Form.Label>
+                </AdminLabel>
                 <form.Field
                   name="title"
                   validators={[
@@ -152,37 +163,33 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     const showErr = field.meta.isTouched && field.errors.length > 0;
                     return (
                       <>
-                        <Form.Control
+                        <AdminInput
                           size="sm"
-                          className="bg-dark tw:text-content border-secondary"
+                          className="tw:bg-muted tw:text-content tw:border-input"
                           autoFocus
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
-                          isInvalid={showErr}
+                          aria-invalid={showErr}
                         />
-                        {showErr && (
-                          <Form.Control.Feedback type="invalid">
-                            {field.errors[0]?.message}
-                          </Form.Control.Feedback>
-                        )}
+                        {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                       </>
                     );
                   }}
                 </form.Field>
-              </Form.Group>
-              <Form.Group
+              </AdminField>
+              <AdminField
                 controlId="event-category"
-                style={{ minWidth: "160px", flex: "1 1 160px" }}
+                className="tw:min-w-40 tw:grow-1 tw:shrink-1 tw:basis-40"
               >
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_content_event_category()}
-                </Form.Label>
+                </AdminLabel>
                 <form.Field name="category">
                   {(field) => (
-                    <Form.Control
+                    <AdminInput
                       size="sm"
-                      className="bg-dark tw:text-content border-secondary"
+                      className="tw:bg-muted tw:text-content tw:border-input"
                       placeholder={m.admin_event_category_placeholder()}
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -190,14 +197,14 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     />
                   )}
                 </form.Field>
-              </Form.Group>
+              </AdminField>
             </div>
 
             <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-4">
-              <Form.Group controlId="event-date" style={{ maxWidth: "180px" }}>
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+              <AdminField controlId="event-date" className="tw:max-w-45">
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_event_date()}
-                </Form.Label>
+                </AdminLabel>
                 <form.Field
                   name="date"
                   validators={[
@@ -211,30 +218,26 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     const showErr = field.meta.isTouched && field.errors.length > 0;
                     return (
                       <>
-                        <Form.Control
+                        <AdminInput
                           type="date"
                           size="sm"
-                          className="bg-dark tw:text-content border-secondary"
+                          className="tw:bg-muted tw:text-content tw:border-input"
                           readOnly={!isFestival && Boolean(derivedStandaloneDate)}
-                          isInvalid={showErr}
+                          aria-invalid={showErr}
                           value={effectiveDate}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
                         />
-                        {showErr && (
-                          <Form.Control.Feedback type="invalid">
-                            {field.errors[0]?.message}
-                          </Form.Control.Feedback>
-                        )}
+                        {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                       </>
                     );
                   }}
                 </form.Field>
-              </Form.Group>
-              <Form.Group controlId="event-start-time" style={{ maxWidth: "140px" }}>
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+              </AdminField>
+              <AdminField controlId="event-start-time" className="tw:max-w-35">
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_content_event_start_time()}
-                </Form.Label>
+                </AdminLabel>
                 <form.Field
                   name="startTime"
                   validators={[
@@ -249,111 +252,106 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     const showErr = field.meta.isTouched && field.errors.length > 0;
                     return (
                       <>
-                        <Form.Control
+                        <AdminInput
                           type="time"
                           size="sm"
-                          className="bg-dark tw:text-content border-secondary"
+                          className="tw:bg-muted tw:text-content tw:border-input"
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
-                          isInvalid={showErr}
+                          aria-invalid={showErr}
                         />
-                        {showErr && (
-                          <Form.Control.Feedback type="invalid">
-                            {field.errors[0]?.message}
-                          </Form.Control.Feedback>
-                        )}
+                        {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                       </>
                     );
                   }}
                 </form.Field>
-              </Form.Group>
-              <Form.Group controlId="event-end-time" style={{ maxWidth: "140px" }}>
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+              </AdminField>
+              <AdminField controlId="event-end-time" className="tw:max-w-35">
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_content_event_end_time()}
-                </Form.Label>
+                </AdminLabel>
                 <form.Field name="endTime">
                   {(field) => (
-                    <Form.Control
+                    <AdminInput
                       type="time"
                       size="sm"
-                      className="bg-dark tw:text-content border-secondary"
+                      className="tw:bg-muted tw:text-content tw:border-input"
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
                   )}
                 </form.Field>
-              </Form.Group>
+              </AdminField>
             </div>
 
-            <Form.Group controlId="event-description" className="tw:mb-4">
-              <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+            <AdminField controlId="event-description" className="tw:mb-4">
+              <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                 {m.admin_content_event_description()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field name="description">
                 {(field) => (
-                  <Form.Control
-                    as="textarea"
+                  <AdminTextarea
                     size="sm"
                     rows={2}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
                   />
                 )}
               </form.Field>
-            </Form.Group>
+            </AdminField>
 
             <form.Field name="registrationRequired">
               {(field) => (
-                <Form.Check
+                <AdminCheck
                   type="checkbox"
                   id="modal-event-registration"
                   label={m.admin_content_event_requires_registration()}
                   checked={field.value}
-                  onChange={(e) => field.handleChange(e.target.checked)}
+                  onCheckedChange={(e) => field.handleChange(e)}
                   className="tw:text-content tw:mb-2"
                 />
               )}
             </form.Field>
             {registrationRequired && (
               <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
-                <Form.Group style={{ maxWidth: "280px" }} controlId="event-registrations-open-from">
-                  <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+                <AdminField className="tw:max-w-70" controlId="event-registrations-open-from">
+                  <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                     {m.admin_content_edition_registration_opens()}
-                  </Form.Label>
+                  </AdminLabel>
                   <form.Field name="registrationsOpenFrom">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         type="datetime-local"
                         size="sm"
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                       />
                     )}
                   </form.Field>
-                </Form.Group>
-                <Form.Group style={{ maxWidth: "280px" }} controlId="event-registrations-close-at">
-                  <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+                </AdminField>
+                <AdminField className="tw:max-w-70" controlId="event-registrations-close-at">
+                  <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                     {m.admin_content_edition_registration_closes()}
-                  </Form.Label>
+                  </AdminLabel>
                   <form.Field name="registrationsCloseAt">
                     {(field) => (
-                      <Form.Control
+                      <AdminInput
                         type="datetime-local"
                         size="sm"
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                       />
                     )}
                   </form.Field>
-                </Form.Group>
+                </AdminField>
               </div>
             )}
 
@@ -372,7 +370,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               {m.admin_save()}
             </Button>
           </DialogFooter>
-        </Form>
+        </form>
       </DialogContent>
     </Dialog>
   );

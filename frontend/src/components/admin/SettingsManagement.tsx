@@ -1,3 +1,10 @@
+import {
+  AdminCheck,
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminDescription,
+} from "@/components/admin/AdminFields";
 /**
  * SettingsManagement — site-wide toggles. Currently just maintenance mode.
  */
@@ -7,7 +14,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
 import { m } from "@/paraglide/messages";
@@ -122,19 +129,19 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
           <Spinner animation="border" size="sm" />
         ) : (
           <>
-            <Form.Check
+            <AdminCheck
               type="switch"
               id="maintenance-mode-switch"
               label={m.admin_settings_maintenance_mode_label()}
               checked={maintenanceMode ?? false}
               disabled={updateMutation.isPending}
-              onChange={(e) => updateMutation.mutate({ maintenance_mode: e.target.checked })}
+              onCheckedChange={(e) => updateMutation.mutate({ maintenance_mode: e })}
             />
             <div className="tw:text-subtle tw:text-sm tw:mt-2">
               {m.admin_settings_maintenance_mode_help()}
             </div>
             <hr className="border-secondary tw:my-6" />
-            <Form
+            <form
               onSubmit={(event) => {
                 event.preventDefault();
                 void form.handleSubmit();
@@ -142,43 +149,43 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
             >
               <form.Field name="publicEmail">
                 {(field) => (
-                  <Form.Group className="tw:mb-4" controlId="public-email">
-                    <Form.Label>{m.admin_settings_public_email_label()}</Form.Label>
-                    <Form.Control
+                  <AdminField className="tw:mb-4" controlId="public-email">
+                    <AdminLabel>{m.admin_settings_public_email_label()}</AdminLabel>
+                    <AdminInput
                       type="email"
                       value={field.value}
                       disabled={updateMutation.isPending}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <Form.Text className="tw:text-subtle">
+                    <AdminDescription className="tw:text-subtle">
                       {m.admin_settings_public_email_help()}
-                    </Form.Text>
-                  </Form.Group>
+                    </AdminDescription>
+                  </AdminField>
                 )}
               </form.Field>
               <form.Field name="publicPhone">
                 {(field) => (
-                  <Form.Group className="tw:mb-4" controlId="public-phone">
-                    <Form.Label>{m.admin_settings_public_phone_label()}</Form.Label>
-                    <Form.Control
+                  <AdminField className="tw:mb-4" controlId="public-phone">
+                    <AdminLabel>{m.admin_settings_public_phone_label()}</AdminLabel>
+                    <AdminInput
                       type="tel"
                       value={field.value}
                       disabled={updateMutation.isPending}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <Form.Text className="tw:text-subtle">
+                    <AdminDescription className="tw:text-subtle">
                       {m.admin_settings_public_phone_help()}
-                    </Form.Text>
-                  </Form.Group>
+                    </AdminDescription>
+                  </AdminField>
                 )}
               </form.Field>
               <form.Field name="facebookUrl">
                 {(field) => (
-                  <Form.Group className="tw:mb-4" controlId="facebook-url">
-                    <Form.Label>{m.admin_settings_facebook_url_label()}</Form.Label>
-                    <Form.Control
+                  <AdminField className="tw:mb-4" controlId="facebook-url">
+                    <AdminLabel>{m.admin_settings_facebook_url_label()}</AdminLabel>
+                    <AdminInput
                       type="url"
                       pattern="https://.*"
                       value={field.value}
@@ -186,10 +193,10 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <Form.Text className="tw:text-subtle">
+                    <AdminDescription className="tw:text-subtle">
                       {m.admin_settings_facebook_url_help()}
-                    </Form.Text>
-                  </Form.Group>
+                    </AdminDescription>
+                  </AdminField>
                 )}
               </form.Field>
               <Button type="submit" variant="primary" disabled={updateMutation.isPending}>
@@ -197,7 +204,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                   ? m.admin_settings_saving()
                   : m.admin_settings_save_contact()}
               </Button>
-            </Form>
+            </form>
           </>
         )}
       </CardContent>

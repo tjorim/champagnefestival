@@ -1,3 +1,4 @@
+import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import VolunteersManagement from "@/components/admin/VolunteersManagement";
@@ -60,7 +61,7 @@ function renderVolunteersManagement(opts: RenderOpts = {}) {
 }
 
 describe("VolunteersManagement — rendering", () => {
-  it("renders volunteer rows with name, address, national register number, eID number, and help periods", () => {
+  it("renders volunteer rows with name, address, national register number, eID number, and help periods", async () => {
     renderVolunteersManagement({
       volunteers: [
         makeVolunteer({
@@ -93,13 +94,13 @@ describe("VolunteersManagement — rendering", () => {
     ).toBeInTheDocument();
   });
 
-  it("shows a loading spinner instead of the table when isLoading is true", () => {
+  it("shows a loading spinner instead of the table when isLoading is true", async () => {
     renderVolunteersManagement({ isLoading: true, volunteers: [] });
     expect(document.querySelector(".spinner-border")).toBeTruthy();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 
-  it("shows the no-results message when volunteers is empty and not loading", () => {
+  it("shows the no-results message when volunteers is empty and not loading", async () => {
     renderVolunteersManagement({ volunteers: [], isLoading: false });
     expect(screen.getByText("admin_volunteers_no_results")).toBeInTheDocument();
   });
@@ -175,7 +176,7 @@ describe("VolunteersManagement — delete confirmation", () => {
 });
 
 describe("VolunteersManagement — client-side pagination", () => {
-  it("shows only the first page of rows and pages through the rest", () => {
+  it("shows only the first page of rows and pages through the rest", async () => {
     const manyVolunteers = Array.from({ length: 25 }, (_, i) =>
       makeVolunteer({ id: `v${i}`, name: `Volunteer ${String(i).padStart(2, "0")}` }),
     );
@@ -194,7 +195,7 @@ describe("VolunteersManagement — client-side pagination", () => {
 });
 
 describe("VolunteersManagement — active/inactive filter", () => {
-  it("filters rows to only inactive volunteers when 'inactive' is selected", () => {
+  it("filters rows to only inactive volunteers when 'inactive' is selected", async () => {
     renderVolunteersManagement({
       volunteers: [
         makeVolunteer({ id: "v1", name: "Active Vera", active: true }),
@@ -205,9 +206,10 @@ describe("VolunteersManagement — active/inactive filter", () => {
     expect(screen.getByText("Active Vera")).toBeInTheDocument();
     expect(screen.getByText("Inactive Ivo")).toBeInTheDocument();
 
-    fireEvent.change(screen.getByRole("combobox", { name: "admin_people_active_label" }), {
-      target: { value: "inactive" },
-    });
+    await selectAdminOption(
+      screen.getByRole("combobox", { name: "admin_people_active_label" }),
+      "inactive",
+    );
 
     expect(screen.queryByText("Active Vera")).not.toBeInTheDocument();
     expect(screen.getByText("Inactive Ivo")).toBeInTheDocument();

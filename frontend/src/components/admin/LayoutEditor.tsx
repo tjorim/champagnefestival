@@ -1,3 +1,12 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminSelect,
+  AdminOption,
+  AdminOptionGroup,
+  AdminCheck,
+} from "@/components/admin/AdminFields";
 import { AreaIcon } from "@/components/AreaIcon";
 import {
   ArrowLeftRightIcon,
@@ -33,7 +42,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -253,6 +262,8 @@ function DraggableTable({
         borderCls,
         bgCls,
       )}
+
+      /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
       style={{
         left: leftPx,
         top: topPx,
@@ -266,6 +277,7 @@ function DraggableTable({
         transition: isDragging ? undefined : "border-color 0.15s, opacity 0.15s",
         pointerEvents: isInteractive ? undefined : "none",
       }}
+      /* oxlint-enable shadcn/no-inline-styles */
       title={`${table.name} — ${assignedCount}/${table.capacity}`}
       role={isInteractive ? "button" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
@@ -343,6 +355,8 @@ function DraggableArea({
         borderCls,
         bgCls,
       )}
+
+      /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
       style={{
         left: leftPx,
         top: topPx,
@@ -356,6 +370,7 @@ function DraggableArea({
         transition: isDragging ? undefined : "border-color 0.15s",
         ...fadedStyle,
       }}
+      /* oxlint-enable shadcn/no-inline-styles */
       title={area.label}
       role={isInteractive ? "button" : undefined}
       tabIndex={isInteractive ? 0 : undefined}
@@ -378,8 +393,8 @@ function DraggableArea({
       </span>
       {assignedLabel && (
         <span
-          className="tw:truncate tw:w-full tw:text-center tw:px-1 tw:text-plan"
-          style={{ opacity: 0.85 }}
+          className="tw:truncate tw:w-full tw:text-center tw:px-1 tw:text-plan tw:opacity-85"
+
           title={assignedLabel}
         >
           {assignedLabel}
@@ -490,6 +505,8 @@ function RoomCanvas({
             onSelectArea(null);
           }}
           className="tw:relative border rounded"
+
+          /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
           style={{
             width: canvasW,
             height: canvasH,
@@ -500,6 +517,7 @@ function RoomCanvas({
             overflow: "visible",
             cursor: "default",
           }}
+          /* oxlint-enable shadcn/no-inline-styles */
           aria-label={room.name}
         >
           {isEmpty && (
@@ -896,9 +914,12 @@ export default function LayoutEditor({
                   >
                     <span
                       className="tw:mr-1 tw:inline-block tw:size-2.5 tw:rounded-full"
+
+                      /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
                       style={{
                         background: room.color,
                       }}
+                      /* oxlint-enable shadcn/no-inline-styles */
                       aria-hidden="true"
                     />
                     {room.name}
@@ -983,7 +1004,11 @@ export default function LayoutEditor({
             <div>
               <div className="tw:flex tw:items-center tw:justify-between tw:mb-2">
                 <div className="tw:flex tw:items-center tw:gap-2">
-                  <span className="tw:font-semibold" style={{ color: activeRoom.color }}>
+                  <span
+                    className="tw:font-semibold" /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
+                    style={{ color: activeRoom.color }}
+                    /* oxlint-enable shadcn/no-inline-styles */
+                  >
                     <Icon icon={BuildingIcon} className="tw:me-1" />
                     {activeRoom.name}
                   </span>
@@ -998,7 +1023,7 @@ export default function LayoutEditor({
                             setActiveLayoutId(layout.id);
                             setSelectedTable(null);
                           }}
-                          style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+                          className="tw:rounded-tr-none tw:rounded-br-none"
                         >
                           {getDayLabel(layout, dayOptions)}
                         </Button>
@@ -1008,11 +1033,7 @@ export default function LayoutEditor({
                           onClick={() => setConfirmDeleteLayoutId(layout.id)}
                           title={m.admin_delete()}
                           aria-label={m.admin_delete()}
-                          style={{
-                            borderTopLeftRadius: 0,
-                            borderBottomLeftRadius: 0,
-                            borderLeft: "none",
-                          }}
+                          className="tw:rounded-tl-none tw:rounded-bl-none tw:border-l-0"
                         >
                           <Icon icon={XIcon} />
                         </Button>
@@ -1126,10 +1147,7 @@ export default function LayoutEditor({
                   >
                     <Icon icon={RotateCcwIcon} />
                   </Button>
-                  <span
-                    className="tw:text-subtle tw:text-sm"
-                    style={{ minWidth: "3.5rem", textAlign: "center" }}
-                  >
+                  <span className="tw:text-subtle tw:text-sm tw:min-w-14 tw:text-center">
                     {Math.round(selectedTableData.rotation)}°
                   </span>
                   <Button
@@ -1172,12 +1190,12 @@ export default function LayoutEditor({
                 {allocationError}
               </Alert>
             )}
-            <Form.Group className="tw:mb-4" controlId="table-name-edit">
-              <Form.Label className="tw:text-subtle tw:text-sm">{m.admin_table_name()}</Form.Label>
-              <Form.Control
+            <AdminField className="tw:mb-4" controlId="table-name-edit">
+              <AdminLabel className="tw:text-subtle tw:text-sm">{m.admin_table_name()}</AdminLabel>
+              <AdminInput
                 size="sm"
                 type="text"
-                className="bg-dark tw:text-content border-secondary"
+                className="tw:bg-muted tw:text-content tw:border-input"
                 defaultValue={selectedTableData.name}
                 onBlur={async (e) => {
                   const val = e.target.value.trim();
@@ -1194,19 +1212,19 @@ export default function LayoutEditor({
                 }}
                 key={`name-${selectedTableData.id}`}
               />
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="table-type-select">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="table-type-select">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_table_type_label()}
-              </Form.Label>
-              <Form.Select
+              </AdminLabel>
+              <AdminSelect
                 size="sm"
-                className="bg-dark tw:text-content border-secondary"
+                className="tw:bg-muted tw:text-content tw:border-input"
                 value={selectedTableData.tableTypeId}
-                onChange={async (e) => {
+                onValueChange={async (e) => {
                   setUpdateTableError(null);
                   try {
-                    await onChangeTableType(selectedTableData.id, e.target.value);
+                    await onChangeTableType(selectedTableData.id, e);
                   } catch (err) {
                     setUpdateTableError(
                       err instanceof Error ? err.message : m.admin_content_error_save(),
@@ -1223,12 +1241,12 @@ export default function LayoutEditor({
                       (tt.active || tt.id === selectedTableData.tableTypeId),
                   )
                   .map((tt) => (
-                    <option key={tt.id} value={tt.id} disabled={!tt.active}>
+                    <AdminOption key={tt.id} value={tt.id} disabled={!tt.active}>
                       {tt.name}
-                    </option>
+                    </AdminOption>
                   ))}
-              </Form.Select>
-            </Form.Group>
+              </AdminSelect>
+            </AdminField>
             {selectedRegistrations.length === 0 ? (
               <p className="tw:text-subtle tw:mb-0">{m.admin_unassigned()}</p>
             ) : (
@@ -1244,15 +1262,15 @@ export default function LayoutEditor({
                         if (!allocation) return null;
                         return (
                           <>
-                            <Form.Control
+                            <AdminInput
                               aria-label={`${m.admin_guests_count()} ${r.person.name}`}
                               type="number"
                               min={allocation.exclusive ? 0 : 1}
                               max={20}
                               defaultValue={allocation.guestCount}
                               disabled={allocationPending || allocation.exclusive}
-                              className="bg-dark tw:text-content border-secondary"
-                              style={{ width: "5rem" }}
+                              className="tw:bg-muted tw:text-content tw:border-input tw:w-20"
+
                               onBlur={(event) => {
                                 const guestCount = Number(event.currentTarget.value);
                                 if (
@@ -1271,17 +1289,17 @@ export default function LayoutEditor({
                                 }
                               }}
                             />
-                            <Form.Select
+                            <AdminSelect
                               aria-label={`${m.admin_layout_move_booking()} ${r.person.name}`}
                               size="sm"
                               value={selectedTableData.id}
                               disabled={allocationPending}
-                              onChange={(event) =>
+                              onValueChange={(event) =>
                                 void savePlanAllocations(
                                   r,
                                   (r.allocations ?? []).map((item) =>
                                     item.tableId === selectedTableData.id
-                                      ? { ...item, tableId: event.target.value }
+                                      ? { ...item, tableId: event }
                                       : item,
                                   ),
                                 )
@@ -1296,11 +1314,11 @@ export default function LayoutEditor({
                                     ),
                                 )
                                 .map((table) => (
-                                  <option key={table.id} value={table.id}>
+                                  <AdminOption key={table.id} value={table.id}>
                                     {table.name}
-                                  </option>
+                                  </AdminOption>
                                 ))}
-                            </Form.Select>
+                            </AdminSelect>
                             <Button
                               size="sm"
                               variant="outline-danger"
@@ -1325,16 +1343,16 @@ export default function LayoutEditor({
               </PresentationList>
             )}
             <div className="border-top border-secondary tw:pt-4 tw:mt-4">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_assign_booking()}
-              </Form.Label>
+              </AdminLabel>
               <div className="tw:flex tw:flex-wrap tw:gap-2">
-                <Form.Select
+                <AdminSelect
                   aria-label={m.admin_layout_assign_booking()}
                   value={bookingToAssign}
                   disabled={allocationPending || assignableRegistrations.length === 0}
-                  onChange={(event) => {
-                    const id = event.target.value;
+                  onValueChange={(event) => {
+                    const id = event;
                     const booking = assignableRegistrations.find((item) => item.id === id);
                     const alreadyAssigned =
                       booking?.allocations?.reduce((sum, item) => sum + item.guestCount, 0) ?? 0;
@@ -1346,14 +1364,14 @@ export default function LayoutEditor({
                     );
                   }}
                 >
-                  <option value="">{m.admin_layout_choose_booking()}</option>
+                  <AdminOption value="">{m.admin_layout_choose_booking()}</AdminOption>
                   {assignableRegistrations.map((registration) => (
-                    <option key={registration.id} value={registration.id}>
+                    <AdminOption key={registration.id} value={registration.id}>
                       {registration.person.name} · {registration.id}
-                    </option>
+                    </AdminOption>
                   ))}
-                </Form.Select>
-                <Form.Control
+                </AdminSelect>
+                <AdminInput
                   aria-label={m.admin_guests_count()}
                   type="number"
                   min={selectedBookingToAssign?.bookedTableQuantity ? 0 : 1}
@@ -1365,7 +1383,7 @@ export default function LayoutEditor({
                     Boolean(selectedBookingToAssign?.bookedTableQuantity)
                   }
                   onChange={(event) => setGuestsToAssign(Number(event.target.value))}
-                  style={{ width: "6rem" }}
+                  className="tw:w-24"
                 />
                 <Button
                   variant="warning"
@@ -1411,10 +1429,7 @@ export default function LayoutEditor({
               >
                 <Icon icon={RotateCcwIcon} />
               </Button>
-              <span
-                className="tw:text-subtle tw:text-sm"
-                style={{ minWidth: "3.5rem", textAlign: "center" }}
-              >
+              <span className="tw:text-subtle tw:text-sm tw:min-w-14 tw:text-center">
                 {Math.round(selectedAreaData.rotation)}°
               </span>
               <Button
@@ -1462,14 +1477,14 @@ export default function LayoutEditor({
                 {resizeAreaError}
               </Alert>
             )}
-            <Form.Group className="tw:mb-4" controlId="area-label">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            <AdminField className="tw:mb-4" controlId="area-label">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_area_form_label()}
-              </Form.Label>
-              <Form.Control
+              </AdminLabel>
+              <AdminInput
                 size="sm"
                 type="text"
-                className="bg-dark tw:text-content border-secondary"
+                className="tw:bg-muted tw:text-content tw:border-input"
                 defaultValue={selectedAreaData.label}
                 onBlur={(e) => {
                   const newLabel = e.target.value.trim();
@@ -1479,19 +1494,19 @@ export default function LayoutEditor({
                 }}
                 key={selectedAreaData.id}
               />
-            </Form.Group>
+            </AdminField>
             <div className="tw:flex tw:gap-2 tw:mb-4">
-              <Form.Group controlId="area-width" className="tw:flex-1">
-                <Form.Label className="tw:text-subtle tw:text-sm">
+              <AdminField controlId="area-width" className="tw:flex-1">
+                <AdminLabel className="tw:text-subtle tw:text-sm">
                   {m.admin_layout_area_width_m()}
-                </Form.Label>
-                <Form.Control
+                </AdminLabel>
+                <AdminInput
                   size="sm"
                   type="number"
                   min={0.1}
                   max={50}
                   step={0.1}
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                   defaultValue={selectedAreaData.widthM}
                   onBlur={async (e) => {
                     const val = parseFloat(e.target.value);
@@ -1508,18 +1523,18 @@ export default function LayoutEditor({
                   }}
                   key={`w-${selectedAreaData.id}`}
                 />
-              </Form.Group>
-              <Form.Group controlId="area-length" className="tw:flex-1">
-                <Form.Label className="tw:text-subtle tw:text-sm">
+              </AdminField>
+              <AdminField controlId="area-length" className="tw:flex-1">
+                <AdminLabel className="tw:text-subtle tw:text-sm">
                   {m.admin_layout_area_length_m()}
-                </Form.Label>
-                <Form.Control
+                </AdminLabel>
+                <AdminInput
                   size="sm"
                   type="number"
                   min={0.1}
                   max={50}
                   step={0.1}
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                   defaultValue={selectedAreaData.lengthM}
                   onBlur={async (e) => {
                     const val = parseFloat(e.target.value);
@@ -1536,20 +1551,20 @@ export default function LayoutEditor({
                   }}
                   key={`l-${selectedAreaData.id}`}
                 />
-              </Form.Group>
+              </AdminField>
             </div>
-            <Form.Group className="tw:mb-4" controlId="area-icon">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            <AdminField className="tw:mb-4" controlId="area-icon">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_area_form_icon()}
-              </Form.Label>
+              </AdminLabel>
               <div className="tw:flex tw:gap-2 tw:items-center">
                 <AreaIcon name={selectedAreaData.icon} className="tw:text-primary" />
-                <Form.Select
+                <AdminSelect
                   size="sm"
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                   value={selectedAreaData.icon || "bi-shop"}
-                  onChange={async (e) => {
-                    const newIcon = e.target.value;
+                  onValueChange={async (e) => {
+                    const newIcon = e;
                     setAssignAreaError(null);
                     try {
                       await onAssignAreaToItem(
@@ -1567,23 +1582,23 @@ export default function LayoutEditor({
                   key={`icon-${selectedAreaData.id}`}
                 >
                   {getAreaIcons().map((ic) => (
-                    <option key={ic.value} value={ic.value}>
+                    <AdminOption key={ic.value} value={ic.value}>
                       {ic.label}
-                    </option>
+                    </AdminOption>
                   ))}
-                </Form.Select>
+                </AdminSelect>
               </div>
-            </Form.Group>
-            <Form.Group controlId="area-assign-item">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            </AdminField>
+            <AdminField controlId="area-assign-item">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_area_assigned_to()}
-              </Form.Label>
-              <Form.Select
+              </AdminLabel>
+              <AdminSelect
                 size="sm"
-                className="bg-dark tw:text-content border-secondary"
+                className="tw:bg-muted tw:text-content tw:border-input"
                 value={selectedAreaData.exhibitorId ? `e:${selectedAreaData.exhibitorId}` : ""}
-                onChange={async (ev) => {
-                  const val = ev.target.value;
+                onValueChange={async (ev) => {
+                  const val = ev;
                   setAssignAreaError(null);
                   try {
                     let eId: number | null = null;
@@ -1598,20 +1613,20 @@ export default function LayoutEditor({
                   }
                 }}
               >
-                <option value="">{m.admin_layout_area_none()}</option>
+                <AdminOption value="">{m.admin_layout_area_none()}</AdminOption>
                 {exhibitors.filter((e) => e.active).length > 0 && (
-                  <optgroup label={m.admin_layout_area_exhibitors_group()}>
+                  <AdminOptionGroup label={m.admin_layout_area_exhibitors_group()}>
                     {exhibitors
                       .filter((e) => e.active)
                       .map((e) => (
-                        <option key={e.id} value={`e:${e.id}`}>
+                        <AdminOption key={e.id} value={`e:${e.id}`}>
                           {e.name}
-                        </option>
+                        </AdminOption>
                       ))}
-                  </optgroup>
+                  </AdminOptionGroup>
                 )}
-              </Form.Select>
-            </Form.Group>
+              </AdminSelect>
+            </AdminField>
             {tablesInSelectedArea.length > 0 && (
               <div className="tw:mt-4 tw:pt-4 border-top border-secondary">
                 <p className="tw:text-subtle tw:text-sm tw:mb-2">
@@ -1664,56 +1679,54 @@ export default function LayoutEditor({
                 {addLayoutError}
               </Alert>
             )}
-            <Form.Group className="tw:mb-4" controlId="layout-day">
-              <Form.Label>{m.admin_layout_day_label()}</Form.Label>
-              <Form.Select
+            <AdminField className="tw:mb-4" controlId="layout-day">
+              <AdminLabel>{m.admin_layout_day_label()}</AdminLabel>
+              <AdminSelect
                 value={newLayout.eventId}
-                onChange={(e) => setNewLayout((p) => ({ ...p, eventId: e.target.value }))}
-                className="bg-dark tw:text-content border-secondary"
+                onValueChange={(e) => setNewLayout((p) => ({ ...p, eventId: e }))}
+                className="tw:bg-muted tw:text-content tw:border-input"
               >
                 {dayOptions.map((day) => (
-                  <option key={day.eventId} value={day.eventId}>
+                  <AdminOption key={day.eventId} value={day.eventId}>
                     {day.label}
-                  </option>
+                  </AdminOption>
                 ))}
-              </Form.Select>
-            </Form.Group>
-            <Form.Group controlId="layout-copy-from">
-              <Form.Label>{m.admin_layout_copy_from_label()}</Form.Label>
-              <Form.Select
+              </AdminSelect>
+            </AdminField>
+            <AdminField controlId="layout-copy-from">
+              <AdminLabel>{m.admin_layout_copy_from_label()}</AdminLabel>
+              <AdminSelect
                 value={newLayout.copyFromLayoutId}
-                onChange={(e) => setNewLayout((p) => ({ ...p, copyFromLayoutId: e.target.value }))}
-                className="bg-dark tw:text-content border-secondary"
+                onValueChange={(e) => setNewLayout((p) => ({ ...p, copyFromLayoutId: e }))}
+                className="tw:bg-muted tw:text-content tw:border-input"
               >
-                <option value="">{m.admin_layout_copy_from_empty()}</option>
+                <AdminOption value="">{m.admin_layout_copy_from_empty()}</AdminOption>
                 {roomLayouts.map((layout) => (
-                  <option key={layout.id} value={layout.id}>
+                  <AdminOption key={layout.id} value={layout.id}>
                     {getDayLabel(layout, dayOptions)}
-                  </option>
+                  </AdminOption>
                 ))}
-              </Form.Select>
-            </Form.Group>
+              </AdminSelect>
+            </AdminField>
             {newLayout.copyFromLayoutId && (
               <div className="tw:mt-4 tw:flex tw:flex-col tw:gap-2">
-                <Form.Check
+                <AdminCheck
                   id="layout-copy-tables"
                   type="checkbox"
                   className="tw:text-sm"
                   checked={newLayout.copyTables}
-                  onChange={(e) =>
-                    setNewLayout((p) => ({ ...p, copyTables: e.currentTarget.checked }))
-                  }
+                  onCheckedChange={(e) => setNewLayout((p) => ({ ...p, copyTables: e }))}
                   label={m.admin_layout_copy_tables()}
                 />
-                <Form.Check
+                <AdminCheck
                   id="layout-copy-areas"
                   type="checkbox"
                   className="tw:text-sm"
                   checked={newLayout.copyAreas}
-                  onChange={(e) =>
+                  onCheckedChange={(e) =>
                     setNewLayout((p) => ({
                       ...p,
-                      copyAreas: e.currentTarget.checked,
+                      copyAreas: e,
                     }))
                   }
                   label={m.admin_layout_copy_areas()}
@@ -1759,39 +1772,39 @@ export default function LayoutEditor({
                 {addAreaError}
               </Alert>
             )}
-            <Form.Group className="tw:mb-4" controlId="area-new-label">
-              <Form.Label>{m.admin_layout_area_form_label()}</Form.Label>
-              <Form.Control
+            <AdminField className="tw:mb-4" controlId="area-new-label">
+              <AdminLabel>{m.admin_layout_area_form_label()}</AdminLabel>
+              <AdminInput
                 type="text"
                 value={newArea.label}
                 onChange={(e) => setNewArea((p) => ({ ...p, label: e.target.value }))}
-                className="bg-dark tw:text-content border-secondary"
+                className="tw:bg-muted tw:text-content tw:border-input"
                 placeholder={m.admin_layout_area_label_placeholder()}
               />
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="area-new-icon">
-              <Form.Label>{m.admin_layout_area_form_icon()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="area-new-icon">
+              <AdminLabel>{m.admin_layout_area_form_icon()}</AdminLabel>
               <div className="tw:flex tw:gap-2 tw:items-center">
                 <AreaIcon name={newArea.icon} className="tw:text-2xl tw:text-primary" />
-                <Form.Select
+                <AdminSelect
                   value={newArea.icon}
-                  onChange={(e) => setNewArea((p) => ({ ...p, icon: e.target.value }))}
-                  className="bg-dark tw:text-content border-secondary"
+                  onValueChange={(e) => setNewArea((p) => ({ ...p, icon: e }))}
+                  className="tw:bg-muted tw:text-content tw:border-input"
                 >
                   {getAreaIcons().map((ic) => (
-                    <option key={ic.value} value={ic.value}>
+                    <AdminOption key={ic.value} value={ic.value}>
                       {ic.label}
-                    </option>
+                    </AdminOption>
                   ))}
-                </Form.Select>
+                </AdminSelect>
               </div>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="area-new-assign">
-              <Form.Label>{m.admin_layout_area_assigned_to_optional()}</Form.Label>
-              <Form.Select
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="area-new-assign">
+              <AdminLabel>{m.admin_layout_area_assigned_to_optional()}</AdminLabel>
+              <AdminSelect
                 value={newArea.assignedType ? `${newArea.assignedType}:${newArea.assignedId}` : ""}
-                onChange={(e) => {
-                  const val = e.target.value;
+                onValueChange={(e) => {
+                  const val = e;
                   if (!val) {
                     setNewArea((p) => ({ ...p, assignedType: "", assignedId: 0 }));
                   } else {
@@ -1805,50 +1818,50 @@ export default function LayoutEditor({
                     }));
                   }
                 }}
-                className="bg-dark tw:text-content border-secondary"
+                className="tw:bg-muted tw:text-content tw:border-input"
               >
-                <option value="">{m.admin_layout_area_none()}</option>
+                <AdminOption value="">{m.admin_layout_area_none()}</AdminOption>
                 {exhibitors.filter((e) => e.active).length > 0 && (
-                  <optgroup label={m.admin_layout_area_exhibitors_group()}>
+                  <AdminOptionGroup label={m.admin_layout_area_exhibitors_group()}>
                     {exhibitors
                       .filter((e) => e.active)
                       .map((e) => (
-                        <option key={e.id} value={`e:${e.id}`}>
+                        <AdminOption key={e.id} value={`e:${e.id}`}>
                           {e.name}
-                        </option>
+                        </AdminOption>
                       ))}
-                  </optgroup>
+                  </AdminOptionGroup>
                 )}
-              </Form.Select>
-            </Form.Group>
+              </AdminSelect>
+            </AdminField>
             <div className="tw:flex tw:flex-wrap tw:-mx-2 tw:*:w-full tw:*:px-2 tw:gap-y-4">
               <div className="tw:min-w-0 tw:flex-1">
-                <Form.Group controlId="area-new-width">
-                  <Form.Label>{m.admin_layout_area_width_m()}</Form.Label>
-                  <Form.Control
+                <AdminField controlId="area-new-width">
+                  <AdminLabel>{m.admin_layout_area_width_m()}</AdminLabel>
+                  <AdminInput
                     type="number"
                     min={0.1}
                     max={50}
                     step={0.5}
                     value={newArea.widthM}
                     onChange={(e) => setNewArea((p) => ({ ...p, widthM: Number(e.target.value) }))}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                   />
-                </Form.Group>
+                </AdminField>
               </div>
               <div className="tw:min-w-0 tw:flex-1">
-                <Form.Group controlId="area-new-length">
-                  <Form.Label>{m.admin_layout_area_length_m()}</Form.Label>
-                  <Form.Control
+                <AdminField controlId="area-new-length">
+                  <AdminLabel>{m.admin_layout_area_length_m()}</AdminLabel>
+                  <AdminInput
                     type="number"
                     min={0.1}
                     max={50}
                     step={0.5}
                     value={newArea.lengthM}
                     onChange={(e) => setNewArea((p) => ({ ...p, lengthM: Number(e.target.value) }))}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                   />
-                </Form.Group>
+                </AdminField>
               </div>
             </div>
           </DialogBody>
@@ -1885,38 +1898,38 @@ export default function LayoutEditor({
                 {addTableError}
               </Alert>
             )}
-            <Form.Group className="tw:mb-4" controlId="table-name">
-              <Form.Label>{m.admin_table_name()}</Form.Label>
-              <Form.Control
+            <AdminField className="tw:mb-4" controlId="table-name">
+              <AdminLabel>{m.admin_table_name()}</AdminLabel>
+              <AdminInput
                 type="text"
                 value={newTable.name}
                 onChange={(e) => setNewTable((p) => ({ ...p, name: e.target.value }))}
-                className="bg-dark tw:text-content border-secondary"
+                className="tw:bg-muted tw:text-content tw:border-input"
                 placeholder={m.admin_table_name_placeholder()}
               />
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="table-type">
-              <Form.Label>{m.admin_table_type_select()}</Form.Label>
-              <Form.Select
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="table-type">
+              <AdminLabel>{m.admin_table_type_select()}</AdminLabel>
+              <AdminSelect
                 value={newTable.tableTypeId}
-                onChange={(e) => setNewTable((p) => ({ ...p, tableTypeId: e.target.value }))}
-                className="bg-dark tw:text-content border-secondary"
+                onValueChange={(e) => setNewTable((p) => ({ ...p, tableTypeId: e }))}
+                className="tw:bg-muted tw:text-content tw:border-input"
               >
-                <option value="">— {m.admin_table_type_select()} —</option>
+                <AdminOption value="">— {m.admin_table_type_select()} —</AdminOption>
                 {tableTypes
                   .filter((tt) => tt.venueId === activeRoom?.venueId)
                   .map((tt) => (
-                    <option key={tt.id} value={tt.id}>
+                    <AdminOption key={tt.id} value={tt.id}>
                       {tt.name} (
                       {tt.shape === "round" ? `⌀${tt.widthM}m` : `${tt.widthM}×${tt.lengthM}m`},{" "}
                       {tt.heightType === "high"
                         ? m.admin_table_height_type_high()
                         : m.admin_table_height_type_low()}
                       , {m.admin_layout_capacity_max()} {tt.capacity})
-                    </option>
+                    </AdminOption>
                   ))}
-              </Form.Select>
-            </Form.Group>
+              </AdminSelect>
+            </AdminField>
           </DialogBody>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setShowAddTable(false)}>

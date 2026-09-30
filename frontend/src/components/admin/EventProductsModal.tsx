@@ -1,3 +1,12 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminSelect,
+  AdminOption,
+  AdminCheck,
+  AdminDescription,
+} from "@/components/admin/AdminFields";
 import { PencilIcon, PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
@@ -6,7 +15,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -294,24 +303,27 @@ export default function EventProductsModal({
 
   function renderForm() {
     return (
-      <Form
+      <form
         onSubmit={(e) => {
           e.preventDefault();
           void form.handleSubmit();
         }}
         noValidate
-        className="border-top border-secondary tw:pt-4 tw:mt-2"
+        className="border-top tw:border-input tw:pt-4 tw:mt-2"
       >
         <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
-          <Form.Group style={{ minWidth: "200px", flex: "2 1 200px" }} controlId="product-name">
-            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+          <AdminField
+            className="tw:min-w-50 tw:grow-2 tw:shrink-1 tw:basis-50"
+            controlId="product-name"
+          >
+            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_products_name()}
-            </Form.Label>
+            </AdminLabel>
             <form.Field name="name">
               {(field) => (
-                <Form.Control
+                <AdminInput
                   size="sm"
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                   autoFocus
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -319,19 +331,19 @@ export default function EventProductsModal({
                 />
               )}
             </form.Field>
-          </Form.Group>
-          <Form.Group
-            style={{ minWidth: "200px", flex: "2 1 200px" }}
+          </AdminField>
+          <AdminField
+            className="tw:min-w-50 tw:grow-2 tw:shrink-1 tw:basis-50"
             controlId="product-description"
           >
-            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_products_description()}
-            </Form.Label>
+            </AdminLabel>
             <form.Field name="description">
               {(field) => (
-                <Form.Control
+                <AdminInput
                   size="sm"
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                   maxLength={300}
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -339,58 +351,60 @@ export default function EventProductsModal({
                 />
               )}
             </form.Field>
-          </Form.Group>
-          <Form.Group style={{ maxWidth: "120px" }} controlId="product-price">
-            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+          </AdminField>
+          <AdminField className="tw:max-w-30" controlId="product-price">
+            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_products_price()}
-            </Form.Label>
+            </AdminLabel>
             <form.Field name="price">
               {(field) => (
-                <Form.Control
+                <AdminInput
                   type="number"
                   min={0}
                   step="0.01"
                   size="sm"
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
               )}
             </form.Field>
-          </Form.Group>
-          <Form.Group style={{ maxWidth: "160px" }} controlId="product-category">
-            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+          </AdminField>
+          <AdminField className="tw:max-w-40" controlId="product-category">
+            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_products_category()}
-            </Form.Label>
+            </AdminLabel>
             <form.Field name="category">
               {(field) => (
-                <Form.Select
+                <AdminSelect
                   size="sm"
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                   value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value as OrderItemCategory)}
+                  onValueChange={(e) => field.handleChange(e as OrderItemCategory)}
                   onBlur={field.handleBlur}
                 >
-                  <option value="champagne">{m.admin_products_category_champagne()}</option>
-                  <option value="food">{m.admin_products_category_food()}</option>
-                  <option value="other">{m.admin_products_category_other()}</option>
-                </Form.Select>
+                  <AdminOption value="champagne">
+                    {m.admin_products_category_champagne()}
+                  </AdminOption>
+                  <AdminOption value="food">{m.admin_products_category_food()}</AdminOption>
+                  <AdminOption value="other">{m.admin_products_category_other()}</AdminOption>
+                </AdminSelect>
               )}
             </form.Field>
-          </Form.Group>
+          </AdminField>
         </div>
 
         <div className="tw:flex tw:flex-wrap tw:gap-6 tw:mb-1">
           <form.Field name="purchasable">
             {(field) => (
-              <Form.Check
+              <AdminCheck
                 type="checkbox"
                 id="product-purchasable"
                 label={m.admin_products_purchasable_label()}
                 checked={field.value}
-                onChange={(e) => {
-                  const purchasable = e.target.checked;
+                onCheckedChange={(e) => {
+                  const purchasable = e;
                   field.handleChange(purchasable);
                   if (!purchasable) form.setFieldValue("required", false);
                 }}
@@ -401,13 +415,13 @@ export default function EventProductsModal({
             {(field) => (
               <form.Subscribe selector={(s) => s.values.purchasable}>
                 {(purchasable) => (
-                  <Form.Check
+                  <AdminCheck
                     type="checkbox"
                     id="product-required"
                     label={m.admin_products_required_label()}
                     checked={field.value}
                     disabled={!purchasable}
-                    onChange={(e) => field.handleChange(e.target.checked)}
+                    onCheckedChange={(e) => field.handleChange(e)}
                   />
                 )}
               </form.Subscribe>
@@ -428,80 +442,82 @@ export default function EventProductsModal({
         </form.Subscribe>
 
         <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
-          <Form.Group style={{ maxWidth: "160px" }} controlId="product-unit">
-            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+          <AdminField className="tw:max-w-40" controlId="product-unit">
+            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_inventory_unit()}
-            </Form.Label>
+            </AdminLabel>
             <form.Field name="unit">
               {(field) => (
-                <Form.Select
+                <AdminSelect
                   size="sm"
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                   value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value as ProductFormState["unit"])}
+                  onValueChange={(e) => field.handleChange(e as ProductFormState["unit"])}
                   onBlur={field.handleBlur}
                 >
-                  <option value="item">{m.admin_inventory_unit_item()}</option>
-                  <option value="person">{m.admin_inventory_unit_person()}</option>
-                  <option value="table">{m.admin_inventory_unit_table()}</option>
-                </Form.Select>
+                  <AdminOption value="item">{m.admin_inventory_unit_item()}</AdminOption>
+                  <AdminOption value="person">{m.admin_inventory_unit_person()}</AdminOption>
+                  <AdminOption value="table">{m.admin_inventory_unit_table()}</AdminOption>
+                </AdminSelect>
               )}
             </form.Field>
-          </Form.Group>
-          <Form.Group style={{ maxWidth: "160px" }} controlId="product-stock">
-            <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+          </AdminField>
+          <AdminField className="tw:max-w-40" controlId="product-stock">
+            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
               {m.admin_inventory_stock()}
-            </Form.Label>
+            </AdminLabel>
             <form.Field name="stock">
               {(field) => (
-                <Form.Control
+                <AdminInput
                   type="number"
                   min={0}
                   step={1}
                   size="sm"
-                  className="bg-dark tw:text-content border-secondary"
+                  className="tw:bg-muted tw:text-content tw:border-input"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
                 />
               )}
             </form.Field>
-          </Form.Group>
+          </AdminField>
         </div>
-        <Form.Text className="tw:block tw:mb-2">{m.admin_inventory_unlimited_help()}</Form.Text>
+        <AdminDescription className="tw:block tw:mb-2">
+          {m.admin_inventory_unlimited_help()}
+        </AdminDescription>
         <fieldset className="tw:mb-4">
           <legend className="tw:text-base tw:font-medium tw:leading-tight">
             {m.admin_inventory_inclusions()}
           </legend>
           {inclusions.map((edge, index) => (
             <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mb-2 tw:items-start" key={index}>
-              <Form.Select
+              <AdminSelect
                 size="sm"
-                className="bg-dark tw:text-content border-secondary"
-                style={{ minWidth: "180px", flex: "2 1 180px" }}
+                className="tw:bg-muted tw:text-content tw:border-input tw:min-w-45 tw:grow-2 tw:shrink-1 tw:basis-45"
+
                 aria-label={m.admin_products_bundle_target()}
                 value={edge.product_id}
-                onChange={(e) =>
+                onValueChange={(e) =>
                   form.setFieldValue(`inclusions[${index}]`, {
                     ...edge,
-                    product_id: e.target.value,
+                    product_id: e,
                   })
                 }
               >
-                <option value="">{m.admin_products_bundle_none()}</option>
+                <AdminOption value="">{m.admin_products_bundle_none()}</AdminOption>
                 {bundleCandidates.map((p) => (
-                  <option value={p.id} key={p.id}>
+                  <AdminOption value={p.id} key={p.id}>
                     {p.name}
-                  </option>
+                  </AdminOption>
                 ))}
-              </Form.Select>
-              <Form.Control
+              </AdminSelect>
+              <AdminInput
                 type="number"
                 min={1}
                 step={1}
                 size="sm"
-                className="bg-dark tw:text-content border-secondary"
-                style={{ maxWidth: "90px" }}
+                className="tw:bg-muted tw:text-content tw:border-input tw:max-w-22.5"
+
                 aria-label={m.admin_inventory_included_quantity()}
                 value={edge.quantity}
                 onChange={(e) =>
@@ -511,13 +527,13 @@ export default function EventProductsModal({
                   })
                 }
               />
-              <Form.Control
+              <AdminInput
                 type="number"
                 min={1}
                 step={1}
                 size="sm"
-                className="bg-dark tw:text-content border-secondary"
-                style={{ maxWidth: "90px" }}
+                className="tw:bg-muted tw:text-content tw:border-input tw:max-w-22.5"
+
                 aria-label={m.admin_inventory_per_quantity()}
                 value={edge.per_quantity}
                 onChange={(e) =>
@@ -527,22 +543,22 @@ export default function EventProductsModal({
                   })
                 }
               />
-              <Form.Select
+              <AdminSelect
                 size="sm"
-                className="bg-dark tw:text-content border-secondary"
-                style={{ maxWidth: "140px" }}
+                className="tw:bg-muted tw:text-content tw:border-input tw:max-w-35"
+
                 aria-label={m.admin_inventory_rounding()}
                 value={edge.rounding}
-                onChange={(e) =>
+                onValueChange={(e) =>
                   form.setFieldValue(`inclusions[${index}]`, {
                     ...edge,
-                    rounding: e.target.value as "up" | "down",
+                    rounding: e as "up" | "down",
                   })
                 }
               >
-                <option value="down">{m.admin_inventory_round_down()}</option>
-                <option value="up">{m.admin_inventory_round_up()}</option>
-              </Form.Select>
+                <AdminOption value="down">{m.admin_inventory_round_down()}</AdminOption>
+                <AdminOption value="up">{m.admin_inventory_round_up()}</AdminOption>
+              </AdminSelect>
               <Button
                 type="button"
                 size="sm"
@@ -553,10 +569,12 @@ export default function EventProductsModal({
               </Button>
             </div>
           ))}
-          <Form.Text className="tw:block tw:mb-2">{m.admin_inventory_ratio_help()}</Form.Text>
-          <Form.Text className="tw:block tw:mb-2">
+          <AdminDescription className="tw:block tw:mb-2">
+            {m.admin_inventory_ratio_help()}
+          </AdminDescription>
+          <AdminDescription className="tw:block tw:mb-2">
             {m.admin_inventory_hidden_target_help()}
-          </Form.Text>
+          </AdminDescription>
           <Button
             type="button"
             onClick={() =>
@@ -578,25 +596,25 @@ export default function EventProductsModal({
             </legend>
             <form.Field name="updateExistingContents">
               {(field) => (
-                <Form.Check
+                <AdminCheck
                   id="update-booked-contents"
                   label={m.admin_inventory_update_contents()}
                   checked={field.value}
-                  onChange={(e) => field.handleChange(e.target.checked)}
+                  onCheckedChange={(e) => field.handleChange(e)}
                 />
               )}
             </form.Field>
             <form.Field name="updateExistingPrices">
               {(field) => (
-                <Form.Check
+                <AdminCheck
                   id="update-booked-prices"
                   label={m.admin_inventory_update_prices()}
                   checked={field.value}
-                  onChange={(e) => field.handleChange(e.target.checked)}
+                  onCheckedChange={(e) => field.handleChange(e)}
                 />
               )}
             </form.Field>
-            <Form.Text>{m.admin_inventory_keep_help()}</Form.Text>
+            <AdminDescription>{m.admin_inventory_keep_help()}</AdminDescription>
           </fieldset>
         )}
 
@@ -614,7 +632,7 @@ export default function EventProductsModal({
             {m.admin_save()}
           </Button>
         </div>
-      </Form>
+      </form>
     );
   }
 
@@ -681,7 +699,7 @@ export default function EventProductsModal({
           </span>
         </div>
         {includedTarget && product.includedPerGuests && (
-          <div className="tw:text-subtle" style={{ fontSize: "0.75rem" }}>
+          <div className="tw:text-subtle tw:text-xs">
             {m.admin_products_bundle_note({
               target: includedTarget.name,
               ratio: product.includedPerGuests,
@@ -737,11 +755,11 @@ export default function EventProductsModal({
                   </Alert>
                 ))}
                 {preview.result.shortages.length > 0 && (
-                  <Form.Check
+                  <AdminCheck
                     id="confirm-stock-shortage"
                     label={m.admin_inventory_confirm_shortage()}
                     checked={confirmShortage}
-                    onChange={(e) => setConfirmShortage(e.target.checked)}
+                    onCheckedChange={(e) => setConfirmShortage(e)}
                   />
                 )}
                 <Button

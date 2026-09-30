@@ -1,3 +1,12 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminError,
+  AdminSelect,
+  AdminOption,
+  AdminCheck,
+} from "@/components/admin/AdminFields";
 import { SaveIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -5,7 +14,7 @@ import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import {
   Dialog,
   DialogContent,
@@ -240,7 +249,7 @@ export default function EditionModal({
             {isEdit ? `Edit ${initial!.id}` : m.admin_content_edition_add()}
           </DialogTitle>
         </DialogHeader>
-        <Form
+        <form
           onSubmit={(e) => {
             e.preventDefault();
             void form.handleSubmit();
@@ -255,8 +264,8 @@ export default function EditionModal({
             )}
 
             {!isEdit && (
-              <Form.Group className="tw:mb-4" controlId="edition-id">
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">ID</Form.Label>
+              <AdminField className="tw:mb-4" controlId="edition-id">
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">ID</AdminLabel>
                 <form.Field
                   name="id"
                   validators={[
@@ -271,47 +280,43 @@ export default function EditionModal({
                     const showErr = field.meta.isTouched && field.errors.length > 0;
                     return (
                       <>
-                        <Form.Control
-                          className="bg-dark tw:text-content border-secondary"
+                        <AdminInput
+                          className="tw:bg-muted tw:text-content tw:border-input"
                           placeholder="e.g. 2026-march"
                           autoFocus
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
-                          isInvalid={showErr}
+                          aria-invalid={showErr}
                         />
-                        {showErr && (
-                          <Form.Control.Feedback type="invalid">
-                            {field.errors[0]?.message}
-                          </Form.Control.Feedback>
-                        )}
+                        {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                       </>
                     );
                   }}
                 </form.Field>
-              </Form.Group>
+              </AdminField>
             )}
 
             <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-4">
-              <Form.Group style={{ maxWidth: "100px" }} controlId="edition-year">
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">Year</Form.Label>
+              <AdminField className="tw:max-w-25" controlId="edition-year">
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">Year</AdminLabel>
                 <form.Field name="year">
                   {(field) => (
-                    <Form.Control
+                    <AdminInput
                       type="number"
-                      className="bg-dark tw:text-content border-secondary"
+                      className="tw:bg-muted tw:text-content tw:border-input"
                       value={field.value}
                       onChange={(e) => field.handleChange(Number(e.target.value))}
                       onBlur={field.handleBlur}
                     />
                   )}
                 </form.Field>
-              </Form.Group>
-              <Form.Group
-                style={{ minWidth: "140px", flex: "1 1 140px" }}
+              </AdminField>
+              <AdminField
+                className="tw:min-w-35 tw:grow-1 tw:shrink-1 tw:basis-35"
                 controlId="edition-month"
               >
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">Month</Form.Label>
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">Month</AdminLabel>
                 <form.Field
                   name="month"
                   validators={[
@@ -326,68 +331,67 @@ export default function EditionModal({
                     const showErr = field.meta.isTouched && field.errors.length > 0;
                     return (
                       <>
-                        <Form.Control
-                          className="bg-dark tw:text-content border-secondary"
+                        <AdminInput
+                          className="tw:bg-muted tw:text-content tw:border-input"
                           placeholder="e.g. march"
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
-                          isInvalid={showErr}
+                          aria-invalid={showErr}
                         />
-                        {showErr && (
-                          <Form.Control.Feedback type="invalid">
-                            {field.errors[0]?.message}
-                          </Form.Control.Feedback>
-                        )}
+                        {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                       </>
                     );
                   }}
                 </form.Field>
-              </Form.Group>
-              <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }} controlId="edition-type">
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+              </AdminField>
+              <AdminField
+                className="tw:min-w-45 tw:grow-1 tw:shrink-1 tw:basis-45"
+                controlId="edition-type"
+              >
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_edition_type_label()}
-                </Form.Label>
+                </AdminLabel>
                 <form.Field name="editionType">
                   {(field) => (
-                    <Form.Select
+                    <AdminSelect
                       value={field.value}
-                      onChange={(e) => {
-                        field.handleChange(e.target.value as EditionType);
-                        if (e.target.value !== "festival") {
+                      onValueChange={(e) => {
+                        field.handleChange(e as EditionType);
+                        if (e !== "festival") {
                           form.setFieldValue("selectedExhibitors", [] as ItemOption[]);
                         }
                       }}
                       onBlur={field.handleBlur}
-                      className="bg-dark tw:text-content border-secondary"
+                      className="tw:bg-muted tw:text-content tw:border-input"
                     >
-                      <option value="festival">{m.admin_edition_type_festival()}</option>
-                      <option value="bourse">{m.admin_edition_type_bourse()}</option>
-                      <option value="capsule_exchange">
+                      <AdminOption value="festival">{m.admin_edition_type_festival()}</AdminOption>
+                      <AdminOption value="bourse">{m.admin_edition_type_bourse()}</AdminOption>
+                      <AdminOption value="capsule_exchange">
                         {m.admin_edition_type_capsule_exchange()}
-                      </option>
-                    </Form.Select>
+                      </AdminOption>
+                    </AdminSelect>
                   )}
                 </form.Field>
-              </Form.Group>
+              </AdminField>
               <form.Field name="active">
                 {(field) => (
-                  <Form.Check
+                  <AdminCheck
                     type="checkbox"
                     id="modal-edition-active"
                     label={m.admin_content_edition_active()}
                     checked={field.value}
-                    onChange={(e) => field.handleChange(e.target.checked)}
+                    onCheckedChange={(e) => field.handleChange(e)}
                     className="tw:text-content tw:self-end tw:mb-1"
                   />
                 )}
               </form.Field>
             </div>
 
-            <Form.Group className="tw:mb-4" controlId="edition-venue">
-              <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+            <AdminField className="tw:mb-4" controlId="edition-venue">
+              <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                 {m.admin_edition_venue_label()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field
                 name="venueId"
                 validators={[
@@ -401,31 +405,27 @@ export default function EditionModal({
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
-                      <Form.Select
-                        className="bg-dark tw:text-content border-secondary"
+                      <AdminSelect
+                        className="tw:bg-muted tw:text-content tw:border-input"
                         value={field.value}
-                        onChange={(e) => field.handleChange(e.target.value)}
+                        onValueChange={(e) => field.handleChange(e)}
                         onBlur={field.handleBlur}
-                        isInvalid={showErr}
+                        aria-invalid={showErr}
                       >
-                        <option value="">{m.admin_edition_venue_placeholder()}</option>
+                        <AdminOption value="">{m.admin_edition_venue_placeholder()}</AdminOption>
                         {venues.map((venue) => (
-                          <option key={venue.id} value={venue.id}>
+                          <AdminOption key={venue.id} value={venue.id}>
                             {venue.name}
                             {venue.active ? "" : " (archived)"}
-                          </option>
+                          </AdminOption>
                         ))}
-                      </Form.Select>
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
+                      </AdminSelect>
+                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                     </>
                   );
                 }}
               </form.Field>
-            </Form.Group>
+            </AdminField>
 
             <div className="border border-secondary rounded tw:p-4 tw:mb-4">
               <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
@@ -437,36 +437,35 @@ export default function EditionModal({
               {isFestival ? (
                 <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2">
                   {["Friday", "Saturday", "Sunday"].map((label, index) => (
-                    <Form.Group
-                      as="div"
+                    <AdminField
                       className="tw:site-md:w-4/12"
                       key={label}
                       controlId={`edition-date-${label.toLowerCase()}`}
                     >
-                      <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">{label}</Form.Label>
-                      <Form.Control
+                      <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">{label}</AdminLabel>
+                      <AdminInput
                         type="date"
                         value={previewDates[index] ?? ""}
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                         readOnly
                         disabled={!previewDates[index]}
                       />
-                    </Form.Group>
+                    </AdminField>
                   ))}
                 </div>
               ) : (
-                <Form.Group controlId="edition-standalone-date">
-                  <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+                <AdminField controlId="edition-standalone-date">
+                  <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                     Edition date
-                  </Form.Label>
-                  <Form.Control
+                  </AdminLabel>
+                  <AdminInput
                     type="date"
                     value={previewDates[0] ?? ""}
-                    className="bg-dark tw:text-content border-secondary"
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     readOnly
                     disabled={!previewDates[0]}
                   />
-                </Form.Group>
+                </AdminField>
               )}
               <div className="tw:text-subtle tw:text-sm tw:mt-2">
                 {isEdit
@@ -475,39 +474,39 @@ export default function EditionModal({
               </div>
             </div>
 
-            <Form.Group className="tw:mb-4" controlId="edition-co-organizer">
-              <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+            <AdminField className="tw:mb-4" controlId="edition-co-organizer">
+              <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                 {m.admin_edition_co_organizer_label()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field name="coOrganizerId">
                 {(field) => (
-                  <Form.Select
-                    className="bg-dark tw:text-content border-secondary"
+                  <AdminSelect
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
                   >
-                    <option value="">{m.admin_edition_co_organizer_none()}</option>
+                    <AdminOption value="">{m.admin_edition_co_organizer_none()}</AdminOption>
                     {allExhibitors
                       .filter((exhibitor) => exhibitor.active !== false)
                       .map((exhibitor) => (
-                        <option key={exhibitor.id} value={String(exhibitor.id)}>
+                        <AdminOption key={exhibitor.id} value={String(exhibitor.id)}>
                           {exhibitor.name}
-                        </option>
+                        </AdminOption>
                       ))}
-                  </Form.Select>
+                  </AdminSelect>
                 )}
               </form.Field>
               <div className="tw:text-subtle tw:text-sm tw:mt-1">
                 {m.admin_edition_co_organizer_help()}
               </div>
-            </Form.Group>
+            </AdminField>
 
             {isFestival && (
-              <Form.Group className="tw:mb-4" controlId="edition-exhibitors">
-                <Form.Label className="tw:text-subtle tw:text-sm tw:mb-1">
+              <AdminField className="tw:mb-4" controlId="edition-exhibitors">
+                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
                   {m.admin_edition_festival_exhibitors()}
-                </Form.Label>
+                </AdminLabel>
                 {exhibitorsQuery.isPending ? (
                   <div className="tw:text-subtle tw:text-sm">
                     <Spinner animation="border" size="sm" className="tw:me-2" />
@@ -575,7 +574,7 @@ export default function EditionModal({
                     )}
                   </form.Field>
                 )}
-              </Form.Group>
+              </AdminField>
             )}
           </DialogBody>
           <DialogFooter>
@@ -596,7 +595,7 @@ export default function EditionModal({
               {m.admin_save()}
             </Button>
           </DialogFooter>
-        </Form>
+        </form>
       </DialogContent>
     </Dialog>
   );

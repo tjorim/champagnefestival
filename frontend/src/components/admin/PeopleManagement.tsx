@@ -1,3 +1,4 @@
+import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import {
   ArrowLeftRightIcon,
   CalendarCheckIcon,
@@ -28,7 +29,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -562,21 +563,21 @@ export default function PeopleManagement({
             </div>
           </div>
           <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
-            <Form.Select
+            <AdminSelect
               size="sm"
               value={roleFilter}
-              onChange={(e) => setRoleFilter(e.target.value)}
-              className="bg-dark tw:text-content border-secondary"
-              style={{ maxWidth: 160 }}
+              onValueChange={(e) => setRoleFilter(e)}
+              className="tw:bg-muted tw:text-content tw:border-input tw:max-w-40"
+
               aria-label={m.admin_people_roles_label()}
             >
-              <option value="all">{m.admin_people_all_roles()}</option>
+              <AdminOption value="all">{m.admin_people_all_roles()}</AdminOption>
               {allRoles.map((role) => (
-                <option key={role} value={role} className="tw:capitalize">
+                <AdminOption key={role} value={role}>
                   {role}
-                </option>
+                </AdminOption>
               ))}
-            </Form.Select>
+            </AdminSelect>
             <Button
               size="sm"
               variant={copySuccess ? "success" : "outline-secondary"}
@@ -588,14 +589,13 @@ export default function PeopleManagement({
               <Icon icon={copySuccess ? CheckIcon : ClipboardIcon} className="tw:me-1" />
               {copySuccess ? m.admin_people_emails_copied() : `${filteredEmails.length}`}
             </Button>
-            <Form.Control
+            <AdminInput
               size="sm"
               type="search"
               placeholder={m.admin_search_person_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="bg-dark tw:text-content border-secondary"
-              style={{ maxWidth: 240 }}
+              className="tw:bg-muted tw:text-content tw:border-input tw:max-w-60"
             />
           </div>
         </CardHeader>
@@ -984,7 +984,7 @@ export default function PeopleManagement({
                             )}
                           </div>
                         </div>
-                        <div className="tw:text-subtle" style={{ fontSize: "0.7rem" }}>
+                        <div className="tw:text-subtle tw:text-tiny">
                           {new Date(r.createdAt).toLocaleDateString()}
                         </div>
                       </PresentationListItem>

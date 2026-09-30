@@ -1,3 +1,4 @@
+import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import {
   CheckIcon,
   CircleCheckIcon,
@@ -37,7 +38,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button as TableButton } from "@/components/ui/button";
-import Form from "react-bootstrap/Form";
+
 import {
   Dialog,
   DialogContent,
@@ -728,14 +729,14 @@ export default function RegistrationList({
             ) : isStandalone && !(reg.bookedTableQuantity ?? 0) ? (
               <span className="tw:text-subtle tw:text-sm">—</span>
             ) : (
-              <Form.Select
+              <AdminSelect
                 size="sm"
-                className="bg-dark tw:text-content border-secondary"
+                className="tw:bg-muted tw:text-content tw:border-input"
                 value={reg.tableId ?? ""}
-                onChange={(e) => handleAssignTable(reg.id, e.target.value)}
+                onValueChange={(e) => handleAssignTable(reg.id, e)}
                 aria-label={m.admin_action_assign_table()}
               >
-                <option value="">{m.admin_unassigned()}</option>
+                <AdminOption value="">{m.admin_unassigned()}</AdminOption>
                 {tables
                   .filter((t) => t.eventId === reg.eventId)
                   .map((t) => {
@@ -746,12 +747,12 @@ export default function RegistrationList({
                       t.capacity - (tableOccupancy.get(t.id) ?? 0) + ownAtTable,
                     );
                     return (
-                      <option key={t.id} value={t.id}>
+                      <AdminOption key={t.id} value={t.id}>
                         {t.name} ({m.admin_table_capacity_remaining({ count: remaining })})
-                      </option>
+                      </AdminOption>
                     );
                   })}
-              </Form.Select>
+              </AdminSelect>
             );
           },
           meta: { tdClassName: "tw:hidden tw:lg:table-cell" },
@@ -1133,21 +1134,21 @@ export default function RegistrationList({
               </Button>
             </ButtonGroup>
             {allocationOptions.length > 0 && (
-              <Form.Select
+              <AdminSelect
                 size="sm"
-                className="bg-dark tw:text-content border-secondary"
-                style={{ maxWidth: 200 }}
+                className="tw:bg-muted tw:text-content tw:border-input tw:max-w-50"
+
                 value={allocationFilter}
-                onChange={(e) => changeAllocationFilter(e.target.value)}
+                onValueChange={(e) => changeAllocationFilter(e)}
                 aria-label={m.admin_filter_allocation_aria()}
               >
-                <option value="">{m.admin_all_allocations()}</option>
+                <AdminOption value="">{m.admin_all_allocations()}</AdminOption>
                 {allocationOptions.map((o) => (
-                  <option key={o.key} value={o.key}>
+                  <AdminOption key={o.key} value={o.key}>
                     {o.label}
-                  </option>
+                  </AdminOption>
                 ))}
-              </Form.Select>
+              </AdminSelect>
             )}
             <ButtonGroup size="sm">
               <Button
@@ -1177,14 +1178,13 @@ export default function RegistrationList({
                 {m.admin_filter_confirmed()} ({statusCounts.confirmed})
               </Button>
             </ButtonGroup>
-            <Form.Control
+            <AdminInput
               size="sm"
               type="search"
               placeholder={m.admin_search_person_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="bg-dark tw:text-content border-secondary"
-              style={{ maxWidth: 220 }}
+              className="tw:bg-muted tw:text-content tw:border-input tw:max-w-55"
             />
           </div>
           {eventCapacityStats.length > 0 && (

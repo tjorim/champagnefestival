@@ -1,10 +1,11 @@
+import { AdminField, AdminTextarea } from "@/components/admin/AdminFields";
 import { useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
@@ -120,17 +121,16 @@ export default function ScratchpadManagement({
             {query.isPending ? (
               <Spinner animation="border" size="sm" />
             ) : (
-              <Form
+              <form
                 onSubmit={(e) => {
                   e.preventDefault();
                   void form.handleSubmit();
                 }}
               >
-                <Form.Group className="tw:mb-4" controlId="admin-scratchpad-content">
+                <AdminField className="tw:mb-4" controlId="admin-scratchpad-content">
                   <form.Field name="content">
                     {(field) => (
-                      <Form.Control
-                        as="textarea"
+                      <AdminTextarea
                         rows={16}
                         value={field.value}
                         onChange={(e) => {
@@ -138,13 +138,13 @@ export default function ScratchpadManagement({
                           setSaved(false);
                         }}
                         placeholder={m.admin_scratchpad_placeholder()}
-                        className="bg-dark tw:text-content border-secondary"
-                        style={{ fontFamily: "monospace" }}
+                        className="tw:bg-muted tw:text-content tw:border-input tw:font-mono"
+
                         maxLength={20000}
                       />
                     )}
                   </form.Field>
-                </Form.Group>
+                </AdminField>
                 <Button
                   type="submit"
                   variant="primary"
@@ -159,7 +159,7 @@ export default function ScratchpadManagement({
                     m.admin_scratchpad_save()
                   )}
                 </Button>
-              </Form>
+              </form>
             )}
           </>
         )}

@@ -1,3 +1,4 @@
+import { AdminInput } from "@/components/admin/AdminFields";
 import {
   ArchiveIcon,
   ChevronDownIcon,
@@ -32,7 +33,7 @@ import {
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import Spinner from "react-bootstrap/Spinner";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
-import Form from "react-bootstrap/Form";
+
 import { m } from "@/paraglide/messages";
 import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
@@ -344,10 +345,7 @@ export function ContentSection({
       >
         <span className="tw:flex tw:items-center tw:gap-2 tw:grow tw:truncate">
           {item.image && (
-            <span
-              className="tw:inline-flex tw:items-center tw:justify-center"
-              style={{ width: 32, height: 32, flexShrink: 0 }}
-            >
+            <span className="tw:inline-flex tw:items-center tw:justify-center tw:w-8 tw:h-8 tw:shrink-0">
               {imageErrors.has(item.id) ? (
                 <span role="img" aria-label={`Image unavailable for ${item.name}`}>
                   🖼
@@ -356,7 +354,7 @@ export function ContentSection({
                 <img
                   src={item.image}
                   alt={item.name}
-                  style={{ width: 32, height: 32, objectFit: "contain" }}
+                  className="tw:w-8 tw:h-8 tw:object-contain"
                   onError={() => setImageErrors((prev) => new Set(prev).add(item.id))}
                 />
               )}
@@ -489,14 +487,13 @@ export function ContentSection({
             </Button>
           ))}
         </ButtonGroup>
-        <Form.Control
+        <AdminInput
           size="sm"
           type="search"
           placeholder={m.admin_content_search_placeholder()}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="bg-dark tw:text-content border-secondary"
-          style={{ maxWidth: 260 }}
+          className="tw:bg-muted tw:text-content tw:border-input tw:max-w-65"
         />
         {typeFilter !== "all" && activeItems.length > 0 && (
           <Button

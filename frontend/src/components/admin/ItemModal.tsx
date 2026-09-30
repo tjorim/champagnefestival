@@ -1,10 +1,18 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminError,
+  AdminSelect,
+  AdminOption,
+} from "@/components/admin/AdminFields";
 import { LoaderCircleIcon, SaveIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
+
 import {
   Dialog,
   DialogContent,
@@ -133,7 +141,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
             {initial ? m.admin_content_edit_item() : m.admin_content_add_item()}
           </DialogTitle>
         </DialogHeader>
-        <Form
+        <form
           onSubmit={(e) => {
             e.preventDefault();
             void form.handleSubmit();
@@ -141,10 +149,10 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           noValidate
         >
           <DialogBody>
-            <Form.Group className="tw:mb-4" controlId="item-name">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            <AdminField className="tw:mb-4" controlId="item-name">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_content_name_placeholder()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field
                 name="name"
                 validators={[
@@ -158,28 +166,24 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
-                      <Form.Control
-                        className="bg-dark tw:text-content border-secondary"
+                      <AdminInput
+                        className="tw:bg-muted tw:text-content tw:border-input"
                         autoFocus
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        isInvalid={showErr}
+                        aria-invalid={showErr}
                       />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
+                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                     </>
                   );
                 }}
               </form.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="item-image">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="item-image">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_content_image_url_placeholder()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field
                 name="image"
                 validators={[
@@ -194,27 +198,23 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
-                      <Form.Control
-                        className="bg-dark tw:text-content border-secondary"
+                      <AdminInput
+                        className="tw:bg-muted tw:text-content tw:border-input"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        isInvalid={showErr}
+                        aria-invalid={showErr}
                       />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
+                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                     </>
                   );
                 }}
               </form.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="item-website">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="item-website">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_item_website_url()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field
                 name="website"
                 validators={[
@@ -231,46 +231,42 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
                     <>
-                      <Form.Control
+                      <AdminInput
                         type="url"
-                        className="bg-dark tw:text-content border-secondary"
+                        className="tw:bg-muted tw:text-content tw:border-input"
                         placeholder="https://…"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        isInvalid={showErr}
+                        aria-invalid={showErr}
                       />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
+                      {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
                     </>
                   );
                 }}
               </form.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="item-type">
-              <Form.Label className="tw:text-subtle tw:text-sm">{m.admin_item_type()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:mb-4" controlId="item-type">
+              <AdminLabel className="tw:text-subtle tw:text-sm">{m.admin_item_type()}</AdminLabel>
               <form.Field name="type">
                 {(field) => (
-                  <Form.Select
-                    className="bg-dark tw:text-content border-secondary"
+                  <AdminSelect
+                    className="tw:bg-muted tw:text-content tw:border-input"
                     value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+                    onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
                   >
-                    <option value="vendor">{m.admin_item_vendor()}</option>
-                    <option value="producer">{m.admin_item_producer()}</option>
-                    <option value="sponsor">{m.admin_item_sponsor()}</option>
-                  </Form.Select>
+                    <AdminOption value="vendor">{m.admin_item_vendor()}</AdminOption>
+                    <AdminOption value="producer">{m.admin_item_producer()}</AdminOption>
+                    <AdminOption value="sponsor">{m.admin_item_sponsor()}</AdminOption>
+                  </AdminSelect>
                 )}
               </form.Field>
-            </Form.Group>
-            <Form.Group controlId="item-contact-person">
-              <Form.Label className="tw:text-subtle tw:text-sm">
+            </AdminField>
+            <AdminField controlId="item-contact-person">
+              <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_item_contact_person()}
-              </Form.Label>
+              </AdminLabel>
               <form.Field name="contactOption">
                 {(field) => (
                   <Combobox
@@ -317,7 +313,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   </Combobox>
                 )}
               </form.Field>
-            </Form.Group>
+            </AdminField>
           </DialogBody>
           <DialogFooter>
             <Button variant="outline-secondary" size="sm" onClick={onHide}>
@@ -328,7 +324,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               {m.admin_save()}
             </Button>
           </DialogFooter>
-        </Form>
+        </form>
       </DialogContent>
     </Dialog>
   );

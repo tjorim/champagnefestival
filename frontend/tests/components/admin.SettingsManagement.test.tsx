@@ -60,7 +60,9 @@ describe("SettingsManagement", () => {
         public_email: "server@example.com",
       });
     });
-    await waitFor(() => expect(screen.getByLabelText("Maintenance mode")).toBeChecked());
+    await waitFor(() =>
+      expect(screen.getByRole("switch", { name: "Maintenance mode" })).toBeChecked(),
+    );
     expect(email).toHaveValue("draft@example.com");
   });
 

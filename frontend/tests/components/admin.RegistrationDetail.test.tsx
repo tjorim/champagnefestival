@@ -1,3 +1,5 @@
+import { readAdminOptions } from "../helpers/adminSelect";
+import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationDetail from "@/components/admin/RegistrationDetail";
@@ -134,7 +136,7 @@ function renderDetail(props: Partial<React.ComponentProps<typeof RegistrationDet
 }
 
 describe("RegistrationDetail", () => {
-  it("renders nothing when registration is null", () => {
+  it("renders nothing when registration is null", async () => {
     render(
       <RegistrationDetail
         registration={null}
@@ -151,7 +153,7 @@ describe("RegistrationDetail", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("renders guest info from the registration", () => {
+  it("renders guest info from the registration", async () => {
     renderDetail();
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -168,7 +170,7 @@ describe("RegistrationDetail", () => {
     ).toBeInTheDocument();
   });
 
-  it("hides notes when absent", () => {
+  it("hides notes when absent", async () => {
     renderDetail({
       registration: buildRegistration({ notes: "" }),
     });
@@ -177,7 +179,7 @@ describe("RegistrationDetail", () => {
     expect(screen.queryByText("Wheelchair access needed.")).not.toBeInTheDocument();
   });
 
-  it("renders order-item rows with delivered/remaining badges for festival registrations", () => {
+  it("renders order-item rows with delivered/remaining badges for festival registrations", async () => {
     renderDetail();
 
     expect(screen.getByText("Brut Reserve")).toBeInTheDocument();
@@ -188,7 +190,7 @@ describe("RegistrationDetail", () => {
     ).toHaveValue(1);
   });
 
-  it("updates delivered order-item quantities from the numeric input", () => {
+  it("updates delivered order-item quantities from the numeric input", async () => {
     const { onToggleDelivered } = renderDetail();
 
     const quantityInput = screen.getByRole("spinbutton", {
@@ -229,7 +231,7 @@ describe("RegistrationDetail", () => {
     expect(
       within(selectors[1]!).queryByRole("option", { name: /Table 10/ }),
     ).not.toBeInTheDocument();
-    fireEvent.change(selectors[1]!, { target: { value: "table-2" } });
+    await selectAdminOption(selectors[1]!, "table-2");
     fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
     await waitFor(() =>
       expect(onSaveBooking).toHaveBeenCalledWith(
@@ -289,18 +291,14 @@ describe("RegistrationDetail", () => {
     });
 
     const select = screen.getByRole("combobox", { name: "admin_inventory_unit_table" });
-    expect(select).toHaveValue("table-2");
-    expect(
-      within(select)
-        .getAllByRole("option")
-        .map((option) => option.textContent),
-    ).toEqual([
+    expect(select).toHaveTextContent("Table 2");
+    expect((await readAdminOptions(select)).map((option) => option.label)).toEqual([
       "admin_unassigned",
       'Table 2 (admin_table_capacity_remaining({"count":6}))',
       'Table 10 (admin_table_capacity_remaining({"count":8}))',
     ]);
 
-    fireEvent.change(select, { target: { value: "table-1" } });
+    await selectAdminOption(select, "table-1");
 
     expect(onSaveBooking).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
@@ -314,7 +312,7 @@ describe("RegistrationDetail", () => {
     );
   });
 
-  it("shows remaining seats, not total capacity, when another booking already occupies a table", () => {
+  it("shows remaining seats, not total capacity, when another booking already occupies a table", async () => {
     const otherRegistration = buildRegistration({
       id: "reg-2",
       allocations: [{ tableId: "table-1", guestCount: 3, exclusive: false }],
@@ -333,11 +331,7 @@ describe("RegistrationDetail", () => {
     });
 
     const select = screen.getByRole("combobox", { name: "admin_inventory_unit_table" });
-    expect(
-      within(select)
-        .getAllByRole("option")
-        .map((option) => option.textContent),
-    ).toEqual([
+    expect((await readAdminOptions(select)).map((option) => option.label)).toEqual([
       "admin_unassigned",
       'Table 2 (admin_table_capacity_remaining({"count":6}))',
       // Table 10 has capacity 8; reg-2 (a different registration) occupies 3 of them.
@@ -345,7 +339,7 @@ describe("RegistrationDetail", () => {
     ]);
   });
 
-  it("disables a hidden product's quantity input when it was only ever included, never purchased standalone", () => {
+  it("disables a hidden product's quantity input when it was only ever included, never purchased standalone", async () => {
     // A hidden product never appears in `event.products` (the admin API
     // filters those out too — see product_to_dict/event_to_summary_dict),
     // so BookingEditor synthesizes a `purchasable: false` stand-in for it
@@ -378,7 +372,7 @@ describe("RegistrationDetail", () => {
     ).toBeDisabled();
   });
 
-  it("keeps a hidden product's quantity input editable when it has a genuine prior standalone quantity", () => {
+  it("keeps a hidden product's quantity input editable when it has a genuine prior standalone quantity", async () => {
     renderDetail({
       onSaveBooking: vi.fn().mockResolvedValue(undefined),
       registration: buildRegistration({
@@ -496,7 +490,7 @@ describe("RegistrationDetail", () => {
     );
   });
 
-  it("hides table assignment for simple RSVP (non-festival) registrations", () => {
+  it("hides table assignment for simple RSVP (non-festival) registrations", async () => {
     renderDetail({
       registration: buildRegistration({
         event: {
@@ -528,7 +522,7 @@ describe("RegistrationDetail", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("hides order items and strap section for simple RSVP (non-festival) registrations", () => {
+  it("hides order items and strap section for simple RSVP (non-festival) registrations", async () => {
     renderDetail({
       registration: buildRegistration({
         event: {
@@ -560,7 +554,7 @@ describe("RegistrationDetail", () => {
     expect(screen.queryByText(/admin_strap_issued|admin_strap_not_issued/)).not.toBeInTheDocument();
   });
 
-  it("shows the check-in button when not checked in and calls onCheckIn on click", () => {
+  it("shows the check-in button when not checked in and calls onCheckIn on click", async () => {
     const { onCheckIn } = renderDetail({
       registration: buildRegistration({ checkedIn: false }),
     });
@@ -571,7 +565,7 @@ describe("RegistrationDetail", () => {
     expect(onCheckIn).toHaveBeenCalledWith("reg-1");
   });
 
-  it("hides the check-in button and shows the checked-in badge when already checked in", () => {
+  it("hides the check-in button and shows the checked-in badge when already checked in", async () => {
     renderDetail({
       registration: buildRegistration({ checkedIn: true }),
     });
@@ -580,7 +574,7 @@ describe("RegistrationDetail", () => {
     expect(screen.getByText("admin_checked_in")).toBeInTheDocument();
   });
 
-  it("calls onIssueStrap with the registration id when the issue-strap button is clicked", () => {
+  it("calls onIssueStrap with the registration id when the issue-strap button is clicked", async () => {
     const { onIssueStrap } = renderDetail({
       registration: buildRegistration({ strapIssued: false }),
     });
@@ -591,7 +585,7 @@ describe("RegistrationDetail", () => {
     expect(onIssueStrap).toHaveBeenCalledWith("reg-1");
   });
 
-  it("does not show the issue-strap button once a strap has already been issued", () => {
+  it("does not show the issue-strap button once a strap has already been issued", async () => {
     renderDetail({
       registration: buildRegistration({ strapIssued: true }),
     });
@@ -599,7 +593,7 @@ describe("RegistrationDetail", () => {
     expect(screen.queryByRole("button", { name: /admin_issue_strap/ })).not.toBeInTheDocument();
   });
 
-  it("renders an alert with a merge button per duplicate and calls onMergeDuplicate on click", () => {
+  it("renders an alert with a merge button per duplicate and calls onMergeDuplicate on click", async () => {
     const { onMergeDuplicate } = renderDetail({
       emailDuplicates: [
         { id: "dup-1", name: "John Doe" },
@@ -618,13 +612,13 @@ describe("RegistrationDetail", () => {
     expect(onMergeDuplicate).toHaveBeenCalledWith("person-1", "dup-2");
   });
 
-  it("renders no duplicates alert when emailDuplicates is empty", () => {
+  it("renders no duplicates alert when emailDuplicates is empty", async () => {
     renderDetail({ emailDuplicates: [] });
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
-  it("calls onClose when the footer close button is clicked", () => {
+  it("calls onClose when the footer close button is clicked", async () => {
     const { onClose } = renderDetail();
 
     fireEvent.click(
@@ -638,15 +632,16 @@ describe("RegistrationDetail", () => {
   });
 });
 
-it("offers all registration email templates and previews the selected registration", () => {
+it("offers all registration email templates and previews the selected registration", async () => {
   renderDetail();
   const template = screen.getByRole("combobox", { name: "admin_email_template_label" });
-  expect(
-    within(template)
-      .getAllByRole("option")
-      .map((option) => option.getAttribute("value")),
-  ).toEqual(["general", "order", "payment", "event"]);
-  fireEvent.change(template, { target: { value: "order" } });
+  expect((await readAdminOptions(template)).map((option) => option.value)).toEqual([
+    "general",
+    "order",
+    "payment",
+    "event",
+  ]);
+  await selectAdminOption(template, "order");
   fireEvent.click(screen.getByRole("button", { name: "admin_email_preview_action" }));
   const dialogs = screen.getAllByRole("dialog");
   const preview = within(dialogs[dialogs.length - 1]!);

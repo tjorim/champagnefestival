@@ -1,8 +1,9 @@
+import { AdminField, AdminLabel, AdminSelect, AdminOption } from "@/components/admin/AdminFields";
 import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
-import Form from "react-bootstrap/Form";
+
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -195,30 +196,30 @@ export default function LayoutCompareModal({
         <DialogBody>
           <p className="tw:text-subtle tw:text-sm">{m.admin_layout_compare_scope_note()}</p>
           <div className="tw:flex tw:gap-4 tw:flex-wrap tw:mb-4">
-            <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
-              <Form.Label className="tw:text-sm tw:text-subtle">
+            <AdminField className="tw:min-w-45 tw:grow-1 tw:shrink-1 tw:basis-45">
+              <AdminLabel className="tw:text-sm tw:text-subtle">
                 {m.admin_layout_compare_baseline()}
-              </Form.Label>
-              <Form.Select value={baselineId} onChange={(e) => setBaselineId(e.target.value)}>
+              </AdminLabel>
+              <AdminSelect value={baselineId} onValueChange={(e) => setBaselineId(e)}>
                 {roomLayouts.map((layout) => (
-                  <option key={layout.id} value={layout.id}>
+                  <AdminOption key={layout.id} value={layout.id}>
                     {getDayLabel(layout, dayOptions)}
-                  </option>
+                  </AdminOption>
                 ))}
-              </Form.Select>
-            </Form.Group>
-            <Form.Group style={{ minWidth: "180px", flex: "1 1 180px" }}>
-              <Form.Label className="tw:text-sm tw:text-subtle">
+              </AdminSelect>
+            </AdminField>
+            <AdminField className="tw:min-w-45 tw:grow-1 tw:shrink-1 tw:basis-45">
+              <AdminLabel className="tw:text-sm tw:text-subtle">
                 {m.admin_layout_compare_current()}
-              </Form.Label>
-              <Form.Select value={currentId} onChange={(e) => setCurrentId(e.target.value)}>
+              </AdminLabel>
+              <AdminSelect value={currentId} onValueChange={(e) => setCurrentId(e)}>
                 {roomLayouts.map((layout) => (
-                  <option key={layout.id} value={layout.id}>
+                  <AdminOption key={layout.id} value={layout.id}>
                     {getDayLabel(layout, dayOptions)}
-                  </option>
+                  </AdminOption>
                 ))}
-              </Form.Select>
-            </Form.Group>
+              </AdminSelect>
+            </AdminField>
           </div>
 
           {baselineId === currentId ? (

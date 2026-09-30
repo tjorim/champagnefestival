@@ -1,3 +1,12 @@
+import {
+  AdminField,
+  AdminLabel,
+  AdminInput,
+  AdminTextarea,
+  AdminSelect,
+  AdminOption,
+  AdminCheck,
+} from "@/components/admin/AdminFields";
 import { useCallback, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -5,7 +14,7 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+
 import {
   Table,
   TableHeader,
@@ -315,7 +324,7 @@ export default function ComposerManagement({
         {error && <Alert variant="danger">{error}</Alert>}
         {confirmDialog}
 
-        <Form
+        <form
           onSubmit={(event) => {
             event.preventDefault();
             void form.handleSubmit();
@@ -334,11 +343,11 @@ export default function ComposerManagement({
               </Button>
             ))}
           </div>
-          <Form.Group className="tw:mb-2" controlId="composer-title">
-            <Form.Label>{m.admin_composer_title_label()}</Form.Label>
+          <AdminField className="tw:mb-2" controlId="composer-title">
+            <AdminLabel>{m.admin_composer_title_label()}</AdminLabel>
             <form.Field name={`title_${preview}`}>
               {(field) => (
-                <Form.Control
+                <AdminInput
                   maxLength={500}
                   value={field.value ?? ""}
                   onChange={(event) => field.handleChange(event.target.value)}
@@ -346,13 +355,12 @@ export default function ComposerManagement({
                 />
               )}
             </form.Field>
-          </Form.Group>
-          <Form.Group className="tw:mb-2" controlId="composer-body">
-            <Form.Label>{m.admin_composer_body_label()}</Form.Label>
+          </AdminField>
+          <AdminField className="tw:mb-2" controlId="composer-body">
+            <AdminLabel>{m.admin_composer_body_label()}</AdminLabel>
             <form.Field name={`body_${preview}`}>
               {(field) => (
-                <Form.Control
-                  as="textarea"
+                <AdminTextarea
                   rows={3}
                   maxLength={500}
                   value={field.value ?? ""}
@@ -361,30 +369,32 @@ export default function ComposerManagement({
                 />
               )}
             </form.Field>
-          </Form.Group>
+          </AdminField>
 
           <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-2">
-            <Form.Group className="tw:site-md:w-4/12" controlId="composer-level">
-              <Form.Label>{m.admin_composer_level_label()}</Form.Label>
+            <AdminField className="tw:site-md:w-4/12" controlId="composer-level">
+              <AdminLabel>{m.admin_composer_level_label()}</AdminLabel>
               <form.Field name="level">
                 {(field) => (
-                  <Form.Select
+                  <AdminSelect
                     value={field.value}
-                    onChange={(event) => field.handleChange(event.target.value as Draft["level"])}
+                    onValueChange={(event) => field.handleChange(event as Draft["level"])}
                     onBlur={field.handleBlur}
                   >
-                    <option value="info">{m.admin_announcement_level_info()}</option>
-                    <option value="warning">{m.admin_announcement_level_warning()}</option>
-                    <option value="urgent">{m.admin_announcement_level_urgent()}</option>
-                  </Form.Select>
+                    <AdminOption value="info">{m.admin_announcement_level_info()}</AdminOption>
+                    <AdminOption value="warning">
+                      {m.admin_announcement_level_warning()}
+                    </AdminOption>
+                    <AdminOption value="urgent">{m.admin_announcement_level_urgent()}</AdminOption>
+                  </AdminSelect>
                 )}
               </form.Field>
-            </Form.Group>
-            <Form.Group className="tw:site-md:w-8/12" controlId="composer-link-url">
-              <Form.Label>{m.admin_composer_link_url_label()}</Form.Label>
+            </AdminField>
+            <AdminField className="tw:site-md:w-8/12" controlId="composer-link-url">
+              <AdminLabel>{m.admin_composer_link_url_label()}</AdminLabel>
               <form.Field name="link_url">
                 {(field) => (
-                  <Form.Control
+                  <AdminInput
                     type="url"
                     value={field.value ?? ""}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -393,20 +403,20 @@ export default function ComposerManagement({
                   />
                 )}
               </form.Field>
-            </Form.Group>
+            </AdminField>
           </div>
 
           <form.Field name="channels">
             {(field) => (
               <div className="tw:mb-4">
-                <Form.Label className="tw:block">{m.admin_composer_channels_label()}</Form.Label>
-                <Form.Check
+                <AdminLabel className="tw:block">{m.admin_composer_channels_label()}</AdminLabel>
+                <AdminCheck
                   inline
                   type="checkbox"
                   id="composer-channel-announcement"
                   label={m.admin_composer_channel_announcement()}
                   checked={field.value.includes("announcement")}
-                  onChange={() =>
+                  onCheckedChange={() =>
                     field.handleChange(
                       field.value.includes("announcement")
                         ? field.value.filter((c) => c !== "announcement")
@@ -414,13 +424,13 @@ export default function ComposerManagement({
                     )
                   }
                 />
-                <Form.Check
+                <AdminCheck
                   inline
                   type="checkbox"
                   id="composer-channel-push"
                   label={m.admin_composer_channel_push()}
                   checked={field.value.includes("push")}
-                  onChange={() =>
+                  onCheckedChange={() =>
                     field.handleChange(
                       field.value.includes("push")
                         ? field.value.filter((c) => c !== "push")
@@ -453,7 +463,7 @@ export default function ComposerManagement({
               </Button>
             )}
           </div>
-        </Form>
+        </form>
 
         {items.length === 0 ? (
           <p className="tw:text-center tw:text-subtle tw:mt-6 tw:mb-0">
