@@ -1,8 +1,10 @@
+import type { LucideIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 export interface RemuageFeatureItem {
   id: number | string;
   title: string;
   description: string;
-  iconClass: string;
+  icon: LucideIcon;
 }
 
 interface RemuageFeatureRackProps {
@@ -15,7 +17,7 @@ const RemuageFeatureRack = ({ items }: RemuageFeatureRackProps) => {
       {items.map((feature) => (
         <article key={feature.id} className="remuage-feature">
           <span className="remuage-feature__aperture" aria-hidden="true">
-            <i className={feature.iconClass} />
+            <Icon icon={feature.icon} />
           </span>
           <div className="remuage-feature__content">
             <h3>{feature.title}</h3>

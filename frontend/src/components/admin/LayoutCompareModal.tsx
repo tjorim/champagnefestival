@@ -1,3 +1,5 @@
+import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
 import Form from "react-bootstrap/Form";
@@ -104,21 +106,21 @@ function statusBadge(status: "added" | "removed" | "changed" | "unchanged") {
     case "added":
       return (
         <Badge bg="success">
-          <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+          <Icon icon={PlusIcon} className="tw:me-1" />
           {m.admin_layout_compare_added()}
         </Badge>
       );
     case "removed":
       return (
         <Badge bg="danger">
-          <i className="bi bi-dash-lg me-1" aria-hidden="true" />
+          <Icon icon={MinusIcon} className="tw:me-1" />
           {m.admin_layout_compare_removed()}
         </Badge>
       );
     case "changed":
       return (
         <Badge bg="warning" text="dark">
-          <i className="bi bi-pencil me-1" aria-hidden="true" />
+          <Icon icon={PencilIcon} className="tw:me-1" />
           {m.admin_layout_compare_changed()}
         </Badge>
       );

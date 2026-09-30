@@ -1,3 +1,5 @@
+import { CircleCheckIcon, ContactRoundIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
@@ -129,7 +131,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
-            <i className="bi bi-person-badge me-2" aria-hidden="true" />
+            <Icon icon={ContactRoundIcon} className="tw:me-2" />
             {isEdit ? m.admin_members_edit_title() : m.admin_members_create_title()}
           </DialogTitle>
         </DialogHeader>
@@ -345,7 +347,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 </>
               ) : (
                 <>
-                  <i className="bi bi-check2-circle me-1" aria-hidden="true" />
+                  <Icon icon={CircleCheckIcon} className="tw:me-1" />
                   {m.admin_people_save()}
                 </>
               )}

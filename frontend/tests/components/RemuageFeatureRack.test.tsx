@@ -1,3 +1,4 @@
+import { CoffeeIcon, SparklesIcon, UsersIcon } from "lucide-react";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import RemuageFeatureRack from "@/components/remuage/RemuageFeatureRack";
@@ -7,14 +8,14 @@ const ITEMS = [
     id: "producer",
     title: "Cuvée",
     description: "Rencontrez les producteurs.",
-    iconClass: "bi bi-cup",
+    icon: CoffeeIcon,
   },
-  { id: 7, title: "Dégustation", description: "Explorez les styles 🥂", iconClass: "bi bi-stars" },
+  { id: 7, title: "Dégustation", description: "Explorez les styles 🥂", icon: SparklesIcon },
   {
     id: "community",
     title: "Community",
     description: "Share the festival.",
-    iconClass: "bi bi-people",
+    icon: UsersIcon,
   },
 ];
 

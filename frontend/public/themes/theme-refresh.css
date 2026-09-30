@@ -773,7 +773,7 @@ main > .content-section .card,
   color: var(--champagne);
 }
 
-.standalone-navbar-brand i,
+.standalone-navbar-brand svg,
 .standalone-navbar-brand span {
   flex: 0 0 auto;
 }

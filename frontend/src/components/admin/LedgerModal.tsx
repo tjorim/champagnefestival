@@ -1,3 +1,5 @@
+import { NotebookTextIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { Button as TableButton } from "@/components/ui/button";
 import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useMemo } from "react";
@@ -169,7 +171,7 @@ export default function LedgerModal({
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
-            <i className="bi bi-journal-text me-2" aria-hidden="true" />
+            <Icon icon={NotebookTextIcon} className="tw:me-2" />
             {title}
           </DialogTitle>
         </DialogHeader>

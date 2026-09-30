@@ -1,8 +1,10 @@
+import type { LucideIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 export interface RivieraFeatureItem {
   id: number | string;
   title: string;
   description: string;
-  iconClass: string;
+  icon: LucideIcon;
 }
 
 interface RivieraFeatureGridProps {
@@ -16,7 +18,7 @@ const RivieraFeatureGrid = ({ items }: RivieraFeatureGridProps) => {
         <article key={feature.id} className="riviera-feature-card">
           <div className="riviera-feature-card__number">{String(index + 1).padStart(2, "0")}</div>
           <span className="riviera-feature-card__icon" aria-hidden="true">
-            <i className={feature.iconClass} />
+            <Icon icon={feature.icon} />
           </span>
           <div>
             <h3>{feature.title}</h3>

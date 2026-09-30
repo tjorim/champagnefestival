@@ -1,3 +1,5 @@
+import { CirclePlusIcon, SaveIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
@@ -166,7 +168,7 @@ export default function VolunteerFormModal({
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
-            <i className="bi bi-hand-thumbs-up me-2" aria-hidden="true" />
+            <Icon icon={ThumbsUpIcon} className="tw:me-2" />
             {isEdit ? m.admin_volunteers_edit_title() : m.admin_volunteers_create_title()}
           </DialogTitle>
         </DialogHeader>
@@ -280,7 +282,7 @@ export default function VolunteerFormModal({
                   size="sm"
                   onClick={() => form.pushFieldValue("helpPeriods", emptyPeriod())}
                 >
-                  <i className="bi bi-plus-circle me-1" aria-hidden="true" />
+                  <Icon icon={CirclePlusIcon} className="tw:me-1" />
                   {m.admin_volunteers_add_help_period()}
                 </Button>
               </div>
@@ -300,7 +302,7 @@ export default function VolunteerFormModal({
                           onClick={() => void form.removeFieldValue("helpPeriods", index)}
                           disabled={helpPeriods.length === 1}
                         >
-                          <i className="bi bi-trash me-1" aria-hidden="true" />
+                          <Icon icon={TrashIcon} className="tw:me-1" />
                           {m.admin_volunteers_remove_help_period()}
                         </Button>
                       </div>
@@ -401,7 +403,7 @@ export default function VolunteerFormModal({
               {isSubmitting ? (
                 <Spinner as="span" animation="border" size="sm" className="me-1" />
               ) : (
-                <i className="bi bi-floppy me-1" aria-hidden="true" />
+                <Icon icon={SaveIcon} className="tw:me-1" />
               )}
               {m.admin_people_save()}
             </Button>

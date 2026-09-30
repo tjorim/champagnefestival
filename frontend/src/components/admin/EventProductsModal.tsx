@@ -1,3 +1,5 @@
+import { PencilIcon, PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -598,7 +600,7 @@ export default function EventProductsModal({
             size="sm"
             disabled={saveMutation.isPending || previewPending}
           >
-            <i className="bi bi-floppy me-1" aria-hidden="true" />
+            <Icon icon={SaveIcon} className="tw:me-1" />
             {m.admin_save()}
           </Button>
         </div>
@@ -655,7 +657,7 @@ export default function EventProductsModal({
               disabled={formOpen && !isBeingEdited}
               aria-label={`Edit ${product.name}`}
             >
-              <i className="bi bi-pencil" aria-hidden="true" />
+              <Icon icon={PencilIcon} />
             </Button>
             <Button
               size="sm"
@@ -664,7 +666,7 @@ export default function EventProductsModal({
               disabled={formOpen}
               aria-label={`${m.admin_delete()} ${product.name}`}
             >
-              <i className="bi bi-trash" aria-hidden="true" />
+              <Icon icon={TrashIcon} />
             </Button>
           </span>
         </div>
@@ -795,7 +797,7 @@ export default function EventProductsModal({
                 onClick={openAdd}
                 disabled={productsQuery.isPending || productsQuery.isError || formOpen}
               >
-                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                <Icon icon={PlusIcon} className="tw:me-1" />
                 {m.admin_products_add()}
               </Button>
             )}

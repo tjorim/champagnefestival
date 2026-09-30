@@ -1,3 +1,20 @@
+import {
+  ArrowLeftIcon,
+  CalendarDaysIcon,
+  CalendarPlusIcon,
+  CircleArrowDownIcon,
+  CircleUserRoundIcon,
+  CupSodaIcon,
+  MapIcon,
+  ScanQrCodeIcon,
+  ShieldCheckIcon,
+  ShieldIcon,
+  SparklesIcon,
+  UsersIcon,
+  WatchIcon,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import React, { lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,7 +23,6 @@ import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/tailwind.css";
-import "bootstrap-icons/font/bootstrap-icons.css";
 import "leaflet/dist/leaflet.css";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
@@ -43,10 +59,10 @@ import { featureItems } from "./config/features";
 import { endOfDay, formatDateRange } from "./utils/dateUtils";
 import { createAppRouter } from "./router";
 
-const FEATURE_ICON_BY_ID: Record<number, string> = {
-  1: "bi bi-cup-straw",
-  2: "bi bi-calendar2-event",
-  3: "bi bi-people",
+const FEATURE_ICON_BY_ID: Record<number, LucideIcon> = {
+  1: CupSodaIcon,
+  2: CalendarDaysIcon,
+  3: UsersIcon,
 };
 
 // Must come after the CSS imports above so our theme stylesheet lands later in the cascade —
@@ -92,18 +108,18 @@ function AppSuspense({ children, errorFallbackText }: AppSuspenseProps) {
 }
 
 /** Minimal top-bar shown on standalone admin / check-in pages */
-function StandaloneNavBar({ iconClass, title }: { iconClass: string; title: string }) {
+function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) {
   return (
     <nav className="standalone-navbar navbar fixed-top px-3 py-2">
       <div className="container-fluid d-flex justify-content-between align-items-center gap-2">
         <span className="standalone-navbar-brand navbar-brand fw-bold mb-0">
-          <i className={`${iconClass} me-2`} aria-hidden="true" />
+          <Icon icon={icon} className="tw:me-2" />
           {title}
         </span>
         <div className="standalone-navbar-actions d-flex gap-2 align-items-center">
           <LanguageSwitcher />
           <Link to="/" className="btn btn-sm btn-outline-secondary">
-            <i className="bi bi-arrow-left me-1" aria-hidden="true" />
+            <Icon icon={ArrowLeftIcon} className="tw:me-1" />
             {m.back_to_site()}
           </Link>
         </div>
@@ -144,7 +160,7 @@ function AdminPage() {
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar iconClass="bi bi-shield-lock" title={m.admin_title()} />
+      <StandaloneNavBar icon={ShieldIcon} title={m.admin_title()} />
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.admin_error_load_dashboard()}>
           <AdminDashboard visible={true} />
@@ -162,7 +178,7 @@ function CheckInRoute() {
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar iconClass="bi bi-qr-code-scan" title={m.checkin_title()} />
+      <StandaloneNavBar icon={ScanQrCodeIcon} title={m.checkin_title()} />
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.admin_error_load_checkin()}>
           <CheckInPage />
@@ -176,7 +192,7 @@ function VenuePlanRoute() {
   useNoIndex();
   return (
     <div className="App standalone-app">
-      <StandaloneNavBar iconClass="bi bi-map" title={m.venue_plan_title()} />
+      <StandaloneNavBar icon={MapIcon} title={m.venue_plan_title()} />
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.venue_plan_error()}>
           <VenuePlanPage />
@@ -193,7 +209,7 @@ function PrivacyPolicyRoute() {
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar iconClass="bi bi-shield-check" title={m.privacy_title()} />
+      <StandaloneNavBar icon={ShieldCheckIcon} title={m.privacy_title()} />
       <main id="main-content" className="standalone-main standalone-document-main">
         <AppSuspense errorFallbackText={m.error_loading_privacy()}>
           <PrivacyPolicyPage />
@@ -211,7 +227,7 @@ function PebblePairRoute() {
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar iconClass="bi bi-smartwatch" title={m.pebble_pair_title()} />
+      <StandaloneNavBar icon={WatchIcon} title={m.pebble_pair_title()} />
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.pebble_pair_error()}>
           <PebblePairPage />
@@ -234,7 +250,7 @@ function MyAccountRoute() {
       <a href="#main-content" className="skip-link">
         {m.accessibility_skip_to_content()}
       </a>
-      <StandaloneNavBar iconClass="bi bi-person-circle" title={m.my_account_title()} />
+      <StandaloneNavBar icon={CircleUserRoundIcon} title={m.my_account_title()} />
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.my_account_delete_error()}>
           <MyAccountPage />
@@ -419,7 +435,7 @@ function App() {
               className="btn bg-brand-gradient text-white rounded-pill border-0 py-2 px-4 fw-bold"
             >
               {m.welcome_learn_more()}
-              <i className="bi bi-arrow-down-circle ms-2" aria-hidden="true" />
+              <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
             </a>
           </section>
         ) : (
@@ -431,7 +447,7 @@ function App() {
               <div className="hero-actions">
                 <a href="#next-festival" className="btn btn-champagne btn-lg">
                   {m.welcome_learn_more()}
-                  <i className="bi bi-arrow-down-circle ms-2" aria-hidden="true" />
+                  <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
                 </a>
                 <a href="#schedule" className="btn btn-outline-light btn-lg">
                   {m.schedule_title()}
@@ -465,7 +481,7 @@ function App() {
                   id: feature.id,
                   title: feature.getTitle(),
                   description: feature.getDesc(),
-                  iconClass: FEATURE_ICON_BY_ID[feature.id] ?? "bi bi-stars",
+                  icon: FEATURE_ICON_BY_ID[feature.id] ?? SparklesIcon,
                 }))}
               />
             ) : variant === "riviera" ? (
@@ -474,7 +490,7 @@ function App() {
                   id: feature.id,
                   title: feature.getTitle(),
                   description: feature.getDesc(),
-                  iconClass: FEATURE_ICON_BY_ID[feature.id] ?? "bi bi-stars",
+                  icon: FEATURE_ICON_BY_ID[feature.id] ?? SparklesIcon,
                 }))}
               />
             ) : (
@@ -483,7 +499,7 @@ function App() {
                   <div key={feature.id} className="feature">
                     {variant !== "classic" && (
                       <span className="feature-icon" aria-hidden="true">
-                        <i className={FEATURE_ICON_BY_ID[feature.id] ?? "bi bi-stars"} />
+                        <Icon icon={FEATURE_ICON_BY_ID[feature.id] ?? SparklesIcon} />
                       </span>
                     )}
                     <h3>{feature.getTitle()}</h3>
@@ -665,7 +681,7 @@ function App() {
               onClick={() => setShowRegistrationModal(true)}
               disabled={registrableEvents.length === 0}
             >
-              <i className="bi bi-calendar-plus me-2" aria-hidden="true" />
+              <Icon icon={CalendarPlusIcon} className="tw:me-2" />
               {m.registration_cta()}
             </button>
           </div>

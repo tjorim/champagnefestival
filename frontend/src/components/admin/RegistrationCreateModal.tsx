@@ -1,3 +1,5 @@
+import { LoaderCircleIcon, SaveIcon, TriangleAlertIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, useSelector } from "@tanstack/react-form";
@@ -23,7 +25,6 @@ import {
 } from "@/components/ui/combobox";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
-import { LoaderCircleIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -199,7 +200,7 @@ export default function RegistrationCreateModal({
                 </div>
               ) : eventsQuery.isError ? (
                 <div className="text-danger small d-flex align-items-center gap-2">
-                  <i className="bi bi-exclamation-triangle-fill" aria-hidden="true" />
+                  <Icon icon={TriangleAlertIcon} />
                   {m.admin_error_load_events()}
                   <Button
                     variant="link"
@@ -343,7 +344,7 @@ export default function RegistrationCreateModal({
               {isSubmitting ? (
                 <Spinner as="span" animation="border" size="sm" className="me-1" />
               ) : (
-                <i className="bi bi-floppy me-1" aria-hidden="true" />
+                <Icon icon={SaveIcon} className="tw:me-1" />
               )}
               {m.admin_create_action()}
             </Button>

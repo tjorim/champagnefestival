@@ -1,3 +1,5 @@
+import { ContactRoundIcon, DownloadIcon, MailIcon, PencilIcon, TrashIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useState, useMemo, useCallback } from "react";
 import {
@@ -210,7 +212,7 @@ export default function MembersManagement({
                     title={m.admin_email_compose_for({ name: member.name })}
                     aria-label={m.admin_email_compose_for({ name: member.name })}
                   >
-                    <i className="bi bi-envelope" aria-hidden="true" />
+                    <Icon icon={MailIcon} />
                   </Button>
                 )}
                 <Button
@@ -223,7 +225,7 @@ export default function MembersManagement({
                   title={m.admin_members_edit_title()}
                   aria-label={m.admin_members_edit_title()}
                 >
-                  <i className="bi bi-pencil" aria-hidden="true" />
+                  <Icon icon={PencilIcon} />
                 </Button>
                 <Button
                   size="sm"
@@ -235,7 +237,7 @@ export default function MembersManagement({
                   title={m.admin_members_delete_title()}
                   aria-label={m.admin_members_delete_title()}
                 >
-                  <i className="bi bi-trash" aria-hidden="true" />
+                  <Icon icon={TrashIcon} />
                 </Button>
               </div>
             );
@@ -299,7 +301,7 @@ export default function MembersManagement({
                 onClick={handleExportCsv}
                 disabled={table.getPrePaginatedRowModel().rows.length === 0}
               >
-                <i className="bi bi-download me-1" aria-hidden="true" />
+                <Icon icon={DownloadIcon} className="tw:me-1" />
                 {m.admin_export_csv()}
               </Button>
               <Button
@@ -310,7 +312,7 @@ export default function MembersManagement({
                   setShowForm(true);
                 }}
               >
-                <i className="bi bi-person-badge me-1" aria-hidden="true" />
+                <Icon icon={ContactRoundIcon} className="tw:me-1" />
                 {m.admin_members_add()}
               </Button>
             </div>
@@ -461,7 +463,7 @@ export default function MembersManagement({
                   </>
                 ) : (
                   <>
-                    <i className="bi bi-trash me-1" aria-hidden="true" />
+                    <Icon icon={TrashIcon} className="tw:me-1" />
                     {m.admin_members_delete_title()}
                   </>
                 )}

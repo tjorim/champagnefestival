@@ -1,3 +1,6 @@
+import { AreaIcon } from "@/components/AreaIcon";
+import { UsersIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
 import Alert from "react-bootstrap/Alert";
@@ -71,7 +74,7 @@ export default function VenuePlanPage() {
                     transform: `rotate(${area.rotation}deg)`,
                   }}
                 >
-                  <i className={`bi ${area.icon} me-1`} aria-hidden="true" />
+                  <AreaIcon name={area.icon} className="tw:me-1" />
                   {area.label}
                 </div>
               ))}
@@ -101,7 +104,7 @@ export default function VenuePlanPage() {
                   >
                     <div className="fw-semibold small">{item.name}</div>
                     <div className="small">
-                      <i className="bi bi-people-fill me-1" />
+                      <Icon icon={UsersIcon} className="tw:me-1" />
                       {occupied}/{item.capacity}
                     </div>
                   </div>

@@ -41,7 +41,7 @@ export async function legacyStyleChanges(page: Page) {
     return elements.flatMap((element, index) =>
       JSON.stringify(enabled[index]) === JSON.stringify(disabled[index])
         ? []
-        : [element.tagName + "." + element.className],
+        : [element.tagName + "." + (element.getAttribute("class") ?? "")],
     );
   });
 }

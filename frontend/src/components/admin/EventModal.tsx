@@ -1,3 +1,5 @@
+import { SaveIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Button from "react-bootstrap/Button";
@@ -364,7 +366,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               {m.close()}
             </Button>
             <Button type="submit" variant="warning" size="sm">
-              <i className="bi bi-floppy me-1" aria-hidden="true" />
+              <Icon icon={SaveIcon} className="tw:me-1" />
               {m.admin_save()}
             </Button>
           </DialogFooter>

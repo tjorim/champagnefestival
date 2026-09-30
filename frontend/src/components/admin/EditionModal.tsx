@@ -1,3 +1,5 @@
+import { SaveIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -585,7 +587,7 @@ export default function EditionModal({
               {saveEditionMutation.isPending ? (
                 <Spinner as="span" animation="border" size="sm" className="me-1" />
               ) : (
-                <i className="bi bi-floppy me-1" aria-hidden="true" />
+                <Icon icon={SaveIcon} className="tw:me-1" />
               )}
               {m.admin_save()}
             </Button>

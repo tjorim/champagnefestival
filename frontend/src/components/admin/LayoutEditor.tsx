@@ -1,3 +1,21 @@
+import { AreaIcon } from "@/components/AreaIcon";
+import {
+  ArrowLeftRightIcon,
+  BuildingIcon,
+  CalendarIcon,
+  Grid3X3Icon,
+  HistoryIcon,
+  InfoIcon,
+  PlusIcon,
+  RotateCcwIcon,
+  RotateCwIcon,
+  StoreIcon,
+  TableIcon,
+  TrashIcon,
+  UsersIcon,
+  XIcon,
+} from "lucide-react";
+import { Icon } from "@/components/Icon";
 /**
  * LayoutEditor — multi-room floor plan manager.
  *
@@ -264,7 +282,7 @@ function DraggableTable({
           : undefined
       }
     >
-      <i className="bi bi-people-fill fs-5" aria-hidden="true" />
+      <Icon icon={UsersIcon} className="tw:text-xl" />
       <span className="small fw-semibold fs-2xs">{table.name}</span>
       <span className="fs-3xs">
         {assignedCount}/{table.capacity}
@@ -354,7 +372,7 @@ function DraggableArea({
           : undefined
       }
     >
-      <i className={clsx("bi", area.icon || "bi-shop", "fs-xs")} aria-hidden="true" />
+      <AreaIcon name={area.icon} className="tw:text-xs" />
       <span className="fw-semibold text-truncate w-100 text-center px-1 fs-3xs">{area.label}</span>
       {assignedLabel && (
         <span
@@ -457,7 +475,7 @@ function RoomCanvas({
       <p className="text-secondary small mb-1">
         {room.widthM} m × {room.lengthM} m
         <span className="ms-2">
-          <i className="bi bi-info-circle me-1" aria-hidden="true" />
+          <Icon icon={InfoIcon} className="tw:me-1" />
           {m.admin_table_move_hint()}
         </span>
       </p>
@@ -484,7 +502,7 @@ function RoomCanvas({
         >
           {isEmpty && (
             <div className="position-absolute top-50 start-50 translate-middle text-secondary text-center pe-none">
-              <i className="bi bi-grid-3x3-gap display-4" aria-hidden="true" />
+              <Icon icon={Grid3X3Icon} className="tw:text-5xl" />
               <p className="mt-2 small">{m.admin_no_tables()}</p>
             </div>
           )}
@@ -852,7 +870,7 @@ export default function LayoutEditor({
         <Card.Header className="d-flex align-items-center justify-content-between flex-wrap gap-2">
           {activeLayoutDateLabel && (
             <span className="text-secondary small d-none d-md-inline">
-              <i className="bi bi-calendar3 me-1" aria-hidden="true" />
+              <Icon icon={CalendarIcon} className="tw:me-1" />
               {activeLayoutDateLabel}
             </span>
           )}
@@ -900,7 +918,7 @@ export default function LayoutEditor({
                   setSelectedArea(null);
                 }}
               >
-                <i className="bi bi-people-fill me-1" aria-hidden="true" />
+                <Icon icon={UsersIcon} className="tw:me-1" />
                 {m.admin_layout_seating()}
               </Button>
               <Button
@@ -911,7 +929,7 @@ export default function LayoutEditor({
                   setSelectedTable(null);
                 }}
               >
-                <i className="bi bi-shop me-1" aria-hidden="true" />
+                <Icon icon={StoreIcon} className="tw:me-1" />
                 {m.admin_layout_areas()}
               </Button>
             </div>
@@ -925,7 +943,7 @@ export default function LayoutEditor({
                 }}
                 disabled={!activeLayoutId}
               >
-                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                <Icon icon={PlusIcon} className="tw:me-1" />
                 {m.admin_add_table()}
               </Button>
             ) : (
@@ -946,7 +964,7 @@ export default function LayoutEditor({
                 }}
                 disabled={!activeLayoutId}
               >
-                <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                <Icon icon={PlusIcon} className="tw:me-1" />
                 {m.admin_layout_add_area()}
               </Button>
             )}
@@ -956,7 +974,7 @@ export default function LayoutEditor({
         <Card.Body className="p-2">
           {rooms.length === 0 ? (
             <p className="text-secondary text-center small mb-0">
-              <i className="bi bi-info-circle me-1" aria-hidden="true" />
+              <Icon icon={InfoIcon} className="tw:me-1" />
               {m.admin_room_no_rooms()}
             </p>
           ) : activeRoom ? (
@@ -964,7 +982,7 @@ export default function LayoutEditor({
               <div className="d-flex align-items-center justify-content-between mb-2">
                 <div className="d-flex align-items-center gap-2">
                   <span className="fw-semibold" style={{ color: activeRoom.color }}>
-                    <i className="bi bi-building me-1" aria-hidden="true" />
+                    <Icon icon={BuildingIcon} className="tw:me-1" />
                     {activeRoom.name}
                   </span>
                   {/* Day / layout selector */}
@@ -994,7 +1012,7 @@ export default function LayoutEditor({
                             borderLeft: "none",
                           }}
                         >
-                          <i className="bi bi-x" aria-hidden="true" />
+                          <Icon icon={XIcon} />
                         </Button>
                       </div>
                     ))}
@@ -1011,7 +1029,7 @@ export default function LayoutEditor({
                       }}
                       title={m.admin_add_layout()}
                     >
-                      <i className="bi bi-plus-lg me-1" aria-hidden="true" />
+                      <Icon icon={PlusIcon} className="tw:me-1" />
                       {m.admin_add_layout()}
                     </Button>
                     {roomLayouts.length > 1 && (
@@ -1021,7 +1039,7 @@ export default function LayoutEditor({
                         onClick={() => setShowCompareLayouts(true)}
                         title={m.admin_layout_compare_title()}
                       >
-                        <i className="bi bi-arrow-left-right me-1" aria-hidden="true" />
+                        <Icon icon={ArrowLeftRightIcon} className="tw:me-1" />
                         {m.admin_layout_compare_title()}
                       </Button>
                     )}
@@ -1032,7 +1050,7 @@ export default function LayoutEditor({
                         onClick={() => setShowRevisions(true)}
                         title={m.admin_layout_revisions_button()}
                       >
-                        <i className="bi bi-clock-history me-1" aria-hidden="true" />
+                        <Icon icon={HistoryIcon} className="tw:me-1" />
                         {m.admin_layout_revisions_button()}
                       </Button>
                     )}
@@ -1068,7 +1086,7 @@ export default function LayoutEditor({
         <Card bg="dark" text="white" border="warning" className="mb-3">
           <Card.Header className="d-flex align-items-center justify-content-between border-warning">
             <span className="fw-semibold">
-              <i className="bi bi-table me-2" aria-hidden="true" />
+              <Icon icon={TableIcon} className="tw:me-2" />
               {m.admin_table_label()}: {selectedTableData.name}
             </span>
             <div className="d-flex gap-2 align-items-center">
@@ -1102,7 +1120,7 @@ export default function LayoutEditor({
                     title={m.admin_layout_rotate_ccw()}
                     aria-label={m.admin_layout_rotate_ccw()}
                   >
-                    <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                    <Icon icon={RotateCcwIcon} />
                   </Button>
                   <span
                     className="text-secondary small"
@@ -1119,7 +1137,7 @@ export default function LayoutEditor({
                     title={m.admin_layout_rotate_cw()}
                     aria-label={m.admin_layout_rotate_cw()}
                   >
-                    <i className="bi bi-arrow-clockwise" aria-hidden="true" />
+                    <Icon icon={RotateCwIcon} />
                   </Button>
                 </>
               )}
@@ -1130,7 +1148,7 @@ export default function LayoutEditor({
                 title={m.admin_delete()}
                 aria-label={m.admin_delete()}
               >
-                <i className="bi bi-trash" aria-hidden="true" />
+                <Icon icon={TrashIcon} />
               </Button>
             </div>
           </Card.Header>
@@ -1376,10 +1394,7 @@ export default function LayoutEditor({
         <Card bg="dark" text="white" border="info" className="mb-3">
           <Card.Header className="d-flex align-items-center justify-content-between border-info">
             <span className="fw-semibold">
-              <i
-                className={clsx("bi", selectedAreaData.icon || "bi-shop", "me-2")}
-                aria-hidden="true"
-              />
+              <AreaIcon name={selectedAreaData.icon} className="tw:me-2" />
               {m.admin_layout_area_label_prefix()} {selectedAreaData.label}
             </span>
             <div className="d-flex gap-2 align-items-center">
@@ -1390,7 +1405,7 @@ export default function LayoutEditor({
                 title={m.admin_layout_rotate_ccw()}
                 aria-label={m.admin_layout_rotate_ccw()}
               >
-                <i className="bi bi-arrow-counterclockwise" aria-hidden="true" />
+                <Icon icon={RotateCcwIcon} />
               </Button>
               <span
                 className="text-secondary small"
@@ -1405,7 +1420,7 @@ export default function LayoutEditor({
                 title={m.admin_layout_rotate_cw()}
                 aria-label={m.admin_layout_rotate_cw()}
               >
-                <i className="bi bi-arrow-clockwise" aria-hidden="true" />
+                <Icon icon={RotateCwIcon} />
               </Button>
               <Button
                 variant="outline-danger"
@@ -1414,7 +1429,7 @@ export default function LayoutEditor({
                 title={m.admin_delete()}
                 aria-label={m.admin_delete()}
               >
-                <i className="bi bi-trash" aria-hidden="true" />
+                <Icon icon={TrashIcon} />
               </Button>
             </div>
           </Card.Header>
@@ -1524,10 +1539,7 @@ export default function LayoutEditor({
                 {m.admin_layout_area_form_icon()}
               </Form.Label>
               <div className="d-flex gap-2 align-items-center">
-                <i
-                  className={clsx("bi", selectedAreaData.icon || "bi-shop", "text-info")}
-                  aria-hidden="true"
-                />
+                <AreaIcon name={selectedAreaData.icon} className="tw:text-primary" />
                 <Form.Select
                   size="sm"
                   className="bg-dark text-light border-secondary"
@@ -1599,7 +1611,7 @@ export default function LayoutEditor({
             {tablesInSelectedArea.length > 0 && (
               <div className="mt-3 pt-3 border-top border-secondary">
                 <p className="text-secondary small mb-2">
-                  <i className="bi bi-grid-3x3-gap me-1" aria-hidden="true" />
+                  <Icon icon={Grid3X3Icon} className="tw:me-1" />
                   {m.admin_layout_tables_in_stand()}{" "}
                   <Badge bg="info" text="dark">
                     {tablesInSelectedArea.length}
@@ -1615,7 +1627,7 @@ export default function LayoutEditor({
                       key={t.id}
                       className="bg-dark text-light border-secondary py-1 px-2 small"
                     >
-                      <i className="bi bi-grid-3x3 me-1 text-secondary" aria-hidden="true" />
+                      <Icon icon={Grid3X3Icon} className="tw:me-1 tw:text-muted-foreground" />
                       {t.name}
                       <Badge bg="secondary" className="ms-2 fs-3xs">
                         {t.capacity} {m.admin_layout_capacity_abbrev()}
@@ -1757,7 +1769,7 @@ export default function LayoutEditor({
             <Form.Group className="mb-3" controlId="area-new-icon">
               <Form.Label>{m.admin_layout_area_form_icon()}</Form.Label>
               <div className="d-flex gap-2 align-items-center">
-                <i className={clsx("bi", newArea.icon, "fs-4 text-info")} aria-hidden="true" />
+                <AreaIcon name={newArea.icon} className="tw:text-2xl tw:text-primary" />
                 <Form.Select
                   value={newArea.icon}
                   onChange={(e) => setNewArea((p) => ({ ...p, icon: e.target.value }))}
