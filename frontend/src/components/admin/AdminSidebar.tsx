@@ -30,10 +30,10 @@ import {
   XIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import React from "react";
 import clsx from "clsx";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 
@@ -369,7 +369,7 @@ export default function AdminSidebar({
           </div>
           <div className="tw:flex tw:gap-2">
             <Button
-              variant="outline-secondary"
+              variant="outline"
               size="sm"
               onClick={onLoadData}
               disabled={isAnyFetching}
@@ -394,11 +394,11 @@ export default function AdminSidebar({
                   as="span"
                   animation="border"
                   size="sm"
-                  className="tw:me-2"
+
                   aria-hidden="true"
                 />
               ) : (
-                <Icon icon={LogOutIcon} className="tw:me-2" />
+                <Icon icon={LogOutIcon} />
               )}
               {isSigningOut ? m.auth_signing_out() : m.admin_logout()}
             </Button>

@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { AdminInput } from "@/components/admin/AdminFields";
 import {
   ArchiveIcon,
@@ -19,7 +21,6 @@ import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -32,7 +33,6 @@ import {
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import Spinner from "react-bootstrap/Spinner";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 
 import { m } from "@/paraglide/messages";
 import EditionCard from "./EditionCard";
@@ -403,7 +403,7 @@ export function ContentSection({
         <span className="tw:flex tw:gap-1 tw:shrink-0">
           {!isArchived && (
             <Button
-              variant="outline-secondary"
+              variant="outline"
               size="sm"
               onClick={() => openEdit(item)}
               aria-label={`Edit ${item.name}`}
@@ -413,7 +413,7 @@ export function ContentSection({
           )}
           {!isArchived ? (
             <Button
-              variant="outline-secondary"
+              variant="outline"
               size="sm"
               onClick={() => handleArchive(item.id)}
               aria-label={`${m.admin_content_archive()} ${item.name}`}
@@ -471,16 +471,18 @@ export function ContentSection({
           )}
         </h6>
         <Button variant="outline-primary" size="sm" onClick={openAdd}>
-          <Icon icon={PlusIcon} className="tw:me-1" />
+          <Icon icon={PlusIcon} />
           {m.admin_content_add_item()}
         </Button>
       </div>
       <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center tw:mb-2">
-        <ButtonGroup size="sm">
+        <ButtonGroup aria-label={m.admin_content_type_filter_aria()}>
           {(["all", "producer", "sponsor", "vendor"] as const).map((type) => (
             <Button
+              size="sm"
               key={type}
-              variant={typeFilter === type ? "primary" : "outline-secondary"}
+              variant={typeFilter === type ? "default" : "outline"}
+              aria-pressed={typeFilter === type}
               onClick={() => setTypeFilter(type)}
             >
               {typeLabels[type]}
@@ -502,7 +504,7 @@ export function ContentSection({
             onClick={() => setBulkArchiveOpen(true)}
             title={m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
           >
-            <Icon icon={ArchiveIcon} className="tw:me-1" />
+            <Icon icon={ArchiveIcon} />
             {m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
           </Button>
         )}
@@ -531,7 +533,7 @@ export function ContentSection({
       {activeItems.length === 0 && archivedItems.length === 0 && (q || typeFilter !== "all") && (
         <div className="tw:text-center tw:py-6 tw:text-subtle">
           <p className="tw:mb-2 tw:text-sm">{m.admin_content_no_results()}</p>
-          <Button variant="outline-secondary" size="sm" onClick={handleClearFilters}>
+          <Button variant="outline" size="sm" onClick={handleClearFilters}>
             {m.admin_content_clear_filters()}
           </Button>
         </div>
@@ -544,7 +546,7 @@ export function ContentSection({
             className="tw:text-subtle tw:px-0"
             onClick={() => setArchivedOpen((value) => !value)}
           >
-            <Icon icon={archivedOpen ? ChevronDownIcon : ChevronRightIcon} className="tw:me-1" />
+            <Icon icon={archivedOpen ? ChevronDownIcon : ChevronRightIcon} />
             {m.admin_content_archived_section()}
           </Button>
           {archivedOpen && (
@@ -688,11 +690,13 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
       <div className="tw:flex tw:justify-between tw:items-center tw:mb-2 tw:flex-wrap tw:gap-2">
         <div>
           <h6 className="tw:mb-1 tw:text-primary">{m.admin_content_editions_section()}</h6>
-          <ButtonGroup size="sm">
+          <ButtonGroup aria-label={m.admin_content_edition_type_filter_aria()}>
             {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
               <Button
+                size="sm"
                 key={type}
-                variant={editionTypeFilter === type ? "primary" : "outline-secondary"}
+                variant={editionTypeFilter === type ? "default" : "outline"}
+                aria-pressed={editionTypeFilter === type}
                 onClick={() => setEditionTypeFilter(type)}
               >
                 {editionTypeLabel(type)}
@@ -701,7 +705,7 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
           </ButtonGroup>
         </div>
         <Button size="sm" variant="outline-primary" onClick={() => setAddModalOpen(true)}>
-          <Icon icon={PlusIcon} className="tw:me-1" />
+          <Icon icon={PlusIcon} />
           {m.admin_content_edition_add()}
         </Button>
       </div>

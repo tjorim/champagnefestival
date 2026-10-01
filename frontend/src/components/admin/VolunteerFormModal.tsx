@@ -6,11 +6,11 @@ import {
   AdminCheck,
 } from "@/components/admin/AdminFields";
 import { CirclePlusIcon, SaveIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 
 import {
   Dialog,
@@ -287,7 +287,7 @@ export default function VolunteerFormModal({
                   size="sm"
                   onClick={() => form.pushFieldValue("helpPeriods", emptyPeriod())}
                 >
-                  <Icon icon={CirclePlusIcon} className="tw:me-1" />
+                  <Icon icon={CirclePlusIcon} />
                   {m.admin_volunteers_add_help_period()}
                 </Button>
               </div>
@@ -309,7 +309,7 @@ export default function VolunteerFormModal({
                           onClick={() => void form.removeFieldValue("helpPeriods", index)}
                           disabled={helpPeriods.length === 1}
                         >
-                          <Icon icon={TrashIcon} className="tw:me-1" />
+                          <Icon icon={TrashIcon} />
                           {m.admin_volunteers_remove_help_period()}
                         </Button>
                       </div>
@@ -392,7 +392,7 @@ export default function VolunteerFormModal({
           </DialogBody>
 
           <DialogFooter>
-            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={onHide}>
               {m.admin_action_cancel()}
             </Button>
             <Button
@@ -407,9 +407,9 @@ export default function VolunteerFormModal({
               }
             >
               {isSubmitting ? (
-                <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
+                <Spinner as="span" animation="border" size="sm" />
               ) : (
-                <Icon icon={SaveIcon} className="tw:me-1" />
+                <Icon icon={SaveIcon} />
               )}
               {m.admin_people_save()}
             </Button>

@@ -1,10 +1,9 @@
 import { NotebookTextIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import { Button as TableButton } from "@/components/ui/button";
 import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useMemo } from "react";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 import {
   Dialog,
   DialogContent,
@@ -230,28 +229,28 @@ export default function LedgerModal({
               <span className="tw:text-muted-foreground tw:text-sm">
                 {m.admin_ledger_page_summary({ from: rangeFrom, to: rangeTo, total })}
               </span>
-              <TableButton
+              <Button
                 variant="outline"
                 size="sm"
                 disabled={isFetching || page <= 1}
                 onClick={onPreviousPage}
               >
                 {m.admin_ledger_previous_page()}
-              </TableButton>
+              </Button>
               <span className="tw:text-muted-foreground tw:text-sm">
                 {page} / {totalPages}
               </span>
-              <TableButton
+              <Button
                 variant="outline"
                 size="sm"
                 disabled={isFetching || page >= totalPages}
                 onClick={onNextPage}
               >
                 {m.admin_ledger_next_page()}
-              </TableButton>
+              </Button>
             </div>
           )}
-          <Button variant="outline-secondary" size="sm" onClick={onHide}>
+          <Button variant="outline" size="sm" onClick={onHide}>
             {m.close()}
           </Button>
         </DialogFooter>

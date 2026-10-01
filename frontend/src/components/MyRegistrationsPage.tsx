@@ -8,6 +8,7 @@ import {
   TriangleAlertIcon,
   UsersIcon,
 } from "lucide-react";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
@@ -15,7 +16,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   PublicField,
@@ -499,7 +499,7 @@ export default function MyRegistrationsPage() {
                   </Button>
                   <Button
                     size="sm"
-                    variant="outline-secondary"
+                    variant="outline"
                     disabled={claimVerifiedEmailMutation.isPending}
                     onClick={() => setClaimableDismissed(true)}
                   >
@@ -650,19 +650,21 @@ export default function MyRegistrationsPage() {
                           {registration.guestCount} {m.my_registrations_guests_label()}
                         </div>
                         {registration.eventDate && (
-                          <a
-                            className="btn btn-sm btn-outline-warning tw:mt-2"
+                          <ButtonLink
+                            size="sm"
+                            variant="outline-warning"
+                            className="tw:mt-2"
                             href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(registration.eventTitle)}&dates=${calendarDateRange(registration.eventDate)}`}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
                             {m.my_registrations_add_calendar()}
-                          </a>
+                          </ButtonLink>
                         )}
                         {registration.status !== "cancelled" && (
                           <Button
                             size="sm"
-                            variant="outline-light"
+                            variant="outline"
                             className="tw:mt-2 tw:ms-2"
                             onClick={() => {
                               submissionId.current = crypto.randomUUID();
@@ -718,7 +720,7 @@ export default function MyRegistrationsPage() {
 
               {showSignOut ? (
                 <Button
-                  variant="outline-secondary"
+                  variant="outline"
                   size="sm"
                   className="tw:mt-2 tw:w-full"
                   disabled={isSigningOut}
@@ -733,19 +735,19 @@ export default function MyRegistrationsPage() {
                       aria-hidden="true"
                     />
                   ) : (
-                    <Icon icon={LogOutIcon} className="tw:me-2" />
+                    <Icon icon={LogOutIcon} />
                   )}
                   {m.my_registrations_sign_out()}
                 </Button>
               ) : (
                 !auth.isAuthenticated && (
                   <Button
-                    variant="outline-secondary"
+                    variant="outline"
                     size="sm"
                     className="tw:mt-4 tw:w-full"
                     onClick={resetToRequestForm}
                   >
-                    <Icon icon={RefreshCwIcon} className="tw:me-2" />
+                    <Icon icon={RefreshCwIcon} />
                     {m.my_registrations_request_new_link()}
                   </Button>
                 )
@@ -804,7 +806,7 @@ export default function MyRegistrationsPage() {
             )}
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline-secondary" onClick={() => setRequestRegistration(null)}>
+            <Button variant="outline" onClick={() => setRequestRegistration(null)}>
               {m.close()}
             </Button>
             {!requestSubmitted && (

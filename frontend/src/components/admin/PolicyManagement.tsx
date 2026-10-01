@@ -1,14 +1,13 @@
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { AdminTextarea, AdminLabel } from "@/components/admin/AdminFields";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-import { Button as LocaleButton } from "@/components/ui/button";
 import {
   Table,
   TableHeader,
@@ -433,20 +432,24 @@ export default function PolicyManagement({
                   className="tw:flex tw:gap-1 tw:border-b tw:border-border"
                 >
                   {LOCALES.map((l) => (
-                    <LocaleButton
+                    <Button
                       key={l}
                       variant={locale === l ? "default" : "ghost"}
                       aria-pressed={locale === l}
                       onClick={() => setLocale(l)}
                     >
                       {l.toUpperCase()}
-                    </LocaleButton>
+                    </Button>
                   ))}
                 </div>
                 <div className="border border-top-0 tw:p-4">
-                  <ButtonGroup size="sm" className="tw:mb-2">
+                  <ButtonGroup
+                    aria-label={m.admin_policy_markdown_toolbar_aria()}
+                    className="tw:mb-2"
+                  >
                     <Button
-                      variant="outline-secondary"
+                      size="sm"
+                      variant="outline"
                       onClick={() =>
                         insertSnippet(
                           "**",
@@ -458,7 +461,8 @@ export default function PolicyManagement({
                       {m.admin_policy_markdown_bold()}
                     </Button>
                     <Button
-                      variant="outline-secondary"
+                      size="sm"
+                      variant="outline"
                       onClick={() =>
                         insertSnippet(
                           "_",
@@ -470,7 +474,8 @@ export default function PolicyManagement({
                       {m.admin_policy_markdown_italic()}
                     </Button>
                     <Button
-                      variant="outline-secondary"
+                      size="sm"
+                      variant="outline"
                       onClick={() =>
                         insertSnippet(
                           "## ",
@@ -482,7 +487,8 @@ export default function PolicyManagement({
                       {m.admin_policy_markdown_h2()}
                     </Button>
                     <Button
-                      variant="outline-secondary"
+                      size="sm"
+                      variant="outline"
                       onClick={() =>
                         insertSnippet(
                           "### ",
@@ -494,7 +500,8 @@ export default function PolicyManagement({
                       {m.admin_policy_markdown_h3()}
                     </Button>
                     <Button
-                      variant="outline-secondary"
+                      size="sm"
+                      variant="outline"
                       onClick={() =>
                         insertSnippet(
                           "[",
@@ -506,7 +513,8 @@ export default function PolicyManagement({
                       {m.admin_policy_markdown_link()}
                     </Button>
                     <Button
-                      variant="outline-secondary"
+                      size="sm"
+                      variant="outline"
                       onClick={() =>
                         insertSnippet(
                           "- ",

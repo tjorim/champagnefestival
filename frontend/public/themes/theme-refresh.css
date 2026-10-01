@@ -347,58 +347,33 @@ h2.section-header::after {
   gap: 0.8rem;
 }
 
-.btn {
-  border-radius: 999px;
+[data-slot="button"]:not([data-theme-scope="admin"] *) {
+  --tw-radius-md: 999px;
 }
 
-.btn-lg {
-  padding: 0.8rem 1.25rem;
-  font-size: 1rem;
-  font-weight: 750;
-}
-
-.btn-champagne,
-.bg-brand-gradient {
-  color: #18130c;
-  background: linear-gradient(135deg, var(--champagne), var(--champagne-deep));
-  border: 0;
+[data-slot="button"][data-variant="brand"]:not([data-theme-scope="admin"] *) {
+  --layout-inverse: #18130c;
+  background-image: linear-gradient(135deg, var(--champagne), var(--champagne-deep));
   box-shadow: 0 14px 32px rgba(216, 173, 86, 0.22);
 }
 
-.btn-champagne:hover,
-.bg-brand-gradient:hover {
-  color: #18130c;
-  background: linear-gradient(135deg, #ffe5a5, #c99a43);
+[data-slot="button"][data-variant="brand"]:hover:not(:disabled):not([data-theme-scope="admin"] *) {
+  background-image: linear-gradient(135deg, #ffe5a5, #c99a43);
 }
 
-#registrations .btn:disabled,
-#registrations .btn.disabled {
-  opacity: 1;
-  color: #18130c;
-  background-color: var(--champagne-deep);
-  border-color: var(--champagne-deep);
+#registrations [data-slot="button"][data-variant="warning"]:disabled {
+  --surface-warning: var(--champagne-deep);
+  --surface-warning-foreground: #18130c;
 }
 
-.btn-outline-light {
-  color: var(--text-color);
-  border-color: rgba(251, 246, 236, 0.36);
+[data-slot="button"][data-variant="light"]:not([data-theme-scope="admin"] *) {
+  --layout-inverse: var(--text-color);
+  --layout-contrast: var(--ink);
 }
 
-.btn-outline-light:hover {
-  color: var(--ink);
-  background: var(--text-color);
-  border-color: var(--text-color);
-}
-
-.hero .btn-outline-light {
-  color: #fff8ec;
-  border-color: rgba(255, 248, 236, 0.46);
-}
-
-.hero .btn-outline-light:hover {
-  color: #18130c;
-  background: #fff8ec;
-  border-color: #fff8ec;
+.hero [data-slot="button"][data-variant="light"] {
+  --layout-inverse: #fff8ec;
+  --layout-contrast: #18130c;
 }
 
 .features {
@@ -904,7 +879,7 @@ a:focus {
     flex-direction: column;
   }
 
-  .hero-actions .btn {
+  .hero-actions [data-slot="button"] {
     width: 100%;
   }
 

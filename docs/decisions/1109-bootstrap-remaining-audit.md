@@ -85,6 +85,16 @@ selector references are removed from the four themes that had them, and frozen e
 entries decrease from 17 to 15. Keep active pending review (screenshot publication waived);
 #1111 remains blocked by #1121–#1123 and its cleanup gates.
 
+#1121 is implemented locally (2026-10-01); see the [button migration audit](1121-buttons.md).
+All 43 scoped Bootstrap Button importers and three ButtonGroup importers use the owned
+Base UI Button, a link-rendering ButtonLink and a labelled `role="group"` ButtonGroup;
+raw `btn*` markup in `main.tsx`, the standalone back link, the contact/check-in/account
+pages and the Cuvée, Remuage and Riviera hero links no longer depends on Bootstrap. All 53
+`.btn*`/`.bg-brand-gradient` selector references are removed from the themes and admin CSS
+(buttons now retint through tokens and `data-variant` hooks). Frozen exception entries stay
+at 15. Keep active pending review and screenshot publication; #1111 remains blocked by
+#1122–#1123 and its cleanup gates.
+
 ## Preferred implementation order and ownership
 
 | Order | Issue | Scope |

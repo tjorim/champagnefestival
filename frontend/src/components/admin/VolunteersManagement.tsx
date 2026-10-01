@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import { FileSpreadsheetIcon, PencilIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -6,7 +7,6 @@ import { useState, useMemo, useCallback } from "react";
 import { type FilterFn, type SortingState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -201,7 +201,7 @@ export default function VolunteersManagement({
               <div className="tw:flex tw:flex-wrap tw:gap-1">
                 <Button
                   size="sm"
-                  variant="outline-light"
+                  variant="outline"
                   onClick={() => {
                     setEditingVolunteer(volunteer);
                     setShowForm(true);
@@ -259,11 +259,11 @@ export default function VolunteersManagement({
             <div className="tw:flex tw:gap-2">
               <Button
                 size="sm"
-                variant="outline-secondary"
+                variant="outline"
                 onClick={() => void handleExportCsv()}
                 disabled={exporting}
               >
-                <Icon icon={FileSpreadsheetIcon} className="tw:me-1" />
+                <Icon icon={FileSpreadsheetIcon} />
                 {m.admin_volunteers_export_csv()}
               </Button>
               <Button
@@ -274,7 +274,7 @@ export default function VolunteersManagement({
                   setShowForm(true);
                 }}
               >
-                <Icon icon={ThumbsUpIcon} className="tw:me-1" />
+                <Icon icon={ThumbsUpIcon} />
                 {m.admin_volunteers_add()}
               </Button>
             </div>
@@ -417,14 +417,14 @@ export default function VolunteersManagement({
               <p>{m.admin_volunteers_delete_confirm()}</p>
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline-secondary" size="sm" onClick={() => setDeletingId(null)}>
+              <Button variant="outline" size="sm" onClick={() => setDeletingId(null)}>
                 {m.admin_action_cancel()}
               </Button>
               <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
                 {deleting ? (
-                  <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
+                  <Spinner as="span" animation="border" size="sm" />
                 ) : (
-                  <Icon icon={TrashIcon} className="tw:me-1" />
+                  <Icon icon={TrashIcon} />
                 )}
                 {m.admin_action_confirm()}
               </Button>

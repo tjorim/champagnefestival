@@ -7,12 +7,12 @@ import {
   AdminTextarea,
 } from "@/components/admin/AdminFields";
 import { LoaderCircleIcon, SaveIcon, TriangleAlertIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 
 import {
   Dialog,
@@ -343,7 +343,7 @@ export default function RegistrationCreateModal({
             </form.Field>
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={onHide}>
               {m.admin_action_cancel()}
             </Button>
             <Button
@@ -353,9 +353,9 @@ export default function RegistrationCreateModal({
               disabled={isSubmitting || !watchedPersonOption || !hasValidEventSelection}
             >
               {isSubmitting ? (
-                <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
+                <Spinner as="span" animation="border" size="sm" />
               ) : (
-                <Icon icon={SaveIcon} className="tw:me-1" />
+                <Icon icon={SaveIcon} />
               )}
               {m.admin_create_action()}
             </Button>

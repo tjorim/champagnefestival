@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import { ContactRoundIcon, DownloadIcon, MailIcon, PencilIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -10,7 +11,6 @@ import {
 } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -218,7 +218,7 @@ export default function MembersManagement({
                 )}
                 <Button
                   size="sm"
-                  variant="outline-light"
+                  variant="outline"
                   onClick={() => {
                     setEditingMember(member);
                     setShowForm(true);
@@ -298,11 +298,11 @@ export default function MembersManagement({
               <ColumnVisibilityDropdown table={table} tableId="members" />
               <Button
                 size="sm"
-                variant="outline-secondary"
+                variant="outline"
                 onClick={handleExportCsv}
                 disabled={table.getPrePaginatedRowModel().rows.length === 0}
               >
-                <Icon icon={DownloadIcon} className="tw:me-1" />
+                <Icon icon={DownloadIcon} />
                 {m.admin_export_csv()}
               </Button>
               <Button
@@ -313,7 +313,7 @@ export default function MembersManagement({
                   setShowForm(true);
                 }}
               >
-                <Icon icon={ContactRoundIcon} className="tw:me-1" />
+                <Icon icon={ContactRoundIcon} />
                 {m.admin_members_add()}
               </Button>
             </div>
@@ -450,11 +450,7 @@ export default function MembersManagement({
               <p>{m.admin_members_delete_confirm()}</p>
             </DialogBody>
             <DialogFooter>
-              <Button
-                variant="outline-secondary"
-                onClick={() => setDeletingId(null)}
-                disabled={deleting}
-              >
+              <Button variant="outline" onClick={() => setDeletingId(null)} disabled={deleting}>
                 {m.admin_action_cancel()}
               </Button>
               <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleting}>

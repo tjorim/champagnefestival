@@ -13,10 +13,10 @@ import { useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import Spinner from "react-bootstrap/Spinner";
-import Button from "react-bootstrap/Button";
 import { m } from "@/paraglide/messages";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
@@ -199,7 +199,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                   </AdminField>
                 )}
               </form.Field>
-              <Button type="submit" variant="primary" disabled={updateMutation.isPending}>
+              <Button type="submit" disabled={updateMutation.isPending}>
                 {updateMutation.isPending
                   ? m.admin_settings_saving()
                   : m.admin_settings_save_contact()}

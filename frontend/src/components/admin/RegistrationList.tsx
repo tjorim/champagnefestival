@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import {
   CheckIcon,
@@ -28,8 +30,6 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
-import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -37,7 +37,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Button as TableButton } from "@/components/ui/button";
 
 import {
   Dialog,
@@ -768,7 +767,7 @@ export default function RegistrationList({
               <div className="tw:flex tw:flex-wrap tw:gap-1">
                 <Button
                   size="sm"
-                  variant="outline-light"
+                  variant="outline"
                   onClick={() => onViewDetail(reg)}
                   title={m.admin_qr_code()}
                   aria-label={m.admin_qr_code()}
@@ -813,7 +812,7 @@ export default function RegistrationList({
                 {hasMoreActions && (
                   <DropdownMenu>
                     <DropdownMenuTrigger
-                      render={<TableButton variant="outline" size="sm" />}
+                      render={<Button variant="outline" size="sm" />}
                       id={`reg-more-${reg.id}`}
                       aria-label={m.admin_more_actions_for({ name: reg.person.name })}
                     >
@@ -1082,7 +1081,7 @@ export default function RegistrationList({
             <div className="tw:flex tw:gap-2">
               <ColumnVisibilityDropdown table={table} tableId="registrations" />
               <Button
-                variant="outline-secondary"
+                variant="outline"
                 size="sm"
                 onClick={() => void handleExportCsv()}
                 disabled={exportingAllCsv}
@@ -1095,39 +1094,47 @@ export default function RegistrationList({
                     aria-hidden="true"
                   />
                 ) : (
-                  <Icon icon={DownloadIcon} className="tw:me-1" />
+                  <Icon icon={DownloadIcon} />
                 )}
                 {m.admin_export_csv()}
               </Button>
               <Button variant="outline-primary" size="sm" onClick={() => setShowCreateModal(true)}>
-                <Icon icon={PlusIcon} className="tw:me-1" />
+                <Icon icon={PlusIcon} />
                 {m.admin_add_registration()}
               </Button>
             </div>
           </div>
           {/* Row 2: filters + search */}
           <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
-            <ButtonGroup size="sm">
+            <ButtonGroup aria-label={m.admin_filter_edition_aria()}>
               <Button
-                variant={editionFilter === "all" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={editionFilter === "all" ? "default" : "outline"}
+                aria-pressed={editionFilter === "all"}
                 onClick={() => changeEditionFilter("all")}
               >
                 {m.admin_filter_edition_all()} ({editionCounts.all})
               </Button>
               <Button
-                variant={editionFilter === "festival" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={editionFilter === "festival" ? "default" : "outline"}
+                aria-pressed={editionFilter === "festival"}
                 onClick={() => changeEditionFilter("festival")}
               >
                 {m.admin_filter_edition_festivals()} ({editionCounts.festival})
               </Button>
               <Button
-                variant={editionFilter === "standalone" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={editionFilter === "standalone" ? "default" : "outline"}
+                aria-pressed={editionFilter === "standalone"}
                 onClick={() => changeEditionFilter("standalone")}
               >
                 {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
               </Button>
               <Button
-                variant={activeEditionOnly ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={activeEditionOnly ? "default" : "outline"}
+                aria-pressed={activeEditionOnly}
                 onClick={toggleActiveEditionOnly}
               >
                 {m.admin_filter_active_edition()} ({editionCounts.active})
@@ -1150,29 +1157,37 @@ export default function RegistrationList({
                 ))}
               </AdminSelect>
             )}
-            <ButtonGroup size="sm">
+            <ButtonGroup aria-label={m.admin_filter_date_aria()}>
               <Button
-                variant={dateFilter === "today" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={dateFilter === "today" ? "default" : "outline"}
+                aria-pressed={dateFilter === "today"}
                 onClick={toggleDateFilter}
               >
                 {m.admin_filter_today()} ({todayCount})
               </Button>
             </ButtonGroup>
-            <ButtonGroup size="sm">
+            <ButtonGroup aria-label={m.admin_filter_status_aria()}>
               <Button
-                variant={filter === "all" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={filter === "all" ? "default" : "outline"}
+                aria-pressed={filter === "all"}
                 onClick={() => changeStatusFilter("all")}
               >
                 {m.admin_filter_all()} ({statusCounts.all})
               </Button>
               <Button
-                variant={filter === "pending" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={filter === "pending" ? "default" : "outline"}
+                aria-pressed={filter === "pending"}
                 onClick={() => changeStatusFilter("pending")}
               >
                 {m.admin_filter_pending()} ({statusCounts.pending})
               </Button>
               <Button
-                variant={filter === "confirmed" ? "primary" : "outline-secondary"}
+                size="sm"
+                variant={filter === "confirmed" ? "default" : "outline"}
+                aria-pressed={filter === "confirmed"}
                 onClick={() => changeStatusFilter("confirmed")}
               >
                 {m.admin_filter_confirmed()} ({statusCounts.confirmed})
@@ -1208,7 +1223,7 @@ export default function RegistrationList({
                         </span>
                         <span className="tw:flex tw:items-center tw:gap-2">
                           <Button
-                            variant="outline-secondary"
+                            variant="outline"
                             size="sm"
                             className="tw:py-0 tw:px-1"
                             disabled={exportingEventId === eventStats.eventId}
@@ -1368,11 +1383,7 @@ export default function RegistrationList({
             hasActiveRegistrationFilters ? (
               <div className="tw:text-subtle tw:text-center tw:py-6 tw:px-4">
                 <p className="tw:mb-2">{m.admin_no_registration_filter_matches()}</p>
-                <Button
-                  variant="outline-secondary"
-                  size="sm"
-                  onClick={handleClearRegistrationFilters}
-                >
+                <Button variant="outline" size="sm" onClick={handleClearRegistrationFilters}>
                   {m.admin_content_clear_filters()}
                 </Button>
               </div>
@@ -1438,25 +1449,25 @@ export default function RegistrationList({
                     ))}
                   </SelectContent>
                 </Select>
-                <TableButton
+                <Button
                   variant="outline"
                   size="sm"
                   disabled={page <= 1 || pageQuery.isFetching}
                   onClick={() => setPage((p) => Math.max(1, p - 1))}
                 >
                   {m.admin_registrations_page_previous()}
-                </TableButton>
+                </Button>
                 <span className="tw:text-muted-foreground tw:text-sm">
                   {page} / {totalPages}
                 </span>
-                <TableButton
+                <Button
                   variant="outline"
                   size="sm"
                   disabled={page >= totalPages || pageQuery.isFetching}
                   onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 >
                   {m.admin_registrations_page_next()}
-                </TableButton>
+                </Button>
               </div>
             </div>
           )}
@@ -1505,7 +1516,7 @@ export default function RegistrationList({
               {m.admin_action_cancel()}
             </Button>
             <Button
-              variant={bulkAction === "cancel" ? "danger" : "primary"}
+              variant={bulkAction === "cancel" ? "danger" : "default"}
               onClick={executeBulkAction}
               disabled={bulkInProgress}
             >

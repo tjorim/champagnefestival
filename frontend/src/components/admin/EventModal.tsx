@@ -7,10 +7,10 @@ import {
   AdminCheck,
 } from "@/components/admin/AdminFields";
 import { SaveIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
-import Button from "react-bootstrap/Button";
 
 import {
   Dialog,
@@ -362,11 +362,11 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             )}
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={onHide}>
               {m.close()}
             </Button>
             <Button type="submit" variant="warning" size="sm">
-              <Icon icon={SaveIcon} className="tw:me-1" />
+              <Icon icon={SaveIcon} />
               {m.admin_save()}
             </Button>
           </DialogFooter>

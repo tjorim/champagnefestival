@@ -8,13 +8,13 @@ import {
   AdminDescription,
 } from "@/components/admin/AdminFields";
 import { PencilIcon, PlusIcon, SaveIcon, TrashIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -619,7 +619,7 @@ export default function EventProductsModal({
         )}
 
         <div className="tw:flex tw:gap-2 tw:justify-end">
-          <Button variant="outline-secondary" size="sm" onClick={() => setFormOpen(false)}>
+          <Button variant="outline" size="sm" onClick={() => setFormOpen(false)}>
             {m.close()}
           </Button>
           <Button
@@ -628,7 +628,7 @@ export default function EventProductsModal({
             size="sm"
             disabled={saveMutation.isPending || previewPending}
           >
-            <Icon icon={SaveIcon} className="tw:me-1" />
+            <Icon icon={SaveIcon} />
             {m.admin_save()}
           </Button>
         </div>
@@ -680,7 +680,7 @@ export default function EventProductsModal({
           <span className="tw:flex tw:gap-1 tw:shrink-0">
             <Button
               size="sm"
-              variant="outline-secondary"
+              variant="outline"
               onClick={() => openEdit(product)}
               disabled={formOpen && !isBeingEdited}
               aria-label={`Edit ${product.name}`}
@@ -787,7 +787,7 @@ export default function EventProductsModal({
                 >
                   {m.admin_save()}
                 </Button>
-                <Button variant="outline-secondary" onClick={() => setPreview(null)}>
+                <Button variant="outline" onClick={() => setPreview(null)}>
                   {m.close()}
                 </Button>
               </section>
@@ -825,18 +825,18 @@ export default function EventProductsModal({
               renderForm()
             ) : (
               <Button
-                variant="outline-secondary"
+                variant="outline"
                 size="sm"
                 onClick={openAdd}
                 disabled={productsQuery.isPending || productsQuery.isError || formOpen}
               >
-                <Icon icon={PlusIcon} className="tw:me-1" />
+                <Icon icon={PlusIcon} />
                 {m.admin_products_add()}
               </Button>
             )}
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={onHide}>
               {m.close()}
             </Button>
           </DialogFooter>

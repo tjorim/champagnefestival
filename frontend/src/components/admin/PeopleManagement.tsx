@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import {
   ArrowLeftRightIcon,
@@ -27,7 +28,6 @@ import {
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
@@ -457,7 +457,7 @@ export default function PeopleManagement({
                 )}
                 <Button
                   size="sm"
-                  variant="outline-light"
+                  variant="outline"
                   onClick={() => {
                     setEditingPerson(person);
                     setShowForm(true);
@@ -487,7 +487,7 @@ export default function PeopleManagement({
                     onClick={() => openMerge(person, dup)}
                     title={`${m.admin_people_merge_title()}: ${dup.name}`}
                   >
-                    <Icon icon={UserRoundCogIcon} className="tw:me-1" />
+                    <Icon icon={UserRoundCogIcon} />
                     {m.admin_people_merge_title()}
                   </Button>
                 ))}
@@ -557,7 +557,7 @@ export default function PeopleManagement({
                   setShowForm(true);
                 }}
               >
-                <Icon icon={UserPlusIcon} className="tw:me-1" />
+                <Icon icon={UserPlusIcon} />
                 {m.admin_people_add_person()}
               </Button>
             </div>
@@ -580,13 +580,13 @@ export default function PeopleManagement({
             </AdminSelect>
             <Button
               size="sm"
-              variant={copySuccess ? "success" : "outline-secondary"}
+              variant={copySuccess ? "success" : "outline"}
               onClick={handleCopyEmails}
               disabled={filteredEmails.length === 0}
               title={m.admin_people_copy_emails_tooltip()}
               aria-label={`${m.admin_people_copy_emails_tooltip()} (${filteredEmails.length})`}
             >
-              <Icon icon={copySuccess ? CheckIcon : ClipboardIcon} className="tw:me-1" />
+              <Icon icon={copySuccess ? CheckIcon : ClipboardIcon} />
               {copySuccess ? m.admin_people_emails_copied() : `${filteredEmails.length}`}
             </Button>
             <AdminInput
@@ -786,7 +786,7 @@ export default function PeopleManagement({
             </DialogBody>
 
             <DialogFooter>
-              <Button variant="outline-secondary" onClick={() => setMergeState(null)}>
+              <Button variant="outline" onClick={() => setMergeState(null)}>
                 {m.close()}
               </Button>
               <Button variant="warning" onClick={handleMergeConfirm} disabled={merging}>
@@ -834,14 +834,14 @@ export default function PeopleManagement({
               <p>{m.admin_people_delete_confirm()}</p>
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline-secondary" size="sm" onClick={() => setDeletingId(null)}>
+              <Button variant="outline" size="sm" onClick={() => setDeletingId(null)}>
                 {m.admin_action_cancel()}
               </Button>
               <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
                 {deleting ? (
-                  <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
+                  <Spinner as="span" animation="border" size="sm" />
                 ) : (
-                  <Icon icon={TrashIcon} className="tw:me-1" />
+                  <Icon icon={TrashIcon} />
                 )}
                 {m.admin_action_confirm()}
               </Button>
@@ -1006,7 +1006,7 @@ export default function PeopleManagement({
               <div className="tw:flex tw:justify-between tw:gap-2">
                 <div className="tw:flex tw:gap-2">
                   <Button
-                    variant="outline-secondary"
+                    variant="outline"
                     size="sm"
                     disabled={personRegistrations.length === 0}
                     onClick={() => {
@@ -1016,25 +1016,25 @@ export default function PeopleManagement({
                     }}
                     title={m.admin_payment_view_ledger()}
                   >
-                    <Icon icon={NotebookTextIcon} className="tw:me-1" />
+                    <Icon icon={NotebookTextIcon} />
                     {m.admin_payment_view_ledger()}
                   </Button>
                   <Button
-                    variant="outline-secondary"
+                    variant="outline"
                     size="sm"
                     disabled={exportingLedger || personRegistrations.length === 0}
                     onClick={() => void handleExportLedger()}
                     title={m.admin_people_export_ledger()}
                   >
                     {exportingLedger ? (
-                      <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
+                      <Spinner as="span" animation="border" size="sm" />
                     ) : (
-                      <Icon icon={FileSpreadsheetIcon} className="tw:me-1" />
+                      <Icon icon={FileSpreadsheetIcon} />
                     )}
                     {m.admin_people_export_ledger()}
                   </Button>
                 </div>
-                <Button variant="outline-secondary" size="sm" onClick={closePersonRegistrations}>
+                <Button variant="outline" size="sm" onClick={closePersonRegistrations}>
                   {m.close()}
                 </Button>
               </div>

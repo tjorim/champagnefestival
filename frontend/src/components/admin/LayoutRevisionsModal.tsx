@@ -7,12 +7,12 @@ import {
   AdminCheck,
 } from "@/components/admin/AdminFields";
 import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -587,7 +587,7 @@ export default function LayoutRevisionsModal({
                     <div className="tw:flex tw:gap-2 tw:justify-end">
                       <Button
                         size="sm"
-                        variant="outline-secondary"
+                        variant="outline"
                         onClick={() => {
                           setRestoreTarget(null);
                           setPreview(null);

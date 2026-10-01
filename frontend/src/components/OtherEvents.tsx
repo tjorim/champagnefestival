@@ -1,9 +1,9 @@
 import { CalendarCheckIcon, CalendarDaysIcon, MapPinIcon, UsersIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import SectionHeading from "@/components/SectionHeading";
 import RegistrationModal from "@/components/RegistrationModal";
@@ -292,7 +292,7 @@ export default function OtherEvents() {
                           )}
                           onClick={() => setSelectedEvent(item.event)}
                         >
-                          <Icon icon={CalendarCheckIcon} className="tw:me-2" />
+                          <Icon icon={CalendarCheckIcon} />
                           {item.event.registrationsCloseAt &&
                           new Date(item.event.registrationsCloseAt).getTime() <= now
                             ? m.registration_closed()

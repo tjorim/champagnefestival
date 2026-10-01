@@ -24,11 +24,11 @@ const RivieraHero = ({
         <h1 className="riviera-hero__title">{title}</h1>
         <p className="riviera-hero__subtitle">{subtitle}</p>
         <div className="riviera-hero__actions">
-          <a href="#next-festival" className="btn riviera-button riviera-button--primary">
+          <a href="#next-festival" className="riviera-button riviera-button--primary">
             {learnMoreLabel}
-            <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
+            <Icon icon={CircleArrowDownIcon} />
           </a>
-          <a href="#schedule" className="btn riviera-button riviera-button--secondary">
+          <a href="#schedule" className="riviera-button riviera-button--secondary">
             {scheduleLabel}
           </a>
         </div>

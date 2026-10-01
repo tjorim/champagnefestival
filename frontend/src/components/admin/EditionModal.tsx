@@ -8,12 +8,12 @@ import {
   AdminCheck,
 } from "@/components/admin/AdminFields";
 import { SaveIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 
 import {
   Dialog,
@@ -578,7 +578,7 @@ export default function EditionModal({
             )}
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={onHide}>
               {m.close()}
             </Button>
             <Button
@@ -588,9 +588,9 @@ export default function EditionModal({
               disabled={saveEditionMutation.isPending}
             >
               {saveEditionMutation.isPending ? (
-                <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
+                <Spinner as="span" animation="border" size="sm" />
               ) : (
-                <Icon icon={SaveIcon} className="tw:me-1" />
+                <Icon icon={SaveIcon} />
               )}
               {m.admin_save()}
             </Button>

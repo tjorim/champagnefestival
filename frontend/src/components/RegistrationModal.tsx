@@ -6,6 +6,7 @@ import {
   TicketIcon,
   TriangleAlertIcon,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMutation } from "@tanstack/react-query";
 import { useForm, useSelector } from "@tanstack/react-form";
@@ -18,7 +19,6 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Button from "react-bootstrap/Button";
 import {
   PublicCheck,
   PublicDescription,
@@ -556,7 +556,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                           </span>
                           <div className="tw:flex tw:items-center tw:gap-2">
                             <Button
-                              variant="outline-secondary"
+                              variant="outline"
                               size="sm"
                               onClick={() => handleQuantityChange(product.id, qty - 1)}
                               disabled={qty === 0}
@@ -664,7 +664,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
         {submitSuccess && (
           <DialogFooter>
-            <Button variant="outline-secondary" onClick={handleClose}>
+            <Button variant="outline" onClick={handleClose}>
               {m.close()}
             </Button>
           </DialogFooter>

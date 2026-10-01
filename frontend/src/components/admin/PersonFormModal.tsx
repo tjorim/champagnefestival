@@ -9,11 +9,11 @@ import {
   AdminCheck,
 } from "@/components/admin/AdminFields";
 import { SaveIcon, UserPlusIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 
 import {
   Dialog,
@@ -377,7 +377,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   <Button
                     key={role}
                     size="sm"
-                    variant={currentRoles.includes(role) ? "warning" : "outline-secondary"}
+                    variant={currentRoles.includes(role) ? "warning" : "outline"}
                     onClick={() => toggleRole(role)}
                     type="button"
                   >
@@ -430,7 +430,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
           </DialogBody>
 
           <DialogFooter>
-            <Button variant="outline-secondary" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={onHide}>
               {m.admin_action_cancel()}
             </Button>
             <Button
@@ -440,9 +440,9 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               disabled={isSubmitting || !nameValue?.trim()}
             >
               {isSubmitting ? (
-                <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
+                <Spinner as="span" animation="border" size="sm" />
               ) : (
-                <Icon icon={SaveIcon} className="tw:me-1" />
+                <Icon icon={SaveIcon} />
               )}
               {m.admin_people_save()}
             </Button>

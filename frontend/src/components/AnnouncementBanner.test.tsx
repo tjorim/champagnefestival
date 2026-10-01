@@ -63,7 +63,7 @@ describe("AnnouncementBanner", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Entrance changed");
     expect(dialog).toHaveTextContent("Festival closing");
-    expect(screen.getByRole("button", { name: "View map" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "View map" })).toHaveAttribute(
       "href",
       "https://example.com/map",
     );

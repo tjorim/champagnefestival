@@ -80,23 +80,22 @@
   background-clip: text;
 }
 
-/* ---- Buttons — replace warning (yellow) with brand blue ---- */
-#admin .btn-warning {
-  background: var(--adm-gradient) !important;
-  border-color: var(--adm-primary) !important;
-  color: #fff !important;
-  font-weight: 600 !important;
+/* ---- Buttons — replace warning (yellow) with brand blue ----
+   Utilities own the background colour; the tokens retint it and the gradient
+   paints above it. */
+[data-theme-scope="admin"] [data-slot="button"][data-variant="warning"] {
+  --surface-warning: var(--adm-primary, #5a7ff0);
+  --surface-warning-foreground: #fff;
+  background-image: var(--adm-gradient, linear-gradient(135deg, #5a7ff0, #9a5df6));
+  font-weight: 600;
 }
 
-#admin .btn-warning:hover,
-#admin .btn-warning:focus {
+[data-theme-scope="admin"] [data-slot="button"][data-variant="warning"]:hover:not(:disabled) {
   filter: brightness(1.1);
-  box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb), 0.25) !important;
 }
 
-#admin .btn-warning:disabled {
-  filter: none;
-  opacity: 0.55;
+[data-theme-scope="admin"] [data-slot="button"][data-variant="warning"]:focus-visible {
+  box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb, 90, 127, 240), 0.25);
 }
 
 /* keep outline-secondary and outline-danger as-is — they already work with dark theme */
@@ -585,17 +584,6 @@
   .admin-mobile-toggle {
     display: none !important;
   }
-}
-
-[data-theme-scope="admin"] [data-slot="dialog-content"] .btn-warning {
-  background: var(--adm-gradient) !important;
-  border-color: var(--adm-primary) !important;
-  color: #fff !important;
-  font-weight: 600 !important;
-}
-
-[data-theme-scope="admin"] [data-slot="dialog-content"] .btn-warning:hover {
-  filter: brightness(1.1);
 }
 
 [data-theme-scope="admin"] [data-slot="dialog-content"] .tw\:text-highlight {

@@ -1,6 +1,5 @@
 import { Fragment, useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Button from "react-bootstrap/Button";
 import {
   Dialog,
   DialogContent,
@@ -9,6 +8,7 @@ import {
   DialogBody,
 } from "@/components/ui/dialog";
 
+import { ButtonLink } from "@/components/ui/button";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import { queryKeys } from "@/utils/queryKeys";
@@ -119,9 +119,9 @@ export default function AnnouncementBanner() {
                 <li key={item.id} className={`announcement-dialog-item announcement-${item.level}`}>
                   <p className="tw:mb-2">{item.text}</p>
                   {item.link_url && item.link_label && (
-                    <Button href={item.link_url} variant="primary" size="sm">
+                    <ButtonLink href={item.link_url} size="sm">
                       {item.link_label}
-                    </Button>
+                    </ButtonLink>
                   )}
                 </li>
               ))}

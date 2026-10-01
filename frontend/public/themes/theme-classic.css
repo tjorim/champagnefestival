@@ -398,8 +398,12 @@ main {
 /* Only override Bootstrap variables that need customization for our brand */
 
 /* Brand color utilities - with higher specificity instead of !important */
-.bg-brand-gradient {
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+[data-slot="button"][data-variant="brand"] {
+  background-image: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+}
+
+[data-slot="button"][data-variant="brand"]:hover:not(:disabled) {
+  filter: brightness(1.1);
 }
 
 .gradient-text {

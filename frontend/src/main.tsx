@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
+import { Button, ButtonLink } from "@/components/ui/button";
 import React, { lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -118,10 +119,10 @@ function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) 
         </span>
         <div className="standalone-navbar-actions tw:flex tw:gap-2 tw:items-center">
           <LanguageSwitcher />
-          <Link to="/" className="btn btn-sm btn-outline-secondary">
-            <Icon icon={ArrowLeftIcon} className="tw:me-1" />
+          <ButtonLink render={<Link to="/" />} variant="outline" size="sm">
+            <Icon icon={ArrowLeftIcon} />
             {m.back_to_site()}
-          </Link>
+          </ButtonLink>
         </div>
       </div>
     </nav>
@@ -430,13 +431,14 @@ function App() {
           <section className="hero" id="welcome">
             <h1 className="brand-title">{m.welcome_title()}</h1>
             <p className="hero-subtitle">{m.welcome_subtitle()}</p>
-            <a
+            <ButtonLink
               href="#next-festival"
-              className="btn bg-brand-gradient tw:text-inverse rounded-pill border-0 tw:py-2 tw:px-6 tw:font-bold"
+              variant="brand"
+              className="tw:rounded-full tw:px-6 tw:py-2"
             >
               {m.welcome_learn_more()}
-              <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
-            </a>
+              <Icon icon={CircleArrowDownIcon} />
+            </ButtonLink>
           </section>
         ) : (
           <section className="hero" id="welcome">
@@ -445,13 +447,23 @@ function App() {
               <h1 className="brand-title">{m.welcome_title()}</h1>
               <p className="hero-subtitle">{m.welcome_subtitle()}</p>
               <div className="hero-actions">
-                <a href="#next-festival" className="btn btn-champagne btn-lg">
+                <ButtonLink
+                  href="#next-festival"
+                  variant="brand"
+                  size="lg"
+                  className="tw:h-auto tw:px-5 tw:py-3 tw:text-base"
+                >
                   {m.welcome_learn_more()}
-                  <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
-                </a>
-                <a href="#schedule" className="btn btn-outline-light btn-lg">
+                  <Icon icon={CircleArrowDownIcon} />
+                </ButtonLink>
+                <ButtonLink
+                  href="#schedule"
+                  variant="light"
+                  size="lg"
+                  className="tw:h-auto tw:px-5 tw:py-3 tw:text-base tw:font-bold"
+                >
                   {m.schedule_title()}
-                </a>
+                </ButtonLink>
               </div>
             </div>
           </section>
@@ -671,15 +683,16 @@ function App() {
               title={m.registration_title()}
               subtitle={m.registration_description()}
             />
-            <button
-              type="button"
-              className="btn btn-warning btn-lg rounded-pill tw:px-12 tw:font-bold"
+            <Button
+              variant="warning"
+              size="lg"
+              className="tw:rounded-full tw:px-12 tw:font-bold"
               onClick={() => setShowRegistrationModal(true)}
               disabled={registrableEvents.length === 0}
             >
-              <Icon icon={CalendarPlusIcon} className="tw:me-2" />
+              <Icon icon={CalendarPlusIcon} />
               {m.registration_cta()}
-            </button>
+            </Button>
           </div>
         </section>
       </main>
