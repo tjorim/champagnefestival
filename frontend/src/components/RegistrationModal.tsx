@@ -18,8 +18,18 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
+import {
+  PublicCheck,
+  PublicDescription,
+  PublicError,
+  PublicField,
+  PublicInput,
+  PublicLabel,
+  PublicOption,
+  PublicSelect,
+  PublicTextarea,
+} from "@/components/PublicFields";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
@@ -307,7 +317,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               </a>
             </Alert>
           ) : (
-            <Form
+            <form
               onSubmit={(e) => {
                 e.preventDefault();
                 void form.handleSubmit();
@@ -316,7 +326,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
             >
               <form.Field name="honeypot">
                 {(field) => (
-                  <Form.Control
+                  <PublicInput
                     type="text"
                     aria-hidden="true"
                     tabIndex={-1}
@@ -341,23 +351,18 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 {(field) => {
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
-                    <Form.Group className="tw:mb-4" controlId="res-name">
-                      <Form.Label>{m.registration_name()} *</Form.Label>
-                      <Form.Control
+                    <PublicField className="tw:mb-4" controlId="res-name">
+                      <PublicLabel>{m.registration_name()} *</PublicLabel>
+                      <PublicInput
                         type="text"
-                        isInvalid={showErr}
-                        className="tw:bg-popover tw:text-foreground tw:border-border"
+                        aria-invalid={showErr}
                         autoComplete="name"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                       />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
+                      {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                    </PublicField>
                   );
                 }}
               </form.Field>
@@ -378,23 +383,18 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 {(field) => {
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
-                    <Form.Group className="tw:mb-4" controlId="res-email">
-                      <Form.Label>{m.registration_email()} *</Form.Label>
-                      <Form.Control
+                    <PublicField className="tw:mb-4" controlId="res-email">
+                      <PublicLabel>{m.registration_email()} *</PublicLabel>
+                      <PublicInput
                         type="email"
-                        isInvalid={showErr}
-                        className="tw:bg-popover tw:text-foreground tw:border-border"
+                        aria-invalid={showErr}
                         autoComplete="email"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                       />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
+                      {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                    </PublicField>
                   );
                 }}
               </form.Field>
@@ -412,23 +412,18 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 {(field) => {
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
-                    <Form.Group className="tw:mb-4" controlId="res-phone">
-                      <Form.Label>{m.registration_phone()} *</Form.Label>
-                      <Form.Control
+                    <PublicField className="tw:mb-4" controlId="res-phone">
+                      <PublicLabel>{m.registration_phone()} *</PublicLabel>
+                      <PublicInput
                         type="tel"
-                        isInvalid={showErr}
-                        className="tw:bg-popover tw:text-foreground tw:border-border"
+                        aria-invalid={showErr}
                         autoComplete="tel"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                       />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
+                      {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                    </PublicField>
                   );
                 }}
               </form.Field>
@@ -450,64 +445,56 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 {(field) => {
                   const showErr = field.meta.isTouched && field.errors.length > 0;
                   return (
-                    <Form.Group className="tw:mb-4" controlId="res-guests">
-                      <Form.Label>{m.registration_guests()} *</Form.Label>
-                      <Form.Control
+                    <PublicField className="tw:mb-4" controlId="res-guests">
+                      <PublicLabel>{m.registration_guests()} *</PublicLabel>
+                      <PublicInput
                         type="number"
-                        isInvalid={showErr}
+                        aria-invalid={showErr}
                         min={MIN_GUESTS}
                         max={MAX_GUESTS}
-                        className="tw:bg-popover tw:text-foreground tw:border-border"
                         value={field.value}
                         onChange={(e) => field.handleChange(Number(e.target.value))}
                         onBlur={field.handleBlur}
                       />
-                      {showErr && (
-                        <Form.Control.Feedback type="invalid">
-                          {field.errors[0]?.message}
-                        </Form.Control.Feedback>
-                      )}
-                    </Form.Group>
+                      {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                    </PublicField>
                   );
                 }}
               </form.Field>
 
               <form.Field name="preferredLanguage">
                 {(field) => (
-                  <Form.Group className="tw:mb-4" controlId="res-preferred-language">
-                    <Form.Label>{m.registration_preferred_language()}</Form.Label>
-                    <Form.Select
+                  <PublicField className="tw:mb-4" controlId="res-preferred-language">
+                    <PublicLabel>{m.registration_preferred_language()}</PublicLabel>
+                    <PublicSelect
                       value={field.value}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value as "nl" | "fr" | "en")
+                      onValueChange={(language) =>
+                        field.handleChange(language as "nl" | "fr" | "en")
                       }
                     >
-                      <option value="nl">Nederlands</option>
-                      <option value="fr">Français</option>
-                      <option value="en">English</option>
-                    </Form.Select>
-                    <Form.Text className="tw:text-subtle">
+                      <PublicOption value="nl">Nederlands</PublicOption>
+                      <PublicOption value="fr">Français</PublicOption>
+                      <PublicOption value="en">English</PublicOption>
+                    </PublicSelect>
+                    <PublicDescription>
                       {m.registration_preferred_language_help()}
-                    </Form.Text>
-                  </Form.Group>
+                    </PublicDescription>
+                  </PublicField>
                 )}
               </form.Field>
 
               <form.Field name="marketingOptIn">
                 {(field) => (
-                  <Form.Group className="tw:mb-4" controlId="res-marketing-opt-in">
-                    <Form.Check
+                  <PublicField className="tw:mb-4" controlId="res-marketing-opt-in">
+                    <PublicCheck
                       id="res-marketing-opt-in-check"
-                      type="checkbox"
                       label={m.registration_marketing_opt_in()}
                       checked={field.value}
-                      onChange={(e) => field.handleChange(e.target.checked)}
-                      aria-describedby="res-marketing-opt-in-help"
+                      onCheckedChange={(checked) => field.handleChange(checked)}
+                      aria-describedby="res-marketing-opt-in-description"
                     />
-                    <Form.Text id="res-marketing-opt-in-help" className="tw:text-subtle">
-                      {m.registration_marketing_opt_in_help()}
-                    </Form.Text>
-                  </Form.Group>
+                    <PublicDescription>{m.registration_marketing_opt_in_help()}</PublicDescription>
+                  </PublicField>
                 )}
               </form.Field>
 
@@ -562,10 +549,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                               </>
                             )}
                             {product.description && (
-                              <span
-                                className="tw:text-subtle tw:block"
-                                style={{ fontSize: "0.75rem" }}
-                              >
+                              <span className="tw:text-subtle tw:block tw:text-xs">
                                 {product.description}
                               </span>
                             )}
@@ -580,10 +564,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                             >
                               <Icon icon={MinusIcon} />
                             </Button>
-                            <span
-                              className="tw:text-foreground"
-                              style={{ minWidth: "1.5rem", textAlign: "center" }}
-                            >
+                            <span className="tw:text-foreground tw:min-w-6 tw:text-center">
                               {qty}
                             </span>
                             <Button
@@ -608,7 +589,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                           </div>
                         )}
                         {included && (
-                          <div className="tw:text-subtle" style={{ fontSize: "0.75rem" }}>
+                          <div className="tw:text-subtle tw:text-xs">
                             {m.registration_order_included_note({
                               count: included.quantity,
                               source: included.sourceName,
@@ -629,23 +610,18 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
               <form.Field name="notes">
                 {(field) => (
-                  <Form.Group className="tw:mb-4" controlId="res-notes">
-                    <Form.Label>{m.registration_notes()}</Form.Label>
-                    <Form.Control
-                      as="textarea"
+                  <PublicField className="tw:mb-4" controlId="res-notes">
+                    <PublicLabel>{m.registration_notes()}</PublicLabel>
+                    <PublicTextarea
                       rows={3}
                       maxLength={4000}
-                      aria-describedby="res-notes-help"
                       placeholder={m.registration_notes_placeholder()}
-                      className="tw:bg-popover tw:text-foreground tw:border-border"
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <Form.Text id="res-notes-help" className="tw:text-subtle">
-                      {m.registration_notes_help()}
-                    </Form.Text>
-                  </Form.Group>
+                    <PublicDescription>{m.registration_notes_help()}</PublicDescription>
+                  </PublicField>
                 )}
               </form.Field>
 
@@ -682,7 +658,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   </>
                 )}
               </Button>
-            </Form>
+            </form>
           )}
         </DialogBody>
 

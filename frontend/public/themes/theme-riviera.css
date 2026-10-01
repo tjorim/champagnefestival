@@ -729,14 +729,6 @@ html[data-visual-theme="riviera"] .bubble-background {
   --layout-content: var(--text-color) !important;
 }
 
-.standalone-main #check-in .form-control,
-.standalone-main #my-registrations .form-control,
-.standalone-main #check-in .form-select,
-.standalone-main #my-registrations .form-select {
-  color: var(--text-color) !important;
-  background-color: #fffaf0 !important;
-}
-
 @media (max-width: 767.98px) {
   .riviera-hero {
     min-height: auto;

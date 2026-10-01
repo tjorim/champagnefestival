@@ -77,6 +77,14 @@ Frozen exception entries decrease from 34 to 17, with dynamic floor-plan/room-co
 exceptions narrowly documented in source. Keep active pending review and screenshot
 publication; #1111 remains blocked by its remaining prerequisites and cleanup gates.
 
+#1120 is implemented locally (2026-10-01); see the [public form migration audit](1120-public-forms.md).
+All six scoped Bootstrap Form importers (76 opening tags) are replaced with the owned
+field/control layer plus a generated RadioGroup; the Select popup follows the runtime theme
+on public pages. Existing TanStack and plain React state is unchanged. All 26 public form
+selector references are removed from the four themes that had them, and frozen exception
+entries decrease from 17 to 15. Keep active pending review and screenshot publication;
+#1111 remains blocked by #1121–#1123 and its cleanup gates.
+
 ## Preferred implementation order and ownership
 
 | Order | Issue | Scope |
