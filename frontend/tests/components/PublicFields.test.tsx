@@ -83,7 +83,7 @@ describe("owned public fields", () => {
     expect(trigger).toHaveFocus();
   });
 
-  it("toggles a labelled consent checkbox and keeps the description association", async () => {
+  it("toggles a labeled consent checkbox and keeps the description association", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(

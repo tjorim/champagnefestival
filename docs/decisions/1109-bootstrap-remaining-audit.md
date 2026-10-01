@@ -82,7 +82,7 @@ All six scoped Bootstrap Form importers (76 opening tags) are replaced with the 
 field/control layer plus a generated RadioGroup; the Select popup follows the runtime theme
 on public pages. Existing TanStack and plain React state is unchanged. All 26 public form
 selector references are removed from the four themes that had them, and frozen exception
-entries decrease from 17 to 15. Keep active pending review and screenshot publication;
+entries decrease from 17 to 15. Keep active pending review (screenshot publication waived);
 #1111 remains blocked by #1121–#1123 and its cleanup gates.
 
 ## Preferred implementation order and ownership

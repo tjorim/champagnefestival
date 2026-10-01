@@ -30,7 +30,7 @@ number formatting. Controls keep their explicit IDs (`res-name`, `name`,
 and labels still resolve. Duplicate-submit protection (`disabled`/`aria-busy`
 while pending, the stable contact `submissionId`) is untouched.
 
-Behaviour notes:
+Behavior notes:
 
 - Validation errors render through `PublicError` (`role="alert"`) and the control
   receives `aria-invalid` plus an `aria-describedby` for its description and error.
@@ -39,8 +39,8 @@ Behaviour notes:
 - Help text uses `PublicDescription`, so the notes and language fields are
   described programmatically without hand-written IDs. The marketing opt-in keeps
   an explicit description reference because checkboxes render their own label.
-- The meal poll renders a labelled `RadioGroup` (arrow-key navigation, group name
-  from the heading) and a labelled checkbox group for dinners; selections still
+- The meal poll renders a labeled `RadioGroup` (arrow-key navigation, group name
+  from the heading) and a labeled checkbox group for dinners; selections still
   save on change and are disabled while a save is pending.
 - Language and request-type selects now use the owned popup. Tests choose options
   through the visible popup instead of dispatching native change events.
@@ -53,7 +53,7 @@ No write operation, endpoint, payload or retry strategy changed, so
 ## Theme handling
 
 Important Tailwind utilities (layer `utilities`) outrank unlayered theme rules,
-so themes cannot override a control's colours or radius by property. They instead
+so themes cannot override a control's colors or radius by property. They instead
 set the `--surface-*` tokens (and `--radius-md`) on the control, which the
 utilities consume:
 
@@ -62,9 +62,9 @@ utilities consume:
   `--card-background` and `--text-color` directly (the old overrides forced the
   same `#fffaf0`/`--text-color` values).
 - Cuvée: control background `#fffdf4`, ink text, hairline border, 2px radius and
-  foil-deep focus colour via token overrides; labels keep ink colour.
+  foil-deep focus color via token overrides; labels keep ink color.
 - Remuage: white control, `--rem-line-strong` border, 8px radius, 46px minimum
-  height (no competing utility), blue focus border; labels keep grape colour and
+  height (no competing utility), blue focus border; labels keep grape color and
   750 weight (`--font-weight-medium` override). The generic `legend` rule stays
   because raw `<fieldset>` legends remain in the registration dialog.
 - Classic needed no rule.
@@ -123,6 +123,6 @@ Observation unrelated to forms: Riviera's standalone check-in page shows a narro
 "Scan a QR code" alert beside the scanner at 1440px. That alert is not touched
 here (buttons/alerts belong to #1121/#1122).
 
-Keep #1120 active pending review and screenshot publication on an eventual PR.
+Keep #1120 active pending review; screenshot publication is waived by the maintainer.
 #1109 and #1111 status below remain in force; this issue alone does not
 authorize final Bootstrap removal.
