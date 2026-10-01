@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { AdminField, AdminLabel, AdminInput, AdminTextarea } from "@/components/admin/AdminFields";
 import {
   ChevronDownIcon,
@@ -26,7 +27,6 @@ import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -375,7 +375,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               <div className="tw:flex tw:gap-1">
                 <Button
                   size="sm"
-                  variant="outline-secondary"
+                  variant="outline"
                   disabled={isMutating}
                   onClick={() => openEdit(item)}
                   aria-label={m.admin_edit()}
@@ -385,7 +385,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                 </Button>
                 <Button
                   size="sm"
-                  variant="outline-secondary"
+                  variant="outline"
                   disabled={isMutating}
                   onClick={() => handleToggleActive(item)}
                   aria-label={item.active ? m.admin_content_archive() : m.admin_content_restore()}
@@ -419,7 +419,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
         <CardHeader className="tw:flex tw:items-center tw:justify-between">
           <span className="tw:font-semibold">{m.admin_content_faq_section()}</span>
           <Button variant="outline-warning" size="sm" onClick={openAdd}>
-            <Icon icon={PlusIcon} className="tw:me-1" />
+            <Icon icon={PlusIcon} />
             {m.admin_add_faq_item()}
           </Button>
         </CardHeader>

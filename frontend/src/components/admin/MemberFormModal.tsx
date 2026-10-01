@@ -9,11 +9,11 @@ import {
   AdminCheck,
 } from "@/components/admin/AdminFields";
 import { CircleCheckIcon, ContactRoundIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 
 import {
   Dialog,
@@ -343,7 +343,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           </DialogBody>
 
           <DialogFooter>
-            <Button variant="outline-secondary" onClick={onHide} disabled={isSubmitting}>
+            <Button variant="outline" onClick={onHide} disabled={isSubmitting}>
               {m.admin_action_cancel()}
             </Button>
             <Button variant="warning" type="submit" disabled={isSubmitting || !nameValue?.trim()}>

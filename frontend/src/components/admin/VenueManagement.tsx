@@ -17,6 +17,7 @@ import {
   TrashIcon,
   TriangleAlertIcon,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 /**
  * VenueManagement — CRUD for venues and the rooms and table types they own.
@@ -31,7 +32,6 @@ import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
@@ -597,7 +597,7 @@ export default function VenueManagement({
           {m.admin_venue_add()}
         </span>
         <Button variant="outline-warning" size="sm" onClick={openAddVenue}>
-          <Icon icon={PlusIcon} className="tw:me-1" />
+          <Icon icon={PlusIcon} />
           {m.admin_venue_add()}
         </Button>
       </CardHeader>
@@ -661,7 +661,7 @@ export default function VenueManagement({
                   </div>
                   <div className="tw:flex tw:gap-1 tw:shrink-0">
                     <Button
-                      variant="outline-secondary"
+                      variant="outline"
                       size="sm"
                       onClick={() => openEditVenue(venue)}
                       aria-label={`${m.admin_edit()} ${venue.name}`}
@@ -692,7 +692,7 @@ export default function VenueManagement({
                       </>
                     ) : (
                       <Button
-                        variant="outline-secondary"
+                        variant="outline"
                         size="sm"
                         onClick={() => setConfirmArchiveVenueId(venue.id)}
                         aria-label={m.admin_content_archive()}
@@ -709,12 +709,8 @@ export default function VenueManagement({
                       <span className="tw:text-subtle tw:text-sm tw:uppercase tw:font-semibold">
                         {m.admin_rooms_tab()}
                       </span>
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={() => openAddRoom(venue.id)}
-                      >
-                        <Icon icon={PlusIcon} className="tw:me-1" />
+                      <Button variant="outline" size="sm" onClick={() => openAddRoom(venue.id)}>
+                        <Icon icon={PlusIcon} />
                         {m.admin_room_add()}
                       </Button>
                     </div>
@@ -760,7 +756,7 @@ export default function VenueManagement({
                                 <>
                                   <Button
                                     size="sm"
-                                    variant="outline-secondary"
+                                    variant="outline"
                                     onClick={() => openEditRoom(room)}
                                     aria-label={m.admin_edit()}
                                     title={m.admin_edit()}
@@ -769,7 +765,7 @@ export default function VenueManagement({
                                   </Button>
                                   <Button
                                     size="sm"
-                                    variant="outline-secondary"
+                                    variant="outline"
                                     onClick={() => handleArchiveRoom(room.id)}
                                     aria-label={m.admin_content_archive()}
                                     title={m.admin_content_archive()}
@@ -810,11 +806,11 @@ export default function VenueManagement({
                         {m.admin_table_types_tab()}
                       </span>
                       <Button
-                        variant="outline-secondary"
+                        variant="outline"
                         size="sm"
                         onClick={() => openAddTableType(venue.id)}
                       >
-                        <Icon icon={PlusIcon} className="tw:me-1" />
+                        <Icon icon={PlusIcon} />
                         {m.admin_add_table_type()}
                       </Button>
                     </div>
@@ -841,7 +837,7 @@ export default function VenueManagement({
                                 <>
                                   <Button
                                     size="sm"
-                                    variant="outline-secondary"
+                                    variant="outline"
                                     onClick={() => openEditTableType(tt)}
                                     aria-label={m.admin_edit()}
                                     title={m.admin_edit()}
@@ -850,7 +846,7 @@ export default function VenueManagement({
                                   </Button>
                                   <Button
                                     size="sm"
-                                    variant="outline-secondary"
+                                    variant="outline"
                                     onClick={() => handleArchiveTableType(tt.id)}
                                     aria-label={m.admin_content_archive()}
                                     title={m.admin_content_archive()}

@@ -32,11 +32,11 @@ const CuveeHero = ({
         </div>
         <p className="cuvee-hero__subtitle">{subtitle}</p>
         <div className="cuvee-hero__actions">
-          <a href="#next-festival" className="btn cuvee-button">
+          <a href="#next-festival" className="cuvee-button">
             {learnMoreLabel}
-            <Icon icon={CircleArrowDownIcon} className="tw:ms-2" />
+            <Icon icon={CircleArrowDownIcon} />
           </a>
-          <a href="#schedule" className="btn cuvee-button cuvee-button--ghost">
+          <a href="#schedule" className="cuvee-button cuvee-button--ghost">
             {scheduleLabel}
           </a>
         </div>

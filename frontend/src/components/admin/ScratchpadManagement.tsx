@@ -1,9 +1,9 @@
+import { Button } from "@/components/ui/button";
 import { AdminField, AdminTextarea } from "@/components/admin/AdminFields";
 import { useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import Spinner from "react-bootstrap/Spinner";
@@ -147,7 +147,7 @@ export default function ScratchpadManagement({
                 </AdminField>
                 <Button
                   type="submit"
-                  variant="primary"
+
                   disabled={saveMutation.isPending || !isDirty}
                 >
                   {saveMutation.isPending ? (

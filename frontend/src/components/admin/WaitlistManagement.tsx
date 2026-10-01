@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";

@@ -11,7 +11,7 @@ import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -273,7 +273,7 @@ export default function AnnouncementManagement({
             <>
               <Button
                 size="sm"
-                variant="outline-secondary"
+                variant="outline"
                 disabled={!row.index}
                 onClick={() => void move(row.index, -1)}
               >
@@ -281,7 +281,7 @@ export default function AnnouncementManagement({
               </Button>{" "}
               <Button
                 size="sm"
-                variant="outline-secondary"
+                variant="outline"
                 disabled={row.index === items.length - 1}
                 onClick={() => void move(row.index, 1)}
               >

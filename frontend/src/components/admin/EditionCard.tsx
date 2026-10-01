@@ -9,11 +9,11 @@ import {
   TrashIcon,
   TriangleAlertIcon,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import Spinner from "react-bootstrap/Spinner";
@@ -179,7 +179,7 @@ export default function EditionCard({
           aria-expanded={open}
           aria-controls={collapseId}
         >
-          <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} className="tw:me-2" />
+          <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} />
           {edition.id}
         </Button>
         <span className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
@@ -230,18 +230,11 @@ export default function EditionCard({
           <span className="tw:flex tw:items-center tw:gap-1">
             <Button size="sm" variant="danger" onClick={handleDelete} disabled={deleting}>
               {deleting && (
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  role="status"
-                  aria-hidden="true"
-                  className="tw:me-1"
-                />
+                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
               )}
               {m.admin_action_confirm()}
             </Button>
-            <Button size="sm" variant="outline-secondary" onClick={() => setConfirmDelete(false)}>
+            <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
               {m.admin_action_cancel()}
             </Button>
           </span>
@@ -249,7 +242,7 @@ export default function EditionCard({
           <span className="tw:flex tw:gap-1">
             <Button
               size="sm"
-              variant="outline-secondary"
+              variant="outline"
               onClick={() => setPollOptionsModalOpen(true)}
               aria-label={`${m.admin_poll_kind_dish()} / ${m.admin_poll_kind_soup()} / ${m.admin_poll_kind_dinner()} — ${edition.id}`}
               title={m.admin_poll_modal_title({ edition: edition.id })}
@@ -258,7 +251,7 @@ export default function EditionCard({
             </Button>
             <Button
               size="sm"
-              variant="outline-secondary"
+              variant="outline"
               onClick={() => setEditionModalOpen(true)}
               aria-label={`${m.admin_edit()} ${edition.id}`}
             >
@@ -298,8 +291,8 @@ export default function EditionCard({
             <h6 className="tw:text-highlight tw:mb-0 tw:text-sm">
               {m.admin_content_edition_schedule()}
             </h6>
-            <Button size="sm" variant="outline-secondary" onClick={openAddEvent}>
-              <Icon icon={PlusIcon} className="tw:me-1" />
+            <Button size="sm" variant="outline" onClick={openAddEvent}>
+              <Icon icon={PlusIcon} />
               {m.admin_content_edition_add_event()}
             </Button>
           </div>
@@ -341,7 +334,7 @@ export default function EditionCard({
                   <span className="tw:flex tw:gap-1 tw:shrink-0">
                     <Button
                       size="sm"
-                      variant="outline-secondary"
+                      variant="outline"
                       onClick={() => openProducts(event)}
                       aria-label={`${m.admin_content_edition_manage_products()} ${event.title}`}
                       title={m.admin_content_edition_manage_products()}
@@ -350,7 +343,7 @@ export default function EditionCard({
                     </Button>
                     <Button
                       size="sm"
-                      variant="outline-secondary"
+                      variant="outline"
                       onClick={() => openEditEvent(event)}
                       aria-label={`Edit event ${event.title}`}
                     >

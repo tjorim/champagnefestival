@@ -177,6 +177,16 @@ export default function MaintenancePage() {
            the colors below are this page's own copy of each theme's real
            button treatment, not a dependency on that class being defined. */
         .maintenance-page__cta {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          padding: 0.5rem 1rem;
+          font-size: 1.25rem;
+          line-height: 1.5;
+          text-align: center;
+          text-decoration: none;
+          cursor: pointer;
           border-radius: 9999px;
           background: linear-gradient(135deg, #f2d894, #b78938);
           color: #18130c;
@@ -304,9 +314,9 @@ export default function MaintenancePage() {
             href={facebookUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn btn-lg maintenance-page__cta"
+            className="maintenance-page__cta"
           >
-            <Icon icon={ExternalLinkIcon} className="tw:me-2" />
+            <Icon icon={ExternalLinkIcon} />
             {m.maintenance_facebook_cta()}
           </a>
         )}

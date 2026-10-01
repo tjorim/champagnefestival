@@ -1,4 +1,5 @@
 import { FileSpreadsheetIcon, NotebookTextIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 /**
  * AnalyticsDashboard — cross-edition attendance/check-in trend view.
@@ -20,7 +21,6 @@ import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import {
   Table,
@@ -211,7 +211,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         <h2 className="tw:text-2xl tw:font-medium tw:leading-tight tw:mb-0">
           {m.admin_analytics_title()}
         </h2>
-        <Button variant="outline-secondary" size="sm" onClick={() => setShowTable((v) => !v)}>
+        <Button variant="outline" size="sm" onClick={() => setShowTable((v) => !v)}>
           {showTable ? m.admin_analytics_view_chart() : m.admin_analytics_view_table()}
         </Button>
       </div>
@@ -279,7 +279,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                 <TableCell>€{edition.totalRefundLiability.toFixed(2)}</TableCell>
                 <TableCell className="tw:flex tw:gap-1">
                   <Button
-                    variant="outline-secondary"
+                    variant="outline"
                     size="sm"
                     className="tw:py-0 tw:px-1"
                     onClick={() => {
@@ -298,7 +298,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                     <Icon icon={NotebookTextIcon} />
                   </Button>
                   <Button
-                    variant="outline-secondary"
+                    variant="outline"
                     size="sm"
                     className="tw:py-0 tw:px-1"
                     disabled={exportingEditionId === edition.editionId}

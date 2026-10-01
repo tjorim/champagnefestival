@@ -646,7 +646,7 @@ it("offers all registration email templates and previews the selected registrati
   const dialogs = screen.getAllByRole("dialog");
   const preview = within(dialogs[dialogs.length - 1]!);
   expect(preview.getByDisplayValue(/Brut Reserve × 3/)).toBeInTheDocument();
-  expect(preview.getByRole("button", { name: "admin_email_open_client" })).toHaveAttribute(
+  expect(preview.getByRole("link", { name: "admin_email_open_client" })).toHaveAttribute(
     "href",
     expect.stringMatching(/^mailto:/),
   );

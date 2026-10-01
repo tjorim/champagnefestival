@@ -16,7 +16,6 @@ import {
 import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 
 import Spinner from "react-bootstrap/Spinner";
 import {
@@ -27,6 +26,7 @@ import {
   TableHead,
   TableCell,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 import { fetchAuditEntries, fetchAuditResourceTypes } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
@@ -210,7 +210,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
         </AdminField>
         {hasFilters && (
           <AdminField className="tw:self-end">
-            <Button variant="outline-secondary" size="sm" onClick={handleClearFilters}>
+            <Button variant="outline" size="sm" onClick={handleClearFilters}>
               {m.admin_content_clear_filters()}
             </Button>
           </AdminField>
@@ -263,7 +263,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
 
           <div className="tw:flex tw:justify-between tw:items-center">
             <Button
-              variant="outline-secondary"
+              variant="outline"
               size="sm"
               disabled={page <= 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -272,7 +272,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             </Button>
             <span className="tw:text-subtle tw:text-sm">{m.admin_audit_page_label({ page })}</span>
             <Button
-              variant="outline-secondary"
+              variant="outline"
               size="sm"
               disabled={entries.length < PAGE_SIZE}
               onClick={() => setPage((p) => p + 1)}

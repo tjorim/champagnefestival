@@ -11,8 +11,8 @@ import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 
+import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import type { FloorTable } from "@/types/admin";
 import type { Product } from "@/types/event";
@@ -370,7 +370,7 @@ export default function BookingEditor({
           </div>
         ))}
         <Button
-          variant="outline-secondary"
+          variant="outline"
           className="tw:me-2"
           disabled={assigned >= allocationTotal}
           onClick={() =>

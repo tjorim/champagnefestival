@@ -250,20 +250,27 @@ html[data-visual-theme="remuage"] [data-public-form][data-slot="select-trigger"]
   min-height: 46px;
 }
 
-html[data-visual-theme="remuage"] .bg-brand-gradient,
-html[data-visual-theme="remuage"] .btn-champagne,
-html[data-visual-theme="remuage"] #registrations .btn-warning {
-  color: #fff !important;
-  background: var(--rem-blue) !important;
-  border: 2px solid var(--rem-blue) !important;
-  border-radius: 9px !important;
+html[data-visual-theme="remuage"] [data-slot="button"]:not([data-theme-scope="admin"] *) {
+  --tw-radius-md: 9px;
 }
 
-html[data-visual-theme="remuage"] .bg-brand-gradient:hover,
-html[data-visual-theme="remuage"] .btn-champagne:hover,
-html[data-visual-theme="remuage"] #registrations .btn-warning:hover {
-  background: var(--rem-blue-deep) !important;
-  border-color: var(--rem-paper) !important;
+html[data-visual-theme="remuage"] [data-slot="button"][data-variant="brand"],
+html[data-visual-theme="remuage"] #registrations [data-slot="button"][data-variant="warning"],
+html[data-visual-theme="remuage"] .standalone-app [data-slot="button"][data-variant="warning"] {
+  --surface-primary: var(--rem-blue);
+  --surface-warning: var(--rem-blue);
+  --surface-warning-foreground: #fff;
+  --layout-inverse: #fff;
+}
+
+html[data-visual-theme="remuage"] [data-slot="button"][data-variant="brand"]:hover:not(:disabled),
+html[data-visual-theme="remuage"]
+  #registrations
+  [data-slot="button"][data-variant="warning"]:hover:not(:disabled),
+html[data-visual-theme="remuage"]
+  .standalone-app
+  [data-slot="button"][data-variant="warning"]:hover:not(:disabled) {
+  background-image: linear-gradient(var(--rem-blue-deep), var(--rem-blue-deep));
 }
 
 /* ------------------------------------------------------------------ footer + standalone */
@@ -307,14 +314,17 @@ html[data-visual-theme="remuage"] .standalone-navbar-brand {
   text-transform: uppercase;
 }
 
-html[data-visual-theme="remuage"] .standalone-navbar .btn-outline-secondary {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.55);
+html[data-visual-theme="remuage"] .standalone-navbar [data-slot="button"][data-variant="outline"] {
+  --surface-foreground: #fff;
+  --surface-border: rgba(255, 255, 255, 0.55);
+  --surface-background: transparent;
+  --surface-muted: #fff;
 }
 
-html[data-visual-theme="remuage"] .standalone-navbar .btn-outline-secondary:hover {
-  color: var(--rem-grape);
-  background: #fff;
+html[data-visual-theme="remuage"]
+  .standalone-navbar
+  [data-slot="button"][data-variant="outline"]:hover {
+  --surface-foreground: var(--rem-grape);
 }
 
 html[data-visual-theme="remuage"] .standalone-main,
@@ -370,12 +380,6 @@ html[data-visual-theme="remuage"] .standalone-app .tw\:text-subtle {
 html[data-visual-theme="remuage"] .standalone-app .tw\:text-highlight {
   color: var(--rem-blue) !important;
   --layout-highlight: var(--rem-blue) !important;
-}
-
-html[data-visual-theme="remuage"] .standalone-app .btn-warning {
-  color: #fff !important;
-  background: var(--rem-blue) !important;
-  border-color: var(--rem-blue) !important;
 }
 
 html[data-visual-theme="remuage"] #my-registrations [data-slot="card"] {

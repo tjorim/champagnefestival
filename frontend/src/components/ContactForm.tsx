@@ -1,11 +1,11 @@
 import { CircleAlertIcon, SendIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "@tanstack/react-form";
 import { useRef, useState } from "react";
 import { m } from "@/paraglide/messages";
 import { Card, CardContent } from "@/components/ui/card";
-import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import {
@@ -274,8 +274,8 @@ const ContactForm = () => {
 
             <Button
               type="submit"
-              variant="dark"
-              className="btn tw:w-full bg-brand-gradient tw:text-inverse"
+              variant="brand"
+              className="tw:w-full"
               disabled={isSubmitting}
               aria-busy={isSubmitting ? "true" : "false"}
               aria-live="polite"

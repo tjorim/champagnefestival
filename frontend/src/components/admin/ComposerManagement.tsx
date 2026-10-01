@@ -12,7 +12,7 @@ import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -296,7 +296,7 @@ export default function ComposerManagement({
             return (
               item.state === "draft" && (
                 <div className="tw:flex tw:gap-2 tw:justify-end">
-                  <Button size="sm" variant="outline-secondary" onClick={() => startEdit(item)}>
+                  <Button size="sm" variant="outline" onClick={() => startEdit(item)}>
                     {m.admin_composer_edit_button()}
                   </Button>
                   <Button size="sm" variant="warning" onClick={() => void handleSend(item)}>
@@ -336,7 +336,7 @@ export default function ComposerManagement({
                 key={locale}
                 type="button"
                 size="sm"
-                variant={preview === locale ? "warning" : "outline-secondary"}
+                variant={preview === locale ? "warning" : "outline"}
                 onClick={() => setPreview(locale)}
               >
                 {locale.toUpperCase()}
@@ -453,7 +453,7 @@ export default function ComposerManagement({
             {editing && (
               <Button
                 type="button"
-                variant="outline-secondary"
+                variant="outline"
                 onClick={() => {
                   setEditing(null);
                   form.reset(emptyDraft);

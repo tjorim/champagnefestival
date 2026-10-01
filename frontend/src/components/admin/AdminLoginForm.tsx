@@ -1,9 +1,9 @@
 import { HistoryIcon, ShieldIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import { m } from "@/paraglide/messages";
 import { clearSignOutReason, peekSignOutReason } from "@/utils/signOutReason";

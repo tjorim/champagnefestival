@@ -7,6 +7,8 @@ import {
   AdminOptionGroup,
   AdminCheck,
 } from "@/components/admin/AdminFields";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { AreaIcon } from "@/components/AreaIcon";
 import {
   ArrowLeftRightIcon,
@@ -40,7 +42,6 @@ import { PointerActivationConstraints } from "@dnd-kit/dom";
 import { RestrictToElement } from "@dnd-kit/dom/modifiers";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
@@ -52,7 +53,6 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button as RoomButton } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
 import type { TableAllocation } from "@/types/registration";
@@ -906,7 +906,7 @@ export default function LayoutEditor({
                 .reduce((sum, l) => sum + tables.filter((t) => t.layoutId === l.id).length, 0);
               return (
                 <span key={room.id}>
-                  <RoomButton
+                  <Button
                     size="sm"
                     variant={activeRoomId === room.id ? "default" : "ghost"}
                     aria-pressed={activeRoomId === room.id}
@@ -926,36 +926,38 @@ export default function LayoutEditor({
                     <span className="tw:ml-1 tw:rounded tw:bg-muted tw:px-1 tw:text-xs tw:text-muted-foreground">
                       {roomTableCount}
                     </span>
-                  </RoomButton>
+                  </Button>
                 </span>
               );
             })}
           </div>
           <div className="tw:flex tw:gap-2 tw:items-center">
-            <div className="btn-group btn-group-sm" role="group" aria-label="Layer">
+            <ButtonGroup aria-label={m.admin_layout_layer_aria()}>
               <Button
-                variant={layer === "seating" ? "warning" : "outline-secondary"}
+                variant={layer === "seating" ? "warning" : "outline"}
+                aria-pressed={layer === "seating"}
                 size="sm"
                 onClick={() => {
                   setLayer("seating");
                   setSelectedArea(null);
                 }}
               >
-                <Icon icon={UsersIcon} className="tw:me-1" />
+                <Icon icon={UsersIcon} />
                 {m.admin_layout_seating()}
               </Button>
               <Button
-                variant={layer === "areas" ? "info" : "outline-secondary"}
+                variant={layer === "areas" ? "info" : "outline"}
+                aria-pressed={layer === "areas"}
                 size="sm"
                 onClick={() => {
                   setLayer("areas");
                   setSelectedTable(null);
                 }}
               >
-                <Icon icon={StoreIcon} className="tw:me-1" />
+                <Icon icon={StoreIcon} />
                 {m.admin_layout_areas()}
               </Button>
-            </div>
+            </ButtonGroup>
             {layer === "seating" ? (
               <Button
                 variant="outline-warning"
@@ -966,7 +968,7 @@ export default function LayoutEditor({
                 }}
                 disabled={!activeLayoutId}
               >
-                <Icon icon={PlusIcon} className="tw:me-1" />
+                <Icon icon={PlusIcon} />
                 {m.admin_add_table()}
               </Button>
             ) : (
@@ -987,7 +989,7 @@ export default function LayoutEditor({
                 }}
                 disabled={!activeLayoutId}
               >
-                <Icon icon={PlusIcon} className="tw:me-1" />
+                <Icon icon={PlusIcon} />
                 {m.admin_layout_add_area()}
               </Button>
             )}
@@ -1018,7 +1020,7 @@ export default function LayoutEditor({
                       <div key={layout.id} className="tw:flex tw:items-center tw:gap-0">
                         <Button
                           size="sm"
-                          variant={activeLayoutId === layout.id ? "warning" : "outline-secondary"}
+                          variant={activeLayoutId === layout.id ? "warning" : "outline"}
                           onClick={() => {
                             setActiveLayoutId(layout.id);
                             setSelectedTable(null);
@@ -1052,7 +1054,7 @@ export default function LayoutEditor({
                       }}
                       title={m.admin_add_layout()}
                     >
-                      <Icon icon={PlusIcon} className="tw:me-1" />
+                      <Icon icon={PlusIcon} />
                       {m.admin_add_layout()}
                     </Button>
                     {roomLayouts.length > 1 && (
@@ -1062,18 +1064,18 @@ export default function LayoutEditor({
                         onClick={() => setShowCompareLayouts(true)}
                         title={m.admin_layout_compare_title()}
                       >
-                        <Icon icon={ArrowLeftRightIcon} className="tw:me-1" />
+                        <Icon icon={ArrowLeftRightIcon} />
                         {m.admin_layout_compare_title()}
                       </Button>
                     )}
                     {activeLayoutId && (
                       <Button
                         size="sm"
-                        variant="outline-secondary"
+                        variant="outline"
                         onClick={() => setShowRevisions(true)}
                         title={m.admin_layout_revisions_button()}
                       >
-                        <Icon icon={HistoryIcon} className="tw:me-1" />
+                        <Icon icon={HistoryIcon} />
                         {m.admin_layout_revisions_button()}
                       </Button>
                     )}
@@ -1137,7 +1139,7 @@ export default function LayoutEditor({
               {selectedType?.shape !== "round" && (
                 <>
                   <Button
-                    variant="outline-secondary"
+                    variant="outline"
                     size="sm"
                     onClick={() =>
                       onRotateTable(selectedTableData.id, selectedTableData.rotation - 15)
@@ -1151,7 +1153,7 @@ export default function LayoutEditor({
                     {Math.round(selectedTableData.rotation)}°
                   </span>
                   <Button
-                    variant="outline-secondary"
+                    variant="outline"
                     size="sm"
                     onClick={() =>
                       onRotateTable(selectedTableData.id, selectedTableData.rotation + 15)
@@ -1421,7 +1423,7 @@ export default function LayoutEditor({
             </span>
             <div className="tw:flex tw:gap-2 tw:items-center">
               <Button
-                variant="outline-secondary"
+                variant="outline"
                 size="sm"
                 onClick={() => onRotateArea(selectedAreaData.id, selectedAreaData.rotation - 15)}
                 title={m.admin_layout_rotate_ccw()}
@@ -1433,7 +1435,7 @@ export default function LayoutEditor({
                 {Math.round(selectedAreaData.rotation)}°
               </span>
               <Button
-                variant="outline-secondary"
+                variant="outline"
                 size="sm"
                 onClick={() => onRotateArea(selectedAreaData.id, selectedAreaData.rotation + 15)}
                 title={m.admin_layout_rotate_cw()}

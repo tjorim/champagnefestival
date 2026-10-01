@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
+import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 

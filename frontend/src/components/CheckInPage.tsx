@@ -17,13 +17,13 @@ import {
   UserIcon,
   WifiOffIcon,
 } from "lucide-react";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import clsx from "clsx";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
-import Button from "react-bootstrap/Button";
 import {
   PublicDescription,
   PublicField,
@@ -34,7 +34,6 @@ import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
-import { Button as SearchButton } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
@@ -141,7 +140,7 @@ function CheckInCard({
                   )}
                 </span>
                 <Button variant="outline-success" size="sm" onClick={onReturnToScanner}>
-                  <Icon icon={ScanQrCodeIcon} className="tw:me-2" />
+                  <Icon icon={ScanQrCodeIcon} />
                   {m.checkin_scan_next()}
                 </Button>
               </div>
@@ -149,14 +148,19 @@ function CheckInCard({
           )}
         </div>
         {canManageEntranceActions && registration.editionId && registration.tableId && (
-          <Link
-            to="/venue-plan"
-            search={{ edition: registration.editionId, table: registration.tableId }}
-            className="btn btn-outline-warning tw:w-full tw:mb-4"
+          <ButtonLink
+            render={
+              <Link
+                to="/venue-plan"
+                search={{ edition: registration.editionId, table: registration.tableId }}
+              />
+            }
+            variant="outline-warning"
+            className="tw:w-full tw:mb-4"
           >
-            <Icon icon={MapIcon} className="tw:me-2" />
+            <Icon icon={MapIcon} />
             {m.venue_plan_show_table()}
-          </Link>
+          </ButtonLink>
         )}
 
         <div role="alert" aria-live="assertive">
@@ -216,7 +220,7 @@ function CheckInCard({
                     <div className="tw:flex tw:items-center tw:gap-1">
                       <Button
                         size="sm"
-                        variant="outline-secondary"
+                        variant="outline"
                         onClick={() => onAdjustOrderItem(item.productId, -1)}
                         disabled={
                           !canUpdateEntrance ||
@@ -296,16 +300,9 @@ function CheckInCard({
               disabled={isCheckingIn}
             >
               {isCheckingIn ? (
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  role="status"
-                  aria-hidden="true"
-                  className="tw:me-2"
-                />
+                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
               ) : (
-                <Icon icon={UserCheckIcon} className="tw:me-2" />
+                <Icon icon={UserCheckIcon} />
               )}
               {m.checkin_do_checkin()}
             </Button>
@@ -318,16 +315,9 @@ function CheckInCard({
               disabled={!canManageEntranceActions || isUpdatingRegistration}
             >
               {isUpdatingRegistration ? (
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  role="status"
-                  aria-hidden="true"
-                  className="tw:me-2"
-                />
+                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
               ) : (
-                <Icon icon={ContactRoundIcon} className="tw:me-2" />
+                <Icon icon={ContactRoundIcon} />
               )}
               {m.admin_issue_strap()}
             </Button>
@@ -654,7 +644,7 @@ export default function CheckInPage() {
                     <Card tone="secondary" className="tw:mb-4">
                       <CardHeader className="tw:p-0">
                         <CollapsibleTrigger
-                          render={<SearchButton variant="ghost" />}
+                          render={<Button variant="ghost" />}
                           className="tw:flex tw:w-full tw:items-center tw:justify-between tw:p-4 tw:text-left tw:text-warning"
                           aria-expanded={searchOpen}
                           aria-controls="manual-checkin-search"

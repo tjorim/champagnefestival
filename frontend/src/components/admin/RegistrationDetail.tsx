@@ -19,11 +19,11 @@ import {
   UserIcon,
   UserRoundCogIcon,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useCallback, useMemo, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
-import Button from "react-bootstrap/Button";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -269,7 +269,7 @@ export default function RegistrationDetail({
                     variant="warning"
                     onClick={() => onMergeDuplicate?.(registration.personId, dup.id)}
                   >
-                    <Icon icon={UserRoundCogIcon} className="tw:me-1" />
+                    <Icon icon={UserRoundCogIcon} />
                     {m.admin_people_merge_title()}: {dup.name}
                   </Button>
                 ))}
@@ -389,7 +389,7 @@ export default function RegistrationDetail({
                       <div className="tw:flex tw:items-center tw:gap-1">
                         <Button
                           size="sm"
-                          variant="outline-secondary"
+                          variant="outline"
                           onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
                           disabled={item.deliveredQuantity <= 0}
                           title={m.admin_mark_not_delivered()}
@@ -457,7 +457,7 @@ export default function RegistrationDetail({
                   size="sm"
                   onClick={() => onCheckIn(registration.id)}
                 >
-                  <Icon icon={LogInIcon} className="tw:me-1" />
+                  <Icon icon={LogInIcon} />
                   {m.admin_mark_checked_in()}
                 </Button>
               )}
@@ -467,7 +467,7 @@ export default function RegistrationDetail({
                   size="sm"
                   onClick={() => onIssueStrap(registration.id)}
                 >
-                  <Icon icon={ContactRoundIcon} className="tw:me-1" />
+                  <Icon icon={ContactRoundIcon} />
                   {m.admin_issue_strap()}
                 </Button>
               )}
@@ -499,7 +499,7 @@ export default function RegistrationDetail({
         </DialogBody>
 
         <DialogFooter>
-          <Button variant="outline-secondary" onClick={onClose}>
+          <Button variant="outline" onClick={onClose}>
             {m.close()}
           </Button>
         </DialogFooter>

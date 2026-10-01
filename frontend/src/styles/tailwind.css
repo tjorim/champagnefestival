@@ -73,8 +73,8 @@
   --color-border: var(--surface-border);
   --color-input: var(--surface-border);
   --color-ring: var(--surface-primary);
-  --color-warning: var(--bs-warning);
-  --color-warning-foreground: var(--bs-dark);
+  --color-warning: var(--surface-warning, var(--bs-warning));
+  --color-warning-foreground: var(--surface-warning-foreground, var(--bs-dark));
   --color-progress-track: var(--bs-secondary);
   --color-success: var(--bs-success);
   --color-destructive: var(--surface-destructive);

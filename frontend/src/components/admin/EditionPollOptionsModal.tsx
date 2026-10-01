@@ -9,8 +9,8 @@ import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
 
+import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -203,7 +203,7 @@ export default function EditionPollOptionsModal({
                               </Button>
                               <Button
                                 size="sm"
-                                variant="outline-secondary"
+                                variant="outline"
                                 onClick={() => setEditingId(null)}
                               >
                                 {m.admin_action_cancel()}
@@ -214,7 +214,7 @@ export default function EditionPollOptionsModal({
                               <span className="tw:grow">{option.label}</span>
                               <Button
                                 size="sm"
-                                variant="outline-secondary"
+                                variant="outline"
                                 onClick={() => {
                                   setEditingId(option.id);
                                   setEditingLabel(option.label);

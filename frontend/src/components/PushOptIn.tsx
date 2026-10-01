@@ -1,6 +1,6 @@
 import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
-import Button from "react-bootstrap/Button";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import Spinner from "react-bootstrap/Spinner";
 import { PublicCheck } from "@/components/PublicFields";
@@ -89,7 +89,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
                   as="span"
                   animation="border"
                   size="sm"
-                  className="tw:me-2"
+
                   aria-hidden="true"
                 />
               )}
@@ -103,7 +103,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
             </p>
             <div className="tw:flex tw:gap-2 tw:flex-wrap">
               <Button
-                variant="outline-secondary"
+                variant="outline"
                 size="sm"
                 disabled={isBusy}
                 onClick={() => void unsubscribe()}
@@ -113,7 +113,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
                     as="span"
                     animation="border"
                     size="sm"
-                    className="tw:me-2"
+
                     aria-hidden="true"
                   />
                 )}
@@ -131,7 +131,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
                       as="span"
                       animation="border"
                       size="sm"
-                      className="tw:me-2"
+
                       aria-hidden="true"
                     />
                   )}
