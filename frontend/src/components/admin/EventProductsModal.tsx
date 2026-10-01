@@ -648,7 +648,7 @@ export default function EventProductsModal({
         className="tw:flex tw:flex-col tw:gap-1 tw:py-1 tw:px-0 tw:text-card-foreground"
       >
         <div className="tw:flex tw:justify-between tw:items-center tw:gap-2">
-          <span className="tw:flex tw:items-center tw:gap-2 tw:truncate tw:flex-wrap">
+          <span className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2 tw:flex-wrap">
             <span className="tw:text-content">
               {product.name}
               <span className="tw:block tw:text-sm tw:text-subtle">

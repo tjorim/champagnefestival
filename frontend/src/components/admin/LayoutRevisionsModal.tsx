@@ -155,7 +155,7 @@ function DiffRowsList({ rows }: { rows: DiffRow[] }) {
           key={row.id}
           className="tw:flex tw:justify-between tw:items-start tw:gap-2"
         >
-          <div>
+          <div className="tw:min-w-0">
             <div className="tw:font-semibold tw:text-sm">{row.name}</div>
             {row.changes.length > 0 && (
               <div className="tw:text-subtle tw:text-sm">{row.changes.join(", ")}</div>
@@ -402,7 +402,7 @@ export default function LayoutRevisionsModal({
                   key={revision.id}
                   className="tw:flex tw:justify-between tw:items-center tw:gap-2"
                 >
-                  <div>
+                  <div className="tw:min-w-0">
                     <div className="tw:font-semibold tw:text-sm">
                       #{revision.revisionNumber} {revision.label}
                     </div>
@@ -415,6 +415,7 @@ export default function LayoutRevisionsModal({
                   <Button
                     size="sm"
                     variant="outline-warning"
+                    className="tw:shrink-0"
                     onClick={() => void openRestorePreview(revision.revisionNumber)}
                   >
                     {m.admin_layout_revisions_restore()}
