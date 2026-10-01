@@ -28,17 +28,6 @@
     }
   },
   {
-    "files": ["src/components/ContactForm.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["minHeight"]
-        }
-      ]
-    }
-  },
-  {
     "files": ["src/components/ContactInfo.tsx"],
     "rules": {
       "shadcn/no-unknown-classes": [
@@ -65,17 +54,6 @@
             "maintenance-page__flyer-trigger",
             "maintenance-page__scrim"
           ]
-        }
-      ]
-    }
-  },
-  {
-    "files": ["src/components/RegistrationModal.tsx"],
-    "rules": {
-      "shadcn/no-inline-styles": [
-        "error",
-        {
-          "allow": ["fontSize", "minWidth", "textAlign"]
         }
       ]
     }

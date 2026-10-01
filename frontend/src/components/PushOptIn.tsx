@@ -2,8 +2,8 @@ import { useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
+import { PublicCheck } from "@/components/PublicFields";
 import { m } from "@/paraglide/messages";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import { sendTestPush } from "@/utils/pushApi";
@@ -71,13 +71,12 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
 
         {!isSubscribed ? (
           <>
-            <Form.Check
-              type="checkbox"
+            <PublicCheck
               id="push-opt-in-consent"
               className="tw:text-sm tw:mb-2"
               label={m.push_opt_in_consent_label()}
               checked={consentChecked}
-              onChange={(e) => setConsentChecked(e.target.checked)}
+              onCheckedChange={setConsentChecked}
             />
             <Button
               variant="warning"

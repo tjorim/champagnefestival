@@ -17,7 +17,14 @@ import Alert from "react-bootstrap/Alert";
 import Badge from "react-bootstrap/Badge";
 import Button from "react-bootstrap/Button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
+import {
+  PublicField,
+  PublicInput,
+  PublicLabel,
+  PublicOption,
+  PublicSelect,
+  PublicTextarea,
+} from "@/components/PublicFields";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
   Dialog,
@@ -372,18 +379,18 @@ export default function MyRegistrationsPage() {
           <p className="tw:text-center tw:text-subtle tw:mb-6">
             {m.my_registrations_description()}
           </p>
-          <Form
+          <form
             onSubmit={(e) => {
               e.preventDefault();
               void emailForm.handleSubmit();
             }}
             noValidate
           >
-            <Form.Group controlId="my-registrations-email" className="tw:mb-4">
-              <Form.Label>{m.my_registrations_email_label()}</Form.Label>
+            <PublicField controlId="my-registrations-email" className="tw:mb-4">
+              <PublicLabel>{m.my_registrations_email_label()}</PublicLabel>
               <emailForm.Field name="email">
                 {(field) => (
-                  <Form.Control
+                  <PublicInput
                     type="email"
                     placeholder={m.my_registrations_email_placeholder()}
                     value={field.value}
@@ -392,13 +399,12 @@ export default function MyRegistrationsPage() {
                     required
                     disabled={isSubmittingEmail}
                     autoComplete="email"
-                    isInvalid={isEmailInvalid}
-                    className="bg-dark tw:text-content border-secondary"
+                    aria-invalid={isEmailInvalid}
                     aria-describedby={error ? "email-error" : undefined}
                   />
                 )}
               </emailForm.Field>
-            </Form.Group>
+            </PublicField>
 
             <div id="email-error" role="alert">
               {error && (
@@ -443,7 +449,7 @@ export default function MyRegistrationsPage() {
                 </>
               )}
             </Button>
-          </Form>
+          </form>
           <Button
             variant="link"
             className="tw:w-full tw:mt-2 tw:text-subtle"
@@ -534,31 +540,30 @@ export default function MyRegistrationsPage() {
                   {auth.isAuthenticated && registrations.length > 0 && (
                     <Card tone="secondary">
                       <CardContent>
-                        <Form.Label htmlFor="my-registrations-language">
-                          {m.registration_preferred_language()}
-                        </Form.Label>
-                        <div className="tw:flex tw:gap-2">
-                          <Form.Select
-                            id="my-registrations-language"
-                            value={preferredLanguage}
-                            disabled={isPreferenceLoading || preferenceStatus === "saving"}
-                            onChange={(event) => {
-                              setPreferredLanguage(event.target.value as CommunicationLanguage);
-                              setPreferenceStatus("");
-                            }}
-                          >
-                            <option value="nl">Nederlands</option>
-                            <option value="fr">Français</option>
-                            <option value="en">English</option>
-                          </Form.Select>
-                          <Button
-                            variant="outline-warning"
-                            disabled={isPreferenceLoading || preferenceStatus === "saving"}
-                            onClick={() => void savePreference()}
-                          >
-                            {m.my_registrations_save_language()}
-                          </Button>
-                        </div>
+                        <PublicField controlId="my-registrations-language">
+                          <PublicLabel>{m.registration_preferred_language()}</PublicLabel>
+                          <div className="tw:flex tw:gap-2">
+                            <PublicSelect
+                              value={preferredLanguage}
+                              disabled={isPreferenceLoading || preferenceStatus === "saving"}
+                              onValueChange={(language) => {
+                                setPreferredLanguage(language as CommunicationLanguage);
+                                setPreferenceStatus("");
+                              }}
+                            >
+                              <PublicOption value="nl">Nederlands</PublicOption>
+                              <PublicOption value="fr">Français</PublicOption>
+                              <PublicOption value="en">English</PublicOption>
+                            </PublicSelect>
+                            <Button
+                              variant="outline-warning"
+                              disabled={isPreferenceLoading || preferenceStatus === "saving"}
+                              onClick={() => void savePreference()}
+                            >
+                              {m.my_registrations_save_language()}
+                            </Button>
+                          </div>
+                        </PublicField>
                         {preferenceStatus === "saved" && (
                           <div className="tw:text-sm tw:text-success tw:mt-2" role="status">
                             {m.my_registrations_language_saved()}
@@ -767,30 +772,29 @@ export default function MyRegistrationsPage() {
             ) : (
               <>
                 <Alert variant="warning">{m.my_registrations_request_change_warning()}</Alert>
-                <Form.Group className="tw:mb-4">
-                  <Form.Label>{m.my_registrations_request_type()}</Form.Label>
-                  <Form.Select
+                <PublicField className="tw:mb-4" controlId="my-registrations-request-type">
+                  <PublicLabel>{m.my_registrations_request_type()}</PublicLabel>
+                  <PublicSelect
                     value={requestType}
-                    onChange={(event) =>
-                      setRequestType(event.target.value as "change" | "cancellation")
-                    }
+                    onValueChange={(type) => setRequestType(type as "change" | "cancellation")}
                   >
-                    <option value="change">{m.my_registrations_request_type_change()}</option>
-                    <option value="cancellation">
+                    <PublicOption value="change">
+                      {m.my_registrations_request_type_change()}
+                    </PublicOption>
+                    <PublicOption value="cancellation">
                       {m.my_registrations_request_type_cancellation()}
-                    </option>
-                  </Form.Select>
-                </Form.Group>
-                <Form.Group>
-                  <Form.Label>{m.my_registrations_request_details()}</Form.Label>
-                  <Form.Control
-                    as="textarea"
+                    </PublicOption>
+                  </PublicSelect>
+                </PublicField>
+                <PublicField controlId="my-registrations-request-details">
+                  <PublicLabel>{m.my_registrations_request_details()}</PublicLabel>
+                  <PublicTextarea
                     rows={4}
                     placeholder={m.my_registrations_request_details_placeholder()}
                     value={requestDetails}
                     onChange={(event) => setRequestDetails(event.target.value)}
                   />
-                </Form.Group>
+                </PublicField>
                 {bookingRequestMutation.isError && (
                   <Alert variant="danger" className="tw:mt-4 tw:mb-0" role="alert">
                     {m.my_registrations_request_change_error()}

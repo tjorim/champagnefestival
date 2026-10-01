@@ -24,11 +24,16 @@ import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import Button from "react-bootstrap/Button";
+import {
+  PublicDescription,
+  PublicField,
+  PublicInput,
+  PublicLabel,
+} from "@/components/PublicFields";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
 import Badge from "react-bootstrap/Badge";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
-import Form from "react-bootstrap/Form";
 import { Button as SearchButton } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { m } from "@/paraglide/messages";
@@ -223,7 +228,7 @@ function CheckInCard({
                         <Icon icon={MinusIcon} />
                         <span className="tw:sr-only">{m.admin_mark_not_delivered()}</span>
                       </Button>
-                      <Form.Control
+                      <PublicInput
                         key={item.deliveredQuantity}
                         aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
                         className="tw:w-20 tw:text-center"
@@ -248,7 +253,6 @@ function CheckInCard({
                           }
                         }}
                         size="sm"
-
                         type="number"
                         defaultValue={item.deliveredQuantity}
                         disabled={!canUpdateEntrance || isUpdatingRegistration}
@@ -703,9 +707,9 @@ export default function CheckInPage() {
                             </Alert>
                           )}
 
-                          <Form.Group controlId="manual-checkin-query">
-                            <Form.Label>{m.checkin_manual_search_label()}</Form.Label>
-                            <Form.Control
+                          <PublicField controlId="manual-checkin-query">
+                            <PublicLabel>{m.checkin_manual_search_label()}</PublicLabel>
+                            <PublicInput
                               type="search"
                               value={searchTerm}
                               onChange={(event) => {
@@ -717,10 +721,8 @@ export default function CheckInPage() {
                               placeholder={m.checkin_manual_search_placeholder()}
                               disabled={!canManageEntranceActions}
                             />
-                            <Form.Text className="tw:text-subtle">
-                              {m.checkin_manual_search_help()}
-                            </Form.Text>
-                          </Form.Group>
+                            <PublicDescription>{m.checkin_manual_search_help()}</PublicDescription>
+                          </PublicField>
 
                           {showSearchHint && (
                             <div className="tw:text-subtle tw:mt-4">

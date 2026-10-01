@@ -5,10 +5,16 @@ import { useForm } from "@tanstack/react-form";
 import { useRef, useState } from "react";
 import { m } from "@/paraglide/messages";
 import { Card, CardContent } from "@/components/ui/card";
-import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 import Alert from "react-bootstrap/Alert";
 import Spinner from "react-bootstrap/Spinner";
+import {
+  PublicError,
+  PublicField,
+  PublicInput,
+  PublicLabel,
+  PublicTextarea,
+} from "@/components/PublicFields";
 import { EMAIL_REGEX } from "@/config/constants";
 
 /**
@@ -69,7 +75,7 @@ async function submitContactForm(form: FormData, submissionId: string): Promise<
 }
 
 /**
- * Contact form component with validation using react-bootstrap components
+ * Contact form component with TanStack Form validation and owned field controls
  */
 const ContactForm = () => {
   const [formStartTime] = useState(() => new Date().toISOString());
@@ -135,7 +141,7 @@ const ContactForm = () => {
         {isSubmitted ? (
           <Alert variant="success">{m.contact_success_message()}</Alert>
         ) : (
-          <Form
+          <form
             onSubmit={(e) => {
               e.preventDefault();
               void form.handleSubmit();
@@ -156,7 +162,7 @@ const ContactForm = () => {
             <form.Field name="honeypot">
               {(field) => (
                 <div className="tw:hidden">
-                  <Form.Control
+                  <PublicInput
                     type="text"
                     autoComplete="off"
                     tabIndex={-1}
@@ -181,25 +187,20 @@ const ContactForm = () => {
               {(field) => {
                 const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
-                  <Form.Group className="tw:mb-4 tw:text-left">
-                    <Form.Label htmlFor="name">{m.contact_name()}</Form.Label>
-                    <Form.Control
-                      id="name"
+                  <PublicField className="tw:mb-4 tw:text-left" controlId="name">
+                    <PublicLabel>{m.contact_name()}</PublicLabel>
+                    <PublicInput
                       placeholder={m.contact_placeholder_name()}
                       disabled={isSubmitting}
-                      isInvalid={showErr}
+                      aria-invalid={showErr}
                       autoComplete="name"
                       required
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
+                    {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                  </PublicField>
                 );
               }}
             </form.Field>
@@ -220,26 +221,21 @@ const ContactForm = () => {
               {(field) => {
                 const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
-                  <Form.Group className="tw:mb-4 tw:text-left">
-                    <Form.Label htmlFor="email">{m.contact_email()}</Form.Label>
-                    <Form.Control
-                      id="email"
+                  <PublicField className="tw:mb-4 tw:text-left" controlId="email">
+                    <PublicLabel>{m.contact_email()}</PublicLabel>
+                    <PublicInput
                       type="email"
                       placeholder={m.contact_placeholder_email()}
                       disabled={isSubmitting}
-                      isInvalid={showErr}
+                      aria-invalid={showErr}
                       autoComplete="email"
                       required
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
+                    {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                  </PublicField>
                 );
               }}
             </form.Field>
@@ -257,27 +253,21 @@ const ContactForm = () => {
               {(field) => {
                 const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
-                  <Form.Group className="tw:mb-4 tw:text-left">
-                    <Form.Label htmlFor="message">{m.contact_message()}</Form.Label>
-                    <Form.Control
-                      as="textarea"
-                      id="message"
+                  <PublicField className="tw:mb-4 tw:text-left" controlId="message">
+                    <PublicLabel>{m.contact_message()}</PublicLabel>
+                    <PublicTextarea
+                      className="tw:min-h-30"
                       placeholder={m.contact_placeholder_message()}
-                      style={{ minHeight: "120px" }}
                       disabled={isSubmitting}
-                      isInvalid={showErr}
+                      aria-invalid={showErr}
                       autoComplete="off"
                       required
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    {showErr && (
-                      <Form.Control.Feedback type="invalid">
-                        {field.errors[0]?.message}
-                      </Form.Control.Feedback>
-                    )}
-                  </Form.Group>
+                    {showErr && <PublicError>{field.errors[0]?.message}</PublicError>}
+                  </PublicField>
                 );
               }}
             </form.Field>
@@ -302,7 +292,7 @@ const ContactForm = () => {
                 </span>
               )}
             </Button>
-          </Form>
+          </form>
         )}
       </CardContent>
     </Card>

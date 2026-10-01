@@ -5,6 +5,7 @@ import RegistrationModal from "@/components/RegistrationModal";
 import { server } from "@/mocks/server";
 import type { Event, Product } from "@/types/event";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
+import { selectAdminOption } from "../helpers/adminSelect";
 
 const authState = vi.hoisted(() => ({ accessToken: null as string | null }));
 
@@ -180,6 +181,40 @@ describe("RegistrationModal component", () => {
     fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
 
     await waitFor(() => expect(requestBody.marketing_opt_in).toBe(true));
+  });
+
+  it("sends the preferred language chosen from the themed select popup", async () => {
+    let requestBody: { preferred_language?: string } = {};
+    server.use(
+      http.post("/api/registrations", async ({ request }) => {
+        requestBody = (await request.json()) as { preferred_language?: string };
+        return HttpResponse.json({ id: "reg-language" }, { status: 201 });
+      }),
+    );
+    renderModal();
+
+    const language = screen.getByRole("combobox", { name: "Preferred communication language" });
+    expect(language).toHaveAccessibleDescription("Used for confirmations and messages.");
+    await selectAdminOption(language, "fr");
+    expect(language).toHaveTextContent("Français");
+
+    fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+    fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+    fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+      target: { value: "+32 123 456 789" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    await waitFor(() => expect(requestBody.preferred_language).toBe("fr"));
+  });
+
+  it("marks invalid fields and associates their error messages", async () => {
+    renderModal();
+    fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+
+    const name = await screen.findByLabelText(/Name \*/i);
+    await waitFor(() => expect(name).toBeInvalid());
+    expect(name).toHaveAccessibleDescription(expect.stringContaining("Name is required"));
   });
 
   it("sends the visitor token when placing a signed-in registration", async () => {

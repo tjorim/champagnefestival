@@ -1151,26 +1151,6 @@ a:focus {
   .standalone-main #my-registrations .border-secondary {
     border-color: rgba(108, 117, 125, 0.45) !important;
   }
-
-  .standalone-main #check-in .form-control.bg-dark,
-  .standalone-main #my-registrations .form-control.bg-dark,
-  .standalone-main #check-in .form-select.bg-dark,
-  .standalone-main #my-registrations .form-select.bg-dark {
-    color: var(--text-color) !important;
-    background-color: #fffaf0 !important;
-  }
-
-  .standalone-main #check-in .form-control,
-  .standalone-main #my-registrations .form-control {
-    color: var(--text-color) !important;
-    background-color: #fffaf0 !important;
-  }
-
-  .standalone-main #check-in .form-control::placeholder,
-  .standalone-main #my-registrations .form-control::placeholder {
-    color: rgba(35, 29, 22, 0.58);
-    opacity: 1;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

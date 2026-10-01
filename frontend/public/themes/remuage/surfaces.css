@@ -230,31 +230,24 @@ html[data-visual-theme="remuage"] #contact [data-slot="card"] {
   box-shadow: var(--rem-shadow) !important;
 }
 
-html[data-visual-theme="remuage"] .form-label,
+html[data-visual-theme="remuage"] [data-public-form][data-slot="field-label"],
 html[data-visual-theme="remuage"] legend {
+  --font-weight-medium: 750;
   color: var(--rem-grape);
   font-weight: 750;
 }
 
-html[data-visual-theme="remuage"] .form-control,
-html[data-visual-theme="remuage"] .form-select {
+/* Controls follow the --surface-* tokens; important utilities outrank ordinary
+   unlayered properties, so only geometry without a utility is set directly. */
+html[data-visual-theme="remuage"] [data-public-form][data-slot="input"],
+html[data-visual-theme="remuage"] [data-public-form][data-slot="textarea"],
+html[data-visual-theme="remuage"] [data-public-form][data-slot="select-trigger"] {
+  --surface-muted: #fff;
+  --surface-foreground: var(--rem-ink);
+  --surface-border: var(--rem-line-strong);
+  --surface-primary: var(--rem-blue);
+  --radius-md: 8px;
   min-height: 46px;
-  color: var(--rem-ink);
-  background: #fff;
-  border: 1px solid var(--rem-line-strong);
-  border-radius: 8px;
-}
-
-html[data-visual-theme="remuage"] .form-control:focus,
-html[data-visual-theme="remuage"] .form-select:focus {
-  color: var(--rem-ink);
-  background: #fff;
-  border-color: var(--rem-blue);
-  box-shadow: 0 0 0 3px rgba(181, 47, 98, 0.24);
-}
-
-html[data-visual-theme="remuage"] .form-control::placeholder {
-  color: #7a8695;
 }
 
 html[data-visual-theme="remuage"] .bg-brand-gradient,

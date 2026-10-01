@@ -13,6 +13,7 @@ import MyRegistrationsPage, { buildCheckInQrUrl } from "@/components/MyRegistrat
 import { server } from "@/mocks/server";
 import { validateMyRegistrationsSearch } from "@/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
+import { selectAdminOption } from "../helpers/adminSelect";
 
 const authState = vi.hoisted(() => ({
   accessToken: null as string | null,
@@ -337,8 +338,8 @@ describe("MyRegistrationsPage", () => {
     );
     await renderPage();
     const language = await screen.findByLabelText("Preferred communication language");
-    await waitFor(() => expect(language).toHaveValue("fr"));
-    fireEvent.change(language, { target: { value: "en" } });
+    await waitFor(() => expect(language).toHaveTextContent("Français"));
+    await selectAdminOption(language, "en");
     fireEvent.click(screen.getByRole("button", { name: "Save language" }));
     await screen.findByText("Communication language saved.");
     expect(savedBody).toEqual({ preferred_language: "en" });
@@ -380,7 +381,7 @@ describe("MyRegistrationsPage", () => {
     expect(screen.getByRole("button", { name: "Save language" })).toBeDisabled();
     resolvePreference();
     await waitFor(() => expect(language).toBeEnabled());
-    expect(language).toHaveValue("fr");
+    expect(language).toHaveTextContent("Français");
   });
 
   it("shows a returning visitor's orders from an existing session, with no token and no email form", async () => {

@@ -160,6 +160,7 @@ export function AdminSelect({
   disabled,
   name,
   required,
+  admin = true,
   ...props
 }: Omit<ComponentProps<typeof SelectTrigger>, "value" | "onChange" | "children" | "size"> & {
   value?: string | number;
@@ -168,6 +169,8 @@ export function AdminSelect({
   size?: "sm" | "lg";
   name?: string;
   required?: boolean;
+  /** Public forms pass `false`; the popup then follows the runtime theme. */
+  admin?: boolean;
 }) {
   const association = useAssociation(props.id, props["aria-invalid"] === true);
   const items = optionsFrom(children);
@@ -194,7 +197,7 @@ export function AdminSelect({
       >
         <SelectValue className="tw:truncate" />
       </SelectTrigger>
-      <SelectContent align="start" alignItemWithTrigger={false}>
+      <SelectContent align="start" alignItemWithTrigger={false} admin={admin}>
         {renderOptions(children)}
       </SelectContent>
     </Select>

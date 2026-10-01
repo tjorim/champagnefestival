@@ -3,9 +3,11 @@ import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import Alert from "react-bootstrap/Alert";
 import Button from "react-bootstrap/Button";
-import Form from "react-bootstrap/Form";
 import Spinner from "react-bootstrap/Spinner";
+import { FieldLabel, FieldTitle } from "@/components/ui/field";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { PublicCheck, PublicField, PublicInput, PublicLabel } from "@/components/PublicFields";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteMyAccount } from "@/utils/meApi";
@@ -201,51 +203,59 @@ export default function MyAccountPage() {
                 const selectedId =
                   kind === "dish" ? poll.selections.dishOptionId : poll.selections.soupOptionId;
                 return (
-                  <Form.Group key={kind} className="tw:mb-4">
-                    <Form.Label className="tw:font-semibold tw:text-sm">
+                  <PublicField key={kind} className="tw:mb-4" controlId={`my-poll-${kind}`}>
+                    <FieldTitle id={`my-poll-${kind}-label`} className="tw:font-semibold">
                       {kind === "dish" ? m.my_poll_dish_label() : m.my_poll_soup_label()}
-                    </Form.Label>
-                    {kindOptions.map((option) => (
-                      <Form.Check
-                        key={option.id}
-                        type="radio"
-                        id={`my-poll-${kind}-${option.id}`}
-                        name={`my-poll-${kind}`}
-                        label={option.label}
-                        checked={selectedId === option.id}
-                        disabled={pollSelectionsMutation.isPending}
-                        onChange={() =>
-                          savePollSelections({
-                            dishOptionId:
-                              kind === "dish" ? option.id : poll.selections.dishOptionId,
-                            soupOptionId:
-                              kind === "soup" ? option.id : poll.selections.soupOptionId,
-                            dinnerOptionIds: poll.selections.dinnerOptionIds,
-                          })
-                        }
-                      />
-                    ))}
-                  </Form.Group>
+                    </FieldTitle>
+                    <RadioGroup
+                      aria-labelledby={`my-poll-${kind}-label`}
+                      name={`my-poll-${kind}`}
+                      value={selectedId}
+                      disabled={pollSelectionsMutation.isPending}
+                      onValueChange={(optionId) =>
+                        savePollSelections({
+                          dishOptionId: kind === "dish" ? optionId : poll.selections.dishOptionId,
+                          soupOptionId: kind === "soup" ? optionId : poll.selections.soupOptionId,
+                          dinnerOptionIds: poll.selections.dinnerOptionIds,
+                        })
+                      }
+                    >
+                      {kindOptions.map((option) => (
+                        <div key={option.id} className="tw:flex tw:items-center tw:gap-2">
+                          <RadioGroupItem id={`my-poll-${kind}-${option.id}`} value={option.id} />
+                          <FieldLabel
+                            htmlFor={`my-poll-${kind}-${option.id}`}
+                            className="tw:font-normal"
+                          >
+                            {option.label}
+                          </FieldLabel>
+                        </div>
+                      ))}
+                    </RadioGroup>
+                  </PublicField>
                 );
               })}
               {poll.options.some((o) => o.kind === "dinner") && (
-                <Form.Group className="tw:mb-2">
-                  <Form.Label className="tw:font-semibold tw:text-sm">
+                <PublicField
+                  className="tw:mb-2"
+                  controlId="my-poll-dinner"
+                  aria-labelledby="my-poll-dinner-label"
+                >
+                  <FieldTitle id="my-poll-dinner-label" className="tw:font-semibold">
                     {m.my_poll_dinner_label()}
-                  </Form.Label>
+                  </FieldTitle>
                   {poll.options
                     .filter((o) => o.kind === "dinner")
                     .map((option) => {
                       const checked = poll.selections.dinnerOptionIds.includes(option.id);
                       return (
-                        <Form.Check
+                        <PublicCheck
                           key={option.id}
-                          type="checkbox"
                           id={`my-poll-dinner-${option.id}`}
                           label={option.label}
                           checked={checked}
                           disabled={pollSelectionsMutation.isPending}
-                          onChange={() =>
+                          onCheckedChange={() =>
                             savePollSelections({
                               dishOptionId: poll.selections.dishOptionId,
                               soupOptionId: poll.selections.soupOptionId,
@@ -257,7 +267,7 @@ export default function MyAccountPage() {
                         />
                       );
                     })}
-                </Form.Group>
+                </PublicField>
               )}
               {pollSelectionsMutation.isError && (
                 <Alert variant="danger" className="tw:py-2 tw:text-sm tw:mb-0">
@@ -274,17 +284,17 @@ export default function MyAccountPage() {
               {m.my_eid_correction_heading()}
             </h3>
             <p className="tw:text-sm tw:mb-4">{m.my_eid_correction_description()}</p>
-            <Form
+            <form
               onSubmit={(event) => {
                 event.preventDefault();
                 void correctionForm.handleSubmit();
               }}
             >
-              <Form.Group className="tw:mb-4" controlId="my-eid-new-number">
-                <Form.Label>{m.my_eid_new_number_label()}</Form.Label>
+              <PublicField className="tw:mb-4" controlId="my-eid-new-number">
+                <PublicLabel>{m.my_eid_new_number_label()}</PublicLabel>
                 <correctionForm.Field name="newEidDocumentNumber">
                   {(field) => (
-                    <Form.Control
+                    <PublicInput
                       value={field.value}
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={(event) => {
@@ -298,7 +308,7 @@ export default function MyAccountPage() {
                     />
                   )}
                 </correctionForm.Field>
-              </Form.Group>
+              </PublicField>
               {(correctionValidationError || correctionMutation.isError) && (
                 <Alert variant="danger" className="tw:py-2 tw:text-sm">
                   {correctionValidationError ||
@@ -322,7 +332,7 @@ export default function MyAccountPage() {
                   ? m.my_eid_submitting()
                   : m.my_eid_submit_correction()}
               </Button>
-            </Form>
+            </form>
           </Alert>
         </>
       ) : (
@@ -331,17 +341,17 @@ export default function MyAccountPage() {
             {m.my_eid_register_heading()}
           </h3>
           <p className="tw:text-sm tw:mb-4">{m.my_eid_register_description()}</p>
-          <Form
+          <form
             onSubmit={(event) => {
               event.preventDefault();
               void registerForm.handleSubmit();
             }}
           >
-            <Form.Group className="tw:mb-4" controlId="my-eid-name">
-              <Form.Label>{m.my_eid_name_label()}</Form.Label>
+            <PublicField className="tw:mb-4" controlId="my-eid-name">
+              <PublicLabel>{m.my_eid_name_label()}</PublicLabel>
               <registerForm.Field name="name">
                 {(field) => (
-                  <Form.Control
+                  <PublicInput
                     value={field.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     maxLength={200}
@@ -349,12 +359,12 @@ export default function MyAccountPage() {
                   />
                 )}
               </registerForm.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="my-eid-niss">
-              <Form.Label>{m.my_eid_niss_label()}</Form.Label>
+            </PublicField>
+            <PublicField className="tw:mb-4" controlId="my-eid-niss">
+              <PublicLabel>{m.my_eid_niss_label()}</PublicLabel>
               <registerForm.Field name="nationalRegisterNumber">
                 {(field) => (
-                  <Form.Control
+                  <PublicInput
                     value={field.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     onBlur={(event) => {
@@ -367,12 +377,12 @@ export default function MyAccountPage() {
                   />
                 )}
               </registerForm.Field>
-            </Form.Group>
-            <Form.Group className="tw:mb-4" controlId="my-eid-eid">
-              <Form.Label>{m.my_eid_eid_label()}</Form.Label>
+            </PublicField>
+            <PublicField className="tw:mb-4" controlId="my-eid-eid">
+              <PublicLabel>{m.my_eid_eid_label()}</PublicLabel>
               <registerForm.Field name="eidDocumentNumber">
                 {(field) => (
-                  <Form.Control
+                  <PublicInput
                     value={field.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     onBlur={(event) => {
@@ -386,7 +396,7 @@ export default function MyAccountPage() {
                   />
                 )}
               </registerForm.Field>
-            </Form.Group>
+            </PublicField>
             {(registerValidationError || registerMutation.isError) && (
               <Alert variant="danger" className="tw:py-2 tw:text-sm">
                 {registerValidationError ||
@@ -403,7 +413,7 @@ export default function MyAccountPage() {
             >
               {registerMutation.isPending ? m.my_eid_submitting() : m.my_eid_register_button()}
             </Button>
-          </Form>
+          </form>
         </Alert>
       )}
     </>

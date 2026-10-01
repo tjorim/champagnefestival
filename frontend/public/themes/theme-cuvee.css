@@ -811,36 +811,20 @@ h2.section-header::after {
 
 /* ----------------------------------------------------------------- forms */
 
-.form-control,
-.form-select {
+/* Owned public controls follow --surface-* tokens; Cuvée tunes them per control
+   because important utilities outrank unlayered rules for ordinary properties. */
+[data-public-form][data-slot="input"],
+[data-public-form][data-slot="textarea"],
+[data-public-form][data-slot="select-trigger"] {
+  --surface-muted: #fffdf4;
+  --surface-foreground: var(--ink);
+  --surface-border: var(--hairline-strong);
+  --surface-primary: var(--foil-deep);
+  --radius-md: 2px;
+}
+
+[data-public-form][data-slot="field-label"] {
   color: var(--ink);
-  background-color: #fffdf4;
-  border-color: var(--hairline-strong);
-  border-radius: 2px;
-}
-
-.form-control:focus,
-.form-select:focus {
-  color: var(--ink);
-  background-color: #fffdf4;
-  border-color: var(--foil-deep);
-  box-shadow: 0 0 0 3px rgba(180, 137, 46, 0.25);
-}
-
-.form-control::placeholder {
-  color: rgba(95, 88, 68, 0.65);
-}
-
-.form-label,
-.form-check-label {
-  color: var(--ink);
-}
-
-.input-group-text {
-  color: var(--ink-soft);
-  background: var(--label-soft);
-  border-color: var(--hairline-strong);
-  border-radius: 2px;
 }
 
 /* --------------------------------------------------------- marquee & map */

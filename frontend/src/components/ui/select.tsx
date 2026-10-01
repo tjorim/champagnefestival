@@ -63,39 +63,44 @@ function SelectContent({
   align = "center",
   alignOffset = 0,
   alignItemWithTrigger = true,
+  admin = true,
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
-  >) {
+  > & {
+    /** Public forms pass `false` so the popup follows the active runtime theme. */
+    admin?: boolean;
+  }) {
+  const content = (
+    <SelectPrimitive.Positioner
+      side={side}
+      sideOffset={sideOffset}
+      align={align}
+      alignOffset={alignOffset}
+      alignItemWithTrigger={alignItemWithTrigger}
+      className="tw:isolate tw:z-popup"
+    >
+      <SelectPrimitive.Popup
+        data-slot="select-content"
+        data-tailwind-migrated="true"
+        data-align-trigger={alignItemWithTrigger}
+        className={cn(
+          " tw:relative tw:isolate tw:z-popup   tw:min-w-36 tw:max-h-80 tw:max-w-sm  tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-md tw:bg-popover tw:text-popover-foreground tw:shadow-md tw:ring-1 tw:ring-foreground/10 tw:duration-100             ",
+          className,
+        )}
+        {...props}
+      >
+        <SelectScrollUpButton />
+        <SelectPrimitive.List>{children}</SelectPrimitive.List>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Popup>
+    </SelectPrimitive.Positioner>
+  );
   return (
     <SelectPrimitive.Portal>
-      <AdminThemeScope>
-        <SelectPrimitive.Positioner
-          side={side}
-          sideOffset={sideOffset}
-          align={align}
-          alignOffset={alignOffset}
-          alignItemWithTrigger={alignItemWithTrigger}
-          className="tw:isolate tw:z-popup"
-        >
-          <SelectPrimitive.Popup
-            data-slot="select-content"
-            data-tailwind-migrated="true"
-            data-align-trigger={alignItemWithTrigger}
-            className={cn(
-              " tw:relative tw:isolate tw:z-popup   tw:min-w-36 tw:max-h-80 tw:max-w-sm  tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-md tw:bg-popover tw:text-popover-foreground tw:shadow-md tw:ring-1 tw:ring-foreground/10 tw:duration-100             ",
-              className,
-            )}
-            {...props}
-          >
-            <SelectScrollUpButton />
-            <SelectPrimitive.List>{children}</SelectPrimitive.List>
-            <SelectScrollDownButton />
-          </SelectPrimitive.Popup>
-        </SelectPrimitive.Positioner>
-      </AdminThemeScope>
+      {admin ? <AdminThemeScope>{content}</AdminThemeScope> : content}
     </SelectPrimitive.Portal>
   );
 }
