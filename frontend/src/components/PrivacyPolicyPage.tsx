@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import Spinner from "react-bootstrap/Spinner";
-import Alert from "react-bootstrap/Alert";
+import { Spinner } from "@/components/ui/spinner";
+import { Alert } from "@/components/ui/alert";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { usePublicSettings } from "@/hooks/useMaintenanceMode";
@@ -50,7 +50,7 @@ export default function PrivacyPolicyPage() {
 
             {query.isLoading && (
               <div className="tw:text-center tw:py-12">
-                <Spinner animation="border" role="status" aria-label="Loading" />
+                <Spinner role="status" aria-label="Loading" />
               </div>
             )}
             {query.isError && <Alert variant="danger">{String(query.error)}</Alert>}

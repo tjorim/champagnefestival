@@ -40,8 +40,8 @@ import React, { useCallback, useMemo, useRef, useState } from "react";
 import { DragDropProvider, PointerSensor, useDraggable } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
 import { RestrictToElement } from "@dnd-kit/dom/modifiers";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
@@ -1117,18 +1117,17 @@ export default function LayoutEditor({
               {m.admin_table_label()}: {selectedTableData.name}
             </span>
             <div className="tw:flex tw:gap-2 tw:items-center">
-              <Badge bg="secondary">
+              <Badge variant="secondary">
                 {selectedTableData.capacity} {m.admin_guests_count()}
               </Badge>
               {selectedType && (
-                <Badge bg="secondary" className="tw:text-content">
+                <Badge variant="secondary" className="tw:text-content">
                   {selectedType.name}
                 </Badge>
               )}
               {selectedType && (
                 <Badge
-                  bg={selectedType.heightType === "high" ? "info" : "dark"}
-                  text={selectedType.heightType === "high" ? "dark" : "secondary"}
+                  variant={selectedType.heightType === "high" ? "info" : "dark"}
                   className="border border-secondary"
                 >
                   {selectedType.heightType === "high"
@@ -1461,7 +1460,6 @@ export default function LayoutEditor({
                 aria-live="assertive"
                 variant="danger"
                 className="tw:py-1 tw:mb-2 tw:text-sm"
-                dismissible
                 onClose={() => setAssignAreaError(null)}
               >
                 {assignAreaError}
@@ -1473,7 +1471,6 @@ export default function LayoutEditor({
                 aria-live="assertive"
                 variant="danger"
                 className="tw:py-1 tw:mb-2 tw:text-sm"
-                dismissible
                 onClose={() => setResizeAreaError(null)}
               >
                 {resizeAreaError}
@@ -1634,9 +1631,7 @@ export default function LayoutEditor({
                 <p className="tw:text-subtle tw:text-sm tw:mb-2">
                   <Icon icon={Grid3X3Icon} className="tw:me-1" />
                   {m.admin_layout_tables_in_stand()}{" "}
-                  <Badge bg="info" text="dark">
-                    {tablesInSelectedArea.length}
-                  </Badge>
+                  <Badge variant="info">{tablesInSelectedArea.length}</Badge>
                   <span className="tw:ms-2 tw:text-subtle">
                     {tablesInSelectedArea.reduce((s, t) => s + t.capacity, 0)}{" "}
                     {m.admin_layout_places_total()}
@@ -1647,7 +1642,7 @@ export default function LayoutEditor({
                     <PresentationListItem key={t.id} className="tw:py-1 tw:px-2 tw:text-sm">
                       <Icon icon={Grid3X3Icon} className="tw:me-1 tw:text-muted-foreground" />
                       {t.name}
-                      <Badge bg="secondary" className="tw:ms-2 tw:text-micro">
+                      <Badge variant="secondary" className="tw:ms-2 tw:text-micro">
                         {t.capacity} {m.admin_layout_capacity_abbrev()}
                       </Badge>
                     </PresentationListItem>

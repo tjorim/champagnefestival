@@ -1,8 +1,8 @@
 import { useState } from "react";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { PublicCheck } from "@/components/PublicFields";
 import { m } from "@/paraglide/messages";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
@@ -86,8 +86,6 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
             >
               {isBusy && (
                 <Spinner
-                  as="span"
-                  animation="border"
                   size="sm"
 
                   aria-hidden="true"
@@ -110,8 +108,6 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
               >
                 {isBusy && (
                   <Spinner
-                    as="span"
-                    animation="border"
                     size="sm"
 
                     aria-hidden="true"
@@ -128,8 +124,6 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
                 >
                   {testStatus === "sending" && (
                     <Spinner
-                      as="span"
-                      animation="border"
                       size="sm"
 
                       aria-hidden="true"

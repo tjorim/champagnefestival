@@ -12,11 +12,11 @@ import {
 import { useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
@@ -126,7 +126,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
             {m.admin_error_load_settings()}
           </Alert>
         ) : settingsQuery.isPending ? (
-          <Spinner animation="border" size="sm" />
+          <Spinner label={m.admin_loading()} size="sm" />
         ) : (
           <>
             <AdminCheck

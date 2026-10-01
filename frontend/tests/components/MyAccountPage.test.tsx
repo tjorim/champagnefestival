@@ -182,7 +182,7 @@ describe("MyAccountPage", () => {
     // The page never forces sign-in (unlike the old design), so the
     // registrations section still renders underneath the error.
     expect(screen.getByText("Registrations section")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Close alert" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(clearAuthError).toHaveBeenCalledTimes(1);
   });

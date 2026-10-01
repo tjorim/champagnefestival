@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
@@ -103,7 +103,7 @@ export default function PebblePairPage() {
         <Alert variant="success">{m.pebble_pair_close_instruction()}</Alert>
       ) : (
         <div className="tw:flex tw:items-center tw:justify-center tw:gap-2 tw:text-subtle">
-          <Spinner animation="border" size="sm" />
+          <Spinner size="sm" />
           {m.pebble_pair_connecting()}
         </div>
       )}

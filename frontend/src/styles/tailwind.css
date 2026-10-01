@@ -78,6 +78,7 @@
   --color-progress-track: var(--bs-secondary);
   --color-success: var(--bs-success);
   --color-destructive: var(--surface-destructive);
+  --animate-spinner-slow: spin 1.5s linear infinite;
 }
 
 /* Runtime themes retain their language-control colours after Bootstrap's button
@@ -279,4 +280,67 @@
 }
 [data-slot="card-footer"] {
   border-radius: 0 0 0.375rem 0.375rem;
+}
+
+/* Owned alert and badge surfaces replace Bootstrap's component rules. Tones mix
+   the semantic colour into the active surface, so one rule reads correctly on
+   light, dark and fixed-dark admin scopes. Runtime themes retint through the
+   same stable slot/variant hooks (or the --alert-tone/--badge-* variables). */
+[data-slot="alert"] {
+  --alert-tone: var(--surface-muted-foreground);
+  color: var(--surface-foreground);
+  background: color-mix(in srgb, var(--alert-tone) 16%, var(--surface-background));
+  border: 1px solid color-mix(in srgb, var(--alert-tone) 50%, var(--surface-background));
+}
+[data-slot="alert"][data-variant="danger"] {
+  --alert-tone: var(--surface-destructive);
+}
+[data-slot="alert"][data-variant="warning"] {
+  --alert-tone: var(--bs-warning);
+}
+[data-slot="alert"][data-variant="success"] {
+  --alert-tone: var(--bs-success);
+}
+[data-slot="alert"][data-variant="info"] {
+  --alert-tone: var(--bs-info);
+}
+[data-slot="alert"][data-variant="primary"] {
+  --alert-tone: var(--surface-primary);
+}
+
+[data-slot="badge"] {
+  --badge-background: var(--bs-secondary);
+  --badge-foreground: #fff;
+  color: var(--badge-foreground);
+  background: var(--badge-background);
+  border: 1px solid transparent;
+  border-radius: 0.375rem;
+  font-size: 0.75em;
+  font-weight: 700;
+}
+[data-slot="badge"][data-variant="primary"] {
+  --badge-background: var(--surface-primary);
+  --badge-foreground: var(--surface-primary-foreground);
+}
+[data-slot="badge"][data-variant="success"] {
+  --badge-background: var(--bs-success);
+}
+[data-slot="badge"][data-variant="danger"] {
+  --badge-background: var(--bs-danger);
+}
+[data-slot="badge"][data-variant="warning"] {
+  --badge-background: var(--surface-warning, var(--bs-warning));
+  --badge-foreground: var(--surface-warning-foreground, var(--bs-dark));
+}
+[data-slot="badge"][data-variant="info"] {
+  --badge-background: var(--bs-info);
+  --badge-foreground: var(--bs-dark);
+}
+[data-slot="badge"][data-variant="dark"] {
+  --badge-background: var(--bs-dark);
+}
+[data-slot="badge"][data-variant="outline"] {
+  --badge-background: transparent;
+  --badge-foreground: var(--surface-muted-foreground);
+  border-color: var(--surface-border);
 }

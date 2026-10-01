@@ -78,15 +78,15 @@ html[data-visual-theme="remuage"] .event-card .tw\:text-subtle {
   --layout-subtle: var(--rem-muted) !important;
 }
 
-html[data-visual-theme="remuage"] .badge {
+html[data-visual-theme="remuage"] [data-slot="badge"] {
   font-weight: 750;
   letter-spacing: 0.025em;
   border-radius: 6px;
 }
 
-html[data-visual-theme="remuage"] .badge.bg-warning {
-  color: #4e3000 !important;
-  background: #ffe2a1 !important;
+html[data-visual-theme="remuage"] [data-slot="badge"][data-variant="warning"] {
+  color: #4e3000;
+  background: #ffe2a1;
   border: 1px solid #d39724;
 }
 

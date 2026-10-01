@@ -8,7 +8,7 @@ import {
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
@@ -19,7 +19,7 @@ import {
   DialogTitle,
   DialogBody,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
@@ -162,7 +162,7 @@ export default function EditionPollOptionsModal({
           {error && <Alert variant="danger">{error}</Alert>}
           {optionsQuery.isPending ? (
             <div className="tw:flex tw:justify-center tw:py-4">
-              <Spinner animation="border" size="sm" />
+              <Spinner label={m.admin_loading()} size="sm" />
             </div>
           ) : optionsQuery.isError ? (
             <Alert variant="danger">{m.admin_content_error_load()}</Alert>

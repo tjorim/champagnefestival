@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 
 import {
   Dialog,
@@ -23,7 +23,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { devError } from "@/utils/devLog";
 import { EMAIL_REGEX } from "@/config/constants";
@@ -153,12 +153,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         >
           <DialogBody>
             {error && (
-              <Alert
-                variant="danger"
-                className="tw:py-2 tw:text-sm"
-                dismissible
-                onClose={() => setError(null)}
-              >
+              <Alert variant="danger" className="tw:py-2 tw:text-sm" onClose={() => setError(null)}>
                 {error}
               </Alert>
             )}
@@ -349,7 +344,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             <Button variant="warning" type="submit" disabled={isSubmitting || !nameValue?.trim()}>
               {isSubmitting ? (
                 <>
-                  <Spinner animation="border" size="sm" className="tw:me-2" />
+                  <Spinner size="sm" className="tw:me-2" />
                   {m.admin_save()}
                 </>
               ) : (

@@ -34,7 +34,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import React from "react";
 import clsx from "clsx";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 
 interface SidebarItemProps {
@@ -391,8 +391,6 @@ export default function AdminSidebar({
             >
               {isSigningOut ? (
                 <Spinner
-                  as="span"
-                  animation="border"
                   size="sm"
 
                   aria-hidden="true"

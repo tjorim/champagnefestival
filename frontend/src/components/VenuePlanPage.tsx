@@ -3,10 +3,10 @@ import { UsersIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useQuery } from "@tanstack/react-query";
 import { useSearch } from "@tanstack/react-router";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
 import { venuePlanQueryOptions } from "@/utils/venuePlanApi";
@@ -34,7 +34,7 @@ export default function VenuePlanPage() {
   if (query.isLoading)
     return (
       <div className="tw:text-center tw:p-12">
-        <Spinner />
+        <Spinner label={m.loading()} />
       </div>
     );
   if (query.isError) return <Alert variant="danger">{query.error.message}</Alert>;
@@ -49,7 +49,7 @@ export default function VenuePlanPage() {
             <strong>
               {layout.room?.name ?? layout.label} — {layout.event_title}
             </strong>
-            {layout.date && <Badge bg="secondary">{layout.date}</Badge>}
+            {layout.date && <Badge variant="secondary">{layout.date}</Badge>}
           </CardHeader>
           <CardContent>
             <div

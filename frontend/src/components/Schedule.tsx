@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import Badge from "react-bootstrap/Badge";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
@@ -137,16 +137,16 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                             </div>
                             <div className="tw:grow">
                               <h5 className="event-title tw:mb-1">{event.title}</h5>
-                              <Badge bg={getCategoryColor(event.category)} className="tw:mb-2">
+                              <Badge variant={getCategoryColor(event.category)} className="tw:mb-2">
                                 {getCategoryLabel(event.category)}
                               </Badge>
                               {event.registrationRequired ? (
-                                <Badge bg="warning" className="tw:mb-2 tw:ms-2">
+                                <Badge variant="warning" className="tw:mb-2 tw:ms-2">
                                   {m.schedule_registration()}
                                 </Badge>
                               ) : (
                                 event.products.length > 0 && (
-                                  <Badge bg="info" text="dark" className="tw:mb-2 tw:ms-2">
+                                  <Badge variant="info" className="tw:mb-2 tw:ms-2">
                                     {m.schedule_order_available()}
                                   </Badge>
                                 )

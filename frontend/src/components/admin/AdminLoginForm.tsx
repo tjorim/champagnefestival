@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert, AlertHeading } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { clearSignOutReason, peekSignOutReason } from "@/utils/signOutReason";
 
@@ -33,23 +33,17 @@ export default function AdminLoginForm() {
             </Alert>
           ) : null}
           {auth.authError ? (
-            <Alert variant="danger" dismissible onClose={auth.clearAuthError}>
-              <Alert.Heading as="h3" className="tw:text-base tw:font-medium tw:leading-tight">
+            <Alert variant="danger" onClose={auth.clearAuthError}>
+              <AlertHeading as="h3" className="tw:text-base tw:font-medium tw:leading-tight">
                 {m.auth_error_title()}
-              </Alert.Heading>
+              </AlertHeading>
               <p className="tw:mb-0">{auth.authError}</p>
             </Alert>
           ) : null}
           <Button variant="warning" onClick={() => auth.login()} disabled={auth.isSigningIn}>
             {auth.isSigningIn ? (
               <>
-                <Spinner
-                  as="span"
-                  animation="border"
-                  size="sm"
-                  className="tw:me-2"
-                  aria-hidden="true"
-                />
+                <Spinner size="sm" className="tw:me-2" aria-hidden="true" />
                 {m.auth_signing_in()}
               </>
             ) : (

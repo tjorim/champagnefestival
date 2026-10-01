@@ -30,9 +30,9 @@ import {
   PublicInput,
   PublicLabel,
 } from "@/components/PublicFields";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
-import Badge from "react-bootstrap/Badge";
+import { Alert, AlertHeading } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { m } from "@/paraglide/messages";
@@ -111,15 +111,15 @@ function CheckInCard({
           {registration.name}
         </span>
         <div className="tw:flex tw:gap-2 tw:flex-wrap">
-          {isCancelled && <Badge bg="danger">{m.admin_status_cancelled()}</Badge>}
+          {isCancelled && <Badge variant="danger">{m.admin_status_cancelled()}</Badge>}
           {registration.checkedIn && (
-            <Badge bg="success">
+            <Badge variant="success">
               <Icon icon={CircleCheckIcon} className="tw:me-1" />
               {m.admin_checked_in()}
             </Badge>
           )}
           {registration.strapIssued && (
-            <Badge bg="info">
+            <Badge variant="info">
               <Icon icon={ContactRoundIcon} className="tw:me-1" />
               {m.admin_strap_issued()}
             </Badge>
@@ -208,13 +208,13 @@ function CheckInCard({
                   className="tw:flex tw:justify-between tw:items-center tw:gap-4 tw:flex-wrap"
                 >
                   <span>
-                    {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
+                    {item.name} <Badge variant="secondary">×{item.quantity}</Badge>
                   </span>
                   <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
-                    <Badge bg={item.delivered ? "success" : "secondary"}>
+                    <Badge variant={item.delivered ? "success" : "secondary"}>
                       {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
                     </Badge>
-                    <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
+                    <Badge variant={item.remainingQuantity > 0 ? "warning" : "success"}>
                       {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                     </Badge>
                     <div className="tw:flex tw:items-center tw:gap-1">
@@ -300,7 +300,7 @@ function CheckInCard({
               disabled={isCheckingIn}
             >
               {isCheckingIn ? (
-                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                <Spinner size="sm" role="status" aria-hidden="true" />
               ) : (
                 <Icon icon={UserCheckIcon} />
               )}
@@ -315,7 +315,7 @@ function CheckInCard({
               disabled={!canManageEntranceActions || isUpdatingRegistration}
             >
               {isUpdatingRegistration ? (
-                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
+                <Spinner size="sm" role="status" aria-hidden="true" />
               ) : (
                 <Icon icon={ContactRoundIcon} />
               )}
@@ -613,17 +613,17 @@ export default function CheckInPage() {
         )}
 
         {auth.authError ? (
-          <Alert variant="danger" dismissible onClose={auth.clearAuthError}>
-            <Alert.Heading as="h3" className="tw:text-base tw:font-medium tw:leading-tight">
+          <Alert variant="danger" onClose={auth.clearAuthError}>
+            <AlertHeading as="h3" className="tw:text-base tw:font-medium tw:leading-tight">
               {m.auth_error_title()}
-            </Alert.Heading>
+            </AlertHeading>
             <p className="tw:mb-0">{auth.authError}</p>
           </Alert>
         ) : null}
 
         {shouldShowAuthLoadingGate ? (
           <div className="tw:text-center tw:py-6">
-            <Spinner animation="border" variant="warning" role="status">
+            <Spinner variant="warning" role="status">
               <span className="tw:sr-only">{m.admin_loading()}</span>
             </Spinner>
             <p className="tw:mt-2 tw:text-subtle">{m.admin_loading()}</p>
@@ -676,13 +676,7 @@ export default function CheckInPage() {
                               >
                                 {auth.isSigningIn ? (
                                   <>
-                                    <Spinner
-                                      as="span"
-                                      animation="border"
-                                      size="sm"
-                                      className="tw:me-2"
-                                      aria-hidden="true"
-                                    />
+                                    <Spinner size="sm" className="tw:me-2" aria-hidden="true" />
                                     {m.auth_signing_in()}
                                   </>
                                 ) : (
@@ -727,8 +721,6 @@ export default function CheckInPage() {
                               aria-live="polite"
                             >
                               <Spinner
-                                as="span"
-                                animation="border"
                                 size="sm"
                                 role="status"
                                 aria-hidden="true"
@@ -775,7 +767,7 @@ export default function CheckInPage() {
                                       {result.guestCount}
                                     </span>
                                   </span>
-                                  <Badge bg={result.checkedIn ? "success" : "secondary"}>
+                                  <Badge variant={result.checkedIn ? "success" : "secondary"}>
                                     {result.checkedIn
                                       ? m.admin_checked_in()
                                       : m.checkin_manual_not_checked_in()}
@@ -793,7 +785,7 @@ export default function CheckInPage() {
 
               {isLoading && (
                 <div className="tw:text-center tw:py-6">
-                  <Spinner animation="border" variant="warning" role="status">
+                  <Spinner variant="warning" role="status">
                     <span className="tw:sr-only">{m.checkin_looking_up()}</span>
                   </Spinner>
                   <p className="tw:mt-2 tw:text-subtle">{m.checkin_looking_up()}</p>

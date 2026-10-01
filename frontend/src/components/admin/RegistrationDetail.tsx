@@ -22,8 +22,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useCallback, useMemo, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -181,20 +181,14 @@ export default function RegistrationDetail({
           )}
           <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
           {actionError && (
-            <Alert
-              variant="danger"
-              dismissible={Boolean(onClearActionError)}
-              onClose={onClearActionError}
-              className="tw:mb-4"
-              role="alert"
-            >
+            <Alert variant="danger" onClose={onClearActionError} className="tw:mb-4" role="alert">
               {actionError}
             </Alert>
           )}
 
           <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mb-4">
             <Badge
-              bg={
+              variant={
                 registration.status === "confirmed"
                   ? "success"
                   : registration.status === "cancelled"
@@ -209,7 +203,7 @@ export default function RegistrationDetail({
                   : m.admin_status_pending()}
             </Badge>
             <Badge
-              bg={
+              variant={
                 registration.paymentStatus === "paid"
                   ? "success"
                   : registration.paymentStatus === "partial"
@@ -231,7 +225,7 @@ export default function RegistrationDetail({
               )}
             </Badge>
             {registration.checkedIn ? (
-              <Badge bg="success">
+              <Badge variant="success">
                 <Icon icon={CircleCheckIcon} className="tw:me-1" />
                 {m.admin_checked_in()}
                 {registration.checkedInAt && (
@@ -241,16 +235,16 @@ export default function RegistrationDetail({
                 )}
               </Badge>
             ) : (
-              <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
+              <Badge variant="secondary">{m.admin_not_checked_in()}</Badge>
             )}
             {!simpleRsvp &&
               (registration.strapIssued ? (
-                <Badge bg="info">
+                <Badge variant="info">
                   <Icon icon={ContactRoundIcon} className="tw:me-1" />
                   {m.admin_strap_issued()}
                 </Badge>
               ) : (
-                <Badge bg="secondary">{m.admin_strap_not_issued()}</Badge>
+                <Badge variant="secondary">{m.admin_strap_not_issued()}</Badge>
               ))}
           </div>
 
@@ -375,15 +369,15 @@ export default function RegistrationDetail({
                   >
                     <span>
                       {item.name}{" "}
-                      <Badge bg="secondary" className="tw:ms-1">
+                      <Badge variant="secondary" className="tw:ms-1">
                         ×{item.quantity}
                       </Badge>
                     </span>
                     <div className="tw:flex tw:items-center tw:gap-2">
-                      <Badge bg={item.delivered ? "success" : "secondary"}>
+                      <Badge variant={item.delivered ? "success" : "secondary"}>
                         {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
                       </Badge>
-                      <Badge bg={item.remainingQuantity > 0 ? "warning" : "success"} text="dark">
+                      <Badge variant={item.remainingQuantity > 0 ? "warning" : "success"}>
                         {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                       </Badge>
                       <div className="tw:flex tw:items-center tw:gap-1">

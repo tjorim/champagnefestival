@@ -9,8 +9,8 @@ import {
   type SortingState,
   type ColumnVisibilityState,
 } from "@tanstack/react-table";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -21,7 +21,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
@@ -145,7 +145,7 @@ export default function MembersManagement({
               <div className="tw:font-semibold tw:flex tw:items-center tw:gap-1">
                 {member.name}
                 {!member.active && (
-                  <Badge bg="secondary" className="tw:ms-1">
+                  <Badge variant="secondary" className="tw:ms-1">
                     {m.admin_people_inactive_badge_label()}
                   </Badge>
                 )}
@@ -346,7 +346,6 @@ export default function MembersManagement({
           {createSuccess && (
             <Alert
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setCreateSuccess(false)}
             >
@@ -356,7 +355,6 @@ export default function MembersManagement({
           {updateSuccess && (
             <Alert
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setUpdateSuccess(false)}
             >
@@ -366,7 +364,6 @@ export default function MembersManagement({
           {deleteSuccess && (
             <Alert
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setDeleteSuccess(false)}
             >
@@ -376,7 +373,7 @@ export default function MembersManagement({
 
           {isLoading ? (
             <div className="tw:text-center tw:py-6">
-              <Spinner animation="border" variant="primary" size="sm" />
+              <Spinner label={m.admin_loading()} variant="primary" size="sm" />
             </div>
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
             <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
@@ -456,7 +453,7 @@ export default function MembersManagement({
               <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleting}>
                 {deleting ? (
                   <>
-                    <Spinner animation="border" size="sm" className="tw:me-2" />
+                    <Spinner size="sm" className="tw:me-2" />
                     {m.admin_delete()}
                   </>
                 ) : (

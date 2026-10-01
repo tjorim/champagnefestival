@@ -157,20 +157,10 @@
 }
 
 /* ---- Badges — swap warning yellow for brand blue ---- */
-#admin .badge.bg-warning,
-#admin .badge.bg-warning.tw\:text-contrast {
-  background: rgba(var(--adm-primary-rgb), 0.18) !important;
-  color: var(--adm-primary) !important;
-  border: 1px solid rgba(var(--adm-primary-rgb), 0.3) !important;
-  /* reset text-dark override */
-  --bs-badge-color: var(--adm-primary) !important;
-  --layout-contrast: var(--adm-primary) !important;
-}
-
-/* ---- Spinner — match brand ---- */
-#admin .spinner-border.tw\:text-highlight {
-  color: var(--adm-primary) !important;
-  --layout-highlight: var(--adm-primary) !important;
+#admin [data-slot="badge"][data-variant="warning"] {
+  background: rgba(var(--adm-primary-rgb), 0.18);
+  color: var(--adm-primary);
+  border: 1px solid rgba(var(--adm-primary-rgb), 0.3);
 }
 
 /* ---- text-warning overrides ---- */
@@ -591,12 +581,12 @@
   --layout-highlight: var(--adm-primary) !important;
 }
 
-[data-theme-scope="admin"] [data-slot="dialog-content"] .badge.bg-warning,
-[data-theme-scope="admin"] [data-slot="dialog-content"] .badge.bg-warning.tw\:text-contrast {
-  background: rgba(var(--adm-primary-rgb), 0.18) !important;
-  color: var(--adm-primary) !important;
-  border: 1px solid rgba(var(--adm-primary-rgb), 0.3) !important;
-  --layout-contrast: var(--adm-primary) !important;
+[data-theme-scope="admin"]
+  [data-slot="dialog-content"]
+  [data-slot="badge"][data-variant="warning"] {
+  background: rgba(var(--adm-primary-rgb), 0.18);
+  color: var(--adm-primary);
+  border: 1px solid rgba(var(--adm-primary-rgb), 0.3);
 }
 
 .admin-active-edition-strip {

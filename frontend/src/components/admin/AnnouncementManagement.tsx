@@ -9,8 +9,8 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
@@ -307,7 +307,7 @@ export default function AnnouncementManagement({
             (["nl", "en", "fr"] as const).map((locale) => (
               <Badge
                 className="tw:me-1"
-                bg={row.original[`text_${locale}`] ? "success" : "secondary"}
+                variant={row.original[`text_${locale}`] ? "success" : "secondary"}
                 key={locale}
               >
                 {locale}
@@ -319,7 +319,7 @@ export default function AnnouncementManagement({
           header: m.admin_status_label(),
           enableSorting: false,
           cell: ({ row }) => (
-            <Badge bg={status(row.original) === "active" ? "success" : "secondary"}>
+            <Badge variant={status(row.original) === "active" ? "success" : "secondary"}>
               {statusLabel(status(row.original))}
             </Badge>
           ),

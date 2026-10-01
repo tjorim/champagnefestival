@@ -26,8 +26,8 @@ import {
   type ColumnVisibilityState,
 } from "@tanstack/react-table";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
@@ -39,7 +39,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
@@ -352,7 +352,7 @@ export default function PeopleManagement({
                 <div className="tw:font-semibold tw:flex tw:items-center tw:gap-1">
                   {person.name}
                   {!person.active && (
-                    <Badge bg="secondary" className="tw:ms-1">
+                    <Badge variant="secondary" className="tw:ms-1">
                       {m.admin_people_inactive_badge_label()}
                     </Badge>
                   )}
@@ -384,7 +384,7 @@ export default function PeopleManagement({
           cell: ({ row }) => (
             <div className="tw:flex tw:flex-wrap tw:gap-1">
               {row.original.roles.map((role) => (
-                <Badge key={role} bg="secondary" className="tw:capitalize">
+                <Badge key={role} variant="secondary" className="tw:capitalize">
                   {role}
                 </Badge>
               ))}
@@ -400,12 +400,7 @@ export default function PeopleManagement({
             const resCount = getValue();
             return (
               <>
-                <Badge
-                  bg={resCount > 0 ? "warning" : "secondary"}
-                  text={resCount > 0 ? "dark" : undefined}
-                >
-                  {resCount}
-                </Badge>
+                <Badge variant={resCount > 0 ? "warning" : "secondary"}>{resCount}</Badge>
                 {resCount > 0 && (
                   <Button
                     size="sm"
@@ -606,7 +601,6 @@ export default function PeopleManagement({
               role="status"
               aria-live="polite"
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setMergeSuccess(false)}
             >
@@ -618,7 +612,6 @@ export default function PeopleManagement({
               role="status"
               aria-live="polite"
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setCreateSuccess(false)}
             >
@@ -630,7 +623,6 @@ export default function PeopleManagement({
               role="status"
               aria-live="polite"
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setUpdateSuccess(false)}
             >
@@ -642,7 +634,6 @@ export default function PeopleManagement({
               role="status"
               aria-live="polite"
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setDeleteSuccess(false)}
             >
@@ -652,7 +643,7 @@ export default function PeopleManagement({
 
           {isLoading || peopleSearchQuery.isLoading ? (
             <div className="tw:text-center tw:py-6">
-              <Spinner animation="border" variant="primary" size="sm" />
+              <Spinner label={m.admin_loading()} variant="primary" size="sm" />
             </div>
           ) : peopleSearchQuery.isError ? (
             <p className="tw:text-destructive tw:text-center tw:py-6 tw:mb-0">
@@ -767,14 +758,11 @@ export default function PeopleManagement({
                       <div className="tw:text-subtle">{person.email}</div>
                       {person.phone && <div className="tw:text-subtle">{person.phone}</div>}
                       <div className="tw:mt-1">
-                        <Badge
-                          bg={resCount > 0 ? "warning" : "secondary"}
-                          text={resCount > 0 ? "dark" : undefined}
-                        >
+                        <Badge variant={resCount > 0 ? "warning" : "secondary"}>
                           {resCount} {m.admin_people_registrations_count()}
                         </Badge>
                         {person.roles.map((r) => (
-                          <Badge key={r} bg="secondary" className="tw:ms-1 tw:capitalize">
+                          <Badge key={r} variant="secondary" className="tw:ms-1 tw:capitalize">
                             {r}
                           </Badge>
                         ))}
@@ -791,13 +779,7 @@ export default function PeopleManagement({
               </Button>
               <Button variant="warning" onClick={handleMergeConfirm} disabled={merging}>
                 {merging ? (
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                  />
+                  <Spinner size="sm" role="status" aria-hidden="true" />
                 ) : (
                   <>
                     <Icon icon={UserRoundCogIcon} className="tw:me-1" />
@@ -838,11 +820,7 @@ export default function PeopleManagement({
                 {m.admin_action_cancel()}
               </Button>
               <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
-                {deleting ? (
-                  <Spinner as="span" animation="border" size="sm" />
-                ) : (
-                  <Icon icon={TrashIcon} />
-                )}
+                {deleting ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
                 {m.admin_action_confirm()}
               </Button>
             </DialogFooter>
@@ -879,7 +857,7 @@ export default function PeopleManagement({
             <DialogBody className="tw:p-0">
               {loadingPersonRegistrations && (
                 <div className="tw:text-center tw:py-6">
-                  <Spinner animation="border" size="sm" variant="warning" />
+                  <Spinner label={m.admin_loading()} size="sm" variant="warning" />
                 </div>
               )}
               {!loadingPersonRegistrations && personRegistrationsError && (
@@ -947,7 +925,7 @@ export default function PeopleManagement({
                           </div>
                           <div className="tw:flex tw:gap-1 tw:flex-wrap tw:justify-end">
                             <Badge
-                              bg={
+                              variant={
                                 r.status === "confirmed"
                                   ? "success"
                                   : r.status === "cancelled"
@@ -962,7 +940,7 @@ export default function PeopleManagement({
                                   : m.admin_status_pending()}
                             </Badge>
                             <Badge
-                              bg={
+                              variant={
                                 r.paymentStatus === "paid"
                                   ? "success"
                                   : r.paymentStatus === "partial"
@@ -977,7 +955,7 @@ export default function PeopleManagement({
                                   : m.admin_payment_unpaid()}
                             </Badge>
                             {r.checkedIn && (
-                              <Badge bg="success">
+                              <Badge variant="success">
                                 <Icon icon={CircleCheckIcon} className="tw:me-1" />
                                 {m.admin_checked_in()}
                               </Badge>
@@ -1026,11 +1004,7 @@ export default function PeopleManagement({
                     onClick={() => void handleExportLedger()}
                     title={m.admin_people_export_ledger()}
                   >
-                    {exportingLedger ? (
-                      <Spinner as="span" animation="border" size="sm" />
-                    ) : (
-                      <Icon icon={FileSpreadsheetIcon} />
-                    )}
+                    {exportingLedger ? <Spinner size="sm" /> : <Icon icon={FileSpreadsheetIcon} />}
                     {m.admin_people_export_ledger()}
                   </Button>
                 </div>

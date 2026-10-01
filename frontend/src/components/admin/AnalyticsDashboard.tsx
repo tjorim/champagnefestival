@@ -20,8 +20,8 @@ import { Chart } from "@tanstack/charts/react/core";
 import { scaleBand } from "@tanstack/charts/scales/band";
 import { scaleLinear } from "@tanstack/charts/scales/linear";
 import { tooltip } from "@tanstack/charts/tooltip";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableHeader,
@@ -230,7 +230,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
 
       {statsQuery.isPending ? (
         <div className="tw:text-center tw:py-12">
-          <Spinner animation="border" variant="primary" role="status">
+          <Spinner variant="primary" role="status">
             <span className="tw:sr-only">{m.admin_loading()}</span>
           </Spinner>
         </div>
@@ -309,7 +309,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                     })}
                   >
                     {exportingEditionId === edition.editionId ? (
-                      <Spinner as="span" animation="border" size="sm" />
+                      <Spinner size="sm" />
                     ) : (
                       <Icon icon={FileSpreadsheetIcon} />
                     )}

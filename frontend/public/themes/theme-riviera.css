@@ -692,9 +692,9 @@ html[data-visual-theme="riviera"] .bubble-background {
   font-weight: 950;
 }
 
-.badge {
+[data-slot="badge"] {
   color: #fffaf0;
-  background: var(--secondary-color) !important;
+  background: var(--secondary-color);
   border-radius: 999px;
 }
 

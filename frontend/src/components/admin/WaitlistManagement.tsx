@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
+import { Badge } from "@/components/ui/badge";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import {
   fetchArrayOrThrow,
@@ -85,7 +86,7 @@ export default function WaitlistManagement({
       <CardHeader className="tw:font-semibold">{m.admin_waitlist_section()}</CardHeader>
       <CardContent>
         <p className="tw:text-subtle tw:text-sm">{m.admin_waitlist_description()}</p>
-        {entries.isPending && <Spinner animation="border" size="sm" />}
+        {entries.isPending && <Spinner label={m.admin_loading()} size="sm" />}
         {entries.isError && <Alert variant="danger">{m.admin_error_load_waitlist()}</Alert>}
         {(handled.isError || removed.isError) && (
           <Alert variant="danger">{m.admin_error_handle_waitlist_entry()}</Alert>
@@ -97,9 +98,9 @@ export default function WaitlistManagement({
           <article key={entry.id} className="border-bottom border-secondary tw:pb-4 tw:mb-4">
             <div className="tw:flex tw:justify-between tw:gap-4 tw:flex-wrap">
               <div>
-                <span className="badge bg-secondary tw:me-2">
+                <Badge variant="secondary" className="tw:me-2">
                   {entry.eventTitle} — {entry.productName}
-                </span>
+                </Badge>
                 <div>
                   <strong>{entry.name}</strong> <a href={`mailto:${entry.email}`}>{entry.email}</a>
                   {entry.phone && <> · {entry.phone}</>}

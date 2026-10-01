@@ -4,8 +4,8 @@ import { AdminTextarea, AdminLabel } from "@/components/admin/AdminFields";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -63,7 +63,7 @@ function contentFor(version: PolicyVersion | undefined, locale: Locale): string 
   return version[`content_${locale}`] ?? "";
 }
 
-function statusVariant(status: PolicyVersion["status"]): string {
+function statusVariant(status: PolicyVersion["status"]): BadgeVariant {
   switch (status) {
     case "draft":
       return "warning";
@@ -315,7 +315,7 @@ export default function PolicyManagement({
           header: m.admin_status_label(),
           enableSorting: false,
           cell: ({ row }) => (
-            <Badge bg={statusVariant(row.original.status)}>
+            <Badge variant={statusVariant(row.original.status)}>
               {statusLabel(row.original.status)}
             </Badge>
           ),
@@ -386,7 +386,7 @@ export default function PolicyManagement({
                   {LOCALES.map((l) => (
                     <Badge
                       key={l}
-                      bg={policy.required_locales.includes(l) ? "info" : "secondary"}
+                      variant={policy.required_locales.includes(l) ? "info" : "secondary"}
                       className="tw:me-1"
                     >
                       {l}
@@ -418,7 +418,7 @@ export default function PolicyManagement({
                   {LOCALES.map((l) => (
                     <Badge
                       key={l}
-                      bg={values[l]?.trim() ? "success" : "secondary"}
+                      variant={values[l]?.trim() ? "success" : "secondary"}
                       className="tw:me-1"
                     >
                       {l}

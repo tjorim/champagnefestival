@@ -102,7 +102,9 @@ test.describe("Remuage visual theme", () => {
 
     await expect(page.locator("#next-festival")).toHaveCSS("background-color", "rgb(72, 34, 77)");
     await expect(page.locator("#registrations")).toHaveCSS("background-color", "rgb(72, 34, 77)");
-    await expect(page.locator("#other-events .alert-danger")).toHaveCount(0);
+    await expect(
+      page.locator('#other-events [data-slot="alert"][data-variant="danger"]'),
+    ).toHaveCount(0);
     await page.locator('#faq [data-slot="accordion-trigger"]').first().click();
     await expect(page.locator('#faq [data-slot="accordion-content"]')).toBeVisible();
 

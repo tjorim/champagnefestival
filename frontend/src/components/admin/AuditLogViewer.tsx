@@ -15,9 +15,9 @@ import {
 
 import { useCallback, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Table,
   TableHeader,
@@ -225,7 +225,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
 
       {entriesQuery.isPending ? (
         <div className="tw:text-center tw:py-12">
-          <Spinner animation="border" variant="primary" role="status">
+          <Spinner variant="primary" role="status">
             <span className="tw:sr-only">{m.admin_loading()}</span>
           </Spinner>
         </div>

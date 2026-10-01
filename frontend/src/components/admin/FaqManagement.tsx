@@ -25,8 +25,8 @@ import { Icon } from "@/components/Icon";
 
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -37,7 +37,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { FaqItem } from "@/types/admin";
@@ -300,7 +300,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   const localeBadge = (label: string, translated: boolean) => (
     <Badge
       key={label}
-      bg={translated ? "success" : "secondary"}
+      variant={translated ? "success" : "secondary"}
       className={`tw:ms-1 tw:text-tiny ${translated ? "" : "opacity-50"}`}
       title={translated ? undefined : m.admin_faq_locale_missing_title({ locale: label })}
     >
@@ -353,7 +353,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                 <div className="tw:font-semibold">
                   {item.questionNl}
                   {!item.active && (
-                    <Badge bg="secondary" className="tw:ms-2 tw:text-tiny">
+                    <Badge variant="secondary" className="tw:ms-2 tw:text-tiny">
                       {m.admin_venue_archived_badge()}
                     </Badge>
                   )}
@@ -435,7 +435,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
             </Alert>
           ) : faqItemsQuery.isPending ? (
             <div className="tw:text-center tw:py-12">
-              <Spinner animation="border" size="sm" role="status">
+              <Spinner size="sm" role="status">
                 <span className="tw:sr-only">{m.admin_loading()}</span>
               </Spinner>
             </div>

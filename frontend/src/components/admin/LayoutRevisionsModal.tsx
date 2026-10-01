@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogBody,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import type {
   LayoutRevision,
@@ -124,21 +124,21 @@ function statusBadge(status: DiffStatus) {
   switch (status) {
     case "added":
       return (
-        <Badge bg="success">
+        <Badge variant="success">
           <Icon icon={PlusIcon} className="tw:me-1" />
           {m.admin_layout_compare_added()}
         </Badge>
       );
     case "removed":
       return (
-        <Badge bg="danger">
+        <Badge variant="danger">
           <Icon icon={MinusIcon} className="tw:me-1" />
           {m.admin_layout_compare_removed()}
         </Badge>
       );
     case "changed":
       return (
-        <Badge bg="warning" text="dark">
+        <Badge variant="warning">
           <Icon icon={PencilIcon} className="tw:me-1" />
           {m.admin_layout_compare_changed()}
         </Badge>
@@ -387,7 +387,7 @@ export default function LayoutRevisionsModal({
           {/* List */}
           {loading ? (
             <div className="tw:text-center tw:py-4">
-              <Spinner animation="border" size="sm" />
+              <Spinner label={m.admin_loading()} size="sm" />
             </div>
           ) : loadError ? (
             <Alert variant="danger" className="tw:py-2 tw:text-sm">
@@ -470,7 +470,7 @@ export default function LayoutRevisionsModal({
               </div>
               {diffLoading ? (
                 <div className="tw:text-center tw:py-2">
-                  <Spinner animation="border" size="sm" />
+                  <Spinner label={m.admin_loading()} size="sm" />
                 </div>
               ) : diffError ? (
                 <Alert variant="danger" className="tw:py-2 tw:text-sm">
@@ -513,7 +513,7 @@ export default function LayoutRevisionsModal({
               <h6 className="tw:text-base">{m.admin_layout_revisions_restore_preview_title()}</h6>
               {previewLoading ? (
                 <div className="tw:text-center tw:py-2">
-                  <Spinner animation="border" size="sm" />
+                  <Spinner label={m.admin_loading()} size="sm" />
                 </div>
               ) : previewError ? (
                 <Alert variant="danger" className="tw:py-2 tw:text-sm">

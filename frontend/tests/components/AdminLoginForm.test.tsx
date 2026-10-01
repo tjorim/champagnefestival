@@ -22,6 +22,7 @@ const baseAuth = {
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    close: () => "Close",
     admin_title: () => "Admin",
     admin_login_button: () => "Login",
     auth_error_title: () => "Authentication problem",

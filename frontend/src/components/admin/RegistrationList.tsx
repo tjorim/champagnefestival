@@ -1,3 +1,4 @@
+import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
@@ -28,8 +29,8 @@ import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -122,7 +123,7 @@ interface RegistrationListProps {
   onClearSectionError?: () => void;
 }
 
-function statusBadgeVariant(status: RegistrationStatus): string {
+function statusBadgeVariant(status: RegistrationStatus): BadgeVariant {
   switch (status) {
     case "confirmed":
       return "success";
@@ -133,7 +134,7 @@ function statusBadgeVariant(status: RegistrationStatus): string {
   }
 }
 
-function paymentBadgeVariant(payment: PaymentStatus): string {
+function paymentBadgeVariant(payment: PaymentStatus): BadgeVariant {
   switch (payment) {
     case "paid":
       return "success";
@@ -645,7 +646,7 @@ export default function RegistrationList({
                       <Icon icon={ContactRoundIcon} className="tw:text-primary" />
                     </span>
                   )}
-                  <Badge bg={isStandalone ? "info" : "warning"} text="dark">
+                  <Badge variant={isStandalone ? "info" : "warning"}>
                     {(() => {
                       const et = reg.event?.edition?.editionType;
                       if (et === "bourse") return m.admin_edition_type_bourse();
@@ -678,13 +679,13 @@ export default function RegistrationList({
         columnHelper.accessor("status", {
           header: m.admin_status_label(),
           cell: ({ getValue }) => (
-            <Badge bg={statusBadgeVariant(getValue())}>{statusLabel(getValue())}</Badge>
+            <Badge variant={statusBadgeVariant(getValue())}>{statusLabel(getValue())}</Badge>
           ),
         }),
         columnHelper.accessor("paymentStatus", {
           header: m.admin_payment_label(),
           cell: ({ getValue }) => (
-            <Badge bg={paymentBadgeVariant(getValue())}>{paymentLabel(getValue())}</Badge>
+            <Badge variant={paymentBadgeVariant(getValue())}>{paymentLabel(getValue())}</Badge>
           ),
           meta: { tdClassName: "tw:hidden tw:lg:table-cell" },
         }),
@@ -696,15 +697,15 @@ export default function RegistrationList({
             return (
               <>
                 {reg.checkedIn ? (
-                  <Badge bg="success">
+                  <Badge variant="success">
                     <Icon icon={CircleCheckIcon} className="tw:me-1" />
                     {m.admin_checked_in()}
                   </Badge>
                 ) : (
-                  <Badge bg="secondary">{m.admin_not_checked_in()}</Badge>
+                  <Badge variant="secondary">{m.admin_not_checked_in()}</Badge>
                 )}
                 {!isStandalone && reg.strapIssued && (
-                  <Badge bg="info" className="tw:ms-1" title={m.admin_strap_issued()}>
+                  <Badge variant="info" className="tw:ms-1" title={m.admin_strap_issued()}>
                     <Icon icon={ContactRoundIcon} />
                     <span className="tw:sr-only">{m.admin_strap_issued()}</span>
                   </Badge>
@@ -1065,11 +1066,11 @@ export default function RegistrationList({
             <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
               <span className="tw:font-semibold">{m.admin_registrations_tab_header()}</span>
               <span className="tw:text-subtle tw:text-sm">
-                <Badge bg="warning" text="dark" className="tw:me-1">
+                <Badge variant="warning" className="tw:me-1">
                   {statusCounts.pending}
                 </Badge>
                 {m.admin_filter_pending()}
-                <Badge bg="success" className="tw:mx-1">
+                <Badge variant="success" className="tw:mx-1">
                   {statusCounts.confirmed}
                 </Badge>
                 {m.admin_filter_confirmed()}
@@ -1088,11 +1089,7 @@ export default function RegistrationList({
                 title={m.admin_export_csv_all_title()}
               >
                 {exportingAllCsv ? (
-                  <span
-                    className="spinner-border spinner-border-sm tw:me-1"
-                    role="status"
-                    aria-hidden="true"
-                  />
+                  <Spinner size="sm" aria-hidden="true" />
                 ) : (
                   <Icon icon={DownloadIcon} />
                 )}
@@ -1253,7 +1250,6 @@ export default function RegistrationList({
               aria-live="assertive"
               variant="danger"
               className="tw:py-1 tw:mt-2 tw:mb-0"
-              dismissible
               onClose={() => setBulkError(null)}
             >
               {bulkError}
@@ -1265,7 +1261,6 @@ export default function RegistrationList({
               aria-live="assertive"
               variant="danger"
               className="tw:py-1 tw:mt-2 tw:mb-0"
-              dismissible
               onClose={() => setEventExportError(null)}
             >
               {eventExportError}
@@ -1277,7 +1272,6 @@ export default function RegistrationList({
               aria-live="assertive"
               variant="danger"
               className="tw:py-1 tw:mt-2 tw:mb-0"
-              dismissible
               onClose={() => setCsvExportError(null)}
             >
               {csvExportError}
@@ -1298,13 +1292,7 @@ export default function RegistrationList({
                     onClick={() => void handleSelectAllMatching()}
                     disabled={isSelectingAllMatching}
                   >
-                    {isSelectingAllMatching && (
-                      <span
-                        className="spinner-border spinner-border-sm tw:me-1"
-                        role="status"
-                        aria-hidden="true"
-                      />
-                    )}
+                    {isSelectingAllMatching && <Spinner size="sm" aria-hidden="true" />}
                     {m.admin_bulk_select_all_matching({ total })}
                   </Button>
                 </div>
@@ -1315,7 +1303,6 @@ export default function RegistrationList({
                   aria-live="assertive"
                   variant="danger"
                   className="tw:py-1 tw:mb-2"
-                  dismissible
                   onClose={() => setSelectAllMatchingError(null)}
                 >
                   {selectAllMatchingError}
@@ -1359,7 +1346,6 @@ export default function RegistrationList({
               role="alert"
               aria-live="assertive"
               variant="danger"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={onClearSectionError}
             >
@@ -1368,11 +1354,7 @@ export default function RegistrationList({
           )}
           {pageQuery.isLoading ? (
             <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
-              <span
-                className="spinner-border spinner-border-sm tw:me-2"
-                role="status"
-                aria-hidden="true"
-              />
+              <Spinner size="sm" aria-hidden="true" />
               {m.admin_search_person_placeholder()}…
             </p>
           ) : pageQuery.isError ? (
@@ -1520,13 +1502,7 @@ export default function RegistrationList({
               onClick={executeBulkAction}
               disabled={bulkInProgress}
             >
-              {bulkInProgress && (
-                <span
-                  className="spinner-border spinner-border-sm tw:me-2"
-                  role="status"
-                  aria-hidden="true"
-                />
-              )}
+              {bulkInProgress && <Spinner size="sm" aria-hidden="true" />}
               {m.admin_action_confirm()}
             </Button>
           </DialogFooter>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
 import "./admin.css";
@@ -407,7 +407,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   if (auth.isLoading) {
     return (
       <div className="tw:py-12 tw:text-center">
-        <Spinner animation="border" variant="warning" role="status">
+        <Spinner variant="warning" role="status">
           <span className="tw:sr-only">{m.admin_loading()}</span>
         </Spinner>
       </div>
@@ -497,17 +497,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               // Renewal is quick but not instant; without this the dashboard just
               // sits there, which reads as a hang rather than as recovery.
               <Alert variant="info" className="tw:mb-6 tw:flex tw:items-center tw:gap-2">
-                <Spinner animation="border" size="sm" aria-hidden="true" />
+                <Spinner size="sm" aria-hidden="true" />
                 {m.admin_session_renewing()}
               </Alert>
             )}
             {globalError && (
-              <Alert
-                variant="danger"
-                className="tw:mb-6"
-                dismissible
-                onClose={() => setGlobalError("")}
-              >
+              <Alert variant="danger" className="tw:mb-6" onClose={() => setGlobalError("")}>
                 {globalError}
               </Alert>
             )}
