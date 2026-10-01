@@ -60,6 +60,25 @@ export const publicHandlers = [
     }),
   ),
 
+  /**
+   * GET /api/announcements/active — no announcements by default. Without a handler the
+   * banner's one-minute poll falls through to the dev proxy and logs ECONNREFUSED.
+   */
+  http.get("/api/announcements/active", () => HttpResponse.json([])),
+
+  /** GET /api/policies/:key/current — deterministic published policy for the visitor pages. */
+  http.get("/api/policies/:key/current", ({ params, request }) => {
+    const locale = new URL(request.url).searchParams.get("locale") ?? "nl";
+    return HttpResponse.json({
+      key: params.key,
+      title: "Privacy Policy",
+      locale,
+      html: "<p>Your privacy matters.</p>",
+      version_number: 1,
+      published_at: "2026-09-30T00:00:00Z",
+    });
+  }),
+
   /** GET /api/faq/active — returns a deterministic localized public FAQ item. */
   http.get("/api/faq/active", ({ request }) => {
     const locale = new URL(request.url).searchParams.getAll("locale").at(-1) ?? "nl";
