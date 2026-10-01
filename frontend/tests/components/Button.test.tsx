@@ -1,3 +1,4 @@
+import type { ComponentProps } from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
@@ -66,6 +67,28 @@ describe("ButtonLink", () => {
     expect(link).toHaveAttribute("href", "/home");
     expect(link).toHaveTextContent("Home");
     expect(link).toHaveAttribute("data-size", "sm");
+  });
+});
+
+describe("ButtonLink with a router-style link component", () => {
+  it("passes styling, hooks and children through to the rendered component", () => {
+    function RouterLink({ to, ...props }: ComponentProps<"a"> & { to: string }) {
+      return <a href={to} {...props} />;
+    }
+    render(
+      <ButtonLink
+        render={<RouterLink to="/venue-plan" />}
+        variant="outline-warning"
+        className="tw:w-full"
+      >
+        Show table
+      </ButtonLink>,
+    );
+    const link = screen.getByRole("link", { name: "Show table" });
+    expect(link).toHaveAttribute("href", "/venue-plan");
+    expect(link).toHaveAttribute("data-variant", "outline-warning");
+    expect(link.className).toContain("tw:w-full");
+    expect(link).not.toHaveAttribute("role");
   });
 });
 
