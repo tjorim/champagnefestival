@@ -24,7 +24,7 @@ const RivieraHero = ({
         <h1 className="riviera-hero__title">{title}</h1>
         <p className="riviera-hero__subtitle">{subtitle}</p>
         <div className="riviera-hero__actions">
-          <a href="#next-festival" className="riviera-button riviera-button--primary">
+          <a href="#next-festival" className="riviera-button">
             {learnMoreLabel}
             <Icon icon={CircleArrowDownIcon} />
           </a>

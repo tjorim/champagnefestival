@@ -294,7 +294,7 @@ export default function VolunteerFormModal({
               ) : (
                 <div className="tw:flex tw:flex-col tw:gap-2">
                   {helpPeriods.map((period, index) => (
-                    <div key={index} className="border border-secondary rounded tw:p-4">
+                    <div key={index} className="tw:rounded-md tw:border tw:border-subtle tw:p-4">
                       <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
                         <span className="tw:text-subtle tw:text-sm">#{index + 1}</span>
                         <Button

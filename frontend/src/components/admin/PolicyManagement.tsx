@@ -442,7 +442,7 @@ export default function PolicyManagement({
                     </Button>
                   ))}
                 </div>
-                <div className="border border-top-0 tw:p-4">
+                <div className="tw:border tw:border-t-0 tw:border-border tw:p-4">
                   <ButtonGroup
                     aria-label={m.admin_policy_markdown_toolbar_aria()}
                     className="tw:mb-2"
@@ -532,7 +532,7 @@ export default function PolicyManagement({
                         ref={textareaRef}
 
                         rows={12}
-                        className="font-monospace"
+                        className="tw:font-mono"
                         value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
                         onBlur={field.handleBlur}
@@ -545,7 +545,7 @@ export default function PolicyManagement({
                         {m.admin_policy_preview_label()}
                       </AdminLabel>
                       <div
-                        className="border rounded tw:p-4 bg-body-tertiary tw:min-h-32"
+                        className="tw:rounded-md tw:border tw:border-border tw:bg-muted tw:p-4 tw:min-h-32"
 
                         // Trusted: `preview` is always the sanitized HTML the
                         // backend's shared render_markdown() returned. Blanked

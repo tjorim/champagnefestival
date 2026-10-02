@@ -1,6 +1,7 @@
 import { InfoIcon, VideoOffIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import clsx from "clsx";
 import jsQR from "jsqr";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -170,24 +171,22 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
 
   return (
     <div className="tw:mb-4">
-      <div
-        className="tw:relative rounded tw:overflow-hidden bg-black"
-        style={{ aspectRatio: "4 / 3" }}
-      >
+      <div className="tw:relative tw:aspect-4/3 tw:overflow-hidden tw:rounded-md tw:bg-black">
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           ref={videoRef}
           muted
           playsInline
           aria-hidden="true"
-          className="tw:w-full tw:h-full"
-          style={{ objectFit: "cover", display: status === "scanning" ? "block" : "none" }}
+          className={clsx(
+            "tw:h-full tw:w-full tw:object-cover",
+            status === "scanning" ? "tw:block" : "tw:hidden",
+          )}
         />
         <canvas ref={canvasRef} className="tw:hidden" aria-hidden="true" />
         {status === "scanning" && (
           <div
-            className="tw:absolute tw:top-1/2 tw:left-1/2 tw:-translate-x-1/2 tw:-translate-y-1/2 border border-warning border-3 rounded"
-            style={{ width: "60%", aspectRatio: "1 / 1", pointerEvents: "none" }}
+            className="tw:pointer-events-none tw:absolute tw:top-1/2 tw:left-1/2 tw:aspect-square tw:w-3/5 tw:-translate-x-1/2 tw:-translate-y-1/2 tw:rounded-md tw:border-3 tw:border-warning"
             aria-hidden="true"
           />
         )}

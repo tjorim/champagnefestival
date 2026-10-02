@@ -95,7 +95,7 @@ export default function WaitlistManagement({
           <p className="tw:text-subtle tw:mb-0">{m.admin_waitlist_empty()}</p>
         )}
         {entries.data?.map((entry) => (
-          <article key={entry.id} className="border-bottom border-secondary tw:pb-4 tw:mb-4">
+          <article key={entry.id} className="tw:border-b tw:border-subtle tw:pb-4 tw:mb-4">
             <div className="tw:flex tw:justify-between tw:gap-4 tw:flex-wrap">
               <div>
                 <Badge variant="secondary" className="tw:me-2">
@@ -128,9 +128,7 @@ export default function WaitlistManagement({
               </div>
             </div>
             {entry.notes && (
-              <p className="tw:mt-2 tw:mb-0 tw:text-sm" style={{ whiteSpace: "pre-wrap" }}>
-                {entry.notes}
-              </p>
+              <p className="tw:mt-2 tw:mb-0 tw:text-sm tw:whitespace-pre-wrap">{entry.notes}</p>
             )}
           </article>
         ))}

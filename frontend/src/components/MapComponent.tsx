@@ -88,7 +88,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   if (!validCoordinates) {
     return (
-      <div className="tw:aspect-video rounded tw:overflow-hidden border tw:flex tw:items-center tw:justify-center bg-light">
+      <div className="tw:flex tw:aspect-video tw:items-center tw:justify-center tw:overflow-hidden tw:rounded-md tw:border tw:border-border tw:bg-muted">
         <p className="tw:text-subtle">{m.error_loading_map()}</p>
       </div>
     );
@@ -99,7 +99,7 @@ const MapComponent: React.FC<MapComponentProps> = ({
 
   return (
     <div
-      className="tw:aspect-video rounded tw:overflow-hidden border tw:relative"
+      className="tw:relative tw:aspect-video tw:overflow-hidden tw:rounded-md tw:border tw:border-border"
       aria-label={m.location_map_label()}
     >
       <MapContainer

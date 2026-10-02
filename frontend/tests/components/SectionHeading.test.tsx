@@ -10,9 +10,9 @@ describe("SectionHeading component", () => {
   });
 
   it("applies the provided className", () => {
-    render(<SectionHeading id="test-heading" title="Test Heading" className="custom-class" />);
+    render(<SectionHeading id="test-heading" title="Test Heading" className="tw:mt-2" />);
     const container = screen.getByText("Test Heading").closest("div");
-    expect(container).toHaveClass("custom-class");
+    expect(container).toHaveClass("tw:mt-2");
   });
 
   it("renders with subtitle when provided", () => {

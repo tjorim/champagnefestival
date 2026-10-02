@@ -729,7 +729,7 @@ export default function EventProductsModal({
           <DialogBody>
             {preview && (
               <section
-                className="border rounded tw:p-4 tw:mb-4"
+                className="tw:rounded-md tw:border tw:border-border tw:p-4 tw:mb-4"
                 aria-label={m.admin_inventory_review()}
               >
                 <h3 className="tw:text-base tw:font-medium tw:leading-tight">
@@ -815,7 +815,7 @@ export default function EventProductsModal({
             ) : (
               <>
                 {products.length === 0 ? (
-                  <p className="tw:text-subtle fst-italic tw:text-sm">{m.admin_products_empty()}</p>
+                  <p className="tw:text-subtle tw:italic tw:text-sm">{m.admin_products_empty()}</p>
                 ) : (
                   <PresentationList flush className="tw:mb-2">
                     {products.map((product) => renderRow(product))}

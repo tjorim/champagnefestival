@@ -104,11 +104,6 @@ html[data-visual-theme="riviera"] body::before {
   clip: auto;
 }
 
-html[data-visual-theme="riviera"] .bubble-background {
-  opacity: 0.16;
-  filter: hue-rotate(135deg) saturate(1.4);
-}
-
 .site-header {
   z-index: 1040;
   min-height: var(--header-height);
@@ -475,29 +470,6 @@ html[data-visual-theme="riviera"] .bubble-background {
   text-align: left;
 }
 
-.section-title {
-  margin: 0;
-  color: var(--ink);
-  font-size: clamp(2.5rem, 6vw, 5.8rem);
-  line-height: 0.9;
-  letter-spacing: -0.065em;
-}
-
-.section-title::after {
-  display: block;
-  width: 7rem;
-  height: 0.55rem;
-  margin: 0.9rem 0 0;
-  content: "";
-  background: repeating-linear-gradient(
-    90deg,
-    #007f83 0 1rem,
-    #ffd166 1rem 2rem,
-    #ff7448 2rem 3rem
-  );
-  border-radius: 999px;
-}
-
 .section-subtitle {
   max-width: none;
   margin: 0 !important;
@@ -753,9 +725,7 @@ html[data-visual-theme="riviera"] .bubble-background {
   box-shadow: var(--shadow-sm);
 }
 
-.standalone-document-main #privacy-policy .site-content-column,
-.standalone-main #check-in .bg-dark,
-.standalone-main #my-registrations .bg-dark {
+.standalone-document-main #privacy-policy .site-content-column {
   color: var(--text-color) !important;
   background-color: var(--surface-color-strong) !important;
 }

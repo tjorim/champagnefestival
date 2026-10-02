@@ -46,6 +46,7 @@ import {
 import { m } from "@/paraglide/messages";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
 import ConfirmModal from "@/components/ConfirmModal";
+import { safeRoomColor } from "@/utils/layoutUtils";
 
 const MapComponent = lazy(() => import("@/components/MapComponent"));
 
@@ -715,7 +716,7 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueRooms.length === 0 ? (
-                      <p className="tw:text-subtle tw:text-sm fst-italic tw:mb-4">
+                      <p className="tw:text-subtle tw:text-sm tw:italic tw:mb-4">
                         {m.admin_room_no_rooms()}
                       </p>
                     ) : (
@@ -734,7 +735,7 @@ export default function VenueManagement({
                                 className="tw:inline-block tw:size-2.5 tw:rounded-full tw:shrink-0"
 
                                 /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                                style={{ background: room.color }}
+                                style={{ background: safeRoomColor(room.color) }}
                                 /* oxlint-enable shadcn/no-inline-styles */
                               />
                               {room.name}
@@ -815,7 +816,7 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueTableTypes.length === 0 ? (
-                      <p className="tw:text-subtle tw:text-sm fst-italic tw:mb-0">
+                      <p className="tw:text-subtle tw:text-sm tw:italic tw:mb-0">
                         {m.admin_no_table_types()}
                       </p>
                     ) : (
@@ -1041,7 +1042,7 @@ export default function VenueManagement({
                 </div>
                 <Suspense
                   fallback={
-                    <div className="ratio ratio-16x9 rounded border border-secondary tw:flex tw:items-center tw:justify-center">
+                    <div className="tw:flex tw:aspect-video tw:items-center tw:justify-center tw:rounded-md tw:border tw:border-subtle">
                       {m.loading()}
                     </div>
                   }

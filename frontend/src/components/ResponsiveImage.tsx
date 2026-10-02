@@ -30,11 +30,15 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   const aspectRatio = width && height ? `${(height / width) * 100}%` : undefined;
 
   return (
-    <div
-      className={`tw:relative ${className}`}
-      style={fill ? { width: "100%", height: "100%" } : undefined}
-    >
-      {aspectRatio && !fill && <div style={{ paddingBottom: aspectRatio }} aria-hidden="true" />}
+    <div className={clsx("tw:relative", fill && "tw:h-full tw:w-full", className)}>
+      {aspectRatio && !fill && (
+        <div
+          /* oxlint-disable shadcn/no-inline-styles -- Spacer height derives from each image's width/height props. */
+          style={{ paddingBottom: aspectRatio }}
+          /* oxlint-enable shadcn/no-inline-styles */
+          aria-hidden="true"
+        />
+      )}
 
       <img
         src={src}
@@ -43,12 +47,10 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
         sizes={sizes}
         width={width}
         height={height}
-        className={clsx("object-cover", fill ? "tw:absolute tw:w-full tw:h-full" : "tw:w-full")}
-        style={{
-          objectFit: "cover",
-          top: 0,
-          left: 0,
-        }}
+        className={clsx(
+          "tw:top-0 tw:left-0 tw:w-full tw:object-cover",
+          fill && "tw:absolute tw:h-full",
+        )}
         onError={(e) => {
           e.currentTarget.src = "/images/logo.svg";
           e.currentTarget.onerror = null;

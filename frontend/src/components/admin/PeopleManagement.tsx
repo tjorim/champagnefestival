@@ -731,11 +731,15 @@ export default function PeopleManagement({
                     ? m.admin_people_merge_into()
                     : m.admin_people_merge_discard();
                 const variant = role === "canonical" ? "success" : "danger";
+                const tone =
+                  role === "canonical"
+                    ? "tw:border-success tw:text-success"
+                    : "tw:border-destructive tw:text-destructive";
 
                 return (
                   <Card key={role} tone={variant} className="tw:mb-4">
                     <CardHeader
-                      className={`border-${variant} text-${variant} tw:text-sm tw:font-semibold tw:flex tw:justify-between`}
+                      className={`${tone} tw:text-sm tw:font-semibold tw:flex tw:justify-between`}
                     >
                       <span>{label}</span>
                       <Button

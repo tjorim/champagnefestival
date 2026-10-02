@@ -1200,7 +1200,7 @@ export default function RegistrationList({
             />
           </div>
           {eventCapacityStats.length > 0 && (
-            <div className="tw:mt-2 tw:pt-2 border-top border-secondary">
+            <div className="tw:mt-2 tw:pt-2 tw:border-t tw:border-subtle">
               <div className="tw:flex tw:flex-col tw:gap-2">
                 {eventCapacityStats.map((eventStats) => {
                   const checkInPercent =
@@ -1279,7 +1279,7 @@ export default function RegistrationList({
           )}
           {/* Bulk action bar */}
           {selectedIds.size > 0 && (
-            <div className="tw:mt-2 tw:pt-2 border-top border-secondary">
+            <div className="tw:mt-2 tw:pt-2 tw:border-t tw:border-subtle">
               {canExpandSelectionToAllMatching && (
                 <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap tw:text-sm tw:text-subtle tw:mb-2">
                   <span>

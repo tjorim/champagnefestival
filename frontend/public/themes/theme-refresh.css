@@ -389,8 +389,7 @@ main > .content-section [data-slot="card"],
 .event-card,
 [data-slot="accordion"],
 .map-loading,
-.carousel-loading,
-.bubble-container-placeholder {
+.carousel-loading {
   background: var(--surface-color);
   border: 1px solid var(--border-color);
   box-shadow: var(--shadow);
@@ -456,9 +455,7 @@ main > .content-section [data-slot="card"],
   --layout-subtle: var(--text-muted) !important;
 }
 
-.tw\:text-highlight,
-.text-brand,
-.gradient-text {
+.tw\:text-highlight {
   color: var(--champagne) !important;
   -webkit-text-fill-color: currentColor;
   background: none;
@@ -602,8 +599,7 @@ main > .content-section [data-slot="card"],
 }
 
 .map-loading,
-.carousel-loading,
-.bubble-container-placeholder {
+.carousel-loading {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -659,18 +655,6 @@ main > .content-section [data-slot="card"],
 .marquee-slider .swiper-button-next,
 .marquee-slider .swiper-pagination {
   z-index: 3;
-}
-
-.map-iframe {
-  transition: opacity 0.3s ease;
-}
-
-.map-iframe-loading {
-  opacity: 0;
-}
-
-.map-iframe-loaded {
-  opacity: 1;
 }
 
 .site-footer {
@@ -1110,21 +1094,10 @@ a:focus {
     --layout-content: var(--text-color) !important;
   }
 
-  .standalone-main #check-in .bg-dark,
-  .standalone-main #my-registrations .bg-dark {
-    color: var(--text-color) !important;
-    background-color: var(--surface-color-strong) !important;
-  }
-
   .standalone-main #check-in .tw\:text-content,
   .standalone-main #my-registrations .tw\:text-content {
     color: var(--text-color) !important;
     --layout-content: var(--text-color) !important;
-  }
-
-  .standalone-main #check-in .border-secondary,
-  .standalone-main #my-registrations .border-secondary {
-    border-color: rgba(108, 117, 125, 0.45) !important;
   }
 }
 

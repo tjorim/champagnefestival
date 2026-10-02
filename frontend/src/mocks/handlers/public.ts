@@ -3,6 +3,20 @@ import { editions, events, type SeedEdition } from "../data/editionStore";
 import { sharedStore, resetSharedStore } from "../data/registrations";
 import { seedTables } from "../data/venue";
 
+/**
+ * Page-level state that specs cannot reach through the service worker (maintenance
+ * mode, announcements) is seeded in localStorage before load: `msw:maintenance`
+ * (`"true"`) and `msw:announcements` (a JSON array). Absent keys keep the defaults.
+ */
+function seededState<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(`msw:${key}`);
+    return raw === null ? fallback : (JSON.parse(raw) as T);
+  } catch {
+    return fallback;
+  }
+}
+
 function hydrateEditionEvents(edition: SeedEdition): SeedEdition {
   const editionEvents = [...events.filter((event) => event.edition_id === edition.id)].sort(
     (left, right) =>
@@ -53,7 +67,7 @@ export const publicHandlers = [
   /** GET /api/settings — site-wide settings; maintenance mode off by default. */
   http.get("/api/settings", () =>
     HttpResponse.json({
-      maintenance_mode: false,
+      maintenance_mode: seededState("maintenance", false),
       public_email: "nancy.cattrysse@telenet.be",
       public_phone: "+32 478 48 01 77",
       facebook_url: "https://www.facebook.com/champagnefestival.kust",
@@ -64,7 +78,7 @@ export const publicHandlers = [
    * GET /api/announcements/active — no announcements by default. Without a handler the
    * banner's one-minute poll falls through to the dev proxy and logs ECONNREFUSED.
    */
-  http.get("/api/announcements/active", () => HttpResponse.json([])),
+  http.get("/api/announcements/active", () => HttpResponse.json(seededState("announcements", []))),
 
   /** GET /api/policies/:key/current — deterministic published policy for the visitor pages. */
   http.get("/api/policies/:key/current", ({ params, request }) => {

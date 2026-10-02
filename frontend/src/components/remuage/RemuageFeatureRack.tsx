@@ -19,7 +19,7 @@ const RemuageFeatureRack = ({ items }: RemuageFeatureRackProps) => {
           <span className="remuage-feature__aperture" aria-hidden="true">
             <Icon icon={feature.icon} />
           </span>
-          <div className="remuage-feature__content">
+          <div>
             <h3>{feature.title}</h3>
             <p>{feature.description}</p>
           </div>

@@ -510,7 +510,7 @@ export default function LayoutRevisionsModal({
 
           {/* Restore preview / confirm */}
           {restoreTarget !== null && (
-            <div className="border rounded tw:p-2 tw:mt-4">
+            <div className="tw:rounded-md tw:border tw:border-border tw:p-2 tw:mt-4">
               <h6 className="tw:text-base">{m.admin_layout_revisions_restore_preview_title()}</h6>
               {previewLoading ? (
                 <div className="tw:text-center tw:py-2">

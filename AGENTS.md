@@ -126,9 +126,9 @@ Future workflow additions should follow these conventions:
   prefix-aware `cn` helper, and Lucide for new icons.
 - `pnpm lint` regenerates `.oxlint-legacy-classes.json` from vendor, component and
   runtime theme CSS. Never hand-edit that generated allow-list. The frozen
-  `.oxlint-legacy-exceptions.json` records existing inline properties and class
-  hooks without CSS; remove a file's exceptions when migrating it. Do not grow
-  this baseline for new components. All four shadcn rules apply to new files.
+  `.oxlint-legacy-exceptions.json` is empty since #1123; keep it empty. Genuinely
+  computed geometry (floor-plan coordinates, saved colors, data-derived ratios)
+  uses a scoped `oxlint-disable` comment with a justification instead. All four shadcn rules apply to new files.
 - Coexistence is temporary: remove unused legacy CSS/classes and each file's lint
   exceptions as it migrates. At migration completion, remove Bootstrap/Bootstrap
   Icons, replace reboot with verified Tailwind preflight, remove `tw:` prefixes

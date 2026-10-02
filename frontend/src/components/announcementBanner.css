@@ -1,16 +1,21 @@
-/* Flat fills — these exact colors are also the gradient endpoints for
-   .announcement-ticker__seam in AnnouncementBanner.tsx (LEVEL_COLOR), so a
-   seam meets each item's own background with no visible discontinuity. */
+/* Flat fills. The same colors are the gradient endpoints of
+   .announcement-ticker__seam (via data-from/data-to), so a seam meets each
+   item's own background with no visible discontinuity. */
+:root {
+  --announcement-info-bg: #d9edf7;
+  --announcement-warning-bg: #fff0bf;
+  --announcement-urgent-bg: #a9192b;
+}
 .announcement-info {
-  background: #d9edf7;
+  background: var(--announcement-info-bg);
   color: #123f52;
 }
 .announcement-warning {
-  background: #fff0bf;
+  background: var(--announcement-warning-bg);
   color: #513d00;
 }
 .announcement-urgent {
-  background: #a9192b;
+  background: var(--announcement-urgent-bg);
   color: #fff;
 }
 
@@ -35,12 +40,31 @@
   flex-shrink: 0;
   font-weight: 600;
 }
-/* The blended transition between two adjacent announcements — its gradient
-   colors come from AnnouncementBanner.tsx (LEVEL_COLOR) via an inline style. */
+/* The blended transition between two adjacent announcements; AnnouncementBanner
+   sets data-from (previous item level) and data-to (next item level). */
 .announcement-ticker__seam {
   flex-shrink: 0;
   align-self: stretch;
   width: 5rem;
+  background: linear-gradient(to right, var(--seam-from), var(--seam-to));
+}
+.announcement-ticker__seam[data-from="info"] {
+  --seam-from: var(--announcement-info-bg);
+}
+.announcement-ticker__seam[data-from="warning"] {
+  --seam-from: var(--announcement-warning-bg);
+}
+.announcement-ticker__seam[data-from="urgent"] {
+  --seam-from: var(--announcement-urgent-bg);
+}
+.announcement-ticker__seam[data-to="info"] {
+  --seam-to: var(--announcement-info-bg);
+}
+.announcement-ticker__seam[data-to="warning"] {
+  --seam-to: var(--announcement-warning-bg);
+}
+.announcement-ticker__seam[data-to="urgent"] {
+  --seam-to: var(--announcement-urgent-bg);
 }
 /* Shared by the clickable visible copy (<button>) and the aria-hidden
    duplicate (<span>) so both halves of the scroll loop have identical

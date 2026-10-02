@@ -34,6 +34,13 @@ describe("MaintenancePage", () => {
     );
   });
 
+  it("styles itself with owned classes instead of an embedded stylesheet or inline styles", () => {
+    const { container } = render(<MaintenancePage />);
+    expect(container.querySelector("style")).toBeNull();
+    expect(container.querySelector("[style]")).toBeNull();
+    expect(container.querySelector(".maintenance-page__title")).toBeInTheDocument();
+  });
+
   it("hides the Facebook action when the setting is empty", () => {
     facebookUrl = "";
     render(<MaintenancePage />);

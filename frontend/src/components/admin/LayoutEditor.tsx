@@ -57,7 +57,7 @@ import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
 import type { TableAllocation } from "@/types/registration";
 import type { Room, FloorTable, FloorArea, TableType, Layout, LayoutRevision } from "@/types/admin";
-import { getAreaSizePx, getCanvasSizePx, getTableSizePx } from "@/utils/layoutUtils";
+import { getAreaSizePx, getCanvasSizePx, getTableSizePx, safeRoomColor } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
 import LayoutCompareModal from "./LayoutCompareModal";
@@ -230,23 +230,23 @@ function DraggableTable({
   const isOverfilled = table.capacity > 0 && assignedCount > table.capacity;
   const isFull = exclusive || (table.capacity > 0 && assignedCount === table.capacity);
   const borderCls = isSelected
-    ? "border-warning"
+    ? "tw:border-warning"
     : isOverfilled
-      ? "border-danger"
+      ? "tw:border-destructive"
       : isFull
-        ? "border-warning"
+        ? "tw:border-warning"
         : assignedCount > 0
-          ? "border-success"
-          : "border-secondary";
+          ? "tw:border-success"
+          : "tw:border-subtle";
   const bgCls = isSelected
-    ? "bg-warning bg-opacity-25 tw:text-highlight"
+    ? "tw:bg-warning/25 tw:text-highlight"
     : isOverfilled
-      ? "bg-danger bg-opacity-10 tw:text-destructive"
+      ? "tw:bg-destructive/10 tw:text-destructive"
       : isFull
-        ? "bg-warning bg-opacity-10 tw:text-highlight"
+        ? "tw:bg-warning/10 tw:text-highlight"
         : assignedCount > 0
-          ? "bg-success bg-opacity-10 tw:text-success"
-          : "bg-dark tw:text-subtle";
+          ? "tw:bg-success/10 tw:text-success"
+          : "tw:bg-muted tw:text-subtle";
 
   return (
     <div
@@ -257,8 +257,8 @@ function DraggableTable({
         onClick();
       }}
       className={clsx(
-        "tw:absolute tw:flex tw:flex-col tw:items-center tw:justify-center border tw:text-center",
-        shape === "round" ? "rounded-circle" : "rounded",
+        "tw:absolute tw:flex tw:flex-col tw:items-center tw:justify-center tw:border tw:text-center",
+        shape === "round" ? "tw:rounded-full" : "tw:rounded-md",
         borderCls,
         bgCls,
       )}
@@ -336,10 +336,8 @@ function DraggableArea({
   const leftPx = (area.x / 100) * canvasW;
   const topPx = (area.y / 100) * canvasH;
 
-  const borderCls = isSelected ? "border-warning" : "border-info";
-  const bgCls = isSelected
-    ? "bg-warning bg-opacity-25 tw:text-highlight"
-    : "bg-info bg-opacity-10 tw:text-info";
+  const borderCls = isSelected ? "tw:border-warning" : "tw:border-info";
+  const bgCls = isSelected ? "tw:bg-warning/25 tw:text-highlight" : "tw:bg-info/10 tw:text-info";
   const fadedStyle = !isInteractive ? { opacity: 0.25, pointerEvents: "none" as const } : {};
 
   return (
@@ -351,7 +349,7 @@ function DraggableArea({
         onClick();
       }}
       className={clsx(
-        "tw:absolute tw:flex tw:flex-col tw:items-center tw:justify-center border tw:text-center rounded",
+        "tw:absolute tw:flex tw:flex-col tw:items-center tw:justify-center tw:rounded-md tw:border tw:text-center",
         borderCls,
         bgCls,
       )}
@@ -504,13 +502,13 @@ function RoomCanvas({
             onSelectTable(null);
             onSelectArea(null);
           }}
-          className="tw:relative border rounded"
+          className="tw:relative tw:rounded-md tw:border"
 
           /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
           style={{
             width: canvasW,
             height: canvasH,
-            borderColor: room.color,
+            borderColor: safeRoomColor(room.color),
             background:
               "repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)," +
               "repeating-linear-gradient(90deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)",
@@ -917,7 +915,7 @@ export default function LayoutEditor({
 
                       /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
                       style={{
-                        background: room.color,
+                        background: safeRoomColor(room.color),
                       }}
                       /* oxlint-enable shadcn/no-inline-styles */
                       aria-hidden="true"
@@ -1008,7 +1006,7 @@ export default function LayoutEditor({
                 <div className="tw:flex tw:items-center tw:gap-2">
                   <span
                     className="tw:font-semibold" /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                    style={{ color: activeRoom.color }}
+                    style={{ color: safeRoomColor(activeRoom.color, "inherit") }}
                     /* oxlint-enable shadcn/no-inline-styles */
                   >
                     <Icon icon={BuildingIcon} className="tw:me-1" />
@@ -1128,7 +1126,7 @@ export default function LayoutEditor({
               {selectedType && (
                 <Badge
                   variant={selectedType.heightType === "high" ? "info" : "dark"}
-                  className="border border-secondary"
+                  className="tw:border tw:border-subtle"
                 >
                   {selectedType.heightType === "high"
                     ? m.admin_table_height_type_high()
@@ -1343,7 +1341,7 @@ export default function LayoutEditor({
                 ))}
               </PresentationList>
             )}
-            <div className="border-top border-secondary tw:pt-4 tw:mt-4">
+            <div className="tw:border-t tw:border-subtle tw:pt-4 tw:mt-4">
               <AdminLabel className="tw:text-subtle tw:text-sm">
                 {m.admin_layout_assign_booking()}
               </AdminLabel>
@@ -1627,7 +1625,7 @@ export default function LayoutEditor({
               </AdminSelect>
             </AdminField>
             {tablesInSelectedArea.length > 0 && (
-              <div className="tw:mt-4 tw:pt-4 border-top border-secondary">
+              <div className="tw:mt-4 tw:pt-4 tw:border-t tw:border-subtle">
                 <p className="tw:text-subtle tw:text-sm tw:mb-2">
                   <Icon icon={Grid3X3Icon} className="tw:me-1" />
                   {m.admin_layout_tables_in_stand()}{" "}

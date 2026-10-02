@@ -357,7 +357,6 @@ html[data-visual-theme="remuage"] .standalone-app [data-slot="card-footer"] {
   border-color: var(--rem-line) !important;
 }
 
-html[data-visual-theme="remuage"] .standalone-app .bg-dark,
 html[data-visual-theme="remuage"] .standalone-app .tw\:text-content,
 html[data-visual-theme="remuage"] .standalone-app [data-slot="presentation-list-item"] {
   color: var(--rem-ink) !important;
@@ -365,7 +364,6 @@ html[data-visual-theme="remuage"] .standalone-app [data-slot="presentation-list-
   --layout-content: var(--rem-ink) !important;
 }
 
-html[data-visual-theme="remuage"] .standalone-app .border-secondary,
 html[data-visual-theme="remuage"] .standalone-app [data-slot="presentation-list-item"] {
   border-color: var(--rem-line) !important;
 }
