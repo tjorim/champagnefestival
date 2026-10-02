@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
+import { safeRoomColor } from "@/utils/layoutUtils";
 import { venuePlanQueryOptions } from "@/utils/venuePlanApi";
 
 export default function VenuePlanPage() {
@@ -58,7 +59,7 @@ export default function VenuePlanPage() {
               /* oxlint-disable shadcn/no-inline-styles -- Room aspect ratio and saved room color are per-layout data (docs/floor-plan-coordinates.md). */
               style={{
                 aspectRatio: `${layout.room?.width_m ?? 4} / ${layout.room?.length_m ?? 3}`,
-                borderColor: layout.room?.color ?? "var(--surface-border)",
+                borderColor: safeRoomColor(layout.room?.color),
               }}
               /* oxlint-enable shadcn/no-inline-styles */
               aria-label={layout.room?.name ?? layout.label}

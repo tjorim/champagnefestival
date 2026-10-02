@@ -57,7 +57,7 @@ import { m } from "@/paraglide/messages";
 import type { Registration } from "@/types/registration";
 import type { TableAllocation } from "@/types/registration";
 import type { Room, FloorTable, FloorArea, TableType, Layout, LayoutRevision } from "@/types/admin";
-import { getAreaSizePx, getCanvasSizePx, getTableSizePx } from "@/utils/layoutUtils";
+import { getAreaSizePx, getCanvasSizePx, getTableSizePx, safeRoomColor } from "@/utils/layoutUtils";
 import { getTablesInArea } from "@/utils/layoutGeometry";
 import { devError } from "@/utils/devLog";
 import LayoutCompareModal from "./LayoutCompareModal";
@@ -508,7 +508,7 @@ function RoomCanvas({
           style={{
             width: canvasW,
             height: canvasH,
-            borderColor: room.color,
+            borderColor: safeRoomColor(room.color),
             background:
               "repeating-linear-gradient(0deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)," +
               "repeating-linear-gradient(90deg,transparent,transparent 27px,rgba(255,255,255,0.04) 27px,rgba(255,255,255,0.04) 28px)",
@@ -915,7 +915,7 @@ export default function LayoutEditor({
 
                       /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
                       style={{
-                        background: room.color,
+                        background: safeRoomColor(room.color),
                       }}
                       /* oxlint-enable shadcn/no-inline-styles */
                       aria-hidden="true"
@@ -1006,7 +1006,7 @@ export default function LayoutEditor({
                 <div className="tw:flex tw:items-center tw:gap-2">
                   <span
                     className="tw:font-semibold" /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                    style={{ color: activeRoom.color }}
+                    style={{ color: safeRoomColor(activeRoom.color, "inherit") }}
                     /* oxlint-enable shadcn/no-inline-styles */
                   >
                     <Icon icon={BuildingIcon} className="tw:me-1" />

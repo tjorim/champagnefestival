@@ -46,6 +46,7 @@ import {
 import { m } from "@/paraglide/messages";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
 import ConfirmModal from "@/components/ConfirmModal";
+import { safeRoomColor } from "@/utils/layoutUtils";
 
 const MapComponent = lazy(() => import("@/components/MapComponent"));
 
@@ -734,7 +735,7 @@ export default function VenueManagement({
                                 className="tw:inline-block tw:size-2.5 tw:rounded-full tw:shrink-0"
 
                                 /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                                style={{ background: room.color }}
+                                style={{ background: safeRoomColor(room.color) }}
                                 /* oxlint-enable shadcn/no-inline-styles */
                               />
                               {room.name}

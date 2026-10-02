@@ -27,6 +27,15 @@ needs no new entry.
 | Floor plan (`LayoutEditor`, `VenueManagement`), jsQR scanner, QR output, Leaflet, Swiper, analytics, Remuage/Riviera artwork | **Kept custom**: domain rendering or vendor integration (see the issue). Their existing narrow inline allowances are unchanged. |
 | Test placeholders | `custom-class` in the `ResponsiveImage`/`SectionHeading` tests became a real `tw:mt-2` class; the `fill` test now asserts classes instead of inline styles. |
 
+### Saved room colors
+
+Room colors are written to inline styles (floor-plan canvas border, editor swatch and
+heading, venue swatch). The backend enforces a hex pattern on writes, but responses are
+plain strings, so `safeRoomColor()` in `src/utils/layoutUtils.ts` re-checks the same
+pattern before each use and falls back to the neutral `var(--surface-border)` (or
+`inherit` for text). Anything else (named colors, `var()`/`url()` payloads, malformed
+hex) is rendered with the fallback.
+
 ### Raw Bootstrap utilities in migrated views
 
 A tokenised search of every string in `src`, `tests` and `e2e` against the vendor
