@@ -19,8 +19,8 @@ import { Icon } from "@/components/Icon";
 import clsx from "clsx";
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -32,7 +32,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 
 import { m } from "@/paraglide/messages";
 import EditionCard from "./EditionCard";
@@ -50,7 +50,7 @@ import {
   updateContentSectionItemActive,
 } from "@/utils/adminContentApi";
 
-function typeBadgeVariant(type: string | undefined): string {
+function typeBadgeVariant(type: string | undefined): BadgeVariant {
   switch (type) {
     case "producer":
       return "warning";
@@ -384,7 +384,7 @@ export function ContentSection({
             </span>
           )}
           <Badge
-            bg={typeBadgeVariant(item.type)}
+            variant={typeBadgeVariant(item.type)}
             className="tw:shrink-0"
             aria-label={`${m.admin_item_type()}: ${typeLabel(item.type)}`}
           >
@@ -450,7 +450,7 @@ export function ContentSection({
   if (itemsQuery.isPending) {
     return (
       <div className="tw:text-center tw:py-4">
-        <Spinner animation="border" size="sm" variant="primary" />
+        <Spinner size="sm" variant="primary" />
         <span className="tw:ms-2 tw:text-subtle">{m.admin_content_loading()}</span>
       </div>
     );
@@ -461,11 +461,11 @@ export function ContentSection({
       <div className="tw:flex tw:justify-between tw:items-center tw:mb-2 tw:flex-wrap tw:gap-2">
         <h6 className="tw:mb-0 tw:text-primary">
           {title}
-          <Badge bg="secondary" className="tw:ms-2">
+          <Badge variant="secondary" className="tw:ms-2">
             {totalActive}
           </Badge>
           {totalArchived > 0 && (
-            <Badge bg="dark" text="secondary" className="tw:ms-1 border border-secondary">
+            <Badge variant="outline" className="tw:ms-1">
               {totalArchived} {m.admin_content_archived_section()}
             </Badge>
           )}
@@ -521,7 +521,6 @@ export function ContentSection({
           aria-live="assertive"
           variant="danger"
           className="tw:py-1 tw:mb-2"
-          dismissible
           onClose={() => setActionError(null)}
         >
           {actionError}
@@ -596,13 +595,7 @@ export function ContentSection({
               {m.admin_action_cancel()}
             </Button>
             <Button variant="warning" onClick={handleBulkArchive} disabled={bulkArchiveInProgress}>
-              {bulkArchiveInProgress && (
-                <span
-                  className="spinner-border spinner-border-sm tw:me-2"
-                  role="status"
-                  aria-hidden="true"
-                />
-              )}
+              {bulkArchiveInProgress && <Spinner size="sm" aria-hidden="true" />}
               {m.admin_content_archive()}
             </Button>
           </DialogFooter>
@@ -712,7 +705,7 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
 
       {editionsQuery.isPending && (
         <div className="tw:text-center tw:py-4">
-          <Spinner animation="border" size="sm" variant="primary" />
+          <Spinner size="sm" variant="primary" />
           <span className="tw:ms-2 tw:text-subtle">{m.admin_content_loading()}</span>
         </div>
       )}
@@ -735,7 +728,7 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
               <div key={type}>
                 <div className="tw:flex tw:items-center tw:gap-2 tw:mb-2">
                   <h6 className="tw:mb-0 tw:text-content">{editionTypeLabel(type)}</h6>
-                  <Badge bg="secondary">{grouped.length}</Badge>
+                  <Badge variant="secondary">{grouped.length}</Badge>
                 </div>
                 {grouped.map((edition) => (
                   <EditionCard

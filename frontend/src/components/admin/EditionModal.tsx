@@ -13,7 +13,7 @@ import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 
 import {
   Dialog,
@@ -23,7 +23,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Combobox,
   ComboboxContent,
@@ -509,7 +509,7 @@ export default function EditionModal({
                 </AdminLabel>
                 {exhibitorsQuery.isPending ? (
                   <div className="tw:text-subtle tw:text-sm">
-                    <Spinner animation="border" size="sm" className="tw:me-2" />
+                    <Spinner size="sm" className="tw:me-2" />
                     {m.admin_edition_loading_exhibitors()}
                   </div>
                 ) : (
@@ -587,11 +587,7 @@ export default function EditionModal({
               size="sm"
               disabled={saveEditionMutation.isPending}
             >
-              {saveEditionMutation.isPending ? (
-                <Spinner as="span" animation="border" size="sm" />
-              ) : (
-                <Icon icon={SaveIcon} />
-              )}
+              {saveEditionMutation.isPending ? <Spinner size="sm" /> : <Icon icon={SaveIcon} />}
               {m.admin_save()}
             </Button>
           </DialogFooter>

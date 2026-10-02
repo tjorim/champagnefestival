@@ -10,7 +10,7 @@ import {
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useQuery } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 
 import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";

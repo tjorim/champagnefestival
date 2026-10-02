@@ -22,7 +22,9 @@ describe("SVG icons", () => {
       );
       expect(screen.getByRole("button", { name: "Delete area" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Champagne stand" })).toBeInTheDocument();
-      for (const svg of container.querySelectorAll("svg")) {
+      const svgs = [...container.querySelectorAll("svg")];
+      expect(svgs.length).toBeGreaterThan(0);
+      for (const svg of svgs) {
         expect(svg).toHaveAttribute("aria-hidden", "true");
         expect(svg).toHaveAttribute("focusable", "false");
         expect(svg).toHaveAttribute("width", "1em");

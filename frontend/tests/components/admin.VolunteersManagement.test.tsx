@@ -96,7 +96,7 @@ describe("VolunteersManagement — rendering", () => {
 
   it("shows a loading spinner instead of the table when isLoading is true", async () => {
     renderVolunteersManagement({ isLoading: true, volunteers: [] });
-    expect(document.querySelector(".spinner-border")).toBeTruthy();
+    expect(document.querySelector('[data-slot="spinner"]')).toBeTruthy();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 

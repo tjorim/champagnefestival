@@ -10,18 +10,6 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage"]) {
           localStorage.setItem("champagnefestival:visualTheme", selected);
           localStorage.setItem("PARAGLIDE_LOCALE", "en");
         }, theme);
-        await page.context().route("**/api/policies/privacy/current?*", (route) =>
-          route.fulfill({
-            json: {
-              key: "privacy",
-              title: "Privacy Policy",
-              locale: "en",
-              html: "<p>Your privacy matters.</p>",
-              version_number: 1,
-              published_at: "2026-09-30T00:00:00Z",
-            },
-          }),
-        );
         await page.goto("/privacy", { waitUntil: "domcontentloaded" });
         await expect(page.locator("html")).toHaveAttribute("data-visual-theme", theme);
         await expect

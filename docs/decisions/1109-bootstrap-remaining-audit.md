@@ -95,6 +95,15 @@ pages and the Cuvée, Remuage and Riviera hero links no longer depends on Bootst
 at 15. Keep active pending review and screenshot publication; #1111 remains blocked by
 #1122–#1123 and its cleanup gates.
 
+#1122 is implemented locally (2026-10-01); see the [alert, spinner and badge migration audit](1122-alerts-spinners-badges.md).
+All 48 scoped Bootstrap Alert/Badge/Spinner importers use owned `Alert`, `Badge` and `Spinner`
+primitives, so `react-bootstrap` has no remaining importers in `src`. Raw `alert-link`, `badge` and
+`spinner-border` markup, 15 theme/admin selector lines and the obsolete admin spinner rule are
+removed (colors retint through `data-slot`/`data-variant` hooks); stand-alone spinners and the root
+error fallback gained accessible text/alerts. Frozen exception entries stay at 15. Keep active
+pending review and screenshot publication; #1111 remains blocked by #1123 and its cleanup gates,
+and the `react-bootstrap`/`bootstrap` dependencies stay until then.
+
 ## Preferred implementation order and ownership
 
 | Order | Issue | Scope |

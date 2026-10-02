@@ -4,7 +4,7 @@ import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 import SectionHeading from "@/components/SectionHeading";
 import RegistrationModal from "@/components/RegistrationModal";
 import type { Event } from "@/types/event";

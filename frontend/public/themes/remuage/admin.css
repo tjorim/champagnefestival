@@ -152,10 +152,10 @@ html[data-visual-theme="remuage"]
   background-image: none;
 }
 
-html[data-visual-theme="remuage"] #admin .badge.bg-warning {
-  color: #513200 !important;
-  background: #ffe2a1 !important;
-  border: 1px solid #d39724 !important;
+html[data-visual-theme="remuage"] #admin [data-slot="badge"][data-variant="warning"] {
+  color: #513200;
+  background: #ffe2a1;
+  border: 1px solid #d39724;
 }
 
 html[data-visual-theme="remuage"] #admin [data-slot="presentation-list-item"],

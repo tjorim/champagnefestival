@@ -571,7 +571,7 @@ main > .content-section [data-slot="card"],
   font-weight: 800;
 }
 
-.badge {
+[data-slot="badge"] {
   border-radius: 999px;
   font-weight: 750;
 }

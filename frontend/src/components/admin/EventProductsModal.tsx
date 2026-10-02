@@ -13,8 +13,8 @@ import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -25,7 +25,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
@@ -648,7 +648,7 @@ export default function EventProductsModal({
         className="tw:flex tw:flex-col tw:gap-1 tw:py-1 tw:px-0 tw:text-card-foreground"
       >
         <div className="tw:flex tw:justify-between tw:items-center tw:gap-2">
-          <span className="tw:flex tw:items-center tw:gap-2 tw:truncate tw:flex-wrap">
+          <span className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2 tw:flex-wrap">
             <span className="tw:text-content">
               {product.name}
               <span className="tw:block tw:text-sm tw:text-subtle">
@@ -659,19 +659,22 @@ export default function EventProductsModal({
                   : ""}
               </span>
             </span>
-            <Badge bg={product.purchasable ? "success" : "secondary"} className="tw:text-micro">
+            <Badge
+              variant={product.purchasable ? "success" : "secondary"}
+              className="tw:text-micro"
+            >
               {product.purchasable ? m.admin_products_purchasable() : m.admin_products_hidden()}
             </Badge>
             {soldOut && (
-              <Badge bg="danger" className="tw:text-micro">
+              <Badge variant="danger" className="tw:text-micro">
                 {m.admin_products_sold_out()}
               </Badge>
             )}
-            <Badge bg="secondary" className="tw:text-micro tw:capitalize">
+            <Badge variant="secondary" className="tw:text-micro tw:capitalize">
               {categoryLabel(product.category)}
             </Badge>
             {product.required && (
-              <Badge bg="warning" text="dark" className="tw:text-micro">
+              <Badge variant="warning" className="tw:text-micro">
                 {m.admin_products_required_badge()}
               </Badge>
             )}
@@ -803,7 +806,7 @@ export default function EventProductsModal({
 
             {productsQuery.isPending ? (
               <div className="tw:text-center tw:py-4">
-                <Spinner animation="border" size="sm" variant="warning" />
+                <Spinner label={m.admin_loading()} size="sm" variant="warning" />
               </div>
             ) : productsQuery.isError ? (
               <Alert variant="danger" className="tw:py-1 tw:mb-2">

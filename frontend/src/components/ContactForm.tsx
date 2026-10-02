@@ -6,8 +6,8 @@ import { useForm } from "@tanstack/react-form";
 import { useRef, useState } from "react";
 import { m } from "@/paraglide/messages";
 import { Card, CardContent } from "@/components/ui/card";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import {
   PublicError,
   PublicField,
@@ -282,7 +282,7 @@ const ContactForm = () => {
             >
               {isSubmitting ? (
                 <span className="tw:flex tw:items-center tw:justify-center">
-                  <Spinner animation="border" size="sm" className="tw:me-2" />
+                  <Spinner size="sm" className="tw:me-2" />
                   {m.contact_submitting()}
                 </span>
               ) : (

@@ -1,8 +1,8 @@
 import { useForm } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { FieldLabel, FieldTitle } from "@/components/ui/field";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -163,7 +163,7 @@ export default function MyAccountPage() {
     <>
       {identityMutation.isPending ? (
         <div className="tw:flex tw:items-center tw:justify-center tw:gap-2 tw:text-subtle tw:mb-4">
-          <Spinner animation="border" size="sm" />
+          <Spinner label={m.loading()} size="sm" />
         </div>
       ) : identityMutation.isError && !identity ? (
         <Alert variant="danger">{m.my_eid_load_error()}</Alert>
@@ -449,14 +449,14 @@ export default function MyAccountPage() {
       </h1>
 
       {authError && (
-        <Alert variant="danger" dismissible onClose={clearAuthError}>
+        <Alert variant="danger" onClose={clearAuthError}>
           {authError}
         </Alert>
       )}
 
       {isSigningOut ? (
         <div className="tw:flex tw:items-center tw:justify-center tw:gap-2 tw:text-subtle">
-          <Spinner animation="border" size="sm" />
+          <Spinner size="sm" />
           {m.auth_signing_out()}
         </div>
       ) : (

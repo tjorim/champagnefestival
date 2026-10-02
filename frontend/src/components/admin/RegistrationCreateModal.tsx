@@ -12,7 +12,7 @@ import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm, useSelector } from "@tanstack/react-form";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 
 import {
   Dialog,
@@ -22,7 +22,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Combobox,
   ComboboxInput,
@@ -192,7 +192,6 @@ export default function RegistrationCreateModal({
               <Alert
                 variant="danger"
                 className="tw:py-2 tw:text-sm"
-                dismissible
                 onClose={() => createRegistrationMutation.reset()}
               >
                 {error}
@@ -203,7 +202,7 @@ export default function RegistrationCreateModal({
               <AdminLabel className="tw:text-subtle tw:text-sm">{m.admin_event_label()}</AdminLabel>
               {loadingEvents ? (
                 <div className="tw:text-subtle tw:text-sm">
-                  <Spinner animation="border" size="sm" className="tw:me-2" />
+                  <Spinner size="sm" className="tw:me-2" />
                   {m.admin_loading_events()}
                 </div>
               ) : eventsQuery.isError ? (
@@ -352,11 +351,7 @@ export default function RegistrationCreateModal({
               size="sm"
               disabled={isSubmitting || !watchedPersonOption || !hasValidEventSelection}
             >
-              {isSubmitting ? (
-                <Spinner as="span" animation="border" size="sm" />
-              ) : (
-                <Icon icon={SaveIcon} />
-              )}
+              {isSubmitting ? <Spinner size="sm" /> : <Icon icon={SaveIcon} />}
               {m.admin_create_action()}
             </Button>
           </DialogFooter>

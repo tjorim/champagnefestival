@@ -14,8 +14,8 @@ import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   PublicField,
@@ -34,7 +34,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { QRCodeSVG } from "qrcode.react";
 import { m } from "@/paraglide/messages";
 import {
@@ -432,14 +432,7 @@ export default function MyRegistrationsPage() {
             >
               {isSubmittingEmail ? (
                 <>
-                  <Spinner
-                    as="span"
-                    animation="border"
-                    size="sm"
-                    role="status"
-                    aria-hidden="true"
-                    className="tw:me-2"
-                  />
+                  <Spinner size="sm" role="status" aria-hidden="true" className="tw:me-2" />
                   {m.my_registrations_requesting()}
                 </>
               ) : (
@@ -464,7 +457,7 @@ export default function MyRegistrationsPage() {
         <>
           {isLoadingRegistrations && (
             <Alert variant="secondary" className="tw:text-center">
-              <Spinner animation="border" size="sm" className="tw:me-2" />
+              <Spinner size="sm" className="tw:me-2" />
               {m.my_registrations_loading()}
             </Alert>
           )}
@@ -486,13 +479,7 @@ export default function MyRegistrationsPage() {
                     onClick={() => claimVerifiedEmailMutation.mutate()}
                   >
                     {claimVerifiedEmailMutation.isPending ? (
-                      <Spinner
-                        as="span"
-                        animation="border"
-                        size="sm"
-                        role="status"
-                        aria-hidden="true"
-                      />
+                      <Spinner size="sm" role="status" aria-hidden="true" />
                     ) : (
                       m.my_registrations_claimable_confirm()
                     )}
@@ -609,7 +596,7 @@ export default function MyRegistrationsPage() {
                         )}
                         <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
                           <Badge
-                            bg={
+                            variant={
                               registration.status === "confirmed"
                                 ? "success"
                                 : registration.status === "cancelled"
@@ -624,7 +611,7 @@ export default function MyRegistrationsPage() {
                                 : m.admin_status_pending()}
                           </Badge>
                           <Badge
-                            bg={
+                            variant={
                               registration.paymentStatus === "paid"
                                 ? "success"
                                 : registration.paymentStatus === "partial"
@@ -639,7 +626,7 @@ export default function MyRegistrationsPage() {
                                 : m.admin_payment_unpaid()}
                           </Badge>
                           {registration.checkedIn && (
-                            <Badge bg="success">
+                            <Badge variant="success">
                               <Icon icon={CircleCheckIcon} className="tw:me-1" />
                               {m.admin_checked_in()}
                             </Badge>
@@ -688,7 +675,7 @@ export default function MyRegistrationsPage() {
                                   className="tw:flex tw:justify-between tw:items-center tw:px-0 tw:py-1"
                                 >
                                   <span className="tw:text-sm">
-                                    {item.name} <Badge bg="secondary">×{item.quantity}</Badge>
+                                    {item.name} <Badge variant="secondary">×{item.quantity}</Badge>
                                   </span>
                                 </PresentationListItem>
                               ))}
@@ -727,13 +714,7 @@ export default function MyRegistrationsPage() {
                   onClick={() => void handleSignOut()}
                 >
                   {isSigningOut ? (
-                    <Spinner
-                      as="span"
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                    />
+                    <Spinner size="sm" role="status" aria-hidden="true" />
                   ) : (
                     <Icon icon={LogOutIcon} />
                   )}

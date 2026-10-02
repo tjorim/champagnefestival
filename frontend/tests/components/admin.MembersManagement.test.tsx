@@ -85,7 +85,7 @@ describe("MembersManagement — rendering", () => {
 
   it("shows a loading spinner instead of the table when isLoading is true", async () => {
     renderMembersManagement({ isLoading: true, members: [] });
-    expect(document.querySelector(".spinner-border")).toBeTruthy();
+    expect(document.querySelector('[data-slot="spinner"]')).toBeTruthy();
     expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 

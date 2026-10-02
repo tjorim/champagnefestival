@@ -30,8 +30,8 @@ import { Icon } from "@/components/Icon";
 import clsx from "clsx";
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
@@ -652,7 +652,7 @@ export default function VenueManagement({
                     <div className="tw:font-semibold">
                       {venue.name}
                       {isArchived && (
-                        <Badge bg="secondary" className="tw:ms-2 tw:text-tiny">
+                        <Badge variant="secondary" className="tw:ms-2 tw:text-tiny">
                           {m.admin_venue_archived_badge()}
                         </Badge>
                       )}

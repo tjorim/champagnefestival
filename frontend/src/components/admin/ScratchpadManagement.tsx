@@ -3,10 +3,10 @@ import { AdminField, AdminTextarea } from "@/components/admin/AdminFields";
 import { useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
@@ -114,12 +114,12 @@ export default function ScratchpadManagement({
               </Alert>
             )}
             {saved && !saveMutation.isError && (
-              <Alert variant="success" dismissible onClose={() => setSaved(false)}>
+              <Alert variant="success" onClose={() => setSaved(false)}>
                 {m.admin_scratchpad_saved()}
               </Alert>
             )}
             {query.isPending ? (
-              <Spinner animation="border" size="sm" />
+              <Spinner label={m.admin_loading()} size="sm" />
             ) : (
               <form
                 onSubmit={(e) => {
@@ -152,7 +152,7 @@ export default function ScratchpadManagement({
                 >
                   {saveMutation.isPending ? (
                     <>
-                      <Spinner as="span" animation="border" size="sm" className="tw:me-1" />
+                      <Spinner size="sm" className="tw:me-1" />
                       {m.admin_scratchpad_saving()}
                     </>
                   ) : (

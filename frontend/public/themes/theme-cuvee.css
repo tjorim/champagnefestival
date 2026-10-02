@@ -762,33 +762,34 @@ h2.section-header::after {
   font-weight: 600;
 }
 
-.badge {
+[data-slot="badge"] {
   color: var(--foil-deep);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  background: transparent !important;
+  background: transparent;
   border: 1px solid rgba(138, 100, 20, 0.5);
   border-radius: 2px;
 }
 
 /* Keep the semantic status colors legible as tinted-outline stamps */
-.badge.bg-success {
+[data-slot="badge"][data-variant="success"] {
   color: #2f7d4f;
   border-color: rgba(47, 125, 79, 0.55);
 }
 
-.badge.bg-danger {
+[data-slot="badge"][data-variant="danger"] {
   color: #a33d2f;
   border-color: rgba(163, 61, 47, 0.55);
 }
 
-.badge.bg-secondary {
+[data-slot="badge"][data-variant="secondary"],
+[data-slot="badge"][data-variant="outline"] {
   color: var(--ink-soft);
   border-color: rgba(95, 88, 68, 0.5);
 }
 
-.badge.bg-info {
+[data-slot="badge"][data-variant="info"] {
   color: #1d5f77;
   border-color: rgba(29, 95, 119, 0.55);
 }

@@ -30,8 +30,9 @@ import {
   PublicSelect,
   PublicTextarea,
 } from "@/components/PublicFields";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert, AlertLink } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
@@ -312,9 +313,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               <div className="tw:mt-2">
                 {m.registration_reference({ reference: registrationId })}
               </div>
-              <a href="/me" className="alert-link">
-                {m.registration_view_my_registrations()}
-              </a>
+              <AlertLink href="/me">{m.registration_view_my_registrations()}</AlertLink>
             </Alert>
           ) : (
             <form
@@ -528,13 +527,13 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                             {label}
                             {product.soldOut && (
                               <>
-                                <span className="badge bg-danger tw:ms-2">
+                                <Badge variant="danger" className="tw:ms-2">
                                   {m.registration_order_sold_out()}
-                                </span>
+                                </Badge>
                                 {waitlistedProductIds.has(product.id) ? (
-                                  <span className="badge bg-success tw:ms-2">
+                                  <Badge variant="success" className="tw:ms-2">
                                     {m.registration_waitlist_joined()}
-                                  </span>
+                                  </Badge>
                                 ) : (
                                   <Button
                                     variant="link"
@@ -641,14 +640,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               >
                 {isSubmitting ? (
                   <>
-                    <Spinner
-                      as="span"
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                      className="tw:me-2"
-                    />
+                    <Spinner size="sm" role="status" aria-hidden="true" className="tw:me-2" />
                     {m.registration_submitting()}
                   </>
                 ) : (

@@ -1,7 +1,7 @@
 import { Button, ButtonLink } from "@/components/ui/button";
 import { AdminField, AdminLabel, AdminInput, AdminTextarea } from "@/components/admin/AdminFields";
 import { useMemo, useState } from "react";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 
 import {
   Dialog,

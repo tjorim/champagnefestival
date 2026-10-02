@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 
 import {
   Dialog,
@@ -20,7 +20,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import type { Person, VolunteerHelpPeriod } from "@/types/person";
 
@@ -186,12 +186,7 @@ export default function VolunteerFormModal({
         >
           <DialogBody>
             {error && (
-              <Alert
-                variant="danger"
-                className="tw:py-2 tw:text-sm"
-                dismissible
-                onClose={() => setError(null)}
-              >
+              <Alert variant="danger" className="tw:py-2 tw:text-sm" onClose={() => setError(null)}>
                 {error}
               </Alert>
             )}
@@ -406,11 +401,7 @@ export default function VolunteerFormModal({
                 !eidDocumentNumberValue.trim()
               }
             >
-              {isSubmitting ? (
-                <Spinner as="span" animation="border" size="sm" />
-              ) : (
-                <Icon icon={SaveIcon} />
-              )}
+              {isSubmitting ? <Spinner size="sm" /> : <Icon icon={SaveIcon} />}
               {m.admin_people_save()}
             </Button>
           </DialogFooter>

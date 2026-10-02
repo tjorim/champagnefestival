@@ -144,7 +144,7 @@ describe("Schedule component", () => {
 
   it("shows category badge", () => {
     render(<Schedule events={mockEvents} />);
-    expect(screen.getByText("Tasting", { selector: ".badge" })).toBeInTheDocument();
+    expect(screen.getByText("Tasting", { selector: '[data-slot="badge"]' })).toBeInTheDocument();
   });
 
   it("switches to Saturday tab and shows Saturday events", () => {

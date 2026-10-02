@@ -13,10 +13,10 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import Badge from "react-bootstrap/Badge";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import {
   deleteEditionById,
@@ -42,7 +42,7 @@ interface EditionCardProps {
   onEventMutation?: () => void;
 }
 
-function editionTypeBadge(type: Edition["editionType"]) {
+function editionTypeBadge(type: Edition["editionType"]): { label: string; bg: BadgeVariant } {
   switch (type) {
     case "bourse":
       return { label: m.admin_edition_type_bourse(), bg: "info" };
@@ -183,7 +183,7 @@ export default function EditionCard({
           {edition.id}
         </Button>
         <span className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
-          <Badge bg={typeDisplay.bg}>{typeDisplay.label}</Badge>
+          <Badge variant={typeDisplay.bg}>{typeDisplay.label}</Badge>
           {startDate && endDate ? (
             <span className="tw:text-subtle tw:text-sm">
               {startDate.toLocaleDateString()}
@@ -197,23 +197,25 @@ export default function EditionCard({
             </span>
           )}
         </span>
-        <Badge bg={edition.active ? "success" : "secondary"}>
+        <Badge variant={edition.active ? "success" : "secondary"}>
           {edition.active ? m.admin_content_edition_active() : m.admin_content_edition_inactive()}
         </Badge>
-        <Badge bg="secondary">
+        <Badge variant="secondary">
           {sortedEvents.length} {m.admin_edition_events()}
         </Badge>
         {(edition.producers?.length ?? 0) > 0 && (
-          <Badge bg="secondary">
+          <Badge variant="secondary">
             {edition.producers!.length} {m.admin_edition_producers()}
           </Badge>
         )}
         {(edition.sponsors?.length ?? 0) > 0 && (
-          <Badge bg="secondary">
+          <Badge variant="secondary">
             {edition.sponsors!.length} {m.admin_edition_sponsors()}
           </Badge>
         )}
-        {eventsQuery.isFetching && <Spinner animation="border" size="sm" variant="warning" />}
+        {eventsQuery.isFetching && (
+          <Spinner label={m.admin_loading_events()} size="sm" variant="warning" />
+        )}
         {saveError && (
           <span className="tw:text-destructive tw:text-sm">
             <Icon icon={TriangleAlertIcon} className="tw:me-1" />
@@ -229,9 +231,7 @@ export default function EditionCard({
         {confirmDelete ? (
           <span className="tw:flex tw:items-center tw:gap-1">
             <Button size="sm" variant="danger" onClick={handleDelete} disabled={deleting}>
-              {deleting && (
-                <Spinner as="span" animation="border" size="sm" role="status" aria-hidden="true" />
-              )}
+              {deleting && <Spinner size="sm" role="status" aria-hidden="true" />}
               {m.admin_action_confirm()}
             </Button>
             <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
@@ -279,7 +279,7 @@ export default function EditionCard({
                 <Icon icon={MapPinIcon} className="tw:me-1" />
                 {[venue.name, venue.address, venue.city, venue.country].filter(Boolean).join(", ")}
                 {!venue.active && (
-                  <Badge bg="secondary" className="tw:ms-2 tw:text-micro">
+                  <Badge variant="secondary" className="tw:ms-2 tw:text-micro">
                     {m.admin_venue_archived_badge()}
                   </Badge>
                 )}
@@ -299,7 +299,7 @@ export default function EditionCard({
 
           {eventsQuery.isPending ? (
             <div className="tw:text-subtle tw:text-sm tw:py-2">
-              <Spinner animation="border" size="sm" className="tw:me-2" />
+              <Spinner size="sm" className="tw:me-2" />
               {m.admin_loading_events()}
             </div>
           ) : sortedEvents.length === 0 ? (
@@ -314,7 +314,7 @@ export default function EditionCard({
                   className="tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0"
                 >
                   <span className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
-                    <Badge bg="secondary" className="tw:text-micro">
+                    <Badge variant="secondary" className="tw:text-micro">
                       {event.date}
                     </Badge>
                     <span className="tw:text-subtle tw:text-sm">
@@ -322,11 +322,11 @@ export default function EditionCard({
                       {event.endTime ? `–${event.endTime}` : ""}
                     </span>
                     <span>{event.title}</span>
-                    <Badge bg="info" text="dark" className="tw:capitalize tw:text-micro">
+                    <Badge variant="info" className="tw:capitalize tw:text-micro">
                       {event.category}
                     </Badge>
                     {event.registrationRequired && (
-                      <Badge bg="warning" text="dark" className="tw:text-micro">
+                      <Badge variant="warning" className="tw:text-micro">
                         {m.schedule_registration()}
                       </Badge>
                     )}

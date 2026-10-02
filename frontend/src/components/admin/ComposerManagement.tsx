@@ -10,8 +10,8 @@ import {
 import { useCallback, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
@@ -97,7 +97,7 @@ function writePayload(draft: Draft) {
 
 const columnHelper = createAppColumnHelper<ComposedMessage>();
 
-function stateBadgeVariant(state: ComposedMessageState): string {
+function stateBadgeVariant(state: ComposedMessageState): BadgeVariant {
   switch (state) {
     case "draft":
       return "secondary";
@@ -255,7 +255,7 @@ export default function ComposerManagement({
           header: m.admin_composer_column_state(),
           enableSorting: false,
           cell: ({ row }) => (
-            <Badge bg={stateBadgeVariant(row.original.state)}>{row.original.state}</Badge>
+            <Badge variant={stateBadgeVariant(row.original.state)}>{row.original.state}</Badge>
           ),
         }),
         columnHelper.display({

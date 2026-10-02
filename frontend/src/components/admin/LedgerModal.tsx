@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useMemo } from "react";
-import Alert from "react-bootstrap/Alert";
+import { Alert } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { type OnChangeFn, type SortingState } from "@tanstack/react-table";
 import { m } from "@/paraglide/messages";
@@ -177,7 +177,7 @@ export default function LedgerModal({
         <DialogBody className="tw:p-0">
           {loading && (
             <div className="tw:text-center tw:py-6">
-              <Spinner animation="border" size="sm" variant="warning" />
+              <Spinner label={m.admin_loading()} size="sm" variant="warning" />
             </div>
           )}
           {!loading && error && (

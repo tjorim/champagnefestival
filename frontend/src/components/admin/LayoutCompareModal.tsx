@@ -2,7 +2,7 @@ import { AdminField, AdminLabel, AdminSelect, AdminOption } from "@/components/a
 import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
-import Badge from "react-bootstrap/Badge";
+import { Badge } from "@/components/ui/badge";
 
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -106,21 +106,21 @@ function statusBadge(status: "added" | "removed" | "changed" | "unchanged") {
   switch (status) {
     case "added":
       return (
-        <Badge bg="success">
+        <Badge variant="success">
           <Icon icon={PlusIcon} className="tw:me-1" />
           {m.admin_layout_compare_added()}
         </Badge>
       );
     case "removed":
       return (
-        <Badge bg="danger">
+        <Badge variant="danger">
           <Icon icon={MinusIcon} className="tw:me-1" />
           {m.admin_layout_compare_removed()}
         </Badge>
       );
     case "changed":
       return (
-        <Badge bg="warning" text="dark">
+        <Badge variant="warning">
           <Icon icon={PencilIcon} className="tw:me-1" />
           {m.admin_layout_compare_changed()}
         </Badge>

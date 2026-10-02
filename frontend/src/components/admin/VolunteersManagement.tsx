@@ -5,8 +5,8 @@ import { Icon } from "@/components/Icon";
 import { AdminSortableHeader } from "./AdminSortableHeader";
 import { useState, useMemo, useCallback } from "react";
 import { type FilterFn, type SortingState } from "@tanstack/react-table";
-import Alert from "react-bootstrap/Alert";
-import Badge from "react-bootstrap/Badge";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -17,7 +17,7 @@ import {
   DialogBody,
   DialogFooter,
 } from "@/components/ui/dialog";
-import Spinner from "react-bootstrap/Spinner";
+import { Spinner } from "@/components/ui/spinner";
 import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
@@ -148,7 +148,7 @@ export default function VolunteersManagement({
               <div className="tw:font-semibold tw:flex tw:items-center tw:gap-1">
                 {volunteer.name}
                 {!volunteer.active && (
-                  <Badge bg="secondary" className="tw:ms-1">
+                  <Badge variant="secondary" className="tw:ms-1">
                     {m.admin_people_inactive_badge_label()}
                   </Badge>
                 )}
@@ -280,12 +280,7 @@ export default function VolunteersManagement({
             </div>
           </div>
           {exportError && (
-            <Alert
-              variant="danger"
-              className="tw:py-1 tw:mb-2"
-              dismissible
-              onClose={() => setExportError("")}
-            >
+            <Alert variant="danger" className="tw:py-1 tw:mb-2" onClose={() => setExportError("")}>
               {exportError}
             </Alert>
           )}
@@ -317,7 +312,6 @@ export default function VolunteersManagement({
           {createSuccess && (
             <Alert
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setCreateSuccess(false)}
             >
@@ -327,7 +321,6 @@ export default function VolunteersManagement({
           {updateSuccess && (
             <Alert
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setUpdateSuccess(false)}
             >
@@ -337,7 +330,6 @@ export default function VolunteersManagement({
           {deleteSuccess && (
             <Alert
               variant="success"
-              dismissible
               className="tw:m-4 tw:mb-0"
               onClose={() => setDeleteSuccess(false)}
             >
@@ -347,7 +339,7 @@ export default function VolunteersManagement({
 
           {isLoading ? (
             <div className="tw:text-center tw:py-6">
-              <Spinner animation="border" variant="primary" size="sm" />
+              <Spinner label={m.admin_loading()} variant="primary" size="sm" />
             </div>
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
             <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
@@ -421,11 +413,7 @@ export default function VolunteersManagement({
                 {m.admin_action_cancel()}
               </Button>
               <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
-                {deleting ? (
-                  <Spinner as="span" animation="border" size="sm" />
-                ) : (
-                  <Icon icon={TrashIcon} />
-                )}
+                {deleting ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
                 {m.admin_action_confirm()}
               </Button>
             </DialogFooter>

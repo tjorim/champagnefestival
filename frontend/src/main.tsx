@@ -25,8 +25,8 @@ import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./styles/tailwind.css";
 import "leaflet/dist/leaflet.css";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 
 import { createOidcConfig } from "./config/oidc";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -98,10 +98,14 @@ function AppSuspense({ children, errorFallbackText }: AppSuspenseProps) {
     <SuspenseWithBoundary
       fallback={
         <div className="tw:text-center tw:p-6">
-          <Spinner animation="border" variant="light" />
+          <Spinner label={m.loading()} variant="light" />
         </div>
       }
-      errorFallback={<div className="tw:text-center tw:p-6">{errorFallbackText}</div>}
+      errorFallback={
+        <Alert variant="danger" className="tw:m-6 tw:text-center">
+          {errorFallbackText}
+        </Alert>
+      }
     >
       {children}
     </SuspenseWithBoundary>
@@ -611,7 +615,7 @@ function App() {
                   fallback={
                     <div className="map-loading tw:flex tw:items-center tw:justify-center tw:py-12">
                       <div className="tw:text-center">
-                        <Spinner animation="border" variant="primary" />
+                        <Spinner variant="primary" />
                         <p className="tw:mt-2">{m.loading()}</p>
                       </div>
                     </div>

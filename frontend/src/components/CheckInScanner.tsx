@@ -2,8 +2,8 @@ import { InfoIcon, VideoOffIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import jsQR from "jsqr";
-import Alert from "react-bootstrap/Alert";
-import Spinner from "react-bootstrap/Spinner";
+import { Alert } from "@/components/ui/alert";
+import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 
 export interface ScannedCheckInCredentials {
@@ -193,7 +193,7 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
         )}
         {status === "starting" && (
           <div className="tw:flex tw:flex-col tw:items-center tw:justify-center tw:h-full tw:text-subtle">
-            <Spinner animation="border" variant="warning" role="status">
+            <Spinner variant="warning" role="status">
               <span className="tw:sr-only">{m.checkin_scanner_starting()}</span>
             </Spinner>
             <p className="tw:mt-2 tw:mb-0 tw:text-sm">{m.checkin_scanner_starting()}</p>
