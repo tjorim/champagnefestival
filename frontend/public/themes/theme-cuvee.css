@@ -138,11 +138,6 @@ html[data-visual-theme="cuvee"] body::before {
   clip: auto;
 }
 
-html[data-visual-theme="cuvee"] .bubble-background {
-  opacity: 0.3;
-  filter: sepia(1) hue-rotate(8deg) saturate(1.7) brightness(1.15);
-}
-
 /* ---------------------------------------------------------------- header */
 
 .site-header {
@@ -249,17 +244,6 @@ html[data-visual-theme="cuvee"] .bubble-background {
   --language-control-hover-color: #241f14;
   --language-control-hover-bg: #e7c979;
   --language-control-hover-border-color: #e7c979;
-}
-
-.dropdown-menu-dark {
-  --bs-dropdown-bg: #102b23;
-  --bs-dropdown-link-color: rgba(238, 231, 212, 0.85);
-  --bs-dropdown-link-hover-color: #e7c979;
-  --bs-dropdown-link-hover-bg: rgba(231, 201, 121, 0.1);
-  --bs-dropdown-link-active-color: #241f14;
-  --bs-dropdown-link-active-bg: #e7c979;
-  border: 1px solid var(--gold-hairline);
-  border-radius: 3px;
 }
 
 .site-mobile-menu-panel {
@@ -938,21 +922,10 @@ h2.section-header::after {
   --surface-border: #e7c979;
 }
 
-.standalone-main .bg-dark,
-.standalone-document-main .bg-dark {
-  color: var(--ink);
-  background-color: var(--label-bright) !important;
-}
-
 .standalone-main .tw\:text-content,
 .standalone-document-main .tw\:text-content {
   color: var(--ink) !important;
   --layout-content: var(--ink) !important;
-}
-
-.standalone-main .border-secondary,
-.standalone-document-main .border-secondary {
-  border-color: var(--hairline) !important;
 }
 
 /* Bootstrap warning-yellow reads as foil gold on label stock */
@@ -1132,8 +1105,7 @@ html[data-visual-theme="cuvee"] #admin [data-slot="card-header"] {
 }
 
 /* ---- Ledger tables (markup uses variant="dark") ---- */
-html[data-visual-theme="cuvee"] #admin .table,
-html[data-visual-theme="cuvee"] #admin .table-dark {
+html[data-visual-theme="cuvee"] #admin .table {
   --bs-table-bg: #f8f3e4;
   --bs-table-color: #241f14;
   --bs-table-border-color: rgba(38, 33, 20, 0.18);
@@ -1157,18 +1129,9 @@ html[data-visual-theme="cuvee"] #admin .table thead th {
 }
 
 /* ---- Hard-coded dark utilities in admin markup ---- */
-html[data-visual-theme="cuvee"] #admin .bg-dark {
-  color: var(--adm-text);
-  background-color: var(--adm-surface) !important;
-}
-
 html[data-visual-theme="cuvee"] #admin .tw\:text-content {
   color: var(--adm-text) !important;
   --layout-content: var(--adm-text) !important;
-}
-
-html[data-visual-theme="cuvee"] #admin .border-secondary {
-  border-color: var(--adm-border) !important;
 }
 
 html[data-visual-theme="cuvee"] #admin [data-slot="presentation-list-item"] {

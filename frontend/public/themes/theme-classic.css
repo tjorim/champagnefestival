@@ -184,8 +184,7 @@ h2.section-header::after {
 
 /* Loading placeholders */
 .map-loading,
-.carousel-loading,
-.bubble-container-placeholder {
+.carousel-loading {
   width: 100%;
   height: 300px;
   display: flex;
@@ -406,17 +405,6 @@ main {
   filter: brightness(1.1);
 }
 
-.gradient-text {
-  /* Softer gradient with better text rendering */
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  /* Fix for text cut-off issue */
-  padding-bottom: 0.2em;
-  margin-bottom: -0.1em;
-}
-
 .footer-link {
   opacity: 0.9;
   transition: opacity 0.2s ease;
@@ -446,11 +434,6 @@ main {
   margin-left: 4px;
   font-size: 0.8rem;
   opacity: 0.7;
-}
-
-/* Remove focus outline from bootstrap */
-.schedule-container .nav-tabs .nav-link:focus {
-  outline: none;
 }
 
 /* Custom Accordion Styling */

@@ -1,0 +1,289 @@
+/* Maintenance page: self-contained styling. The page deliberately imports nothing
+   from the swappable theme stylesheets (see MaintenancePage.tsx), so the accent
+   colors below are its own copies of each theme's button treatment. Text and image
+   rules are scoped under .maintenance-page so they outrank global theme element
+   rules such as `h1 {}` without inline styles. */
+.maintenance-page {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: url("/images/champagne-hero.png");
+  background-size: cover;
+  background-position: center;
+}
+.maintenance-page__content {
+  position: relative;
+  z-index: 1;
+  padding: 2rem;
+  max-width: 36rem;
+  /* The CTA button and flyer card below are both inline-block —
+     without an explicit column, they stack only by accident,
+     whenever the container happens to be too narrow to fit them
+     side by side. A flex column guarantees each child gets its own
+     row at every width instead of leaving that to chance. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+@media (min-width: 900px) {
+  .maintenance-page {
+    justify-content: flex-start;
+  }
+  .maintenance-page__content {
+    text-align: left;
+    align-items: flex-start;
+    margin-left: 6vw;
+    /* Stays inside the image's dark half at any wide viewport,
+       rather than a value tuned to one specific width. */
+    max-width: min(36rem, 42vw);
+  }
+}
+
+.maintenance-page__scrim {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.55);
+}
+
+.maintenance-page__flyer-card {
+  margin-top: 2rem;
+  padding: 0.5rem;
+  background: #fff8ec;
+  border-radius: 0.5rem;
+  border: 0;
+  box-shadow: 0 14px 38px rgb(0 0 0 / 0.35);
+  display: inline-block;
+}
+.maintenance-page__flyer-trigger {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.maintenance-page__flyer-trigger:hover,
+.maintenance-page__flyer-trigger:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 44px rgb(0 0 0 / 0.45);
+}
+.maintenance-page__flyer-overlay {
+  position: absolute;
+  inset: 0.5rem;
+  border-radius: 0.25rem;
+  background: rgba(20, 14, 6, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+.maintenance-page__flyer-trigger:hover .maintenance-page__flyer-overlay,
+.maintenance-page__flyer-trigger:focus-visible .maintenance-page__flyer-overlay {
+  opacity: 1;
+}
+
+/* Deliberately not .btn-champagne: see the file docstring above —
+   the colors below are this page's own copy of each theme's real
+   button treatment, not a dependency on that class being defined. */
+.maintenance-page__cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 1.25rem;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #f2d894, #b78938);
+  color: #18130c;
+  border: 0;
+  box-shadow: 0 14px 32px rgba(216, 173, 86, 0.35);
+  transition:
+    box-shadow 0.15s ease,
+    transform 0.15s ease,
+    background 0.15s ease;
+}
+.maintenance-page__cta:hover,
+.maintenance-page__cta:focus-visible {
+  color: #18130c;
+  background: linear-gradient(135deg, #ffe5a5, #c99a43);
+  transform: translateY(-1px);
+}
+
+/* classic: flat, high-contrast, no gradients or soft shadows */
+html[data-visual-theme="classic"] .maintenance-page__scrim {
+  background-color: rgba(10, 10, 12, 0.6);
+}
+html[data-visual-theme="classic"] .maintenance-page__cta {
+  border-radius: 0.25rem;
+  background: #5a7ff0;
+  color: #fff;
+  box-shadow: 0 14px 32px rgba(90, 127, 240, 0.35);
+}
+html[data-visual-theme="classic"] .maintenance-page__cta:hover,
+html[data-visual-theme="classic"] .maintenance-page__cta:focus-visible {
+  background: #4666d9;
+  color: #fff;
+}
+html[data-visual-theme="classic"] .maintenance-page__flyer-card {
+  border-radius: 0.25rem;
+}
+
+/* riviera: rounded "sticker" look, thick ink border, hard offset shadow */
+html[data-visual-theme="riviera"] .maintenance-page__scrim {
+  background-color: rgba(10, 22, 22, 0.55);
+}
+html[data-visual-theme="riviera"] .maintenance-page__cta {
+  border-radius: 0.9rem;
+  background: linear-gradient(135deg, #ffd166, #ffb703);
+  color: #12323b;
+  border: 2px solid rgba(18, 50, 59, 0.72);
+  box-shadow: 5px 5px 0 rgba(18, 50, 59, 0.22);
+}
+html[data-visual-theme="riviera"] .maintenance-page__cta:hover,
+html[data-visual-theme="riviera"] .maintenance-page__cta:focus-visible {
+  color: #fffaf0;
+  background: linear-gradient(135deg, #007f83, #2c9f7a);
+  transform: translate(-1px, -1px);
+}
+html[data-visual-theme="riviera"] .maintenance-page__flyer-card {
+  border-radius: 0.9rem;
+  border: 2px solid rgba(18, 50, 59, 0.72);
+  box-shadow: 5px 5px 0 rgba(18, 50, 59, 0.22);
+}
+
+/* cuvée: sharp corners, uppercase small caps, thin gilt border */
+html[data-visual-theme="cuvee"] .maintenance-page__scrim {
+  background-color: rgba(6, 18, 14, 0.6);
+}
+html[data-visual-theme="cuvee"] .maintenance-page__cta {
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ecd28d, #cfa74d);
+  color: #2a2107;
+  border: 1px solid rgba(138, 100, 20, 0.8);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 0.85rem;
+}
+html[data-visual-theme="cuvee"] .maintenance-page__cta:hover,
+html[data-visual-theme="cuvee"] .maintenance-page__cta:focus-visible {
+  background: linear-gradient(180deg, #f5e0a8, #dcb968);
+  color: #2a2107;
+}
+html[data-visual-theme="cuvee"] .maintenance-page__flyer-card {
+  border-radius: 2px;
+  border: 1px solid rgba(138, 100, 20, 0.8);
+}
+
+/* remuage: clean corporate blue, modest rounding */
+html[data-visual-theme="remuage"] .maintenance-page__scrim {
+  background-color: rgba(8, 14, 28, 0.55);
+}
+html[data-visual-theme="remuage"] .maintenance-page__cta {
+  border-radius: 9px;
+  background: #2144b2;
+  color: #fff;
+  border: 2px solid #2144b2;
+  box-shadow: 0 14px 32px rgba(33, 68, 178, 0.35);
+}
+html[data-visual-theme="remuage"] .maintenance-page__cta:hover,
+html[data-visual-theme="remuage"] .maintenance-page__cta:focus-visible {
+  background: #18348d;
+  border-color: #fbfcfe;
+  color: #fff;
+}
+html[data-visual-theme="remuage"] .maintenance-page__flyer-card {
+  border-radius: 9px;
+}
+
+.maintenance-page .maintenance-page__logo {
+  width: 6rem;
+  height: 6rem;
+  margin-bottom: 1.5rem;
+}
+.maintenance-page .maintenance-page__title {
+  margin-bottom: 1rem;
+  color: #fff8ec;
+  font-size: clamp(2.2rem, 5vw, 3.4rem);
+  font-weight: 900;
+  text-shadow: 0 14px 38px rgb(0 0 0 / 0.48);
+}
+.maintenance-page .maintenance-page__message {
+  margin-bottom: 1.5rem;
+  color: #fff8ec;
+  font-size: 1.1rem;
+}
+
+.maintenance-page .maintenance-page__flyer-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: clamp(220px, 19vw, 380px);
+  max-height: clamp(200px, 30vh, 460px);
+  aspect-ratio: 884 / 1536;
+  color: #8a7554;
+  border: 2px dashed #c9b48a;
+  border-radius: 0.25rem;
+}
+.maintenance-page .maintenance-page__flyer-placeholder-text {
+  padding: 0 1rem;
+  font-size: 0.9rem;
+  text-align: center;
+}
+.maintenance-page .maintenance-page__flyer-image {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: clamp(220px, 19vw, 380px);
+  /* The rest of the column (logo, heading, message, button) already spends a
+     good chunk of a typical laptop's viewport height, so the flyer needs its own
+     budget tied to vh, not just a generous cap: the real flyer's tall portrait
+     aspect ratio (~0.58) would otherwise push the page past the fold on ordinary
+     900px/768px-tall screens. */
+  max-height: clamp(200px, 30vh, 460px);
+  border-radius: 0.25rem;
+}
+
+.maintenance-page__lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background-color: rgb(0 0 0 / 0.85);
+}
+.maintenance-page__lightbox-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: #fff8ec;
+  font-size: 1.25rem;
+  line-height: 1;
+  background: rgb(255 255 255 / 0.15);
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.maintenance-page .maintenance-page__lightbox-image {
+  width: auto;
+  height: auto;
+  max-width: 90vw;
+  max-height: 90vh;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 60px rgb(0 0 0 / 0.6);
+}

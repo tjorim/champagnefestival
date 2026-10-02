@@ -32,15 +32,15 @@ describe("ResponsiveImage component", () => {
   it("applies fill styles when fill prop is true", () => {
     const { container } = render(<ResponsiveImage src="/images/test.jpg" alt="Test" fill />);
     const wrapper = container.firstChild as HTMLElement;
-    expect(wrapper.style.width).toBe("100%");
-    expect(wrapper.style.height).toBe("100%");
+    expect(wrapper).toHaveClass("tw:w-full", "tw:h-full");
+    expect(screen.getByRole("img")).toHaveClass("tw:absolute", "tw:object-cover");
   });
 
   it("applies custom className", () => {
     const { container } = render(
-      <ResponsiveImage src="/images/test.jpg" alt="Test" className="custom-class" />,
+      <ResponsiveImage src="/images/test.jpg" alt="Test" className="tw:mt-2" />,
     );
-    expect(container.firstChild).toHaveClass("custom-class");
+    expect(container.firstChild).toHaveClass("tw:mt-2");
   });
 
   it("passes sizes attribute to img", () => {

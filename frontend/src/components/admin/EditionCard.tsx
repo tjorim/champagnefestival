@@ -303,7 +303,7 @@ export default function EditionCard({
               {m.admin_loading_events()}
             </div>
           ) : sortedEvents.length === 0 ? (
-            <p className="tw:text-subtle fst-italic tw:text-sm">
+            <p className="tw:text-subtle tw:italic tw:text-sm">
               {m.admin_content_edition_no_events()}
             </p>
           ) : (

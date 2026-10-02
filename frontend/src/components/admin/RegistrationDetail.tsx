@@ -475,7 +475,7 @@ export default function RegistrationDetail({
                 {m.admin_qr_code()}
               </h6>
               <p className="tw:text-subtle tw:text-sm tw:mb-4">{m.admin_qr_scan_info()}</p>
-              <div className="tw:inline-block tw:p-4 bg-white rounded">
+              <div className="tw:inline-block tw:rounded-md tw:bg-white tw:p-4">
                 <QRCodeSVG value={checkInUrl} size={180} level="M" includeMargin={false} />
               </div>
               <div className="tw:mt-2">

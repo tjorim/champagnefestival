@@ -140,7 +140,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
             <div className="tw:text-subtle tw:text-sm tw:mt-2">
               {m.admin_settings_maintenance_mode_help()}
             </div>
-            <hr className="border-secondary tw:my-6" />
+            <hr className="tw:border-subtle tw:my-6" />
             <form
               onSubmit={(event) => {
                 event.preventDefault();

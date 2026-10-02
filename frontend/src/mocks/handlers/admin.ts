@@ -1119,6 +1119,58 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // Layouts
   // ──────────────────────────────────────────────────────────────
+  /** GET /api/venue-plan/:editionId — read-only plan assembled from the layout stores. */
+  http.get("/api/venue-plan/:editionId", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const editionLayouts = layouts.filter((layout) => layout.edition_id === params.editionId);
+    return HttpResponse.json({
+      edition_id: params.editionId,
+      layouts: editionLayouts.map((layout) => {
+        const room = rooms.find((candidate) => candidate.id === layout.room_id);
+        const event = events.find((candidate) => candidate.id === layout.event_id);
+        return {
+          event_id: layout.event_id,
+          event_title: event?.title ?? "",
+          id: layout.id,
+          date: layout.date ?? null,
+          label: layout.label,
+          room: room
+            ? {
+                id: room.id,
+                name: room.name,
+                width_m: room.width_m,
+                length_m: room.length_m,
+                color: room.color,
+              }
+            : null,
+          tables: tables
+            .filter((table) => table.layout_id === layout.id)
+            .map((table) => ({
+              id: table.id,
+              name: table.name,
+              capacity: table.capacity,
+              x: table.x,
+              y: table.y,
+              rotation: table.rotation,
+              registration_ids: table.registration_ids,
+              occupied_seats: (table.registration_ids as string[]).length,
+            })),
+          areas: areas
+            .filter((area) => area.layout_id === layout.id)
+            .map((area) => ({
+              id: area.id,
+              label: area.label,
+              icon: area.icon,
+              x: area.x,
+              y: area.y,
+              rotation: area.rotation,
+            })),
+        };
+      }),
+    });
+  }),
+
   http.get("/api/layouts", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;

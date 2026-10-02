@@ -206,12 +206,12 @@ function MarqueeSlider({ items = [] }: MarqueeSliderProps) {
         {carouselItems.map((item, index) => (
           <SwiperSlide key={`${item.id}-${index}`}>
             <div className="marquee-card tw:h-full">
-              <div className="marquee-logo-frame tw:overflow-hidden shadow-sm tw:mb-2">
+              <div className="marquee-logo-frame tw:overflow-hidden tw:shadow-sm tw:mb-2">
                 <div className="tw:relative tw:w-full tw:h-full">
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="marquee-logo-image tw:w-full tw:h-full object-fit-contain"
+                    className="marquee-logo-image tw:w-full tw:h-full tw:object-contain"
                     onError={(e) => {
                       // Quietly set a fallback image without console errors
                       e.currentTarget.src = "/images/logo.svg";

@@ -53,26 +53,27 @@ export default function VenuePlanPage() {
           </CardHeader>
           <CardContent>
             <div
-              className="tw:relative border rounded tw:overflow-hidden"
+              data-slot="venue-plan-canvas"
+              className="tw:relative tw:min-h-70 tw:w-full tw:overflow-hidden tw:rounded-md tw:border"
+              /* oxlint-disable shadcn/no-inline-styles -- Room aspect ratio and saved room color are per-layout data (docs/floor-plan-coordinates.md). */
               style={{
-                width: "100%",
                 aspectRatio: `${layout.room?.width_m ?? 4} / ${layout.room?.length_m ?? 3}`,
-                minHeight: 280,
-                borderColor: layout.room?.color,
-                background:
-                  "repeating-linear-gradient(0deg,transparent,transparent 31px,rgba(255,255,255,.05) 32px)",
+                borderColor: layout.room?.color ?? "var(--surface-border)",
               }}
+              /* oxlint-enable shadcn/no-inline-styles */
               aria-label={layout.room?.name ?? layout.label}
             >
               {layout.areas.map((area) => (
                 <div
                   key={area.id}
                   className="tw:absolute tw:text-subtle tw:text-sm"
+                  /* oxlint-disable shadcn/no-inline-styles -- Floor-plan x/y percentages and rotation per docs/floor-plan-coordinates.md. */
                   style={{
                     left: `${area.x}%`,
                     top: `${area.y}%`,
                     transform: `rotate(${area.rotation}deg)`,
                   }}
+                  /* oxlint-enable shadcn/no-inline-styles */
                 >
                   <AreaIcon name={area.icon} className="tw:me-1" />
                   {area.label}
@@ -83,22 +84,23 @@ export default function VenuePlanPage() {
                 const occupied = item.occupied_seats;
                 const occupancyClass =
                   occupied > item.capacity
-                    ? "border-danger bg-danger bg-opacity-10 tw:text-destructive"
+                    ? "tw:border-destructive tw:bg-destructive/10 tw:text-destructive"
                     : item.exclusive || occupied === item.capacity
-                      ? "border-warning bg-warning bg-opacity-10 tw:text-highlight"
+                      ? "tw:border-warning tw:bg-warning/10 tw:text-highlight"
                       : occupied
-                        ? "border-success bg-dark tw:text-success"
-                        : "border-secondary bg-dark tw:text-content";
+                        ? "tw:border-success tw:bg-muted tw:text-success"
+                        : "tw:border-subtle tw:bg-muted tw:text-foreground";
                 return (
                   <div
                     key={item.id}
-                    className={`tw:absolute border rounded tw:px-2 tw:py-1 tw:text-center ${selected ? "border-warning bg-warning tw:text-contrast" : occupancyClass}`}
+                    className={`tw:absolute tw:rounded-md tw:border tw:min-w-18 tw:px-2 tw:py-1 tw:text-center ${selected ? "tw:border-warning tw:bg-warning tw:text-contrast" : occupancyClass}`}
+                    /* oxlint-disable shadcn/no-inline-styles -- Floor-plan x/y percentages and rotation per docs/floor-plan-coordinates.md. */
                     style={{
                       left: `${item.x}%`,
                       top: `${item.y}%`,
                       transform: `translate(-50%, -50%) rotate(${item.rotation}deg)`,
-                      minWidth: 72,
                     }}
+                    /* oxlint-enable shadcn/no-inline-styles */
                     title={`${item.name}: ${occupied}/${item.capacity}`}
                     aria-current={selected ? "location" : undefined}
                   >

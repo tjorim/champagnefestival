@@ -109,8 +109,7 @@ html[data-visual-theme="remuage"] #admin [data-slot="card-header"] {
   border-bottom: 3px solid rgba(var(--adm-primary-rgb), 0.25);
 }
 
-html[data-visual-theme="remuage"] #admin .table,
-html[data-visual-theme="remuage"] #admin .table-dark {
+html[data-visual-theme="remuage"] #admin .table {
   --bs-table-bg: #fbfcfe;
   --bs-table-color: #172033;
   --bs-table-border-color: rgba(23, 32, 51, 0.14);
@@ -133,15 +132,10 @@ html[data-visual-theme="remuage"] #admin .table thead th {
   border-bottom: 2px solid var(--rem-blue);
 }
 
-html[data-visual-theme="remuage"] #admin .bg-dark,
 html[data-visual-theme="remuage"] #admin .tw\:text-content {
   color: var(--adm-text) !important;
   background-color: var(--adm-surface) !important;
   --layout-content: var(--adm-text) !important;
-}
-
-html[data-visual-theme="remuage"] #admin .border-secondary {
-  border-color: var(--adm-border) !important;
 }
 
 html[data-visual-theme="remuage"]

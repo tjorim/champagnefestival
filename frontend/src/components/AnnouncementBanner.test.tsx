@@ -36,6 +36,25 @@ describe("AnnouncementBanner", () => {
     expect(items[1]?.querySelector("button")).toBeNull();
   });
 
+  it("blends adjacent levels through seams keyed by data attributes, not inline styles", async () => {
+    const view = renderBanner([
+      { id: "a", text: "First", level: "info", link_url: null, link_label: null },
+      { id: "b", text: "Second", level: "urgent", link_url: null, link_label: null },
+    ]);
+    await waitFor(() => expect(screen.getAllByText("Second")).toHaveLength(2));
+    const seams = [...view.container.querySelectorAll(".announcement-ticker__seam")];
+    // Two copies of two items; every seam, including the wrap-around, is typed.
+    expect(
+      seams.map((seam) => [seam.getAttribute("data-from"), seam.getAttribute("data-to")]),
+    ).toEqual([
+      ["urgent", "info"],
+      ["info", "urgent"],
+      ["urgent", "info"],
+      ["info", "urgent"],
+    ]);
+    for (const seam of seams) expect(seam).not.toHaveAttribute("style");
+  });
+
   it("announces an urgent message once with an alert live region, still scrolling with the rest", async () => {
     renderBanner([
       { id: "urgent", text: "Festival closing", level: "urgent", link_url: null, link_label: null },

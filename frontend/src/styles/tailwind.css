@@ -344,3 +344,14 @@
   --badge-foreground: var(--surface-muted-foreground);
   border-color: var(--surface-border);
 }
+
+/* Read-only floor plan (VenuePlanPage): faint rows behind the saved layout.
+   Per-layout geometry (aspect ratio, room color, x/y/rotation) stays inline. */
+[data-slot="venue-plan-canvas"] {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 31px,
+    rgb(255 255 255 / 0.05) 32px
+  );
+}

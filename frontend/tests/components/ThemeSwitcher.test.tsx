@@ -17,6 +17,16 @@ describe("ThemeSwitcher", () => {
     expect(screen.getByRole("button", { name: "New" })).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("is styled by its own stylesheet rather than inline styles", () => {
+    render(<ThemeSwitcher variant="refresh" onChange={vi.fn()} />);
+
+    const group = screen.getByRole("group", { name: /visual design preview switcher/i });
+    expect(group).not.toHaveAttribute("style");
+    for (const button of within(group).getAllByRole("button")) {
+      expect(button).not.toHaveAttribute("style");
+    }
+  });
+
   it("reports the selected registered variant", () => {
     const onChange = vi.fn();
     render(<ThemeSwitcher variant="refresh" onChange={onChange} />);

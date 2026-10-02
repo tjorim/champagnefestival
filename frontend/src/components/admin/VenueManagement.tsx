@@ -715,7 +715,7 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueRooms.length === 0 ? (
-                      <p className="tw:text-subtle tw:text-sm fst-italic tw:mb-4">
+                      <p className="tw:text-subtle tw:text-sm tw:italic tw:mb-4">
                         {m.admin_room_no_rooms()}
                       </p>
                     ) : (
@@ -815,7 +815,7 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueTableTypes.length === 0 ? (
-                      <p className="tw:text-subtle tw:text-sm fst-italic tw:mb-0">
+                      <p className="tw:text-subtle tw:text-sm tw:italic tw:mb-0">
                         {m.admin_no_table_types()}
                       </p>
                     ) : (
@@ -1041,7 +1041,7 @@ export default function VenueManagement({
                 </div>
                 <Suspense
                   fallback={
-                    <div className="ratio ratio-16x9 rounded border border-secondary tw:flex tw:items-center tw:justify-center">
+                    <div className="tw:flex tw:aspect-video tw:items-center tw:justify-center tw:rounded-md tw:border tw:border-subtle">
                       {m.loading()}
                     </div>
                   }

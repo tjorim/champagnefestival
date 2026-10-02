@@ -1,5 +1,5 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, relative, resolve } from "node:path";
 import postcss from "postcss";
 import selectorParser from "postcss-selector-parser";
 
@@ -12,20 +12,34 @@ const sources = [
   "src/components/admin/admin.css",
   "src/components/admin/analyticsDashboard.css",
   "src/components/announcementBanner.css",
+  "src/components/maintenancePage.css",
   "src/components/ThemeSwitcher.css",
   ...(await readdir(resolve(root, "public/themes")))
     .filter((name) => name.endsWith(".css"))
     .map((name) => `public/themes/${name}`),
 ];
 const classes = new Set();
-for (const source of sources) {
-  const css = postcss.parse(await readFile(resolve(root, source), "utf8"));
+const seen = new Set();
+// Theme entry points (e.g. theme-remuage.css) only @import their partials, so
+// follow relative imports to catch every class a theme defines.
+async function collect(source) {
+  const file = resolve(root, source);
+  if (seen.has(file)) return;
+  seen.add(file);
+  const css = postcss.parse(await readFile(file, "utf8"));
+  const imports = [];
+  css.walkAtRules("import", (rule) => {
+    const target = /^(?:url\()?["']?(\.{1,2}\/[^"')]+)/.exec(rule.params.trim());
+    if (target) imports.push(resolve(dirname(file), target[1]));
+  });
   css.walkRules((rule) => {
     selectorParser((selectors) => {
       selectors.walkClasses((node) => classes.add(node.value));
     }).processSync(rule.selector);
   });
+  for (const target of imports) await collect(relative(root, target));
 }
+for (const source of sources) await collect(source);
 const allow = [...classes].sort();
 const legacyColors = allow.filter((name) =>
   /^(bg|text|border|ring|fill|stroke|divide|outline|decoration|shadow|from|via|to)-/.test(name),

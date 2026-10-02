@@ -98,53 +98,7 @@
   box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb, 90, 127, 240), 0.25);
 }
 
-/* keep outline-secondary and outline-danger as-is — they already work with dark theme */
-
-/* ---- Tab navigation ---- */
-#admin .nav-tabs {
-  border-bottom-color: var(--adm-border) !important;
-  flex-wrap: nowrap !important;
-  overflow-x: auto;
-  overflow-y: visible;
-  scrollbar-width: none;
-}
-
-#admin .nav-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-#admin .nav-tabs .nav-item {
-  flex-shrink: 0;
-}
-
-#admin .nav-tabs .nav-link {
-  color: var(--adm-text-muted) !important;
-  border-color: transparent !important;
-  border-bottom: 2px solid transparent !important;
-  white-space: nowrap;
-  transition:
-    color var(--adm-t) var(--adm-ease),
-    border-color var(--adm-t) var(--adm-ease) !important;
-}
-
-#admin .nav-tabs .nav-link:hover {
-  color: var(--adm-text) !important;
-  border-bottom-color: var(--adm-border) !important;
-  background: rgba(255, 255, 255, 0.03) !important;
-}
-
-#admin .nav-tabs .nav-link.active {
-  color: var(--adm-primary) !important;
-  border-color: transparent !important;
-  border-bottom: 2px solid var(--adm-primary) !important;
-  background: transparent !important;
-}
-
-/* ---- Tab content fade-in ---- */
-#admin .tab-pane.show.active {
-  animation: adm-tab-in 220ms var(--adm-ease) both;
-}
-
+/* ---- Content fade-in ---- */
 @keyframes adm-tab-in {
   from {
     opacity: 0;
@@ -176,7 +130,6 @@
 
 /* ---- Reduced motion ---- */
 @media (prefers-reduced-motion: reduce) {
-  #admin .tab-pane.show.active,
   #admin .admin-content-pane {
     animation: none !important;
   }

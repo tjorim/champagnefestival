@@ -38,22 +38,19 @@ export default function AdminSkeleton({ variant, rows = 6 }: AdminSkeletonProps)
       <span className="tw:sr-only">{m.admin_loading()}</span>
 
       <div className="admin-skeleton-toolbar" aria-hidden="true">
-        <div className="admin-skeleton-bar" style={{ width: "9rem", height: "2rem" }} />
-        <div className="admin-skeleton-bar" style={{ width: "6rem", height: "2rem" }} />
-        <div
-          className="admin-skeleton-bar admin-skeleton-grow"
-          style={{ maxWidth: "16rem", height: "2rem" }}
-        />
+        <div className="admin-skeleton-bar tw:h-8 tw:w-36" />
+        <div className="admin-skeleton-bar tw:h-8 tw:w-24" />
+        <div className="admin-skeleton-bar admin-skeleton-grow tw:h-8 tw:max-w-64" />
       </div>
 
       {variant === "table" ? (
         <div className="admin-skeleton-table" aria-hidden="true">
           {Array.from({ length: rows }, (_, row) => (
             <div className="admin-skeleton-row" key={row}>
-              <div className="admin-skeleton-bar" style={{ width: "38%" }} />
-              <div className="admin-skeleton-bar" style={{ width: "22%" }} />
-              <div className="admin-skeleton-bar" style={{ width: "16%" }} />
-              <div className="admin-skeleton-bar" style={{ width: "12%" }} />
+              <div className="admin-skeleton-bar tw:w-3/8" />
+              <div className="admin-skeleton-bar tw:w-1/5" />
+              <div className="admin-skeleton-bar tw:w-1/6" />
+              <div className="admin-skeleton-bar tw:w-1/8" />
             </div>
           ))}
         </div>
@@ -61,9 +58,9 @@ export default function AdminSkeleton({ variant, rows = 6 }: AdminSkeletonProps)
         <div className="admin-skeleton-cards" aria-hidden="true">
           {Array.from({ length: Math.min(rows, 4) }, (_, card) => (
             <div className="admin-skeleton-card" key={card}>
-              <div className="admin-skeleton-bar" style={{ width: "45%", height: "1.1rem" }} />
-              <div className="admin-skeleton-bar" style={{ width: "80%" }} />
-              <div className="admin-skeleton-bar" style={{ width: "65%" }} />
+              <div className="admin-skeleton-bar tw:h-4.5 tw:w-9/20" />
+              <div className="admin-skeleton-bar tw:w-4/5" />
+              <div className="admin-skeleton-bar tw:w-13/20" />
             </div>
           ))}
         </div>

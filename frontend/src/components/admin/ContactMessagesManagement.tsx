@@ -68,7 +68,7 @@ export default function ContactMessagesManagement({
           <p className="tw:text-subtle tw:mb-0">{m.admin_contact_messages_empty()}</p>
         )}
         {messages.data?.map((message) => (
-          <article key={message.id} className="border-bottom border-secondary tw:pb-4 tw:mb-4">
+          <article key={message.id} className="tw:border-b tw:border-subtle tw:pb-4 tw:mb-4">
             <div className="tw:flex tw:justify-between tw:gap-4 tw:flex-wrap">
               <div>
                 <strong>{message.name}</strong>{" "}
@@ -89,9 +89,7 @@ export default function ContactMessagesManagement({
                 </Button>
               )}
             </div>
-            <p className="tw:mt-2 tw:mb-0" style={{ whiteSpace: "pre-wrap" }}>
-              {message.message}
-            </p>
+            <p className="tw:mt-2 tw:mb-0 tw:whitespace-pre-wrap">{message.message}</p>
           </article>
         ))}
       </CardContent>

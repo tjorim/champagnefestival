@@ -538,7 +538,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                                   <Button
                                     variant="link"
                                     size="sm"
-                                    className="tw:p-0 tw:ms-2 align-baseline"
+                                    className="tw:p-0 tw:ms-2 tw:align-baseline"
                                     disabled={joinWaitlistMutation.isPending}
                                     onClick={() => handleJoinWaitlist(product.id)}
                                   >

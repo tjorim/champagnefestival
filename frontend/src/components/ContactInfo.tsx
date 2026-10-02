@@ -8,7 +8,7 @@ import { usePublicSettings } from "@/hooks/useMaintenanceMode";
 const ContactInfo: React.FC = () => {
   const settings = usePublicSettings();
   return (
-    <div className="contact-info">
+    <div>
       <p className="tw:mb-4">{m.contact_alternative_contact()}</p>
 
       {settings.public_email && (

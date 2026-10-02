@@ -104,6 +104,19 @@ error fallback gained accessible text/alerts. Frozen exception entries stay at 1
 pending review and screenshot publication; #1111 remains blocked by #1123 and its cleanup gates,
 and the `react-bootstrap`/`bootstrap` dependencies stay until then.
 
+#1123 is implemented locally (2026-10-02); see the [custom view migration audit](1123-custom-views.md).
+`MaintenancePage`'s embedded stylesheet and blanket lint exemption, the `AnnouncementBanner` seam
+gradient, `ThemeSwitcher`, `CheckInScanner`, `AdminSkeleton`, the admin message lists and four
+stale class hooks are replaced with owned CSS or `tw:` utilities; floor-plan geometry and
+`ResponsiveImage` keep narrowly scoped, documented inline allowances. Raw Bootstrap utilities
+that survived in migrated views are replaced, orphan `.nav-tabs`/`.tab-pane`/`.bg-dark`/
+`.border-secondary`/`.table-dark`/bubble/map selectors are removed from the admin CSS and the
+themes (24 rules), and the legacy-class generator now follows the Remuage `@import`s. Frozen
+exception entries decrease from 15 to **0**. All of #1117–#1123 are now implemented locally;
+keep them active pending review and screenshot publication. #1111 is no longer blocked by a
+missing migration group but remains gated by its cleanup requirements; no final vendor removal
+is authorized.
+
 ## Preferred implementation order and ownership
 
 | Order | Issue | Scope |

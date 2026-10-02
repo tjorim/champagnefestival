@@ -3,6 +3,14 @@
 Playwright, config in `../playwright.config.ts`. Tests run against `pnpm exec vite`
 with `VITE_MSW=true` (mocked API responses, no real backend needed).
 
+## Seeding mock state
+
+The MSW service worker owns `/api`, so `page.route` cannot override it. Public state
+the default handlers hard-code is seeded in `localStorage` before load (use
+`page.addInitScript`): `msw:maintenance` (`"true"` shows the maintenance page) and
+`msw:announcements` (a JSON array for `/api/announcements/active`). See
+`custom-views.spec.ts`.
+
 ## Admin dashboard auth
 
 Reaching `/admin` normally means a real Keycloak login. For local debugging and

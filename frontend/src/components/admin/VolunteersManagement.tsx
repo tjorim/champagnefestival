@@ -181,7 +181,7 @@ export default function VolunteersManagement({
                   <span key={period.id} className="tw:text-subtle">
                     {formatPeriod(period)}
                     {period.notes && (
-                      <span className="tw:block tw:text-subtle opacity-75">{period.notes}</span>
+                      <span className="tw:block tw:text-subtle tw:opacity-75">{period.notes}</span>
                     )}
                   </span>
                 ))

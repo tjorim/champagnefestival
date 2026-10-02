@@ -427,7 +427,7 @@ export default function EditionModal({
               </form.Field>
             </AdminField>
 
-            <div className="border border-secondary rounded tw:p-4 tw:mb-4">
+            <div className="tw:rounded-md tw:border tw:border-subtle tw:p-4 tw:mb-4">
               <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
                 <div className="tw:text-content tw:text-sm tw:font-semibold">
                   {typeLabel(editionType)} {m.admin_edition_date_handling()}

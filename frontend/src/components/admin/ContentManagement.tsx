@@ -717,7 +717,7 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
       {!editionsQuery.isPending &&
         !editionsQuery.isError &&
         (editionsQuery.data ?? []).length === 0 && (
-          <p className="tw:text-subtle fst-italic tw:text-sm">{m.admin_content_no_editions()}</p>
+          <p className="tw:text-subtle tw:italic tw:text-sm">{m.admin_content_no_editions()}</p>
         )}
       {!editionsQuery.isPending && !editionsQuery.isError && (
         <div className="tw:flex tw:flex-col tw:gap-4">
@@ -777,7 +777,7 @@ export default function ContentManagement({
             onItemSaved={onExhibitorSaved}
             onItemDeleted={onExhibitorDeleted}
           />
-          <hr className="border-secondary" />
+          <hr className="tw:border-subtle" />
           <EditionsSection
             authHeaders={authHeaders}
             venues={venues}

@@ -22,14 +22,6 @@ export interface PublicAnnouncement {
   link_label: string | null;
 }
 
-// Matches the flat colors in announcementBanner.css exactly, so a seam's
-// gradient meets each item's own background with no visible discontinuity.
-const LEVEL_COLOR: Record<PublicAnnouncement["level"], string> = {
-  info: "#d9edf7",
-  warning: "#fff0bf",
-  urgent: "#a9192b",
-};
-
 export async function fetchActiveAnnouncements(locale: string): Promise<PublicAnnouncement[]> {
   const response = await fetch(`/api/announcements/active?locale=${encodeURIComponent(locale)}`);
   if (!response.ok) throw new Error("Could not load announcements");
@@ -68,9 +60,8 @@ export default function AnnouncementBanner() {
                   <div
                     className="announcement-ticker__seam"
                     aria-hidden="true"
-                    style={{
-                      background: `linear-gradient(to right, ${LEVEL_COLOR[prevLevel]}, ${LEVEL_COLOR[item.level]})`,
-                    }}
+                    data-from={prevLevel}
+                    data-to={item.level}
                   />
                   <div
                     className={`announcement-ticker__item announcement-${item.level}`}
@@ -114,7 +105,7 @@ export default function AnnouncementBanner() {
             <DialogTitle id={titleId}>{m.announcement_dialog_title()}</DialogTitle>
           </DialogHeader>
           <DialogBody>
-            <ul className="announcement-dialog-list list-unstyled tw:mb-0">
+            <ul className="tw:m-0 tw:list-none tw:p-0">
               {data.map((item) => (
                 <li key={item.id} className={`announcement-dialog-item announcement-${item.level}`}>
                   <p className="tw:mb-2">{item.text}</p>
