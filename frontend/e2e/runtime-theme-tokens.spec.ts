@@ -11,10 +11,9 @@ for (const preference of ["light", "dark"] as const) {
       );
       await page.route("**/src/main.tsx", (route) => route.abort());
       await page.goto("/");
-      const mode = theme.bootstrapMode === "system" ? preference : theme.bootstrapMode;
+      const mode = theme.colorMode === "system" ? preference : theme.colorMode;
       await expect(page.locator("html")).toHaveAttribute("data-visual-theme", theme.value);
       await expect(page.locator("html")).toHaveAttribute("data-theme-mode", mode);
-      await expect(page.locator("html")).toHaveAttribute("data-bs-theme", mode);
       for (const chromeMode of ["light", "dark"] as const) {
         await expect(
           page.locator(`meta[name="theme-color"][media="(prefers-color-scheme: ${chromeMode})"]`),
@@ -30,11 +29,11 @@ test("Classic utilities and portalled admin scope consume separate tokens", asyn
   await expect(page.locator("#welcome")).toBeVisible();
   const colors = await page.evaluate(() => {
     const publicProbe = document.createElement("div");
-    publicProbe.className = "tw:bg-background tw:text-primary";
+    publicProbe.className = "bg-background text-primary";
     const portal = document.createElement("div");
     portal.dataset.themeScope = "admin";
     portal.dataset.themeMode = "dark";
-    portal.className = "tw:bg-background tw:text-primary tw:dark:font-bold";
+    portal.className = "bg-background text-primary dark:font-bold";
     document.body.append(publicProbe, portal);
     const classic = {
       background: getComputedStyle(publicProbe).backgroundColor,
@@ -115,15 +114,15 @@ const palettes = {
 async function addColorProbes(page: import("@playwright/test").Page) {
   await page.evaluate(() => {
     const probes = [
-      "tw:bg-background",
-      "tw:text-foreground",
-      "tw:text-primary",
-      "tw:text-secondary",
-      "tw:bg-muted",
-      "tw:text-muted-foreground",
-      "tw:bg-card",
-      "tw:bg-popover",
-      "tw:font-normal tw:dark:font-bold",
+      "bg-background",
+      "text-foreground",
+      "text-primary",
+      "text-secondary",
+      "bg-muted",
+      "text-muted-foreground",
+      "bg-card",
+      "bg-popover",
+      "font-normal dark:font-bold",
     ];
     for (const [index, classes] of probes.entries()) {
       const probe = document.createElement("div");
@@ -199,7 +198,6 @@ test("Refresh updates colors and dark utilities when the system preference chang
   for (const preference of ["light", "dark", "light"] as const) {
     await page.emulateMedia({ colorScheme: preference });
     await expect(page.locator("html")).toHaveAttribute("data-theme-mode", preference);
-    await expect(page.locator("html")).toHaveAttribute("data-bs-theme", preference);
     await expectPalette(page, palettes.refresh[preference], preference === "dark");
   }
 });

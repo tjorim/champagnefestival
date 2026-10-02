@@ -7,10 +7,7 @@ import type { Swiper as SwiperInstance } from "swiper";
 import { BREAKPOINTS, CAROUSEL_SPEED_MS, CAROUSEL_AUTOPLAY_DELAY_MS } from "@/config/constants";
 
 // Import Swiper styles
-import "swiper/css";
-import "swiper/css/autoplay";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
+import "./marqueeSliderVendor.css";
 
 /**
  * Represents an item in the carousel
@@ -156,7 +153,7 @@ function MarqueeSlider({ items = [] }: MarqueeSliderProps) {
 
   return (
     <div
-      className="marquee-slider tw:mx-auto tw:my-6"
+      className="marquee-slider mx-auto my-6"
       onFocusCapture={pauseForFocus}
       onBlurCapture={resumeAfterFocus}
       onMouseEnter={pauseForPointer}
@@ -201,17 +198,17 @@ function MarqueeSlider({ items = [] }: MarqueeSliderProps) {
             spaceBetween: 16,
           },
         }}
-        className="tw:py-2 tw:pb-12" // Added padding at bottom for pagination
+        className="py-2 pb-12" // Added padding at bottom for pagination
       >
         {carouselItems.map((item, index) => (
           <SwiperSlide key={`${item.id}-${index}`}>
-            <div className="marquee-card tw:h-full">
-              <div className="marquee-logo-frame tw:overflow-hidden tw:shadow-sm tw:mb-2">
-                <div className="tw:relative tw:w-full tw:h-full">
+            <div className="marquee-card h-full">
+              <div className="marquee-logo-frame overflow-hidden shadow-sm mb-2">
+                <div className="relative w-full h-full">
                   <img
                     src={item.image}
                     alt={item.name}
-                    className="marquee-logo-image tw:w-full tw:h-full tw:object-contain"
+                    className="marquee-logo-image w-full h-full object-contain"
                     onError={(e) => {
                       // Quietly set a fallback image without console errors
                       e.currentTarget.src = "/images/logo.svg";
@@ -221,7 +218,7 @@ function MarqueeSlider({ items = [] }: MarqueeSliderProps) {
                   />
                 </div>
               </div>
-              <h5 className="marquee-logo-title tw:text-center tw:text-sm">{item.name}</h5>
+              <h5 className="marquee-logo-title text-center text-sm">{item.name}</h5>
             </div>
           </SwiperSlide>
         ))}

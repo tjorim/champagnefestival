@@ -158,10 +158,10 @@ export default function EditionPollOptionsModal({
           <DialogTitle>{m.admin_poll_modal_title({ edition: edition?.id ?? "" })}</DialogTitle>
         </DialogHeader>
         <DialogBody>
-          <p className="tw:text-sm tw:text-subtle">{m.admin_poll_modal_description()}</p>
+          <p className="text-sm text-subtle">{m.admin_poll_modal_description()}</p>
           {error && <Alert variant="danger">{error}</Alert>}
           {optionsQuery.isPending ? (
-            <div className="tw:flex tw:justify-center tw:py-4">
+            <div className="flex justify-center py-4">
               <Spinner label={m.admin_loading()} size="sm" />
             </div>
           ) : optionsQuery.isError ? (
@@ -170,24 +170,19 @@ export default function EditionPollOptionsModal({
             KINDS.map((kind) => {
               const kindOptions = options.filter((o) => o.kind === kind);
               return (
-                <div key={kind} className="tw:mb-6">
-                  <h3 className="tw:text-base tw:font-medium tw:leading-tight">
-                    {kindLabel(kind)}
-                  </h3>
+                <div key={kind} className="mb-6">
+                  <h3 className="text-base font-medium leading-tight">{kindLabel(kind)}</h3>
                   {kindOptions.length === 0 ? (
-                    <p className="tw:text-sm tw:text-subtle">{m.admin_poll_no_options()}</p>
+                    <p className="text-sm text-subtle">{m.admin_poll_no_options()}</p>
                   ) : (
-                    <PresentationList className="tw:mb-2">
+                    <PresentationList className="mb-2">
                       {kindOptions.map((option) => (
-                        <PresentationListItem
-                          key={option.id}
-                          className="tw:flex tw:items-center tw:gap-2"
-                        >
+                        <PresentationListItem key={option.id} className="flex items-center gap-2">
                           {editingId === option.id ? (
                             <>
                               <AdminInput
                                 size="sm"
-                                className="tw:bg-muted tw:text-content tw:border-input"
+                                className="bg-muted text-content border-input"
                                 value={editingLabel}
                                 onChange={(e) => setEditingLabel(e.target.value)}
                                 maxLength={200}
@@ -211,7 +206,7 @@ export default function EditionPollOptionsModal({
                             </>
                           ) : (
                             <>
-                              <span className="tw:grow">{option.label}</span>
+                              <span className="grow">{option.label}</span>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -245,17 +240,17 @@ export default function EditionPollOptionsModal({
               e.preventDefault();
               void addForm.handleSubmit();
             }}
-            className="tw:flex tw:gap-2 tw:items-end tw:flex-wrap border-top tw:border-input tw:pt-4"
+            className="flex gap-2 items-end flex-wrap border-t border-input pt-4"
           >
             <AdminField controlId="poll-option-add-kind">
-              <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
+              <AdminLabel className="text-sm text-subtle mb-1">
                 {m.admin_poll_add_kind_label()}
               </AdminLabel>
               <addForm.Field name="kind">
                 {(field) => (
                   <AdminSelect
                     size="sm"
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e as PollOptionKind)}
                   >
@@ -268,15 +263,15 @@ export default function EditionPollOptionsModal({
                 )}
               </addForm.Field>
             </AdminField>
-            <AdminField controlId="poll-option-add-label" className="tw:grow">
-              <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
+            <AdminField controlId="poll-option-add-label" className="grow">
+              <AdminLabel className="text-sm text-subtle mb-1">
                 {m.admin_poll_add_label_label()}
               </AdminLabel>
               <addForm.Field name="label">
                 {(field) => (
                   <AdminInput
                     size="sm"
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     maxLength={200}

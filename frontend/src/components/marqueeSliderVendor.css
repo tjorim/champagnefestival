@@ -1,0 +1,5 @@
+/* Swiper's own styles sit in the `vendor` layer, below the owned `components`
+   layer, so themes and component CSS can override them (see styles/tailwind.css). */
+@import "swiper/css" layer(vendor);
+@import "swiper/css/navigation" layer(vendor);
+@import "swiper/css/pagination" layer(vendor);

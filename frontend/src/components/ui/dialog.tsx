@@ -28,7 +28,7 @@ function DialogOverlay({ className, ...props }: DialogPrimitive.Backdrop.Props) 
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
       className={cn(
-        "tw:fixed tw:inset-0 tw:isolate tw:z-dialog tw:bg-foreground/50 tw:duration-100 tw:supports-backdrop-filter:backdrop-blur-xs",
+        "fixed inset-0 isolate z-dialog bg-foreground/50 duration-100 supports-backdrop-filter:backdrop-blur-xs",
         className,
       )}
       {...props}
@@ -51,13 +51,12 @@ function DialogContent({
   const content = (
     <>
       <DialogOverlay />
-      <DialogPrimitive.Viewport className="tw:fixed tw:inset-0 tw:z-dialog tw:flex tw:flex-col tw:items-center tw:overflow-y-auto tw:p-4">
+      <DialogPrimitive.Viewport className="fixed inset-0 z-dialog flex flex-col items-center overflow-y-auto p-4">
         <DialogPrimitive.Popup
           data-slot="dialog-content"
-          data-tailwind-migrated="true"
           data-size={size}
           className={cn(
-            "tw:relative tw:z-dialog tw:my-auto tw:w-full tw:max-w-lg tw:rounded-xl tw:border tw:border-border tw:bg-popover tw:text-popover-foreground tw:shadow-lg tw:outline-none tw:data-[size=sm]:max-w-sm tw:data-[size=lg]:max-w-4xl tw:data-[size=xl]:max-w-6xl",
+            "relative z-dialog my-auto w-full max-w-lg rounded-xl border border-border bg-popover text-popover-foreground shadow-lg outline-none data-[size=sm]:max-w-sm data-[size=lg]:max-w-4xl data-[size=xl]:max-w-6xl",
             className,
           )}
           {...props}
@@ -66,16 +65,10 @@ function DialogContent({
           {showCloseButton && (
             <DialogPrimitive.Close
               data-slot="dialog-close"
-              render={
-                <Button
-                  variant="ghost"
-                  className="tw:absolute tw:top-4 tw:right-4"
-                  size="icon-sm"
-                />
-              }
+              render={<Button variant="ghost" className="absolute top-4 right-4" size="icon-sm" />}
             >
               <XIcon />
-              <span className="tw:sr-only">{m.close()}</span>
+              <span className="sr-only">{m.close()}</span>
             </DialogPrimitive.Close>
           )}
         </DialogPrimitive.Popup>
@@ -91,17 +84,14 @@ function DialogHeader({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-header"
-      className={cn(
-        "tw:flex tw:flex-col tw:gap-2 tw:border-b tw:border-border tw:p-4 tw:pr-14",
-        className,
-      )}
+      className={cn("flex flex-col gap-2 border-b border-border p-4 pr-14", className)}
       {...props}
     />
   );
 }
 
 function DialogBody({ className, ...props }: React.ComponentProps<"div">) {
-  return <div data-slot="dialog-body" className={cn("tw:p-4", className)} {...props} />;
+  return <div data-slot="dialog-body" className={cn("p-4", className)} {...props} />;
 }
 
 function DialogFooter({
@@ -115,10 +105,7 @@ function DialogFooter({
   return (
     <div
       data-slot="dialog-footer"
-      className={cn(
-        "tw:flex tw:flex-wrap tw:justify-end tw:gap-2 tw:border-t tw:border-border tw:p-4",
-        className,
-      )}
+      className={cn("flex flex-wrap justify-end gap-2 border-t border-border p-4", className)}
       {...props}
     >
       {children}
@@ -135,7 +122,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("tw:m-0 tw:text-lg tw:leading-normal tw:font-medium", className)}
+      className={cn("m-0 text-lg leading-normal font-medium", className)}
       {...props}
     />
   );
@@ -146,7 +133,7 @@ function DialogDescription({ className, ...props }: DialogPrimitive.Description.
     <DialogPrimitive.Description
       data-slot="dialog-description"
       className={cn(
-        "tw:text-sm tw:text-muted-foreground tw:*:[a]:underline tw:*:[a]:underline-offset-3 tw:*:[a]:hover:text-foreground",
+        "text-sm text-muted-foreground *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
         className,
       )}
       {...props}

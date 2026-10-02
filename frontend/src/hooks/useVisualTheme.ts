@@ -32,12 +32,6 @@ function readStoredVariant(): VisualThemeVariant {
   return DEFAULT_VISUAL_THEME;
 }
 
-/**
- * Creates/updates the swappable theme `<link>`. Must be called from module-level code in
- * main.tsx (after the bootstrap CSS import), not from an early inline <head> script — appending
- * this early would put it before Vite's bootstrap stylesheet in the cascade, letting Bootstrap's
- * same-specificity rules (e.g. `.navbar-brand`) silently win over our overrides.
- */
 function applyBrowserThemeColors(variant: VisualThemeVariant): void {
   const { themeColors } = getVisualThemeDefinition(variant);
   const darkMeta = document.querySelector<HTMLMetaElement>(
@@ -51,6 +45,12 @@ function applyBrowserThemeColors(variant: VisualThemeVariant): void {
   lightMeta?.setAttribute("content", themeColors.light);
 }
 
+/**
+ * Creates/updates the swappable theme `<link>`. Theme stylesheets declare their rules in the
+ * `components` cascade layer (see styles/tailwind.css), so Tailwind utilities win over them
+ * wherever the link lands in the document; the link is appended so same-layer rules from the
+ * bundled stylesheet never outrank the active theme.
+ */
 function applyVisualTheme(variant: VisualThemeVariant): void {
   const definition = getVisualThemeDefinition(variant);
   document.documentElement.dataset.visualTheme = variant;
@@ -65,9 +65,8 @@ function applyVisualTheme(variant: VisualThemeVariant): void {
   stylesheet.href = `/themes/theme-${variant}.css`;
   applyBrowserThemeColors(variant);
 
-  if (definition.bootstrapMode !== "system") {
-    document.documentElement.dataset.bsTheme = definition.bootstrapMode;
-    document.documentElement.dataset.themeMode = definition.bootstrapMode;
+  if (definition.colorMode !== "system") {
+    document.documentElement.dataset.themeMode = definition.colorMode;
     return;
   }
 
@@ -75,11 +74,10 @@ function applyVisualTheme(variant: VisualThemeVariant): void {
     typeof window !== "undefined" && typeof window.matchMedia === "function"
       ? window.matchMedia("(prefers-color-scheme: light)").matches
       : false;
-  document.documentElement.dataset.bsTheme = isLight ? "light" : "dark";
-  document.documentElement.dataset.themeMode = document.documentElement.dataset.bsTheme;
+  document.documentElement.dataset.themeMode = isLight ? "light" : "dark";
 }
 
-/** Call once at module top level in main.tsx, after the bootstrap CSS import, to load the stored variant. */
+/** Call once at module top level in main.tsx, after the stylesheet imports, to load the stored variant. */
 export function initializeVisualTheme(): void {
   applyVisualTheme(readStoredVariant());
 }

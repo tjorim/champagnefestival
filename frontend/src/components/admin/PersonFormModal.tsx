@@ -197,7 +197,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={UserPlusIcon} className="tw:me-2" />
+            <Icon icon={UserPlusIcon} className="me-2" />
             {isEdit ? m.admin_people_edit_title() : m.admin_people_create_title()}
           </DialogTitle>
         </DialogHeader>
@@ -211,15 +211,13 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
         >
           <DialogBody>
             {error && (
-              <Alert variant="danger" className="tw:py-2 tw:text-sm" onClose={() => setError(null)}>
+              <Alert variant="danger" className="py-2 text-sm" onClose={() => setError(null)}>
                 {error}
               </Alert>
             )}
 
-            <AdminField className="tw:mb-4" controlId="person-name">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
-                {m.registration_name()} *
-              </AdminLabel>
+            <AdminField className="mb-4" controlId="person-name">
+              <AdminLabel className="text-subtle text-sm">{m.registration_name()} *</AdminLabel>
               <form.Field
                 name="name"
                 validators={[
@@ -236,7 +234,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                     <>
                       <AdminInput
                         type="text"
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         maxLength={200}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -250,12 +248,10 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               </form.Field>
             </AdminField>
 
-            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mb-4">
-              <div className="tw:w-full tw:site-md:w-6/12">
+            <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mb-4">
+              <div className="w-full site-md:w-6/12">
                 <AdminField controlId="person-email">
-                  <AdminLabel className="tw:text-subtle tw:text-sm">
-                    {m.registration_email()}
-                  </AdminLabel>
+                  <AdminLabel className="text-subtle text-sm">{m.registration_email()}</AdminLabel>
                   <form.Field
                     name="email"
                     validators={[
@@ -274,7 +270,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                         <>
                           <AdminInput
                             type="email"
-                            className="tw:bg-muted tw:text-content tw:border-input"
+                            className="bg-muted text-content border-input"
                             maxLength={200}
                             value={field.value}
                             onChange={(e) => field.handleChange(e.target.value)}
@@ -288,16 +284,14 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   </form.Field>
                 </AdminField>
               </div>
-              <div className="tw:w-full tw:site-md:w-6/12">
+              <div className="w-full site-md:w-6/12">
                 <AdminField controlId="person-phone">
-                  <AdminLabel className="tw:text-subtle tw:text-sm">
-                    {m.registration_phone()}
-                  </AdminLabel>
+                  <AdminLabel className="text-subtle text-sm">{m.registration_phone()}</AdminLabel>
                   <form.Field name="phone">
                     {(field) => (
                       <AdminInput
                         type="tel"
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         maxLength={50}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -309,15 +303,15 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               </div>
             </div>
 
-            <AdminField className="tw:mb-4" controlId="person-address">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
+            <AdminField className="mb-4" controlId="person-address">
+              <AdminLabel className="text-subtle text-sm">
                 {m.admin_people_address_label()}
               </AdminLabel>
               <form.Field name="address">
                 {(field) => (
                   <AdminInput
                     type="text"
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     maxLength={300}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -329,7 +323,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
 
             <form.Field name="preferredLanguage">
               {(field) => (
-                <AdminField className="tw:mb-4" controlId="person-preferred-language">
+                <AdminField className="mb-4" controlId="person-preferred-language">
                   <AdminLabel>{m.registration_preferred_language()}</AdminLabel>
                   <AdminSelect
                     value={field.value ?? ""}
@@ -345,15 +339,15 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 </AdminField>
               )}
             </form.Field>
-            <AdminField className="tw:mb-4" controlId="person-club">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
+            <AdminField className="mb-4" controlId="person-club">
+              <AdminLabel className="text-subtle text-sm">
                 {m.admin_people_club_name_label()}
               </AdminLabel>
               <form.Field name="clubName">
                 {(field) => (
                   <AdminInput
                     type="text"
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     maxLength={200}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -363,11 +357,11 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               </form.Field>
             </AdminField>
 
-            <AdminField className="tw:mb-4" controlId="person-roles">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
+            <AdminField className="mb-4" controlId="person-roles">
+              <AdminLabel className="text-subtle text-sm">
                 {m.admin_people_roles_label()}
               </AdminLabel>
-              <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mb-2">
+              <div className="flex flex-wrap gap-2 mb-2">
                 {KNOWN_ROLES.map((role) => (
                   <Button
                     key={role}
@@ -384,7 +378,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 {(field) => (
                   <AdminInput
                     type="text"
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     placeholder={m.admin_people_roles_placeholder()}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -394,13 +388,13 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
               </form.Field>
             </AdminField>
 
-            <AdminField className="tw:mb-4" controlId="person-notes">
-              <AdminLabel className="tw:text-subtle tw:text-sm">{m.admin_notes()}</AdminLabel>
+            <AdminField className="mb-4" controlId="person-notes">
+              <AdminLabel className="text-subtle text-sm">{m.admin_notes()}</AdminLabel>
               <form.Field name="notes">
                 {(field) => (
                   <AdminTextarea
                     rows={2}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     maxLength={2000}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -418,7 +412,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                   label={m.admin_people_active_label()}
                   checked={field.value}
                   onCheckedChange={(e) => field.handleChange(e)}
-                  className="tw:text-subtle tw:text-sm"
+                  className="text-subtle text-sm"
                 />
               )}
             </form.Field>

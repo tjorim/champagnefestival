@@ -116,7 +116,7 @@ describe("ContentManagement", () => {
     const archivedRow = await screen.findByText("Maison Moët & Chandon");
     const row = archivedRow.closest('[data-slot="presentation-list-item"]');
     expect(row).not.toBeNull();
-    expect(row).toHaveClass("tw:opacity-50");
+    expect(row).toHaveClass("opacity-50");
   });
 
   it("shows an error alert when loading exhibitors fails", async () => {

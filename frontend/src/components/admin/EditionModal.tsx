@@ -258,14 +258,14 @@ export default function EditionModal({
         >
           <DialogBody>
             {error && (
-              <Alert variant="danger" className="tw:py-1 tw:mb-4 tw:text-sm">
+              <Alert variant="danger" className="py-1 mb-4 text-sm">
                 {error}
               </Alert>
             )}
 
             {!isEdit && (
-              <AdminField className="tw:mb-4" controlId="edition-id">
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">ID</AdminLabel>
+              <AdminField className="mb-4" controlId="edition-id">
+                <AdminLabel className="text-subtle text-sm mb-1">ID</AdminLabel>
                 <form.Field
                   name="id"
                   validators={[
@@ -281,7 +281,7 @@ export default function EditionModal({
                     return (
                       <>
                         <AdminInput
-                          className="tw:bg-muted tw:text-content tw:border-input"
+                          className="bg-muted text-content border-input"
                           placeholder="e.g. 2026-march"
                           autoFocus
                           value={field.value}
@@ -297,14 +297,14 @@ export default function EditionModal({
               </AdminField>
             )}
 
-            <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-4">
-              <AdminField className="tw:max-w-25" controlId="edition-year">
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">Year</AdminLabel>
+            <div className="flex gap-2 flex-wrap mb-4">
+              <AdminField className="max-w-25" controlId="edition-year">
+                <AdminLabel className="text-subtle text-sm mb-1">Year</AdminLabel>
                 <form.Field name="year">
                   {(field) => (
                     <AdminInput
                       type="number"
-                      className="tw:bg-muted tw:text-content tw:border-input"
+                      className="bg-muted text-content border-input"
                       value={field.value}
                       onChange={(e) => field.handleChange(Number(e.target.value))}
                       onBlur={field.handleBlur}
@@ -312,11 +312,8 @@ export default function EditionModal({
                   )}
                 </form.Field>
               </AdminField>
-              <AdminField
-                className="tw:min-w-35 tw:grow-1 tw:shrink-1 tw:basis-35"
-                controlId="edition-month"
-              >
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">Month</AdminLabel>
+              <AdminField className="min-w-35 grow-1 shrink-1 basis-35" controlId="edition-month">
+                <AdminLabel className="text-subtle text-sm mb-1">Month</AdminLabel>
                 <form.Field
                   name="month"
                   validators={[
@@ -332,7 +329,7 @@ export default function EditionModal({
                     return (
                       <>
                         <AdminInput
-                          className="tw:bg-muted tw:text-content tw:border-input"
+                          className="bg-muted text-content border-input"
                           placeholder="e.g. march"
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -345,11 +342,8 @@ export default function EditionModal({
                   }}
                 </form.Field>
               </AdminField>
-              <AdminField
-                className="tw:min-w-45 tw:grow-1 tw:shrink-1 tw:basis-45"
-                controlId="edition-type"
-              >
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+              <AdminField className="min-w-45 grow-1 shrink-1 basis-45" controlId="edition-type">
+                <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_edition_type_label()}
                 </AdminLabel>
                 <form.Field name="editionType">
@@ -363,7 +357,7 @@ export default function EditionModal({
                         }
                       }}
                       onBlur={field.handleBlur}
-                      className="tw:bg-muted tw:text-content tw:border-input"
+                      className="bg-muted text-content border-input"
                     >
                       <AdminOption value="festival">{m.admin_edition_type_festival()}</AdminOption>
                       <AdminOption value="bourse">{m.admin_edition_type_bourse()}</AdminOption>
@@ -382,14 +376,14 @@ export default function EditionModal({
                     label={m.admin_content_edition_active()}
                     checked={field.value}
                     onCheckedChange={(e) => field.handleChange(e)}
-                    className="tw:text-content tw:self-end tw:mb-1"
+                    className="text-content self-end mb-1"
                   />
                 )}
               </form.Field>
             </div>
 
-            <AdminField className="tw:mb-4" controlId="edition-venue">
-              <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+            <AdminField className="mb-4" controlId="edition-venue">
+              <AdminLabel className="text-subtle text-sm mb-1">
                 {m.admin_edition_venue_label()}
               </AdminLabel>
               <form.Field
@@ -406,7 +400,7 @@ export default function EditionModal({
                   return (
                     <>
                       <AdminSelect
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         value={field.value}
                         onValueChange={(e) => field.handleChange(e)}
                         onBlur={field.handleBlur}
@@ -427,26 +421,26 @@ export default function EditionModal({
               </form.Field>
             </AdminField>
 
-            <div className="tw:rounded-md tw:border tw:border-subtle tw:p-4 tw:mb-4">
-              <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
-                <div className="tw:text-content tw:text-sm tw:font-semibold">
+            <div className="rounded-md border border-subtle p-4 mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <div className="text-content text-sm font-semibold">
                   {typeLabel(editionType)} {m.admin_edition_date_handling()}
                 </div>
-                <span className="tw:text-subtle tw:text-sm">{m.admin_edition_dates_info()}</span>
+                <span className="text-subtle text-sm">{m.admin_edition_dates_info()}</span>
               </div>
               {isFestival ? (
-                <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2">
+                <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2">
                   {["Friday", "Saturday", "Sunday"].map((label, index) => (
                     <AdminField
-                      className="tw:site-md:w-4/12"
+                      className="site-md:w-4/12"
                       key={label}
                       controlId={`edition-date-${label.toLowerCase()}`}
                     >
-                      <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">{label}</AdminLabel>
+                      <AdminLabel className="text-subtle text-sm mb-1">{label}</AdminLabel>
                       <AdminInput
                         type="date"
                         value={previewDates[index] ?? ""}
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         readOnly
                         disabled={!previewDates[index]}
                       />
@@ -455,33 +449,31 @@ export default function EditionModal({
                 </div>
               ) : (
                 <AdminField controlId="edition-standalone-date">
-                  <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
-                    Edition date
-                  </AdminLabel>
+                  <AdminLabel className="text-subtle text-sm mb-1">Edition date</AdminLabel>
                   <AdminInput
                     type="date"
                     value={previewDates[0] ?? ""}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     readOnly
                     disabled={!previewDates[0]}
                   />
                 </AdminField>
               )}
-              <div className="tw:text-subtle tw:text-sm tw:mt-2">
+              <div className="text-subtle text-sm mt-2">
                 {isEdit
                   ? m.admin_edition_update_event_dates()
                   : m.admin_edition_create_first_then_events()}
               </div>
             </div>
 
-            <AdminField className="tw:mb-4" controlId="edition-co-organizer">
-              <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+            <AdminField className="mb-4" controlId="edition-co-organizer">
+              <AdminLabel className="text-subtle text-sm mb-1">
                 {m.admin_edition_co_organizer_label()}
               </AdminLabel>
               <form.Field name="coOrganizerId">
                 {(field) => (
                   <AdminSelect
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
@@ -497,19 +489,17 @@ export default function EditionModal({
                   </AdminSelect>
                 )}
               </form.Field>
-              <div className="tw:text-subtle tw:text-sm tw:mt-1">
-                {m.admin_edition_co_organizer_help()}
-              </div>
+              <div className="text-subtle text-sm mt-1">{m.admin_edition_co_organizer_help()}</div>
             </AdminField>
 
             {isFestival && (
-              <AdminField className="tw:mb-4" controlId="edition-exhibitors">
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+              <AdminField className="mb-4" controlId="edition-exhibitors">
+                <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_edition_festival_exhibitors()}
                 </AdminLabel>
                 {exhibitorsQuery.isPending ? (
-                  <div className="tw:text-subtle tw:text-sm">
-                    <Spinner size="sm" className="tw:me-2" />
+                  <div className="text-subtle text-sm">
+                    <Spinner size="sm" className="me-2" />
                     {m.admin_edition_loading_exhibitors()}
                   </div>
                 ) : (
@@ -531,7 +521,7 @@ export default function EditionModal({
                                   <ComboboxChip
                                     key={option.value}
                                     className={
-                                      option.isArchived ? "tw:text-muted-foreground" : undefined
+                                      option.isArchived ? "text-muted-foreground" : undefined
                                     }
                                   >
                                     {option.label}
@@ -559,7 +549,7 @@ export default function EditionModal({
                                       key={option.value}
                                       value={option}
                                       className={
-                                        option.isArchived ? "tw:text-muted-foreground" : undefined
+                                        option.isArchived ? "text-muted-foreground" : undefined
                                       }
                                     >
                                       {option.label}

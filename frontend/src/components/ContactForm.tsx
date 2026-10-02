@@ -136,8 +136,8 @@ const ContactForm = () => {
   });
 
   return (
-    <Card className="tw:mx-auto tw:border-0 tw:shadow-lg">
-      <CardContent className="tw:p-4 tw:site-md:p-6">
+    <Card className="mx-auto border-0 shadow-lg">
+      <CardContent className="p-4 site-md:p-6">
         {isSubmitted ? (
           <Alert variant="success">{m.contact_success_message()}</Alert>
         ) : (
@@ -146,14 +146,14 @@ const ContactForm = () => {
               e.preventDefault();
               void form.handleSubmit();
             }}
-            className="tw:my-4"
+            className="my-4"
             name="contact-form"
             autoComplete="on"
             noValidate
           >
             {generalError && (
-              <Alert variant="danger" className="tw:flex tw:items-center">
-                <Icon icon={CircleAlertIcon} className="tw:me-2" />
+              <Alert variant="danger" className="flex items-center">
+                <Icon icon={CircleAlertIcon} className="me-2" />
                 <span>{generalError}</span>
               </Alert>
             )}
@@ -161,7 +161,7 @@ const ContactForm = () => {
             {/* Hidden honeypot field to catch bots - placed early to trap bots */}
             <form.Field name="honeypot">
               {(field) => (
-                <div className="tw:hidden">
+                <div className="hidden">
                   <PublicInput
                     type="text"
                     autoComplete="off"
@@ -187,7 +187,7 @@ const ContactForm = () => {
               {(field) => {
                 const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
-                  <PublicField className="tw:mb-4 tw:text-left" controlId="name">
+                  <PublicField className="mb-4 text-left" controlId="name">
                     <PublicLabel>{m.contact_name()}</PublicLabel>
                     <PublicInput
                       placeholder={m.contact_placeholder_name()}
@@ -221,7 +221,7 @@ const ContactForm = () => {
               {(field) => {
                 const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
-                  <PublicField className="tw:mb-4 tw:text-left" controlId="email">
+                  <PublicField className="mb-4 text-left" controlId="email">
                     <PublicLabel>{m.contact_email()}</PublicLabel>
                     <PublicInput
                       type="email"
@@ -253,10 +253,10 @@ const ContactForm = () => {
               {(field) => {
                 const showErr = field.meta.isTouched && field.errors.length > 0;
                 return (
-                  <PublicField className="tw:mb-4 tw:text-left" controlId="message">
+                  <PublicField className="mb-4 text-left" controlId="message">
                     <PublicLabel>{m.contact_message()}</PublicLabel>
                     <PublicTextarea
-                      className="tw:min-h-30"
+                      className="min-h-30"
                       placeholder={m.contact_placeholder_message()}
                       disabled={isSubmitting}
                       aria-invalid={showErr}
@@ -275,19 +275,19 @@ const ContactForm = () => {
             <Button
               type="submit"
               variant="brand"
-              className="tw:w-full"
+              className="w-full"
               disabled={isSubmitting}
               aria-busy={isSubmitting ? "true" : "false"}
               aria-live="polite"
             >
               {isSubmitting ? (
-                <span className="tw:flex tw:items-center tw:justify-center">
-                  <Spinner size="sm" className="tw:me-2" />
+                <span className="flex items-center justify-center">
+                  <Spinner size="sm" className="me-2" />
                   {m.contact_submitting()}
                 </span>
               ) : (
-                <span className="tw:flex tw:items-center tw:justify-center">
-                  <Icon icon={SendIcon} className="tw:me-2" />
+                <span className="flex items-center justify-center">
+                  <Icon icon={SendIcon} className="me-2" />
                   {m.contact_submit()}
                 </span>
               )}

@@ -1,5 +1,10 @@
 # Tailwind coexistence with Bootstrap and runtime themes
 
+> **Historical.** The coexistence setup described here (prefix, important
+> utilities, generated legacy lint allow-list) was temporary and was removed by
+> [#1111](https://github.com/tjorim/champagnefestival/issues/1111). The current
+> architecture is in [1111-bootstrap-removal.md](1111-bootstrap-removal.md).
+
 Issue: [#1104](https://github.com/tjorim/champagnefestival/issues/1104).
 
 ## Cascade spike and decision

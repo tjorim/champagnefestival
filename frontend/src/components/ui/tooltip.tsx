@@ -12,7 +12,7 @@ function Tooltip(props: Primitive.Root.Props) {
   );
 }
 function TooltipTrigger(props: Primitive.Trigger.Props) {
-  return <Primitive.Trigger data-tailwind-migrated="true" {...props} />;
+  return <Primitive.Trigger {...props} />;
 }
 function TooltipContent({
   admin = false,
@@ -20,13 +20,12 @@ function TooltipContent({
   ...props
 }: Primitive.Popup.Props & { admin?: boolean }) {
   const content = (
-    <Primitive.Positioner side="top" sideOffset={4} className="tw:z-popup">
+    <Primitive.Positioner side="top" sideOffset={4} className="z-popup">
       <Primitive.Popup
         role="tooltip"
-        data-tailwind-migrated="true"
         data-slot="tooltip-content"
         className={cn(
-          "tw:max-w-xs tw:rounded tw:bg-foreground tw:px-3 tw:py-2 tw:text-sm tw:text-background tw:shadow",
+          "max-w-xs rounded bg-foreground px-3 py-2 text-sm text-background shadow",
           className,
         )}
         {...props}

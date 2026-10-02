@@ -109,7 +109,7 @@ export default function MaintenancePage() {
         {flyerFailed ? (
           <div className="maintenance-page__flyer-card">
             <div className="maintenance-page__flyer-placeholder">
-              <Icon icon={ImageIcon} className="tw:text-3xl" />
+              <Icon icon={ImageIcon} className="text-3xl" />
               <span className="maintenance-page__flyer-placeholder-text">
                 {m.maintenance_flyer_placeholder()}
               </span>
@@ -129,7 +129,7 @@ export default function MaintenancePage() {
               className="maintenance-page__flyer-image"
             />
             <span className="maintenance-page__flyer-overlay" aria-hidden="true">
-              <Icon icon={ZoomInIcon} className="tw:text-3xl tw:text-primary-foreground" />
+              <Icon icon={ZoomInIcon} className="text-3xl text-primary-foreground" />
             </span>
           </button>
         )}

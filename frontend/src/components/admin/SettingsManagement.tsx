@@ -112,17 +112,17 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
 
   return (
     <Card tone="secondary">
-      <CardHeader className="tw:font-semibold">{m.admin_content_settings_section()}</CardHeader>
+      <CardHeader className="font-semibold">{m.admin_content_settings_section()}</CardHeader>
       <CardContent>
         {updateMutation.isError && (
-          <Alert variant="danger" className="tw:py-1 tw:mb-4 tw:text-sm">
+          <Alert variant="danger" className="py-1 mb-4 text-sm">
             {updateMutation.error instanceof Error
               ? updateMutation.error.message
               : m.admin_error_update_settings()}
           </Alert>
         )}
         {settingsQuery.isError ? (
-          <Alert variant="danger" className="tw:py-1 tw:mb-0 tw:text-sm">
+          <Alert variant="danger" className="py-1 mb-0 text-sm">
             {m.admin_error_load_settings()}
           </Alert>
         ) : settingsQuery.isPending ? (
@@ -137,10 +137,10 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
               disabled={updateMutation.isPending}
               onCheckedChange={(e) => updateMutation.mutate({ maintenance_mode: e })}
             />
-            <div className="tw:text-subtle tw:text-sm tw:mt-2">
+            <div className="text-subtle text-sm mt-2">
               {m.admin_settings_maintenance_mode_help()}
             </div>
-            <hr className="tw:border-subtle tw:my-6" />
+            <hr className="border-subtle my-6" />
             <form
               onSubmit={(event) => {
                 event.preventDefault();
@@ -149,7 +149,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
             >
               <form.Field name="publicEmail">
                 {(field) => (
-                  <AdminField className="tw:mb-4" controlId="public-email">
+                  <AdminField className="mb-4" controlId="public-email">
                     <AdminLabel>{m.admin_settings_public_email_label()}</AdminLabel>
                     <AdminInput
                       type="email"
@@ -158,7 +158,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <AdminDescription className="tw:text-subtle">
+                    <AdminDescription className="text-subtle">
                       {m.admin_settings_public_email_help()}
                     </AdminDescription>
                   </AdminField>
@@ -166,7 +166,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
               </form.Field>
               <form.Field name="publicPhone">
                 {(field) => (
-                  <AdminField className="tw:mb-4" controlId="public-phone">
+                  <AdminField className="mb-4" controlId="public-phone">
                     <AdminLabel>{m.admin_settings_public_phone_label()}</AdminLabel>
                     <AdminInput
                       type="tel"
@@ -175,7 +175,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <AdminDescription className="tw:text-subtle">
+                    <AdminDescription className="text-subtle">
                       {m.admin_settings_public_phone_help()}
                     </AdminDescription>
                   </AdminField>
@@ -183,7 +183,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
               </form.Field>
               <form.Field name="facebookUrl">
                 {(field) => (
-                  <AdminField className="tw:mb-4" controlId="facebook-url">
+                  <AdminField className="mb-4" controlId="facebook-url">
                     <AdminLabel>{m.admin_settings_facebook_url_label()}</AdminLabel>
                     <AdminInput
                       type="url"
@@ -193,7 +193,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
                       onChange={(event) => field.handleChange(event.target.value)}
                       onBlur={field.handleBlur}
                     />
-                    <AdminDescription className="tw:text-subtle">
+                    <AdminDescription className="text-subtle">
                       {m.admin_settings_facebook_url_help()}
                     </AdminDescription>
                   </AdminField>

@@ -46,11 +46,11 @@ export default function EmailComposeModal({ draft, onClose }: Props) {
         </DialogHeader>
         <DialogBody>
           {tooLong && <Alert variant="warning">{m.admin_email_too_long()}</Alert>}
-          <AdminField className="tw:mb-4" controlId="email-compose-recipient">
+          <AdminField className="mb-4" controlId="email-compose-recipient">
             <AdminLabel>{m.admin_email_to_label()}</AdminLabel>
             <AdminInput readOnly value={draft.recipient} />
           </AdminField>
-          <AdminField className="tw:mb-4" controlId="email-compose-subject">
+          <AdminField className="mb-4" controlId="email-compose-subject">
             <AdminLabel>{m.admin_email_subject_label()}</AdminLabel>
             <AdminInput readOnly value={draft.subject} />
           </AdminField>
@@ -59,12 +59,12 @@ export default function EmailComposeModal({ draft, onClose }: Props) {
             <AdminTextarea rows={10} readOnly value={draft.body} />
           </AdminField>
           {copyStatus === "copied" && (
-            <Alert variant="success" className="tw:mt-4 tw:mb-0">
+            <Alert variant="success" className="mt-4 mb-0">
               {m.admin_email_copied()}
             </Alert>
           )}
           {copyStatus === "failed" && (
-            <Alert variant="danger" className="tw:mt-4 tw:mb-0" role="alert">
+            <Alert variant="danger" className="mt-4 mb-0" role="alert">
               {m.admin_email_copy_failed()}
             </Alert>
           )}

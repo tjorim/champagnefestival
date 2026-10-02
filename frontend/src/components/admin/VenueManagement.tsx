@@ -592,9 +592,9 @@ export default function VenueManagement({
 
   return (
     <Card tone="secondary">
-      <CardHeader className="tw:flex tw:items-center tw:justify-between">
-        <span className="tw:font-semibold">
-          <Icon icon={MapPinIcon} className="tw:me-2" />
+      <CardHeader className="flex items-center justify-between">
+        <span className="font-semibold">
+          <Icon icon={MapPinIcon} className="me-2" />
           {m.admin_venue_add()}
         </span>
         <Button variant="outline-warning" size="sm" onClick={openAddVenue}>
@@ -602,40 +602,25 @@ export default function VenueManagement({
           {m.admin_venue_add()}
         </Button>
       </CardHeader>
-      <CardContent className="tw:flex tw:flex-col tw:gap-4">
+      <CardContent className="flex flex-col gap-4">
         {deleteVenueError && (
-          <Alert
-            role="alert"
-            aria-live="assertive"
-            variant="danger"
-            className="tw:py-1 tw:mb-0 tw:text-sm"
-          >
+          <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-0 text-sm">
             {deleteVenueError}
           </Alert>
         )}
         {deleteRoomError && (
-          <Alert
-            role="alert"
-            aria-live="assertive"
-            variant="danger"
-            className="tw:py-1 tw:mb-0 tw:text-sm"
-          >
+          <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-0 text-sm">
             {deleteRoomError}
           </Alert>
         )}
         {deleteTableTypeError && (
-          <Alert
-            role="alert"
-            aria-live="assertive"
-            variant="danger"
-            className="tw:py-1 tw:mb-0 tw:text-sm"
-          >
+          <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-0 text-sm">
             {deleteTableTypeError}
           </Alert>
         )}
         {venues.length === 0 ? (
-          <p className="tw:text-subtle tw:text-center tw:text-sm tw:my-4">
-            <Icon icon={InfoIcon} className="tw:me-1" />
+          <p className="text-subtle text-center text-sm my-4">
+            <Icon icon={InfoIcon} className="me-1" />
             {m.admin_no_venues()}
           </p>
         ) : (
@@ -647,20 +632,20 @@ export default function VenueManagement({
               .filter(Boolean)
               .join(", ");
             return (
-              <Card key={venue.id} tone="secondary" className={clsx(isArchived && "tw:opacity-75")}>
-                <CardHeader className="tw:flex tw:items-start tw:justify-between tw:gap-2">
+              <Card key={venue.id} tone="secondary" className={clsx(isArchived && "opacity-75")}>
+                <CardHeader className="flex items-start justify-between gap-2">
                   <div>
-                    <div className="tw:font-semibold">
+                    <div className="font-semibold">
                       {venue.name}
                       {isArchived && (
-                        <Badge variant="secondary" className="tw:ms-2 tw:text-tiny">
+                        <Badge variant="secondary" className="ms-2 text-tiny">
                           {m.admin_venue_archived_badge()}
                         </Badge>
                       )}
                     </div>
-                    <div className="tw:text-subtle tw:text-sm">{locationLine || "—"}</div>
+                    <div className="text-subtle text-sm">{locationLine || "—"}</div>
                   </div>
-                  <div className="tw:flex tw:gap-1 tw:shrink-0">
+                  <div className="flex gap-1 shrink-0">
                     <Button
                       variant="outline"
                       size="sm"
@@ -705,9 +690,9 @@ export default function VenueManagement({
                   </div>
                 </CardHeader>
                 {!isArchived && (
-                  <CardContent className="tw:py-2">
-                    <div className="tw:flex tw:items-center tw:justify-between tw:mb-1">
-                      <span className="tw:text-subtle tw:text-sm tw:uppercase tw:font-semibold">
+                  <CardContent className="py-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-subtle text-sm uppercase font-semibold">
                         {m.admin_rooms_tab()}
                       </span>
                       <Button variant="outline" size="sm" onClick={() => openAddRoom(venue.id)}>
@@ -716,23 +701,21 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueRooms.length === 0 ? (
-                      <p className="tw:text-subtle tw:text-sm tw:italic tw:mb-4">
-                        {m.admin_room_no_rooms()}
-                      </p>
+                      <p className="text-subtle text-sm italic mb-4">{m.admin_room_no_rooms()}</p>
                     ) : (
-                      <PresentationList flush className="tw:mb-4">
+                      <PresentationList flush className="mb-4">
                         {venueRooms.map((room) => (
                           <PresentationListItem
                             key={room.id}
                             className={clsx(
-                              "tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0",
-                              !room.active && "tw:opacity-50",
+                              "flex justify-between items-center gap-2 py-1 px-0",
+                              !room.active && "opacity-50",
                             )}
                           >
-                            <span className="tw:flex tw:items-center tw:gap-2">
+                            <span className="flex items-center gap-2">
                               <span
                                 aria-hidden="true"
-                                className="tw:inline-block tw:size-2.5 tw:rounded-full tw:shrink-0"
+                                className="inline-block size-2.5 rounded-full shrink-0"
 
                                 /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
                                 style={{ background: safeRoomColor(room.color) }}
@@ -745,14 +728,11 @@ export default function VenueManagement({
                                   aria-label={m.admin_room_dimensions_placeholder_badge()}
                                   title={m.admin_room_dimensions_placeholder_hint()}
                                 >
-                                  <Icon
-                                    icon={TriangleAlertIcon}
-                                    className="tw:text-xs tw:text-warning"
-                                  />
+                                  <Icon icon={TriangleAlertIcon} className="text-xs text-warning" />
                                 </span>
                               )}
                             </span>
-                            <span className="tw:flex tw:gap-1 tw:shrink-0">
+                            <span className="flex gap-1 shrink-0">
                               {room.active ? (
                                 <>
                                   <Button
@@ -802,8 +782,8 @@ export default function VenueManagement({
                       </PresentationList>
                     )}
 
-                    <div className="tw:flex tw:items-center tw:justify-between tw:mb-1">
-                      <span className="tw:text-subtle tw:text-sm tw:uppercase tw:font-semibold">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-subtle text-sm uppercase font-semibold">
                         {m.admin_table_types_tab()}
                       </span>
                       <Button
@@ -816,24 +796,22 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueTableTypes.length === 0 ? (
-                      <p className="tw:text-subtle tw:text-sm tw:italic tw:mb-0">
-                        {m.admin_no_table_types()}
-                      </p>
+                      <p className="text-subtle text-sm italic mb-0">{m.admin_no_table_types()}</p>
                     ) : (
-                      <PresentationList flush className="tw:mb-0">
+                      <PresentationList flush className="mb-0">
                         {venueTableTypes.map((tt) => (
                           <PresentationListItem
                             key={tt.id}
                             className={clsx(
-                              "tw:flex tw:justify-between tw:items-center tw:gap-2 tw:py-1 tw:px-0",
-                              !tt.active && "tw:opacity-50",
+                              "flex justify-between items-center gap-2 py-1 px-0",
+                              !tt.active && "opacity-50",
                             )}
                           >
-                            <span className="tw:flex tw:items-center tw:gap-2">
+                            <span className="flex items-center gap-2">
                               <Icon icon={tt.shape === "round" ? CircleIcon : SquareIcon} />
                               {tt.name}
                             </span>
-                            <span className="tw:flex tw:gap-1 tw:shrink-0">
+                            <span className="flex gap-1 shrink-0">
                               {tt.active ? (
                                 <>
                                   <Button
@@ -909,12 +887,12 @@ export default function VenueManagement({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="tw:py-1 tw:mb-4 tw:text-sm"
+                className="py-1 mb-4 text-sm"
               >
                 {addVenueError}
               </Alert>
             )}
-            <AdminField className="tw:mb-4" controlId="venue-name">
+            <AdminField className="mb-4" controlId="venue-name">
               <AdminLabel>{m.admin_venue_name_label()}</AdminLabel>
               <venueForm.Field name="name">
                 {(field) => (
@@ -923,13 +901,13 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     placeholder={m.admin_venue_name_placeholder()}
                   />
                 )}
               </venueForm.Field>
             </AdminField>
-            <AdminField className="tw:mb-4" controlId="venue-address">
+            <AdminField className="mb-4" controlId="venue-address">
               <AdminLabel>{m.admin_venue_address_label()}</AdminLabel>
               <venueForm.Field name="address">
                 {(field) => (
@@ -938,13 +916,13 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                   />
                 )}
               </venueForm.Field>
             </AdminField>
-            <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-4">
-              <div className="tw:min-w-0 tw:flex-1">
+            <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mb-4">
+              <div className="min-w-0 flex-1">
                 <AdminField controlId="venue-city">
                   <AdminLabel>{m.admin_venue_city_label()}</AdminLabel>
                   <venueForm.Field name="city">
@@ -954,13 +932,13 @@ export default function VenueManagement({
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                       />
                     )}
                   </venueForm.Field>
                 </AdminField>
               </div>
-              <div className="tw:w-auto tw:flex-none">
+              <div className="w-auto flex-none">
                 <AdminField controlId="venue-postal-code">
                   <AdminLabel>{m.admin_venue_postal_code_label()}</AdminLabel>
                   <venueForm.Field name="postalCode">
@@ -970,14 +948,14 @@ export default function VenueManagement({
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        className="tw:bg-muted tw:text-content tw:border-input tw:w-28"
+                        className="bg-muted text-content border-input w-28"
                       />
                     )}
                   </venueForm.Field>
                 </AdminField>
               </div>
             </div>
-            <AdminField className="tw:mb-4" controlId="venue-country">
+            <AdminField className="mb-4" controlId="venue-country">
               <AdminLabel>{m.admin_venue_country_label()}</AdminLabel>
               <venueForm.Field name="country">
                 {(field) => (
@@ -986,13 +964,13 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                   />
                 )}
               </venueForm.Field>
             </AdminField>
-            <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2">
-              <div className="tw:min-w-0 tw:flex-1">
+            <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2">
+              <div className="min-w-0 flex-1">
                 <AdminField controlId="venue-latitude">
                   <AdminLabel>{m.admin_venue_latitude_label()}</AdminLabel>
                   <venueForm.Field name="lat">
@@ -1007,13 +985,13 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                       />
                     )}
                   </venueForm.Field>
                 </AdminField>
               </div>
-              <div className="tw:min-w-0 tw:flex-1">
+              <div className="min-w-0 flex-1">
                 <AdminField controlId="venue-longitude">
                   <AdminLabel>{m.admin_venue_longitude_label()}</AdminLabel>
                   <venueForm.Field name="lng">
@@ -1028,7 +1006,7 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                       />
                     )}
                   </venueForm.Field>
@@ -1036,13 +1014,11 @@ export default function VenueManagement({
               </div>
             </div>
             {previewCoordinates && (
-              <div className="tw:mt-4">
-                <div className="tw:text-subtle tw:text-sm tw:mb-1">
-                  {m.admin_venue_map_preview()}
-                </div>
+              <div className="mt-4">
+                <div className="text-subtle text-sm mb-1">{m.admin_venue_map_preview()}</div>
                 <Suspense
                   fallback={
-                    <div className="tw:flex tw:aspect-video tw:items-center tw:justify-center tw:rounded-md tw:border tw:border-subtle">
+                    <div className="flex aspect-video items-center justify-center rounded-md border border-subtle">
                       {m.loading()}
                     </div>
                   }
@@ -1089,12 +1065,12 @@ export default function VenueManagement({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="tw:py-1 tw:mb-4 tw:text-sm"
+                className="py-1 mb-4 text-sm"
               >
                 {addRoomError}
               </Alert>
             )}
-            <AdminField className="tw:mb-4" controlId="room-venue">
+            <AdminField className="mb-4" controlId="room-venue">
               <AdminLabel>{m.admin_room_venue_label()}</AdminLabel>
               <roomForm.Field name="venueId">
                 {(field) => (
@@ -1102,7 +1078,7 @@ export default function VenueManagement({
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                   >
                     {venues
                       .filter((v) => v.active)
@@ -1115,7 +1091,7 @@ export default function VenueManagement({
                 )}
               </roomForm.Field>
             </AdminField>
-            <AdminField className="tw:mb-4" controlId="room-name">
+            <AdminField className="mb-4" controlId="room-name">
               <AdminLabel>{m.admin_room_name_label()}</AdminLabel>
               <roomForm.Field name="name">
                 {(field) => (
@@ -1124,14 +1100,14 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     placeholder={m.admin_room_name_placeholder()}
                   />
                 )}
               </roomForm.Field>
             </AdminField>
-            <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-4">
-              <div className="tw:min-w-0 tw:flex-1">
+            <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mb-4">
+              <div className="min-w-0 flex-1">
                 <AdminField controlId="room-width">
                   <AdminLabel>{m.admin_room_width_label()}</AdminLabel>
                   <roomForm.Field name="widthM">
@@ -1146,13 +1122,13 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                       />
                     )}
                   </roomForm.Field>
                 </AdminField>
               </div>
-              <div className="tw:min-w-0 tw:flex-1">
+              <div className="min-w-0 flex-1">
                 <AdminField controlId="room-length">
                   <AdminLabel>{m.admin_room_length_label()}</AdminLabel>
                   <roomForm.Field name="lengthM">
@@ -1167,7 +1143,7 @@ export default function VenueManagement({
                           field.handleChange(e.target.value === "" ? "" : Number(e.target.value))
                         }
                         onBlur={field.handleBlur}
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                       />
                     )}
                   </roomForm.Field>
@@ -1178,20 +1154,20 @@ export default function VenueManagement({
               <AdminLabel>{m.admin_room_color_label()}</AdminLabel>
               <roomForm.Field name="color">
                 {(field) => (
-                  <div className="tw:flex tw:gap-2 tw:items-center">
+                  <div className="flex gap-2 items-center">
                     <AdminInput
                       type="color"
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
-                      className="tw:w-12 tw:h-9.5 tw:p-0.5"
+                      className="w-12 h-9.5 p-0.5"
                     />
                     <AdminInput
                       type="text"
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
-                      className="tw:bg-muted tw:text-content tw:border-input tw:font-mono"
+                      className="bg-muted text-content border-input font-mono"
                     />
                   </div>
                 )}
@@ -1228,12 +1204,12 @@ export default function VenueManagement({
                 role="alert"
                 aria-live="assertive"
                 variant="danger"
-                className="tw:py-1 tw:mb-4 tw:text-sm"
+                className="py-1 mb-4 text-sm"
               >
                 {addTableTypeError}
               </Alert>
             )}
-            <AdminField className="tw:mb-4" controlId="tt-venue">
+            <AdminField className="mb-4" controlId="tt-venue">
               <AdminLabel>{m.admin_room_venue_label()}</AdminLabel>
               <tableTypeForm.Field name="venueId">
                 {(field) => (
@@ -1241,7 +1217,7 @@ export default function VenueManagement({
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                   >
                     <AdminOption value="">— {m.admin_room_venue_label()} —</AdminOption>
                     {venues
@@ -1255,7 +1231,7 @@ export default function VenueManagement({
                 )}
               </tableTypeForm.Field>
             </AdminField>
-            <AdminField className="tw:mb-4" controlId="tt-name">
+            <AdminField className="mb-4" controlId="tt-name">
               <AdminLabel>{m.admin_table_type_name_label()}</AdminLabel>
               <tableTypeForm.Field name="name">
                 {(field) => (
@@ -1264,13 +1240,13 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     placeholder={m.admin_table_type_name_placeholder()}
                   />
                 )}
               </tableTypeForm.Field>
             </AdminField>
-            <AdminField className="tw:mb-4" controlId="tt-shape">
+            <AdminField className="mb-4" controlId="tt-shape">
               <AdminLabel>{m.admin_table_shape_label()}</AdminLabel>
               <tableTypeForm.Field name="shape">
                 {(field) => (
@@ -1286,7 +1262,7 @@ export default function VenueManagement({
                       tableTypeForm.setFieldValue("lengthM", "");
                     }}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                   >
                     <AdminOption value="rectangle">{m.admin_table_shape_rectangle()}</AdminOption>
                     <AdminOption value="round">{m.admin_table_shape_round()}</AdminOption>
@@ -1294,7 +1270,7 @@ export default function VenueManagement({
                 )}
               </tableTypeForm.Field>
             </AdminField>
-            <AdminField className="tw:mb-4" controlId="tt-height-type">
+            <AdminField className="mb-4" controlId="tt-height-type">
               <AdminLabel>{m.admin_table_height_type_label()}</AdminLabel>
               <tableTypeForm.Field name="heightType">
                 {(field) => (
@@ -1302,7 +1278,7 @@ export default function VenueManagement({
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e as "low" | "high")}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                   >
                     <AdminOption value="low">{m.admin_table_height_type_low()}</AdminOption>
                     <AdminOption value="high">{m.admin_table_height_type_high()}</AdminOption>
@@ -1311,7 +1287,7 @@ export default function VenueManagement({
               </tableTypeForm.Field>
             </AdminField>
             {tableTypeValues.shape === "round" ? (
-              <AdminField className="tw:mb-4" controlId="tt-diameter">
+              <AdminField className="mb-4" controlId="tt-diameter">
                 <AdminLabel>{m.admin_table_diameter_label()}</AdminLabel>
                 <tableTypeForm.Field name="widthM">
                   {(field) => (
@@ -1329,14 +1305,14 @@ export default function VenueManagement({
                         tableTypeForm.setFieldValue("lengthM", v);
                       }}
                       onBlur={field.handleBlur}
-                      className="tw:bg-muted tw:text-content tw:border-input"
+                      className="bg-muted text-content border-input"
                     />
                   )}
                 </tableTypeForm.Field>
               </AdminField>
             ) : (
-              <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-4">
-                <div className="tw:min-w-0 tw:flex-1">
+              <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mb-4">
+                <div className="min-w-0 flex-1">
                   <AdminField controlId="tt-width">
                     <AdminLabel>{m.admin_table_width_label()}</AdminLabel>
                     <tableTypeForm.Field name="widthM">
@@ -1353,13 +1329,13 @@ export default function VenueManagement({
                             field.handleChange(raw === "" ? "" : Number(raw));
                           }}
                           onBlur={field.handleBlur}
-                          className="tw:bg-muted tw:text-content tw:border-input"
+                          className="bg-muted text-content border-input"
                         />
                       )}
                     </tableTypeForm.Field>
                   </AdminField>
                 </div>
-                <div className="tw:min-w-0 tw:flex-1">
+                <div className="min-w-0 flex-1">
                   <AdminField controlId="tt-length">
                     <AdminLabel>{m.admin_table_length_label()}</AdminLabel>
                     <tableTypeForm.Field name="lengthM">
@@ -1376,7 +1352,7 @@ export default function VenueManagement({
                             field.handleChange(raw === "" ? "" : Number(raw));
                           }}
                           onBlur={field.handleBlur}
-                          className="tw:bg-muted tw:text-content tw:border-input"
+                          className="bg-muted text-content border-input"
                         />
                       )}
                     </tableTypeForm.Field>
@@ -1395,7 +1371,7 @@ export default function VenueManagement({
                     value={field.value}
                     onChange={(e) => field.handleChange(Number(e.target.value))}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                   />
                 )}
               </tableTypeForm.Field>

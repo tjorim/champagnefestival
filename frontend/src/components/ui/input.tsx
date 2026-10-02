@@ -7,9 +7,8 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
     <InputPrimitive
       type={type}
       data-slot="input"
-      data-tailwind-migrated="true"
       className={cn(
-        "tw:h-9 tw:w-full tw:min-w-0 tw:rounded-md tw:border tw:border-input tw:bg-muted tw:px-2.5 tw:py-1 tw:text-sm tw:shadow-xs tw:transition-shadow tw:outline-none tw:file:inline-flex tw:file:h-7 tw:file:border-0 tw:file:bg-transparent tw:file:text-sm tw:file:font-medium tw:file:text-foreground tw:placeholder:text-muted-foreground tw:focus-visible:border-ring tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:disabled:pointer-events-none tw:disabled:cursor-not-allowed tw:disabled:opacity-50 tw:aria-invalid:border-destructive tw:aria-invalid:ring-3 tw:aria-invalid:ring-destructive/20",
+        "h-9 w-full min-w-0 rounded-md border border-input bg-muted px-2.5 py-1 text-sm shadow-xs transition-shadow outline-none file:inline-flex file:h-7 file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20",
         className,
       )}
       {...props}

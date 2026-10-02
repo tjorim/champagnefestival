@@ -5,10 +5,9 @@ function Separator({ className, orientation = "horizontal", ...props }: Separato
   return (
     <SeparatorPrimitive
       data-slot="separator"
-      data-tailwind-migrated="true"
       orientation={orientation}
       className={cn(
-        "tw:shrink-0 tw:bg-border tw:data-horizontal:h-px tw:data-horizontal:w-full tw:data-vertical:w-px tw:data-vertical:self-stretch",
+        "shrink-0 bg-border data-horizontal:h-px data-horizontal:w-full data-vertical:w-px data-vertical:self-stretch",
         className,
       )}
       {...props}

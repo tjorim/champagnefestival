@@ -79,7 +79,7 @@ describe("ButtonLink with a router-style link component", () => {
       <ButtonLink
         render={<RouterLink to="/venue-plan" />}
         variant="outline-warning"
-        className="tw:w-full"
+        className="w-full"
       >
         Show table
       </ButtonLink>,
@@ -87,7 +87,7 @@ describe("ButtonLink with a router-style link component", () => {
     const link = screen.getByRole("link", { name: "Show table" });
     expect(link).toHaveAttribute("href", "/venue-plan");
     expect(link).toHaveAttribute("data-variant", "outline-warning");
-    expect(link.className).toContain("tw:w-full");
+    expect(link.className).toContain("w-full");
     expect(link).not.toHaveAttribute("role");
   });
 });

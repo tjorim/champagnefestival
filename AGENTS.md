@@ -108,32 +108,37 @@ Future workflow additions should follow these conventions:
 - Do not commit automatically unless explicitly asked
 - GitHub issues are living documents: never add comments to them. Record clarifications, decisions, new sub-issue links and corrections by editing the issue body (read it first, keep the original text, and add or adjust a clearly headed section), including on closed issues
 
-## Styling during the Bootstrap migration (#1104)
+## Styling
 
-- Existing Bootstrap, component CSS and runtime themes retain their cascade and
-  reboot. Do not import Tailwind preflight or reorder the theme `<link>`.
-- New or migrated UI uses Tailwind v4 with the `tw:` prefix (for example
-  `tw:flex tw:gap-2 tw:hover:bg-primary`). Utilities are important so they beat
-  unlayered legacy styles, including Bootstrap's important utilities. Avoid
-  mixing both systems on new controls; coexistence is for gradual migration.
+Tailwind v4 and Base UI are the frontend stack; Bootstrap was removed in #1111
+(decision record: `docs/decisions/1111-bootstrap-removal.md`).
+
+- UI is built from Base UI primitives in `frontend/src/components/ui/` styled
+  with unprefixed Tailwind utilities (for example `flex gap-2 hover:bg-primary`).
+  Tailwind preflight is the reset. Utilities are not `!important`.
+- Cascade layers are declared in `frontend/src/styles/tailwind.css`, lowest to
+  highest: `theme`, `base`, `vendor`, `components`, `utilities`. Leaflet/Swiper
+  CSS goes in `vendor`; runtime themes (`frontend/public/themes/*.css`),
+  `admin.css`, other component stylesheets and the `data-slot` rules in
+  `tailwind.css` go in `components`. A utility on an element therefore beats all
+  of them without specificity tricks. Any new stylesheet must declare its rules
+  inside one of those layers, never unlayered (unlayered CSS beats every layer).
 - Use semantic colours from `frontend/src/styles/tailwind.css`, mapped to the
   active runtime theme. Do not use raw palette colours, arbitrary values or
-  inline styles. Dynamic positioning needs a deliberate, narrow lint exception.
+  inline styles. Dynamic positioning needs a deliberate, narrow lint exception
+  (a scoped `oxlint-disable` comment with a justification; floor-plan
+  coordinates, saved colours and data-derived ratios are the existing cases).
 - Generate Base UI primitives on demand with `cd frontend && pnpm dlx shadcn@latest
   add <component>` using the committed `components.json` (`base-vega`, Lucide,
   Tailwind v4). Own and restyle the generated source; never run `init` over the
-  existing theme or bulk-generate controls. Use `@/lib/utils` for the shared
-  prefix-aware `cn` helper, and Lucide for new icons.
-- `pnpm lint` regenerates `.oxlint-legacy-classes.json` from vendor, component and
-  runtime theme CSS. Never hand-edit that generated allow-list. The frozen
-  `.oxlint-legacy-exceptions.json` is empty since #1123; keep it empty. Genuinely
-  computed geometry (floor-plan coordinates, saved colors, data-derived ratios)
-  uses a scoped `oxlint-disable` comment with a justification instead. All four shadcn rules apply to new files.
-- Coexistence is temporary: remove unused legacy CSS/classes and each file's lint
-  exceptions as it migrates. At migration completion, remove Bootstrap/Bootstrap
-  Icons, replace reboot with verified Tailwind preflight, remove `tw:` prefixes
-  and utility `important`, update `components.json` and `cn`, and delete legacy
-  lint generation/baselines. Preserve runtime visual themes and required vendor
-  CSS. Follow the cleanup gates in
-  `docs/decisions/1104-tailwind-coexistence.md` and final cleanup issue #1111
-  before declaring completion.
+  existing theme or bulk-generate controls. Use `@/lib/utils` for `cn`, and
+  Lucide for icons.
+- `pnpm lint` runs Oxlint with all four shadcn rules (`no-arbitrary-values`,
+  `no-inline-styles`, `no-unknown-classes`, `no-raw-colors`) configured directly
+  in `frontend/.oxlintrc.json`. The only allowance is the list of owned
+  class-name namespaces (`admin-*`, `site-*`, `riviera-*` and so on) whose rules
+  live in the owned stylesheets above; add a namespace only when you add owned CSS
+  for it. There is no generated allow-list and no exception baseline.
+- Runtime themes toggle light/dark through `data-theme-mode` on `<html>` (and on
+  the fixed-dark `data-theme-scope="admin"` scope); the Tailwind `dark` variant
+  reads the same attribute.

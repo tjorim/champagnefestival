@@ -149,8 +149,8 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
           noValidate
         >
           <DialogBody>
-            <AdminField className="tw:mb-4" controlId="item-name">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
+            <AdminField className="mb-4" controlId="item-name">
+              <AdminLabel className="text-subtle text-sm">
                 {m.admin_content_name_placeholder()}
               </AdminLabel>
               <form.Field
@@ -167,7 +167,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   return (
                     <>
                       <AdminInput
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         autoFocus
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -180,8 +180,8 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                 }}
               </form.Field>
             </AdminField>
-            <AdminField className="tw:mb-4" controlId="item-image">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
+            <AdminField className="mb-4" controlId="item-image">
+              <AdminLabel className="text-subtle text-sm">
                 {m.admin_content_image_url_placeholder()}
               </AdminLabel>
               <form.Field
@@ -199,7 +199,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                   return (
                     <>
                       <AdminInput
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -211,10 +211,8 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                 }}
               </form.Field>
             </AdminField>
-            <AdminField className="tw:mb-4" controlId="item-website">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
-                {m.admin_item_website_url()}
-              </AdminLabel>
+            <AdminField className="mb-4" controlId="item-website">
+              <AdminLabel className="text-subtle text-sm">{m.admin_item_website_url()}</AdminLabel>
               <form.Field
                 name="website"
                 validators={[
@@ -233,7 +231,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                     <>
                       <AdminInput
                         type="url"
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         placeholder="https://…"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -246,12 +244,12 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                 }}
               </form.Field>
             </AdminField>
-            <AdminField className="tw:mb-4" controlId="item-type">
-              <AdminLabel className="tw:text-subtle tw:text-sm">{m.admin_item_type()}</AdminLabel>
+            <AdminField className="mb-4" controlId="item-type">
+              <AdminLabel className="text-subtle text-sm">{m.admin_item_type()}</AdminLabel>
               <form.Field name="type">
                 {(field) => (
                   <AdminSelect
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     value={field.value}
                     onValueChange={(e) => field.handleChange(e)}
                     onBlur={field.handleBlur}
@@ -264,7 +262,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               </form.Field>
             </AdminField>
             <AdminField controlId="item-contact-person">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
+              <AdminLabel className="text-subtle text-sm">
                 {m.admin_item_contact_person()}
               </AdminLabel>
               <form.Field name="contactOption">
@@ -288,7 +286,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                     >
                       {loadingPersons && (
                         <LoaderCircleIcon
-                          className="tw:size-4 tw:animate-spin tw:text-muted-foreground"
+                          className="size-4 animate-spin text-muted-foreground"
                           aria-hidden="true"
                         />
                       )}
@@ -303,7 +301,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                             <div>
                               <div>{opt.label}</div>
                               {opt.sub && (
-                                <small className="tw:text-muted-foreground">{opt.sub}</small>
+                                <small className="text-muted-foreground">{opt.sub}</small>
                               )}
                             </div>
                           </ComboboxItem>

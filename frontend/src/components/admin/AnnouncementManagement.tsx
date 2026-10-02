@@ -306,7 +306,7 @@ export default function AnnouncementManagement({
           cell: ({ row }) =>
             (["nl", "en", "fr"] as const).map((locale) => (
               <Badge
-                className="tw:me-1"
+                className="me-1"
                 variant={row.original[`text_${locale}`] ? "success" : "secondary"}
                 key={locale}
               >
@@ -328,7 +328,7 @@ export default function AnnouncementManagement({
           id: "actions",
           header: m.admin_actions_label(),
           enableSorting: false,
-          meta: { tdClassName: "tw:whitespace-nowrap" },
+          meta: { tdClassName: "whitespace-nowrap" },
           cell: ({ row }) => {
             const item = row.original;
             return (
@@ -365,7 +365,7 @@ export default function AnnouncementManagement({
   return (
     <Card>
       <CardHeader>
-        <h2 className="tw:text-xl tw:font-medium tw:leading-tight tw:mb-0">
+        <h2 className="text-xl font-medium leading-tight mb-0">
           {m.admin_announcements_section()}
         </h2>
       </CardHeader>
@@ -377,9 +377,9 @@ export default function AnnouncementManagement({
             void form.handleSubmit();
           }}
         >
-          <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2">
+          <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2">
             {(["nl", "en", "fr"] as const).map((locale) => (
-              <AdminField className="tw:site-md:w-4/12" key={locale}>
+              <AdminField className="site-md:w-4/12" key={locale}>
                 <AdminLabel>
                   {m.admin_announcement_text_label({ locale: locale.toUpperCase() })}
                 </AdminLabel>
@@ -396,8 +396,8 @@ export default function AnnouncementManagement({
               </AdminField>
             ))}
           </div>
-          <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mt-1">
-            <AdminField className="tw:site-md:w-3/12">
+          <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mt-1">
+            <AdminField className="site-md:w-3/12">
               <AdminLabel>{m.admin_announcement_level_label()}</AdminLabel>
               <form.Field name="level">
                 {(field) => (
@@ -415,7 +415,7 @@ export default function AnnouncementManagement({
                 )}
               </form.Field>
             </AdminField>
-            <AdminField className="tw:site-md:w-3/12">
+            <AdminField className="site-md:w-3/12">
               <AdminLabel>{m.admin_announcement_starts_label()}</AdminLabel>
               <form.Field name="starts_at">
                 {(field) => (
@@ -428,7 +428,7 @@ export default function AnnouncementManagement({
                 )}
               </form.Field>
             </AdminField>
-            <AdminField className="tw:site-md:w-3/12">
+            <AdminField className="site-md:w-3/12">
               <AdminLabel>{m.admin_announcement_ends_label()}</AdminLabel>
               <form.Field name="ends_at">
                 {(field) => (
@@ -441,7 +441,7 @@ export default function AnnouncementManagement({
                 )}
               </form.Field>
             </AdminField>
-            <AdminField className="tw:site-md:w-3/12">
+            <AdminField className="site-md:w-3/12">
               <AdminLabel>{m.admin_announcement_link_url_label()}</AdminLabel>
               <form.Field name="link_url">
                 {(field) => (
@@ -455,9 +455,9 @@ export default function AnnouncementManagement({
               </form.Field>
             </AdminField>
           </div>
-          <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mt-1">
+          <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mt-1">
             {(["nl", "en", "fr"] as const).map((locale) => (
-              <AdminField className="tw:site-md:w-4/12" key={locale}>
+              <AdminField className="site-md:w-4/12" key={locale}>
                 <AdminLabel>
                   {m.admin_announcement_link_label_field({ locale: locale.toUpperCase() })}
                 </AdminLabel>
@@ -476,14 +476,14 @@ export default function AnnouncementManagement({
           <form.Field name="active">
             {(field) => (
               <AdminCheck
-                className="tw:mt-4"
+                className="mt-4"
                 label={m.admin_announcement_publish_immediately()}
                 checked={field.value}
                 onCheckedChange={(event) => field.handleChange(event)}
               />
             )}
           </form.Field>
-          <div className="tw:flex tw:gap-2 tw:mt-4">
+          <div className="flex gap-2 mt-4">
             <Button type="submit" disabled={save.isPending}>
               {editing ? m.admin_save() : m.admin_create_action()}
             </Button>
@@ -502,7 +502,7 @@ export default function AnnouncementManagement({
         </form>
         <hr />
         <AdminSelect
-          className="tw:mb-4 tw:w-auto"
+          className="mb-4 w-auto"
           aria-label={m.admin_announcement_preview_language_label()}
           value={preview}
           onValueChange={(event) => setPreview(event as typeof preview)}
@@ -511,7 +511,7 @@ export default function AnnouncementManagement({
           <AdminOption value="en">{m.admin_announcement_preview_en()}</AdminOption>
           <AdminOption value="fr">{m.admin_announcement_preview_fr()}</AdminOption>
         </AdminSelect>
-        <div data-tailwind-migrated="true" className="tw:w-full">
+        <div className="w-full">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (

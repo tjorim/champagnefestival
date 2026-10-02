@@ -191,28 +191,28 @@ export default function RegistrationCreateModal({
             {error && (
               <Alert
                 variant="danger"
-                className="tw:py-2 tw:text-sm"
+                className="py-2 text-sm"
                 onClose={() => createRegistrationMutation.reset()}
               >
                 {error}
               </Alert>
             )}
 
-            <AdminField className="tw:mb-4" controlId="registration-event">
-              <AdminLabel className="tw:text-subtle tw:text-sm">{m.admin_event_label()}</AdminLabel>
+            <AdminField className="mb-4" controlId="registration-event">
+              <AdminLabel className="text-subtle text-sm">{m.admin_event_label()}</AdminLabel>
               {loadingEvents ? (
-                <div className="tw:text-subtle tw:text-sm">
-                  <Spinner size="sm" className="tw:me-2" />
+                <div className="text-subtle text-sm">
+                  <Spinner size="sm" className="me-2" />
                   {m.admin_loading_events()}
                 </div>
               ) : eventsQuery.isError ? (
-                <div className="tw:text-destructive tw:text-sm tw:flex tw:items-center tw:gap-2">
+                <div className="text-destructive text-sm flex items-center gap-2">
                   <Icon icon={TriangleAlertIcon} />
                   {m.admin_error_load_events()}
                   <Button
                     variant="link"
                     size="sm"
-                    className="tw:p-0 tw:text-highlight"
+                    className="p-0 text-highlight"
                     onClick={() => void eventsQuery.refetch()}
                   >
                     {m.admin_retry()}
@@ -222,7 +222,7 @@ export default function RegistrationCreateModal({
                 <form.Field name="eventId">
                   {(field) => (
                     <AdminSelect
-                      className="tw:bg-muted tw:text-content tw:border-input"
+                      className="bg-muted text-content border-input"
                       value={field.value}
                       onValueChange={(e) => field.handleChange(e)}
                       onBlur={field.handleBlur}
@@ -246,7 +246,7 @@ export default function RegistrationCreateModal({
               ) : (
                 <AdminSelect
                   value=""
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                   disabled
                   aria-label={m.admin_event_label()}
                 >
@@ -255,10 +255,8 @@ export default function RegistrationCreateModal({
               )}
             </AdminField>
 
-            <AdminField className="tw:mb-4" controlId="registration-person">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
-                {m.admin_person_label()} *
-              </AdminLabel>
+            <AdminField className="mb-4" controlId="registration-person">
+              <AdminLabel className="text-subtle text-sm">{m.admin_person_label()} *</AdminLabel>
               <form.Field name="personOption">
                 {(field) => (
                   <Combobox
@@ -280,7 +278,7 @@ export default function RegistrationCreateModal({
                     >
                       {loadingPersons && (
                         <LoaderCircleIcon
-                          className="tw:size-4 tw:animate-spin tw:text-muted-foreground"
+                          className="size-4 animate-spin text-muted-foreground"
                           aria-hidden="true"
                         />
                       )}
@@ -295,7 +293,7 @@ export default function RegistrationCreateModal({
                             <div>
                               <div>{opt.label}</div>
                               {opt.sub && (
-                                <small className="tw:text-muted-foreground">{opt.sub}</small>
+                                <small className="text-muted-foreground">{opt.sub}</small>
                               )}
                             </div>
                           </ComboboxItem>
@@ -309,15 +307,13 @@ export default function RegistrationCreateModal({
 
             <form.Field name="guestCount">
               {(field) => (
-                <AdminField className="tw:mb-4" controlId="registration-guest-count">
-                  <AdminLabel className="tw:text-subtle tw:text-sm">
-                    {m.admin_guests_count()}
-                  </AdminLabel>
+                <AdminField className="mb-4" controlId="registration-guest-count">
+                  <AdminLabel className="text-subtle text-sm">{m.admin_guests_count()}</AdminLabel>
                   <AdminInput
                     type="number"
                     min={1}
                     max={20}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     value={field.value}
                     onChange={(e) => field.handleChange(Number(e.target.value))}
                     onBlur={field.handleBlur}
@@ -329,10 +325,10 @@ export default function RegistrationCreateModal({
             <form.Field name="notes">
               {(field) => (
                 <AdminField controlId="registration-notes">
-                  <AdminLabel className="tw:text-subtle tw:text-sm">{m.admin_notes()}</AdminLabel>
+                  <AdminLabel className="text-subtle text-sm">{m.admin_notes()}</AdminLabel>
                   <AdminTextarea
                     rows={2}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}

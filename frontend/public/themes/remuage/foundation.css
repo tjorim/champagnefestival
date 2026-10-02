@@ -72,8 +72,11 @@ html[data-visual-theme="remuage"] ::selection {
   background: var(--rem-rose);
 }
 
+/* Owned controls draw their own focus ring through utilities, which outrank this layer. */
 html[data-visual-theme="remuage"]
-  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  :where(a, button, input, select, textarea, [tabindex]):where(
+    :not([class*="focus-visible:ring"])
+  ):focus-visible {
   outline: 2px solid transparent;
   box-shadow: var(--rem-focus) !important;
 }

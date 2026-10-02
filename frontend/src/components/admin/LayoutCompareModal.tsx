@@ -107,21 +107,21 @@ function statusBadge(status: "added" | "removed" | "changed" | "unchanged") {
     case "added":
       return (
         <Badge variant="success">
-          <Icon icon={PlusIcon} className="tw:me-1" />
+          <Icon icon={PlusIcon} className="me-1" />
           {m.admin_layout_compare_added()}
         </Badge>
       );
     case "removed":
       return (
         <Badge variant="danger">
-          <Icon icon={MinusIcon} className="tw:me-1" />
+          <Icon icon={MinusIcon} className="me-1" />
           {m.admin_layout_compare_removed()}
         </Badge>
       );
     case "changed":
       return (
         <Badge variant="warning">
-          <Icon icon={PencilIcon} className="tw:me-1" />
+          <Icon icon={PencilIcon} className="me-1" />
           {m.admin_layout_compare_changed()}
         </Badge>
       );
@@ -194,10 +194,10 @@ export default function LayoutCompareModal({
           <DialogTitle>{m.admin_layout_compare_title()}</DialogTitle>
         </DialogHeader>
         <DialogBody>
-          <p className="tw:text-subtle tw:text-sm">{m.admin_layout_compare_scope_note()}</p>
-          <div className="tw:flex tw:gap-4 tw:flex-wrap tw:mb-4">
-            <AdminField className="tw:min-w-45 tw:grow-1 tw:shrink-1 tw:basis-45">
-              <AdminLabel className="tw:text-sm tw:text-subtle">
+          <p className="text-subtle text-sm">{m.admin_layout_compare_scope_note()}</p>
+          <div className="flex gap-4 flex-wrap mb-4">
+            <AdminField className="min-w-45 grow-1 shrink-1 basis-45">
+              <AdminLabel className="text-sm text-subtle">
                 {m.admin_layout_compare_baseline()}
               </AdminLabel>
               <AdminSelect value={baselineId} onValueChange={(e) => setBaselineId(e)}>
@@ -208,8 +208,8 @@ export default function LayoutCompareModal({
                 ))}
               </AdminSelect>
             </AdminField>
-            <AdminField className="tw:min-w-45 tw:grow-1 tw:shrink-1 tw:basis-45">
-              <AdminLabel className="tw:text-sm tw:text-subtle">
+            <AdminField className="min-w-45 grow-1 shrink-1 basis-45">
+              <AdminLabel className="text-sm text-subtle">
                 {m.admin_layout_compare_current()}
               </AdminLabel>
               <AdminSelect value={currentId} onValueChange={(e) => setCurrentId(e)}>
@@ -223,30 +223,24 @@ export default function LayoutCompareModal({
           </div>
 
           {baselineId === currentId ? (
-            <p className="tw:text-subtle tw:text-sm tw:mb-0">
-              {m.admin_layout_compare_same_plan()}
-            </p>
+            <p className="text-subtle text-sm mb-0">{m.admin_layout_compare_same_plan()}</p>
           ) : tableDiff.length === 0 && areaDiff.length === 0 ? (
-            <p className="tw:text-subtle tw:text-sm tw:mb-0">
-              {m.admin_layout_compare_no_changes()}
-            </p>
+            <p className="text-subtle text-sm mb-0">{m.admin_layout_compare_no_changes()}</p>
           ) : (
             <>
               {tableDiff.length > 0 && (
                 <>
-                  <h6 className="tw:text-base">{m.admin_layout_compare_tables()}</h6>
-                  <PresentationList flush className="tw:mb-4">
+                  <h6 className="text-base">{m.admin_layout_compare_tables()}</h6>
+                  <PresentationList flush className="mb-4">
                     {tableDiff.map((row) => (
                       <PresentationListItem
                         key={row.name}
-                        className="tw:flex tw:justify-between tw:items-start tw:gap-2"
+                        className="flex justify-between items-start gap-2"
                       >
                         <div>
-                          <div className="tw:font-semibold tw:text-sm">{row.name}</div>
+                          <div className="font-semibold text-sm">{row.name}</div>
                           {row.changes.length > 0 && (
-                            <div className="tw:text-subtle tw:text-sm">
-                              {row.changes.join(", ")}
-                            </div>
+                            <div className="text-subtle text-sm">{row.changes.join(", ")}</div>
                           )}
                         </div>
                         {statusBadge(row.status)}
@@ -257,14 +251,14 @@ export default function LayoutCompareModal({
               )}
               {areaDiff.length > 0 && (
                 <>
-                  <h6 className="tw:text-base">{m.admin_layout_compare_areas()}</h6>
+                  <h6 className="text-base">{m.admin_layout_compare_areas()}</h6>
                   <PresentationList flush>
                     {areaDiff.map((row) => (
                       <PresentationListItem
                         key={row.label}
-                        className="tw:flex tw:justify-between tw:items-center tw:gap-2"
+                        className="flex justify-between items-center gap-2"
                       >
-                        <span className="tw:text-sm">{row.label}</span>
+                        <span className="text-sm">{row.label}</span>
                         {statusBadge(row.status)}
                       </PresentationListItem>
                     ))}
