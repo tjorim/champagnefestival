@@ -8,8 +8,7 @@ function RadioGroup({ className, ...props }: RadioGroupPrimitive.Props) {
   return (
     <RadioGroupPrimitive
       data-slot="radio-group"
-      data-tailwind-migrated="true"
-      className={cn("tw:grid tw:w-full tw:gap-2", className)}
+      className={cn("grid w-full gap-2", className)}
       {...props}
     />
   );
@@ -19,18 +18,17 @@ function RadioGroupItem({ className, ...props }: RadioPrimitive.Root.Props) {
   return (
     <RadioPrimitive.Root
       data-slot="radio-group-item"
-      data-tailwind-migrated="true"
       className={cn(
-        "tw:group/radio-group-item tw:peer tw:relative tw:flex tw:size-4 tw:shrink-0 tw:items-center tw:justify-center tw:rounded-full tw:border tw:border-input tw:shadow-xs tw:transition-shadow tw:outline-none tw:after:absolute tw:after:-inset-x-3 tw:after:-inset-y-2 tw:focus-visible:border-ring tw:focus-visible:ring-3 tw:focus-visible:ring-ring/50 tw:disabled:cursor-not-allowed tw:disabled:opacity-50 tw:aria-invalid:border-destructive tw:aria-invalid:ring-3 tw:aria-invalid:ring-destructive/20 tw:data-checked:border-primary tw:data-checked:bg-primary tw:data-checked:text-primary-foreground",
+        "group/radio-group-item peer relative flex size-4 shrink-0 items-center justify-center rounded-full border border-input shadow-xs transition-shadow outline-none after:absolute after:-inset-x-3 after:-inset-y-2 focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 data-checked:border-primary data-checked:bg-primary data-checked:text-primary-foreground",
         className,
       )}
       {...props}
     >
       <RadioPrimitive.Indicator
         data-slot="radio-group-indicator"
-        className="tw:flex tw:items-center tw:justify-center"
+        className="flex items-center justify-center"
       >
-        <span className="tw:absolute tw:top-1/2 tw:left-1/2 tw:size-2 tw:-translate-x-1/2 tw:-translate-y-1/2 tw:rounded-full tw:bg-primary-foreground" />
+        <span className="absolute top-1/2 left-1/2 size-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary-foreground" />
       </RadioPrimitive.Indicator>
     </RadioPrimitive.Root>
   );

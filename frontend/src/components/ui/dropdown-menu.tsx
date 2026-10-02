@@ -33,7 +33,7 @@ function DropdownMenuContent({
   const content = (
     <>
       <MenuPrimitive.Positioner
-        className="tw:isolate tw:z-popup tw:outline-none"
+        className="isolate z-popup outline-none"
         align={align}
         alignOffset={alignOffset}
         side={side}
@@ -41,9 +41,8 @@ function DropdownMenuContent({
       >
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
-          data-tailwind-migrated="true"
           className={cn(
-            " tw:z-popup   tw:min-w-32  tw:overflow-x-hidden tw:overflow-y-auto tw:rounded-md tw:bg-popover tw:p-1 tw:text-popover-foreground tw:shadow-md tw:ring-1 tw:ring-foreground/10 tw:duration-100 tw:outline-none           tw:data-closed:overflow-hidden  ",
+            " z-popup   min-w-32  overflow-x-hidden overflow-y-auto rounded-md bg-popover p-1 text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none           data-closed:overflow-hidden  ",
             className,
           )}
           {...props}
@@ -74,7 +73,7 @@ function DropdownMenuLabel({
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        "tw:px-2 tw:py-1.5 tw:text-xs tw:font-medium tw:text-muted-foreground tw:data-inset:pl-8",
+        "px-2 py-1.5 text-xs font-medium text-muted-foreground data-inset:pl-8",
         className,
       )}
       {...props}
@@ -97,7 +96,7 @@ function DropdownMenuItem({
       data-inset={inset}
       data-variant={variant}
       className={cn(
-        "tw:group/dropdown-menu-item tw:relative tw:flex tw:cursor-default tw:items-center tw:gap-2 tw:rounded-sm tw:px-2 tw:py-1.5 tw:text-sm tw:outline-none tw:select-none tw:data-highlighted:bg-accent tw:data-highlighted:text-accent-foreground tw:data-inset:pl-8 tw:data-disabled:pointer-events-none tw:data-disabled:opacity-50",
+        "group/dropdown-menu-item relative flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...props}
@@ -122,13 +121,13 @@ function DropdownMenuSubTrigger({
       data-slot="dropdown-menu-sub-trigger"
       data-inset={inset}
       className={cn(
-        "tw:flex tw:cursor-default tw:items-center tw:gap-2 tw:rounded-sm tw:px-2 tw:py-1.5 tw:text-sm tw:outline-none tw:select-none tw:data-highlighted:bg-accent tw:data-highlighted:text-accent-foreground tw:data-inset:pl-8 tw:data-popup-open:bg-accent tw:data-popup-open:text-accent-foreground tw:data-open:bg-accent tw:data-open:text-accent-foreground",
+        "flex cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground data-inset:pl-8 data-popup-open:bg-accent data-popup-open:text-accent-foreground data-open:bg-accent data-open:text-accent-foreground",
         className,
       )}
       {...props}
     >
       {children}
-      <ChevronRightIcon className="tw:ml-auto" />
+      <ChevronRightIcon className="ml-auto" />
     </MenuPrimitive.SubmenuTrigger>
   );
 }
@@ -145,7 +144,7 @@ function DropdownMenuSubContent({
     <DropdownMenuContent
       data-slot="dropdown-menu-sub-content"
       className={cn(
-        " tw:w-auto  tw:rounded-md tw:bg-popover tw:p-1 tw:text-popover-foreground tw:shadow-lg tw:ring-1 tw:ring-foreground/10 tw:duration-100          ",
+        " w-auto  rounded-md bg-popover p-1 text-popover-foreground shadow-lg ring-1 ring-foreground/10 duration-100          ",
         className,
       )}
       align={align}
@@ -171,18 +170,18 @@ function DropdownMenuCheckboxItem({
       data-slot="dropdown-menu-checkbox-item"
       data-inset={inset}
       className={cn(
-        "tw:relative tw:flex tw:cursor-default tw:items-center tw:gap-2 tw:rounded-sm tw:py-1.5 tw:pr-8 tw:pl-2 tw:text-sm tw:outline-none tw:select-none tw:data-highlighted:bg-accent tw:data-highlighted:text-accent-foreground tw:focus:**:text-accent-foreground tw:data-inset:pl-8 tw:data-disabled:pointer-events-none tw:data-disabled:opacity-50",
+        "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       checked={checked}
       {...props}
     >
       <span
-        className="tw:pointer-events-none tw:absolute tw:right-2 tw:flex tw:items-center tw:justify-center"
+        className="pointer-events-none absolute right-2 flex items-center justify-center"
         data-slot="dropdown-menu-checkbox-item-indicator"
       >
         <MenuPrimitive.CheckboxItemIndicator>
-          <CheckIcon className="tw:size-4" />
+          <CheckIcon className="size-4" />
         </MenuPrimitive.CheckboxItemIndicator>
       </span>
       {children}
@@ -207,17 +206,17 @@ function DropdownMenuRadioItem({
       data-slot="dropdown-menu-radio-item"
       data-inset={inset}
       className={cn(
-        "tw:relative tw:flex tw:cursor-default tw:items-center tw:gap-2 tw:rounded-sm tw:py-1.5 tw:pr-8 tw:pl-2 tw:text-sm tw:outline-none tw:select-none tw:data-highlighted:bg-accent tw:data-highlighted:text-accent-foreground tw:focus:**:text-accent-foreground tw:data-inset:pl-8 tw:data-disabled:pointer-events-none tw:data-disabled:opacity-50",
+        "relative flex cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-none select-none data-highlighted:bg-accent data-highlighted:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-8 data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...props}
     >
       <span
-        className="tw:pointer-events-none tw:absolute tw:right-2 tw:flex tw:items-center tw:justify-center"
+        className="pointer-events-none absolute right-2 flex items-center justify-center"
         data-slot="dropdown-menu-radio-item-indicator"
       >
         <MenuPrimitive.RadioItemIndicator>
-          <CheckIcon className="tw:size-4" />
+          <CheckIcon className="size-4" />
         </MenuPrimitive.RadioItemIndicator>
       </span>
       {children}
@@ -229,7 +228,7 @@ function DropdownMenuSeparator({ className, ...props }: MenuPrimitive.Separator.
   return (
     <MenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("tw:-mx-1 tw:my-1 tw:h-px tw:bg-border", className)}
+      className={cn("-mx-1 my-1 h-px bg-border", className)}
       {...props}
     />
   );
@@ -240,7 +239,7 @@ function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<"spa
     <span
       data-slot="dropdown-menu-shortcut"
       className={cn(
-        "tw:ml-auto tw:text-xs tw:tracking-widest tw:text-muted-foreground tw:group-focus/dropdown-menu-item:text-accent-foreground",
+        "ml-auto text-xs tracking-widest text-muted-foreground group-focus/dropdown-menu-item:text-accent-foreground",
         className,
       )}
       {...props}

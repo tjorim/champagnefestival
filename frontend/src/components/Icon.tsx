@@ -11,8 +11,7 @@ export function Icon({ icon: SvgIcon, className, size = "1em", ...props }: IconP
     <SvgIcon
       {...props}
       size={size}
-      className={cn("tw:inline-block tw:shrink-0 tw:align-middle", className)}
-      data-tailwind-migrated="true"
+      className={cn("inline-block shrink-0 align-middle", className)}
       aria-hidden="true"
       focusable="false"
     />

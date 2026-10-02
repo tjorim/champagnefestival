@@ -31,7 +31,7 @@ export function AdminSortableHeader<T extends RowData>({
       {canSort ? (
         <Button variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}>
           {children}
-          <Icon aria-hidden="true" className="tw:size-4" />
+          <Icon aria-hidden="true" className="size-4" />
         </Button>
       ) : (
         children

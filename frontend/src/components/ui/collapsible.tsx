@@ -3,9 +3,7 @@
 import { Collapsible as CollapsiblePrimitive } from "@base-ui/react/collapsible";
 
 function Collapsible({ ...props }: CollapsiblePrimitive.Root.Props) {
-  return (
-    <CollapsiblePrimitive.Root data-tailwind-migrated="true" data-slot="collapsible" {...props} />
-  );
+  return <CollapsiblePrimitive.Root data-slot="collapsible" {...props} />;
 }
 
 function CollapsibleTrigger({ ...props }: CollapsiblePrimitive.Trigger.Props) {

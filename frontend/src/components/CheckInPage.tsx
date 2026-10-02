@@ -98,29 +98,25 @@ function CheckInCard({
     <Card tone={success ? "success" : isAlreadyCheckedIn ? "warning" : "secondary"}>
       <CardHeader
         className={clsx(
-          "tw:flex tw:items-center tw:justify-between tw:gap-4 tw:flex-wrap",
-          success
-            ? "tw:border-success"
-            : isAlreadyCheckedIn
-              ? "tw:border-warning"
-              : "tw:border-border",
+          "flex items-center justify-between gap-4 flex-wrap",
+          success ? "border-success" : isAlreadyCheckedIn ? "border-warning" : "border-border",
         )}
       >
-        <span className="tw:font-semibold tw:text-xl">
-          <Icon icon={UserIcon} className="tw:me-2" />
+        <span className="font-semibold text-xl">
+          <Icon icon={UserIcon} className="me-2" />
           {registration.name}
         </span>
-        <div className="tw:flex tw:gap-2 tw:flex-wrap">
+        <div className="flex gap-2 flex-wrap">
           {isCancelled && <Badge variant="danger">{m.admin_status_cancelled()}</Badge>}
           {registration.checkedIn && (
             <Badge variant="success">
-              <Icon icon={CircleCheckIcon} className="tw:me-1" />
+              <Icon icon={CircleCheckIcon} className="me-1" />
               {m.admin_checked_in()}
             </Badge>
           )}
           {registration.strapIssued && (
             <Badge variant="info">
-              <Icon icon={ContactRoundIcon} className="tw:me-1" />
+              <Icon icon={ContactRoundIcon} className="me-1" />
               {m.admin_strap_issued()}
             </Badge>
           )}
@@ -130,13 +126,13 @@ function CheckInCard({
       <CardContent>
         <div role="status" aria-live="polite">
           {success && (
-            <Alert variant="success" className="tw:mb-4">
-              <div className="tw:flex tw:justify-between tw:items-center tw:gap-4 tw:flex-wrap">
+            <Alert variant="success" className="mb-4">
+              <div className="flex justify-between items-center gap-4 flex-wrap">
                 <span>
-                  <Icon icon={CircleCheckIcon} className="tw:me-2" />
+                  <Icon icon={CircleCheckIcon} className="me-2" />
                   <strong>{m.checkin_success()}</strong>
                   {registration.strapIssued && (
-                    <div className="tw:mt-1">{m.checkin_strap_issued()}</div>
+                    <div className="mt-1">{m.checkin_strap_issued()}</div>
                   )}
                 </span>
                 <Button variant="outline-success" size="sm" onClick={onReturnToScanner}>
@@ -156,7 +152,7 @@ function CheckInCard({
               />
             }
             variant="outline-warning"
-            className="tw:w-full tw:mb-4"
+            className="w-full mb-4"
           >
             <Icon icon={MapIcon} />
             {m.venue_plan_show_table()}
@@ -165,59 +161,59 @@ function CheckInCard({
 
         <div role="alert" aria-live="assertive">
           {isCancelled && (
-            <Alert variant="danger" className="tw:mb-4">
-              <Icon icon={OctagonXIcon} className="tw:me-2" />
+            <Alert variant="danger" className="mb-4">
+              <Icon icon={OctagonXIcon} className="me-2" />
               {m.admin_status_cancelled()}
             </Alert>
           )}
           {isAlreadyCheckedIn && !success && registration.checkedInAt && (
-            <Alert variant="warning" className="tw:mb-4">
-              <Icon icon={CircleAlertIcon} className="tw:me-2" />
+            <Alert variant="warning" className="mb-4">
+              <Icon icon={CircleAlertIcon} className="me-2" />
               {m.checkin_already_in()} {new Date(registration.checkedInAt).toLocaleTimeString()}
             </Alert>
           )}
         </div>
 
-        <PresentationList flush className="tw:bg-card">
-          <PresentationListItem className="tw:flex tw:justify-between tw:gap-4">
-            <span className="tw:text-subtle">{m.checkin_event()}</span>
-            <span className="tw:text-right">{registration.eventTitle || registration.eventId}</span>
+        <PresentationList flush className="bg-card">
+          <PresentationListItem className="flex justify-between gap-4">
+            <span className="text-subtle">{m.checkin_event()}</span>
+            <span className="text-right">{registration.eventTitle || registration.eventId}</span>
           </PresentationListItem>
-          <PresentationListItem className="tw:flex tw:justify-between tw:gap-4">
-            <span className="tw:text-subtle">{m.checkin_guests()}</span>
+          <PresentationListItem className="flex justify-between gap-4">
+            <span className="text-subtle">{m.checkin_guests()}</span>
             <span>{registration.guestCount}</span>
           </PresentationListItem>
           {registration.tableName && (
-            <PresentationListItem className="tw:flex tw:justify-between tw:gap-4">
-              <span className="tw:text-subtle">{m.checkin_table()}</span>
-              <span className="tw:font-semibold tw:text-highlight">{registration.tableName}</span>
+            <PresentationListItem className="flex justify-between gap-4">
+              <span className="text-subtle">{m.checkin_table()}</span>
+              <span className="font-semibold text-highlight">{registration.tableName}</span>
             </PresentationListItem>
           )}
         </PresentationList>
 
         {registration.orderItems.length > 0 && (
-          <div className="tw:mt-4">
-            <p className="tw:font-semibold tw:text-highlight tw:mb-2">
-              <Icon icon={ShoppingCartIcon} className="tw:me-2" />
+          <div className="mt-4">
+            <p className="font-semibold text-highlight mb-2">
+              <Icon icon={ShoppingCartIcon} className="me-2" />
               {m.checkin_order_items()}
             </p>
             <PresentationList flush>
               {registration.orderItems.map((item, idx) => (
                 <PresentationListItem
                   key={`${item.productId}-${idx}`}
-                  className="tw:flex tw:justify-between tw:items-center tw:gap-4 tw:flex-wrap"
+                  className="flex justify-between items-center gap-4 flex-wrap"
                 >
                   <span>
                     {item.name} <Badge variant="secondary">×{item.quantity}</Badge>
                   </span>
-                  <div className="tw:flex tw:items-center tw:gap-2 tw:flex-wrap">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <Badge variant={item.delivered ? "success" : "secondary"}>
                       {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
                     </Badge>
                     <Badge variant={item.remainingQuantity > 0 ? "warning" : "success"}>
                       {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                     </Badge>
-                    <div className="tw:flex tw:items-center tw:gap-1">
+                    <div className="flex items-center gap-1">
                       <Button
                         size="sm"
                         variant="outline"
@@ -230,12 +226,12 @@ function CheckInCard({
                         title={m.admin_mark_not_delivered()}
                       >
                         <Icon icon={MinusIcon} />
-                        <span className="tw:sr-only">{m.admin_mark_not_delivered()}</span>
+                        <span className="sr-only">{m.admin_mark_not_delivered()}</span>
                       </Button>
                       <PublicInput
                         key={item.deliveredQuantity}
                         aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
-                        className="tw:w-20 tw:text-center"
+                        className="w-20 text-center"
                         inputMode="numeric"
                         min={0}
                         max={item.quantity}
@@ -273,7 +269,7 @@ function CheckInCard({
                         title={m.admin_mark_delivered()}
                       >
                         <Icon icon={PlusIcon} />
-                        <span className="tw:sr-only">{m.admin_mark_delivered()}</span>
+                        <span className="sr-only">{m.admin_mark_delivered()}</span>
                       </Button>
                     </div>
                   </div>
@@ -281,8 +277,8 @@ function CheckInCard({
               ))}
             </PresentationList>
             {!canManageEntranceActions && registration.checkedIn && registration.strapIssued && (
-              <div className="tw:text-sm tw:text-subtle tw:mt-2">
-                <Icon icon={InfoIcon} className="tw:me-1" />
+              <div className="text-sm text-subtle mt-2">
+                <Icon icon={InfoIcon} className="me-1" />
                 {m.checkin_actions_login_required()}
               </div>
             )}
@@ -291,11 +287,11 @@ function CheckInCard({
       </CardContent>
 
       {!isCancelled && (!registration.checkedIn || !registration.strapIssued) && (
-        <CardFooter className="tw:grid tw:gap-2">
+        <CardFooter className="grid gap-2">
           {!registration.checkedIn && (
             <Button
               variant="warning"
-              className="tw:w-full"
+              className="w-full"
               onClick={onCheckIn}
               disabled={isCheckingIn}
             >
@@ -310,7 +306,7 @@ function CheckInCard({
           {registration.checkedIn && !registration.strapIssued && (
             <Button
               variant="info"
-              className="tw:w-full"
+              className="w-full"
               onClick={onIssueStrap}
               disabled={!canManageEntranceActions || isUpdatingRegistration}
             >
@@ -323,7 +319,7 @@ function CheckInCard({
             </Button>
           )}
           {!canManageEntranceActions && (
-            <div className="tw:text-sm tw:text-subtle">{m.checkin_actions_login_required()}</div>
+            <div className="text-sm text-subtle">{m.checkin_actions_login_required()}</div>
           )}
         </CardFooter>
       )}
@@ -598,65 +594,65 @@ export default function CheckInPage() {
   }, [canAutoReturnToScanner, handleReturnToScanner]);
 
   return (
-    <section id="check-in" className="tw:py-12" aria-labelledby="checkin-title">
-      <div className="site-container tw:mx-auto tw:w-full">
-        <h2 id="checkin-title" className="tw:text-center tw:mb-6 tw:text-highlight">
-          <Icon icon={ScanQrCodeIcon} className="tw:me-2" />
+    <section id="check-in" className="py-12" aria-labelledby="checkin-title">
+      <div className="site-container mx-auto w-full">
+        <h2 id="checkin-title" className="text-center mb-6 text-highlight">
+          <Icon icon={ScanQrCodeIcon} className="me-2" />
           {m.checkin_title()}
         </h2>
 
         {!isOnline && (
-          <Alert variant="danger" className="tw:w-20 tw:text-center" role="status">
-            <Icon icon={WifiOffIcon} className="tw:me-2" />
+          <Alert variant="danger" className="w-20 text-center" role="status">
+            <Icon icon={WifiOffIcon} className="me-2" />
             {m.checkin_offline_banner()}
           </Alert>
         )}
 
         {auth.authError ? (
           <Alert variant="danger" onClose={auth.clearAuthError}>
-            <AlertHeading as="h3" className="tw:text-base tw:font-medium tw:leading-tight">
+            <AlertHeading as="h3" className="text-base font-medium leading-tight">
               {m.auth_error_title()}
             </AlertHeading>
-            <p className="tw:mb-0">{auth.authError}</p>
+            <p className="mb-0">{auth.authError}</p>
           </Alert>
         ) : null}
 
         {shouldShowAuthLoadingGate ? (
-          <div className="tw:text-center tw:py-6">
+          <div className="text-center py-6">
             <Spinner variant="warning" role="status">
-              <span className="tw:sr-only">{m.admin_loading()}</span>
+              <span className="sr-only">{m.admin_loading()}</span>
             </Spinner>
-            <p className="tw:mt-2 tw:text-subtle">{m.admin_loading()}</p>
+            <p className="mt-2 text-subtle">{m.admin_loading()}</p>
           </div>
         ) : (
-          <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
-            <div className="tw:w-full tw:site-sm:w-10/12 tw:site-md:w-8/12 tw:site-lg:w-6/12">
+          <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter justify-center">
+            <div className="w-full site-sm:w-10/12 site-md:w-8/12 site-lg:w-6/12">
               {!hasQrCredentials && (
                 <>
                   <CheckInScanner onDecode={handleScanDecode} />
 
-                  <Alert variant="warning" className="tw:w-20 tw:text-center">
-                    <Icon icon={InfoIcon} className="tw:me-2" />
+                  <Alert variant="warning" className="w-20 text-center">
+                    <Icon icon={InfoIcon} className="me-2" />
                     {m.checkin_scan_prompt()}
                   </Alert>
 
                   <Collapsible open={searchOpen} onOpenChange={setSearchOpen}>
-                    <Card tone="secondary" className="tw:mb-4">
-                      <CardHeader className="tw:p-0">
+                    <Card tone="secondary" className="mb-4">
+                      <CardHeader className="p-0">
                         <CollapsibleTrigger
                           render={<Button variant="ghost" />}
-                          className="tw:flex tw:w-full tw:items-center tw:justify-between tw:p-4 tw:text-left tw:text-warning"
+                          className="flex w-full items-center justify-between p-4 text-left text-warning"
                           aria-expanded={searchOpen}
                           aria-controls="manual-checkin-search"
                         >
                           <span>
-                            <Search className="tw:mr-2 tw:inline tw:size-4" aria-hidden="true" />
+                            <Search className="mr-2 inline size-4" aria-hidden="true" />
                             {m.checkin_manual_search_title()}
                           </span>
                           {searchOpen ? (
-                            <ChevronUp aria-hidden="true" className="tw:size-4" />
+                            <ChevronUp aria-hidden="true" className="size-4" />
                           ) : (
-                            <ChevronDown aria-hidden="true" className="tw:size-4" />
+                            <ChevronDown aria-hidden="true" className="size-4" />
                           )}
                         </CollapsibleTrigger>
                       </CardHeader>
@@ -665,7 +661,7 @@ export default function CheckInPage() {
                           {!auth.isAuthenticated && (
                             <Alert
                               variant="info"
-                              className="tw:flex tw:justify-between tw:items-center tw:gap-4 tw:flex-wrap"
+                              className="flex justify-between items-center gap-4 flex-wrap"
                             >
                               <span>{m.checkin_manual_search_login_required()}</span>
                               <Button
@@ -676,7 +672,7 @@ export default function CheckInPage() {
                               >
                                 {auth.isSigningIn ? (
                                   <>
-                                    <Spinner size="sm" className="tw:me-2" aria-hidden="true" />
+                                    <Spinner size="sm" className="me-2" aria-hidden="true" />
                                     {m.auth_signing_in()}
                                   </>
                                 ) : (
@@ -709,30 +705,26 @@ export default function CheckInPage() {
                           </PublicField>
 
                           {showSearchHint && (
-                            <div className="tw:text-subtle tw:mt-4">
+                            <div className="text-subtle mt-4">
                               {m.checkin_manual_search_min_chars()}
                             </div>
                           )}
 
                           {volunteerSearchQuery.isFetching && (
-                            <div
-                              className="tw:text-subtle tw:mt-4"
-                              role="status"
-                              aria-live="polite"
-                            >
+                            <div className="text-subtle mt-4" role="status" aria-live="polite">
                               <Spinner
                                 size="sm"
                                 role="status"
                                 aria-hidden="true"
-                                className="tw:me-2"
+                                className="me-2"
                               />
                               {m.checkin_manual_search_loading()}
                             </div>
                           )}
 
                           {volunteerSearchQuery.isError && (
-                            <Alert variant="danger" className="tw:mt-4 tw:mb-0" role="alert">
-                              <Icon icon={TriangleAlertIcon} className="tw:me-2" />
+                            <Alert variant="danger" className="mt-4 mb-0" role="alert">
+                              <Icon icon={TriangleAlertIcon} className="me-2" />
                               {volunteerSearchQuery.error.message === SESSION_EXPIRED_ERROR
                                 ? m.checkin_manual_search_session_expired()
                                 : volunteerSearchQuery.error.message === UNAUTHORIZED_ERROR
@@ -745,24 +737,24 @@ export default function CheckInPage() {
                             debouncedSearchTerm.length >= 2 &&
                             searchResults.length === 0 &&
                             !volunteerSearchQuery.isError && (
-                              <div className="tw:text-subtle tw:mt-4">
+                              <div className="text-subtle mt-4">
                                 {m.checkin_manual_search_no_results()}
                               </div>
                             )}
 
                           {searchResults.length > 0 && (
-                            <PresentationList className="tw:mt-4">
+                            <PresentationList className="mt-4">
                               {searchResults.map((result) => (
                                 <PresentationListItem
                                   key={result.id}
                                   action
 
-                                  className="tw:flex tw:justify-between tw:items-center tw:gap-4"
+                                  className="flex justify-between items-center gap-4"
                                   onClick={() => handleSelectManualRegistration(result)}
                                 >
                                   <span>
-                                    <span className="tw:font-semibold tw:block">{result.name}</span>
-                                    <span className="tw:text-subtle tw:text-sm">
+                                    <span className="font-semibold block">{result.name}</span>
+                                    <span className="text-subtle text-sm">
                                       {result.eventTitle || result.eventId} · {m.checkin_guests()}:{" "}
                                       {result.guestCount}
                                     </span>
@@ -784,17 +776,17 @@ export default function CheckInPage() {
               )}
 
               {isLoading && (
-                <div className="tw:text-center tw:py-6">
+                <div className="text-center py-6">
                   <Spinner variant="warning" role="status">
-                    <span className="tw:sr-only">{m.checkin_looking_up()}</span>
+                    <span className="sr-only">{m.checkin_looking_up()}</span>
                   </Spinner>
-                  <p className="tw:mt-2 tw:text-subtle">{m.checkin_looking_up()}</p>
+                  <p className="mt-2 text-subtle">{m.checkin_looking_up()}</p>
                 </div>
               )}
 
               {(mutationError || queryError) && (
                 <Alert variant="danger" role="alert">
-                  <Icon icon={TriangleAlertIcon} className="tw:me-2" />
+                  <Icon icon={TriangleAlertIcon} className="me-2" />
                   {mutationError || queryError}
                 </Alert>
               )}

@@ -9,12 +9,7 @@ import { Separator } from "@/components/ui/separator";
 
 function FieldSet({ className, ...props }: React.ComponentProps<"fieldset">) {
   return (
-    <fieldset
-      data-slot="field-set"
-      data-tailwind-migrated="true"
-      className={cn("tw:flex tw:flex-col tw:gap-6", className)}
-      {...props}
-    />
+    <fieldset data-slot="field-set" className={cn("flex flex-col gap-6", className)} {...props} />
   );
 }
 
@@ -26,9 +21,8 @@ function FieldLegend({
   return (
     <legend
       data-slot="field-legend"
-      data-tailwind-migrated="true"
       data-variant={variant}
-      className={cn("tw:mb-3 tw:font-medium", className)}
+      className={cn("mb-3 font-medium", className)}
       {...props}
     />
   );
@@ -38,9 +32,8 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field-group"
-      data-tailwind-migrated="true"
       className={cn(
-        "tw:group/field-group tw:@container/field-group tw:flex tw:w-full tw:flex-col tw:gap-7",
+        "group/field-group @container/field-group flex w-full flex-col gap-7",
         className,
       )}
       {...props}
@@ -48,13 +41,13 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-const fieldVariants = cva("tw:group/field tw:flex tw:w-full tw:gap-3", {
+const fieldVariants = cva("group/field flex w-full gap-3", {
   variants: {
     orientation: {
-      vertical: "tw:flex-col tw:*:w-full",
-      horizontal: "tw:flex-row tw:items-center",
+      vertical: "flex-col *:w-full",
+      horizontal: "flex-row items-center",
       responsive:
-        "tw:flex-col tw:*:w-full tw:@md/field-group:flex-row tw:@md/field-group:items-center tw:@md/field-group:*:w-auto",
+        "flex-col *:w-full @md/field-group:flex-row @md/field-group:items-center @md/field-group:*:w-auto",
     },
   },
   defaultVariants: {
@@ -71,7 +64,6 @@ function Field({
     <div
       role="group"
       data-slot="field"
-      data-tailwind-migrated="true"
       data-orientation={orientation}
       className={cn(fieldVariants({ orientation }), className)}
       {...props}
@@ -83,11 +75,7 @@ function FieldContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field-content"
-      data-tailwind-migrated="true"
-      className={cn(
-        "tw:group/field-content tw:flex tw:flex-1 tw:flex-col tw:gap-1 tw:leading-snug",
-        className,
-      )}
+      className={cn("group/field-content flex flex-1 flex-col gap-1 leading-snug", className)}
       {...props}
     />
   );
@@ -97,9 +85,8 @@ function FieldLabel({ className, ...props }: React.ComponentProps<typeof Label>)
   return (
     <Label
       data-slot="field-label"
-      data-tailwind-migrated="true"
       className={cn(
-        "tw:group/field-label tw:peer/field-label tw:flex tw:w-fit tw:gap-2 tw:leading-snug tw:has-data-checked:border-primary/30 tw:has-data-checked:bg-primary/5 tw:dark:has-data-checked:border-primary/20 tw:dark:has-data-checked:bg-primary/10",
+        "group/field-label peer/field-label flex w-fit gap-2 leading-snug has-data-checked:border-primary/30 has-data-checked:bg-primary/5 dark:has-data-checked:border-primary/20 dark:has-data-checked:bg-primary/10",
         className,
       )}
       {...props}
@@ -111,11 +98,7 @@ function FieldTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="field-label"
-      data-tailwind-migrated="true"
-      className={cn(
-        "tw:flex tw:w-fit tw:items-center tw:gap-2 tw:text-sm tw:font-medium",
-        className,
-      )}
+      className={cn("flex w-fit items-center gap-2 text-sm font-medium", className)}
       {...props}
     />
   );
@@ -125,10 +108,9 @@ function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
       data-slot="field-description"
-      data-tailwind-migrated="true"
       className={cn(
-        "tw:text-left tw:text-sm tw:leading-normal tw:font-normal tw:text-muted-foreground tw:group-has-data-horizontal/field:text-balance",
-        "tw:last:mt-0 tw:nth-last-2:-mt-1",
+        "text-left text-sm leading-normal font-normal text-muted-foreground group-has-data-horizontal/field:text-balance",
+        "last:mt-0 nth-last-2:-mt-1",
         "  ",
         className,
       )}
@@ -147,17 +129,15 @@ function FieldSeparator({
   return (
     <div
       data-slot="field-separator"
-      data-tailwind-migrated="true"
       data-content={!!children}
-      className={cn("tw:relative tw:-my-2 tw:h-5 tw:text-sm", className)}
+      className={cn("relative -my-2 h-5 text-sm", className)}
       {...props}
     >
-      <Separator className="tw:absolute tw:inset-0 tw:top-1/2" />
+      <Separator className="absolute inset-0 top-1/2" />
       {children && (
         <span
-          className="tw:relative tw:mx-auto tw:block tw:w-fit tw:bg-background tw:px-2 tw:text-muted-foreground"
+          className="relative mx-auto block w-fit bg-background px-2 text-muted-foreground"
           data-slot="field-separator-content"
-          data-tailwind-migrated="true"
         >
           {children}
         </span>
@@ -190,7 +170,7 @@ function FieldError({
     }
 
     return (
-      <ul className="tw:ml-4 tw:flex tw:list-disc tw:flex-col tw:gap-1">
+      <ul className="ml-4 flex list-disc flex-col gap-1">
         {uniqueErrors.map((error, index) => error?.message && <li key={index}>{error.message}</li>)}
       </ul>
     );
@@ -204,8 +184,7 @@ function FieldError({
     <div
       role="alert"
       data-slot="field-error"
-      data-tailwind-migrated="true"
-      className={cn("tw:text-sm tw:font-normal tw:text-destructive", className)}
+      className={cn("text-sm font-normal text-destructive", className)}
       {...props}
     >
       {content}

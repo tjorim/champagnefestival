@@ -36,7 +36,7 @@ export function AdminField({
   const generatedId = useId();
   return (
     <FieldId.Provider value={controlId ?? generatedId}>
-      <Field className={cn("tw:gap-2", className)} {...props} />
+      <Field className={cn("gap-2", className)} {...props} />
     </FieldId.Provider>
   );
 }
@@ -75,7 +75,7 @@ export function AdminInput({ id, size, className, ...props }: InputProps) {
     <Input
       {...association}
       {...props}
-      className={cn("tw:text-foreground", size === "sm" && "tw:h-8 tw:text-sm", className)}
+      className={cn("text-foreground", size === "sm" && "h-8 text-sm", className)}
     />
   );
 }
@@ -91,7 +91,7 @@ export function AdminTextarea({
     <Textarea
       {...association}
       {...props}
-      className={cn("tw:text-foreground", size === "sm" && "tw:text-sm", className)}
+      className={cn("text-foreground", size === "sm" && "text-sm", className)}
     />
   );
 }
@@ -190,12 +190,12 @@ export function AdminSelect({
         {...props}
         size={size === "sm" ? "sm" : "default"}
         className={cn(
-          "tw:w-full tw:min-w-0 tw:bg-muted tw:text-foreground",
-          size === "sm" && "tw:h-8 tw:text-sm",
+          "w-full min-w-0 bg-muted text-foreground",
+          size === "sm" && "h-8 text-sm",
           className,
         )}
       >
-        <SelectValue className="tw:truncate" />
+        <SelectValue className="truncate" />
       </SelectTrigger>
       <SelectContent align="start" alignItemWithTrigger={false} admin={admin}>
         {renderOptions(children)}
@@ -221,16 +221,10 @@ export function AdminCheck({
   const resolvedId = id ?? generatedId;
   const Control = type === "switch" ? Switch : Checkbox;
   return (
-    <div
-      className={cn(
-        "tw:flex tw:items-center tw:gap-2",
-        inline && "tw:inline-flex tw:me-4",
-        className,
-      )}
-    >
+    <div className={cn("flex items-center gap-2", inline && "inline-flex me-4", className)}>
       <Control id={resolvedId} {...props} />
       {label && (
-        <FieldLabel htmlFor={resolvedId} className="tw:mb-0">
+        <FieldLabel htmlFor={resolvedId} className="mb-0">
           {label}
         </FieldLabel>
       )}

@@ -125,7 +125,7 @@ html[data-visual-theme="remuage"] .bubble {
     border-width: 3px;
   }
 
-  html[data-visual-theme="remuage"] .event-card .tw\:flex.tw\:justify-between {
+  html[data-visual-theme="remuage"] .event-card .flex.justify-between {
     align-items: flex-start !important;
   }
 
@@ -139,7 +139,7 @@ html[data-visual-theme="remuage"] .bubble {
   }
 
   html[data-visual-theme="remuage"] .standalone-navbar .site-fluid-container {
-    align-items: flex-start !important;
+    align-items: flex-start;
     flex-wrap: wrap;
   }
 

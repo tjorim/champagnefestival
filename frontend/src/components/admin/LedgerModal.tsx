@@ -170,30 +170,28 @@ export default function LedgerModal({
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={NotebookTextIcon} className="tw:me-2" />
+            <Icon icon={NotebookTextIcon} className="me-2" />
             {title}
           </DialogTitle>
         </DialogHeader>
-        <DialogBody className="tw:p-0">
+        <DialogBody className="p-0">
           {loading && (
-            <div className="tw:text-center tw:py-6">
+            <div className="text-center py-6">
               <Spinner label={m.admin_loading()} size="sm" variant="warning" />
             </div>
           )}
           {!loading && error && (
-            <Alert role="alert" aria-live="assertive" variant="danger" className="tw:m-4">
+            <Alert role="alert" aria-live="assertive" variant="danger" className="m-4">
               {m.admin_payment_history_error()}
             </Alert>
           )}
           {!loading && !error && total === 0 && (
-            <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
-              {m.admin_payment_history_empty()}
-            </p>
+            <p className="text-subtle text-center py-6 mb-0">{m.admin_payment_history_empty()}</p>
           )}
           {!loading && !error && total > 0 && (
-            <div data-tailwind-migrated="true" className="tw:w-full">
+            <div className="w-full">
               <Table>
-                <caption className="tw:sr-only">{m.admin_ledger_table_caption()}</caption>
+                <caption className="sr-only">{m.admin_ledger_table_caption()}</caption>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
@@ -207,7 +205,7 @@ export default function LedgerModal({
                 </TableHeader>
                 <TableBody>
                   {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} className="tw:text-sm">
+                    <TableRow key={row.id} className="text-sm">
                       {row.getVisibleCells().map((cell) => (
                         <TableCell key={cell.id}>
                           <table.FlexRender cell={cell} />
@@ -222,11 +220,8 @@ export default function LedgerModal({
         </DialogBody>
         <DialogFooter>
           {total > 0 && (
-            <div
-              data-tailwind-migrated="true"
-              className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:mr-auto"
-            >
-              <span className="tw:text-muted-foreground tw:text-sm">
+            <div className="flex flex-wrap items-center gap-2 mr-auto">
+              <span className="text-muted-foreground text-sm">
                 {m.admin_ledger_page_summary({ from: rangeFrom, to: rangeTo, total })}
               </span>
               <Button
@@ -237,7 +232,7 @@ export default function LedgerModal({
               >
                 {m.admin_ledger_previous_page()}
               </Button>
-              <span className="tw:text-muted-foreground tw:text-sm">
+              <span className="text-muted-foreground text-sm">
                 {page} / {totalPages}
               </span>
               <Button

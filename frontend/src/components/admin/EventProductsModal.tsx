@@ -309,21 +309,16 @@ export default function EventProductsModal({
           void form.handleSubmit();
         }}
         noValidate
-        className="border-top tw:border-input tw:pt-4 tw:mt-2"
+        className="border-t border-input pt-4 mt-2"
       >
-        <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
-          <AdminField
-            className="tw:min-w-50 tw:grow-2 tw:shrink-1 tw:basis-50"
-            controlId="product-name"
-          >
-            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
-              {m.admin_products_name()}
-            </AdminLabel>
+        <div className="flex gap-2 flex-wrap mb-2">
+          <AdminField className="min-w-50 grow-2 shrink-1 basis-50" controlId="product-name">
+            <AdminLabel className="text-subtle text-sm mb-1">{m.admin_products_name()}</AdminLabel>
             <form.Field name="name">
               {(field) => (
                 <AdminInput
                   size="sm"
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                   autoFocus
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -332,18 +327,15 @@ export default function EventProductsModal({
               )}
             </form.Field>
           </AdminField>
-          <AdminField
-            className="tw:min-w-50 tw:grow-2 tw:shrink-1 tw:basis-50"
-            controlId="product-description"
-          >
-            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+          <AdminField className="min-w-50 grow-2 shrink-1 basis-50" controlId="product-description">
+            <AdminLabel className="text-subtle text-sm mb-1">
               {m.admin_products_description()}
             </AdminLabel>
             <form.Field name="description">
               {(field) => (
                 <AdminInput
                   size="sm"
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                   maxLength={300}
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
@@ -352,10 +344,8 @@ export default function EventProductsModal({
               )}
             </form.Field>
           </AdminField>
-          <AdminField className="tw:max-w-30" controlId="product-price">
-            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
-              {m.admin_products_price()}
-            </AdminLabel>
+          <AdminField className="max-w-30" controlId="product-price">
+            <AdminLabel className="text-subtle text-sm mb-1">{m.admin_products_price()}</AdminLabel>
             <form.Field name="price">
               {(field) => (
                 <AdminInput
@@ -363,7 +353,7 @@ export default function EventProductsModal({
                   min={0}
                   step="0.01"
                   size="sm"
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -371,15 +361,15 @@ export default function EventProductsModal({
               )}
             </form.Field>
           </AdminField>
-          <AdminField className="tw:max-w-40" controlId="product-category">
-            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+          <AdminField className="max-w-40" controlId="product-category">
+            <AdminLabel className="text-subtle text-sm mb-1">
               {m.admin_products_category()}
             </AdminLabel>
             <form.Field name="category">
               {(field) => (
                 <AdminSelect
                   size="sm"
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                   value={field.value}
                   onValueChange={(e) => field.handleChange(e as OrderItemCategory)}
                   onBlur={field.handleBlur}
@@ -395,7 +385,7 @@ export default function EventProductsModal({
           </AdminField>
         </div>
 
-        <div className="tw:flex tw:flex-wrap tw:gap-6 tw:mb-1">
+        <div className="flex flex-wrap gap-6 mb-1">
           <form.Field name="purchasable">
             {(field) => (
               <AdminCheck
@@ -428,12 +418,10 @@ export default function EventProductsModal({
             )}
           </form.Field>
         </div>
-        <div className="tw:text-subtle tw:text-sm tw:mb-1">
-          {m.admin_products_purchasable_help()}
-        </div>
+        <div className="text-subtle text-sm mb-1">{m.admin_products_purchasable_help()}</div>
         <form.Subscribe selector={(s) => s.values.purchasable}>
           {(purchasable) => (
-            <div className="tw:text-subtle tw:text-sm tw:mb-2">
+            <div className="text-subtle text-sm mb-2">
               {purchasable
                 ? m.admin_products_required_help()
                 : m.admin_products_required_needs_purchasable()}
@@ -441,16 +429,14 @@ export default function EventProductsModal({
           )}
         </form.Subscribe>
 
-        <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
-          <AdminField className="tw:max-w-40" controlId="product-unit">
-            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
-              {m.admin_inventory_unit()}
-            </AdminLabel>
+        <div className="flex gap-2 flex-wrap mb-2">
+          <AdminField className="max-w-40" controlId="product-unit">
+            <AdminLabel className="text-subtle text-sm mb-1">{m.admin_inventory_unit()}</AdminLabel>
             <form.Field name="unit">
               {(field) => (
                 <AdminSelect
                   size="sm"
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                   value={field.value}
                   onValueChange={(e) => field.handleChange(e as ProductFormState["unit"])}
                   onBlur={field.handleBlur}
@@ -462,8 +448,8 @@ export default function EventProductsModal({
               )}
             </form.Field>
           </AdminField>
-          <AdminField className="tw:max-w-40" controlId="product-stock">
-            <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+          <AdminField className="max-w-40" controlId="product-stock">
+            <AdminLabel className="text-subtle text-sm mb-1">
               {m.admin_inventory_stock()}
             </AdminLabel>
             <form.Field name="stock">
@@ -473,7 +459,7 @@ export default function EventProductsModal({
                   min={0}
                   step={1}
                   size="sm"
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   onBlur={field.handleBlur}
@@ -482,18 +468,18 @@ export default function EventProductsModal({
             </form.Field>
           </AdminField>
         </div>
-        <AdminDescription className="tw:block tw:mb-2">
+        <AdminDescription className="block mb-2">
           {m.admin_inventory_unlimited_help()}
         </AdminDescription>
-        <fieldset className="tw:mb-4">
-          <legend className="tw:text-base tw:font-medium tw:leading-tight">
+        <fieldset className="mb-4">
+          <legend className="text-base font-medium leading-tight">
             {m.admin_inventory_inclusions()}
           </legend>
           {inclusions.map((edge, index) => (
-            <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mb-2 tw:items-start" key={index}>
+            <div className="flex flex-wrap gap-2 mb-2 items-start" key={index}>
               <AdminSelect
                 size="sm"
-                className="tw:bg-muted tw:text-content tw:border-input tw:min-w-45 tw:grow-2 tw:shrink-1 tw:basis-45"
+                className="bg-muted text-content border-input min-w-45 grow-2 shrink-1 basis-45"
 
                 aria-label={m.admin_products_bundle_target()}
                 value={edge.product_id}
@@ -516,7 +502,7 @@ export default function EventProductsModal({
                 min={1}
                 step={1}
                 size="sm"
-                className="tw:bg-muted tw:text-content tw:border-input tw:max-w-22.5"
+                className="bg-muted text-content border-input max-w-22.5"
 
                 aria-label={m.admin_inventory_included_quantity()}
                 value={edge.quantity}
@@ -532,7 +518,7 @@ export default function EventProductsModal({
                 min={1}
                 step={1}
                 size="sm"
-                className="tw:bg-muted tw:text-content tw:border-input tw:max-w-22.5"
+                className="bg-muted text-content border-input max-w-22.5"
 
                 aria-label={m.admin_inventory_per_quantity()}
                 value={edge.per_quantity}
@@ -545,7 +531,7 @@ export default function EventProductsModal({
               />
               <AdminSelect
                 size="sm"
-                className="tw:bg-muted tw:text-content tw:border-input tw:max-w-35"
+                className="bg-muted text-content border-input max-w-35"
 
                 aria-label={m.admin_inventory_rounding()}
                 value={edge.rounding}
@@ -569,10 +555,10 @@ export default function EventProductsModal({
               </Button>
             </div>
           ))}
-          <AdminDescription className="tw:block tw:mb-2">
+          <AdminDescription className="block mb-2">
             {m.admin_inventory_ratio_help()}
           </AdminDescription>
-          <AdminDescription className="tw:block tw:mb-2">
+          <AdminDescription className="block mb-2">
             {m.admin_inventory_hidden_target_help()}
           </AdminDescription>
           <Button
@@ -590,8 +576,8 @@ export default function EventProductsModal({
           </Button>
         </fieldset>
         {editingId && (
-          <fieldset className="tw:mb-4">
-            <legend className="tw:text-base tw:font-medium tw:leading-tight">
+          <fieldset className="mb-4">
+            <legend className="text-base font-medium leading-tight">
               {m.admin_inventory_existing_bookings()}
             </legend>
             <form.Field name="updateExistingContents">
@@ -618,7 +604,7 @@ export default function EventProductsModal({
           </fieldset>
         )}
 
-        <div className="tw:flex tw:gap-2 tw:justify-end">
+        <div className="flex gap-2 justify-end">
           <Button variant="outline" size="sm" onClick={() => setFormOpen(false)}>
             {m.close()}
           </Button>
@@ -645,13 +631,13 @@ export default function EventProductsModal({
     return (
       <PresentationListItem
         key={product.id}
-        className="tw:flex tw:flex-col tw:gap-1 tw:py-1 tw:px-0 tw:text-card-foreground"
+        className="flex flex-col gap-1 py-1 px-0 text-card-foreground"
       >
-        <div className="tw:flex tw:justify-between tw:items-center tw:gap-2">
-          <span className="tw:flex tw:min-w-0 tw:flex-1 tw:items-center tw:gap-2 tw:flex-wrap">
-            <span className="tw:text-content">
+        <div className="flex justify-between items-center gap-2">
+          <span className="flex min-w-0 flex-1 items-center gap-2 flex-wrap">
+            <span className="text-content">
               {product.name}
-              <span className="tw:block tw:text-sm tw:text-subtle">
+              <span className="block text-sm text-subtle">
                 {m.admin_inventory_reserved()} {product.reservedQuantity ?? 0} /{" "}
                 {product.stock ?? m.admin_inventory_unlimited()}
                 {(product.shortage ?? 0) > 0
@@ -659,28 +645,25 @@ export default function EventProductsModal({
                   : ""}
               </span>
             </span>
-            <Badge
-              variant={product.purchasable ? "success" : "secondary"}
-              className="tw:text-micro"
-            >
+            <Badge variant={product.purchasable ? "success" : "secondary"} className="text-micro">
               {product.purchasable ? m.admin_products_purchasable() : m.admin_products_hidden()}
             </Badge>
             {soldOut && (
-              <Badge variant="danger" className="tw:text-micro">
+              <Badge variant="danger" className="text-micro">
                 {m.admin_products_sold_out()}
               </Badge>
             )}
-            <Badge variant="secondary" className="tw:text-micro tw:capitalize">
+            <Badge variant="secondary" className="text-micro capitalize">
               {categoryLabel(product.category)}
             </Badge>
             {product.required && (
-              <Badge variant="warning" className="tw:text-micro">
+              <Badge variant="warning" className="text-micro">
                 {m.admin_products_required_badge()}
               </Badge>
             )}
-            <span className="tw:text-subtle tw:text-sm">€{product.price.toFixed(2)}</span>
+            <span className="text-subtle text-sm">€{product.price.toFixed(2)}</span>
           </span>
-          <span className="tw:flex tw:gap-1 tw:shrink-0">
+          <span className="flex gap-1 shrink-0">
             <Button
               size="sm"
               variant="outline"
@@ -702,7 +685,7 @@ export default function EventProductsModal({
           </span>
         </div>
         {includedTarget && product.includedPerGuests && (
-          <div className="tw:text-subtle tw:text-xs">
+          <div className="text-subtle text-xs">
             {m.admin_products_bundle_note({
               target: includedTarget.name,
               ratio: product.includedPerGuests,
@@ -729,10 +712,10 @@ export default function EventProductsModal({
           <DialogBody>
             {preview && (
               <section
-                className="tw:rounded-md tw:border tw:border-border tw:p-4 tw:mb-4"
+                className="rounded-md border border-border p-4 mb-4"
                 aria-label={m.admin_inventory_review()}
               >
-                <h3 className="tw:text-base tw:font-medium tw:leading-tight">
+                <h3 className="text-base font-medium leading-tight">
                   {m.admin_inventory_review()}
                 </h3>
                 <p>
@@ -741,7 +724,7 @@ export default function EventProductsModal({
                   {preview.payload.stock ?? m.admin_inventory_unlimited()}
                 </p>
                 {preview.result.bookings.map((b) => (
-                  <div key={b.id} className="tw:mb-2">
+                  <div key={b.id} className="mb-2">
                     <strong>{b.id}</strong>: €{b.before_total} → €{b.after_total};{" "}
                     {m.admin_inventory_paid()} €{b.amount_paid}; {m.admin_inventory_refund()} €
                     {b.refund_due}
@@ -796,28 +779,28 @@ export default function EventProductsModal({
               </section>
             )}
 
-            <p className="tw:text-subtle tw:text-sm tw:mb-4">{m.admin_products_help()}</p>
+            <p className="text-subtle text-sm mb-4">{m.admin_products_help()}</p>
 
             {error && (
-              <Alert variant="danger" className="tw:py-1 tw:mb-2">
+              <Alert variant="danger" className="py-1 mb-2">
                 {error}
               </Alert>
             )}
 
             {productsQuery.isPending ? (
-              <div className="tw:text-center tw:py-4">
+              <div className="text-center py-4">
                 <Spinner label={m.admin_loading()} size="sm" variant="warning" />
               </div>
             ) : productsQuery.isError ? (
-              <Alert variant="danger" className="tw:py-1 tw:mb-2">
+              <Alert variant="danger" className="py-1 mb-2">
                 {m.admin_content_error_load()}
               </Alert>
             ) : (
               <>
                 {products.length === 0 ? (
-                  <p className="tw:text-subtle tw:italic tw:text-sm">{m.admin_products_empty()}</p>
+                  <p className="text-subtle italic text-sm">{m.admin_products_empty()}</p>
                 ) : (
-                  <PresentationList flush className="tw:mb-2">
+                  <PresentationList flush className="mb-2">
                     {products.map((product) => renderRow(product))}
                   </PresentationList>
                 )}

@@ -35,22 +35,22 @@ export default function AdminSkeleton({ variant, rows = 6 }: AdminSkeletonProps)
     // One live region for the whole pane: the bars are decorative, so screen
     // readers get a single "loading" announcement rather than a stream of noise.
     <div className="admin-skeleton" role="status" aria-busy="true">
-      <span className="tw:sr-only">{m.admin_loading()}</span>
+      <span className="sr-only">{m.admin_loading()}</span>
 
       <div className="admin-skeleton-toolbar" aria-hidden="true">
-        <div className="admin-skeleton-bar tw:h-8 tw:w-36" />
-        <div className="admin-skeleton-bar tw:h-8 tw:w-24" />
-        <div className="admin-skeleton-bar admin-skeleton-grow tw:h-8 tw:max-w-64" />
+        <div className="admin-skeleton-bar h-8 w-36" />
+        <div className="admin-skeleton-bar h-8 w-24" />
+        <div className="admin-skeleton-bar admin-skeleton-grow h-8 max-w-64" />
       </div>
 
       {variant === "table" ? (
         <div className="admin-skeleton-table" aria-hidden="true">
           {Array.from({ length: rows }, (_, row) => (
             <div className="admin-skeleton-row" key={row}>
-              <div className="admin-skeleton-bar tw:w-3/8" />
-              <div className="admin-skeleton-bar tw:w-1/5" />
-              <div className="admin-skeleton-bar tw:w-1/6" />
-              <div className="admin-skeleton-bar tw:w-1/8" />
+              <div className="admin-skeleton-bar w-3/8" />
+              <div className="admin-skeleton-bar w-1/5" />
+              <div className="admin-skeleton-bar w-1/6" />
+              <div className="admin-skeleton-bar w-1/8" />
             </div>
           ))}
         </div>
@@ -58,9 +58,9 @@ export default function AdminSkeleton({ variant, rows = 6 }: AdminSkeletonProps)
         <div className="admin-skeleton-cards" aria-hidden="true">
           {Array.from({ length: Math.min(rows, 4) }, (_, card) => (
             <div className="admin-skeleton-card" key={card}>
-              <div className="admin-skeleton-bar tw:h-4.5 tw:w-9/20" />
-              <div className="admin-skeleton-bar tw:w-4/5" />
-              <div className="admin-skeleton-bar tw:w-13/20" />
+              <div className="admin-skeleton-bar h-4.5 w-9/20" />
+              <div className="admin-skeleton-bar w-4/5" />
+              <div className="admin-skeleton-bar w-13/20" />
             </div>
           ))}
         </div>

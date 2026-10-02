@@ -21,6 +21,10 @@ from collections.abc import Mapping
 
 from app.services.frontend_i18n_snippets import FAQ_TITLE, SCHEDULE_TITLE, Locale
 
+# The shell ships no CSS framework reset for these fragments, so the wrapper
+# carries its own centred, padded column. Replaced wholesale when React mounts.
+_CONTENT_WRAPPER_STYLE = "max-width:60rem;margin:0 auto;padding:3rem 1rem"
+
 
 def _text(value: str) -> str:
     """Escape *value* for use as HTML element content."""
@@ -102,14 +106,15 @@ def render_schedule_section(events: list[dict], *, locale: Locale) -> str:
 
 def render_home_content(*, faq_items: list[dict], events: list[dict], locale: Locale) -> str:
     """Fragment for `/`'s `<!--ssr:content-->` slot: crawler-visible FAQ and
-    schedule text, styled with the Bootstrap classes the page already loads.
+    schedule text, given just enough inline layout to read well before the
+    SPA mounts.
     Replaced wholesale when React mounts (`createRoot`, not `hydrateRoot` —
     see decision 4: no hydration-mismatch failure mode to design around, so
     this doesn't try to pixel-match the client render). The JSON-LD script
     is a separate fragment (`json_ld_script`) injected into `<!--ssr:head-->`
     instead — see `app.routers.public_pages`."""
     return (
-        '<div class="container py-5">'
+        f'<div style="{_CONTENT_WRAPPER_STYLE}">'
         + render_schedule_section(events, locale=locale)
         + render_faq_section(faq_items, locale=locale)
         + "</div>"
@@ -122,7 +127,7 @@ def render_privacy_content(*, title: str, html_body: str) -> str:
     — the single renderer/sanitizer pair #944 established, reused rather than
     a second one (see decision 1's "Escaping is the part worth being
     deliberate about" section)."""
-    return f'<div class="container py-5"><h1>{_text(title)}</h1>{html_body}</div>'
+    return f'<div style="{_CONTENT_WRAPPER_STYLE}"><h1>{_text(title)}</h1>{html_body}</div>'
 
 
 __all__ = [

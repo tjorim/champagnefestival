@@ -586,7 +586,9 @@ class Area(Base):
     )
     label: Mapped[str] = mapped_column(String(200))
     icon: Mapped[str] = mapped_column(String(50), default="bi-shop")
-    """Bootstrap Icons class name, e.g. 'bi-shop', 'bi-music-note-beamed'."""
+    """Stored icon identifier, e.g. 'bi-shop', 'bi-music-note-beamed'. The ``bi-`` names
+    predate the move to Lucide and stay as persisted keys; the frontend maps each to a
+    Lucide icon (``AreaIcon``)."""
 
     x: Mapped[float] = mapped_column(default=50.0)
     y: Mapped[float] = mapped_column(default=50.0)

@@ -1,7 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-const LEGACY_UTILITIES = ".border, .rounded, .bg-dark, .border-secondary, .border-warning";
-
 for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage"]) {
   for (const colorScheme of ["light", "dark"] as const) {
     for (const width of [1440, 390]) {
@@ -23,7 +21,6 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage"]) {
           "repeating-linear-gradient",
         );
         expect(await canvas.evaluate((el) => el.style.aspectRatio)).toBe("50 / 80");
-        await expect(page.locator(LEGACY_UTILITIES)).toHaveCount(0);
 
         const selected = canvas.locator('[aria-current="location"]');
         await expect(selected).toHaveCount(1);

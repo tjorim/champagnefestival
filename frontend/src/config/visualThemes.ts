@@ -2,7 +2,7 @@ import definitions from "./visualThemes.json";
 
 export type VisualThemeVariant = "refresh" | "classic" | "riviera" | "cuvee" | "remuage";
 
-export type BootstrapThemeMode = "system" | "light" | "dark";
+export type ThemeColorMode = "system" | "light" | "dark";
 
 interface VisualThemeColors {
   readonly dark: string;
@@ -12,7 +12,7 @@ interface VisualThemeColors {
 export interface VisualThemeDefinition {
   readonly value: VisualThemeVariant;
   readonly label: string;
-  readonly bootstrapMode: BootstrapThemeMode;
+  readonly colorMode: ThemeColorMode;
   readonly themeColors: VisualThemeColors;
 }
 

@@ -97,13 +97,17 @@ jobs:
           # for #1106 / PR #1114's admin table migration to shadcn and Base UI.
           # The first production use of Base UI Menu, Select, Checkbox and Button
           # adds their interaction, focus-management and positioning code while
-          # Bootstrap remains during coexistence. Same-dependency builds before/
+          # Bootstrap remained during coexistence. Same-dependency builds before/
           # after: total 2373 -> 2608 KiB, admin 979 -> 1214 KiB; index stays
-          # 632 KiB. Keep the public entry budget unchanged and revisit these
-          # ceilings downward when the Bootstrap cleanup (#1111) removes overlap.
-          TOTAL_MAX_KB=2700
+          # 632 KiB.
+          # Total lowered 2700 -> 2560 and AdminDashboard 1300 -> 1000 by #1111,
+          # which removed bootstrap, react-bootstrap and bootstrap-icons
+          # (measured: total 2563 -> 2504 KiB, index 776 -> 774, admin 946 -> 937;
+          # CSS 350 -> 119 kB raw, 53 -> 24 kB gzip). The public entry budget is
+          # unchanged.
+          TOTAL_MAX_KB=2560
           INDEX_MAX_KB=1050
-          ADMIN_MAX_KB=1300
+          ADMIN_MAX_KB=1000
 
           total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
           index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')

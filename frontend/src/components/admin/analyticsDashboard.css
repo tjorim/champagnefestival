@@ -1,25 +1,27 @@
-/*
+@layer components {
+  /*
  * AnalyticsDashboard chart styling.
  *
  * Colors come from the data-viz skill's reference categorical palette,
- * dark-mode steps only (this app is fixed to data-bs-theme="dark").
+ * dark-mode steps only (this app is fixed to data-theme-mode="dark").
  * Validated against this app's actual chart surface (--adm-surface, #1e1e1e):
  * node scripts/validate_palette.js "#3987e5,#199e70,..." --mode dark --surface "#1e1e1e"
  * → all checks pass for slots 1 (blue) and 2 (aqua) used here.
  */
 
-.viz-root {
-  --viz-text-secondary: #c3c2b7;
-  --viz-text-muted: #898781;
-  --viz-gridline: #2c2c2a;
-  --viz-axis: #383835;
-  --viz-surface: #1e1e1e;
+  .viz-root {
+    --viz-text-secondary: #c3c2b7;
+    --viz-text-muted: #898781;
+    --viz-gridline: #2c2c2a;
+    --viz-axis: #383835;
+    --viz-surface: #1e1e1e;
 
-  /* Pin the TanStack Charts built-in tooltip to this app's forced dark
+    /* Pin the TanStack Charts built-in tooltip to this app's forced dark
    * theme instead of the OS-preference-driven Canvas/CanvasText defaults. */
-  --ts-chart-tooltip-background: var(--viz-surface);
-  --ts-chart-tooltip-color: var(--viz-text-secondary);
-  --ts-chart-tooltip-border: 1px solid var(--viz-axis);
+    --ts-chart-tooltip-background: var(--viz-surface);
+    --ts-chart-tooltip-color: var(--viz-text-secondary);
+    --ts-chart-tooltip-border: 1px solid var(--viz-axis);
 
-  min-width: 0;
+    min-width: 0;
+  }
 }

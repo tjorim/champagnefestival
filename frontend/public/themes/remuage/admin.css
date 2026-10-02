@@ -27,8 +27,13 @@ html[data-visual-theme="remuage"] .admin-main {
   background: var(--adm-bg);
 }
 
-html[data-visual-theme="remuage"] #admin h2#admin-title {
+/* The signed-in brand keeps its grape colour; the login title takes the
+   highlight utility's colour. */
+html[data-visual-theme="remuage"] #admin.admin-authenticated h2#admin-title {
   color: var(--rem-grape) !important;
+}
+
+html[data-visual-theme="remuage"] #admin h2#admin-title {
   font-family: var(--rem-display);
   font-weight: 900;
   letter-spacing: -0.035em;
@@ -109,32 +114,9 @@ html[data-visual-theme="remuage"] #admin [data-slot="card-header"] {
   border-bottom: 3px solid rgba(var(--adm-primary-rgb), 0.25);
 }
 
-html[data-visual-theme="remuage"] #admin .table {
-  --bs-table-bg: #fbfcfe;
-  --bs-table-color: #172033;
-  --bs-table-border-color: rgba(23, 32, 51, 0.14);
-  --bs-table-striped-bg: #f1f4f8;
-  --bs-table-striped-color: #172033;
-  --bs-table-hover-bg: #e6ebf3;
-  --bs-table-hover-color: #172033;
-  --bs-table-active-bg: #dce4f1;
-  --bs-table-active-color: #172033;
-  color: var(--bs-table-color);
-}
-
-html[data-visual-theme="remuage"] #admin .table thead th {
-  color: var(--adm-text-muted);
-  font-family: var(--rem-data);
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  background: #e6ebf3;
-  border-bottom: 2px solid var(--rem-blue);
-}
-
-html[data-visual-theme="remuage"] #admin .tw\:text-content {
+html[data-visual-theme="remuage"] #admin .text-content {
   color: var(--adm-text) !important;
-  background-color: var(--adm-surface) !important;
+  background-color: var(--adm-surface);
   --layout-content: var(--adm-text) !important;
 }
 
@@ -152,8 +134,7 @@ html[data-visual-theme="remuage"] #admin [data-slot="badge"][data-variant="warni
   border: 1px solid #d39724;
 }
 
-html[data-visual-theme="remuage"] #admin [data-slot="presentation-list-item"],
-html[data-visual-theme="remuage"] #admin .dropdown-menu {
+html[data-visual-theme="remuage"] #admin [data-slot="presentation-list-item"] {
   color: var(--adm-text);
   background: var(--adm-surface);
   border-color: var(--adm-border);

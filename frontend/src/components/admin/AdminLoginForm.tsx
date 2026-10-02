@@ -19,31 +19,31 @@ export default function AdminLoginForm() {
   }, []);
 
   return (
-    <div className="site-container tw:mx-auto tw:w-full">
-      <h2 id="admin-title" className="tw:text-center tw:mb-6 tw:text-highlight">
-        <Icon icon={ShieldIcon} className="tw:me-2" />
+    <div className="site-container mx-auto w-full">
+      <h2 id="admin-title" className="text-center mb-6 text-highlight">
+        <Icon icon={ShieldIcon} className="me-2" />
         {m.admin_title()}
       </h2>
-      <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
-        <div className="tw:w-full tw:site-sm:w-8/12 tw:site-md:w-6/12 tw:site-lg:w-4/12 tw:text-center">
+      <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter justify-center">
+        <div className="w-full site-sm:w-8/12 site-md:w-6/12 site-lg:w-4/12 text-center">
           {signOutReason === "session-expired" && !auth.authError ? (
             <Alert variant="info">
-              <Icon icon={HistoryIcon} className="tw:me-2" />
+              <Icon icon={HistoryIcon} className="me-2" />
               {m.auth_session_expired_notice()}
             </Alert>
           ) : null}
           {auth.authError ? (
             <Alert variant="danger" onClose={auth.clearAuthError}>
-              <AlertHeading as="h3" className="tw:text-base tw:font-medium tw:leading-tight">
+              <AlertHeading as="h3" className="text-base font-medium leading-tight">
                 {m.auth_error_title()}
               </AlertHeading>
-              <p className="tw:mb-0">{auth.authError}</p>
+              <p className="mb-0">{auth.authError}</p>
             </Alert>
           ) : null}
           <Button variant="warning" onClick={() => auth.login()} disabled={auth.isSigningIn}>
             {auth.isSigningIn ? (
               <>
-                <Spinner size="sm" className="tw:me-2" aria-hidden="true" />
+                <Spinner size="sm" className="me-2" aria-hidden="true" />
                 {m.auth_signing_in()}
               </>
             ) : (

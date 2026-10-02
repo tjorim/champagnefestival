@@ -78,18 +78,18 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
   };
 
   if (days.length === 0) {
-    return <p className="tw:mb-0 tw:text-center">{m.schedule_no_events()}</p>;
+    return <p className="mb-0 text-center">{m.schedule_no_events()}</p>;
   }
 
   return (
     <div>
       <Tabs value={activeDay} onValueChange={(value) => setActiveDay(Number(value))}>
-        <TabsList className="schedule-tabs tw:mb-4 tw:justify-center">
+        <TabsList className="schedule-tabs mb-4 justify-center">
           {days.map((day) => (
             <div key={day.id}>
               <TabsTrigger value={day.id}>
                 {getDayName(day.date)}
-                <span className="tw:block tw:text-sm">
+                <span className="block text-sm">
                   {(() => {
                     try {
                       return new Date(day.date + "T00:00:00").toLocaleDateString(getLocale(), {
@@ -116,15 +116,15 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                 <div className="events-list">
                   {sortedEvents.map((event) => {
                     return (
-                      <Card key={event.id} className="event-card tw:mb-4 tw:border-0">
+                      <Card key={event.id} className="event-card mb-4 border-0">
                         <CardContent>
-                          <div className="tw:flex tw:justify-between tw:items-start tw:gap-4">
-                            <div className="event-time tw:me-4 tw:whitespace-nowrap">
+                          <div className="flex justify-between items-start gap-4">
+                            <div className="event-time me-4 whitespace-nowrap">
                               {event.endTime ? (
                                 <>
                                   <div title={m.schedule_start_time()}>{event.startTime}</div>
                                   <div title={m.schedule_end_time()}>{event.endTime}</div>
-                                  <span className="tw:sr-only">
+                                  <span className="sr-only">
                                     {m.schedule_time_range({
                                       start: event.startTime,
                                       end: event.endTime,
@@ -135,23 +135,23 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                                 <span title={m.schedule_time()}>{event.startTime}</span>
                               )}
                             </div>
-                            <div className="tw:grow">
-                              <h5 className="event-title tw:mb-1">{event.title}</h5>
-                              <Badge variant={getCategoryColor(event.category)} className="tw:mb-2">
+                            <div className="grow">
+                              <h5 className="event-title mb-1">{event.title}</h5>
+                              <Badge variant={getCategoryColor(event.category)} className="mb-2">
                                 {getCategoryLabel(event.category)}
                               </Badge>
                               {event.registrationRequired ? (
-                                <Badge variant="warning" className="tw:mb-2 tw:ms-2">
+                                <Badge variant="warning" className="mb-2 ms-2">
                                   {m.schedule_registration()}
                                 </Badge>
                               ) : (
                                 event.products.length > 0 && (
-                                  <Badge variant="info" className="tw:mb-2 tw:ms-2">
+                                  <Badge variant="info" className="mb-2 ms-2">
                                     {m.schedule_order_available()}
                                   </Badge>
                                 )
                               )}
-                              <p className="event-description tw:mb-1">{event.description}</p>
+                              <p className="event-description mb-1">{event.description}</p>
                             </div>
                           </div>
                         </CardContent>
@@ -160,7 +160,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                   })}
                 </div>
               ) : (
-                <p className="tw:text-center tw:mb-0">{m.schedule_no_events()}</p>
+                <p className="text-center mb-0">{m.schedule_no_events()}</p>
               )}
             </TabsContent>
           );

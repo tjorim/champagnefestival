@@ -43,15 +43,15 @@ function Harness({
 
 describe("ConfirmModal", () => {
   it.each([
-    ["danger", "tw:bg-destructive/10", "tw:text-destructive"],
-    ["warning", "tw:bg-warning", "tw:text-warning-foreground"],
-    ["primary", "tw:bg-primary", "tw:text-primary-foreground"],
+    ["danger", "bg-destructive/10", "text-destructive"],
+    ["warning", "bg-warning", "text-warning-foreground"],
+    ["primary", "bg-primary", "text-primary-foreground"],
   ] as const)("preserves the %s confirmation style", async (variant, background, foreground) => {
     render(<Harness variant={variant} onConfirm={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: "Delete booking" }));
     const confirm = screen.getByRole("button", { name: "Confirm" });
     expect(confirm).toHaveClass(background, foreground);
-    if (variant !== "primary") expect(confirm).not.toHaveClass("tw:bg-primary");
+    if (variant !== "primary") expect(confirm).not.toHaveClass("bg-primary");
   });
 
   it.each([false, true])(

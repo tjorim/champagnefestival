@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="nl" data-bs-theme="dark">
+<html lang="nl" data-theme-mode="dark">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" href="/icons/favicon.ico" sizes="any" />
@@ -80,12 +80,11 @@
     -->
     <!--ssr:head-->
 
-    <!-- Bootstrap will be imported via JS -->
     <script>
       (() => {
-        // Sets data-bs-theme (Bootstrap's own dark/light component colors) before first paint,
-        // to avoid a flash. The theme stylesheet itself (colors/layout) is loaded from main.tsx,
-        // after the bootstrap CSS import, so it lands later in the cascade — see useVisualTheme.ts.
+        // Sets data-theme-mode (the light/dark mode that Tailwind's dark variant and the
+        // runtime theme tokens read) before first paint, to avoid a flash. The theme stylesheet
+        // itself (colors/layout) is loaded from main.tsx — see useVisualTheme.ts.
         const VISUAL_THEME_KEY = "champagnefestival:visualTheme";
         // Vite injects the shared registry in development and production.
         const THEMES = __VISUAL_THEMES__;
@@ -101,11 +100,10 @@
         const applyTheme = () => {
           const current = document.documentElement.dataset.visualTheme;
           const definition = THEMES.find((theme) => theme.value === current) ?? THEMES[0];
-          const mode = definition.bootstrapMode;
+          const mode = definition.colorMode;
           const colors = definition.themeColors;
-          document.documentElement.dataset.bsTheme =
+          document.documentElement.dataset.themeMode =
             mode === "system" ? (query.matches ? "light" : "dark") : mode;
-          document.documentElement.dataset.themeMode = document.documentElement.dataset.bsTheme;
           document
             .querySelector('meta[name="theme-color"][media="(prefers-color-scheme: dark)"]')
             ?.setAttribute("content", colors.dark);

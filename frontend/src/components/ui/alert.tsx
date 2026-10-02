@@ -11,8 +11,8 @@ type AlertVariant = "danger" | "warning" | "success" | "info" | "secondary" | "p
  * hooks in `styles/tailwind.css`, so runtime themes retint alerts without
  * touching components.
  *
- * Like the Bootstrap alert it replaces, the default is an assertive live region
- * (`role="alert"`), which e2e and screen-reader flows rely on. Pass
+ * The default is an assertive live region (`role="alert"`), which e2e and
+ * screen-reader flows rely on. Pass
  * `role="status"` for polite, non-urgent messages. The role already implies the
  * matching `aria-live`; do not add a second live region around an alert, which
  * announces the message twice.
@@ -36,12 +36,7 @@ function Alert({
       role={role}
       data-slot="alert"
       data-variant={variant}
-      data-tailwind-migrated="true"
-      className={cn(
-        "tw:relative tw:mb-4 tw:rounded-md tw:px-4 tw:py-3",
-        onClose && "tw:pe-12",
-        className,
-      )}
+      className={cn("relative mb-4 rounded-md px-4 py-3", onClose && "pe-12", className)}
       {...props}
     >
       {children}
@@ -49,7 +44,7 @@ function Alert({
         <Button
           variant="ghost"
           size="icon-xs"
-          className="tw:absolute tw:top-2 tw:end-2 tw:text-current"
+          className="absolute top-2 end-2 text-current"
           aria-label={closeLabel ?? m.close()}
           onClick={onClose}
         >
@@ -68,7 +63,7 @@ function AlertHeading({
   return (
     <Tag
       data-slot="alert-heading"
-      className={cn("tw:mt-0 tw:mb-2 tw:text-base tw:font-medium tw:text-current", className)}
+      className={cn("mt-0 mb-2 text-base font-medium text-current", className)}
       {...props}
     />
   );
@@ -78,7 +73,7 @@ function AlertLink({ className, ...props }: ComponentProps<"a">) {
   return (
     <a
       data-slot="alert-link"
-      className={cn("tw:font-bold tw:text-current tw:underline", className)}
+      className={cn("font-bold text-current underline", className)}
       {...props}
     />
   );

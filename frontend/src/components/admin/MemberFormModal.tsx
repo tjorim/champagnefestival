@@ -139,7 +139,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={ContactRoundIcon} className="tw:me-2" />
+            <Icon icon={ContactRoundIcon} className="me-2" />
             {isEdit ? m.admin_members_edit_title() : m.admin_members_create_title()}
           </DialogTitle>
         </DialogHeader>
@@ -153,15 +153,13 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         >
           <DialogBody>
             {error && (
-              <Alert variant="danger" className="tw:py-2 tw:text-sm" onClose={() => setError(null)}>
+              <Alert variant="danger" className="py-2 text-sm" onClose={() => setError(null)}>
                 {error}
               </Alert>
             )}
 
-            <AdminField className="tw:mb-4" controlId="member-name">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
-                {m.registration_name()} *
-              </AdminLabel>
+            <AdminField className="mb-4" controlId="member-name">
+              <AdminLabel className="text-subtle text-sm">{m.registration_name()} *</AdminLabel>
               <form.Field
                 name="name"
                 validators={[
@@ -178,7 +176,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                     <>
                       <AdminInput
                         type="text"
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         maxLength={200}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -192,12 +190,10 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               </form.Field>
             </AdminField>
 
-            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mb-4">
-              <div className="tw:w-full tw:site-md:w-6/12">
+            <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mb-4">
+              <div className="w-full site-md:w-6/12">
                 <AdminField controlId="member-email">
-                  <AdminLabel className="tw:text-subtle tw:text-sm">
-                    {m.registration_email()}
-                  </AdminLabel>
+                  <AdminLabel className="text-subtle text-sm">{m.registration_email()}</AdminLabel>
                   <form.Field
                     name="email"
                     validators={[
@@ -216,7 +212,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                         <>
                           <AdminInput
                             type="email"
-                            className="tw:bg-muted tw:text-content tw:border-input"
+                            className="bg-muted text-content border-input"
                             maxLength={200}
                             value={field.value}
                             onChange={(e) => field.handleChange(e.target.value)}
@@ -230,16 +226,14 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                   </form.Field>
                 </AdminField>
               </div>
-              <div className="tw:w-full tw:site-md:w-6/12">
+              <div className="w-full site-md:w-6/12">
                 <AdminField controlId="member-phone">
-                  <AdminLabel className="tw:text-subtle tw:text-sm">
-                    {m.registration_phone()}
-                  </AdminLabel>
+                  <AdminLabel className="text-subtle text-sm">{m.registration_phone()}</AdminLabel>
                   <form.Field name="phone">
                     {(field) => (
                       <AdminInput
                         type="tel"
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         maxLength={50}
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
@@ -253,7 +247,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
 
             <form.Field name="preferredLanguage">
               {(field) => (
-                <AdminField className="tw:mb-4" controlId="member-preferred-language">
+                <AdminField className="mb-4" controlId="member-preferred-language">
                   <AdminLabel>{m.registration_preferred_language()}</AdminLabel>
                   <AdminSelect
                     value={field.value ?? ""}
@@ -269,15 +263,15 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 </AdminField>
               )}
             </form.Field>
-            <AdminField className="tw:mb-4" controlId="member-club">
-              <AdminLabel className="tw:text-sm tw:font-semibold tw:text-highlight">
+            <AdminField className="mb-4" controlId="member-club">
+              <AdminLabel className="text-sm font-semibold text-highlight">
                 {m.admin_people_club_name_label()}
               </AdminLabel>
               <form.Field name="clubName">
                 {(field) => (
                   <AdminInput
                     type="text"
-                    className="tw:bg-muted tw:text-content tw:border-input tw:border-warning"
+                    className="bg-muted text-content border-input border-warning"
                     maxLength={200}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -287,15 +281,15 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               </form.Field>
             </AdminField>
 
-            <AdminField className="tw:mb-4" controlId="member-address">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
+            <AdminField className="mb-4" controlId="member-address">
+              <AdminLabel className="text-subtle text-sm">
                 {m.admin_people_address_label()}
               </AdminLabel>
               <form.Field name="address">
                 {(field) => (
                   <AdminInput
                     type="text"
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     maxLength={300}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -305,15 +299,13 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               </form.Field>
             </AdminField>
 
-            <AdminField className="tw:mb-4" controlId="member-notes">
-              <AdminLabel className="tw:text-subtle tw:text-sm">
-                {m.registration_notes()}
-              </AdminLabel>
+            <AdminField className="mb-4" controlId="member-notes">
+              <AdminLabel className="text-subtle text-sm">{m.registration_notes()}</AdminLabel>
               <form.Field name="notes">
                 {(field) => (
                   <AdminTextarea
                     rows={4}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     maxLength={2000}
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -328,7 +320,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 <AdminCheck
                   type="switch"
                   id="member-active"
-                  className="tw:text-subtle"
+                  className="text-subtle"
                   label={m.admin_people_active_label()}
                   checked={field.value}
                   onCheckedChange={(e) => field.handleChange(e)}
@@ -344,12 +336,12 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             <Button variant="warning" type="submit" disabled={isSubmitting || !nameValue?.trim()}>
               {isSubmitting ? (
                 <>
-                  <Spinner size="sm" className="tw:me-2" />
+                  <Spinner size="sm" className="me-2" />
                   {m.admin_save()}
                 </>
               ) : (
                 <>
-                  <Icon icon={CircleCheckIcon} className="tw:me-1" />
+                  <Icon icon={CircleCheckIcon} className="me-1" />
                   {m.admin_people_save()}
                 </>
               )}

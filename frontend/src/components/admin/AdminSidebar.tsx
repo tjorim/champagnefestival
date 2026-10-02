@@ -367,7 +367,7 @@ export default function AdminSidebar({
               {canManageAdminSections ? m.admin_role_admin() : m.admin_role_volunteer()}
             </span>
           </div>
-          <div className="tw:flex tw:gap-2">
+          <div className="flex gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -376,7 +376,7 @@ export default function AdminSidebar({
               title={m.admin_refresh()}
               aria-label={m.admin_refresh()}
             >
-              <Icon icon={RotateCwIcon} className={clsx(isAnyFetching && "tw:animate-spin")} />
+              <Icon icon={RotateCwIcon} className={clsx(isAnyFetching && "animate-spin")} />
             </Button>
             {/* Labeled, not icon-only: this sits next to Refresh and is destructive
                 (it ends the session and discards loaded work), so it must not be a
@@ -384,7 +384,7 @@ export default function AdminSidebar({
             <Button
               variant="outline-danger"
               size="sm"
-              className="tw:grow"
+              className="grow"
               onClick={onLogout}
               disabled={isSigningOut}
               title={m.admin_logout()}
