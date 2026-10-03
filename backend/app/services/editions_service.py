@@ -30,6 +30,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
+from app.database import violated_constraint_name
 from app.models import Edition, Event, Exhibitor, Venue
 from app.schemas import EditionCreate, EditionScratchpadUpdate, EditionType, EditionUpdate
 from app.services.public_render_cache import notify_render_cache_invalidate
@@ -125,27 +126,26 @@ async def deactivate_conflicting_editions(
 
 
 async def commit_or_conflict(db: AsyncSession) -> None:
-    """Commit, translating a ``uq_editions_active_type`` violation into a 409.
+    """Queue the render-cache invalidation and commit, translating a
+    ``uq_editions_active_type`` violation into a 409.
 
     A concurrent activation of two editions of the same type can race past
     `deactivate_conflicting_editions` with nothing to lock; see that function's
-    docstring. Other integrity violations reaching this commit — a duplicate id
-    slipping past `create_edition`'s existence check, or a venue/co-organizer
-    deleted concurrently with this request — are re-raised as-is for
+    docstring. The violation surfaces at the first flush of the pending insert or
+    update — which ``notify_render_cache_invalidate``'s ``db.execute`` triggers
+    via autoflush — or at commit, so both sit inside the guarded block. Other
+    integrity violations reaching it — a duplicate id slipping past
+    `create_edition`'s existence check, or a venue/co-organizer deleted
+    concurrently with this request — are re-raised as-is for
     ``app.main.integrity_error_handler`` to report accurately instead of being
     misreported as this specific conflict.
     """
     try:
+        await notify_render_cache_invalidate(db)
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
-        # SQLAlchemy's asyncpg dialect wraps the driver error in a fresh exception
-        # that only copies pgcode/sqlstate, not asyncpg's richer diagnostics — but
-        # it chains the original via `raise ... from error`, so the real
-        # `asyncpg.exceptions.UniqueViolationError` (with `constraint_name`) is
-        # reachable through `__cause__`.
-        constraint = getattr(getattr(exc.orig, "__cause__", None), "constraint_name", None)
-        if constraint != "uq_editions_active_type":
+        if violated_constraint_name(exc) != "uq_editions_active_type":
             raise
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -395,7 +395,6 @@ async def create_edition(db: AsyncSession, *, body: EditionCreate, actor: str, r
         request_id=request_id,
         details=details,
     )
-    await notify_render_cache_invalidate(db)
     await commit_or_conflict(db)
     edition = await get_edition_or_404(db, edition.id)
     return await edition_payload(db, edition, active_only=False)
@@ -470,7 +469,6 @@ async def apply_edition_update(
         request_id=request_id,
         details=details,
     )
-    await notify_render_cache_invalidate(db)
     await commit_or_conflict(db)
     edition = await get_edition_or_404(db, edition.id)
     return await edition_payload(db, edition, active_only=False)
