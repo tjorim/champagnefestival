@@ -298,14 +298,14 @@ def matches_order_filters(
             continue
         try:
             quantity = max(int(item.get("quantity", 0) or 0), 0)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             quantity = 0
         delivered_quantity = item.get("delivered_quantity")
         if delivered_quantity is None:
             delivered_quantity = quantity if item.get("delivered", False) else 0
         try:
             delivered_quantity = max(min(int(delivered_quantity or 0), quantity), 0)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             delivered_quantity = 0
         if delivery_state == "pending" and delivered_quantity >= quantity:
             continue

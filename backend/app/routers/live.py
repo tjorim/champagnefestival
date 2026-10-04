@@ -39,7 +39,7 @@ async def _sse_generator(
     edition_id: str | None,
     event_id: str | None,
     heartbeat_interval: float,
-) -> AsyncGenerator[str, None]:
+) -> AsyncGenerator[str]:
     async with live_bus.subscribe() as queue:
         yield 'event: ready\ndata: {"ok":true}\n\n'
         loop = asyncio.get_running_loop()

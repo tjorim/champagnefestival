@@ -12,6 +12,7 @@ from datetime import timedelta
 
 import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import IdempotencyKey, Layout, Room, Table, TableType
 from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VENUE_PAYLOAD, event_for_room
@@ -370,6 +371,53 @@ async def test_bulk_create_tables_idempotency_key_replays_result(client):
 
     r = await client.get("/api/tables", params={"layout_id": layout_id}, headers=ADMIN_HEADERS)
     assert len(r.json()) == 1
+
+
+@pytest.mark.anyio
+async def test_bulk_create_tables_concurrent_first_use_of_idempotency_key_conflicts_cleanly(
+    client, engine, monkeypatch
+):
+    """A competing request committing the same key after our check surfaces as the
+    idempotency ConflictError, not the generic constraint error.
+
+    SQLAlchemy 2.1 autoflushes raw ``NOTIFY`` executes, so the staged idempotency row
+    must not be pending while ``notify_live_event`` runs — otherwise the unique
+    violation fires there, outside ``commit_with_idempotency_guard``.
+    """
+    venue_id = await _create_venue(client)
+    room_id = await _create_room(client, venue_id)
+    table_type_id = await _create_table_type(client, venue_id)
+    layout_id = await _create_layout(client, room_id)
+
+    from app.services import tables_service
+
+    original_check = tables_service.check_idempotency_key
+
+    async def check_then_lose_race(db, *, scope, key, actor, request_hash):
+        result = await original_check(db, scope=scope, key=key, actor=actor, request_hash=request_hash)
+        async with async_sessionmaker(engine, expire_on_commit=False)() as other:
+            other.add(
+                IdempotencyKey(
+                    id="idem-competitor",
+                    scope=scope,
+                    key=key,
+                    actor=actor,
+                    request_hash=request_hash,
+                    response_body={"items": []},
+                )
+            )
+            await other.commit()
+        return result
+
+    monkeypatch.setattr(tables_service, "check_idempotency_key", check_then_lose_race)
+
+    body = {
+        "items": [{"name": "Table A", "table_type_id": table_type_id, "layout_id": layout_id}],
+        "idempotency_key": "table-race-key",
+    }
+    r = await client.post("/api/tables/bulk", json=body, headers=ADMIN_HEADERS)
+    assert r.status_code == 409, r.text
+    assert "concurrent request" in r.json()["detail"]
 
 
 # ---------------------------------------------------------------------------

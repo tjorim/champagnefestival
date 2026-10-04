@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from datetime import UTC, date, datetime
-from typing import Any, TypeVar
+from typing import Any
 
 from fastapi import HTTPException
 from fastmcp.exceptions import ToolError
@@ -18,9 +18,6 @@ from app.services.errors import ServiceError
 ROLE_ADMIN = "admin"
 ROLE_VOLUNTEER = "volunteer"
 ROLE_PUBLIC = "public"
-
-T = TypeVar("T")
-SchemaT = TypeVar("SchemaT", bound=BaseModel)
 
 
 class MCPToolError(ValueError, ToolError):
@@ -46,7 +43,7 @@ class MCPToolError(ValueError, ToolError):
         self.log_level = logging.ERROR
 
 
-async def get_or_error(db: AsyncSession, model: type[T], object_id: Any, message: str) -> T:
+async def get_or_error[T](db: AsyncSession, model: type[T], object_id: Any, message: str) -> T:
     """Return the row with primary key ``object_id``, or raise ``MCPToolError``.
 
     MCP-context equivalent of ``app.utils.get_or_404`` — tools have no HTTP
@@ -59,7 +56,7 @@ async def get_or_error(db: AsyncSession, model: type[T], object_id: Any, message
     return obj
 
 
-def validate_with_schema(schema_cls: type[SchemaT], **kwargs: Any) -> SchemaT:
+def validate_with_schema[SchemaT: BaseModel](schema_cls: type[SchemaT], **kwargs: Any) -> SchemaT:
     """Construct *schema_cls* (one of the REST ``app.schemas`` Create/Update models) from kwargs.
 
     MCP tools take plain typed parameters rather than a parsed request body, so this is
@@ -183,7 +180,7 @@ def order_item_dict(item: Any) -> dict:
         item = {}
     try:
         quantity = int(item.get("quantity", 0))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         quantity = 0
     quantity = max(quantity, 0)
 
@@ -194,7 +191,7 @@ def order_item_dict(item: Any) -> dict:
     else:
         try:
             delivered_quantity = int(delivered_quantity_raw)
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             delivered_quantity = 0
     delivered_quantity = max(0, min(delivered_quantity, quantity))
     remaining_quantity = quantity - delivered_quantity

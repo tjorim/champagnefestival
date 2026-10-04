@@ -89,7 +89,7 @@ if settings.sentry_dsn:
 
 
 @asynccontextmanager
-async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None]:
     # Startup
     logger.info("=" * 60)
     logger.info("Champagnefestival API — starting up")
