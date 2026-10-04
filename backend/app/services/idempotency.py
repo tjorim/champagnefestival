@@ -31,6 +31,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.database import violated_constraint_name
 from app.models import IdempotencyKey
 from app.services.errors import ConflictError
 from app.utils import make_id
@@ -109,19 +110,14 @@ _IDEMPOTENCY_CONSTRAINT_NAME = "uq_idempotency_keys_scope_key"
 def _violates_idempotency_constraint(exc: IntegrityError) -> bool:
     """Best-effort check that ``exc`` is specifically the (scope, key) unique violation.
 
-    Constraint-name attribute access differs by DB-API driver (e.g. asyncpg
-    nests it under ``exc.orig.__cause__``, psycopg exposes it via
-    ``exc.orig.diag``); fall back to a substring check of the rendered
-    exception so an unrecognised driver shape still classifies correctly
-    rather than silently mismatching every commit-time IntegrityError as an
-    idempotency conflict.
+    Falls back to a substring check of the rendered exception when the driver
+    doesn't report a constraint name, so an unrecognised driver shape still
+    classifies correctly rather than silently mismatching every commit-time
+    IntegrityError as an idempotency conflict.
     """
-    for candidate in (
-        getattr(getattr(exc.orig, "__cause__", None), "constraint_name", None),
-        getattr(exc.orig, "constraint_name", None),
-    ):
-        if candidate is not None:
-            return candidate == _IDEMPOTENCY_CONSTRAINT_NAME
+    candidate = violated_constraint_name(exc)
+    if candidate is not None:
+        return candidate == _IDEMPOTENCY_CONSTRAINT_NAME
     return _IDEMPOTENCY_CONSTRAINT_NAME in str(exc)
 
 

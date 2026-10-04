@@ -736,6 +736,51 @@ class TestCreateMcpServer:
             assert item["access"] == {"role": tool_required_role(item["name"])}
 
     @pytest.mark.anyio
+    async def test_call_tool_proxy_runs_tool_visible_to_caller(self):
+        # Positive control for the refusals below: the proxy itself works.
+        mcp = create_mcp_server(session_factory=MagicMock())
+        result = await mcp.call_tool("call_tool", {"name": "whoami", "arguments": {}})
+
+        assert result.structured_content is not None
+        assert result.structured_content["role"] == "public"
+
+    @pytest.mark.anyio
+    @pytest.mark.parametrize(
+        "hidden_name",
+        [
+            "find_guest",  # volunteer-only
+            "create_venue",  # admin-only
+            "does_not_exist",
+            "search_tools",  # synthetic tools are not proxyable
+            "call_tool",
+        ],
+    )
+    async def test_call_tool_proxy_refuses_tools_outside_caller_catalog(self, hidden_name):
+        # The proxy only reaches tools the caller could discover via search_tools,
+        # so an anonymous caller cannot use it to run volunteer/admin tools.
+        mcp = create_mcp_server(session_factory=MagicMock())
+
+        with pytest.raises(ToolError):
+            await mcp.call_tool("call_tool", {"name": hidden_name, "arguments": {}})
+
+    @pytest.mark.anyio
+    async def test_search_tools_finds_seating_and_floor_plan_tools_by_plain_language(self):
+        # Regression for docstring keywords: BM25 only matches words present in
+        # the tool text, so these phrasings must stay discoverable. Ranked over
+        # the full catalog because the anonymous catalog hides non-public tools.
+        from fastmcp.server.transforms.search import BM25SearchTransform
+
+        mcp = create_mcp_server(session_factory=MagicMock())
+        tools = [t for t in await mcp.local_provider.list_tools() if t.name != "whoami"]
+        transform = BM25SearchTransform(max_results=10)
+
+        seating = await transform._search(tools, "who is seated at table 12")
+        assert "get_table_seating" in [t.name for t in seating]
+
+        moving = await transform._search(tools, "move a table on the floor plan")
+        assert "update_table" in [t.name for t in moving]
+
+    @pytest.mark.anyio
     async def test_search_tools_supports_unicode_tokens(self):
         from fastmcp import FastMCP
         from fastmcp.server.transforms.search import BM25SearchTransform

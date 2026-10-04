@@ -18,8 +18,10 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 ### Changed
 
 - The frontend no longer ships Bootstrap, react-bootstrap or bootstrap-icons. Tailwind preflight replaces Bootstrap's reboot, utilities are unprefixed and no longer `!important`, and all owned, theme and vendor CSS now sits in cascade layers beneath the utilities (`docs/decisions/1111-bootstrap-removal.md`). Runtime themes publish light/dark only through `data-theme-mode`; `data-bs-theme` is gone. Server-rendered `/` and `/privacy` fragments carry inline layout instead of Bootstrap's `container py-5` (#1111)
+- MCP tool discovery is easier for agents: the server instructions now explain the `search_tools` → `call_tool` flow, and the `get_table_seating` and `update_table` descriptions include plain-language phrasing ("who is seated at table N", "move a table on the floor plan") so `search_tools` finds them
 - The outbox worker no longer performs the daily cleanup sweep. Terminal outbox jobs, stale rate-limit buckets, expired visitor sessions and magic links, and stale push subscriptions are now removed by `python -m app.maintenance housekeeping`, which the VPS schedules daily (tjorim/apps). Retention settings are unchanged. Deployments that run the worker without that timer no longer clean these tables
 - `GET /api/mcp/capabilities` now follows the shared MCP capability contract v1: a top-level `contract_version`, plus `requires_confirmation` and an `access` object (`{"role": ...}`) on every tool. `compare_layout_revisions` and `preview_layout_restore`, which only read data, are now reported as `read` instead of `write` (tjorim/apps#229)
+- **Breaking for local development:** the backend now requires Python 3.14 (`requires-python >=3.14`), matching the production image; backend CI and the release workflow run on 3.14 too, and ruff targets `py314`. Upgraded SQLAlchemy to 2.1, which needs the `sqlalchemy[asyncio]` extra
 
 ## [2026.8.2] - 2026-08-01
 

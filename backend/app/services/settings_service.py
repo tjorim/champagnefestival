@@ -15,6 +15,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.database import violated_constraint_name
 from app.models import AppSettings
 from app.schemas import AppSettingsUpdate
 from app.utils import app_settings_to_dict
@@ -50,7 +51,7 @@ async def get_or_create_settings(db: AsyncSession) -> AppSettings:
         # mirrors editions_service.commit_or_conflict's constraint-name check
         # for the same reason: anything else must propagate as-is rather than
         # being misreported as a settings-row race.
-        constraint = getattr(getattr(exc.orig, "__cause__", None), "constraint_name", None)
+        constraint = violated_constraint_name(exc)
         if constraint != "app_settings_pkey":
             raise
         settings = await db.get(AppSettings, _SETTINGS_ID)

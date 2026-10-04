@@ -10,15 +10,15 @@ name = "champagnefestival-backend"
 # (see app/version.py) and is what app/main.py, the frontend, and Android use.
 version = "0.0.0"
 description = "FastAPI backend for the Champagnefestival reservation system"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
   "alembic==1.20.0",
   "asyncpg==0.31.0",
-  "fastapi==0.141.1",
-  "fastmcp==4.0.5",
+  "fastapi==0.142.0",
+  "fastmcp==4.0.10",
   "httpx==0.28.1",
   "limits==5.8.0",
-  "phonenumbers==9.0.39",
+  "phonenumbers==9.0.40",
   "psycopg[binary]==3.3.6",
   "pydantic[email]==2.13.5",
   "pydantic-settings==2.15.0",
@@ -27,18 +27,18 @@ dependencies = [
   "python-multipart==0.0.32",
   "qrcode[pil]==8.2",
   "slowapi==0.1.10",
-  "sqlalchemy==2.0.54",
-  "uvicorn[standard]==0.53.0",
+  "sqlalchemy[asyncio]==2.1.1",
+  "uvicorn[standard]==0.54.0",
   "markdown-it-py==4.2.0",
   "nh3==0.3.7",
   "pywebpush>=2.5.0",
 ]
 
 [project.optional-dependencies]
-sentry = ["sentry-sdk[fastapi]==2.70.0"]
+sentry = ["sentry-sdk[fastapi]==2.71.0"]
 
 [dependency-groups]
-dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "anyio==4.15.1", "ruff==0.16.8", "ty==0.0.83"]
+dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "anyio==4.15.1", "ruff==0.16.9", "ty==0.0.84"]
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]
@@ -52,7 +52,7 @@ markers = ["anyio: marks tests as anyio-compatible (no-op under asyncio_mode=aut
 testpaths = ["tests"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py314"
 line-length = 120
 
 [tool.ruff.lint]
@@ -64,22 +64,3 @@ known-first-party = ["app"]
 
 [tool.ty.rules]
 unresolved-attribute = "warn"
-
-[tool.uv]
-# fastmcp is intentionally pinned to a prerelease (still pre-1.0 during its
-# v4 beta cycle) and exact-requires a matching prerelease of fastmcp-slim, a
-# transitive dependency — uv's default prerelease mode doesn't treat that
-# transitive requirement as "explicit" consistently across every resolution
-# fork, breaking specifically in the `python_full_version >= '3.14'` fork
-# (this project's actual Docker runtime — see backend/Dockerfile) whenever
-# fastmcp moves to a newer prerelease, which is exactly the update
-# Dependabot needs to propose.
-#
-# `prerelease = "explicit"` plus this open-ended constraint (not an exact
-# pin) scopes prerelease-allowance to fastmcp-slim only — every other
-# dependency still rejects prereleases — without going stale the way an
-# exact-pinned constraint did (Dependabot only bumps the `dependencies`
-# entry it's targeting, not a hand-pinned version here). Drop both lines
-# once fastmcp reaches a stable 4.0.0 release.
-prerelease = "explicit"
-constraint-dependencies = ["fastmcp-slim>=4.0.0a1"]

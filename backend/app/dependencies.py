@@ -1,11 +1,9 @@
 """Shared FastAPI dependencies."""
 
-from typing import Any, TypeVar
+from typing import Any
 
 from fastapi import HTTPException, Query, Request, status
 from sqlalchemy.sql import Select
-
-SelectT = TypeVar("SelectT", bound=Select[Any])
 
 
 def get_request_id(request: Request) -> str | None:
@@ -35,7 +33,7 @@ class Pagination:
         self.limit = limit
 
 
-def apply_pagination(stmt: SelectT, pagination: Pagination) -> SelectT:
+def apply_pagination[SelectT: Select[Any]](stmt: SelectT, pagination: Pagination) -> SelectT:
     """Apply offset/limit pagination only when a limit is provided."""
     if pagination.limit is not None:
         return stmt.offset((pagination.page - 1) * pagination.limit).limit(pagination.limit)
