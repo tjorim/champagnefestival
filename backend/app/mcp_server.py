@@ -309,7 +309,8 @@ class ChampagneFestivalMcpBackend:
     async def get_table_seating(self, table_id: str | None = None) -> dict:
         """Return seating information for a table, or all tables for the active edition.
 
-        Shows which guests are assigned to each table and their check-in status.
+        Answers "who is seated at table N" and "who sits where": shows which guests are
+        assigned to each table and their check-in status.
         Requires the ``volunteer`` or ``admin`` role.
 
         Parameters
@@ -715,7 +716,9 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update a table; omitted fields are left unchanged. Requires the ``admin`` role.
 
-        See ``create_table`` for the ``x``/``y``/``rotation`` coordinate contract.
+        Use it to move, reposition or rotate a table on the floor plan, rename it, or
+        change its table type or layout. See ``create_table`` for the ``x``/``y``/
+        ``rotation`` coordinate contract.
         """
         self._require_admin()
         return await mcp_admin_tables.update_table(
@@ -2015,8 +2018,9 @@ def create_mcp_server(
             "'volunteer' or 'admin' role. Admins additionally get full write/management "
             "parity with the admin REST API: editions, events, venues, rooms, table types, "
             "tables, layouts, areas, FAQ, settings, exhibitors, people, members, volunteers, "
-            "registrations, and the audit trail. Use search_tools for natural language "
-            "tool discovery."
+            "registrations, and the audit trail. Most tools are hidden: describe what you "
+            "need to search_tools, then run the tool it returns with call_tool (name plus "
+            "arguments). Only tools your role may use are returned."
         ),
         auth=auth,
         version=APP_VERSION,
