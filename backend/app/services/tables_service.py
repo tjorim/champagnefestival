@@ -152,13 +152,16 @@ async def bulk_create_tables(
     await db.execute(select(Table).where(Table.id.in_([t.id for t in rows])))
     # New tables have no reservations yet.
     response = {"items": [table_to_dict(t, [], capacity=table_types[t.table_type_id].capacity) for t in rows]}
-    if idempotency_key:
-        record_idempotency_key(
-            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
-        )
+    # Notify before staging the idempotency row: the notify's execute autoflushes
+    # (SQLAlchemy 2.1), and a unique violation on that row must surface at the
+    # commit below, inside commit_with_idempotency_guard, not here.
     for t in rows:
         await _notify_seating_changed(
             db, action="created", table_id=t.id, edition_id=layout_edition_by_id.get(t.layout_id)
+        )
+    if idempotency_key:
+        record_idempotency_key(
+            db, scope=_BULK_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash, response_body=response
         )
     await commit_with_idempotency_guard(db, idempotency_key=idempotency_key)
     return response

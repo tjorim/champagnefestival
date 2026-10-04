@@ -217,6 +217,10 @@ async def test_deleting_a_booking_with_ledger_entries_is_rejected(client):
 
     r = await client.delete(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 409, r.text
+    # The specific message, not the generic one from app.main.integrity_error_handler:
+    # the FK violation must surface inside delete_registration's guarded commit even
+    # though SQLAlchemy 2.1 autoflushes at the notify_live_event() that precedes it.
+    assert "payment transactions" in r.json()["detail"]
 
 
 @pytest.mark.anyio

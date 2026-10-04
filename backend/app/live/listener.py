@@ -97,7 +97,7 @@ class PgLiveListener:
         """
         try:
             event = LiveEvent.from_notify_payload(payload)
-        except (KeyError, ValueError, TypeError):
+        except KeyError, ValueError, TypeError:
             logger.warning("Live bus: dropped malformed NOTIFY payload: %r", payload)
             return
         await live_bus.publish(event)

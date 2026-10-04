@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncGenerator
 
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -24,6 +25,17 @@ engine = create_async_engine(
     # echo=True,  # uncomment for SQL query logging during development
 )
 
+
+def violated_constraint_name(exc: DBAPIError) -> str | None:
+    """Name of the constraint behind an integrity error, as reported by the driver.
+
+    SQLAlchemy 2.1's asyncpg dialect wraps the driver error in an emulated DBAPI
+    exception that doesn't carry ``constraint_name``; ``driver_exception`` is the
+    supported accessor for the real ``asyncpg`` error.
+    """
+    return getattr(exc.driver_exception, "constraint_name", None)
+
+
 async_session_factory = async_sessionmaker(
     engine,
     expire_on_commit=False,
@@ -34,7 +46,7 @@ class Base(DeclarativeBase):
     pass
 
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
+async def get_db() -> AsyncGenerator[AsyncSession]:
     """FastAPI dependency that yields a database session."""
     async with async_session_factory() as session:
         yield session

@@ -10,7 +10,7 @@ name = "champagnefestival-backend"
 # (see app/version.py) and is what app/main.py, the frontend, and Android use.
 version = "0.0.0"
 description = "FastAPI backend for the Champagnefestival reservation system"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
   "alembic==1.20.0",
   "asyncpg==0.31.0",
@@ -27,7 +27,7 @@ dependencies = [
   "python-multipart==0.0.32",
   "qrcode[pil]==8.2",
   "slowapi==0.1.10",
-  "sqlalchemy==2.0.54",
+  "sqlalchemy[asyncio]==2.1.1",
   "uvicorn[standard]==0.54.0",
   "markdown-it-py==4.2.0",
   "nh3==0.3.7",
@@ -52,7 +52,7 @@ markers = ["anyio: marks tests as anyio-compatible (no-op under asyncio_mode=aut
 testpaths = ["tests"]
 
 [tool.ruff]
-target-version = "py311"
+target-version = "py314"
 line-length = 120
 
 [tool.ruff.lint]

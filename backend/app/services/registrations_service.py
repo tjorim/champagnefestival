@@ -468,16 +468,18 @@ async def delete_registration(
         details={"event_id": event_id},
     )
     await db.delete(registration)
-    await notify_live_event(
-        db,
-        live_mapping.registration_changed(
-            action="deleted",
-            registration_id=reg_id,
-            event_id=event_id,
-            edition_id=edition_id,
-        ),
-    )
     try:
+        # Inside the guard: notify_live_event's execute autoflushes the pending
+        # DELETE (SQLAlchemy 2.1), which is where the RESTRICT violation fires.
+        await notify_live_event(
+            db,
+            live_mapping.registration_changed(
+                action="deleted",
+                registration_id=reg_id,
+                event_id=event_id,
+                edition_id=edition_id,
+            ),
+        )
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()

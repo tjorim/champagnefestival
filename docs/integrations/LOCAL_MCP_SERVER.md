@@ -19,7 +19,7 @@ people, members, volunteers, registrations, and read access to the audit trail. 
 
 ## Prerequisites
 
-- Python 3.13+
+- Python 3.14+
 - [`uv`](https://docs.astral.sh/uv/) (recommended) or pip
 - A running PostgreSQL database with the Champagnefestival schema
 - Environment variables (copy `backend/.env.example` → `backend/.env` and fill in at minimum `DATABASE_URL`)
