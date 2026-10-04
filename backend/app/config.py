@@ -318,7 +318,7 @@ class Settings(BaseSettings):
         return data
 
     @model_validator(mode="after")
-    def validate_production_oidc(self) -> "Settings":
+    def validate_production_oidc(self) -> Settings:
         """Refuse to start in production without OIDC issuer URL and trusted hosts."""
         if self.environment == "production":
             if not self.oidc_issuer_url:
@@ -330,7 +330,7 @@ class Settings(BaseSettings):
         return self
 
     @model_validator(mode="after")
-    def validate_production_no_dev_bypass(self) -> "Settings":
+    def validate_production_no_dev_bypass(self) -> Settings:
         """Refuse to start with DEV_AUTH_BYPASS_TOKEN set outside development.
 
         Makes it structurally impossible for the auth bypass to be both

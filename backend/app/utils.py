@@ -6,7 +6,7 @@ import secrets
 import time
 from collections.abc import Sequence
 from datetime import date
-from typing import Any, TypeVar
+from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import Text, cast
@@ -30,8 +30,6 @@ from app.models import (
     TableType,
     Venue,
 )
-
-T = TypeVar("T", bound=Base)
 
 _CSV_INJECTION_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n")
 
@@ -66,7 +64,7 @@ def normalise_table_type_dimensions(shape: str, width_m: float, length_m: float)
     return width_m, length_m
 
 
-async def get_or_404(
+async def get_or_404[T: Base](
     db: AsyncSession,
     model: type[T],
     object_id: Any,
