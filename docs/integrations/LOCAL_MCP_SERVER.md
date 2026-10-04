@@ -267,6 +267,21 @@ flat `required_role` key has been removed from both the manifest and the search 
 
 ---
 
+### Tool failures
+
+Every failed tool call reaches the agent as a tool error it can act on (`app/mcp/middleware.py`):
+
+| Failure | What the agent sees |
+| --- | --- |
+| Unknown tool, or one outside the caller's role (direct or via `call_tool`) | `Unknown tool 'x'. Use search_tools …` — the same text either way, so a restricted tool's existence is not revealed |
+| Invalid arguments | `Invalid arguments for 'x': field: reason …` — field paths and constraint messages only, never the submitted values |
+| Domain error (`MCPToolError`) | The sanitized message, unchanged |
+| Anything unexpected | `Tool 'x' failed unexpectedly (ExceptionType) … request id <id>` — no exception details |
+
+The request id is logged with the traceback (unexpected errors) or the failing field paths
+(validation errors), so an operator can find the cause from the id alone. `whoami` and
+`get_active_edition` are listed directly; everything else is discovered with `search_tools`.
+
 ## Delivery state note
 
 Champagne delivery is currently tracked per order **line** (a boolean `delivered` flag), not per individual bottle. The delivery tools report:

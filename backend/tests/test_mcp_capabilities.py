@@ -249,8 +249,8 @@ async def test_component_auth_hides_non_public_tools_without_role_claims():
     visible = {tool.name for tool in await mcp.list_tools()}
 
     # With BM25SearchTransform, only always_visible tools that pass auth plus synthetic tools are listed.
-    # Only whoami plus the synthetic discovery tools remain initially visible.
-    assert visible == {"whoami", "search_tools", "call_tool"}
+    # Only the public entry tools plus the synthetic discovery tools remain initially visible.
+    assert visible == {"whoami", "get_active_edition", "search_tools", "call_tool"}
 
 
 def test_unknown_tools_default_to_admin_component_authorization():

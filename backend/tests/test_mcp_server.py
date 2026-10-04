@@ -703,6 +703,7 @@ class TestCreateMcpServer:
         # current auth context are directly listed.
         expected = {
             "whoami",
+            "get_active_edition",
             "search_tools",
             "call_tool",
         }

@@ -69,6 +69,7 @@ from app.mcp.capabilities import (
     tool_annotations,
     tool_auth,
 )
+from app.mcp.middleware import ToolFailureMiddleware
 from app.schemas import (
     ROTATION_DESCRIPTION,
     X_POSITION_DESCRIPTION,
@@ -83,6 +84,14 @@ from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINU
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
+
+SEARCH_TOOL_NAME = "search_tools"
+CALL_TOOL_NAME = "call_tool"
+
+# Tools listed alongside search_tools/call_tool. whoami answers "which role am I?"
+# and get_active_edition is the anchor most sessions start from (the edition and
+# event ids every other tool takes); both are public and have tiny schemas.
+ALWAYS_VISIBLE_TOOLS = ["whoami", "get_active_edition"]
 
 # ---------------------------------------------------------------------------
 # Backend wrapper
@@ -2020,7 +2029,8 @@ def create_mcp_server(
             "tables, layouts, areas, FAQ, settings, exhibitors, people, members, volunteers, "
             "registrations, and the audit trail. Most tools are hidden: describe what you "
             "need to search_tools, then run the tool it returns with call_tool (name plus "
-            "arguments). Only tools your role may use are returned."
+            "arguments). Only tools your role may use are returned. whoami and "
+            "get_active_edition are always available directly."
         ),
         auth=auth,
         version=APP_VERSION,
@@ -2030,12 +2040,13 @@ def create_mcp_server(
         # that way — e.g. a raw driver `IntegrityError` — which would otherwise
         # have their full str() (SQL, row contents) embedded in the tool result.
         mask_error_details=True,
+        middleware=[ToolFailureMiddleware(search_tool_name=SEARCH_TOOL_NAME, call_tool_name=CALL_TOOL_NAME)],
         transforms=[
             BM25SearchTransform(
                 max_results=10,
-                always_visible=["whoami"],
-                search_tool_name="search_tools",
-                call_tool_name="call_tool",
+                always_visible=ALWAYS_VISIBLE_TOOLS,
+                search_tool_name=SEARCH_TOOL_NAME,
+                call_tool_name=CALL_TOOL_NAME,
                 search_result_serializer=_search_serializer,
             )
         ],
