@@ -208,3 +208,22 @@ export function createAdminCollectionLifecycle<
     isLatestEvent,
   };
 }
+
+/**
+ * Runs a write handler's API calls, then refetches explicitly (the implicit
+ * refetch after a handler is deprecated, so handlers return `{ refetch: false }`).
+ * If a call fails the write may or may not have committed, so the server state is
+ * refetched before the optimistic change is rolled back (see docs/retry-safety.md).
+ */
+export async function persistThenRefetch(
+  collection: { utils: { refetch: () => Promise<unknown> } },
+  persist: () => Promise<void>,
+): Promise<void> {
+  try {
+    await persist();
+  } catch (error) {
+    await collection.utils.refetch().catch(() => undefined);
+    throw error;
+  }
+  await collection.utils.refetch();
+}

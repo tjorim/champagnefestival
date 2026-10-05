@@ -4,14 +4,18 @@ import { describe, expect, it, vi } from "vitest";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
 import { server } from "@/mocks/server";
 import { createAdminTablesCollection } from "@/state/adminTablesCollection";
+import { createAdminVenueCollections } from "@/state/adminVenueCollections";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 describe("useVenueMutations", () => {
   it("wires create layout requests with the active edition", async () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
-    const invalidateQueries = vi
-      .spyOn(queryClient, "invalidateQueries")
-      .mockResolvedValue(undefined);
+    const venueCollections = createAdminVenueCollections({
+      queryClient,
+      authHeaders: () => ({}),
+      enabled: false,
+    });
+    const refetch = vi.spyOn(venueCollections.layouts.utils, "refetch").mockResolvedValue([]);
     const seen = {
       authorization: "",
       body: {} as Record<string, unknown>,
@@ -28,7 +32,6 @@ describe("useVenueMutations", () => {
     const { result } = renderHook(
       () =>
         useVenueMutations({
-          queryClient,
           authHeaders: () => ({
             "Content-Type": "application/json",
             Authorization: "Bearer test-token",
@@ -38,11 +41,7 @@ describe("useVenueMutations", () => {
             authHeaders: () => ({}),
             enabled: false,
           }),
-          venuesQueryKey: ["admin", "venues"],
-          roomsQueryKey: ["admin", "rooms"],
-          tableTypesQueryKey: ["admin", "table-types"],
-          layoutsQueryKey: ["admin", "layouts"],
-          areasQueryKey: ["admin", "areas"],
+          venueCollections,
         }),
       { wrapper: Wrapper },
     );
@@ -62,7 +61,7 @@ describe("useVenueMutations", () => {
       label: "Saturday evening",
     });
     await waitFor(() => {
-      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["admin", "layouts"] });
+      expect(refetch).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -25,6 +25,14 @@ describe("useAdminQueries invalidation rules", () => {
     expect(shouldRefetchAdminOnlyResourceQuery(queryKeys.admin.people)).toBe(false);
   });
 
+  it("leaves the venue group to its collections instead of standalone queries", () => {
+    for (const resource of ["venues", "rooms", "table-types", "layouts", "areas"]) {
+      expect(ADMIN_RESOURCE_KEYS).not.toContain(resource);
+      expect(shouldRefetchAdminResourceQuery(["admin", resource])).toBe(false);
+      expect(shouldRefetchAdminOnlyResourceQuery(["admin", resource])).toBe(false);
+    }
+  });
+
   it("can limit refetches to registration resources for non-admin users", () => {
     expect(
       shouldRefetchAdminResourceQuery(queryKeys.admin.registrations, { includeAdminOnly: false }),

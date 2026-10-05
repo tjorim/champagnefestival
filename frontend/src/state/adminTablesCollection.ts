@@ -5,6 +5,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import {
   createAdminCollection,
   createAdminCollectionLifecycle,
+  persistThenRefetch,
   type AdminCollectionSyncMode,
 } from "@/state/adminCollectionFactory";
 import {
@@ -36,25 +37,6 @@ interface CreateAdminTablesCollectionOptions {
  * not optimistic: the server assigns the id and the table type's capacity, so
  * `addAdminTable` calls the API first and then applies a direct write.
  */
-/**
- * Runs a write handler's API calls, then refetches explicitly (the implicit
- * refetch after a handler is deprecated, so handlers return `{ refetch: false }`).
- * If a call fails the write may or may not have committed, so the server state is
- * refetched before the optimistic change is rolled back (see docs/retry-safety.md).
- */
-async function persistThenRefetch(
-  collection: { utils: { refetch: () => Promise<unknown> } },
-  persist: () => Promise<void>,
-): Promise<void> {
-  try {
-    await persist();
-  } catch (error) {
-    await collection.utils.refetch().catch(() => undefined);
-    throw error;
-  }
-  await collection.utils.refetch();
-}
-
 export function createAdminTablesCollection({
   queryClient,
   authHeaders,

@@ -293,6 +293,45 @@ export async function deleteTable(
   );
 }
 
+/** The fields an admin can change on an existing area (the canvas edits, not the exhibitor assignment). */
+export type AreaUpdateChanges = Partial<
+  Pick<FloorArea, "label" | "x" | "y" | "rotation" | "widthM" | "lengthM">
+>;
+
+function areaUpdateErrorMessage(changes: AreaUpdateChanges): string {
+  if (changes.widthM !== undefined || changes.lengthM !== undefined) {
+    return m.admin_error_resize_area_status({ status: 500 });
+  }
+  if (changes.label !== undefined) return "Failed to persist area label.";
+  if (changes.rotation !== undefined) return m.admin_error_persist_area_rotation();
+  return m.admin_error_persist_area_position();
+}
+
+/** One `PUT` carrying only the changed fields (see `docs/retry-safety.md`: not retry safe). */
+export async function updateArea(
+  authHeaders: () => Record<string, string>,
+  areaId: string,
+  changes: AreaUpdateChanges,
+): Promise<void> {
+  const { label, x, y, rotation, widthM, lengthM } = changes;
+  await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/areas/${encodeURIComponent(areaId)}`,
+    {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        ...(label !== undefined ? { label } : {}),
+        ...(x !== undefined ? { x } : {}),
+        ...(y !== undefined ? { y } : {}),
+        ...(rotation !== undefined ? { rotation } : {}),
+        ...(widthM !== undefined ? { width_m: widthM } : {}),
+        ...(lengthM !== undefined ? { length_m: lengthM } : {}),
+      }),
+    },
+    areaUpdateErrorMessage(changes),
+  );
+}
+
 export async function fetchVenues(authHeaders: () => Record<string, string>): Promise<Venue[]> {
   const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
     "/api/venues",

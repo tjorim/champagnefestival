@@ -1,4 +1,3 @@
-import type { QueryClient } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
@@ -15,7 +14,7 @@ const authHeaders = () => ({
   Authorization: "Bearer ".concat("mock-access-token"),
 });
 
-function useAdminTables(queryClient: QueryClient) {
+function useAdminTables() {
   const queries = useAdminQueries({
     visible: true,
     isAuthenticated: true,
@@ -23,14 +22,9 @@ function useAdminTables(queryClient: QueryClient) {
     authHeaders,
   });
   const actions = useAdminVenueActions({
-    areasQueryKey: queries.areasQueryKey,
     authHeaders,
-    layoutsQueryKey: queries.layoutsQueryKey,
-    queryClient,
-    roomsQueryKey: queries.roomsQueryKey,
-    tableTypesQueryKey: queries.tableTypesQueryKey,
     tablesCollection: queries.tablesCollection,
-    venuesQueryKey: queries.venuesQueryKey,
+    venueCollections: queries.venueCollections,
   });
   return { queries, actions };
 }
@@ -53,10 +47,10 @@ function registrationEvent(registrationId: string): LiveEnvelope {
 }
 
 async function renderLoaded() {
-  const { queryClient, Wrapper } = createTestQueryClientHarness();
+  const { Wrapper } = createTestQueryClientHarness();
   const view = renderHook(
     () => {
-      return useAdminTables(queryClient);
+      return useAdminTables();
     },
     { wrapper: Wrapper },
   );
