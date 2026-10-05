@@ -110,6 +110,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const {
     registrationsQuery,
     tablesQuery,
+    tablesCollection,
     venuesQuery,
     roomsQuery,
     tableTypesQuery,
@@ -121,7 +122,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     isAnyPending,
     isAnyFetching,
     registrationsQueryKey,
-    tablesQueryKey,
     venuesQueryKey,
     roomsQueryKey,
     tableTypesQueryKey,
@@ -221,7 +221,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     authHeaders,
     queryClient,
     registrationsQueryKey,
-    tablesQueryKey,
     setDetailRegistration,
     setRegistrationError,
     confirmOverCapacity,
@@ -267,7 +266,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     queryClient,
     roomsQueryKey,
     tableTypesQueryKey,
-    tablesQueryKey,
+    tablesCollection,
     venuesQueryKey,
   });
 
@@ -311,11 +310,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // underlying query errors actually changes, not on every render.
   const dashboardQueryErrors = useMemo(
     (): (Error | null)[] => [
-      // registrationsQuery.error comes from the tanstack-db collection's
-      // lastError, typed loosely by the library; the other queries are plain
-      // react-query errors. Both are Error instances or null at runtime.
+      // registrationsQuery.error and tablesQuery.error come from the tanstack-db
+      // collections' lastError, typed loosely by the library; the other queries
+      // are plain react-query errors. Both are Error instances or null at runtime.
       registrationsQuery.error as Error | null,
-      tablesQuery.error,
+      tablesQuery.error as Error | null,
       venuesQuery.error,
       roomsQuery.error,
       tableTypesQuery.error,

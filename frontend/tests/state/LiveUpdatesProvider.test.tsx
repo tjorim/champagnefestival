@@ -33,6 +33,16 @@ vi.mock("@/state/adminRegistrationsCollection", () => ({
   patchAdminRegistrationLiveEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Table patching likewise needs a registered tables collection.
+let canPatchTable = false;
+const patchTable = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+
+vi.mock("@/state/adminTablesCollection", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/state/adminTablesCollection")>()),
+  canPatchAdminTableLiveEvent: () => canPatchTable,
+  patchAdminTableLiveEvent: patchTable,
+}));
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -56,6 +66,8 @@ function makeEnvelope(overrides: Partial<LiveEnvelope> = {}): LiveEnvelope {
 describe("LiveUpdatesProvider", () => {
   beforeEach(() => {
     canPatch = false;
+    canPatchTable = false;
+    patchTable.mockClear();
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -150,6 +162,88 @@ describe("LiveUpdatesProvider", () => {
     expect(spy).toHaveBeenCalledWith({
       queryKey: ["admin", "registrations", "checkin-stats"],
     });
+  });
+
+  it("does not touch the tables key for a registration's seating change", async () => {
+    capturedOptions = null;
+    const { queryClient, Wrapper } = createTestQueryClientHarness();
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+
+    render(<LiveUpdatesProvider />, { wrapper: Wrapper });
+    await waitFor(() => expect(capturedOptions).not.toBeNull());
+
+    act(() =>
+      capturedOptions!.onInvalidate(
+        makeEnvelope({
+          topic: "seating",
+          keys: [
+            ["admin", "registrations"],
+            ["admin", "tables"],
+          ],
+        }),
+      ),
+    );
+
+    // Occupancy is derived from the registrations, so only they are refreshed.
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "registrations"] });
+    expect(spy).not.toHaveBeenCalledWith({ queryKey: ["admin", "tables"] });
+    expect(patchTable).not.toHaveBeenCalled();
+  });
+
+  it("patches the tables collection for a table-scoped seating event", async () => {
+    capturedOptions = null;
+    canPatchTable = true;
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const Wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    queryClient.setQueryData(["admin", "tables"], []);
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+
+    render(<LiveUpdatesProvider />, { wrapper: Wrapper });
+    await waitFor(() => expect(capturedOptions).not.toBeNull());
+
+    const envelope = makeEnvelope({
+      topic: "seating",
+      scope: { edition_id: null, event_id: null, registration_id: null, table_id: "table-01" },
+      keys: [
+        ["admin", "registrations"],
+        ["admin", "tables"],
+      ],
+    });
+    act(() => capturedOptions!.onInvalidate(envelope));
+
+    expect(patchTable).toHaveBeenCalledWith(envelope, expect.any(Function));
+    expect(spy).not.toHaveBeenCalledWith({ queryKey: ["admin", "tables"] });
+    // The registrations key still has no registration to patch, so it is invalidated.
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "registrations"] });
+  });
+
+  it("falls back to invalidating the tables key when a table patch fails", async () => {
+    capturedOptions = null;
+    canPatchTable = true;
+    patchTable.mockRejectedValueOnce(new Error("fetch failed"));
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const Wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    queryClient.setQueryData(["admin", "tables"], []);
+    const spy = vi.spyOn(queryClient, "invalidateQueries");
+
+    render(<LiveUpdatesProvider />, { wrapper: Wrapper });
+    await waitFor(() => expect(capturedOptions).not.toBeNull());
+
+    act(() =>
+      capturedOptions!.onInvalidate(
+        makeEnvelope({
+          topic: "seating",
+          scope: { edition_id: null, event_id: null, registration_id: null, table_id: "table-01" },
+          keys: [["admin", "tables"]],
+        }),
+      ),
+    );
+
+    await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "tables"] }));
   });
 
   it("calls invalidateQueries for all live keys on reconnect", async () => {

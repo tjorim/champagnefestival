@@ -455,6 +455,25 @@ describe("LayoutEditor", () => {
     await waitFor(() => expect(callbacks.onDeleteTable).toHaveBeenCalledWith("table-1"));
   });
 
+  it("blocks deleting a table that still holds bookings", () => {
+    const fixture = realisticFixture();
+    fixture.tables = [makeTable({ registrationIds: ["reg-1"] }), fixture.tables[1]!];
+    const { callbacks } = renderLayoutEditor(fixture);
+
+    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+
+    const card = screen
+      .getByText("admin_table_label: Table A")
+      .closest('[data-slot="card"]') as HTMLElement;
+    const deleteButton = within(card).getByRole("button", { name: "admin_delete" });
+
+    expect(deleteButton).toBeDisabled();
+    expect(deleteButton).toHaveAttribute("title", "admin_layout_table_delete_blocked");
+    fireEvent.click(deleteButton);
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+    expect(callbacks.onDeleteTable).not.toHaveBeenCalled();
+  });
+
   it("does not delete a table when the confirm dialog is cancelled", async () => {
     const fixture = realisticFixture();
     const { callbacks } = renderLayoutEditor(fixture);

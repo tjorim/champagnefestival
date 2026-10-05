@@ -1,6 +1,6 @@
 import type {
   Room,
-  FloorTable,
+  FloorTableRecord,
   FloorArea,
   TableType,
   Layout,
@@ -142,8 +142,12 @@ export function apiRoomToRoom(d: Record<string, unknown>): Room {
   };
 }
 
-/** Map FastAPI snake_case table response to frontend camelCase Table type */
-export function apiTableToTable(d: Record<string, unknown>): FloorTable {
+/**
+ * Map a FastAPI snake_case table response to the stored table row. The
+ * response's `registration_ids` is deliberately ignored: occupancy is derived
+ * from the registrations collection rather than stored a second time.
+ */
+export function apiTableToTable(d: Record<string, unknown>): FloorTableRecord {
   return {
     eventId: d.event_id as string,
     id: d.id as string,
@@ -154,7 +158,6 @@ export function apiTableToTable(d: Record<string, unknown>): FloorTable {
     tableTypeId: d.table_type_id as string,
     rotation: (d.rotation ?? 0) as number,
     layoutId: d.layout_id as string,
-    registrationIds: (d.registration_ids as string[]) ?? [],
   };
 }
 

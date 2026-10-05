@@ -18,7 +18,8 @@ export interface TableType {
   active: boolean;
 }
 
-export interface FloorTable {
+/** A table as stored by the admin tables collection: the persisted row only. */
+export interface FloorTableRecord {
   eventId?: string;
   id: string;
   name: string;
@@ -33,6 +34,14 @@ export interface FloorTable {
   rotation: number;
   /** Layout this table belongs to */
   layoutId: string;
+}
+
+/**
+ * A table as the admin views read it: the stored row plus its occupancy.
+ * `registrationIds` is never stored; it is derived from the registrations
+ * collection's allocations (see `state/tableOccupancy.ts`).
+ */
+export interface FloorTable extends FloorTableRecord {
   registrationIds: string[];
 }
 

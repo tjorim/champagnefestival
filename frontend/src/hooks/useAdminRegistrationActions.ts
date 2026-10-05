@@ -19,7 +19,6 @@ interface UseAdminRegistrationActionsOptions {
   authHeaders: () => Record<string, string>;
   queryClient: QueryClient;
   registrationsQueryKey: QueryKey;
-  tablesQueryKey: QueryKey;
   setDetailRegistration: Dispatch<SetStateAction<Registration | null>>;
   setRegistrationError: Dispatch<SetStateAction<string>>;
   /**
@@ -61,7 +60,6 @@ export function useAdminRegistrationActions({
   authHeaders,
   queryClient,
   registrationsQueryKey,
-  tablesQueryKey,
   setDetailRegistration,
   setRegistrationError,
   confirmOverCapacity,
@@ -71,7 +69,6 @@ export function useAdminRegistrationActions({
       queryClient,
       authHeaders,
       registrationsQueryKey,
-      tablesQueryKey,
     });
 
   const handleUpdateStatus = useCallback(
@@ -267,7 +264,6 @@ export function useAdminRegistrationActions({
           prev?.map((r) => (r.id === registrationId ? updated : r)),
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
-        await queryClient.invalidateQueries({ queryKey: tablesQueryKey });
       } catch (error) {
         setRegistrationError(error instanceof Error ? error.message : m.admin_error_assign_table());
         throw error;
@@ -279,7 +275,6 @@ export function useAdminRegistrationActions({
       registrationsQueryKey,
       setDetailRegistration,
       setRegistrationError,
-      tablesQueryKey,
       updateRegistrationMutation,
     ],
   );
@@ -305,7 +300,6 @@ export function useAdminRegistrationActions({
           previous?.map((item) => (item.id === registrationId ? updated : item)),
         );
         setDetailRegistration((previous) => (previous?.id === registrationId ? updated : previous));
-        await queryClient.invalidateQueries({ queryKey: tablesQueryKey });
       } catch (error) {
         setRegistrationError(
           error instanceof Error ? error.message : m.admin_error_update_registration(),
@@ -319,7 +313,6 @@ export function useAdminRegistrationActions({
       registrationsQueryKey,
       setDetailRegistration,
       setRegistrationError,
-      tablesQueryKey,
       updateRegistrationMutation,
     ],
   );
@@ -354,8 +347,11 @@ export function useAdminRegistrationActions({
 
   const handleAddRegistration = useCallback(
     (registration: Registration) => {
+      // Never seed an unloaded list with a single row: that would present a
+      // one-booking list as loaded (and repopulate the collection after a
+      // sign-out reset). The initial fetch returns the new booking itself.
       queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev ? [registration, ...prev] : [registration],
+        prev ? [registration, ...prev] : prev,
       );
     },
     [queryClient, registrationsQueryKey],

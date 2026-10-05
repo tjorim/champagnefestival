@@ -6,9 +6,15 @@ import {
   registerAdminRegistrationsCollection,
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
+import {
+  createAdminTablesCollection,
+  refetchAdminTables,
+  registerAdminTablesCollection,
+  resetAdminTablesCollection,
+} from "@/state/adminTablesCollection";
+import { withTableOccupancy } from "@/state/tableOccupancy";
 import { queryKeys } from "@/utils/queryKeys";
 import {
-  fetchTables,
   fetchVenues,
   fetchRooms,
   fetchTableTypes,
@@ -26,9 +32,11 @@ interface UseAdminQueriesOptions {
   authHeaders: () => Record<string, string>;
 }
 
+// "tables" is deliberately absent: it is served by the admin tables collection,
+// which is refetched through its own utils (see `loadData`), never by a
+// standalone query.
 export const ADMIN_RESOURCE_KEYS = [
   "registrations",
-  "tables",
   "venues",
   "rooms",
   "table-types",
@@ -85,7 +93,6 @@ export function useAdminQueries({
 
   // Per-resource query keys (no longer scoped to a token; OIDC manages the session)
   const registrationsQueryKey = queryKeys.admin.registrations;
-  const tablesQueryKey = queryKeys.admin.tables;
   const venuesQueryKey = queryKeys.admin.venues;
   const roomsQueryKey = queryKeys.admin.rooms;
   const tableTypesQueryKey = queryKeys.admin.tableTypes;
@@ -133,19 +140,44 @@ export function useAdminQueries({
     isFetching: registrationsCollection.utils.isFetching,
   };
 
+  const tablesCollection = useMemo(
+    () =>
+      createAdminTablesCollection({
+        queryClient,
+        authHeaders,
+        enabled: adminQueryOptions.enabled,
+      }),
+    [adminQueryOptions.enabled, authHeaders, queryClient],
+  );
+  const tablesLiveQuery = useLiveQuery(() => tablesCollection, [tablesCollection]);
+  const tablesCollectionRef = useRef(tablesCollection);
+  useEffect(() => {
+    tablesCollectionRef.current = tablesCollection;
+  }, [tablesCollection]);
+  useEffect(() => registerAdminTablesCollection(tablesCollection), [tablesCollection]);
+  // Occupancy is derived from the registrations collection on every change, so
+  // one registration write updates the registrations and the seating views.
+  const tablesData = useMemo(
+    () => withTableOccupancy(tablesLiveQuery.data ?? [], registrationsLiveQuery.data ?? []),
+    [tablesLiveQuery.data, registrationsLiveQuery.data],
+  );
+  const tablesQuery = {
+    data: tablesData,
+    error: tablesCollection.utils.lastError ?? null,
+    isPending: tablesLiveQuery.isLoading,
+    isFetching: tablesCollection.utils.isFetching,
+  };
+
   useEffect(() => {
     if (isAuthenticated) return;
-    // The cached query is removed right below, so a failed reset needs no extra handling.
+    // The cached queries are removed right below, so a failed reset needs no extra handling.
     void resetAdminRegistrationsCollection(registrationsCollectionRef.current).catch(
       () => undefined,
     );
+    void resetAdminTablesCollection(tablesCollectionRef.current).catch(() => undefined);
     void queryClient.removeQueries({ queryKey: registrationsQueryKey });
+    void queryClient.removeQueries({ queryKey: queryKeys.admin.tables });
   }, [isAuthenticated, queryClient, registrationsQueryKey]);
-  const tablesQuery = useQuery({
-    queryKey: tablesQueryKey,
-    queryFn: () => fetchTables(authHeaders),
-    ...adminQueryOptions,
-  });
   const venuesQuery = useQuery({
     queryKey: venuesQueryKey,
     queryFn: () => fetchVenues(authHeaders),
@@ -205,18 +237,22 @@ export function useAdminQueries({
   ];
 
   const loadData = useCallback(async () => {
-    await queryClient.refetchQueries({
-      predicate: (query) =>
-        shouldRefetchAdminResourceQuery(query.queryKey, {
-          includeAdminOnly: canManageAdminSections,
-        }),
-    });
-  }, [canManageAdminSections, queryClient]);
+    await Promise.all([
+      queryClient.refetchQueries({
+        predicate: (query) =>
+          shouldRefetchAdminResourceQuery(query.queryKey, {
+            includeAdminOnly: canManageAdminSections,
+          }),
+      }),
+      canManageAdminSections ? refetchAdminTables(tablesCollection) : undefined,
+    ]);
+  }, [canManageAdminSections, queryClient, tablesCollection]);
 
   return {
     // Query objects (for error/loading state access)
     registrationsQuery,
     tablesQuery,
+    tablesCollection,
     venuesQuery,
     roomsQuery,
     tableTypesQuery,
@@ -230,7 +266,6 @@ export function useAdminQueries({
     isAnyFetching: allQueries.some((q) => q.isFetching),
     // Stable query keys (needed by mutations in the parent)
     registrationsQueryKey,
-    tablesQueryKey,
     venuesQueryKey,
     roomsQueryKey,
     tableTypesQueryKey,

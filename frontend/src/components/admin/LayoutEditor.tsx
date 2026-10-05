@@ -1159,7 +1159,12 @@ export default function LayoutEditor({
                 variant="outline-danger"
                 size="sm"
                 onClick={() => setConfirmDeleteTableId(selectedTableData.id)}
-                title={m.admin_delete()}
+                disabled={selectedTableData.registrationIds.length > 0}
+                title={
+                  selectedTableData.registrationIds.length > 0
+                    ? m.admin_layout_table_delete_blocked()
+                    : m.admin_delete()
+                }
                 aria-label={m.admin_delete()}
               >
                 <Icon icon={TrashIcon} />

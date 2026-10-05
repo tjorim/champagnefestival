@@ -36,7 +36,11 @@ function makeCollection(
   writeDelete: (key: unknown) => Promise<void> = () => Promise.resolve(),
 ) {
   const utils = { writeUpsert: vi.fn(writeUpsert), writeDelete: vi.fn(writeDelete) };
-  return { collection: { utils } as unknown as AdminRegistrationsCollection, utils };
+  // The stub always holds the row, so deletes reach `writeDelete`.
+  return {
+    collection: { utils, has: () => true } as unknown as AdminRegistrationsCollection,
+    utils,
+  };
 }
 
 const cleanups: Array<() => void> = [];

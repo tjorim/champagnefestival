@@ -5,6 +5,11 @@ import {
   canPatchAdminRegistrationLiveEvent,
   patchAdminRegistrationLiveEvent,
 } from "@/state/adminRegistrationsCollection";
+import {
+  canPatchAdminTableLiveEvent,
+  isTableRowUnaffectedByLiveEvent,
+  patchAdminTableLiveEvent,
+} from "@/state/adminTablesCollection";
 import { queryKeys } from "@/utils/queryKeys";
 import { connectLiveStream } from "@/utils/liveStream";
 
@@ -18,8 +23,9 @@ const ALL_LIVE_KEYS = [queryKeys.admin.registrations, queryKeys.admin.tables] as
  * Mount once inside a shared layout route for admin/check-in routes so route
  * changes do not tear down the SSE connection. Opens GET /api/live/stream
  * when authenticated and
- * incrementally patches the active admin registrations collection when possible,
- * and falls back to queryClient.invalidateQueries() for other keys or failures.
+ * incrementally patches the active admin registrations and tables collections
+ * when possible, and falls back to queryClient.invalidateQueries() for other
+ * keys or failures.
  */
 export function LiveUpdatesProvider(): null {
   const queryClient = useQueryClient();
@@ -38,13 +44,24 @@ export function LiveUpdatesProvider(): null {
         const queryState = queryClient.getQueryState(queryKeys.admin.registrations);
         const isQuerySuccess = queryState?.status === "success";
         const canPatchRegistration = isQuerySuccess && canPatchAdminRegistrationLiveEvent(envelope);
+        const tablesQueryState = queryClient.getQueryState(queryKeys.admin.tables);
+        const canPatchTable =
+          tablesQueryState?.status === "success" && canPatchAdminTableLiveEvent(envelope);
+        // Allocation changes never alter a stored table row: occupancy is
+        // derived from the registrations, so the tables key needs no work.
+        const skipTablesKey = isTableRowUnaffectedByLiveEvent(envelope);
 
         for (const key of envelope.keys) {
           const isAdminRegistrationsKey =
             key.length === queryKeys.admin.registrations.length &&
             key.every((part, index) => part === queryKeys.admin.registrations[index]);
+          const isAdminTablesKey =
+            key.length === queryKeys.admin.tables.length &&
+            key.every((part, index) => part === queryKeys.admin.tables[index]);
 
-          if (!canPatchRegistration || !isAdminRegistrationsKey) {
+          if (isAdminTablesKey) {
+            if (!canPatchTable && !skipTablesKey) queryClient.invalidateQueries({ queryKey: key });
+          } else if (!canPatchRegistration || !isAdminRegistrationsKey) {
             queryClient.invalidateQueries({ queryKey: key });
           } else {
             // Patching keeps the collection's rows fresh, but the server-counted
@@ -54,12 +71,20 @@ export function LiveUpdatesProvider(): null {
           }
         }
 
-        if (!canPatchRegistration) return;
-
-        void patchAdminRegistrationLiveEvent(envelope, () => {
+        const authHeaders = () => {
           const token = getAccessToken();
           return token ? { Authorization: `Bearer ${token}` } : ({} as Record<string, string>);
-        }).catch(() => {
+        };
+
+        if (canPatchTable) {
+          void patchAdminTableLiveEvent(envelope, authHeaders).catch(() => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.admin.tables });
+          });
+        }
+
+        if (!canPatchRegistration) return;
+
+        void patchAdminRegistrationLiveEvent(envelope, authHeaders).catch(() => {
           queryClient.invalidateQueries({ queryKey: queryKeys.admin.registrations });
         });
       },
