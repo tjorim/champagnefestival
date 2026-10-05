@@ -456,6 +456,7 @@
   "admin_layout_delete_confirm": "Delete this layout? All tables in this layout will also be deleted.",
   "admin_layout_delete_title": "Delete layout",
   "admin_layout_table_delete_confirm": "Delete this table? This cannot be undone.",
+  "admin_layout_table_delete_blocked": "Move or remove this table's bookings before deleting it.",
   "admin_layout_table_delete_title": "Delete table",
   "admin_layout_area_delete_confirm": "Delete this area? This cannot be undone.",
   "admin_layout_area_delete_title": "Delete area",

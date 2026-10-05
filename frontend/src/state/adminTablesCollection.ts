@@ -27,12 +27,31 @@ interface CreateAdminTablesCollectionOptions {
  * of a row: it is derived from the registrations collection (see
  * `tableOccupancy.ts`), so seating changes never need a second cache patch.
  *
- * Only updates run through a write handler, because they are optimistic (a
- * dragged table must follow the pointer and roll back on failure). Create and
- * delete are not optimistic: a create needs the server's id and capacity, and a
- * delete of an allocated table is rejected, so both call the API first and then
- * apply a direct write (see `useAdminVenueActions`).
+ * Updates and deletes run through write handlers because the client knows the
+ * outcome up front: a dragged table must follow the pointer, and a deleted
+ * table disappears at once, both rolling back if the server refuses. Create is
+ * not optimistic: the server assigns the id and the table type's capacity, so
+ * `addAdminTable` calls the API first and then applies a direct write.
  */
+/**
+ * Runs a write handler's API calls, then refetches explicitly (the implicit
+ * refetch after a handler is deprecated, so handlers return `{ refetch: false }`).
+ * If a call fails the write may or may not have committed, so the server state is
+ * refetched before the optimistic change is rolled back (see docs/retry-safety.md).
+ */
+async function persistThenRefetch(
+  collection: { utils: { refetch: () => Promise<unknown> } },
+  persist: () => Promise<void>,
+): Promise<void> {
+  try {
+    await persist();
+  } catch (error) {
+    await collection.utils.refetch().catch(() => undefined);
+    throw error;
+  }
+  await collection.utils.refetch();
+}
+
 export function createAdminTablesCollection({
   queryClient,
   authHeaders,
@@ -48,18 +67,19 @@ export function createAdminTablesCollection({
       retry: false,
       getKey: (table) => table.id,
       onUpdate: async ({ transaction, collection }) => {
-        try {
+        await persistThenRefetch(collection, async () => {
           for (const mutation of transaction.mutations) {
             await updateTable(authHeaders, String(mutation.key), mutation.changes);
           }
-        } catch (error) {
-          // The write may or may not have committed; reconcile with the server
-          // before the optimistic state is rolled back (see docs/retry-safety.md).
-          await collection.utils.refetch().catch(() => undefined);
-          throw error;
-        }
-        // Explicit refetch instead of the deprecated implicit one.
-        await collection.utils.refetch();
+        });
+        return { refetch: false };
+      },
+      onDelete: async ({ transaction, collection }) => {
+        await persistThenRefetch(collection, async () => {
+          for (const mutation of transaction.mutations) {
+            await deleteTable(authHeaders, String(mutation.key));
+          }
+        });
         return { refetch: false };
       },
     }),
@@ -96,21 +116,6 @@ export async function addAdminTable(
   const table = await createTable(authHeaders, input);
   if (!isCurrent()) return;
   await collection.utils.writeUpsert(table);
-}
-
-/**
- * Deletes a table through the API and removes the row. Not optimistic: the
- * server rejects deleting a table that still holds bookings.
- */
-export async function deleteAdminTable(
-  collection: AdminTablesCollection,
-  authHeaders: AuthHeadersProvider,
-  tableId: string,
-): Promise<void> {
-  const isCurrent = tablesFence.capture();
-  await deleteTable(authHeaders, tableId);
-  if (!isCurrent()) return;
-  await deleteIfPresent(collection, tableId);
 }
 
 /** Removes every table that belongs to one of the given layouts (a layout/venue delete cascade). */

@@ -5,7 +5,6 @@ import {
   addAdminTable,
   canPatchAdminTableLiveEvent,
   captureAdminTablesFence,
-  deleteAdminTable,
   createAdminTablesCollection,
   isTableRowUnaffectedByLiveEvent,
   patchAdminTableLiveEvent,
@@ -18,7 +17,7 @@ import {
 import { seedTables } from "@/mocks/data/venue";
 import type { FloorTableRecord } from "@/types/admin";
 import type { LiveEnvelope } from "@/utils/liveStream";
-import { createTable, deleteTable } from "@/utils/adminFetch";
+import { createTable } from "@/utils/adminFetch";
 import { createTestQueryClient } from "../utils/queryClient";
 
 const TEST_AUTH_HEADERS = { Authorization: "Bearer ".concat("mock-access-token") };
@@ -146,13 +145,42 @@ describe("admin tables collection", () => {
     expect(collection.size).toBe(seedTables.length + 1);
   });
 
-  it("deletes a table through the API and removes the row", async () => {
+  it("deletes optimistically, calls the API and refetches", async () => {
     const { collection } = await createLoadedCollection();
+    const deleted: string[] = [];
+    server.use(
+      http.delete("/api/tables/:id", ({ params }) => {
+        deleted.push(String(params.id));
+        return new HttpResponse(null, { status: 204 });
+      }),
+      http.get("/api/tables", () =>
+        HttpResponse.json(seedTables.filter((t) => t.id !== "table-02")),
+      ),
+    );
 
-    await deleteTable(authHeaders, "table-02");
-    await collection.utils.writeDelete("table-02");
-
+    const tx = collection.delete("table-02");
     expect(collection.has("table-02")).toBe(false);
+
+    await tx.isPersisted.promise;
+
+    expect(deleted).toEqual(["table-02"]);
+    expect(collection.has("table-02")).toBe(false);
+    expect(collection.size).toBe(seedTables.length - 1);
+  });
+
+  it("restores a table the server refuses to delete", async () => {
+    const { collection } = await createLoadedCollection();
+    server.use(
+      http.delete("/api/tables/:id", () =>
+        HttpResponse.json({ detail: "allocated" }, { status: 409 }),
+      ),
+    );
+
+    const tx = collection.delete("table-01");
+    expect(collection.has("table-01")).toBe(false);
+
+    await expect(tx.isPersisted.promise).rejects.toThrow();
+    expect(collection.has("table-01")).toBe(true);
   });
 
   it("removes the tables of deleted layouts and replaces a restored layout's tables", async () => {
@@ -244,7 +272,7 @@ describe("admin tables writes after an API call", () => {
     expect(collection.size).toBe(0);
   });
 
-  it("does not fail a delete whose row a live event already removed", async () => {
+  it("does not fail a table delete whose row a live event already removed", async () => {
     const { collection } = await createLoadedCollection();
     const { gate, release } = gatedResponse();
     server.use(
@@ -252,13 +280,24 @@ describe("admin tables writes after an API call", () => {
         await gate;
         return new HttpResponse(null, { status: 204 });
       }),
+      http.get("/api/tables", () =>
+        HttpResponse.json(seedTables.filter((t) => t.id !== "table-02")),
+      ),
     );
 
-    const removal = deleteAdminTable(collection, authHeaders, "table-02");
-    await collection.utils.writeDelete("table-02");
+    const tx = collection.delete("table-02");
+    cleanups.push(registerAdminTablesCollection(collection));
+    // The server's own `deleted` event arrives while the DELETE is still in flight.
+    await patchAdminTableLiveEvent(
+      seatingEnvelope({
+        action: "deleted",
+        scope: { edition_id: null, event_id: null, registration_id: null, table_id: "table-02" },
+      }),
+      authHeaders,
+    );
     release();
 
-    await expect(removal).resolves.toBeUndefined();
+    await expect(tx.isPersisted.promise).resolves.toBeDefined();
     expect(collection.has("table-02")).toBe(false);
   });
 

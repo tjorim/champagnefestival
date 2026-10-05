@@ -6,7 +6,6 @@ import { useVenueMutations } from "@/hooks/useVenueMutations";
 import {
   addAdminTable,
   captureAdminTablesFence,
-  deleteAdminTable,
   refetchAdminTables,
   removeAdminTablesForLayouts,
   replaceAdminTablesForLayout,
@@ -116,9 +115,11 @@ export function useAdminVenueActions({
 
   const handleDeleteTable = useCallback(
     async (tableId: string) => {
-      await deleteAdminTable(tablesCollection, authHeaders, tableId);
+      // Optimistic through the collection's `onDelete` handler; rolls back if
+      // the server refuses (for example a table that still holds bookings).
+      await tablesCollection.delete(tableId).isPersisted.promise;
     },
-    [authHeaders, tablesCollection],
+    [tablesCollection],
   );
 
   const handleChangeTableType = useCallback(

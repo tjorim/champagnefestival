@@ -456,6 +456,7 @@
   "admin_layout_delete_confirm": "Supprimer cet agencement ? Toutes les tables associées seront également supprimées.",
   "admin_layout_delete_title": "Supprimer l'agencement",
   "admin_layout_table_delete_confirm": "Supprimer cette table ? Cette action est irréversible.",
+  "admin_layout_table_delete_blocked": "Déplacez ou supprimez les réservations de cette table avant de la supprimer.",
   "admin_layout_table_delete_title": "Supprimer la table",
   "admin_layout_area_delete_confirm": "Supprimer cette zone ? Cette action est irréversible.",
   "admin_layout_area_delete_title": "Supprimer la zone",

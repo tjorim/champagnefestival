@@ -456,6 +456,7 @@
   "admin_layout_delete_confirm": "Deze indeling verwijderen? Alle tafels in deze indeling worden ook verwijderd.",
   "admin_layout_delete_title": "Indeling verwijderen",
   "admin_layout_table_delete_confirm": "Deze tafel verwijderen? Dit kan niet ongedaan worden gemaakt.",
+  "admin_layout_table_delete_blocked": "Verplaats of verwijder de boekingen van deze tafel voordat je de tafel verwijdert.",
   "admin_layout_table_delete_title": "Tafel verwijderen",
   "admin_layout_area_delete_confirm": "Deze zone verwijderen? Dit kan niet ongedaan worden gemaakt.",
   "admin_layout_area_delete_title": "Zone verwijderen",

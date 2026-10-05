@@ -111,15 +111,19 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   table. That avoids depending on the equality-partition conditions of
   `@tanstack/db` 0.11 (`eq(field, literal)` with no other clauses) and returns
   the source rows unmodified.
-- **Writes.** Position, rotation, rename and table-type changes are optimistic
-  through the collection's `onUpdate` handler: one `PUT` per changed row, an
-  explicit `collection.utils.refetch()` and `{ refetch: false }` on success, a
-  refetch before rollback on failure. Create and delete are not optimistic (a
-  create needs the server's id and capacity; the server rejects deleting a table
-  that still holds bookings), so they call the API and then apply
-  `writeUpsert`/`writeDelete`. Layout and venue deletes remove their tables with
-  `writeDelete`, and a layout revision restore replaces the layout's tables with
-  one `writeBatch`. Retry-safety decisions are in `docs/retry-safety.md`.
+- **Writes.** Position, rotation, rename, table-type changes and deletes are
+  optimistic through the collection's `onUpdate`/`onDelete` handlers: one request
+  per changed row, an explicit `collection.utils.refetch()` and
+  `{ refetch: false }` on success, and a refetch before rollback on failure.
+  Create is not optimistic (the server assigns the id and the table type's
+  capacity), so `addAdminTable` calls the API and then applies `writeUpsert`.
+  The rule for further collections: server-generated rows use a direct write,
+  changes the client already knows the outcome of use a handler. A delete the
+  server will refuse is also blocked up front: the layout editor disables the
+  delete button while the derived occupancy shows bookings on the table. Layout
+  and venue deletes remove their tables with `writeDelete`, and a layout
+  revision restore replaces the layout's tables with one `writeBatch`.
+  Retry-safety decisions are in `docs/retry-safety.md`.
 - **Live events.** A `seating` event with a `table_id` and no `registration_id`
   (table created/updated/deleted) patches one row: `writeDelete` for `deleted`,
   otherwise `fetchTable` and `writeUpsert`, with the same per-id timestamp guard
@@ -132,7 +136,7 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   each collection module an epoch that advances on reset and on
   (un)registration. The registrations and table live-event patchers capture it
   before their fetch and drop the row if it moved; table writes that follow an
-  API call (create, delete, layout/venue delete cascades, revision restore) do
+  API call (create, layout/venue delete cascades, revision restore) do
   the same through `captureAdminTablesFence()`. Deletes only touch rows the
   collection still holds, because `writeDelete` throws for a missing key.
   `handleAddRegistration` no longer seeds an unloaded registrations list with a
