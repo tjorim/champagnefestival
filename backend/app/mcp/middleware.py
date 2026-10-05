@@ -21,7 +21,7 @@ import uuid
 from typing import Any
 
 import mcp.types as mt
-from fastmcp.exceptions import NotFoundError, ToolError
+from fastmcp.exceptions import DisabledError, NotFoundError, ToolError
 from fastmcp.exceptions import ValidationError as FastMCPValidationError
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
 from fastmcp.tools.base import ToolResult
@@ -131,7 +131,7 @@ class ToolFailureMiddleware(Middleware):
             # Protocol-level signals (e.g. a missing client capability) must
             # keep their JSON-RPC code; flattening them hides the real problem.
             raise
-        except NotFoundError as exc:
+        except (NotFoundError, DisabledError) as exc:
             raise self._unknown_tool(target, _new_request_id()) from exc
         except FastMCPValidationError as exc:
             request_id = _new_request_id()
@@ -165,7 +165,7 @@ class ToolFailureMiddleware(Middleware):
                 # FastMCP's masked wrapper (mask_error_details=True): the real
                 # failure is the cause. Anything else — a rate-limit or timeout
                 # notice FastMCP deliberately words for the agent — passes through.
-                if isinstance(cause, NotFoundError):
+                if isinstance(cause, (NotFoundError, DisabledError)):
                     raise self._unknown_tool(target, _new_request_id()) from exc
                 request_id = _new_request_id()
                 logger.error(

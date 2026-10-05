@@ -15,8 +15,8 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
-from fastmcp import FastMCP
-from fastmcp.exceptions import ToolError
+from fastmcp import Client, FastMCP
+from fastmcp.exceptions import DisabledError, ToolError
 from fastmcp.server.transforms.search import BM25SearchTransform
 from sqlalchemy import select
 
@@ -93,6 +93,17 @@ class TestUnknownTool:
 
         assert f"{name!r} cannot be run through call_tool" in message
         assert "Error calling tool" not in message
+
+    async def test_disabled_tool_is_reported_like_an_unknown_one(self):
+        def retired() -> str:
+            raise DisabledError("retired is disabled")
+
+        mcp = _server_with_proxy(retired=retired)
+
+        message = str(await _failure(mcp, "call_tool", {"name": "retired", "arguments": {}}))
+
+        assert "Unknown tool 'retired'" in message
+        assert "failed unexpectedly" not in message
 
 
 class TestInvalidArguments:
@@ -280,6 +291,54 @@ class TestProxyBehaviour:
 
         assert shape(entries[0]) == shape(entries[1])
         assert len({e.resource_id for e in entries}) == 2  # two venues, not one row written twice
+
+
+class TestOverTheProtocol:
+    """Through a real MCP client, where a failure must be a tool result, not a JSON-RPC error."""
+
+    async def test_invalid_arguments_are_a_tool_result_that_does_not_echo_the_value(self):
+        def book_table(guest_count: int) -> str:
+            return "ok"
+
+        mcp = _server_with_proxy(book_table=book_table)
+        secret = "SECRET-GUEST-NOTE"
+
+        async with Client(mcp) as client:
+            result = await client.call_tool(
+                "call_tool", {"name": "book_table", "arguments": {"guest_count": secret}}, raise_on_error=False
+            )
+
+        assert result.is_error
+        text = result.content[0].text
+        assert "Invalid arguments for 'book_table'" in text
+        assert "guest_count" in text
+        assert secret not in text
+        assert "input_value" not in text
+        assert _request_id(text)
+
+    async def test_unknown_tool_is_a_tool_result_pointing_to_search(self):
+        mcp = create_mcp_server(session_factory=MagicMock())
+
+        async with Client(mcp) as client:
+            result = await client.call_tool("call_tool", {"name": "find_guest", "arguments": {}}, raise_on_error=False)
+
+        assert result.is_error
+        text = result.content[0].text
+        assert "Unknown tool 'find_guest'" in text
+        assert "search_tools" in text
+
+    async def test_session_works_through_search_and_call_tool(self):
+        mcp = create_mcp_server(session_factory=MagicMock())
+
+        async with Client(mcp) as client:
+            listed = {tool.name for tool in await client.list_tools()}
+            search = await client.call_tool("search_tools", {"query": "festival event schedule"})
+            call = await client.call_tool("call_tool", {"name": "whoami", "arguments": {}})
+
+        assert listed == {*ALWAYS_VISIBLE_TOOLS, "search_tools", "call_tool"}
+        found = {item["name"] for item in _structured(search)["result"]}
+        assert "get_event_schedule" in found
+        assert _structured(call)["role"] == "public"
 
 
 class TestSearchCatalog:

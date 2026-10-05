@@ -245,7 +245,7 @@ The manifest follows the shared MCP capability contract (`contract_version: 1`, 
 - `requires_confirmation` — always `false` here; no tool has a server-side confirmation step.
 - `access` — app-specific policy. Champagnefestival reports `{"role": "public" | "volunteer" | "admin"}`.
 
-`search_tools` results use the same `access` shape (`{"role": ...}`) next to `effect`. The former
+`search_tools` results use the same `access` shape (`{"role": ...}`) next to `effect` and `requires_confirmation`. The former
 flat `required_role` key has been removed from both the manifest and the search results; read
 `access.role` instead.
 

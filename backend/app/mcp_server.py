@@ -103,9 +103,9 @@ def _search_serializer(
 ) -> list[dict[str, Any]]:
     """Custom serializer for BM25SearchTransform that adds role metadata.
 
-    Adds access ({"role": ...}, the same shape as the capability manifest) and
-    effect to each tool in search results so clients can see authorization
-    requirements without calling each tool.
+    Adds access ({"role": ...}, the same shape as the capability manifest),
+    effect and requires_confirmation to each tool in search results so clients
+    can see authorization requirements without calling each tool.
     """
     from app.mcp.capabilities import tool_effect, tool_required_role
 
@@ -116,6 +116,9 @@ def _search_serializer(
             "input_schema": tool.parameters,
             "access": {"role": tool_required_role(tool.name)},
             "effect": tool_effect(tool.name),
+            # Same fields as the capability manifest (contract v1); no tool here has a
+            # server-side confirmation step.
+            "requires_confirmation": False,
         }
         for tool in tools
     ]
