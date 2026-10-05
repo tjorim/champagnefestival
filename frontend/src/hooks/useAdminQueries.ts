@@ -47,39 +47,12 @@ interface UseAdminQueriesOptions {
 // through their own utils (see `loadData`), never by a standalone query.
 export const ADMIN_RESOURCE_KEYS = ["registrations"] as const;
 
-export const ADMIN_ONLY_RESOURCE_KEYS = ADMIN_RESOURCE_KEYS.filter(
-  (resource) => resource !== "registrations",
-);
-
-interface ShouldRefetchAdminResourceQueryOptions {
-  includeAdminOnly?: boolean;
-}
-
-export function shouldRefetchAdminResourceQuery(
-  queryKey: readonly unknown[],
-  { includeAdminOnly = true }: ShouldRefetchAdminResourceQueryOptions = {},
-): boolean {
-  if (
-    !(
-      queryKey.length === 2 &&
-      queryKey[0] === "admin" &&
-      typeof queryKey[1] === "string" &&
-      (ADMIN_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
-    )
-  ) {
-    return false;
-  }
-
-  if (includeAdminOnly) return true;
-  return !(ADMIN_ONLY_RESOURCE_KEYS as readonly string[]).includes(queryKey[1]);
-}
-
-export function shouldRefetchAdminOnlyResourceQuery(queryKey: readonly unknown[]): boolean {
+export function shouldRefetchAdminResourceQuery(queryKey: readonly unknown[]): boolean {
   return (
     queryKey.length === 2 &&
     queryKey[0] === "admin" &&
     typeof queryKey[1] === "string" &&
-    (ADMIN_ONLY_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
+    (ADMIN_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
   );
 }
 
@@ -312,10 +285,7 @@ export function useAdminQueries({
   const loadData = useCallback(async () => {
     await Promise.all([
       queryClient.refetchQueries({
-        predicate: (query) =>
-          shouldRefetchAdminResourceQuery(query.queryKey, {
-            includeAdminOnly: canManageAdminSections,
-          }),
+        predicate: (query) => shouldRefetchAdminResourceQuery(query.queryKey),
       }),
       canManageAdminSections ? refetchAdminTables(tablesCollection) : undefined,
       canManageAdminSections ? refetchAdminPeople(peopleCollection) : undefined,

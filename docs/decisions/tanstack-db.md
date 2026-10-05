@@ -315,7 +315,8 @@ migration. They are now one eager collection on the shared factory
   patches it protected; `useAdminQueries` still removes the exhibitors query key
   on sign-out because the collection reads through it.
 - **Keys and refresh.** `"exhibitors"` is no longer in `ADMIN_RESOURCE_KEYS`, which
-  is now just `registrations` (`ADMIN_ONLY_RESOURCE_KEYS` is therefore empty);
+  is now just `registrations` (the admin-only variant `ADMIN_ONLY_RESOURCE_KEYS`,
+  `shouldRefetchAdminOnlyResourceQuery` and the `includeAdminOnly` option are removed);
   `loadData` refetches the collection through `refetchAdminExhibitors`. The
   dashboard's exhibitors error comes from the collection's `lastError` like the
   others. The `ContentSection` list and `EditionModal`'s exhibitor picker keep
