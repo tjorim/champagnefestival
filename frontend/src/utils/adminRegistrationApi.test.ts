@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fetchAdminPersonRegistrations, fetchPersonPaymentSummary } from "./adminRegistrationApi";
+import {
+  fetchAdminPersonOptions,
+  fetchAdminPersonRegistrations,
+  fetchPersonPaymentSummary,
+  fetchRegistrableEvents,
+} from "./adminRegistrationApi";
 
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
 
@@ -116,5 +121,62 @@ describe("fetchPersonPaymentSummary", () => {
     await expect(fetchPersonPaymentSummary("person-1", authHeaders)).rejects.toThrow(
       "Failed to load payment summary: 404",
     );
+  });
+});
+
+describe("fetchAdminPersonOptions", () => {
+  const stubPeople = (body: unknown) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify(body), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+  it("maps the people in the {items, total, limit, page} envelope the API returns", async () => {
+    stubPeople({
+      items: [{ id: "person-1", name: "Alice", email: "alice@example.com", phone: "123" }],
+      total: 1,
+      limit: 200,
+      page: 1,
+    });
+
+    await expect(fetchAdminPersonOptions("ali", authHeaders)).resolves.toEqual([
+      {
+        value: "person-1",
+        label: "Alice",
+        sub: "alice@example.com · 123",
+        name: "Alice",
+        email: "alice@example.com",
+        phone: "123",
+      },
+    ]);
+  });
+
+  it("rejects a bare array instead of reading it as no matches", async () => {
+    stubPeople([{ id: "person-1", name: "Alice", email: "", phone: "" }]);
+
+    await expect(fetchAdminPersonOptions("ali", authHeaders)).rejects.toThrow(
+      /expected \{items, total, limit, page\}/,
+    );
+  });
+});
+
+describe("fetchRegistrableEvents", () => {
+  it("rejects a malformed response instead of reporting no events", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ detail: "oops" }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+
+    await expect(fetchRegistrableEvents(authHeaders)).rejects.toThrow(/expected an array/);
   });
 });

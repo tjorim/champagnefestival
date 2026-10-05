@@ -91,7 +91,9 @@ export async function fetchRegistrableEvents(
   }
 
   const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToEvent) : [];
+  // A malformed response is an error, not "no registrable events".
+  if (!Array.isArray(data)) throw new Error("Invalid /api/events response: expected an array.");
+  return data.map(apiToEvent);
 }
 
 export async function fetchAdminPersonOptions(
@@ -104,8 +106,14 @@ export async function fetchAdminPersonOptions(
     signal,
   });
   if (!response.ok) throw new Error("Failed to load people");
-  const data = (await response.json()) as PersonSearchResult[];
-  return data.map((person) => ({
+  // GET /api/people answers with a {items, total, limit, page} envelope (see
+  // backend/app/routers/people.py). A bare array or any other shape is rejected
+  // instead of being read as "no matches".
+  const payload = (await response.json()) as { items?: PersonSearchResult[] };
+  if (!Array.isArray(payload.items)) {
+    throw new Error("Invalid /api/people response: expected {items, total, limit, page}.");
+  }
+  return payload.items.map((person) => ({
     value: person.id,
     label: person.name,
     sub: [person.email, person.phone].filter(Boolean).join(" · "),

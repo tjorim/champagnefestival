@@ -70,9 +70,13 @@ describe("RegistrationCreateModal", () => {
       http.get("/api/people", ({ request }) => {
         queries.push(new URL(request.url).searchParams.get("q") ?? "");
         // The server's result need not contain the literal search text.
-        return HttpResponse.json([
-          { id: "person-1", name: "Alice", email: "alice@example.com", phone: "123" },
-        ]);
+        // The real endpoint answers with a {items, total, limit, page} envelope.
+        return HttpResponse.json({
+          items: [{ id: "person-1", name: "Alice", email: "alice@example.com", phone: "123" }],
+          total: 1,
+          limit: 200,
+          page: 1,
+        });
       }),
     );
     render(
