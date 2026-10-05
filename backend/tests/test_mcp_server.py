@@ -703,6 +703,7 @@ class TestCreateMcpServer:
         # current auth context are directly listed.
         expected = {
             "whoami",
+            "get_active_edition",
             "search_tools",
             "call_tool",
         }
@@ -734,6 +735,9 @@ class TestCreateMcpServer:
         for item in items:
             assert "required_role" not in item
             assert item["access"] == {"role": tool_required_role(item["name"])}
+            # Same fields as the capability manifest (contract v1).
+            assert item["requires_confirmation"] is False
+            assert item["effect"] in {"read", "write"}
 
     @pytest.mark.anyio
     async def test_call_tool_proxy_runs_tool_visible_to_caller(self):
