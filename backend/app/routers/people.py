@@ -8,13 +8,13 @@ create/update/delete/merge transitions — lives in
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import Text, cast, func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.dependencies import Pagination, get_request_id
+from app.dependencies import ListQuery, get_request_id
 from app.models import Event, Person, Registration
 from app.schemas import (
     PersonAdminSummaryOut,
@@ -25,8 +25,8 @@ from app.schemas import (
     PersonUpdate,
 )
 from app.services import payments_service, people_service
-from app.services.operational_search import person_search_order_by, person_search_predicate
-from app.utils import person_to_dict, registration_to_list_dict, roles_contains
+from app.services.people_listing import PersonSortKey, filtered_people_stmt, order_people_stmt
+from app.utils import person_to_dict, registration_to_list_dict
 
 # The identity-field anonymisation window (docs/decisions/934-data-retention-and-erasure.md):
 # 7 years after a person's most recent registration's event date. 365.25 days/year
@@ -39,16 +39,6 @@ router = APIRouter(
     tags=["people"],
     dependencies=[Depends(require_admin)],
 )
-
-# Applies to GET /api/people regardless of whether `q` is set, so an admin
-# paging the people list gets one predictable page size instead of "20 when
-# searching, unbounded when not" (see backend/app/routers/registrations.py's
-# ADMIN_LIST_DEFAULT_LIMIT, which this mirrors). The ceiling is Pagination's
-# own `limit` validation (1000) rather than
-# app.services.operational_search.MAX_RESULT_LIMIT (50) — that constant is
-# sized for the volunteer door-lookup use case (one guest at a time), not an
-# admin browsing or exporting the full people list.
-ADMIN_LIST_DEFAULT_LIMIT = 200
 
 
 @router.post("", response_model=PersonOut, status_code=status.HTTP_201_CREATED)
@@ -64,51 +54,27 @@ async def create_person(
 @router.get("", response_model=PersonListEnvelope)
 async def list_people(
     db: AsyncSession = Depends(get_db),
-    q: str | None = Query(default=None),
     role: str | None = Query(default=None, description="Filter by role (case-insensitive)"),
     active: bool | None = Query(default=None),
-    pagination: Pagination = Depends(),
+    sort: PersonSortKey | None = Query(
+        default=None,
+        description="Sort column; overrides the default relevance/newest-first order. "
+        "Applies across the whole filtered set, not just the current page.",
+    ),
+    list_query: ListQuery = Depends(),
 ) -> dict:
-    filtered_stmt = select(Person)
+    """Paged people list on the shared list contract (see ``ListQuery``).
 
-    if active is not None:
-        filtered_stmt = filtered_stmt.where(Person.active == active)
-
-    if role:
-        filtered_stmt = filtered_stmt.where(roles_contains(role))
-
-    q_stripped = q.strip() if q and q.strip() else None
-    if q_stripped:
-        q_escaped = q_stripped.replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-        q_like = f"%{q_escaped}%"
-        filtered_stmt = filtered_stmt.where(
-            or_(
-                person_search_predicate(name=q_stripped, email=q_stripped),
-                Person.phone.ilike(q_like, escape="\\"),
-                Person.address.ilike(q_like, escape="\\"),
-                Person.national_register_number.ilike(q_like, escape="\\"),
-                Person.eid_document_number.ilike(q_like, escape="\\"),
-                Person.club_name.ilike(q_like, escape="\\"),
-                Person.notes.ilike(q_like, escape="\\"),
-                cast(Person.roles, Text).ilike(q_like, escape="\\"),
-            )
-        )
-
+    ``q`` searches name, email, phone, address, NISS, eID, club, notes and
+    roles. Without ``sort`` a search is ordered by relevance and a plain list
+    newest first; every order ends in ``id`` so paging is stable.
+    """
+    filtered_stmt = filtered_people_stmt(q=list_query.q, role=role, active=active)
     total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
 
-    if q_stripped:
-        stmt = filtered_stmt.order_by(*person_search_order_by(name=q_stripped, email=q_stripped))
-    else:
-        stmt = filtered_stmt.order_by(Person.created_at.desc(), Person.id.desc())
-
-    limit = pagination.limit or ADMIN_LIST_DEFAULT_LIMIT
-    page = pagination.page
-    stmt = stmt.offset((page - 1) * limit).limit(limit)
-
-    result = await db.execute(stmt)
-    rows = result.scalars().all()
-    items = [person_to_dict(p) for p in rows]
-    return {"items": items, "total": total, "limit": limit, "page": page}
+    stmt = order_people_stmt(filtered_stmt, q=list_query.q, sort=sort, sort_dir=list_query.sort_dir)
+    rows = (await db.execute(list_query.apply(stmt))).scalars().all()
+    return list_query.envelope([person_to_dict(p) for p in rows], total)
 
 
 @router.get("/due-for-anonymisation", response_model=list[PersonAdminSummaryOut])

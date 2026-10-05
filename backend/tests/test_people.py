@@ -393,8 +393,8 @@ async def test_people_search_not_capped_at_operational_search_limit(client):
     """Regression test for a #931-shaped bug: /api/people's search path used to
     silently cap results at app.services.operational_search.MAX_RESULT_LIMIT
     (50) — a limit sized for the volunteer door-lookup use case — regardless
-    of what the admin UI asked for. It must honor its own, larger admin
-    default (ADMIN_LIST_DEFAULT_LIMIT) instead."""
+    of what the admin UI asked for. It must honor the requested `limit` (up
+    to the shared MAX_LIST_LIMIT) instead."""
     unique_token = "Zylberschmidt"
     created_ids: set[str] = set()
     for i in range(55):
@@ -406,7 +406,7 @@ async def test_people_search_not_capped_at_operational_search_limit(client):
         assert r.status_code == 201
         created_ids.add(r.json()["id"])
 
-    r = await client.get("/api/people", params={"q": unique_token}, headers=ADMIN_HEADERS)
+    r = await client.get("/api/people", params={"q": unique_token, "limit": 100}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     body = r.json()
     assert body["total"] == 55
