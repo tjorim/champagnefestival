@@ -135,7 +135,10 @@ export function useAdminQueries({
 
   useEffect(() => {
     if (isAuthenticated) return;
-    resetAdminRegistrationsCollection(registrationsCollectionRef.current);
+    // The cached query is removed right below, so a failed reset needs no extra handling.
+    void resetAdminRegistrationsCollection(registrationsCollectionRef.current).catch(
+      () => undefined,
+    );
     void queryClient.removeQueries({ queryKey: registrationsQueryKey });
   }, [isAuthenticated, queryClient, registrationsQueryKey]);
   const tablesQuery = useQuery({

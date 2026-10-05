@@ -311,3 +311,15 @@ its success handler only updates the local pristine baseline when the user has
 not entered newer edits during the request. No automatic retry, write queue,
 version precondition or server retry-safety guarantee is added. Ambiguous write
 outcomes still require reading and reconciling as documented for updates above.
+
+### Registration live-event collection patching (2026-10-05)
+
+`patchAdminRegistrationLiveEvent` applies a live event to the in-memory TanStack DB
+registrations collections through `writeUpsert`/`writeDelete` and now awaits the
+applied-receipt promises those direct writes return (`resetAdminRegistrationsCollection`
+awaits its `writeBatch` too). This is a local cache write, not a server write: no
+request is sent, so there is nothing to retry-protect. Upserting the fetched row or
+deleting a key by ID converges on the same state when repeated. A failed write
+rejects the returned promise, and `LiveUpdatesProvider` responds by invalidating the
+registrations query so the collection refetches from the server. No retry, queue or
+server contract is added.
