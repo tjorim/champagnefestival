@@ -499,15 +499,6 @@ export async function fetchPeople(authHeaders: () => Record<string, string>): Pr
   return mergePeopleWithVolunteers(peopleResult.people, volunteersResult.people);
 }
 
-export async function fetchMembers(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  const result = await fetchPersonListEnvelope(
-    `/api/people?role=member&limit=${PEOPLE_FULL_LIST_LIMIT}`,
-    authHeaders,
-  );
-  warnIfPersonListTruncated("members", result.people.length, result.total);
-  return result.people;
-}
-
 export interface AuditEntryFilters {
   resourceType?: string;
   resourceId?: string;

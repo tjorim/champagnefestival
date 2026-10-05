@@ -19,12 +19,10 @@ describe("useAdminQueries invalidation rules", () => {
     expect(shouldRefetchAdminResourceQuery(queryKeys.admin.tables)).toBe(false);
   });
 
-  it("leaves people and members to their collections instead of standalone queries", () => {
-    for (const resource of ["people", "members"] as const) {
-      expect(ADMIN_RESOURCE_KEYS).not.toContain(resource);
-      expect(shouldRefetchAdminResourceQuery(queryKeys.admin[resource])).toBe(false);
-      expect(shouldRefetchAdminOnlyResourceQuery(queryKeys.admin[resource])).toBe(false);
-    }
+  it("leaves people to their collection instead of a standalone query", () => {
+    expect(ADMIN_RESOURCE_KEYS).not.toContain("people");
+    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.people)).toBe(false);
+    expect(shouldRefetchAdminOnlyResourceQuery(queryKeys.admin.people)).toBe(false);
   });
 
   it("can limit refetches to registration resources for non-admin users", () => {

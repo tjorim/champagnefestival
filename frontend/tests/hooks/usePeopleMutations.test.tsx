@@ -3,21 +3,19 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import { server } from "@/mocks/server";
-import type { AdminPeopleCollections } from "@/state/adminPeopleCollection";
+import type { AdminPeopleCollection } from "@/state/adminPeopleCollection";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 describe("usePeopleMutations", () => {
-  it("wires create person requests and refetches the people and member collections", async () => {
+  it("wires create person requests and refetches the people collection", async () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const invalidateQueries = vi
       .spyOn(queryClient, "invalidateQueries")
       .mockResolvedValue(undefined);
     const refetchPeople = vi.fn().mockResolvedValue(undefined);
-    const refetchMembers = vi.fn().mockResolvedValue(undefined);
-    const peopleCollections = {
-      people: { utils: { refetch: refetchPeople } },
-      members: { utils: { refetch: refetchMembers } },
-    } as unknown as AdminPeopleCollections;
+    const peopleCollection = {
+      utils: { refetch: refetchPeople },
+    } as unknown as AdminPeopleCollection;
     const seen = {
       authorization: "",
       body: {} as Record<string, unknown>,
@@ -39,7 +37,7 @@ describe("usePeopleMutations", () => {
             "Content-Type": "application/json",
             Authorization: "Bearer test-token",
           }),
-          peopleCollections,
+          peopleCollection,
           registrationsQueryKey: ["admin", "registrations"],
           exhibitorsQueryKey: ["admin", "exhibitors"],
         }),
@@ -72,13 +70,11 @@ describe("usePeopleMutations", () => {
     });
     await waitFor(() => {
       expect(refetchPeople).toHaveBeenCalledTimes(1);
-      expect(refetchMembers).toHaveBeenCalledTimes(1);
     });
     // The per-person queries nested under the people key are still invalidated,
-    // but never the collections' own keys: those are refetched explicitly.
+    // but never the collection's own key: that is refetched explicitly.
     const calls = invalidateQueries.mock.calls.map(([filters]) => filters);
     expect(calls).not.toContainEqual({ queryKey: ["admin", "people"] });
-    expect(calls).not.toContainEqual({ queryKey: ["admin", "members"] });
     expect(calls).toContainEqual(
       expect.objectContaining({ queryKey: ["admin", "people"], predicate: expect.any(Function) }),
     );

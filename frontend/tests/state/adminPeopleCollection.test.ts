@@ -3,7 +3,6 @@ import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/server";
 import { seedPeople } from "@/mocks/data/people";
 import {
-  applyAdminMemberCreated,
   applyAdminPeopleMerged,
   applyAdminPersonCreated,
   applyAdminPersonDeleted,
@@ -11,11 +10,12 @@ import {
   applyAdminVolunteerDeleted,
   applyAdminVolunteerUpdated,
   captureAdminPeopleFence,
-  createAdminPeopleCollections,
+  createAdminPeopleCollection,
   invalidateAdminPersonDetailQueries,
   refetchAdminPeople,
-  registerAdminPeopleCollections,
-  resetAdminPeopleCollections,
+  registerAdminPeopleCollection,
+  resetAdminPeopleCollection,
+  selectMembers,
 } from "@/state/adminPeopleCollection";
 import { apiToPerson, type Person } from "@/types/person";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -30,12 +30,12 @@ afterEach(() => {
   while (cleanups.length > 0) cleanups.pop()?.();
 });
 
-async function createLoadedCollections() {
+async function createLoadedCollection() {
   const queryClient = createTestQueryClient();
-  const collections = createAdminPeopleCollections({ queryClient, authHeaders, enabled: true });
+  const collection = createAdminPeopleCollection({ queryClient, authHeaders, enabled: true });
   cleanups.push(() => queryClient.clear());
-  await Promise.all([collections.people.preload(), collections.members.preload()]);
-  return { collections, queryClient };
+  await collection.preload();
+  return { collection, queryClient };
 }
 
 function person(overrides: Partial<Person> & { id: string }): Person {
@@ -46,224 +46,218 @@ function person(overrides: Partial<Person> & { id: string }): Person {
   };
 }
 
-const memberIds = (
-  collections: Awaited<ReturnType<typeof createLoadedCollections>>["collections"],
-) => collections.members.toArray.map((member) => member.id);
+const memberIds = (collection: Awaited<ReturnType<typeof createLoadedCollection>>["collection"]) =>
+  selectMembers(collection.toArray).map((member) => member.id);
 
-describe("admin people collections", () => {
-  it("loads people (with volunteers merged in) and members from their own endpoints", async () => {
-    const { collections } = await createLoadedCollections();
+describe("admin people collection", () => {
+  it("loads people with volunteers merged in", async () => {
+    const { collection } = await createLoadedCollection();
 
-    expect(collections.people.size).toBe(seedPeople.length);
-    expect(collections.people.get("person-01")?.roles).toContain("volunteer");
-    expect(collections.members.size).toBe(
-      seedPeople.filter((p) => (p.roles as string[]).includes("member")).length,
-    );
-    expect(collections.members.get("person-02")).toMatchObject({ name: "Bernard Martin" });
+    expect(collection.size).toBe(seedPeople.length);
+    expect(collection.get("person-01")?.roles).toContain("volunteer");
+    expect(collection.get("person-02")).toMatchObject({ name: "Bernard Martin" });
   });
 
-  it("refetches the requested collections explicitly", async () => {
-    const { collections } = await createLoadedCollections();
-    let peopleRequests = 0;
+  it("derives members from the people rows instead of storing them twice", async () => {
+    const { collection } = await createLoadedCollection();
+
+    expect(memberIds(collection)).toEqual(
+      seedPeople.filter((p) => (p.roles as string[]).includes("member")).map((p) => p.id),
+    );
+  });
+
+  it("refetches the collection explicitly", async () => {
+    const { collection } = await createLoadedCollection();
+    let requests = 0;
     server.use(
-      http.get("/api/people", ({ request }) => {
-        if (new URL(request.url).searchParams.get("role") !== "member") peopleRequests += 1;
+      http.get("/api/people", () => {
+        requests += 1;
         return HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 });
       }),
     );
 
-    await refetchAdminPeople(collections, ["people"]);
+    await refetchAdminPeople(collection);
 
-    expect(peopleRequests).toBe(1);
-    // Only the volunteer-only rows survive the empty people response, and the
-    // members collection was not asked to refetch.
-    expect(collections.people.has("person-02")).toBe(false);
-    expect(collections.members.has("person-02")).toBe(true);
+    expect(requests).toBe(1);
+    // Only the volunteer-only rows survive an empty people response.
+    expect(collection.has("person-02")).toBe(false);
   });
 
-  it("creates a person, adding a member only when the person has the member role", async () => {
-    const { collections } = await createLoadedCollections();
+  it("shows a created person as a member only when they hold the member role", async () => {
+    const { collection } = await createLoadedCollection();
 
     await applyAdminPersonCreated(
-      collections,
+      collection,
       person({ id: "new-member", roles: ["member"] }),
       always,
     );
-    await applyAdminPersonCreated(collections, person({ id: "new-guest", roles: [] }), always);
+    await applyAdminPersonCreated(collection, person({ id: "new-guest", roles: [] }), always);
 
-    expect(collections.people.has("new-member")).toBe(true);
-    expect(collections.people.has("new-guest")).toBe(true);
-    expect(collections.members.has("new-member")).toBe(true);
-    expect(collections.members.has("new-guest")).toBe(false);
+    expect(collection.has("new-guest")).toBe(true);
+    expect(memberIds(collection)).toContain("new-member");
+    expect(memberIds(collection)).not.toContain("new-guest");
   });
 
-  it("creates a member in both collections", async () => {
-    const { collections } = await createLoadedCollections();
+  it("updates one person once and the members view follows, including a role change", async () => {
+    const { collection } = await createLoadedCollection();
+    const before = collection.get("person-02")!;
 
-    await applyAdminMemberCreated(
-      collections,
-      person({ id: "member-x", roles: ["member"] }),
-      always,
+    await applyAdminPersonUpdated(collection, { ...before, name: "Bernard M." }, always);
+    expect(collection.get("person-02")?.name).toBe("Bernard M.");
+    expect(selectMembers(collection.toArray).find((m) => m.id === "person-02")?.name).toBe(
+      "Bernard M.",
     );
 
-    expect(collections.people.has("member-x")).toBe(true);
-    expect(collections.members.has("member-x")).toBe(true);
+    await applyAdminPersonUpdated(collection, { ...before, roles: ["guest"] }, always);
+    expect(memberIds(collection)).not.toContain("person-02");
   });
 
-  it("updates one person into every collection and follows a role change", async () => {
-    const { collections } = await createLoadedCollections();
-    const before = collections.people.get("person-02")!;
+  it("does not invent a row for an update of a person the collection does not hold", async () => {
+    const { collection } = await createLoadedCollection();
 
-    await applyAdminPersonUpdated(collections, { ...before, name: "Bernard M." }, always);
-    expect(collections.people.get("person-02")?.name).toBe("Bernard M.");
-    expect(collections.members.get("person-02")?.name).toBe("Bernard M.");
+    await applyAdminPersonUpdated(collection, person({ id: "unknown" }), always);
 
-    await applyAdminPersonUpdated(collections, { ...before, roles: ["guest"] }, always);
-    expect(collections.people.get("person-02")?.roles).toEqual(["guest"]);
-    expect(collections.members.has("person-02")).toBe(false);
+    expect(collection.has("unknown")).toBe(false);
   });
 
   it("keeps a volunteer's help periods when a person update carries none", async () => {
-    const { collections } = await createLoadedCollections();
+    const { collection } = await createLoadedCollection();
     const helpPeriods = [{ id: 7, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" }];
     await applyAdminVolunteerUpdated(
-      collections,
+      collection,
       person({ id: "person-01", roles: ["member", "volunteer"], helpPeriods }),
       always,
     );
 
     await applyAdminPersonUpdated(
-      collections,
+      collection,
       person({ id: "person-01", roles: ["member", "volunteer"], name: "Renamed", helpPeriods: [] }),
       always,
     );
 
-    expect(collections.people.get("person-01")).toMatchObject({ name: "Renamed", helpPeriods });
+    expect(collection.get("person-01")).toMatchObject({ name: "Renamed", helpPeriods });
   });
 
-  it("deletes a person from every collection and tolerates a row that is already gone", async () => {
-    const { collections } = await createLoadedCollections();
+  it("deletes a person (and so the member) and tolerates a row that is already gone", async () => {
+    const { collection } = await createLoadedCollection();
 
-    await applyAdminPersonDeleted(collections, "person-02", always);
-    expect(collections.people.has("person-02")).toBe(false);
-    expect(collections.members.has("person-02")).toBe(false);
+    await applyAdminPersonDeleted(collection, "person-02", always);
+    expect(collection.has("person-02")).toBe(false);
+    expect(memberIds(collection)).not.toContain("person-02");
 
-    await expect(
-      applyAdminPersonDeleted(collections, "person-02", always),
-    ).resolves.toBeUndefined();
+    await expect(applyAdminPersonDeleted(collection, "person-02", always)).resolves.toBeUndefined();
   });
 
-  it("patches a volunteer update onto the matching member and removes the volunteer role", async () => {
-    const { collections } = await createLoadedCollections();
-    const volunteer = collections.people.get("person-01")!;
+  it("patches a volunteer update onto the person and removes the volunteer role", async () => {
+    const { collection } = await createLoadedCollection();
+    const volunteer = collection.get("person-01")!;
 
     await applyAdminVolunteerUpdated(
-      collections,
+      collection,
       { ...volunteer, name: "Alice D.", active: false },
       always,
     );
-    expect(collections.members.get("person-01")).toMatchObject({ name: "Alice D.", active: false });
+    expect(selectMembers(collection.toArray).find((m) => m.id === "person-01")).toMatchObject({
+      name: "Alice D.",
+      active: false,
+    });
 
-    await applyAdminVolunteerDeleted(collections, "person-01", always);
-    expect(collections.people.get("person-01")?.roles).not.toContain("volunteer");
-    expect(collections.people.get("person-01")?.helpPeriods).toEqual([]);
-    expect(collections.members.has("person-01")).toBe(true);
+    await applyAdminVolunteerDeleted(collection, "person-01", always);
+    expect(collection.get("person-01")?.roles).not.toContain("volunteer");
+    expect(collection.get("person-01")?.helpPeriods).toEqual([]);
+    expect(memberIds(collection)).toContain("person-01");
   });
 
   it("merges two people: the duplicate disappears and the survivor keeps its own help periods", async () => {
-    const { collections } = await createLoadedCollections();
+    const { collection } = await createLoadedCollection();
     const survivor = person({ id: "person-01", roles: ["member", "volunteer"], name: "Merged" });
-    const survivorPeriods = collections.people.get("person-01")!.helpPeriods;
+    const survivorPeriods = collection.get("person-01")!.helpPeriods;
 
-    await applyAdminPeopleMerged(collections, survivor, "person-02", always);
+    await applyAdminPeopleMerged(collection, survivor, "person-02", always);
 
-    expect(collections.people.has("person-02")).toBe(false);
-    expect(collections.members.has("person-02")).toBe(false);
-    expect(collections.people.get("person-01")).toMatchObject({
+    expect(collection.has("person-02")).toBe(false);
+    expect(memberIds(collection)).not.toContain("person-02");
+    expect(collection.get("person-01")).toMatchObject({
       name: "Merged",
       helpPeriods: survivorPeriods,
     });
-    expect(collections.members.get("person-01")?.name).toBe("Merged");
   });
 
   it("does not report a failed action when a local write cannot be applied", async () => {
-    const { collections } = await createLoadedCollections();
-    vi.spyOn(collections.people.utils, "writeUpsert").mockRejectedValue(new Error("sync stopped"));
+    const { collection } = await createLoadedCollection();
+    vi.spyOn(collection.utils, "writeUpsert").mockRejectedValue(new Error("sync stopped"));
 
     await expect(
-      applyAdminPersonCreated(collections, person({ id: "late", roles: ["member"] }), always),
+      applyAdminPersonCreated(collection, person({ id: "late", roles: ["member"] }), always),
     ).resolves.toBeUndefined();
   });
 
   describe("cancellation of in-flight writes", () => {
     it("drops a response that arrives after the session was reset", async () => {
-      const { collections } = await createLoadedCollections();
+      const { collection } = await createLoadedCollection();
       const isCurrent = captureAdminPeopleFence();
 
-      await resetAdminPeopleCollections(collections);
+      await resetAdminPeopleCollection(collection);
       await applyAdminPersonCreated(
-        collections,
+        collection,
         person({ id: "late", roles: ["member"] }),
         isCurrent,
       );
       await applyAdminPersonUpdated(
-        collections,
+        collection,
         person({ id: "person-02", name: "Late" }),
         isCurrent,
       );
 
-      expect(collections.people.size).toBe(0);
-      expect(collections.members.size).toBe(0);
+      expect(collection.size).toBe(0);
     });
 
-    it("drops a response that arrives after the collections were swapped", async () => {
-      const { collections } = await createLoadedCollections();
-      const unregister = registerAdminPeopleCollections();
+    it("drops a response that arrives after the collection was swapped", async () => {
+      const { collection } = await createLoadedCollection();
+      const unregister = registerAdminPeopleCollection();
       const isCurrent = captureAdminPeopleFence();
 
       unregister();
-      await applyAdminPersonDeleted(collections, "person-02", isCurrent);
+      await applyAdminPersonDeleted(collection, "person-02", isCurrent);
 
-      expect(collections.people.has("person-02")).toBe(true);
-      expect(collections.members.has("person-02")).toBe(true);
+      expect(collection.has("person-02")).toBe(true);
     });
 
     it("applies a response that belongs to the current session", async () => {
-      const { collections } = await createLoadedCollections();
+      const { collection } = await createLoadedCollection();
       const isCurrent = captureAdminPeopleFence();
 
-      await applyAdminPersonDeleted(collections, "person-02", isCurrent);
+      await applyAdminPersonDeleted(collection, "person-02", isCurrent);
 
-      expect(collections.people.has("person-02")).toBe(false);
+      expect(collection.has("person-02")).toBe(false);
     });
   });
 
   describe("reset", () => {
-    it("empties both collections", async () => {
-      const { collections } = await createLoadedCollections();
-      expect(collections.people.size).toBeGreaterThan(0);
+    it("empties the collection, and with it the members view", async () => {
+      const { collection } = await createLoadedCollection();
+      expect(collection.size).toBeGreaterThan(0);
 
-      await resetAdminPeopleCollections(collections);
+      await resetAdminPeopleCollection(collection);
 
-      expect(collections.people.size).toBe(0);
-      expect(collections.members.size).toBe(0);
-      expect(memberIds(collections)).toEqual([]);
+      expect(collection.size).toBe(0);
+      expect(memberIds(collection)).toEqual([]);
     });
 
-    it("is safe on collections that are already empty", async () => {
-      const { collections } = await createLoadedCollections();
-      await resetAdminPeopleCollections(collections);
+    it("is safe on a collection that is already empty", async () => {
+      const { collection } = await createLoadedCollection();
+      await resetAdminPeopleCollection(collection);
 
-      await expect(resetAdminPeopleCollections(collections)).resolves.toBeUndefined();
+      await expect(resetAdminPeopleCollection(collection)).resolves.toBeUndefined();
     });
   });
 
   it("invalidates only the per-person queries nested under the people key", async () => {
-    const { collections, queryClient } = await createLoadedCollections();
+    const { collection, queryClient } = await createLoadedCollection();
     const detailKey = ["admin", "people", "person-02", "registrations"] as const;
     queryClient.setDefaultOptions({ queries: { retry: false, gcTime: Infinity } });
     queryClient.setQueryData(detailKey, [{ id: "reg-1" }]);
-    queryClient.setQueryData(["admin", "people"], [...collections.people.values()]);
+    queryClient.setQueryData(["admin", "people"], [...collection.values()]);
 
     await invalidateAdminPersonDetailQueries(queryClient);
 

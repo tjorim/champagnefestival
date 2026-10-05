@@ -13,7 +13,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import { server } from "@/mocks/server";
-import { createAdminPeopleCollections } from "@/state/adminPeopleCollection";
+import { createAdminPeopleCollection } from "@/state/adminPeopleCollection";
 import type { Person } from "@/types/person";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
@@ -100,11 +100,8 @@ async function renderMergeHook(people: Person[]) {
   queryClient.setDefaultOptions({ queries: { retry: false, gcTime: Infinity } });
   const volunteers = people.filter((person) => person.roles.includes("volunteer"));
   server.use(
-    http.get("/api/people", ({ request }) => {
-      const members = new URL(request.url).searchParams.get("role") === "member";
-      const items = (members ? people.filter((p) => p.roles.includes("member")) : people).map(
-        toApiPerson,
-      );
+    http.get("/api/people", () => {
+      const items = people.map(toApiPerson);
       return HttpResponse.json({ items, total: items.length, limit: 1000, page: 1 });
     }),
     http.get("/api/volunteers", () =>
@@ -124,24 +121,23 @@ async function renderMergeHook(people: Person[]) {
       }),
     ),
   );
-  const peopleCollections = createAdminPeopleCollections({
+  const peopleCollection = createAdminPeopleCollection({
     queryClient,
     authHeaders: () => ({ "Content-Type": "application/json" }),
     enabled: true,
   });
-  await Promise.all([peopleCollections.people.preload(), peopleCollections.members.preload()]);
+  await peopleCollection.preload();
   // Keep the refetch out of the way: this is about what the hook writes itself.
   const refetchPeople = vi
-    .spyOn(peopleCollections.people.utils, "refetch")
+    .spyOn(peopleCollection.utils, "refetch")
     .mockResolvedValue(undefined as never);
-  vi.spyOn(peopleCollections.members.utils, "refetch").mockResolvedValue(undefined as never);
 
   const { result } = renderHook(
     () =>
       useAdminPeopleActions({
         authHeaders: () => ({ "Content-Type": "application/json" }),
         exhibitorsQueryKey: EXHIBITORS_KEY,
-        peopleCollections,
+        peopleCollection,
         queryClient,
         registrationsQueryKey: REGISTRATIONS_KEY,
         setDetailRegistration: vi.fn(),
@@ -149,7 +145,7 @@ async function renderMergeHook(people: Person[]) {
     { wrapper: Wrapper },
   );
 
-  return { peopleCollections, result, refetchPeople };
+  return { peopleCollection, result, refetchPeople };
 }
 
 describe("useAdminPeopleActions — merge", () => {
@@ -159,7 +155,7 @@ describe("useAdminPeopleActions — merge", () => {
         HttpResponse.json(MERGE_RESPONSE),
       ),
     );
-    const { peopleCollections, result, refetchPeople } = await renderMergeHook([
+    const { peopleCollection, result, refetchPeople } = await renderMergeHook([
       CANONICAL,
       DUPLICATE,
     ]);
@@ -168,7 +164,7 @@ describe("useAdminPeopleActions — merge", () => {
       await result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
     });
 
-    const people = peopleCollections.people.toArray;
+    const people = peopleCollection.toArray;
     expect(people.map((person) => person.id)).toEqual([CANONICAL.id]);
     // The duplicate's two periods are transferred server-side; showing them here
     // before the refetch confirms it is exactly what masked the cascade delete.
@@ -185,13 +181,13 @@ describe("useAdminPeopleActions — merge", () => {
         HttpResponse.json(MERGE_RESPONSE),
       ),
     );
-    const { peopleCollections, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
+    const { peopleCollection, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
 
     await act(async () => {
       await result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
     });
 
-    const survivor = peopleCollections.people.toArray[0];
+    const survivor = peopleCollection.toArray[0];
     // The merge fills the canonical's blank email from the duplicate and adopts
     // its identity numbers; the cached blanks must not win.
     expect(survivor?.email).toBe("sofie@example.com");
@@ -207,13 +203,13 @@ describe("useAdminPeopleActions — merge", () => {
         HttpResponse.json({ ...MERGE_RESPONSE, roles: ["member"] }),
       ),
     );
-    const { peopleCollections, result } = await renderMergeHook([plainCanonical, plainDuplicate]);
+    const { peopleCollection, result } = await renderMergeHook([plainCanonical, plainDuplicate]);
 
     await act(async () => {
       await result.current.handleMergePeople(plainCanonical.id, plainDuplicate.id);
     });
 
-    const survivor = peopleCollections.people.toArray[0];
+    const survivor = peopleCollection.toArray[0];
     expect(survivor?.roles).toEqual(["member"]);
     expect(survivor?.helpPeriods).toEqual([]);
   });

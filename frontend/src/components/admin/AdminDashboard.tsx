@@ -119,7 +119,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     areasQuery,
     peopleQuery,
     membersQuery,
-    peopleCollections,
+    peopleCollection,
     isAnyPending,
     isAnyFetching,
     registrationsQueryKey,
@@ -196,7 +196,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   } = useAdminPeopleActions({
     authHeaders,
     exhibitorsQueryKey,
-    peopleCollections,
+    peopleCollection,
     queryClient,
     registrationsQueryKey,
     setDetailRegistration,

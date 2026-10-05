@@ -6,7 +6,7 @@ import { m } from "@/paraglide/messages";
 import {
   invalidateAdminPersonDetailQueries,
   refetchAdminPeople,
-  type AdminPeopleCollections,
+  type AdminPeopleCollection,
 } from "@/state/adminPeopleCollection";
 import {
   fetchJsonOrThrowWithUnauthorized,
@@ -17,7 +17,7 @@ import { invalidateAdmin } from "@/utils/queryInvalidation";
 interface UsePeopleMutationsOptions {
   queryClient: QueryClient;
   authHeaders: () => Record<string, string>;
-  peopleCollections: AdminPeopleCollections;
+  peopleCollection: AdminPeopleCollection;
   registrationsQueryKey: QueryKey;
   exhibitorsQueryKey: QueryKey;
 }
@@ -25,18 +25,15 @@ interface UsePeopleMutationsOptions {
 export function usePeopleMutations({
   queryClient,
   authHeaders,
-  peopleCollections,
+  peopleCollection,
   registrationsQueryKey,
   exhibitorsQueryKey,
 }: UsePeopleMutationsOptions) {
-  // Refetches the collections a write touched (explicitly: the implicit refetch
-  // after a write is deprecated) and the plain queries that show the same person.
-  const refreshPeople = (
-    resources: readonly ("people" | "members")[],
-    extraKeys: readonly QueryKey[] = [],
-  ) => {
+  // Refetches the people collection (explicitly: the implicit refetch after a
+  // write is deprecated) and the plain queries that show the same person.
+  const refreshPeople = (extraKeys: readonly QueryKey[] = []) => {
     void Promise.all([
-      refetchAdminPeople(peopleCollections, resources),
+      refetchAdminPeople(peopleCollection),
       invalidateAdminPersonDetailQueries(queryClient),
       invalidateAdmin(queryClient, extraKeys),
     ]);
@@ -50,7 +47,7 @@ export function usePeopleMutations({
         m.admin_people_merge_error(),
       ),
     onSettled: () => {
-      refreshPeople(["people", "members"], [registrationsQueryKey, exhibitorsQueryKey]);
+      refreshPeople([registrationsQueryKey, exhibitorsQueryKey]);
     },
     retry: false,
   });
@@ -76,7 +73,7 @@ export function usePeopleMutations({
         m.admin_members_error_create(),
       ),
     onSettled: () => {
-      refreshPeople(["people", "members"]);
+      refreshPeople();
     },
     retry: false,
   });
@@ -102,7 +99,7 @@ export function usePeopleMutations({
         m.admin_members_error_update(),
       ),
     onSettled: () => {
-      refreshPeople(["members", "people"], [registrationsQueryKey]);
+      refreshPeople([registrationsQueryKey]);
     },
     retry: false,
   });
@@ -115,7 +112,7 @@ export function usePeopleMutations({
         m.admin_members_error_delete(),
       ),
     onSettled: () => {
-      refreshPeople(["people", "members"]);
+      refreshPeople();
     },
     retry: false,
   });
@@ -142,7 +139,7 @@ export function usePeopleMutations({
         m.admin_people_error_create(),
       ),
     onSettled: () => {
-      refreshPeople(["people", "members"]);
+      refreshPeople();
     },
     retry: false,
   });
@@ -169,7 +166,7 @@ export function usePeopleMutations({
         m.admin_people_error_update(),
       ),
     onSettled: () => {
-      refreshPeople(["people", "members"], [registrationsQueryKey]);
+      refreshPeople([registrationsQueryKey]);
     },
     retry: false,
   });
@@ -182,7 +179,7 @@ export function usePeopleMutations({
         m.admin_error_delete_person(),
       ),
     onSettled: () => {
-      refreshPeople(["people", "members"]);
+      refreshPeople();
     },
     retry: false,
   });
@@ -210,7 +207,7 @@ export function usePeopleMutations({
         m.admin_volunteers_error_create(),
       ),
     onSettled: () => {
-      refreshPeople(["people"]);
+      refreshPeople();
     },
     retry: false,
   });
@@ -238,7 +235,7 @@ export function usePeopleMutations({
         m.admin_volunteers_error_update(),
       ),
     onSettled: () => {
-      refreshPeople(["people", "members"]);
+      refreshPeople();
     },
     retry: false,
   });
@@ -251,7 +248,7 @@ export function usePeopleMutations({
         m.admin_volunteers_error_delete(),
       ),
     onSettled: () => {
-      refreshPeople(["people", "members"]);
+      refreshPeople();
     },
     retry: false,
   });

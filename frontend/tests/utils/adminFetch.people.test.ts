@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { fetchMembers, fetchPeople, fetchPeopleSearch } from "@/utils/adminFetch";
+import { fetchPeople, fetchPeopleSearch } from "@/utils/adminFetch";
 import { server } from "@/mocks/server";
 
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
@@ -25,7 +25,7 @@ function personPayload(id: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("fetchPeople / fetchPeopleSearch / fetchMembers — envelope handling", () => {
+describe("fetchPeople / fetchPeopleSearch — envelope handling", () => {
   it("fetchPeople merges the people and volunteers envelopes into one list", async () => {
     server.use(
       http.get("/api/people", () =>
@@ -71,15 +71,18 @@ describe("fetchPeople / fetchPeopleSearch / fetchMembers — envelope handling",
     expect(people.map((p) => p.id)).toEqual(["p2"]);
   });
 
-  it("fetchMembers rejects a bare-array (pre-envelope) response instead of silently returning it", async () => {
+  it("fetchPeople rejects a bare-array (pre-envelope) response instead of silently returning it", async () => {
     // A bare array is exactly the pre-#931-fix shape: if this were accepted,
     // a malformed or reverted backend response would look like an empty or
-    // truncated member list instead of a loud failure. fetchMembers reads
-    // GET /api/people?role=member (there's no separate /api/members list
-    // route — see backend/app/routers/members.py).
-    server.use(http.get("/api/people", () => HttpResponse.json([personPayload("m1")])));
+    // truncated list instead of a loud failure.
+    server.use(
+      http.get("/api/people", () => HttpResponse.json([personPayload("m1")])),
+      http.get("/api/volunteers", () =>
+        HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 }),
+      ),
+    );
 
-    await expect(fetchMembers(authHeaders)).rejects.toThrow(
+    await expect(fetchPeople(authHeaders)).rejects.toThrow(
       /expected \{items, total, limit, page\}/,
     );
   });

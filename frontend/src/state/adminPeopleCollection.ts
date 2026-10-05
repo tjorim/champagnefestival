@@ -3,36 +3,35 @@ import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import type { QueryClient } from "@tanstack/react-query";
 import { createEpochFence } from "@/state/epochFence";
 import type { Person } from "@/types/person";
-import { fetchMembers, fetchPeople } from "@/utils/adminFetch";
+import { fetchPeople } from "@/utils/adminFetch";
 import { mergePersonUpdate, mergeVolunteerPerson } from "@/utils/adminApiMappers";
 import { queryKeys } from "@/utils/queryKeys";
 
 type AuthHeadersProvider = () => Record<string, string>;
 
-interface CreateAdminPeopleCollectionsOptions {
+interface CreateAdminPeopleCollectionOptions {
   queryClient: QueryClient;
   authHeaders: AuthHeadersProvider;
   enabled: boolean;
 }
 
 /**
- * `people` is every person (with their volunteer help periods merged in);
- * `members` is the subset holding the member role. They are two server
- * resources, so they are two collections, but they are always created, reset
- * and written together: one person change reaches both through the helpers
- * below instead of two hand-written cache patches.
+ * Every person, with the volunteer help periods merged in. Members are not a
+ * second copy: they are the rows holding the `member` role, derived from this
+ * collection (see `selectMembers`), so a person change reaches the members view
+ * without a second patch.
  *
  * Rows are written from the server's response after the API call succeeds
- * (the admin forms validate server-side and report errors in the modal), so
- * there are no optimistic write handlers. Each mutation then refetches the
- * collections explicitly through `refetchAdminPeople`.
+ * (the admin forms validate server-side, so there are no optimistic write
+ * handlers). Each mutation then refetches the collection explicitly through
+ * `refetchAdminPeople`.
  */
-export function createAdminPeopleCollections({
+export function createAdminPeopleCollection({
   queryClient,
   authHeaders,
   enabled,
-}: CreateAdminPeopleCollectionsOptions) {
-  const people = createCollection(
+}: CreateAdminPeopleCollectionOptions) {
+  return createCollection(
     queryCollectionOptions({
       queryKey: queryKeys.admin.people,
       queryFn: () => fetchPeople(authHeaders),
@@ -43,27 +42,19 @@ export function createAdminPeopleCollections({
       getKey: (person) => person.id,
     }),
   );
-  const members = createCollection(
-    queryCollectionOptions({
-      queryKey: queryKeys.admin.members,
-      queryFn: () => fetchMembers(authHeaders),
-      queryClient,
-      enabled,
-      staleTime: 60 * 1000,
-      retry: false,
-      getKey: (member) => member.id,
-    }),
-  );
-  return { people, members };
 }
 
-export type AdminPeopleCollections = ReturnType<typeof createAdminPeopleCollections>;
-type AdminPeopleCollection = AdminPeopleCollections["people"] | AdminPeopleCollections["members"];
+export type AdminPeopleCollection = ReturnType<typeof createAdminPeopleCollection>;
+
+/** The members view: every person who holds the member role. */
+export function selectMembers(people: readonly Person[]): Person[] {
+  return people.filter((person) => person.roles.includes("member"));
+}
 
 /**
- * Advanced whenever the set of active collections changes or the collections
- * are reset (sign-out), so a response that resolves afterwards is dropped
- * instead of written into the replacement state; see `epochFence.ts`.
+ * Advanced whenever the collection is replaced or reset (sign-out), so a
+ * response that resolves afterwards is dropped instead of written into the
+ * replacement state; see `epochFence.ts`.
  */
 const peopleFence = createEpochFence();
 
@@ -71,48 +62,30 @@ const peopleFence = createEpochFence();
 export const captureAdminPeopleFence = peopleFence.capture;
 
 /**
- * Marks a collection pair as mounted. A mount or unmount (a new pair replacing
- * the old one) invalidates every capture taken for the previous pair.
+ * Marks the collection as mounted. A mount or unmount (a new collection
+ * replacing the old one) invalidates every capture taken for the previous one.
  */
-export function registerAdminPeopleCollections(): () => void {
+export function registerAdminPeopleCollection(): () => void {
   peopleFence.advance();
   return () => peopleFence.advance();
 }
 
-async function clearCollection(collection: AdminPeopleCollection): Promise<void> {
+/** Empties the collection (sign-out) and drops every write still waiting on an API response. */
+export async function resetAdminPeopleCollection(collection: AdminPeopleCollection): Promise<void> {
+  peopleFence.advance();
   if (collection.size === 0) return;
   await collection.utils.writeBatch(() => {
     for (const key of collection.keys()) void collection.utils.writeDelete(key);
   });
 }
 
-/** Empties both collections (sign-out) and drops every write still waiting on an API response. */
-export async function resetAdminPeopleCollections(
-  collections: AdminPeopleCollections,
-): Promise<void> {
-  peopleFence.advance();
-  const results = await Promise.allSettled([
-    clearCollection(collections.people),
-    clearCollection(collections.members),
-  ]);
-  const failure = results.find((result) => result.status === "rejected");
-  if (failure) throw failure.reason;
-}
-
-type AdminPeopleResource = "people" | "members";
-
 /**
- * Refetches the given collections from the server (the implicit refetch after a
- * write is deprecated, so every write refetches explicitly). Failures stay on
+ * Refetches the people from the server (the implicit refetch after a write is
+ * deprecated, so every write refetches explicitly). Failures stay on
  * `collection.utils.lastError`, which the dashboard already surfaces.
  */
-export async function refetchAdminPeople(
-  collections: AdminPeopleCollections,
-  resources: readonly AdminPeopleResource[] = ["people", "members"],
-): Promise<void> {
-  await Promise.all(
-    resources.map((resource) => collections[resource].utils.refetch().catch(() => undefined)),
-  );
+export async function refetchAdminPeople(collection: AdminPeopleCollection): Promise<void> {
+  await collection.utils.refetch().catch(() => undefined);
 }
 
 /**
@@ -136,10 +109,6 @@ async function removeRow(collection: AdminPeopleCollection, id: string): Promise
   if (collection.has(id)) await collection.utils.writeDelete(id);
 }
 
-async function upsertRow(collection: AdminPeopleCollection, person: Person): Promise<void> {
-  await collection.utils.writeUpsert(person);
-}
-
 /** Replaces a row only when the collection already holds it; an absent row is not invented. */
 async function replaceRow(
   collection: AdminPeopleCollection,
@@ -147,13 +116,7 @@ async function replaceRow(
   next: (existing: Person) => Person,
 ): Promise<void> {
   const existing = collection.get(id);
-  if (existing) await upsertRow(collection, next(existing));
-}
-
-/** Keeps `members` aligned with a person's member role: add or refresh a member, drop a non-member. */
-async function syncMember(members: AdminPeopleCollections["members"], person: Person) {
-  if (person.roles.includes("member")) await upsertRow(members, person);
-  else await removeRow(members, person.id);
+  if (existing) await collection.utils.writeUpsert(next(existing));
 }
 
 /**
@@ -161,7 +124,7 @@ async function syncMember(members: AdminPeopleCollections["members"], person: Pe
  * committed, so a response that belongs to an earlier session is dropped and a
  * local failure (for example a collection whose sync has not started) is not
  * reported as a failed action: the refetch that follows every write brings the
- * collections back in line.
+ * collection back in line.
  */
 async function applyWrite(isCurrent: () => boolean, write: () => Promise<void>): Promise<void> {
   if (!isCurrent()) return;
@@ -172,108 +135,68 @@ async function applyWrite(isCurrent: () => boolean, write: () => Promise<void>):
   }
 }
 
-export function applyAdminMemberCreated(
-  collections: AdminPeopleCollections,
-  member: Person,
-  isCurrent: () => boolean,
-): Promise<void> {
-  return applyWrite(isCurrent, async () => {
-    await upsertRow(collections.members, member);
-    await upsertRow(collections.people, member);
-  });
-}
-
-export function applyAdminMemberUpdated(
-  collections: AdminPeopleCollections,
-  member: Person,
-  isCurrent: () => boolean,
-): Promise<void> {
-  return applyWrite(isCurrent, async () => {
-    await replaceRow(collections.members, member.id, () => member);
-    await replaceRow(collections.people, member.id, (existing) =>
-      mergePersonUpdate(existing, member),
-    );
-  });
-}
-
+/** A created person or member. */
 export function applyAdminPersonCreated(
-  collections: AdminPeopleCollections,
+  collection: AdminPeopleCollection,
   person: Person,
   isCurrent: () => boolean,
 ): Promise<void> {
-  return applyWrite(isCurrent, async () => {
-    await upsertRow(collections.people, person);
-    await syncMember(collections.members, person);
-  });
+  return applyWrite(isCurrent, () => collection.utils.writeUpsert(person));
 }
 
+/** An updated person or member; a volunteer keeps the help periods the row already holds. */
 export function applyAdminPersonUpdated(
-  collections: AdminPeopleCollections,
+  collection: AdminPeopleCollection,
   person: Person,
   isCurrent: () => boolean,
 ): Promise<void> {
-  return applyWrite(isCurrent, async () => {
-    await replaceRow(collections.people, person.id, (existing) =>
-      mergePersonUpdate(existing, person),
-    );
-    await syncMember(collections.members, person);
-  });
+  return applyWrite(isCurrent, () =>
+    replaceRow(collection, person.id, (existing) => mergePersonUpdate(existing, person)),
+  );
 }
 
-/** A deleted person or member leaves both collections. */
+/** A deleted person or member. */
 export function applyAdminPersonDeleted(
-  collections: AdminPeopleCollections,
+  collection: AdminPeopleCollection,
   id: string,
   isCurrent: () => boolean,
 ): Promise<void> {
-  return applyWrite(isCurrent, async () => {
-    await removeRow(collections.people, id);
-    await removeRow(collections.members, id);
-  });
+  return applyWrite(isCurrent, () => removeRow(collection, id));
 }
 
 export function applyAdminVolunteerCreated(
-  collections: AdminPeopleCollections,
+  collection: AdminPeopleCollection,
   volunteer: Person,
   isCurrent: () => boolean,
 ): Promise<void> {
-  return applyWrite(isCurrent, async () => {
-    await upsertRow(collections.people, mergeVolunteerPerson(undefined, volunteer));
-  });
+  return applyWrite(isCurrent, () =>
+    collection.utils.writeUpsert(mergeVolunteerPerson(undefined, volunteer)),
+  );
 }
 
 export function applyAdminVolunteerUpdated(
-  collections: AdminPeopleCollections,
+  collection: AdminPeopleCollection,
   volunteer: Person,
   isCurrent: () => boolean,
 ): Promise<void> {
-  return applyWrite(isCurrent, async () => {
-    await replaceRow(collections.people, volunteer.id, (existing) =>
-      mergeVolunteerPerson(existing, volunteer),
-    );
-    await replaceRow(collections.members, volunteer.id, (member) => ({
-      ...member,
-      name: volunteer.name,
-      address: volunteer.address,
-      active: volunteer.active,
-      updatedAt: volunteer.updatedAt,
-    }));
-  });
+  return applyWrite(isCurrent, () =>
+    replaceRow(collection, volunteer.id, (existing) => mergeVolunteerPerson(existing, volunteer)),
+  );
 }
 
 /** Deleting the volunteer record drops the role and help periods but keeps the person. */
 export function applyAdminVolunteerDeleted(
-  collections: AdminPeopleCollections,
+  collection: AdminPeopleCollection,
   id: string,
   isCurrent: () => boolean,
 ): Promise<void> {
-  return applyWrite(isCurrent, async () => {
-    await replaceRow(collections.people, id, (person) => ({
+  return applyWrite(isCurrent, () =>
+    replaceRow(collection, id, (person) => ({
       ...person,
       roles: person.roles.filter((role) => role !== "volunteer"),
       helpPeriods: [],
-    }));
-  });
+    })),
+  );
 }
 
 /**
@@ -286,19 +209,16 @@ export function applyAdminVolunteerDeleted(
  * merge brings back the real set.
  */
 export function applyAdminPeopleMerged(
-  collections: AdminPeopleCollections,
+  collection: AdminPeopleCollection,
   canonical: Person,
   duplicateId: string,
   isCurrent: () => boolean,
 ): Promise<void> {
   return applyWrite(isCurrent, async () => {
-    const existingCanonical = collections.people.get(canonical.id);
     const merged = canonical.roles.includes("volunteer")
-      ? { ...canonical, helpPeriods: existingCanonical?.helpPeriods ?? [] }
+      ? { ...canonical, helpPeriods: collection.get(canonical.id)?.helpPeriods ?? [] }
       : canonical;
-    await removeRow(collections.people, duplicateId);
-    await replaceRow(collections.people, canonical.id, () => merged);
-    await removeRow(collections.members, duplicateId);
-    await syncMember(collections.members, merged);
+    await removeRow(collection, duplicateId);
+    await replaceRow(collection, canonical.id, () => merged);
   });
 }

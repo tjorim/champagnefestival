@@ -1,6 +1,6 @@
 # TanStack DB for admin/event-day operational state
 
-**Status:** Adopted for registrations, tables, people and members; other resources are open follow-ups (see [Roadmap](#roadmap))
+**Status:** Adopted for registrations, tables and people (members are derived from people); other resources are open follow-ups (see [Roadmap](#roadmap))
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
 **Record updated:** 2026-10-05, [#1164](https://github.com/tjorim/champagnefestival/issues/1164)
 
@@ -151,26 +151,30 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
 
 ## People and members ([#1164](https://github.com/tjorim/champagnefestival/issues/1164))
 
-`people` and `members` are the third and fourth collection-backed domains.
+`people` is the third collection-backed domain; `members` is a view over it.
 
-- `frontend/src/state/adminPeopleCollection.ts`: `createAdminPeopleCollections`
-  builds both collections (`people` from `fetchPeople`, which merges the volunteer
-  help periods in; `members` from `fetchMembers`) with `queryCollectionOptions`
-  and `getKey: (person) => person.id`. They are two server resources, so two
-  collections, but they are created, registered, reset and written as one pair.
-  `useAdminQueries` creates the pair, reads each with `useLiveQuery` and exposes
-  query-shaped `peopleQuery`/`membersQuery` objects, so `AdminDashboard` reads
-  them as before.
+- `frontend/src/state/adminPeopleCollection.ts`: `createAdminPeopleCollection`
+  builds one collection from `fetchPeople` (which merges the volunteer help
+  periods in) with `queryCollectionOptions` and `getKey: (person) => person.id`.
+  `useAdminQueries` reads it with `useLiveQuery` and exposes query-shaped
+  `peopleQuery`/`membersQuery` objects, so `AdminDashboard` reads them as before.
+- **Members are derived, not stored.** A member is a person holding the `member`
+  role, so `membersQuery.data` is `selectMembers(people)`. There is no members
+  collection, no `/api/people?role=member` request (`fetchMembers` and
+  `queryKeys.admin.members` are gone) and no member-sync code: a person update,
+  role change or delete reaches the members view by itself (rule 3 below: derive
+  views instead of storing them twice). An earlier iteration of this migration had
+  a second collection kept in step by hand; that reintroduced the multi-cache
+  patching this issue set out to remove.
 - **Writes are direct, not handlers.** The admin forms validate server-side, and
   the server assigns ids and `updated_at`, so nothing is shown optimistically.
   `useAdminPeopleActions` keeps one `useMutation` per API call and then calls an
-  `applyAdmin…` helper that expresses the whole cross-collection effect once:
-  a person update patches `people` and syncs `members` (a row is added, replaced
-  or removed by the member role); a delete leaves both; a merge removes the
-  duplicate and keeps the survivor's own help periods. That replaces the roughly
-  22 `setQueryData` calls on the two keys. The registrations and exhibitors
-  copies of a person are still patched with `setQueryData` there (those domains
-  are out of scope here; see #1166).
+  `applyAdmin…` helper that writes the server's row into the collection (create,
+  update, delete, the volunteer variants, and merge, which removes the duplicate
+  and keeps the survivor's own help periods). That replaces the roughly 22
+  `setQueryData` calls on the people and members keys. The registrations and
+  exhibitors copies of a person are still patched with `setQueryData` there (those
+  domains are out of scope here; see #1166).
 - **Refetch.** `usePeopleMutations`' `onSettled` calls `collection.utils.refetch()`
   explicitly through `refetchAdminPeople`. The per-person queries nested under
   the people key (`peopleRegistrations`, `peoplePaymentSummary`) share its prefix
@@ -179,16 +183,16 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   second time.
 - **Session fence and reset.** Each action captures `captureAdminPeopleFence()`
   before its request and the helpers drop the write if it moved, because sign-out
-  (`resetAdminPeopleCollections`) and collection swaps (`registerAdminPeopleCollections`)
+  (`resetAdminPeopleCollection`) and collection swaps (`registerAdminPeopleCollection`)
   advance it. A local write that fails after the server committed (for example a
   collection whose sync stopped) is not reported as a failed action; the refetch
-  reconciles. `isAuthenticated` turning false empties both collections and removes
-  both query keys (and the nested per-person queries).
-- **Keys.** `"people"` and `"members"` are no longer in `ADMIN_RESOURCE_KEYS`;
-  `loadData` refetches the pair through `refetchAdminPeople`, and no
-  `useQuery`/`setQueryData` path for either remains.
+  reconciles. `isAuthenticated` turning false empties the collection and removes
+  the people query key (and the nested per-person queries).
+- **Keys.** `"people"` is no longer in `ADMIN_RESOURCE_KEYS`; `loadData` refetches
+  the collection through `refetchAdminPeople`, and no `useQuery`/`setQueryData`
+  path for people or members remains.
 - **No live events.** The stream carries no people topic today, so there is no
-  live patching or timestamp map for these collections.
+  live patching or timestamp map for this collection.
 - Retry-safety decisions are in `docs/retry-safety.md`.
 
 ## Rules that still apply

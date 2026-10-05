@@ -22,7 +22,7 @@ function useAdminPeople(isAuthenticated: boolean) {
 }
 
 describe("admin people collections in the admin hooks", () => {
-  it("serves people and members from collections and drops them when the session ends", async () => {
+  it("serves people from a collection, derives members from it, and drops both when the session ends", async () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const view = renderHook(({ isAuthenticated }) => useAdminPeople(isAuthenticated), {
       wrapper: Wrapper,
@@ -30,7 +30,9 @@ describe("admin people collections in the admin hooks", () => {
     });
     await waitFor(() => {
       expect(view.result.current.peopleQuery.data).toHaveLength(seedPeople.length);
-      expect(view.result.current.membersQuery.data?.length).toBeGreaterThan(0);
+      expect(view.result.current.membersQuery.data).toHaveLength(
+        seedPeople.filter((p) => (p.roles as string[]).includes("member")).length,
+      );
     });
 
     view.rerender({ isAuthenticated: false });
@@ -40,10 +42,9 @@ describe("admin people collections in the admin hooks", () => {
       expect(view.result.current.membersQuery.data).toHaveLength(0);
     });
     expect(queryClient.getQueryData(["admin", "people"])).toBeUndefined();
-    expect(queryClient.getQueryData(["admin", "members"])).toBeUndefined();
   });
 
-  it("reflects a person update in people and members from one action", async () => {
+  it("reflects a person update in people and members from one write", async () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const view = renderHook(
       () => {
@@ -56,7 +57,7 @@ describe("admin people collections in the admin hooks", () => {
         const actions = useAdminPeopleActions({
           authHeaders,
           exhibitorsQueryKey: queries.exhibitorsQueryKey,
-          peopleCollections: queries.peopleCollections,
+          peopleCollection: queries.peopleCollection,
           queryClient,
           registrationsQueryKey: queries.registrationsQueryKey,
           setDetailRegistration: () => undefined,

@@ -7,8 +7,6 @@ import type { Registration } from "@/types/registration";
 import { type Person, apiToPerson } from "@/types/person";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import {
-  applyAdminMemberCreated,
-  applyAdminMemberUpdated,
   applyAdminPeopleMerged,
   applyAdminPersonCreated,
   applyAdminPersonDeleted,
@@ -17,13 +15,13 @@ import {
   applyAdminVolunteerDeleted,
   applyAdminVolunteerUpdated,
   captureAdminPeopleFence,
-  type AdminPeopleCollections,
+  type AdminPeopleCollection,
 } from "@/state/adminPeopleCollection";
 
 interface UseAdminPeopleActionsOptions {
   authHeaders: () => Record<string, string>;
   exhibitorsQueryKey: QueryKey;
-  peopleCollections: AdminPeopleCollections;
+  peopleCollection: AdminPeopleCollection;
   queryClient: QueryClient;
   registrationsQueryKey: QueryKey;
   setDetailRegistration: Dispatch<SetStateAction<Registration | null>>;
@@ -36,7 +34,7 @@ function toRegistrationPerson(person: Person): Registration["person"] {
 export function useAdminPeopleActions({
   authHeaders,
   exhibitorsQueryKey,
-  peopleCollections,
+  peopleCollection,
   queryClient,
   registrationsQueryKey,
   setDetailRegistration,
@@ -55,14 +53,14 @@ export function useAdminPeopleActions({
   } = usePeopleMutations({
     queryClient,
     authHeaders,
-    peopleCollections,
+    peopleCollection,
     registrationsQueryKey,
     exhibitorsQueryKey,
   });
 
   // Registrations and exhibitors still carry a copy of the person, so a
-  // person change patches those caches too. The people and members rows are
-  // written through the collection helpers, which drop the write if the
+  // person change patches those caches too. The people row (and with it the
+  // members view) is written through the collection helpers, which drop the write if the
   // session changed while the request was in flight.
   const patchRegistrationPerson = useCallback(
     (person: Person) => {
@@ -87,7 +85,7 @@ export function useAdminPeopleActions({
       const isCurrent = captureAdminPeopleFence();
       const updated = await mergePeopleMutation.mutateAsync({ canonicalId, duplicateId });
       const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
-      await applyAdminPeopleMerged(peopleCollections, canonicalPerson, duplicateId, isCurrent);
+      await applyAdminPeopleMerged(peopleCollection, canonicalPerson, duplicateId, isCurrent);
       queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
         prev
           ? prev.map((registration) =>
@@ -111,26 +109,20 @@ export function useAdminPeopleActions({
           : prev,
       );
     },
-    [
-      exhibitorsQueryKey,
-      mergePeopleMutation,
-      peopleCollections,
-      queryClient,
-      registrationsQueryKey,
-    ],
+    [exhibitorsQueryKey, mergePeopleMutation, peopleCollection, queryClient, registrationsQueryKey],
   );
 
   const handleCreateMember = useCallback(
     async (data: MemberFormData) => {
       const isCurrent = captureAdminPeopleFence();
       const response = await createMemberMutation.mutateAsync(data);
-      await applyAdminMemberCreated(
-        peopleCollections,
+      await applyAdminPersonCreated(
+        peopleCollection,
         apiToPerson(response as Record<string, unknown>),
         isCurrent,
       );
     },
-    [createMemberMutation, peopleCollections],
+    [createMemberMutation, peopleCollection],
   );
 
   const handleUpdateMember = useCallback(
@@ -138,19 +130,19 @@ export function useAdminPeopleActions({
       const isCurrent = captureAdminPeopleFence();
       const response = await updateMemberMutation.mutateAsync({ id, data });
       const updatedMember = apiToPerson(response as Record<string, unknown>);
-      await applyAdminMemberUpdated(peopleCollections, updatedMember, isCurrent);
+      await applyAdminPersonUpdated(peopleCollection, updatedMember, isCurrent);
       patchRegistrationPerson(updatedMember);
     },
-    [patchRegistrationPerson, peopleCollections, updateMemberMutation],
+    [patchRegistrationPerson, peopleCollection, updateMemberMutation],
   );
 
   const handleDeleteMember = useCallback(
     async (id: string) => {
       const isCurrent = captureAdminPeopleFence();
       await deleteMemberMutation.mutateAsync(id);
-      await applyAdminPersonDeleted(peopleCollections, id, isCurrent);
+      await applyAdminPersonDeleted(peopleCollection, id, isCurrent);
     },
-    [deleteMemberMutation, peopleCollections],
+    [deleteMemberMutation, peopleCollection],
   );
 
   const handleCreatePerson = useCallback(
@@ -158,12 +150,12 @@ export function useAdminPeopleActions({
       const isCurrent = captureAdminPeopleFence();
       const response = await createPersonMutation.mutateAsync(data);
       await applyAdminPersonCreated(
-        peopleCollections,
+        peopleCollection,
         apiToPerson(response as Record<string, unknown>),
         isCurrent,
       );
     },
-    [createPersonMutation, peopleCollections],
+    [createPersonMutation, peopleCollection],
   );
 
   const handleUpdatePerson = useCallback(
@@ -171,19 +163,19 @@ export function useAdminPeopleActions({
       const isCurrent = captureAdminPeopleFence();
       const response = await updatePersonMutation.mutateAsync({ id, data });
       const updated = apiToPerson(response as Record<string, unknown>);
-      await applyAdminPersonUpdated(peopleCollections, updated, isCurrent);
+      await applyAdminPersonUpdated(peopleCollection, updated, isCurrent);
       patchRegistrationPerson(updated);
     },
-    [patchRegistrationPerson, peopleCollections, updatePersonMutation],
+    [patchRegistrationPerson, peopleCollection, updatePersonMutation],
   );
 
   const handleDeletePerson = useCallback(
     async (id: string) => {
       const isCurrent = captureAdminPeopleFence();
       await deletePersonMutation.mutateAsync(id);
-      await applyAdminPersonDeleted(peopleCollections, id, isCurrent);
+      await applyAdminPersonDeleted(peopleCollection, id, isCurrent);
     },
-    [deletePersonMutation, peopleCollections],
+    [deletePersonMutation, peopleCollection],
   );
 
   const handleCreateVolunteer = useCallback(
@@ -191,12 +183,12 @@ export function useAdminPeopleActions({
       const isCurrent = captureAdminPeopleFence();
       const response = await createVolunteerMutation.mutateAsync(data);
       await applyAdminVolunteerCreated(
-        peopleCollections,
+        peopleCollection,
         apiToPerson(response as Record<string, unknown>),
         isCurrent,
       );
     },
-    [createVolunteerMutation, peopleCollections],
+    [createVolunteerMutation, peopleCollection],
   );
 
   const handleUpdateVolunteer = useCallback(
@@ -204,21 +196,21 @@ export function useAdminPeopleActions({
       const isCurrent = captureAdminPeopleFence();
       const response = await updateVolunteerMutation.mutateAsync({ id, data });
       await applyAdminVolunteerUpdated(
-        peopleCollections,
+        peopleCollection,
         apiToPerson(response as Record<string, unknown>),
         isCurrent,
       );
     },
-    [peopleCollections, updateVolunteerMutation],
+    [peopleCollection, updateVolunteerMutation],
   );
 
   const handleDeleteVolunteer = useCallback(
     async (id: string) => {
       const isCurrent = captureAdminPeopleFence();
       await deleteVolunteerMutation.mutateAsync(id);
-      await applyAdminVolunteerDeleted(peopleCollections, id, isCurrent);
+      await applyAdminVolunteerDeleted(peopleCollection, id, isCurrent);
     },
-    [deleteVolunteerMutation, peopleCollections],
+    [deleteVolunteerMutation, peopleCollection],
   );
 
   return {

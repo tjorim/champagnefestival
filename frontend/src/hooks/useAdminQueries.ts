@@ -7,10 +7,11 @@ import {
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
 import {
-  createAdminPeopleCollections,
+  createAdminPeopleCollection,
   refetchAdminPeople,
-  registerAdminPeopleCollections,
-  resetAdminPeopleCollections,
+  registerAdminPeopleCollection,
+  resetAdminPeopleCollection,
+  selectMembers,
 } from "@/state/adminPeopleCollection";
 import {
   createAdminTablesCollection,
@@ -36,7 +37,7 @@ interface UseAdminQueriesOptions {
   authHeaders: () => Record<string, string>;
 }
 
-// "tables", "people" and "members" are deliberately absent: they are served by
+// "tables" and "people" are deliberately absent: they are served by
 // collections, which are refetched through their own utils (see `loadData`),
 // never by a standalone query.
 export const ADMIN_RESOURCE_KEYS = [
@@ -168,34 +169,33 @@ export function useAdminQueries({
     isFetching: tablesCollection.utils.isFetching,
   };
 
-  const peopleCollections = useMemo(
+  const peopleCollection = useMemo(
     () =>
-      createAdminPeopleCollections({
+      createAdminPeopleCollection({
         queryClient,
         authHeaders,
         enabled: adminQueryOptions.enabled,
       }),
     [adminQueryOptions.enabled, authHeaders, queryClient],
   );
-  const peopleLiveQuery = useLiveQuery(() => peopleCollections.people, [peopleCollections]);
-  const membersLiveQuery = useLiveQuery(() => peopleCollections.members, [peopleCollections]);
-  const peopleCollectionsRef = useRef(peopleCollections);
+  const peopleLiveQuery = useLiveQuery(() => peopleCollection, [peopleCollection]);
+  const peopleCollectionRef = useRef(peopleCollection);
   useEffect(() => {
-    peopleCollectionsRef.current = peopleCollections;
-  }, [peopleCollections]);
-  useEffect(() => registerAdminPeopleCollections(), [peopleCollections]);
+    peopleCollectionRef.current = peopleCollection;
+  }, [peopleCollection]);
+  useEffect(() => registerAdminPeopleCollection(), [peopleCollection]);
   const peopleQuery = {
     data: peopleLiveQuery.data,
-    error: peopleCollections.people.utils.lastError ?? null,
+    error: peopleCollection.utils.lastError ?? null,
     isPending: peopleLiveQuery.isLoading,
-    isFetching: peopleCollections.people.utils.isFetching,
+    isFetching: peopleCollection.utils.isFetching,
   };
-  const membersQuery = {
-    data: membersLiveQuery.data,
-    error: peopleCollections.members.utils.lastError ?? null,
-    isPending: membersLiveQuery.isLoading,
-    isFetching: peopleCollections.members.utils.isFetching,
-  };
+  // Members are a view over the people rows, never a second copy.
+  const membersData = useMemo(
+    () => selectMembers(peopleLiveQuery.data ?? []),
+    [peopleLiveQuery.data],
+  );
+  const membersQuery = { ...peopleQuery, data: membersData };
 
   useEffect(() => {
     if (isAuthenticated) return;
@@ -204,12 +204,11 @@ export function useAdminQueries({
       () => undefined,
     );
     void resetAdminTablesCollection(tablesCollectionRef.current).catch(() => undefined);
-    void resetAdminPeopleCollections(peopleCollectionsRef.current).catch(() => undefined);
+    void resetAdminPeopleCollection(peopleCollectionRef.current).catch(() => undefined);
     void queryClient.removeQueries({ queryKey: registrationsQueryKey });
     void queryClient.removeQueries({ queryKey: queryKeys.admin.tables });
     // Also removes the per-person queries nested under the people key.
     void queryClient.removeQueries({ queryKey: queryKeys.admin.people });
-    void queryClient.removeQueries({ queryKey: queryKeys.admin.members });
   }, [isAuthenticated, queryClient, registrationsQueryKey]);
   const venuesQuery = useQuery({
     queryKey: venuesQueryKey,
@@ -267,9 +266,9 @@ export function useAdminQueries({
           }),
       }),
       canManageAdminSections ? refetchAdminTables(tablesCollection) : undefined,
-      canManageAdminSections ? refetchAdminPeople(peopleCollections) : undefined,
+      canManageAdminSections ? refetchAdminPeople(peopleCollection) : undefined,
     ]);
-  }, [canManageAdminSections, peopleCollections, queryClient, tablesCollection]);
+  }, [canManageAdminSections, peopleCollection, queryClient, tablesCollection]);
 
   return {
     // Query objects (for error/loading state access)
@@ -284,7 +283,7 @@ export function useAdminQueries({
     areasQuery,
     peopleQuery,
     membersQuery,
-    peopleCollections,
+    peopleCollection,
     // Derived booleans
     isAnyPending: allQueries.some((q) => q.isPending),
     isAnyFetching: allQueries.some((q) => q.isFetching),
