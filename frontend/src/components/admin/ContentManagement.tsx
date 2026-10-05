@@ -338,14 +338,11 @@ export function ContentSection({
     return (
       <PresentationListItem
         key={item.id}
-        className={clsx(
-          "tw:flex tw:justify-between tw:items-center tw:gap-2",
-          isArchived && "tw:opacity-50",
-        )}
+        className={clsx("flex justify-between items-center gap-2", isArchived && "opacity-50")}
       >
-        <span className="tw:flex tw:items-center tw:gap-2 tw:grow tw:truncate">
+        <span className="flex items-center gap-2 grow truncate">
           {item.image && (
-            <span className="tw:inline-flex tw:items-center tw:justify-center tw:w-8 tw:h-8 tw:shrink-0">
+            <span className="inline-flex items-center justify-center w-8 h-8 shrink-0">
               {imageErrors.has(item.id) ? (
                 <span role="img" aria-label={`Image unavailable for ${item.name}`}>
                   🖼
@@ -354,7 +351,7 @@ export function ContentSection({
                 <img
                   src={item.image}
                   alt={item.name}
-                  className="tw:w-8 tw:h-8 tw:object-contain"
+                  className="w-8 h-8 object-contain"
                   onError={() => setImageErrors((prev) => new Set(prev).add(item.id))}
                 />
               )}
@@ -366,8 +363,8 @@ export function ContentSection({
                 aria-description={`${m.admin_content_used_in_editions()}: ${editionsByItemId.get(item.id)!.join(", ")}`}
                 render={<button type="button" />}
                 className={clsx(
-                  "tw:truncate tw:border-0 tw:bg-transparent tw:p-0 tw:underline tw:decoration-dotted",
-                  isArchived ? "tw:text-muted-foreground" : "tw:text-foreground",
+                  "truncate border-0 bg-transparent p-0 underline decoration-dotted",
+                  isArchived ? "text-muted-foreground" : "text-foreground",
                 )}
               >
                 {item.name}
@@ -377,30 +374,26 @@ export function ContentSection({
               </TooltipContent>
             </Tooltip>
           ) : (
-            <span
-              className={clsx("tw:truncate", isArchived ? "tw:text-subtle" : "tw:text-content")}
-            >
+            <span className={clsx("truncate", isArchived ? "text-subtle" : "text-content")}>
               {item.name}
             </span>
           )}
           <Badge
             variant={typeBadgeVariant(item.type)}
-            className="tw:shrink-0"
+            className="shrink-0"
             aria-label={`${m.admin_item_type()}: ${typeLabel(item.type)}`}
           >
             {typeLabel(item.type)}
           </Badge>
-          <small className="tw:text-subtle tw:truncate tw:hidden tw:site-md:inline">
-            {item.image}
-          </small>
+          <small className="text-subtle truncate hidden site-md:inline">{item.image}</small>
           {item.contactPerson && (
-            <small className="tw:text-subtle tw:truncate tw:hidden tw:site-lg:inline">
-              <Icon icon={UserIcon} className="tw:me-1" />
+            <small className="text-subtle truncate hidden site-lg:inline">
+              <Icon icon={UserIcon} className="me-1" />
               {item.contactPerson.name}
             </small>
           )}
         </span>
-        <span className="tw:flex tw:gap-1 tw:shrink-0">
+        <span className="flex gap-1 shrink-0">
           {!isArchived && (
             <Button
               variant="outline"
@@ -449,23 +442,23 @@ export function ContentSection({
 
   if (itemsQuery.isPending) {
     return (
-      <div className="tw:text-center tw:py-4">
+      <div className="text-center py-4">
         <Spinner size="sm" variant="primary" />
-        <span className="tw:ms-2 tw:text-subtle">{m.admin_content_loading()}</span>
+        <span className="ms-2 text-subtle">{m.admin_content_loading()}</span>
       </div>
     );
   }
 
   return (
-    <div className="tw:mb-6">
-      <div className="tw:flex tw:justify-between tw:items-center tw:mb-2 tw:flex-wrap tw:gap-2">
-        <h6 className="tw:mb-0 tw:text-primary">
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
+        <h6 className="mb-0 text-primary">
           {title}
-          <Badge variant="secondary" className="tw:ms-2">
+          <Badge variant="secondary" className="ms-2">
             {totalActive}
           </Badge>
           {totalArchived > 0 && (
-            <Badge variant="outline" className="tw:ms-1">
+            <Badge variant="outline" className="ms-1">
               {totalArchived} {m.admin_content_archived_section()}
             </Badge>
           )}
@@ -475,7 +468,7 @@ export function ContentSection({
           {m.admin_content_add_item()}
         </Button>
       </div>
-      <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center tw:mb-2">
+      <div className="flex flex-wrap gap-2 items-center mb-2">
         <ButtonGroup aria-label={m.admin_content_type_filter_aria()}>
           {(["all", "producer", "sponsor", "vendor"] as const).map((type) => (
             <Button
@@ -495,7 +488,7 @@ export function ContentSection({
           placeholder={m.admin_content_search_placeholder()}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          className="tw:bg-muted tw:text-content tw:border-input tw:max-w-65"
+          className="bg-muted text-content border-input max-w-65"
         />
         {typeFilter !== "all" && activeItems.length > 0 && (
           <Button
@@ -511,7 +504,7 @@ export function ContentSection({
       </div>
 
       {itemsQuery.isError && (
-        <Alert role="alert" aria-live="assertive" variant="danger" className="tw:py-1 tw:mb-2">
+        <Alert role="alert" aria-live="assertive" variant="danger" className="py-1 mb-2">
           {m.admin_content_error_load()}
         </Alert>
       )}
@@ -520,7 +513,7 @@ export function ContentSection({
           role="alert"
           aria-live="assertive"
           variant="danger"
-          className="tw:py-1 tw:mb-2"
+          className="py-1 mb-2"
           onClose={() => setActionError(null)}
         >
           {actionError}
@@ -530,19 +523,19 @@ export function ContentSection({
         {activeItems.map((item) => renderItemRow(item, false))}
       </PresentationList>
       {activeItems.length === 0 && archivedItems.length === 0 && (q || typeFilter !== "all") && (
-        <div className="tw:text-center tw:py-6 tw:text-subtle">
-          <p className="tw:mb-2 tw:text-sm">{m.admin_content_no_results()}</p>
+        <div className="text-center py-6 text-subtle">
+          <p className="mb-2 text-sm">{m.admin_content_no_results()}</p>
           <Button variant="outline" size="sm" onClick={handleClearFilters}>
             {m.admin_content_clear_filters()}
           </Button>
         </div>
       )}
       {archivedItems.length > 0 && (
-        <div className="tw:mt-2">
+        <div className="mt-2">
           <Button
             variant="link"
             size="sm"
-            className="tw:text-subtle tw:px-0"
+            className="text-subtle px-0"
             onClick={() => setArchivedOpen((value) => !value)}
           >
             <Icon icon={archivedOpen ? ChevronDownIcon : ChevronRightIcon} />
@@ -679,10 +672,10 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
   }, [onEditionMutated, queryClient]);
 
   return (
-    <div className="tw:mb-6">
-      <div className="tw:flex tw:justify-between tw:items-center tw:mb-2 tw:flex-wrap tw:gap-2">
+    <div className="mb-6">
+      <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
         <div>
-          <h6 className="tw:mb-1 tw:text-primary">{m.admin_content_editions_section()}</h6>
+          <h6 className="mb-1 text-primary">{m.admin_content_editions_section()}</h6>
           <ButtonGroup aria-label={m.admin_content_edition_type_filter_aria()}>
             {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
               <Button
@@ -704,30 +697,30 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
       </div>
 
       {editionsQuery.isPending && (
-        <div className="tw:text-center tw:py-4">
+        <div className="text-center py-4">
           <Spinner size="sm" variant="primary" />
-          <span className="tw:ms-2 tw:text-subtle">{m.admin_content_loading()}</span>
+          <span className="ms-2 text-subtle">{m.admin_content_loading()}</span>
         </div>
       )}
       {!editionsQuery.isPending && editionsQuery.isError && (
-        <Alert role="alert" aria-live="assertive" variant="danger" className="tw:py-2 tw:text-sm">
+        <Alert role="alert" aria-live="assertive" variant="danger" className="py-2 text-sm">
           {m.admin_content_error_load()}
         </Alert>
       )}
       {!editionsQuery.isPending &&
         !editionsQuery.isError &&
         (editionsQuery.data ?? []).length === 0 && (
-          <p className="tw:text-subtle tw:italic tw:text-sm">{m.admin_content_no_editions()}</p>
+          <p className="text-subtle italic text-sm">{m.admin_content_no_editions()}</p>
         )}
       {!editionsQuery.isPending && !editionsQuery.isError && (
-        <div className="tw:flex tw:flex-col tw:gap-4">
+        <div className="flex flex-col gap-4">
           {(["festival", "bourse", "capsule_exchange"] as const).map((type) => {
             const grouped = groupedEditions[type];
             if (grouped.length === 0) return null;
             return (
               <div key={type}>
-                <div className="tw:flex tw:items-center tw:gap-2 tw:mb-2">
-                  <h6 className="tw:mb-0 tw:text-content">{editionTypeLabel(type)}</h6>
+                <div className="flex items-center gap-2 mb-2">
+                  <h6 className="mb-0 text-content">{editionTypeLabel(type)}</h6>
                   <Badge variant="secondary">{grouped.length}</Badge>
                 </div>
                 {grouped.map((edition) => (
@@ -768,7 +761,7 @@ export default function ContentManagement({
 }: ContentManagementProps) {
   return (
     <div>
-      <Card tone="secondary" className="tw:mb-4">
+      <Card tone="secondary" className="mb-4">
         <CardContent>
           <ContentSection
             sectionKey="exhibitors"
@@ -777,7 +770,7 @@ export default function ContentManagement({
             onItemSaved={onExhibitorSaved}
             onItemDeleted={onExhibitorDeleted}
           />
-          <hr className="tw:border-subtle" />
+          <hr className="border-subtle" />
           <EditionsSection
             authHeaders={authHeaders}
             venues={venues}

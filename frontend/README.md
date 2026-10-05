@@ -1,6 +1,6 @@
 # Champagnefestival — Frontend
 
-React + Vite SPA for the Champagnefestival website, with TypeScript, Bootstrap, and Paraglide i18n.
+React + Vite SPA for the Champagnefestival website, with TypeScript, Tailwind CSS, Base UI, and Paraglide i18n.
 
 ## Quick start
 
@@ -183,7 +183,7 @@ production builds**.
 
 - **Components**: functional components with TypeScript interfaces; PascalCase filenames
 - **State**: React hooks (`useState`, `useContext`)
-- **UI**: React Bootstrap components; Bootstrap utility classes for custom styling
+- **UI**: Base UI primitives in `src/components/ui/` styled with Tailwind v4 utilities and the semantic tokens in `src/styles/tailwind.css`; Lucide icons. Runtime visual themes live in `public/themes/`
 - **Types**: strict TypeScript, avoid `any`
 - **Imports**: group — React, libraries, components, utils/types
 - **i18n**: always use Paraglide message functions, never hardcode user-facing strings
@@ -217,4 +217,4 @@ production builds**.
 
 ## Technologies
 
-React, Vite (Rolldown), TypeScript, React Bootstrap, Paraglide i18n, Vitest, oxlint
+React, Vite (Rolldown), TypeScript, Tailwind CSS, Base UI, Paraglide i18n, Vitest, oxlint

@@ -86,12 +86,12 @@ export default function ConfirmModal({
     >
       <AlertDialogContent admin={admin} onBackdropClick={dismiss}>
         <AlertDialogHeader>
-          <AlertDialogTitle className="tw:pr-8">{title}</AlertDialogTitle>
+          <AlertDialogTitle className="pr-8">{title}</AlertDialogTitle>
           <AlertDialogCancel
             variant="ghost"
             size="icon-sm"
             disabled={pending}
-            className="tw:absolute tw:top-4 tw:right-4"
+            className="absolute top-4 right-4"
             aria-label={m.close()}
           >
             <XIcon />
@@ -101,7 +101,7 @@ export default function ConfirmModal({
         {error && (
           <div
             role="alert"
-            className="tw:rounded-md tw:border tw:border-destructive tw:bg-destructive/10 tw:p-2 tw:text-sm tw:text-destructive"
+            className="rounded-md border border-destructive bg-destructive/10 p-2 text-sm text-destructive"
           >
             {error}
           </div>
@@ -116,9 +116,9 @@ export default function ConfirmModal({
             disabled={pending}
           >
             {pending ? (
-              <LoaderCircleIcon className="tw:size-4 tw:animate-spin" aria-hidden="true" />
+              <LoaderCircleIcon className="size-4 animate-spin" aria-hidden="true" />
             ) : (
-              <Icon className="tw:size-4" aria-hidden="true" />
+              <Icon className="size-4" aria-hidden="true" />
             )}
             {confirmLabel ?? m.admin_action_confirm()}
           </Button>

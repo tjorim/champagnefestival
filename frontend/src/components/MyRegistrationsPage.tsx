@@ -376,9 +376,7 @@ export default function MyRegistrationsPage() {
     <div id="my-registrations">
       {!showRegistrationFlow && (
         <>
-          <p className="tw:text-center tw:text-subtle tw:mb-6">
-            {m.my_registrations_description()}
-          </p>
+          <p className="text-center text-subtle mb-6">{m.my_registrations_description()}</p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -386,7 +384,7 @@ export default function MyRegistrationsPage() {
             }}
             noValidate
           >
-            <PublicField controlId="my-registrations-email" className="tw:mb-4">
+            <PublicField controlId="my-registrations-email" className="mb-4">
               <PublicLabel>{m.my_registrations_email_label()}</PublicLabel>
               <emailForm.Field name="email">
                 {(field) => (
@@ -408,18 +406,16 @@ export default function MyRegistrationsPage() {
 
             <div id="email-error" role="alert">
               {error && (
-                <Alert variant="danger" className="tw:mb-4">
-                  <Icon icon={TriangleAlertIcon} className="tw:me-2" />
+                <Alert variant="danger" className="mb-4">
+                  <Icon icon={TriangleAlertIcon} className="me-2" />
                   {error}
                 </Alert>
               )}
             </div>
 
             {requestSent && (
-              <Alert variant="info" className="tw:mb-4" role="status" aria-live="polite">
-                <div className="tw:font-semibold tw:mb-1">
-                  {m.my_registrations_request_success()}
-                </div>
+              <Alert variant="info" className="mb-4" role="status" aria-live="polite">
+                <div className="font-semibold mb-1">{m.my_registrations_request_success()}</div>
                 <div>{m.my_registrations_request_pending_notice()}</div>
               </Alert>
             )}
@@ -427,17 +423,17 @@ export default function MyRegistrationsPage() {
             <Button
               type="submit"
               variant="warning"
-              className="tw:w-full"
+              className="w-full"
               disabled={isSubmittingEmail || !email.trim()}
             >
               {isSubmittingEmail ? (
                 <>
-                  <Spinner size="sm" role="status" aria-hidden="true" className="tw:me-2" />
+                  <Spinner size="sm" role="status" aria-hidden="true" className="me-2" />
                   {m.my_registrations_requesting()}
                 </>
               ) : (
                 <>
-                  <Icon icon={MailOpenIcon} className="tw:me-2" />
+                  <Icon icon={MailOpenIcon} className="me-2" />
                   {m.my_registrations_request_link()}
                 </>
               )}
@@ -445,7 +441,7 @@ export default function MyRegistrationsPage() {
           </form>
           <Button
             variant="link"
-            className="tw:w-full tw:mt-2 tw:text-subtle"
+            className="w-full mt-2 text-subtle"
             onClick={() => auth.login("/me")}
           >
             {m.my_registrations_sign_in_instead()}
@@ -456,8 +452,8 @@ export default function MyRegistrationsPage() {
       {showRegistrationFlow && (
         <>
           {isLoadingRegistrations && (
-            <Alert variant="secondary" className="tw:text-center">
-              <Spinner size="sm" className="tw:me-2" />
+            <Alert variant="secondary" className="text-center">
+              <Spinner size="sm" className="me-2" />
               {m.my_registrations_loading()}
             </Alert>
           )}
@@ -466,12 +462,10 @@ export default function MyRegistrationsPage() {
             !claimableDismissed &&
             claimableRegistrations !== null &&
             claimableRegistrations.length > 0 && (
-              <Alert variant="warning" className="tw:mb-4">
-                <div className="tw:font-semibold tw:mb-1">
-                  {m.my_registrations_claimable_heading()}
-                </div>
-                <div className="tw:mb-2">{m.my_registrations_claimable_description()}</div>
-                <div className="tw:flex tw:gap-2">
+              <Alert variant="warning" className="mb-4">
+                <div className="font-semibold mb-1">{m.my_registrations_claimable_heading()}</div>
+                <div className="mb-2">{m.my_registrations_claimable_description()}</div>
+                <div className="flex gap-2">
                   <Button
                     size="sm"
                     variant="warning"
@@ -494,7 +488,7 @@ export default function MyRegistrationsPage() {
                   </Button>
                 </div>
                 {claimVerifiedEmailMutation.isError && (
-                  <div className="tw:text-sm tw:text-destructive tw:mt-2" role="alert">
+                  <div className="text-sm text-destructive mt-2" role="alert">
                     {m.my_registrations_error()}
                   </div>
                 )}
@@ -502,15 +496,15 @@ export default function MyRegistrationsPage() {
             )}
 
           {tokenError && (
-            <Alert variant="danger" className="tw:mb-4" role="alert">
-              <Icon icon={TriangleAlertIcon} className="tw:me-2" />
+            <Alert variant="danger" className="mb-4" role="alert">
+              <Icon icon={TriangleAlertIcon} className="me-2" />
               {tokenError}
             </Alert>
           )}
 
           {oidcError && (
-            <Alert variant="danger" className="tw:mb-4" role="alert">
-              <Icon icon={TriangleAlertIcon} className="tw:me-2" />
+            <Alert variant="danger" className="mb-4" role="alert">
+              <Icon icon={TriangleAlertIcon} className="me-2" />
               {m.my_registrations_error()}
             </Alert>
           )}
@@ -518,18 +512,18 @@ export default function MyRegistrationsPage() {
           {!isLoadingRegistrations && (registrations !== null || showRecoveryCTA) && (
             <>
               {registrations !== null && registrations.length === 0 ? (
-                <Alert variant="info" className="tw:text-center">
-                  <Icon icon={InboxIcon} className="tw:me-2" />
+                <Alert variant="info" className="text-center">
+                  <Icon icon={InboxIcon} className="me-2" />
                   {m.my_registrations_no_results()}
                 </Alert>
               ) : registrations !== null ? (
-                <div className="tw:flex tw:flex-col tw:gap-4">
+                <div className="flex flex-col gap-4">
                   {auth.isAuthenticated && registrations.length > 0 && (
                     <Card tone="secondary">
                       <CardContent>
                         <PublicField controlId="my-registrations-language">
                           <PublicLabel>{m.registration_preferred_language()}</PublicLabel>
-                          <div className="tw:flex tw:gap-2">
+                          <div className="flex gap-2">
                             <PublicSelect
                               value={preferredLanguage}
                               disabled={isPreferenceLoading || preferenceStatus === "saving"}
@@ -552,12 +546,12 @@ export default function MyRegistrationsPage() {
                           </div>
                         </PublicField>
                         {preferenceStatus === "saved" && (
-                          <div className="tw:text-sm tw:text-success tw:mt-2" role="status">
+                          <div className="text-sm text-success mt-2" role="status">
                             {m.my_registrations_language_saved()}
                           </div>
                         )}
                         {preferenceStatus === "error" && (
-                          <div className="tw:text-sm tw:text-destructive tw:mt-2" role="alert">
+                          <div className="text-sm text-destructive mt-2" role="alert">
                             {m.my_account_preference_error()}
                           </div>
                         )}
@@ -566,18 +560,18 @@ export default function MyRegistrationsPage() {
                   )}
                   {registrations.map((registration) => (
                     <Card key={registration.id} tone="secondary">
-                      <CardHeader className="tw:flex tw:items-center tw:justify-between">
-                        <span className="tw:font-semibold">
-                          <Icon icon={CalendarDaysIcon} className="tw:me-2" />
+                      <CardHeader className="flex items-center justify-between">
+                        <span className="font-semibold">
+                          <Icon icon={CalendarDaysIcon} className="me-2" />
                           {registration.eventTitle}
                         </span>
-                        <span className="tw:text-subtle tw:text-sm">
+                        <span className="text-subtle text-sm">
                           {new Date(registration.createdAt).toLocaleDateString()}
                         </span>
                       </CardHeader>
-                      <CardContent className="tw:pb-2">
+                      <CardContent className="pb-2">
                         {registration.status !== "cancelled" && (
-                          <div className="tw:text-center tw:mb-4">
+                          <div className="text-center mb-4">
                             <QRCodeSVG
                               value={buildCheckInQrUrl(
                                 window.location.origin,
@@ -589,12 +583,12 @@ export default function MyRegistrationsPage() {
                               includeMargin
                               aria-label={m.my_registrations_qr_label()}
                             />
-                            <div className="tw:text-sm tw:text-subtle tw:mt-1">
+                            <div className="text-sm text-subtle mt-1">
                               {m.registration_reference({ reference: registration.id })}
                             </div>
                           </div>
                         )}
-                        <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
+                        <div className="flex gap-2 flex-wrap mb-2">
                           <Badge
                             variant={
                               registration.status === "confirmed"
@@ -627,20 +621,20 @@ export default function MyRegistrationsPage() {
                           </Badge>
                           {registration.checkedIn && (
                             <Badge variant="success">
-                              <Icon icon={CircleCheckIcon} className="tw:me-1" />
+                              <Icon icon={CircleCheckIcon} className="me-1" />
                               {m.admin_checked_in()}
                             </Badge>
                           )}
                         </div>
-                        <div className="tw:text-subtle tw:text-sm">
-                          <Icon icon={UsersIcon} className="tw:me-1" />
+                        <div className="text-subtle text-sm">
+                          <Icon icon={UsersIcon} className="me-1" />
                           {registration.guestCount} {m.my_registrations_guests_label()}
                         </div>
                         {registration.eventDate && (
                           <ButtonLink
                             size="sm"
                             variant="outline-warning"
-                            className="tw:mt-2"
+                            className="mt-2"
                             href={`https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(registration.eventTitle)}&dates=${calendarDateRange(registration.eventDate)}`}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -652,7 +646,7 @@ export default function MyRegistrationsPage() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="tw:mt-2 tw:ms-2"
+                            className="mt-2 ms-2"
                             onClick={() => {
                               submissionId.current = crypto.randomUUID();
                               setRequestRegistration(registration);
@@ -666,15 +660,15 @@ export default function MyRegistrationsPage() {
                           </Button>
                         )}
                         {registration.orderItems.some((item) => item.visible) && (
-                          <PresentationList flush className="tw:mt-2">
+                          <PresentationList flush className="mt-2">
                             {registration.orderItems
                               .filter((item) => item.visible)
                               .map((item, idx) => (
                                 <PresentationListItem
                                   key={`${item.productId}-${idx}`}
-                                  className="tw:flex tw:justify-between tw:items-center tw:px-0 tw:py-1"
+                                  className="flex justify-between items-center px-0 py-1"
                                 >
-                                  <span className="tw:text-sm">
+                                  <span className="text-sm">
                                     {item.name} <Badge variant="secondary">×{item.quantity}</Badge>
                                   </span>
                                 </PresentationListItem>
@@ -684,14 +678,14 @@ export default function MyRegistrationsPage() {
                       </CardContent>
                     </Card>
                   ))}
-                  <Alert variant="info" className="tw:mb-0">
+                  <Alert variant="info" className="mb-0">
                     {m.my_registrations_changes_contact()}
                   </Alert>
                 </div>
               ) : null}
 
               {showSignOut && sessionExpiresAt && (
-                <p className="tw:text-sm tw:text-subtle tw:text-center tw:mt-4 tw:mb-0">
+                <p className="text-sm text-subtle text-center mt-4 mb-0">
                   {m.my_registrations_session_expires({
                     date: new Date(sessionExpiresAt).toLocaleDateString(),
                   })}
@@ -699,8 +693,8 @@ export default function MyRegistrationsPage() {
               )}
 
               {showSignOut && signOutError && (
-                <Alert variant="danger" className="tw:mt-4 tw:mb-0" role="alert">
-                  <Icon icon={TriangleAlertIcon} className="tw:me-2" />
+                <Alert variant="danger" className="mt-4 mb-0" role="alert">
+                  <Icon icon={TriangleAlertIcon} className="me-2" />
                   {signOutError}
                 </Alert>
               )}
@@ -709,7 +703,7 @@ export default function MyRegistrationsPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="tw:mt-2 tw:w-full"
+                  className="mt-2 w-full"
                   disabled={isSigningOut}
                   onClick={() => void handleSignOut()}
                 >
@@ -725,7 +719,7 @@ export default function MyRegistrationsPage() {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="tw:mt-4 tw:w-full"
+                    className="mt-4 w-full"
                     onClick={resetToRequestForm}
                   >
                     <Icon icon={RefreshCwIcon} />
@@ -755,7 +749,7 @@ export default function MyRegistrationsPage() {
             ) : (
               <>
                 <Alert variant="warning">{m.my_registrations_request_change_warning()}</Alert>
-                <PublicField className="tw:mb-4" controlId="my-registrations-request-type">
+                <PublicField className="mb-4" controlId="my-registrations-request-type">
                   <PublicLabel>{m.my_registrations_request_type()}</PublicLabel>
                   <PublicSelect
                     value={requestType}
@@ -779,7 +773,7 @@ export default function MyRegistrationsPage() {
                   />
                 </PublicField>
                 {bookingRequestMutation.isError && (
-                  <Alert variant="danger" className="tw:mt-4 tw:mb-0" role="alert">
+                  <Alert variant="danger" className="mt-4 mb-0" role="alert">
                     {m.my_registrations_request_change_error()}
                   </Alert>
                 )}

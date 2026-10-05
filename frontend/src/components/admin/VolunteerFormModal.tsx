@@ -173,7 +173,7 @@ export default function VolunteerFormModal({
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
-            <Icon icon={ThumbsUpIcon} className="tw:me-2" />
+            <Icon icon={ThumbsUpIcon} className="me-2" />
             {isEdit ? m.admin_volunteers_edit_title() : m.admin_volunteers_create_title()}
           </DialogTitle>
         </DialogHeader>
@@ -186,23 +186,21 @@ export default function VolunteerFormModal({
         >
           <DialogBody>
             {error && (
-              <Alert variant="danger" className="tw:py-2 tw:text-sm" onClose={() => setError(null)}>
+              <Alert variant="danger" className="py-2 text-sm" onClose={() => setError(null)}>
                 {error}
               </Alert>
             )}
 
             <form.Field name="name">
               {(field) => (
-                <AdminField className="tw:mb-4" controlId="volunteer-name">
-                  <AdminLabel className="tw:text-subtle tw:text-sm">
-                    {m.registration_name()} *
-                  </AdminLabel>
+                <AdminField className="mb-4" controlId="volunteer-name">
+                  <AdminLabel className="text-subtle text-sm">{m.registration_name()} *</AdminLabel>
                   <AdminInput
                     type="text"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     required
                     maxLength={200}
                   />
@@ -212,8 +210,8 @@ export default function VolunteerFormModal({
 
             <form.Field name="address">
               {(field) => (
-                <AdminField className="tw:mb-4" controlId="volunteer-address">
-                  <AdminLabel className="tw:text-subtle tw:text-sm">
+                <AdminField className="mb-4" controlId="volunteer-address">
+                  <AdminLabel className="text-subtle text-sm">
                     {m.admin_people_address_label()}
                   </AdminLabel>
                   <AdminInput
@@ -221,19 +219,19 @@ export default function VolunteerFormModal({
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     maxLength={300}
                   />
                 </AdminField>
               )}
             </form.Field>
 
-            <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mb-4">
-              <div className="tw:w-full tw:site-md:w-6/12">
+            <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mb-4">
+              <div className="w-full site-md:w-6/12">
                 <form.Field name="nationalRegisterNumber">
                   {(field) => (
                     <AdminField controlId="volunteer-national-register-number">
-                      <AdminLabel className="tw:text-subtle tw:text-sm">
+                      <AdminLabel className="text-subtle text-sm">
                         {m.admin_people_national_register_number_label()} *
                       </AdminLabel>
                       <AdminInput
@@ -241,7 +239,7 @@ export default function VolunteerFormModal({
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value.slice(0, 20))}
                         onBlur={field.handleBlur}
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         required
                         maxLength={20}
                       />
@@ -249,11 +247,11 @@ export default function VolunteerFormModal({
                   )}
                 </form.Field>
               </div>
-              <div className="tw:w-full tw:site-md:w-6/12">
+              <div className="w-full site-md:w-6/12">
                 <form.Field name="eidDocumentNumber">
                   {(field) => (
                     <AdminField controlId="volunteer-eid-document-number">
-                      <AdminLabel className="tw:text-subtle tw:text-sm">
+                      <AdminLabel className="text-subtle text-sm">
                         {m.admin_people_eid_document_number_label()} *
                       </AdminLabel>
                       <AdminInput
@@ -261,7 +259,7 @@ export default function VolunteerFormModal({
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         required
                         maxLength={50}
                       />
@@ -271,9 +269,9 @@ export default function VolunteerFormModal({
               </div>
             </div>
 
-            <div className="tw:mb-4">
-              <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-0">
+            <div className="mb-4">
+              <div className="flex justify-between items-center mb-2">
+                <AdminLabel className="text-subtle text-sm mb-0">
                   {m.admin_volunteers_help_periods_label()} *
                 </AdminLabel>
                 <Button
@@ -288,15 +286,13 @@ export default function VolunteerFormModal({
               </div>
 
               {helpPeriods.length === 0 ? (
-                <div className="tw:text-subtle tw:text-sm">
-                  {m.admin_volunteers_no_help_periods()}
-                </div>
+                <div className="text-subtle text-sm">{m.admin_volunteers_no_help_periods()}</div>
               ) : (
-                <div className="tw:flex tw:flex-col tw:gap-2">
+                <div className="flex flex-col gap-2">
                   {helpPeriods.map((period, index) => (
-                    <div key={index} className="tw:rounded-md tw:border tw:border-subtle tw:p-4">
-                      <div className="tw:flex tw:justify-between tw:items-center tw:mb-2">
-                        <span className="tw:text-subtle tw:text-sm">#{index + 1}</span>
+                    <div key={index} className="rounded-md border border-subtle p-4">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-subtle text-sm">#{index + 1}</span>
                         <Button
                           type="button"
                           variant="outline-danger"
@@ -308,10 +304,10 @@ export default function VolunteerFormModal({
                           {m.admin_volunteers_remove_help_period()}
                         </Button>
                       </div>
-                      <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter">
-                        <div className="tw:w-full tw:site-md:w-6/12">
+                      <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter">
+                        <div className="w-full site-md:w-6/12">
                           <AdminField controlId={`volunteer-period-start-${index}`}>
-                            <AdminLabel className="tw:text-subtle tw:text-sm">
+                            <AdminLabel className="text-subtle text-sm">
                               {m.admin_volunteers_period_start_label()} *
                             </AdminLabel>
                             <AdminInput
@@ -323,14 +319,14 @@ export default function VolunteerFormModal({
                                   firstHelpDay: e.target.value,
                                 })
                               }
-                              className="tw:bg-muted tw:text-content tw:border-input"
+                              className="bg-muted text-content border-input"
                               required
                             />
                           </AdminField>
                         </div>
-                        <div className="tw:w-full tw:site-md:w-6/12">
+                        <div className="w-full site-md:w-6/12">
                           <AdminField controlId={`volunteer-period-end-${index}`}>
-                            <AdminLabel className="tw:text-subtle tw:text-sm">
+                            <AdminLabel className="text-subtle text-sm">
                               {m.admin_volunteers_period_end_label()}
                             </AdminLabel>
                             <AdminInput
@@ -343,13 +339,13 @@ export default function VolunteerFormModal({
                                 })
                               }
                               min={period.firstHelpDay || undefined}
-                              className="tw:bg-muted tw:text-content tw:border-input"
+                              className="bg-muted text-content border-input"
                             />
                           </AdminField>
                         </div>
                       </div>
-                      <AdminField className="tw:mt-2" controlId={`volunteer-period-notes-${index}`}>
-                        <AdminLabel className="tw:text-subtle tw:text-sm">
+                      <AdminField className="mt-2" controlId={`volunteer-period-notes-${index}`}>
+                        <AdminLabel className="text-subtle text-sm">
                           {m.admin_volunteers_period_notes_label()}
                         </AdminLabel>
                         <AdminTextarea
@@ -362,7 +358,7 @@ export default function VolunteerFormModal({
                             })
                           }
                           placeholder={m.admin_volunteers_period_notes_placeholder()}
-                          className="tw:bg-muted tw:text-content tw:border-input"
+                          className="bg-muted text-content border-input"
                           maxLength={2000}
                         />
                       </AdminField>
@@ -380,7 +376,7 @@ export default function VolunteerFormModal({
                   label={m.admin_people_active_label()}
                   checked={field.value}
                   onCheckedChange={(e) => field.handleChange(e)}
-                  className="tw:text-subtle tw:text-sm"
+                  className="text-subtle text-sm"
                 />
               )}
             </form.Field>

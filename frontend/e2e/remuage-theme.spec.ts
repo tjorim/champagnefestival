@@ -32,7 +32,7 @@ test.describe("Remuage visual theme", () => {
     await page.goto("/");
 
     await expect(page.locator("html")).toHaveAttribute("data-visual-theme", "remuage");
-    await expect(page.locator("html")).toHaveAttribute("data-bs-theme", "light");
+    await expect(page.locator("html")).toHaveAttribute("data-theme-mode", "light");
     await expect(page.locator("#visual-theme-stylesheet")).toHaveAttribute(
       "href",
       /\/themes\/theme-remuage\.css$/,
@@ -218,7 +218,7 @@ test.describe("Remuage visual theme", () => {
     await page.locator("body").evaluate((body) => {
       body.insertAdjacentHTML(
         "beforeend",
-        '<div data-theme-scope="admin" data-theme-mode="dark"><div id="admin-portal-probe" class="tw:bg-background tw:text-foreground">Admin dialog</div></div>',
+        '<div data-theme-scope="admin" data-theme-mode="dark"><div id="admin-portal-probe" class="bg-background text-foreground">Admin dialog</div></div>',
       );
     });
     await expect(page.locator("#admin-portal-probe")).toHaveCSS(

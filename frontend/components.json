@@ -8,8 +8,7 @@
     "config": "",
     "css": "src/styles/tailwind.css",
     "baseColor": "neutral",
-    "cssVariables": true,
-    "prefix": "tw"
+    "cssVariables": true
   },
   "aliases": {
     "components": "@/components",

@@ -266,7 +266,7 @@ export default function ComposerManagement({
             const item = row.original;
             if (item.state === "sent") {
               return (
-                <span className="tw:text-sm">
+                <span className="text-sm">
                   {item.channels.includes("push") &&
                     m.admin_composer_push_results({
                       delivered: item.push_delivered_count,
@@ -278,7 +278,7 @@ export default function ComposerManagement({
             }
             if (item.channels.includes("push")) {
               return (
-                <span className="tw:text-sm tw:text-subtle">
+                <span className="text-sm text-subtle">
                   {m.admin_composer_estimated_audience({ count: item.estimated_push_audience })}
                 </span>
               );
@@ -288,14 +288,14 @@ export default function ComposerManagement({
         }),
         columnHelper.display({
           id: "actions",
-          header: () => <span className="tw:sr-only">{m.admin_composer_column_actions()}</span>,
+          header: () => <span className="sr-only">{m.admin_composer_column_actions()}</span>,
           enableSorting: false,
-          meta: { tdClassName: "tw:text-right" },
+          meta: { tdClassName: "text-right" },
           cell: ({ row }) => {
             const item = row.original;
             return (
               item.state === "draft" && (
-                <div className="tw:flex tw:gap-2 tw:justify-end">
+                <div className="flex gap-2 justify-end">
                   <Button size="sm" variant="outline" onClick={() => startEdit(item)}>
                     {m.admin_composer_edit_button()}
                   </Button>
@@ -316,9 +316,7 @@ export default function ComposerManagement({
   return (
     <Card>
       <CardHeader>
-        <h2 className="tw:text-xl tw:font-medium tw:leading-tight tw:mb-0">
-          {m.admin_composer_section()}
-        </h2>
+        <h2 className="text-xl font-medium leading-tight mb-0">{m.admin_composer_section()}</h2>
       </CardHeader>
       <CardContent>
         {error && <Alert variant="danger">{error}</Alert>}
@@ -330,7 +328,7 @@ export default function ComposerManagement({
             void form.handleSubmit();
           }}
         >
-          <div className="tw:flex tw:gap-2 tw:mb-2">
+          <div className="flex gap-2 mb-2">
             {(["nl", "en", "fr"] as const).map((locale) => (
               <Button
                 key={locale}
@@ -343,7 +341,7 @@ export default function ComposerManagement({
               </Button>
             ))}
           </div>
-          <AdminField className="tw:mb-2" controlId="composer-title">
+          <AdminField className="mb-2" controlId="composer-title">
             <AdminLabel>{m.admin_composer_title_label()}</AdminLabel>
             <form.Field name={`title_${preview}`}>
               {(field) => (
@@ -356,7 +354,7 @@ export default function ComposerManagement({
               )}
             </form.Field>
           </AdminField>
-          <AdminField className="tw:mb-2" controlId="composer-body">
+          <AdminField className="mb-2" controlId="composer-body">
             <AdminLabel>{m.admin_composer_body_label()}</AdminLabel>
             <form.Field name={`body_${preview}`}>
               {(field) => (
@@ -371,8 +369,8 @@ export default function ComposerManagement({
             </form.Field>
           </AdminField>
 
-          <div className="tw:flex tw:flex-wrap tw:-mx-1 tw:*:w-full tw:*:px-1 tw:gap-y-2 tw:mb-2">
-            <AdminField className="tw:site-md:w-4/12" controlId="composer-level">
+          <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mb-2">
+            <AdminField className="site-md:w-4/12" controlId="composer-level">
               <AdminLabel>{m.admin_composer_level_label()}</AdminLabel>
               <form.Field name="level">
                 {(field) => (
@@ -390,7 +388,7 @@ export default function ComposerManagement({
                 )}
               </form.Field>
             </AdminField>
-            <AdminField className="tw:site-md:w-8/12" controlId="composer-link-url">
+            <AdminField className="site-md:w-8/12" controlId="composer-link-url">
               <AdminLabel>{m.admin_composer_link_url_label()}</AdminLabel>
               <form.Field name="link_url">
                 {(field) => (
@@ -408,8 +406,8 @@ export default function ComposerManagement({
 
           <form.Field name="channels">
             {(field) => (
-              <div className="tw:mb-4">
-                <AdminLabel className="tw:block">{m.admin_composer_channels_label()}</AdminLabel>
+              <div className="mb-4">
+                <AdminLabel className="block">{m.admin_composer_channels_label()}</AdminLabel>
                 <AdminCheck
                   inline
                   type="checkbox"
@@ -442,7 +440,7 @@ export default function ComposerManagement({
             )}
           </form.Field>
 
-          <div className="tw:flex tw:gap-2">
+          <div className="flex gap-2">
             <Button
               type="submit"
               variant="warning"
@@ -466,11 +464,9 @@ export default function ComposerManagement({
         </form>
 
         {items.length === 0 ? (
-          <p className="tw:text-center tw:text-subtle tw:mt-6 tw:mb-0">
-            {m.admin_composer_empty()}
-          </p>
+          <p className="text-center text-subtle mt-6 mb-0">{m.admin_composer_empty()}</p>
         ) : (
-          <div data-tailwind-migrated="true" className="tw:w-full">
+          <div className="w-full">
             <Table>
               <TableHeader>
                 {table.getHeaderGroups().map((headerGroup) => (

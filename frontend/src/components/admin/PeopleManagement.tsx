@@ -349,17 +349,17 @@ export default function PeopleManagement({
             const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
             return (
               <>
-                <div className="tw:font-semibold tw:flex tw:items-center tw:gap-1">
+                <div className="font-semibold flex items-center gap-1">
                   {person.name}
                   {!person.active && (
-                    <Badge variant="secondary" className="tw:ms-1">
+                    <Badge variant="secondary" className="ms-1">
                       {m.admin_people_inactive_badge_label()}
                     </Badge>
                   )}
                 </div>
                 {isDuplicate && (
-                  <div className="tw:text-highlight tw:text-sm">
-                    <Icon icon={TriangleAlertIcon} className="tw:me-1" />
+                  <div className="text-highlight text-sm">
+                    <Icon icon={TriangleAlertIcon} className="me-1" />
                     {m.admin_people_duplicates_same_email()}
                   </div>
                 )}
@@ -369,28 +369,28 @@ export default function PeopleManagement({
         }),
         columnHelper.accessor("email", {
           header: m.registration_email(),
-          cell: ({ getValue }) => <span className="tw:text-sm">{String(getValue() ?? "")}</span>,
-          meta: { tdClassName: "tw:hidden tw:md:table-cell" },
+          cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
+          meta: { tdClassName: "hidden md:table-cell" },
         }),
         columnHelper.accessor("phone", {
           header: m.registration_phone(),
-          cell: ({ getValue }) => <span className="tw:text-sm">{String(getValue() ?? "")}</span>,
-          meta: { tdClassName: "tw:hidden tw:lg:table-cell" },
+          cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
+          meta: { tdClassName: "hidden lg:table-cell" },
         }),
         columnHelper.display({
           id: "roles",
           header: m.admin_people_roles_label(),
           enableSorting: false,
           cell: ({ row }) => (
-            <div className="tw:flex tw:flex-wrap tw:gap-1">
+            <div className="flex flex-wrap gap-1">
               {row.original.roles.map((role) => (
-                <Badge key={role} variant="secondary" className="tw:capitalize">
+                <Badge key={role} variant="secondary" className="capitalize">
                   {role}
                 </Badge>
               ))}
             </div>
           ),
-          meta: { tdClassName: "tw:hidden tw:lg:table-cell" },
+          meta: { tdClassName: "hidden lg:table-cell" },
         }),
         columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
           id: "registrations",
@@ -405,7 +405,7 @@ export default function PeopleManagement({
                   <Button
                     size="sm"
                     variant="link"
-                    className="tw:text-subtle tw:p-0 tw:ms-1"
+                    className="text-subtle p-0 ms-1"
                     onClick={() => setViewRegistrationsPerson(person)}
                     title={m.admin_people_view_registrations()}
                     aria-label={`${m.admin_people_view_registrations()}: ${person.name}`}
@@ -430,7 +430,7 @@ export default function PeopleManagement({
                 )
               : [];
             return (
-              <div className="tw:flex tw:flex-wrap tw:gap-1">
+              <div className="flex flex-wrap gap-1">
                 {person.email && (
                   <Button
                     size="sm"
@@ -539,10 +539,10 @@ export default function PeopleManagement({
     <>
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
       <Card tone="secondary">
-        <CardHeader className="tw:pb-2">
-          <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:mb-2">
-            <span className="tw:font-semibold">{m.admin_people_tab()}</span>
-            <div className="tw:flex tw:gap-2">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="font-semibold">{m.admin_people_tab()}</span>
+            <div className="flex gap-2">
               <ColumnVisibilityDropdown table={table} tableId="people" />
               <Button
                 size="sm"
@@ -557,12 +557,12 @@ export default function PeopleManagement({
               </Button>
             </div>
           </div>
-          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             <AdminSelect
               size="sm"
               value={roleFilter}
               onValueChange={(e) => setRoleFilter(e)}
-              className="tw:bg-muted tw:text-content tw:border-input tw:max-w-40"
+              className="bg-muted text-content border-input max-w-40"
 
               aria-label={m.admin_people_roles_label()}
             >
@@ -590,18 +590,18 @@ export default function PeopleManagement({
               placeholder={m.admin_search_person_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="tw:bg-muted tw:text-content tw:border-input tw:max-w-60"
+              className="bg-muted text-content border-input max-w-60"
             />
           </div>
         </CardHeader>
 
-        <CardContent className="tw:p-0">
+        <CardContent className="p-0">
           {mergeSuccess && (
             <Alert
               role="status"
               aria-live="polite"
               variant="success"
-              className="tw:m-4 tw:mb-0"
+              className="m-4 mb-0"
               onClose={() => setMergeSuccess(false)}
             >
               {m.admin_people_merge_success()}
@@ -612,7 +612,7 @@ export default function PeopleManagement({
               role="status"
               aria-live="polite"
               variant="success"
-              className="tw:m-4 tw:mb-0"
+              className="m-4 mb-0"
               onClose={() => setCreateSuccess(false)}
             >
               {m.admin_people_create_success()}
@@ -623,7 +623,7 @@ export default function PeopleManagement({
               role="status"
               aria-live="polite"
               variant="success"
-              className="tw:m-4 tw:mb-0"
+              className="m-4 mb-0"
               onClose={() => setUpdateSuccess(false)}
             >
               {m.admin_people_update_success()}
@@ -634,7 +634,7 @@ export default function PeopleManagement({
               role="status"
               aria-live="polite"
               variant="success"
-              className="tw:m-4 tw:mb-0"
+              className="m-4 mb-0"
               onClose={() => setDeleteSuccess(false)}
             >
               {m.admin_people_delete_success()}
@@ -642,19 +642,15 @@ export default function PeopleManagement({
           )}
 
           {isLoading || peopleSearchQuery.isLoading ? (
-            <div className="tw:text-center tw:py-6">
+            <div className="text-center py-6">
               <Spinner label={m.admin_loading()} variant="primary" size="sm" />
             </div>
           ) : peopleSearchQuery.isError ? (
-            <p className="tw:text-destructive tw:text-center tw:py-6 tw:mb-0">
-              {m.admin_error_load_data()}
-            </p>
+            <p className="text-destructive text-center py-6 mb-0">{m.admin_error_load_data()}</p>
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
-            <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
-              {m.admin_people_no_results()}
-            </p>
+            <p className="text-subtle text-center py-6 mb-0">{m.admin_people_no_results()}</p>
           ) : (
-            <div data-tailwind-migrated="true" className="tw:w-full">
+            <div className="w-full">
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
@@ -707,7 +703,7 @@ export default function PeopleManagement({
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle id="merge-modal-title">
-                <Icon icon={UserRoundCogIcon} className="tw:me-2" />
+                <Icon icon={UserRoundCogIcon} className="me-2" />
                 {m.admin_people_merge_title()}
               </DialogTitle>
             </DialogHeader>
@@ -719,9 +715,7 @@ export default function PeopleManagement({
                 </Alert>
               )}
 
-              <p className="tw:text-subtle tw:text-sm tw:mb-4">
-                {m.admin_people_duplicates_same_email()}
-              </p>
+              <p className="text-subtle text-sm mb-4">{m.admin_people_duplicates_same_email()}</p>
 
               {(["canonical", "duplicate"] as const).map((role) => {
                 const person = mergeState[role];
@@ -733,14 +727,12 @@ export default function PeopleManagement({
                 const variant = role === "canonical" ? "success" : "danger";
                 const tone =
                   role === "canonical"
-                    ? "tw:border-success tw:text-success"
-                    : "tw:border-destructive tw:text-destructive";
+                    ? "border-success text-success"
+                    : "border-destructive text-destructive";
 
                 return (
-                  <Card key={role} tone={variant} className="tw:mb-4">
-                    <CardHeader
-                      className={`${tone} tw:text-sm tw:font-semibold tw:flex tw:justify-between`}
-                    >
+                  <Card key={role} tone={variant} className="mb-4">
+                    <CardHeader className={`${tone} text-sm font-semibold flex justify-between`}>
                       <span>{label}</span>
                       <Button
                         size="sm"
@@ -757,16 +749,16 @@ export default function PeopleManagement({
                         <Icon icon={ArrowLeftRightIcon} />
                       </Button>
                     </CardHeader>
-                    <CardContent className="tw:py-2 tw:text-sm">
-                      <div className="tw:font-semibold">{person.name}</div>
-                      <div className="tw:text-subtle">{person.email}</div>
-                      {person.phone && <div className="tw:text-subtle">{person.phone}</div>}
-                      <div className="tw:mt-1">
+                    <CardContent className="py-2 text-sm">
+                      <div className="font-semibold">{person.name}</div>
+                      <div className="text-subtle">{person.email}</div>
+                      {person.phone && <div className="text-subtle">{person.phone}</div>}
+                      <div className="mt-1">
                         <Badge variant={resCount > 0 ? "warning" : "secondary"}>
                           {resCount} {m.admin_people_registrations_count()}
                         </Badge>
                         {person.roles.map((r) => (
-                          <Badge key={r} variant="secondary" className="tw:ms-1 tw:capitalize">
+                          <Badge key={r} variant="secondary" className="ms-1 capitalize">
                             {r}
                           </Badge>
                         ))}
@@ -786,7 +778,7 @@ export default function PeopleManagement({
                   <Spinner size="sm" role="status" aria-hidden="true" />
                 ) : (
                   <>
-                    <Icon icon={UserRoundCogIcon} className="tw:me-1" />
+                    <Icon icon={UserRoundCogIcon} className="me-1" />
                     {m.admin_people_merge_confirm()}
                   </>
                 )}
@@ -806,8 +798,8 @@ export default function PeopleManagement({
         >
           <DialogContent admin size="default">
             <DialogHeader>
-              <DialogTitle className="tw:text-destructive">
-                <Icon icon={TrashIcon} className="tw:me-2" />
+              <DialogTitle className="text-destructive">
+                <Icon icon={TrashIcon} className="me-2" />
                 {m.admin_people_delete_title()}
               </DialogTitle>
             </DialogHeader>
@@ -854,32 +846,32 @@ export default function PeopleManagement({
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle>
-                <Icon icon={CalendarCheckIcon} className="tw:me-2" />
+                <Icon icon={CalendarCheckIcon} className="me-2" />
                 {m.admin_people_registrations_modal_title()} — {viewRegistrationsPerson.name}
               </DialogTitle>
             </DialogHeader>
-            <DialogBody className="tw:p-0">
+            <DialogBody className="p-0">
               {loadingPersonRegistrations && (
-                <div className="tw:text-center tw:py-6">
+                <div className="text-center py-6">
                   <Spinner label={m.admin_loading()} size="sm" variant="warning" />
                 </div>
               )}
               {!loadingPersonRegistrations && personRegistrationsError && (
-                <Alert role="alert" aria-live="assertive" variant="danger" className="tw:m-4">
+                <Alert role="alert" aria-live="assertive" variant="danger" className="m-4">
                   {m.admin_people_registrations_load_error()}
                 </Alert>
               )}
               {!loadingPersonRegistrations &&
                 !personRegistrationsError &&
                 personRegistrations.length === 0 && (
-                  <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
+                  <p className="text-subtle text-center py-6 mb-0">
                     {m.admin_people_registrations_empty()}
                   </p>
                 )}
               {!loadingPersonRegistrations &&
                 !personRegistrationsError &&
                 personRegistrations.length > 0 && (
-                  <div className="tw:px-4 tw:pt-4 tw:text-sm tw:text-subtle">
+                  <div className="px-4 pt-4 text-sm text-subtle">
                     <div>
                       {m.admin_people_total_paid({
                         amount: personPaymentTotals.grandTotal.toFixed(2),
@@ -906,7 +898,7 @@ export default function PeopleManagement({
                     )}
                     {personPaymentTotals.byEdition.length > 1 &&
                       personPaymentTotals.byEdition.map((edition) => (
-                        <div key={edition.label} className="tw:ms-2">
+                        <div key={edition.label} className="ms-2">
                           {edition.label}: €{edition.totalPaid.toFixed(2)}
                         </div>
                       ))}
@@ -917,17 +909,17 @@ export default function PeopleManagement({
                 personRegistrations.length > 0 && (
                   <PresentationList flush>
                     {personRegistrations.map((r) => (
-                      <PresentationListItem key={r.id} className="tw:py-2">
-                        <div className="tw:flex tw:justify-between tw:items-start tw:gap-2">
+                      <PresentationListItem key={r.id} className="py-2">
+                        <div className="flex justify-between items-start gap-2">
                           <div>
-                            <div className="tw:font-semibold tw:text-sm">{r.eventTitle}</div>
-                            <div className="tw:text-subtle tw:text-sm">
-                              <Icon icon={UsersIcon} className="tw:me-1" />
+                            <div className="font-semibold text-sm">{r.eventTitle}</div>
+                            <div className="text-subtle text-sm">
+                              <Icon icon={UsersIcon} className="me-1" />
                               {r.guestCount}
-                              <span className="tw:ms-2">€{r.amountPaid.toFixed(2)}</span>
+                              <span className="ms-2">€{r.amountPaid.toFixed(2)}</span>
                             </div>
                           </div>
-                          <div className="tw:flex tw:gap-1 tw:flex-wrap tw:justify-end">
+                          <div className="flex gap-1 flex-wrap justify-end">
                             <Badge
                               variant={
                                 r.status === "confirmed"
@@ -960,13 +952,13 @@ export default function PeopleManagement({
                             </Badge>
                             {r.checkedIn && (
                               <Badge variant="success">
-                                <Icon icon={CircleCheckIcon} className="tw:me-1" />
+                                <Icon icon={CircleCheckIcon} className="me-1" />
                                 {m.admin_checked_in()}
                               </Badge>
                             )}
                           </div>
                         </div>
-                        <div className="tw:text-subtle tw:text-tiny">
+                        <div className="text-subtle text-tiny">
                           {new Date(r.createdAt).toLocaleDateString()}
                         </div>
                       </PresentationListItem>
@@ -974,19 +966,14 @@ export default function PeopleManagement({
                   </PresentationList>
                 )}
             </DialogBody>
-            <DialogFooter className="tw:flex-col tw:items-stretch">
+            <DialogFooter className="flex-col items-stretch">
               {ledgerExportError && (
-                <Alert
-                  role="alert"
-                  aria-live="assertive"
-                  variant="danger"
-                  className="tw:py-2 tw:mb-2"
-                >
+                <Alert role="alert" aria-live="assertive" variant="danger" className="py-2 mb-2">
                   {ledgerExportError}
                 </Alert>
               )}
-              <div className="tw:flex tw:justify-between tw:gap-2">
-                <div className="tw:flex tw:gap-2">
+              <div className="flex justify-between gap-2">
+                <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"

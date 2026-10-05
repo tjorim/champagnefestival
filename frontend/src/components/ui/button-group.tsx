@@ -15,8 +15,7 @@ function ButtonGroup({
       role="group"
       aria-label={ariaLabel}
       data-slot="button-group"
-      data-tailwind-migrated="true"
-      className={cn("tw:inline-flex tw:flex-wrap tw:gap-1", className)}
+      className={cn("inline-flex flex-wrap gap-1", className)}
       {...props}
     />
   );

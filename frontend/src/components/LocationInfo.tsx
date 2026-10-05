@@ -17,21 +17,21 @@ interface LocationInfoProps {
  */
 const LocationInfo: React.FC<LocationInfoProps> = ({ location }) => {
   return (
-    <Card className="tw:border-0 tw:shadow-sm">
-      <CardContent className="tw:p-6">
-        <h3 className="tw:mb-4">{location.venueName}</h3>
-        <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter">
-          <div className="tw:w-full tw:site-md:w-6/12 tw:mb-4 tw:site-md:mb-0">
-            <div className="tw:mb-6">
+    <Card className="border-0 shadow-sm">
+      <CardContent className="p-6">
+        <h3 className="mb-4">{location.venueName}</h3>
+        <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter">
+          <div className="w-full site-md:w-6/12 mb-4 site-md:mb-0">
+            <div className="mb-6">
               <h5>{m.location_address()}</h5>
-              <p className="tw:mb-1">{location.address}</p>
-              <p className="tw:mb-1">
+              <p className="mb-1">{location.address}</p>
+              <p className="mb-1">
                 {location.postalCode} {location.city}
               </p>
               <p>{m.location_country()}</p>
             </div>
           </div>
-          <div className="tw:w-full tw:site-md:w-6/12">
+          <div className="w-full site-md:w-6/12">
             <div>
               <h5>{m.location_opening_hours()}</h5>
               <p>{m.location_opening_hours_value()}</p>

@@ -48,14 +48,11 @@ export function AdminTablePagination({
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
 
   return (
-    <div
-      data-tailwind-migrated="true"
-      className="tw:flex tw:flex-wrap tw:items-center tw:justify-between tw:gap-2 tw:p-2 tw:border-t tw:border-border"
-    >
-      <span className="tw:text-muted-foreground tw:text-sm">
+    <div className="flex flex-wrap items-center justify-between gap-2 p-2 border-t border-border">
+      <span className="text-muted-foreground text-sm">
         {m.admin_table_page_summary({ from: rangeFrom, to: rangeTo, total })}
       </span>
-      <div className="tw:flex tw:items-center tw:gap-2">
+      <div className="flex items-center gap-2">
         <Select
           value={String(pageSize)}
           onValueChange={(value) => {
@@ -76,7 +73,7 @@ export function AdminTablePagination({
         <Button variant="outline" size="sm" disabled={!canPreviousPage} onClick={onPreviousPage}>
           {m.admin_table_page_previous()}
         </Button>
-        <span className="tw:text-muted-foreground tw:text-sm">
+        <span className="text-muted-foreground text-sm">
           {pageIndex + 1} / {pageCount}
         </span>
         <Button variant="outline" size="sm" disabled={!canNextPage} onClick={onNextPage}>

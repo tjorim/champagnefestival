@@ -158,7 +158,7 @@ export default function RegistrationDetail({
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle id="res-detail-modal-title">
-            <Icon icon={UserIcon} className="tw:me-2" />
+            <Icon icon={UserIcon} className="me-2" />
             {registration.person.name}
           </DialogTitle>
         </DialogHeader>
@@ -181,12 +181,12 @@ export default function RegistrationDetail({
           )}
           <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
           {actionError && (
-            <Alert variant="danger" onClose={onClearActionError} className="tw:mb-4" role="alert">
+            <Alert variant="danger" onClose={onClearActionError} className="mb-4" role="alert">
               {actionError}
             </Alert>
           )}
 
-          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:mb-4">
+          <div className="flex flex-wrap gap-2 mb-4">
             <Badge
               variant={
                 registration.status === "confirmed"
@@ -217,7 +217,7 @@ export default function RegistrationDetail({
                   ? m.admin_payment_partial()
                   : m.admin_payment_unpaid()}
               {registration.amountDue != null && (
-                <span className="tw:ms-1 tw:font-normal">
+                <span className="ms-1 font-normal">
                   {m.admin_registration_amount_due({
                     amount: registration.amountDue.toFixed(2),
                   })}
@@ -226,10 +226,10 @@ export default function RegistrationDetail({
             </Badge>
             {registration.checkedIn ? (
               <Badge variant="success">
-                <Icon icon={CircleCheckIcon} className="tw:me-1" />
+                <Icon icon={CircleCheckIcon} className="me-1" />
                 {m.admin_checked_in()}
                 {registration.checkedInAt && (
-                  <span className="tw:ms-1 tw:font-normal">
+                  <span className="ms-1 font-normal">
                     {new Date(registration.checkedInAt).toLocaleTimeString()}
                   </span>
                 )}
@@ -240,7 +240,7 @@ export default function RegistrationDetail({
             {!simpleRsvp &&
               (registration.strapIssued ? (
                 <Badge variant="info">
-                  <Icon icon={ContactRoundIcon} className="tw:me-1" />
+                  <Icon icon={ContactRoundIcon} className="me-1" />
                   {m.admin_strap_issued()}
                 </Badge>
               ) : (
@@ -249,13 +249,13 @@ export default function RegistrationDetail({
           </div>
 
           {emailDuplicates.length > 0 && (
-            <Alert variant="warning" className="tw:py-2 tw:mb-4">
-              <div className="tw:font-semibold tw:mb-1">
-                <Icon icon={TriangleAlertIcon} className="tw:me-1" />
+            <Alert variant="warning" className="py-2 mb-4">
+              <div className="font-semibold mb-1">
+                <Icon icon={TriangleAlertIcon} className="me-1" />
                 {m.admin_people_duplicates_title()}
               </div>
-              <div className="tw:text-sm tw:mb-2">{m.admin_people_duplicates_same_email()}</div>
-              <div className="tw:flex tw:flex-wrap tw:gap-2">
+              <div className="text-sm mb-2">{m.admin_people_duplicates_same_email()}</div>
+              <div className="flex flex-wrap gap-2">
                 {emailDuplicates.map((dup) => (
                   <Button
                     key={dup.id}
@@ -271,29 +271,29 @@ export default function RegistrationDetail({
             </Alert>
           )}
 
-          <PresentationList flush className="tw:mb-4">
-            <PresentationListItem className="tw:flex tw:justify-between">
-              <span className="tw:text-subtle">{m.registration_email()}</span>
-              <a href={`mailto:${registration.person.email}`} className="tw:text-highlight">
+          <PresentationList flush className="mb-4">
+            <PresentationListItem className="flex justify-between">
+              <span className="text-subtle">{m.registration_email()}</span>
+              <a href={`mailto:${registration.person.email}`} className="text-highlight">
                 {registration.person.email}
               </a>
             </PresentationListItem>
             {!onSaveBooking && (
-              <PresentationListItem className="tw:flex tw:justify-between">
-                <span className="tw:text-subtle">{m.admin_guests_count()}</span>
+              <PresentationListItem className="flex justify-between">
+                <span className="text-subtle">{m.admin_guests_count()}</span>
                 <span aria-label={m.admin_guests_count()}>{registration.guestCount}</span>
               </PresentationListItem>
             )}
-            <PresentationListItem className="tw:flex tw:justify-between">
-              <span className="tw:text-subtle">{m.registration_phone()}</span>
+            <PresentationListItem className="flex justify-between">
+              <span className="text-subtle">{m.registration_phone()}</span>
               <span>{registration.person.phone}</span>
             </PresentationListItem>
-            <PresentationListItem className="tw:flex tw:justify-between">
-              <span className="tw:text-subtle">{m.admin_event_label()}</span>
+            <PresentationListItem className="flex justify-between">
+              <span className="text-subtle">{m.admin_event_label()}</span>
               <span>{registration.event?.title ?? registration.eventId}</span>
             </PresentationListItem>
-            <PresentationListItem className="tw:flex tw:justify-between">
-              <span className="tw:text-subtle">{m.registration_edition_type_label()}</span>
+            <PresentationListItem className="flex justify-between">
+              <span className="text-subtle">{m.registration_edition_type_label()}</span>
               <span>
                 {(() => {
                   const et = registration.event?.edition?.editionType;
@@ -304,7 +304,7 @@ export default function RegistrationDetail({
               </span>
             </PresentationListItem>
             {onSaveBooking && (
-              <PresentationListItem className="tw:border-border">
+              <PresentationListItem className="border-border">
                 <BookingEditor
                   key={`${registration.id}:${registration.updatedAt}`}
                   registration={registration}
@@ -317,21 +317,21 @@ export default function RegistrationDetail({
               </PresentationListItem>
             )}
             {!onSaveBooking && registration.notes && (
-              <PresentationListItem className="tw:border-border">
-                <span className="tw:text-subtle tw:block tw:mb-1">{m.admin_notes()}</span>
-                <span className="tw:text-sm">{registration.notes}</span>
+              <PresentationListItem className="border-border">
+                <span className="text-subtle block mb-1">{m.admin_notes()}</span>
+                <span className="text-sm">{registration.notes}</span>
               </PresentationListItem>
             )}
           </PresentationList>
 
           {registration.person.email && (
-            <section className="tw:mb-6" aria-labelledby="registration-email-heading">
-              <h6 id="registration-email-heading" className="tw:text-highlight tw:mb-2">
-                <Icon icon={MailIcon} className="tw:me-2" />
+            <section className="mb-6" aria-labelledby="registration-email-heading">
+              <h6 id="registration-email-heading" className="text-highlight mb-2">
+                <Icon icon={MailIcon} className="me-2" />
                 {m.admin_email_registration_title()}
               </h6>
-              <div className="tw:flex tw:flex-wrap tw:items-end tw:gap-2">
-                <AdminField controlId="registration-email-template" className="tw:grow">
+              <div className="flex flex-wrap items-end gap-2">
+                <AdminField controlId="registration-email-template" className="grow">
                   <AdminLabel>{m.admin_email_template_label()}</AdminLabel>
                   <AdminSelect
                     value={emailTemplate}
@@ -356,31 +356,31 @@ export default function RegistrationDetail({
           )}
 
           {!simpleRsvp && registration.orderItems.length > 0 && (
-            <div className="tw:mb-6">
-              <h6 className="tw:text-highlight tw:mb-2">
-                <Icon icon={ShoppingBasketIcon} className="tw:me-2" />
+            <div className="mb-6">
+              <h6 className="text-highlight mb-2">
+                <Icon icon={ShoppingBasketIcon} className="me-2" />
                 {m.admin_bottle_fulfillment()}
               </h6>
               <PresentationList>
                 {registration.orderItems.map((item) => (
                   <PresentationListItem
                     key={item.productId}
-                    className="tw:flex tw:items-center tw:justify-between"
+                    className="flex items-center justify-between"
                   >
                     <span>
                       {item.name}{" "}
-                      <Badge variant="secondary" className="tw:ms-1">
+                      <Badge variant="secondary" className="ms-1">
                         ×{item.quantity}
                       </Badge>
                     </span>
-                    <div className="tw:flex tw:items-center tw:gap-2">
+                    <div className="flex items-center gap-2">
                       <Badge variant={item.delivered ? "success" : "secondary"}>
                         {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
                       </Badge>
                       <Badge variant={item.remainingQuantity > 0 ? "warning" : "success"}>
                         {m.admin_bottle_not_delivered()}: {item.remainingQuantity}
                       </Badge>
-                      <div className="tw:flex tw:items-center tw:gap-1">
+                      <div className="flex items-center gap-1">
                         <Button
                           size="sm"
                           variant="outline"
@@ -393,7 +393,7 @@ export default function RegistrationDetail({
                         <AdminInput
                           key={item.deliveredQuantity}
                           aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
-                          className="tw:text-center tw:w-20"
+                          className="text-center w-20"
                           inputMode="numeric"
                           min={0}
                           max={item.quantity}
@@ -439,12 +439,12 @@ export default function RegistrationDetail({
             </div>
           )}
 
-          <div className="tw:mb-6">
-            <h6 className="tw:text-highlight tw:mb-2">
-              <Icon icon={UserCheckIcon} className="tw:me-2" />
+          <div className="mb-6">
+            <h6 className="text-highlight mb-2">
+              <Icon icon={UserCheckIcon} className="me-2" />
               {m.admin_check_in_title()}
             </h6>
-            <div className="tw:flex tw:gap-2 tw:flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               {!registration.checkedIn && (
                 <Button
                   variant="outline-success"
@@ -469,21 +469,21 @@ export default function RegistrationDetail({
           </div>
 
           {registration.checkInToken && (
-            <div className="tw:text-center">
-              <h6 className="tw:text-highlight tw:mb-2">
-                <Icon icon={QrCodeIcon} className="tw:me-2" />
+            <div className="text-center">
+              <h6 className="text-highlight mb-2">
+                <Icon icon={QrCodeIcon} className="me-2" />
                 {m.admin_qr_code()}
               </h6>
-              <p className="tw:text-subtle tw:text-sm tw:mb-4">{m.admin_qr_scan_info()}</p>
-              <div className="tw:inline-block tw:rounded-md tw:bg-white tw:p-4">
+              <p className="text-subtle text-sm mb-4">{m.admin_qr_scan_info()}</p>
+              <div className="inline-block rounded-md bg-white p-4">
                 <QRCodeSVG value={checkInUrl} size={180} level="M" includeMargin={false} />
               </div>
-              <div className="tw:mt-2">
+              <div className="mt-2">
                 <a
                   href={checkInUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="tw:text-subtle tw:text-sm tw:break-words"
+                  className="text-subtle text-sm break-words"
                 >
                   {checkInUrl}
                 </a>

@@ -30,10 +30,10 @@ function toBadgeVariant(value: string, fallback: BadgeVariant = "secondary"): Ba
 /**
  * Small label. Colour is never the only carrier of meaning: every badge needs
  * visible text (or an `sr-only` child for icon-only content). Colours live on
- * `data-slot`/`data-variant` in `styles/tailwind.css` (not as important
- * utilities), so runtime themes retint them per variant and may change the
- * shape, weight and case. Size comes from there too, which lets a caller's
- * `tw:text-micro`/`tw:text-tiny` win.
+ * `data-slot`/`data-variant` in `styles/tailwind.css` (not as utilities), so
+ * runtime themes retint them per variant and may change the shape, weight and
+ * case. Size comes from there too, which lets a caller's `text-micro`/`text-tiny`
+ * win.
  */
 function Badge({
   className,
@@ -44,9 +44,8 @@ function Badge({
     <span
       data-slot="badge"
       data-variant={variant}
-      data-tailwind-migrated="true"
       className={cn(
-        "tw:inline-block tw:px-2 tw:py-1 tw:leading-none tw:whitespace-nowrap tw:align-baseline",
+        "inline-block px-2 py-1 leading-none whitespace-nowrap align-baseline",
         className,
       )}
       {...props}

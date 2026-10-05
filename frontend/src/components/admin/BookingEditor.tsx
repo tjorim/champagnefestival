@@ -225,11 +225,11 @@ export default function BookingEditor({
 
   return (
     <section aria-labelledby="booking-editor-heading">
-      <h6 id="booking-editor-heading" className="tw:text-highlight">
+      <h6 id="booking-editor-heading" className="text-highlight">
         {m.admin_booking_editor()}
       </h6>
-      <div className="tw:flex tw:flex-wrap tw:-mx-2 tw:*:w-full tw:*:px-2 tw:gap-y-4">
-        <AdminField className="tw:site-sm:w-4/12">
+      <div className="flex flex-wrap -mx-2 *:w-full *:px-2 gap-y-4">
+        <AdminField className="site-sm:w-4/12">
           <AdminLabel>{m.admin_guests_count()}</AdminLabel>
           <form.Field name="guestCount">
             {(field) => (
@@ -245,7 +245,7 @@ export default function BookingEditor({
             )}
           </form.Field>
         </AdminField>
-        <AdminField className="tw:site-sm:w-4/12">
+        <AdminField className="site-sm:w-4/12">
           <AdminLabel>{m.admin_status_label()}</AdminLabel>
           <form.Field name="status">
             {(field) => (
@@ -262,7 +262,7 @@ export default function BookingEditor({
             )}
           </form.Field>
         </AdminField>
-        <div className="tw:site-sm:w-4/12 tw:text-sm tw:self-end">
+        <div className="site-sm:w-4/12 text-sm self-end">
           <div>
             {m.admin_booking_total()}: €{amountDue.toFixed(2)}
           </div>
@@ -279,7 +279,7 @@ export default function BookingEditor({
           )}
         </div>
         {products.map((product) => (
-          <AdminField className="tw:site-sm:w-6/12" key={product.id}>
+          <AdminField className="site-sm:w-6/12" key={product.id}>
             <AdminLabel>
               {product.name} · €{(bookedPrices[product.id] ?? product.price).toFixed(2)}
             </AdminLabel>
@@ -294,7 +294,7 @@ export default function BookingEditor({
             />
           </AdminField>
         ))}
-        <AdminField className="tw:w-full">
+        <AdminField className="w-full">
           <AdminLabel>{m.admin_notes()}</AdminLabel>
           <form.Field name="notes">
             {(field) => (
@@ -309,9 +309,9 @@ export default function BookingEditor({
         </AdminField>
       </div>
 
-      <fieldset className="tw:mt-4">
-        <legend className="tw:text-base">{m.admin_action_assign_table()}</legend>
-        <p className="tw:text-sm">
+      <fieldset className="mt-4">
+        <legend className="text-base">{m.admin_action_assign_table()}</legend>
+        <p className="text-sm">
           {m.admin_allocation_progress({
             assigned,
             total: allocationTotal,
@@ -324,10 +324,7 @@ export default function BookingEditor({
           </Alert>
         )}
         {allocations.map((entry, index) => (
-          <div
-            key={`${entry.tableId}:${index}`}
-            className="tw:flex tw:gap-2 tw:mb-2 tw:items-center"
-          >
+          <div key={`${entry.tableId}:${index}`} className="flex gap-2 mb-2 items-center">
             <AdminSelect
               aria-label={m.admin_inventory_unit_table()}
               value={entry.tableId}
@@ -359,7 +356,7 @@ export default function BookingEditor({
               onChange={(event) =>
                 changeAllocation(index, { guestCount: Number(event.target.value) })
               }
-              className="tw:max-w-24"
+              className="max-w-24"
             />
             <Button
               variant="outline-danger"
@@ -371,7 +368,7 @@ export default function BookingEditor({
         ))}
         <Button
           variant="outline"
-          className="tw:me-2"
+          className="me-2"
           disabled={assigned >= allocationTotal}
           onClick={() =>
             form.pushFieldValue("allocations", {
@@ -399,38 +396,33 @@ export default function BookingEditor({
         </Button>
       </fieldset>
 
-      <fieldset className="tw:mt-4">
-        <Button
-          variant="link"
-          size="sm"
-          className="tw:px-0"
-          onClick={() => setShowLedger((v) => !v)}
-        >
+      <fieldset className="mt-4">
+        <Button variant="link" size="sm" className="px-0" onClick={() => setShowLedger((v) => !v)}>
           {showLedger ? m.admin_payment_history_hide() : m.admin_payment_history_show()}
         </Button>
         {showLedger && (
           <>
-            {ledgerQuery.isLoading && <p className="tw:text-sm">{m.loading()}</p>}
+            {ledgerQuery.isLoading && <p className="text-sm">{m.loading()}</p>}
             {ledgerQuery.isError && (
-              <Alert variant="danger" className="tw:mb-2">
+              <Alert variant="danger" className="mb-2">
                 {m.admin_payment_history_error()}
               </Alert>
             )}
             {ledgerQuery.data && ledgerQuery.data.length === 0 && (
-              <p className="tw:text-sm tw:text-subtle">{m.admin_payment_history_empty()}</p>
+              <p className="text-sm text-subtle">{m.admin_payment_history_empty()}</p>
             )}
             {ledgerQuery.data && ledgerQuery.data.length > 0 && (
-              <PresentationList flush className="tw:mb-4">
+              <PresentationList flush className="mb-4">
                 {ledgerQuery.data.map((entry) => (
-                  <PresentationListItem key={entry.id} className="tw:px-0 tw:py-1">
-                    <div className="tw:text-sm tw:flex tw:justify-between tw:flex-wrap tw:gap-2">
+                  <PresentationListItem key={entry.id} className="px-0 py-1">
+                    <div className="text-sm flex justify-between flex-wrap gap-2">
                       <span>
                         <strong>{transactionAmountLabel(entry.amount)}</strong>{" "}
                         {entry.amount >= 0 ? "+" : ""}€{entry.amount.toFixed(2)}
                         {entry.reference ? ` · ${entry.reference}` : ""}
                         {entry.note ? ` · ${entry.note}` : ""}
                       </span>
-                      <span className="tw:text-subtle">
+                      <span className="text-subtle">
                         {entry.effectiveDate} · {entry.recordedBy}
                       </span>
                     </div>
@@ -439,18 +431,16 @@ export default function BookingEditor({
               </PresentationList>
             )}
             {onAddTransaction && (
-              <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-end">
+              <div className="flex flex-wrap gap-2 items-end">
                 <AdminField>
-                  <AdminLabel className="tw:text-sm tw:mb-1">
-                    {m.admin_payment_amount_label()}
-                  </AdminLabel>
+                  <AdminLabel className="text-sm mb-1">{m.admin_payment_amount_label()}</AdminLabel>
                   <transactionForm.Field name="amount">
                     {(field) => (
                       <AdminInput
                         size="sm"
                         type="number"
                         step="0.01"
-                        className="tw:max-w-32"
+                        className="max-w-32"
                         aria-label={m.admin_payment_amount_label()}
                         value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
@@ -458,12 +448,12 @@ export default function BookingEditor({
                       />
                     )}
                   </transactionForm.Field>
-                  <AdminDescription className="tw:text-sm">
+                  <AdminDescription className="text-sm">
                     {m.admin_payment_amount_help()}
                   </AdminDescription>
                 </AdminField>
                 <AdminField>
-                  <AdminLabel className="tw:text-sm tw:mb-1">
+                  <AdminLabel className="text-sm mb-1">
                     {m.admin_payment_transaction_date()}
                   </AdminLabel>
                   <transactionForm.Field name="date">
@@ -481,7 +471,7 @@ export default function BookingEditor({
                   </transactionForm.Field>
                 </AdminField>
                 <AdminField>
-                  <AdminLabel className="tw:text-sm tw:mb-1">
+                  <AdminLabel className="text-sm mb-1">
                     {m.admin_payment_reference_label()}
                   </AdminLabel>
                   <transactionForm.Field name="reference">
@@ -489,7 +479,7 @@ export default function BookingEditor({
                       <AdminInput
                         size="sm"
                         type="text"
-                        className="tw:max-w-40"
+                        className="max-w-40"
                         aria-label={m.admin_payment_reference_label()}
                         value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
@@ -499,15 +489,13 @@ export default function BookingEditor({
                   </transactionForm.Field>
                 </AdminField>
                 <AdminField>
-                  <AdminLabel className="tw:text-sm tw:mb-1">
-                    {m.admin_payment_note_label()}
-                  </AdminLabel>
+                  <AdminLabel className="text-sm mb-1">{m.admin_payment_note_label()}</AdminLabel>
                   <transactionForm.Field name="note">
                     {(field) => (
                       <AdminInput
                         size="sm"
                         type="text"
-                        className="tw:max-w-48"
+                        className="max-w-48"
                         aria-label={m.admin_payment_note_label()}
                         value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
@@ -528,7 +516,7 @@ export default function BookingEditor({
               </div>
             )}
             {transactionError && (
-              <Alert variant="danger" className="tw:mt-2 tw:mb-0">
+              <Alert variant="danger" className="mt-2 mb-0">
                 {transactionError}
               </Alert>
             )}

@@ -32,7 +32,7 @@ describe("useVisualTheme", () => {
   beforeEach(() => {
     window.localStorage.clear();
     delete document.documentElement.dataset.visualTheme;
-    delete document.documentElement.dataset.bsTheme;
+    delete document.documentElement.dataset.themeMode;
     document.getElementById("visual-theme-stylesheet")?.remove();
     const stylesheet = document.createElement("link");
     stylesheet.id = "visual-theme-stylesheet";
@@ -56,7 +56,7 @@ describe("useVisualTheme", () => {
     initializeVisualTheme();
 
     expect(document.documentElement.dataset.visualTheme).toBe("remuage");
-    expect(document.documentElement.dataset.bsTheme).toBe("light");
+    expect(document.documentElement.dataset.themeMode).toBe("light");
     expect(document.getElementById("visual-theme-stylesheet")?.getAttribute("href")).toBe(
       "/themes/theme-remuage.css",
     );
@@ -71,7 +71,7 @@ describe("useVisualTheme", () => {
     initializeVisualTheme();
 
     expect(document.documentElement.dataset.visualTheme).toBe("refresh");
-    expect(document.documentElement.dataset.bsTheme).toBe("light");
+    expect(document.documentElement.dataset.themeMode).toBe("light");
     expect(getThemeColor("dark")).toBe("#100f0d");
     expect(getThemeColor("light")).toBe("#fbf4e6");
   });
@@ -94,7 +94,7 @@ describe("useVisualTheme", () => {
     const stylesheet = document.getElementById("visual-theme-stylesheet");
     expect(result.current.variant).toBe("remuage");
     expect(document.documentElement.dataset.visualTheme).toBe("remuage");
-    expect(document.documentElement.dataset.bsTheme).toBe("light");
+    expect(document.documentElement.dataset.themeMode).toBe("light");
     expect(stylesheet?.getAttribute("href")).toBe("/themes/theme-remuage.css");
     expect(getThemeColor("light")).toBe("#edf1f5");
     expect(window.localStorage.getItem("champagnefestival:visualTheme")).toBe("remuage");
@@ -102,7 +102,7 @@ describe("useVisualTheme", () => {
     act(() => result.current.setVariant("refresh"));
 
     expect(document.getElementById("visual-theme-stylesheet")).toBe(stylesheet);
-    expect(document.documentElement.dataset.bsTheme).toBe("dark");
+    expect(document.documentElement.dataset.themeMode).toBe("dark");
     expect(getThemeColor("dark")).toBe("#100f0d");
     expect(getThemeColor("light")).toBe("#fbf4e6");
   });

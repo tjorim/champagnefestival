@@ -132,22 +132,20 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
 
   return (
     <div>
-      <div className="tw:flex tw:justify-between tw:items-center tw:mb-4">
-        <h2 className="tw:text-2xl tw:font-medium tw:leading-tight tw:mb-0">
-          {m.admin_audit_log_title()}
-        </h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-medium leading-tight mb-0">{m.admin_audit_log_title()}</h2>
       </div>
 
-      <form className="tw:flex tw:flex-wrap tw:gap-4 tw:mb-4">
+      <form className="flex flex-wrap gap-4 mb-4">
         <AdminField controlId="audit-resource-type">
-          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
+          <AdminLabel className="text-sm text-subtle mb-1">
             {m.admin_audit_filter_resource_type()}
           </AdminLabel>
           <AdminSelect
             size="sm"
             value={resourceType}
             onValueChange={handleResourceTypeChange}
-            className="tw:min-w-45"
+            className="min-w-45"
           >
             <AdminOption value="">{m.admin_audit_filter_all()}</AdminOption>
             {(resourceTypesQuery.data ?? []).map((type) => (
@@ -158,7 +156,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
           </AdminSelect>
         </AdminField>
         <AdminField controlId="audit-resource-id">
-          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
+          <AdminLabel className="text-sm text-subtle mb-1">
             {m.admin_audit_filter_resource_id()}
           </AdminLabel>
           <AdminInput
@@ -167,11 +165,11 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             value={resourceId}
             onChange={handleResourceIdChange}
             placeholder={m.admin_audit_filter_resource_id_placeholder()}
-            className="tw:min-w-50"
+            className="min-w-50"
           />
         </AdminField>
         <AdminField controlId="audit-actor">
-          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
+          <AdminLabel className="text-sm text-subtle mb-1">
             {m.admin_audit_filter_actor()}
           </AdminLabel>
           <AdminInput
@@ -180,11 +178,11 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             value={actor}
             onChange={handleActorChange}
             placeholder={m.admin_audit_filter_actor_placeholder()}
-            className="tw:min-w-50"
+            className="min-w-50"
           />
         </AdminField>
         <AdminField controlId="audit-action">
-          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
+          <AdminLabel className="text-sm text-subtle mb-1">
             {m.admin_audit_filter_action()}
           </AdminLabel>
           <AdminInput
@@ -193,23 +191,23 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             value={action}
             onChange={handleActionChange}
             placeholder={m.admin_audit_filter_action_placeholder()}
-            className="tw:min-w-45"
+            className="min-w-45"
           />
         </AdminField>
         <AdminField controlId="audit-since">
-          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
+          <AdminLabel className="text-sm text-subtle mb-1">
             {m.admin_audit_filter_since()}
           </AdminLabel>
           <AdminInput size="sm" type="date" value={since} onChange={handleSinceChange} />
         </AdminField>
         <AdminField controlId="audit-until">
-          <AdminLabel className="tw:text-sm tw:text-subtle tw:mb-1">
+          <AdminLabel className="text-sm text-subtle mb-1">
             {m.admin_audit_filter_until()}
           </AdminLabel>
           <AdminInput size="sm" type="date" value={until} onChange={handleUntilChange} />
         </AdminField>
         {hasFilters && (
-          <AdminField className="tw:self-end">
+          <AdminField className="self-end">
             <Button variant="outline" size="sm" onClick={handleClearFilters}>
               {m.admin_content_clear_filters()}
             </Button>
@@ -218,23 +216,23 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
       </form>
 
       {entriesQuery.error && (
-        <Alert variant="danger" className="tw:mb-4">
+        <Alert variant="danger" className="mb-4">
           {m.admin_error_load_data()}
         </Alert>
       )}
 
       {entriesQuery.isPending ? (
-        <div className="tw:text-center tw:py-12">
+        <div className="text-center py-12">
           <Spinner variant="primary" role="status">
-            <span className="tw:sr-only">{m.admin_loading()}</span>
+            <span className="sr-only">{m.admin_loading()}</span>
           </Spinner>
         </div>
       ) : entries.length === 0 ? (
-        <p className="tw:text-subtle">{m.admin_audit_no_entries()}</p>
+        <p className="text-subtle">{m.admin_audit_no_entries()}</p>
       ) : (
         <>
           <Table>
-            <caption className="tw:sr-only">{m.admin_audit_table_caption()}</caption>
+            <caption className="sr-only">{m.admin_audit_table_caption()}</caption>
             <TableHeader>
               <TableRow>
                 <TableHead scope="col">{m.admin_audit_column_timestamp()}</TableHead>
@@ -248,12 +246,12 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
               {entries.map((entry) => (
                 <TableRow key={entry.id}>
                   <TableCell>{formatTimestamp(entry.timestamp)}</TableCell>
-                  <TableCell className="tw:break-words">{entry.actor}</TableCell>
+                  <TableCell className="break-words">{entry.actor}</TableCell>
                   <TableCell>{entry.action}</TableCell>
-                  <TableCell className="tw:break-words">
+                  <TableCell className="break-words">
                     {entry.resourceType} / {entry.resourceId}
                   </TableCell>
-                  <TableCell className="tw:break-words">
+                  <TableCell className="break-words">
                     {Object.keys(entry.details).length > 0 ? JSON.stringify(entry.details) : ""}
                   </TableCell>
                 </TableRow>
@@ -261,7 +259,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             </TableBody>
           </Table>
 
-          <div className="tw:flex tw:justify-between tw:items-center">
+          <div className="flex justify-between items-center">
             <Button
               variant="outline"
               size="sm"
@@ -270,7 +268,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             >
               {m.admin_audit_previous_page()}
             </Button>
-            <span className="tw:text-subtle tw:text-sm">{m.admin_audit_page_label({ page })}</span>
+            <span className="text-subtle text-sm">{m.admin_audit_page_label({ page })}</span>
             <Button
               variant="outline"
               size="sm"

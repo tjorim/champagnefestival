@@ -94,19 +94,19 @@ describe("Spinner", () => {
     render(<Spinner label="Loading…" variant="warning" />);
     const status = screen.getByRole("status");
     expect(status).not.toHaveAttribute("aria-hidden");
-    expect(status.querySelector(".tw\\:sr-only")).toHaveTextContent("Loading…");
+    expect(status.querySelector(".sr-only")).toHaveTextContent("Loading…");
   });
 
   it("keeps caller-provided status semantics and honors reduced motion", () => {
     render(
       <Spinner role="status">
-        <span className="tw:sr-only">Busy</span>
+        <span className="sr-only">Busy</span>
       </Spinner>,
     );
     const status = screen.getByRole("status");
     expect(status).toHaveTextContent("Busy");
     expect(status).not.toHaveAttribute("aria-hidden");
-    expect(status.className).toContain("tw:animate-spin");
-    expect(status.className).toContain("tw:motion-reduce:animate-spinner-slow");
+    expect(status.className).toContain("animate-spin");
+    expect(status.className).toContain("motion-reduce:animate-spinner-slow");
   });
 });

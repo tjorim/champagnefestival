@@ -37,11 +37,11 @@ html[data-visual-theme="remuage"] .events-list {
 
 html[data-visual-theme="remuage"] .event-card {
   position: relative;
-  margin: 0 !important;
+  margin: 0;
   color: var(--rem-ink);
   background: var(--rem-paper);
-  border: 1px solid var(--rem-line) !important;
-  border-left: 8px solid var(--rem-blue) !important;
+  border: 1px solid var(--rem-line);
+  border-left: 8px solid var(--rem-blue);
   border-radius: 0 var(--rem-radius-small) var(--rem-radius-small) 0;
   box-shadow: 0 7px 18px rgba(23, 32, 51, 0.07);
 }
@@ -73,7 +73,7 @@ html[data-visual-theme="remuage"] .event-card h5 {
 }
 
 html[data-visual-theme="remuage"] .event-description,
-html[data-visual-theme="remuage"] .event-card .tw\:text-subtle {
+html[data-visual-theme="remuage"] .event-card .text-subtle {
   color: var(--rem-muted) !important;
   --layout-subtle: var(--rem-muted) !important;
 }
@@ -116,7 +116,7 @@ html[data-visual-theme="remuage"] .marquee-logo-frame {
   border-radius: 50%;
   box-shadow:
     inset 0 0 0 2px var(--rem-nickel),
-    0 8px 20px rgba(23, 32, 51, 0.08) !important;
+    0 8px 20px rgba(23, 32, 51, 0.08);
 }
 
 html[data-visual-theme="remuage"] .marquee-logo-image {
@@ -224,21 +224,20 @@ html[data-visual-theme="remuage"] .map-error {
 html[data-visual-theme="remuage"] #contact [data-slot="card"] {
   color: var(--rem-ink);
   background: var(--rem-paper);
-  border: 1px solid var(--rem-line) !important;
-  border-top: 8px solid var(--rem-blue) !important;
+  border: 1px solid var(--rem-line);
+  border-top: 8px solid var(--rem-blue);
   border-radius: var(--rem-radius);
-  box-shadow: var(--rem-shadow) !important;
+  box-shadow: var(--rem-shadow);
 }
 
 html[data-visual-theme="remuage"] [data-public-form][data-slot="field-label"],
 html[data-visual-theme="remuage"] legend {
-  --font-weight-medium: 750;
   color: var(--rem-grape);
   font-weight: 750;
 }
 
-/* Controls follow the --surface-* tokens; important utilities outrank ordinary
-   unlayered properties, so only geometry without a utility is set directly. */
+/* Controls follow the --surface-* tokens; only geometry without a utility is set
+   directly (utilities outrank this layer). */
 html[data-visual-theme="remuage"] [data-public-form][data-slot="input"],
 html[data-visual-theme="remuage"] [data-public-form][data-slot="textarea"],
 html[data-visual-theme="remuage"] [data-public-form][data-slot="select-trigger"] {
@@ -246,12 +245,11 @@ html[data-visual-theme="remuage"] [data-public-form][data-slot="select-trigger"]
   --surface-foreground: var(--rem-ink);
   --surface-border: var(--rem-line-strong);
   --surface-primary: var(--rem-blue);
-  --radius-md: 8px;
   min-height: 46px;
 }
 
 html[data-visual-theme="remuage"] [data-slot="button"]:not([data-theme-scope="admin"] *) {
-  --tw-radius-md: 9px;
+  --radius-md: 9px;
 }
 
 html[data-visual-theme="remuage"] [data-slot="button"][data-variant="brand"],
@@ -357,10 +355,10 @@ html[data-visual-theme="remuage"] .standalone-app [data-slot="card-footer"] {
   border-color: var(--rem-line) !important;
 }
 
-html[data-visual-theme="remuage"] .standalone-app .tw\:text-content,
+html[data-visual-theme="remuage"] .standalone-app .text-content,
 html[data-visual-theme="remuage"] .standalone-app [data-slot="presentation-list-item"] {
   color: var(--rem-ink) !important;
-  background-color: var(--rem-paper) !important;
+  background-color: var(--rem-paper);
   --layout-content: var(--rem-ink) !important;
 }
 
@@ -368,14 +366,14 @@ html[data-visual-theme="remuage"] .standalone-app [data-slot="presentation-list-
   border-color: var(--rem-line) !important;
 }
 
-html[data-visual-theme="remuage"] .standalone-app .tw\:text-subtle,
-html[data-visual-theme="remuage"] .standalone-app .tw\:text-subtle {
+html[data-visual-theme="remuage"] .standalone-app .text-subtle,
+html[data-visual-theme="remuage"] .standalone-app .text-subtle {
   color: var(--rem-muted) !important;
   --layout-subtle: var(--rem-muted) !important;
   --layout-subtle: var(--rem-muted) !important;
 }
 
-html[data-visual-theme="remuage"] .standalone-app .tw\:text-highlight {
+html[data-visual-theme="remuage"] .standalone-app .text-highlight {
   color: var(--rem-blue) !important;
   --layout-highlight: var(--rem-blue) !important;
 }

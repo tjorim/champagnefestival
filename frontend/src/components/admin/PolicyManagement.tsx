@@ -369,32 +369,30 @@ export default function PolicyManagement({
   return (
     <Card>
       <CardHeader>
-        <h2 className="tw:text-xl tw:font-medium tw:leading-tight tw:mb-0">
-          {m.admin_policies_section()}
-        </h2>
+        <h2 className="text-xl font-medium leading-tight mb-0">{m.admin_policies_section()}</h2>
       </CardHeader>
       <CardContent>
         {error && <Alert variant="danger">{error}</Alert>}
         {query.isError && <Alert variant="danger">{m.admin_error_load_policy()}</Alert>}
         {policy && (
           <>
-            <div className="tw:flex tw:justify-between tw:items-center tw:mb-4">
+            <div className="flex justify-between items-center mb-4">
               <div>
                 <strong>{policy.title_en ?? policy.title_nl}</strong>{" "}
-                <span className="tw:text-subtle">
+                <span className="text-subtle">
                   {m.admin_policy_required_locales_label()}{" "}
                   {LOCALES.map((l) => (
                     <Badge
                       key={l}
                       variant={policy.required_locales.includes(l) ? "info" : "secondary"}
-                      className="tw:me-1"
+                      className="me-1"
                     >
                       {l}
                     </Badge>
                   ))}
                 </span>
                 {published && (
-                  <div className="tw:text-subtle tw:text-sm">
+                  <div className="text-subtle text-sm">
                     {m.admin_policy_currently_published({
                       version: published.version_number,
                       date: published.published_at
@@ -413,23 +411,22 @@ export default function PolicyManagement({
 
             {draft ? (
               <>
-                <div className="tw:mb-2 tw:text-subtle tw:text-sm">
+                <div className="mb-2 text-subtle text-sm">
                   {m.admin_policy_editing_draft_label({ version: draft.version_number })}{" "}
                   {LOCALES.map((l) => (
                     <Badge
                       key={l}
                       variant={values[l]?.trim() ? "success" : "secondary"}
-                      className="tw:me-1"
+                      className="me-1"
                     >
                       {l}
                     </Badge>
                   ))}
                 </div>
                 <div
-                  data-tailwind-migrated="true"
                   role="group"
                   aria-label={m.language_select()}
-                  className="tw:flex tw:gap-1 tw:border-b tw:border-border"
+                  className="flex gap-1 border-b border-border"
                 >
                   {LOCALES.map((l) => (
                     <Button
@@ -442,11 +439,8 @@ export default function PolicyManagement({
                     </Button>
                   ))}
                 </div>
-                <div className="tw:border tw:border-t-0 tw:border-border tw:p-4">
-                  <ButtonGroup
-                    aria-label={m.admin_policy_markdown_toolbar_aria()}
-                    className="tw:mb-2"
-                  >
+                <div className="border border-t-0 border-border p-4">
+                  <ButtonGroup aria-label={m.admin_policy_markdown_toolbar_aria()} className="mb-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -532,20 +526,20 @@ export default function PolicyManagement({
                         ref={textareaRef}
 
                         rows={12}
-                        className="tw:font-mono"
+                        className="font-mono"
                         value={field.value}
                         onChange={(event) => field.handleChange(event.target.value)}
                         onBlur={field.handleBlur}
                       />
                     )}
                   </form.Field>
-                  <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:mt-4">
-                    <div className="tw:site-md:w-6/12">
-                      <AdminLabel className="tw:text-sm tw:text-subtle">
+                  <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter mt-4">
+                    <div className="site-md:w-6/12">
+                      <AdminLabel className="text-sm text-subtle">
                         {m.admin_policy_preview_label()}
                       </AdminLabel>
                       <div
-                        className="tw:rounded-md tw:border tw:border-border tw:bg-muted tw:p-4 tw:min-h-32"
+                        className="rounded-md border border-border bg-muted p-4 min-h-32"
 
                         // Trusted: `preview` is always the sanitized HTML the
                         // backend's shared render_markdown() returned. Blanked
@@ -557,8 +551,8 @@ export default function PolicyManagement({
                         }}
                       />
                     </div>
-                    <div className="tw:site-md:w-6/12">
-                      <AdminLabel className="tw:text-sm tw:text-subtle">
+                    <div className="site-md:w-6/12">
+                      <AdminLabel className="text-sm text-subtle">
                         {m.admin_policy_change_summary_label()}
                       </AdminLabel>
                       <form.Field name="changeSummary">
@@ -574,7 +568,7 @@ export default function PolicyManagement({
                       </form.Field>
                     </div>
                   </div>
-                  <div className="tw:flex tw:gap-2 tw:mt-4">
+                  <div className="flex gap-2 mt-4">
                     <Button disabled={saveDraft.isPending} onClick={handleSaveDraft}>
                       {m.admin_policy_save_draft_action()}
                     </Button>
@@ -600,10 +594,10 @@ export default function PolicyManagement({
             )}
 
             <hr />
-            <h3 className="tw:text-base tw:font-medium tw:leading-tight">
+            <h3 className="text-base font-medium leading-tight">
               {m.admin_policy_version_history_heading()}
             </h3>
-            <div data-tailwind-migrated="true" className="tw:w-full">
+            <div className="w-full">
               <Table>
                 <TableHeader>
                   {historyTable.getHeaderGroups().map((headerGroup) => (
@@ -630,7 +624,7 @@ export default function PolicyManagement({
               </Table>
             </div>
             {contentFor(published, locale) === "" && published && (
-              <p className="tw:text-subtle tw:text-sm">
+              <p className="text-subtle text-sm">
                 {m.admin_policy_no_published_content({ locale: locale.toUpperCase() })}
               </p>
             )}

@@ -24,7 +24,7 @@ function AlertDialogOverlay({ className, ...props }: AlertDialogPrimitive.Backdr
     <AlertDialogPrimitive.Backdrop
       data-slot="alert-dialog-overlay"
       className={cn(
-        "tw:fixed tw:inset-0 tw:isolate tw:z-dialog tw:bg-foreground/50 tw:duration-100 tw:supports-backdrop-filter:backdrop-blur-xs",
+        "fixed inset-0 isolate z-dialog bg-foreground/50 duration-100 supports-backdrop-filter:backdrop-blur-xs",
         className,
       )}
       {...props}
@@ -47,17 +47,16 @@ function AlertDialogContent({
     <>
       <AlertDialogOverlay onClick={onBackdropClick} />
       <AlertDialogPrimitive.Viewport
-        className="tw:fixed tw:inset-0 tw:z-dialog tw:flex tw:flex-col tw:items-center tw:overflow-y-auto tw:p-4"
+        className="fixed inset-0 z-dialog flex flex-col items-center overflow-y-auto p-4"
         onClick={(event) => {
           if (event.target === event.currentTarget) onBackdropClick?.();
         }}
       >
         <AlertDialogPrimitive.Popup
           data-slot="alert-dialog-content"
-          data-tailwind-migrated="true"
           data-size={size}
           className={cn(
-            "tw:relative tw:z-dialog tw:my-auto tw:grid tw:w-full tw:max-w-lg tw:gap-4 tw:rounded-xl tw:border tw:border-border tw:bg-popover tw:p-6 tw:text-popover-foreground tw:shadow-lg tw:outline-none",
+            "relative z-dialog my-auto grid w-full max-w-lg gap-4 rounded-xl border border-border bg-popover p-6 text-popover-foreground shadow-lg outline-none",
             className,
           )}
           {...props}
@@ -73,9 +72,7 @@ function AlertDialogContent({
 }
 
 function AlertDialogHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div data-slot="alert-dialog-header" className={cn("tw:grid tw:gap-2", className)} {...props} />
-  );
+  return <div data-slot="alert-dialog-header" className={cn("grid gap-2", className)} {...props} />;
 }
 
 function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">) {
@@ -83,7 +80,7 @@ function AlertDialogFooter({ className, ...props }: React.ComponentProps<"div">)
     <div
       data-slot="alert-dialog-footer"
       className={cn(
-        "tw:flex tw:flex-col-reverse tw:gap-2 tw:group-data-[size=sm]/alert-dialog-content:grid tw:group-data-[size=sm]/alert-dialog-content:grid-cols-2 tw:sm:flex-row tw:sm:justify-end",
+        "flex flex-col-reverse gap-2 group-data-[size=sm]/alert-dialog-content:grid group-data-[size=sm]/alert-dialog-content:grid-cols-2 sm:flex-row sm:justify-end",
         className,
       )}
       {...props}
@@ -96,7 +93,7 @@ function AlertDialogMedia({ className, ...props }: React.ComponentProps<"div">) 
     <div
       data-slot="alert-dialog-media"
       className={cn(
-        "tw:mb-2 tw:inline-flex tw:size-16 tw:items-center tw:justify-center tw:rounded-md tw:bg-muted tw:sm:group-data-[size=default]/alert-dialog-content:row-span-2 tw:*:[svg:not([class*=size-])]:size-8",
+        "mb-2 inline-flex size-16 items-center justify-center rounded-md bg-muted sm:group-data-[size=default]/alert-dialog-content:row-span-2 *:[svg:not([class*=size-])]:size-8",
         className,
       )}
       {...props}
@@ -112,7 +109,7 @@ function AlertDialogTitle({
     <AlertDialogPrimitive.Title
       data-slot="alert-dialog-title"
       className={cn(
-        "tw:m-0 tw:text-lg tw:font-medium tw:sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
+        "m-0 text-lg font-medium sm:group-data-[size=default]/alert-dialog-content:group-has-data-[slot=alert-dialog-media]/alert-dialog-content:col-start-2",
         className,
       )}
       {...props}
@@ -128,7 +125,7 @@ function AlertDialogDescription({
     <AlertDialogPrimitive.Description
       data-slot="alert-dialog-description"
       className={cn(
-        "tw:text-sm tw:text-balance tw:text-muted-foreground tw:md:text-pretty tw:*:[a]:underline tw:*:[a]:underline-offset-3 tw:*:[a]:hover:text-foreground",
+        "text-sm text-balance text-muted-foreground md:text-pretty *:[a]:underline *:[a]:underline-offset-3 *:[a]:hover:text-foreground",
         className,
       )}
       {...props}

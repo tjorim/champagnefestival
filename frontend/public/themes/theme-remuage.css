@@ -1,4 +1,4 @@
-@import url("./remuage/foundation.css");
-@import url("./remuage/surfaces.css");
-@import url("./remuage/admin.css");
-@import url("./remuage/responsive.css");
+@import url("./remuage/foundation.css") layer(components);
+@import url("./remuage/surfaces.css") layer(components);
+@import url("./remuage/admin.css") layer(components);
+@import url("./remuage/responsive.css") layer(components);

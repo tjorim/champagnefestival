@@ -24,7 +24,6 @@ it("carries fixed-dark scope inside a Base UI portal outside the admin page", as
   expect(container.contains(dialog)).toBe(false);
   const scope = dialog.closest('[data-theme-scope="admin"]');
   expect(scope).toHaveAttribute("data-theme-mode", "dark");
-  expect(scope).toHaveAttribute("data-bs-theme", "dark");
   const result = await axe(dialog);
   expect(result.violations).toEqual([]);
 });

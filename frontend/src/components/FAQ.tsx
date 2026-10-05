@@ -22,23 +22,23 @@ const FAQ: React.FC = () => {
 
   if (hasLoadError) {
     return (
-      <Alert variant="danger" className="tw:text-center tw:mb-0">
+      <Alert variant="danger" className="text-center mb-0">
         {m.error_faq()}
       </Alert>
     );
   }
 
   if (isLoaded && items.length === 0) {
-    return <p className="tw:text-subtle tw:text-center tw:mb-0">{m.faq_empty()}</p>;
+    return <p className="text-subtle text-center mb-0">{m.faq_empty()}</p>;
   }
 
   return (
-    <Accordion className="tw:overflow-hidden">
+    <Accordion className="overflow-hidden">
       {items.map((item) => (
         <AccordionItem key={item.id} value={item.id}>
           <AccordionTrigger>{item.question}</AccordionTrigger>
           <AccordionContent>
-            <div className="tw:border-l-2 tw:border-primary tw:py-2 tw:pl-3 tw:text-left">
+            <div className="border-l-2 border-primary py-2 pl-3 text-left">
               <p>{item.answer}</p>
             </div>
           </AccordionContent>

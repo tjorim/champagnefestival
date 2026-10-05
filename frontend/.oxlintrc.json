@@ -8,10 +8,55 @@
     "node_modules/**",
     "public/mockServiceWorker.js"
   ],
-  "extends": ["./.oxlint-legacy-classes.json"],
   "jsPlugins": ["@shadcn/lint"],
   "rules": {
     "shadcn/no-arbitrary-values": "error",
-    "shadcn/no-inline-styles": "error"
+    "shadcn/no-inline-styles": "error",
+    "shadcn/no-unknown-classes": [
+      "error",
+      {
+        "allow": [
+          "admin-*",
+          "announcement-*",
+          "App",
+          "bubble",
+          "bubble-*",
+          "carousel-*",
+          "countdown",
+          "countdown-*",
+          "cuvee-*",
+          "event-*",
+          "events-list",
+          "feature",
+          "feature-*",
+          "features",
+          "footer-link",
+          "has-active",
+          "hero",
+          "hero-*",
+          "icon-link",
+          "is-active",
+          "maintenance-page",
+          "maintenance-page__*",
+          "map-*",
+          "marquee-*",
+          "remuage-*",
+          "riviera-*",
+          "schedule-tabs",
+          "section-header",
+          "section-subtitle",
+          "site-*",
+          "skip-link",
+          "standalone-*",
+          "theme-switcher",
+          "theme-switcher__*",
+          "viz-root",
+          "brand-title",
+          "content-section",
+          "highlight-section"
+        ]
+      }
+    ],
+    "shadcn/no-raw-colors": "error"
   }
 }

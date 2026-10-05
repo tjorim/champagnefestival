@@ -55,7 +55,7 @@ export default function ContactMessagesManagement({
 
   return (
     <Card tone="secondary">
-      <CardHeader className="tw:font-semibold">{m.admin_contact_messages_section()}</CardHeader>
+      <CardHeader className="font-semibold">{m.admin_contact_messages_section()}</CardHeader>
       <CardContent>
         {messages.isPending && <Spinner label={m.admin_loading()} size="sm" />}
         {messages.isError && (
@@ -65,20 +65,20 @@ export default function ContactMessagesManagement({
           <Alert variant="danger">{m.admin_error_handle_contact_message()}</Alert>
         )}
         {messages.data?.length === 0 && (
-          <p className="tw:text-subtle tw:mb-0">{m.admin_contact_messages_empty()}</p>
+          <p className="text-subtle mb-0">{m.admin_contact_messages_empty()}</p>
         )}
         {messages.data?.map((message) => (
-          <article key={message.id} className="tw:border-b tw:border-subtle tw:pb-4 tw:mb-4">
-            <div className="tw:flex tw:justify-between tw:gap-4 tw:flex-wrap">
+          <article key={message.id} className="border-b border-subtle pb-4 mb-4">
+            <div className="flex justify-between gap-4 flex-wrap">
               <div>
                 <strong>{message.name}</strong>{" "}
                 <a href={`mailto:${message.email}`}>{message.email}</a>
-                <div className="tw:text-sm tw:text-subtle">
+                <div className="text-sm text-subtle">
                   {new Date(message.createdAt).toLocaleString()}
                 </div>
               </div>
               {message.handledAt ? (
-                <span className="tw:text-success">{m.admin_contact_message_handled()}</span>
+                <span className="text-success">{m.admin_contact_message_handled()}</span>
               ) : (
                 <Button
                   size="sm"
@@ -89,7 +89,7 @@ export default function ContactMessagesManagement({
                 </Button>
               )}
             </div>
-            <p className="tw:mt-2 tw:mb-0 tw:whitespace-pre-wrap">{message.message}</p>
+            <p className="mt-2 mb-0 whitespace-pre-wrap">{message.message}</p>
           </article>
         ))}
       </CardContent>

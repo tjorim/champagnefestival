@@ -98,11 +98,11 @@ export default function ScratchpadManagement({
 
   return (
     <Card tone="secondary">
-      <CardHeader className="tw:font-semibold">{m.admin_scratchpad_section()}</CardHeader>
+      <CardHeader className="font-semibold">{m.admin_scratchpad_section()}</CardHeader>
       <CardContent>
-        <p className="tw:text-subtle tw:text-sm">{m.admin_scratchpad_description()}</p>
+        <p className="text-subtle text-sm">{m.admin_scratchpad_description()}</p>
         {editionId === "" ? (
-          <p className="tw:text-subtle tw:mb-0">{m.admin_scratchpad_no_active_edition()}</p>
+          <p className="text-subtle mb-0">{m.admin_scratchpad_no_active_edition()}</p>
         ) : (
           <>
             {query.isError && <Alert variant="danger">{m.admin_error_load_scratchpad()}</Alert>}
@@ -127,7 +127,7 @@ export default function ScratchpadManagement({
                   void form.handleSubmit();
                 }}
               >
-                <AdminField className="tw:mb-4" controlId="admin-scratchpad-content">
+                <AdminField className="mb-4" controlId="admin-scratchpad-content">
                   <form.Field name="content">
                     {(field) => (
                       <AdminTextarea
@@ -138,7 +138,7 @@ export default function ScratchpadManagement({
                           setSaved(false);
                         }}
                         placeholder={m.admin_scratchpad_placeholder()}
-                        className="tw:bg-muted tw:text-content tw:border-input tw:font-mono"
+                        className="bg-muted text-content border-input font-mono"
 
                         maxLength={20000}
                       />
@@ -152,7 +152,7 @@ export default function ScratchpadManagement({
                 >
                   {saveMutation.isPending ? (
                     <>
-                      <Spinner size="sm" className="tw:me-1" />
+                      <Spinner size="sm" className="me-1" />
                       {m.admin_scratchpad_saving()}
                     </>
                   ) : (

@@ -10,7 +10,7 @@ function PresentationList({
     <ul
       data-slot="presentation-list"
       data-flush={flush || undefined}
-      className={cn("tw:m-0 tw:flex tw:list-none tw:flex-col tw:p-0", className)}
+      className={cn("m-0 flex list-none flex-col p-0", className)}
       {...props}
     />
   );
@@ -23,12 +23,12 @@ function PresentationListItem({
 }: (ComponentProps<"button"> & { action: true }) | (ComponentProps<"li"> & { action?: false })) {
   if (action) {
     return (
-      <li className="tw:list-none">
+      <li className="list-none">
         <button
           data-slot="presentation-list-item"
           type="button"
           className={cn(
-            "tw:w-full tw:text-left tw:cursor-pointer tw:hover:bg-muted tw:focus-visible:outline-2 tw:focus-visible:outline-ring tw:disabled:pointer-events-none tw:disabled:opacity-50",
+            "w-full text-left cursor-pointer hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring disabled:pointer-events-none disabled:opacity-50",
             className,
           )}
           {...(props as ComponentProps<"button">)}
@@ -41,7 +41,7 @@ function PresentationListItem({
   return (
     <li
       data-slot="presentation-list-item"
-      className={cn("tw:relative tw:block", className)}
+      className={cn("relative block", className)}
       {...(props as ComponentProps<"li">)}
     >
       {children}

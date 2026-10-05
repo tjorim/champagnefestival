@@ -207,38 +207,36 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
 
   return (
     <div>
-      <div className="tw:flex tw:justify-between tw:items-center tw:mb-4 tw:flex-wrap tw:gap-2">
-        <h2 className="tw:text-2xl tw:font-medium tw:leading-tight tw:mb-0">
-          {m.admin_analytics_title()}
-        </h2>
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <h2 className="text-2xl font-medium leading-tight mb-0">{m.admin_analytics_title()}</h2>
         <Button variant="outline" size="sm" onClick={() => setShowTable((v) => !v)}>
           {showTable ? m.admin_analytics_view_chart() : m.admin_analytics_view_table()}
         </Button>
       </div>
 
       {statsQuery.error && (
-        <Alert variant="danger" className="tw:mb-4">
+        <Alert variant="danger" className="mb-4">
           {m.admin_error_load_data()}
         </Alert>
       )}
 
       {ledgerExportError && (
-        <Alert role="alert" aria-live="assertive" variant="danger" className="tw:mb-4">
+        <Alert role="alert" aria-live="assertive" variant="danger" className="mb-4">
           {ledgerExportError}
         </Alert>
       )}
 
       {statsQuery.isPending ? (
-        <div className="tw:text-center tw:py-12">
+        <div className="text-center py-12">
           <Spinner variant="primary" role="status">
-            <span className="tw:sr-only">{m.admin_loading()}</span>
+            <span className="sr-only">{m.admin_loading()}</span>
           </Spinner>
         </div>
       ) : editions.length === 0 ? (
-        <p className="tw:text-subtle">{m.admin_analytics_no_data()}</p>
+        <p className="text-subtle">{m.admin_analytics_no_data()}</p>
       ) : showTable ? (
         <Table>
-          <caption className="tw:sr-only">{m.admin_analytics_table_caption()}</caption>
+          <caption className="sr-only">{m.admin_analytics_table_caption()}</caption>
           <TableHeader>
             <TableRow>
               <TableHead scope="col">{m.admin_analytics_column_edition()}</TableHead>
@@ -277,11 +275,11 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                 <TableCell>€{edition.totalRefunded.toFixed(2)}</TableCell>
                 <TableCell>€{edition.totalOutstanding.toFixed(2)}</TableCell>
                 <TableCell>€{edition.totalRefundLiability.toFixed(2)}</TableCell>
-                <TableCell className="tw:flex tw:gap-1">
+                <TableCell className="flex gap-1">
                   <Button
                     variant="outline"
                     size="sm"
-                    className="tw:py-0 tw:px-1"
+                    className="py-0 px-1"
                     onClick={() => {
                       setLedgerPage(1);
                       setLedgerSorting([]);
@@ -300,7 +298,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
                   <Button
                     variant="outline"
                     size="sm"
-                    className="tw:py-0 tw:px-1"
+                    className="py-0 px-1"
                     disabled={exportingEditionId === edition.editionId}
                     onClick={() => void handleExportLedger(edition.editionId)}
                     title={m.admin_analytics_export_ledger()}

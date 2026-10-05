@@ -141,12 +141,9 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
           noValidate
         >
           <DialogBody>
-            <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-4">
-              <AdminField
-                controlId="event-title"
-                className="tw:min-w-60 tw:grow-2 tw:shrink-1 tw:basis-60"
-              >
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+            <div className="flex gap-2 flex-wrap mb-4">
+              <AdminField controlId="event-title" className="min-w-60 grow-2 shrink-1 basis-60">
+                <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_content_event_title()}
                 </AdminLabel>
                 <form.Field
@@ -165,7 +162,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                       <>
                         <AdminInput
                           size="sm"
-                          className="tw:bg-muted tw:text-content tw:border-input"
+                          className="bg-muted text-content border-input"
                           autoFocus
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -178,18 +175,15 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                   }}
                 </form.Field>
               </AdminField>
-              <AdminField
-                controlId="event-category"
-                className="tw:min-w-40 tw:grow-1 tw:shrink-1 tw:basis-40"
-              >
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+              <AdminField controlId="event-category" className="min-w-40 grow-1 shrink-1 basis-40">
+                <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_content_event_category()}
                 </AdminLabel>
                 <form.Field name="category">
                   {(field) => (
                     <AdminInput
                       size="sm"
-                      className="tw:bg-muted tw:text-content tw:border-input"
+                      className="bg-muted text-content border-input"
                       placeholder={m.admin_event_category_placeholder()}
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
@@ -200,11 +194,9 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </AdminField>
             </div>
 
-            <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-4">
-              <AdminField controlId="event-date" className="tw:max-w-45">
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
-                  {m.admin_event_date()}
-                </AdminLabel>
+            <div className="flex gap-2 flex-wrap mb-4">
+              <AdminField controlId="event-date" className="max-w-45">
+                <AdminLabel className="text-subtle text-sm mb-1">{m.admin_event_date()}</AdminLabel>
                 <form.Field
                   name="date"
                   validators={[
@@ -221,7 +213,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                         <AdminInput
                           type="date"
                           size="sm"
-                          className="tw:bg-muted tw:text-content tw:border-input"
+                          className="bg-muted text-content border-input"
                           readOnly={!isFestival && Boolean(derivedStandaloneDate)}
                           aria-invalid={showErr}
                           value={effectiveDate}
@@ -234,8 +226,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                   }}
                 </form.Field>
               </AdminField>
-              <AdminField controlId="event-start-time" className="tw:max-w-35">
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+              <AdminField controlId="event-start-time" className="max-w-35">
+                <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_content_event_start_time()}
                 </AdminLabel>
                 <form.Field
@@ -255,7 +247,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                         <AdminInput
                           type="time"
                           size="sm"
-                          className="tw:bg-muted tw:text-content tw:border-input"
+                          className="bg-muted text-content border-input"
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
@@ -267,8 +259,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                   }}
                 </form.Field>
               </AdminField>
-              <AdminField controlId="event-end-time" className="tw:max-w-35">
-                <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+              <AdminField controlId="event-end-time" className="max-w-35">
+                <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_content_event_end_time()}
                 </AdminLabel>
                 <form.Field name="endTime">
@@ -276,7 +268,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     <AdminInput
                       type="time"
                       size="sm"
-                      className="tw:bg-muted tw:text-content tw:border-input"
+                      className="bg-muted text-content border-input"
                       value={field.value}
                       onChange={(e) => field.handleChange(e.target.value)}
                       onBlur={field.handleBlur}
@@ -286,8 +278,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
               </AdminField>
             </div>
 
-            <AdminField controlId="event-description" className="tw:mb-4">
-              <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+            <AdminField controlId="event-description" className="mb-4">
+              <AdminLabel className="text-subtle text-sm mb-1">
                 {m.admin_content_event_description()}
               </AdminLabel>
               <form.Field name="description">
@@ -295,7 +287,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                   <AdminTextarea
                     size="sm"
                     rows={2}
-                    className="tw:bg-muted tw:text-content tw:border-input"
+                    className="bg-muted text-content border-input"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -312,14 +304,14 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                   label={m.admin_content_event_requires_registration()}
                   checked={field.value}
                   onCheckedChange={(e) => field.handleChange(e)}
-                  className="tw:text-content tw:mb-2"
+                  className="text-content mb-2"
                 />
               )}
             </form.Field>
             {registrationRequired && (
-              <div className="tw:flex tw:gap-2 tw:flex-wrap tw:mb-2">
-                <AdminField className="tw:max-w-70" controlId="event-registrations-open-from">
-                  <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+              <div className="flex gap-2 flex-wrap mb-2">
+                <AdminField className="max-w-70" controlId="event-registrations-open-from">
+                  <AdminLabel className="text-subtle text-sm mb-1">
                     {m.admin_content_edition_registration_opens()}
                   </AdminLabel>
                   <form.Field name="registrationsOpenFrom">
@@ -327,7 +319,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                       <AdminInput
                         type="datetime-local"
                         size="sm"
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -335,8 +327,8 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                     )}
                   </form.Field>
                 </AdminField>
-                <AdminField className="tw:max-w-70" controlId="event-registrations-close-at">
-                  <AdminLabel className="tw:text-subtle tw:text-sm tw:mb-1">
+                <AdminField className="max-w-70" controlId="event-registrations-close-at">
+                  <AdminLabel className="text-subtle text-sm mb-1">
                     {m.admin_content_edition_registration_closes()}
                   </AdminLabel>
                   <form.Field name="registrationsCloseAt">
@@ -344,7 +336,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
                       <AdminInput
                         type="datetime-local"
                         size="sm"
-                        className="tw:bg-muted tw:text-content tw:border-input"
+                        className="bg-muted text-content border-input"
                         value={field.value}
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
@@ -356,9 +348,7 @@ export default function EventModal({ show, edition, initial, onSave, onHide }: E
             )}
 
             {!isFestival && (
-              <div className="tw:text-subtle tw:text-sm tw:mt-2">
-                {m.admin_event_standalone_help()}
-              </div>
+              <div className="text-subtle text-sm mt-2">{m.admin_event_standalone_help()}</div>
             )}
           </DialogBody>
           <DialogFooter>
