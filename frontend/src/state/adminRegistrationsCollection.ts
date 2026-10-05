@@ -48,14 +48,32 @@ export function registerAdminRegistrationsCollection(
   };
 }
 
-export function resetAdminRegistrationsCollection(collection: AdminRegistrationsCollection): void {
+export async function resetAdminRegistrationsCollection(
+  collection: AdminRegistrationsCollection,
+): Promise<void> {
   if (collection.size === 0) return;
-  collection.utils.writeBatch(() => {
+  await collection.utils.writeBatch(() => {
     for (const key of collection.keys()) {
-      collection.utils.writeDelete(key);
+      void collection.utils.writeDelete(key);
       latestRegistrationEventTimestamps.delete(key);
     }
   });
+}
+
+/**
+ * Applies a write to every active collection and resolves once all of them have
+ * applied it. Waits for every write to settle (so none is left running behind a
+ * rejection) and then rejects with the first failure, including a synchronous
+ * throw from a collection whose sync has not started.
+ */
+async function writeToActiveCollections(
+  write: (collection: AdminRegistrationsCollection) => Promise<void>,
+): Promise<void> {
+  const results = await Promise.allSettled(
+    Array.from(activeAdminRegistrationsCollections, async (collection) => write(collection)),
+  );
+  const failure = results.find((result) => result.status === "rejected");
+  if (failure) throw failure.reason;
 }
 
 function hasAdminRegistrationsKey(envelope: LiveEnvelope): boolean {
@@ -100,9 +118,7 @@ export async function patchAdminRegistrationLiveEvent(
   latestRegistrationEventTimestamps.set(registrationId, eventTime);
 
   if (envelope.topic === "registration" && envelope.action === "deleted") {
-    for (const collection of activeAdminRegistrationsCollections) {
-      collection.utils.writeDelete(registrationId);
-    }
+    await writeToActiveCollections((collection) => collection.utils.writeDelete(registrationId));
     return;
   }
 
@@ -113,7 +129,5 @@ export async function patchAdminRegistrationLiveEvent(
     return;
   }
 
-  for (const collection of activeAdminRegistrationsCollections) {
-    collection.utils.writeUpsert(registration);
-  }
+  await writeToActiveCollections((collection) => collection.utils.writeUpsert(registration));
 }
