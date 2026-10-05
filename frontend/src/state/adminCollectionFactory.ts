@@ -214,16 +214,20 @@ export function createAdminCollectionLifecycle<
  * refetch after a handler is deprecated, so handlers return `{ refetch: false }`).
  * If a call fails the write may or may not have committed, so the server state is
  * refetched before the optimistic change is rolled back (see docs/retry-safety.md).
+ *
+ * With `isCurrent`, a handler that settles after sign-out or a collection swap
+ * skips both refetches, so it cannot repopulate a query the sign-out removed.
  */
 export async function persistThenRefetch(
   collection: { utils: { refetch: () => Promise<unknown> } },
   persist: () => Promise<void>,
+  isCurrent: () => boolean = () => true,
 ): Promise<void> {
   try {
     await persist();
   } catch (error) {
-    await collection.utils.refetch().catch(() => undefined);
+    if (isCurrent()) await collection.utils.refetch().catch(() => undefined);
     throw error;
   }
-  await collection.utils.refetch();
+  if (isCurrent()) await collection.utils.refetch();
 }

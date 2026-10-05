@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { delay, http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
@@ -218,5 +218,45 @@ describe("venue group collections in the admin hooks", () => {
 
     expect(seen).toEqual(["venues"]);
     await waitFor(() => expect(view.result.current.queries.venuesQuery.data).toHaveLength(0));
+  });
+  it("does not refetch the areas for an edit that settles after sign-out", async () => {
+    const { Wrapper } = createTestQueryClientHarness();
+    const view = renderHook(
+      ({ isAuthenticated }) => {
+        const queries = useAdminQueries({
+          visible: true,
+          isAuthenticated,
+          canManageAdminSections: true,
+          authHeaders,
+        });
+        const actions = useAdminVenueActions({
+          authHeaders,
+          tablesCollection: queries.tablesCollection,
+          venueCollections: queries.venueCollections,
+        });
+        return { queries, actions };
+      },
+      { wrapper: Wrapper, initialProps: { isAuthenticated: true } },
+    );
+    await waitFor(() =>
+      expect(view.result.current.queries.areasQuery.data).toHaveLength(seedAreas.length),
+    );
+    // The handler closes over the collection of the session that started the edit.
+    const refetch = vi.spyOn(view.result.current.queries.venueCollections.areas.utils, "refetch");
+    server.use(
+      http.put("/api/areas/:id", async () => {
+        await delay(50);
+        return HttpResponse.json({ id: "area-01" });
+      }),
+    );
+
+    act(() => view.result.current.actions.handleMoveArea("area-01", 33, 44));
+    view.rerender({ isAuthenticated: false });
+    await act(async () => {
+      await delay(150);
+    });
+
+    expect(refetch).not.toHaveBeenCalled();
+    expect(view.result.current.queries.areasQuery.data).toHaveLength(0);
   });
 });

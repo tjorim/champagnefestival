@@ -78,13 +78,22 @@ export function createAdminVenueCollections({
       queryFn: () => fetchAreas(authHeaders),
       getKey: (area) => area.id,
       // Canvas edits are optimistic: one PUT per changed area, an explicit
-      // refetch on success, and a refetch before the rollback on failure.
+      // refetch on success, and a refetch before the rollback on failure. The
+      // session fence is taken before the first request: once it moves
+      // (sign-out or a collection swap) no further PUT is sent and neither
+      // refetch runs.
       onUpdate: async ({ transaction, collection }) => {
-        await persistThenRefetch(collection, async () => {
-          for (const mutation of transaction.mutations) {
-            await updateArea(authHeaders, String(mutation.key), mutation.changes);
-          }
-        });
+        const isCurrent = captureAdminVenueFence();
+        await persistThenRefetch(
+          collection,
+          async () => {
+            for (const mutation of transaction.mutations) {
+              if (!isCurrent()) return;
+              await updateArea(authHeaders, String(mutation.key), mutation.changes);
+            }
+          },
+          isCurrent,
+        );
         return { refetch: false };
       },
     }),

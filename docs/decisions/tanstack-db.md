@@ -243,7 +243,9 @@ resource, built together and registered, reset and fenced as a group.
   an area are changes the client already knows the outcome of (a dragged area must
   follow the pointer), so they run through the areas collection's `onUpdate`
   handler like table edits: one `PUT` per changed area, an explicit `refetch()` and
-  `{ refetch: false }` on success, a refetch before the rollback on failure. That
+  `{ refetch: false }` on success, a refetch before the rollback on failure; the
+  handler takes the group fence before its first request and, once it moves,
+  sends no further `PUT` and skips both refetches. That
   replaces the four optimistic `useMutation`s with `onMutate`/`onError` snapshots.
 - **Cascades are collection writes.** A venue delete removes the venue, its rooms,
   those rooms' layouts and those layouts' areas (`applyAdminVenueDeleted`, which
