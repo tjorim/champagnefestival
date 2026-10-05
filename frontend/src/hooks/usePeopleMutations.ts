@@ -4,6 +4,11 @@ import type { PersonFormData } from "@/components/admin/PersonFormModal";
 import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
 import { m } from "@/paraglide/messages";
 import {
+  invalidateAdminPersonDetailQueries,
+  refetchAdminPeople,
+  type AdminPeopleCollections,
+} from "@/state/adminPeopleCollection";
+import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
@@ -12,8 +17,7 @@ import { invalidateAdmin } from "@/utils/queryInvalidation";
 interface UsePeopleMutationsOptions {
   queryClient: QueryClient;
   authHeaders: () => Record<string, string>;
-  peopleQueryKey: QueryKey;
-  membersQueryKey: QueryKey;
+  peopleCollections: AdminPeopleCollections;
   registrationsQueryKey: QueryKey;
   exhibitorsQueryKey: QueryKey;
 }
@@ -21,11 +25,23 @@ interface UsePeopleMutationsOptions {
 export function usePeopleMutations({
   queryClient,
   authHeaders,
-  peopleQueryKey,
-  membersQueryKey,
+  peopleCollections,
   registrationsQueryKey,
   exhibitorsQueryKey,
 }: UsePeopleMutationsOptions) {
+  // Refetches the collections a write touched (explicitly: the implicit refetch
+  // after a write is deprecated) and the plain queries that show the same person.
+  const refreshPeople = (
+    resources: readonly ("people" | "members")[],
+    extraKeys: readonly QueryKey[] = [],
+  ) => {
+    void Promise.all([
+      refetchAdminPeople(peopleCollections, resources),
+      invalidateAdminPersonDetailQueries(queryClient),
+      invalidateAdmin(queryClient, extraKeys),
+    ]);
+  };
+
   const mergePeopleMutation = useMutation({
     mutationFn: ({ canonicalId, duplicateId }: { canonicalId: string; duplicateId: string }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
@@ -34,12 +50,7 @@ export function usePeopleMutations({
         m.admin_people_merge_error(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [
-        peopleQueryKey,
-        membersQueryKey,
-        registrationsQueryKey,
-        exhibitorsQueryKey,
-      ]);
+      refreshPeople(["people", "members"], [registrationsQueryKey, exhibitorsQueryKey]);
     },
     retry: false,
   });
@@ -65,7 +76,7 @@ export function usePeopleMutations({
         m.admin_members_error_create(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [membersQueryKey, peopleQueryKey]);
+      refreshPeople(["people", "members"]);
     },
     retry: false,
   });
@@ -91,7 +102,7 @@ export function usePeopleMutations({
         m.admin_members_error_update(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [membersQueryKey, peopleQueryKey, registrationsQueryKey]);
+      refreshPeople(["members", "people"], [registrationsQueryKey]);
     },
     retry: false,
   });
@@ -104,7 +115,7 @@ export function usePeopleMutations({
         m.admin_members_error_delete(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [membersQueryKey, peopleQueryKey]);
+      refreshPeople(["people", "members"]);
     },
     retry: false,
   });
@@ -131,7 +142,7 @@ export function usePeopleMutations({
         m.admin_people_error_create(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey]);
+      refreshPeople(["people", "members"]);
     },
     retry: false,
   });
@@ -158,7 +169,7 @@ export function usePeopleMutations({
         m.admin_people_error_update(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey, registrationsQueryKey]);
+      refreshPeople(["people", "members"], [registrationsQueryKey]);
     },
     retry: false,
   });
@@ -171,7 +182,7 @@ export function usePeopleMutations({
         m.admin_error_delete_person(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey]);
+      refreshPeople(["people", "members"]);
     },
     retry: false,
   });
@@ -199,7 +210,7 @@ export function usePeopleMutations({
         m.admin_volunteers_error_create(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [peopleQueryKey]);
+      refreshPeople(["people"]);
     },
     retry: false,
   });
@@ -227,7 +238,7 @@ export function usePeopleMutations({
         m.admin_volunteers_error_update(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey]);
+      refreshPeople(["people", "members"]);
     },
     retry: false,
   });
@@ -240,7 +251,7 @@ export function usePeopleMutations({
         m.admin_volunteers_error_delete(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [peopleQueryKey, membersQueryKey]);
+      refreshPeople(["people", "members"]);
     },
     retry: false,
   });

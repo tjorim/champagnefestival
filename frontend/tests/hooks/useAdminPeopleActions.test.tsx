@@ -13,11 +13,10 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import { server } from "@/mocks/server";
+import { createAdminPeopleCollections } from "@/state/adminPeopleCollection";
 import type { Person } from "@/types/person";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
-const PEOPLE_KEY = ["admin", "people"];
-const MEMBERS_KEY = ["admin", "members"];
 const REGISTRATIONS_KEY = ["admin", "registrations"];
 const EXHIBITORS_KEY = ["admin", "exhibitors"];
 
@@ -75,23 +74,74 @@ const MERGE_RESPONSE = {
   updated_at: "2026-08-05T12:00:00Z",
 };
 
-function renderMergeHook(people: Person[]) {
+function toApiPerson(person: Person) {
+  return {
+    id: person.id,
+    name: person.name,
+    email: person.email,
+    phone: person.phone,
+    address: person.address,
+    roles: person.roles,
+    national_register_number: person.nationalRegisterNumber,
+    eid_document_number: person.eidDocumentNumber,
+    visits_per_month: person.visitsPerMonth,
+    club_name: person.clubName,
+    notes: person.notes,
+    active: person.active,
+    created_at: person.createdAt,
+    updated_at: person.updatedAt,
+  };
+}
+
+async function renderMergeHook(people: Person[]) {
   const { queryClient, Wrapper } = createTestQueryClientHarness();
   // Nothing observes these queries, and the harness defaults to gcTime 0, which
   // collects the seeded cache before the assertions can read it.
   queryClient.setDefaultOptions({ queries: { retry: false, gcTime: Infinity } });
+  const volunteers = people.filter((person) => person.roles.includes("volunteer"));
+  server.use(
+    http.get("/api/people", ({ request }) => {
+      const members = new URL(request.url).searchParams.get("role") === "member";
+      const items = (members ? people.filter((p) => p.roles.includes("member")) : people).map(
+        toApiPerson,
+      );
+      return HttpResponse.json({ items, total: items.length, limit: 1000, page: 1 });
+    }),
+    http.get("/api/volunteers", () =>
+      HttpResponse.json({
+        items: volunteers.map((person) => ({
+          ...toApiPerson(person),
+          help_periods: person.helpPeriods.map((period) => ({
+            id: period.id,
+            first_help_day: period.firstHelpDay,
+            last_help_day: period.lastHelpDay,
+            notes: period.notes,
+          })),
+        })),
+        total: volunteers.length,
+        limit: 1000,
+        page: 1,
+      }),
+    ),
+  );
+  const peopleCollections = createAdminPeopleCollections({
+    queryClient,
+    authHeaders: () => ({ "Content-Type": "application/json" }),
+    enabled: true,
+  });
+  await Promise.all([peopleCollections.people.preload(), peopleCollections.members.preload()]);
   // Keep the refetch out of the way: this is about what the hook writes itself.
-  const invalidateQueries = vi.spyOn(queryClient, "invalidateQueries").mockResolvedValue(undefined);
-  queryClient.setQueryData<Person[]>(PEOPLE_KEY, people);
+  const refetchPeople = vi
+    .spyOn(peopleCollections.people.utils, "refetch")
+    .mockResolvedValue(undefined as never);
+  vi.spyOn(peopleCollections.members.utils, "refetch").mockResolvedValue(undefined as never);
 
   const { result } = renderHook(
     () =>
       useAdminPeopleActions({
         authHeaders: () => ({ "Content-Type": "application/json" }),
         exhibitorsQueryKey: EXHIBITORS_KEY,
-        membersQueryKey: MEMBERS_KEY,
-        people,
-        peopleQueryKey: PEOPLE_KEY,
+        peopleCollections,
         queryClient,
         registrationsQueryKey: REGISTRATIONS_KEY,
         setDetailRegistration: vi.fn(),
@@ -99,7 +149,7 @@ function renderMergeHook(people: Person[]) {
     { wrapper: Wrapper },
   );
 
-  return { queryClient, result, invalidateQueries };
+  return { peopleCollections, result, refetchPeople };
 }
 
 describe("useAdminPeopleActions — merge", () => {
@@ -109,20 +159,23 @@ describe("useAdminPeopleActions — merge", () => {
         HttpResponse.json(MERGE_RESPONSE),
       ),
     );
-    const { queryClient, result, invalidateQueries } = renderMergeHook([CANONICAL, DUPLICATE]);
+    const { peopleCollections, result, refetchPeople } = await renderMergeHook([
+      CANONICAL,
+      DUPLICATE,
+    ]);
 
     await act(async () => {
       await result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
     });
 
-    const people = queryClient.getQueryData<Person[]>(PEOPLE_KEY) ?? [];
+    const people = peopleCollections.people.toArray;
     expect(people.map((person) => person.id)).toEqual([CANONICAL.id]);
     // The duplicate's two periods are transferred server-side; showing them here
     // before the refetch confirms it is exactly what masked the cascade delete.
     expect(people[0]?.helpPeriods).toEqual(CANONICAL.helpPeriods);
     // ...and the refetch that supplies the transferred periods is still queued.
     await waitFor(() => {
-      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: PEOPLE_KEY });
+      expect(refetchPeople).toHaveBeenCalled();
     });
   });
 
@@ -132,13 +185,13 @@ describe("useAdminPeopleActions — merge", () => {
         HttpResponse.json(MERGE_RESPONSE),
       ),
     );
-    const { queryClient, result } = renderMergeHook([CANONICAL, DUPLICATE]);
+    const { peopleCollections, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
 
     await act(async () => {
       await result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
     });
 
-    const survivor = (queryClient.getQueryData<Person[]>(PEOPLE_KEY) ?? [])[0];
+    const survivor = peopleCollections.people.toArray[0];
     // The merge fills the canonical's blank email from the duplicate and adopts
     // its identity numbers; the cached blanks must not win.
     expect(survivor?.email).toBe("sofie@example.com");
@@ -154,13 +207,13 @@ describe("useAdminPeopleActions — merge", () => {
         HttpResponse.json({ ...MERGE_RESPONSE, roles: ["member"] }),
       ),
     );
-    const { queryClient, result } = renderMergeHook([plainCanonical, plainDuplicate]);
+    const { peopleCollections, result } = await renderMergeHook([plainCanonical, plainDuplicate]);
 
     await act(async () => {
       await result.current.handleMergePeople(plainCanonical.id, plainDuplicate.id);
     });
 
-    const survivor = (queryClient.getQueryData<Person[]>(PEOPLE_KEY) ?? [])[0];
+    const survivor = peopleCollections.people.toArray[0];
     expect(survivor?.roles).toEqual(["member"]);
     expect(survivor?.helpPeriods).toEqual([]);
   });

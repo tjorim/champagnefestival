@@ -7,29 +7,36 @@ import type { Registration } from "@/types/registration";
 import { type Person, apiToPerson } from "@/types/person";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import {
-  mergeVolunteerPerson,
-  replacePersonById,
-  replaceVolunteerById,
-  syncMembersWithPerson,
-} from "@/utils/adminApiMappers";
+  applyAdminMemberCreated,
+  applyAdminMemberUpdated,
+  applyAdminPeopleMerged,
+  applyAdminPersonCreated,
+  applyAdminPersonDeleted,
+  applyAdminPersonUpdated,
+  applyAdminVolunteerCreated,
+  applyAdminVolunteerDeleted,
+  applyAdminVolunteerUpdated,
+  captureAdminPeopleFence,
+  type AdminPeopleCollections,
+} from "@/state/adminPeopleCollection";
 
 interface UseAdminPeopleActionsOptions {
   authHeaders: () => Record<string, string>;
   exhibitorsQueryKey: QueryKey;
-  membersQueryKey: QueryKey;
-  people: Person[];
-  peopleQueryKey: QueryKey;
+  peopleCollections: AdminPeopleCollections;
   queryClient: QueryClient;
   registrationsQueryKey: QueryKey;
   setDetailRegistration: Dispatch<SetStateAction<Registration | null>>;
 }
 
+function toRegistrationPerson(person: Person): Registration["person"] {
+  return { id: person.id, name: person.name, email: person.email, phone: person.phone };
+}
+
 export function useAdminPeopleActions({
   authHeaders,
   exhibitorsQueryKey,
-  membersQueryKey,
-  people,
-  peopleQueryKey,
+  peopleCollections,
   queryClient,
   registrationsQueryKey,
   setDetailRegistration,
@@ -48,42 +55,39 @@ export function useAdminPeopleActions({
   } = usePeopleMutations({
     queryClient,
     authHeaders,
-    peopleQueryKey,
-    membersQueryKey,
+    peopleCollections,
     registrationsQueryKey,
     exhibitorsQueryKey,
   });
 
-  const handleMergePeople = useCallback(
-    async (canonicalId: string, duplicateId: string) => {
-      const updated = await mergePeopleMutation.mutateAsync({ canonicalId, duplicateId });
-      const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
-      const existingCanonical = people.find((person) => person.id === canonicalId);
-      // The merge response is a PersonOut, which carries no help periods, so
-      // taking it verbatim would blank them out of the cache. Keep the ones the
-      // survivor already had — the merge does not touch its own rows — but do
-      // not copy the duplicate's across. The server re-points those now, and
-      // showing them here regardless is what hid the cascade delete last time.
-      // The refetch queued in the mutation's onSettled brings back the real set.
-      const mergedCanonical = canonicalPerson.roles.includes("volunteer")
-        ? { ...canonicalPerson, helpPeriods: existingCanonical?.helpPeriods ?? [] }
-        : canonicalPerson;
-
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
+  // Registrations and exhibitors still carry a copy of the person, so a
+  // person change patches those caches too. The people and members rows are
+  // written through the collection helpers, which drop the write if the
+  // session changed while the request was in flight.
+  const patchRegistrationPerson = useCallback(
+    (person: Person) => {
+      queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
         prev
-          ? prev
-              .filter((person) => person.id !== duplicateId)
-              .map((person) => (person.id === canonicalId ? mergedCanonical : person))
-          : prev,
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev
-          ? syncMembersWithPerson(
-              prev.filter((member) => member.id !== duplicateId),
-              mergedCanonical,
+          ? prev.map((registration) =>
+              registration.personId === person.id
+                ? { ...registration, person: toRegistrationPerson(person) }
+                : registration,
             )
           : prev,
       );
+      setDetailRegistration((prev) =>
+        prev?.person.id === person.id ? { ...prev, person: toRegistrationPerson(person) } : prev,
+      );
+    },
+    [queryClient, registrationsQueryKey, setDetailRegistration],
+  );
+
+  const handleMergePeople = useCallback(
+    async (canonicalId: string, duplicateId: string) => {
+      const isCurrent = captureAdminPeopleFence();
+      const updated = await mergePeopleMutation.mutateAsync({ canonicalId, duplicateId });
+      const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
+      await applyAdminPeopleMerged(peopleCollections, canonicalPerson, duplicateId, isCurrent);
       queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
         prev
           ? prev.map((registration) =>
@@ -109,10 +113,8 @@ export function useAdminPeopleActions({
     },
     [
       exhibitorsQueryKey,
-      membersQueryKey,
       mergePeopleMutation,
-      people,
-      peopleQueryKey,
+      peopleCollections,
       queryClient,
       registrationsQueryKey,
     ],
@@ -120,215 +122,103 @@ export function useAdminPeopleActions({
 
   const handleCreateMember = useCallback(
     async (data: MemberFormData) => {
+      const isCurrent = captureAdminPeopleFence();
       const response = await createMemberMutation.mutateAsync(data);
-      const createdMember = apiToPerson(response as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? [createdMember, ...prev] : [createdMember],
-      );
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? [createdMember, ...prev] : [createdMember],
+      await applyAdminMemberCreated(
+        peopleCollections,
+        apiToPerson(response as Record<string, unknown>),
+        isCurrent,
       );
     },
-    [createMemberMutation, membersQueryKey, peopleQueryKey, queryClient],
+    [createMemberMutation, peopleCollections],
   );
 
   const handleUpdateMember = useCallback(
     async (id: string, data: MemberFormData) => {
+      const isCurrent = captureAdminPeopleFence();
       const response = await updateMemberMutation.mutateAsync({ id, data });
       const updatedMember = apiToPerson(response as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? prev.map((member) => (member.id === id ? updatedMember : member)) : prev,
-      );
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? replacePersonById(prev, updatedMember) : prev,
-      );
-      queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev
-          ? prev.map((registration) =>
-              registration.personId === id
-                ? {
-                    ...registration,
-                    person: {
-                      id: updatedMember.id,
-                      name: updatedMember.name,
-                      email: updatedMember.email,
-                      phone: updatedMember.phone,
-                    },
-                  }
-                : registration,
-            )
-          : prev,
-      );
-      setDetailRegistration((prev) =>
-        prev?.person.id === id
-          ? {
-              ...prev,
-              person: {
-                id: updatedMember.id,
-                name: updatedMember.name,
-                email: updatedMember.email,
-                phone: updatedMember.phone,
-              },
-            }
-          : prev,
-      );
+      await applyAdminMemberUpdated(peopleCollections, updatedMember, isCurrent);
+      patchRegistrationPerson(updatedMember);
     },
-    [
-      membersQueryKey,
-      peopleQueryKey,
-      queryClient,
-      registrationsQueryKey,
-      setDetailRegistration,
-      updateMemberMutation,
-    ],
+    [patchRegistrationPerson, peopleCollections, updateMemberMutation],
   );
 
   const handleDeleteMember = useCallback(
     async (id: string) => {
+      const isCurrent = captureAdminPeopleFence();
       await deleteMemberMutation.mutateAsync(id);
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? prev.filter((member) => member.id !== id) : prev,
-      );
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? prev.filter((person) => person.id !== id) : prev,
-      );
+      await applyAdminPersonDeleted(peopleCollections, id, isCurrent);
     },
-    [deleteMemberMutation, membersQueryKey, peopleQueryKey, queryClient],
+    [deleteMemberMutation, peopleCollections],
   );
 
   const handleCreatePerson = useCallback(
     async (data: PersonFormData) => {
+      const isCurrent = captureAdminPeopleFence();
       const response = await createPersonMutation.mutateAsync(data);
-      const createdPerson = apiToPerson(response as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? [createdPerson, ...prev] : [createdPerson],
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? syncMembersWithPerson(prev, createdPerson) : prev,
+      await applyAdminPersonCreated(
+        peopleCollections,
+        apiToPerson(response as Record<string, unknown>),
+        isCurrent,
       );
     },
-    [createPersonMutation, membersQueryKey, peopleQueryKey, queryClient],
+    [createPersonMutation, peopleCollections],
   );
 
   const handleUpdatePerson = useCallback(
     async (id: string, data: PersonFormData) => {
+      const isCurrent = captureAdminPeopleFence();
       const response = await updatePersonMutation.mutateAsync({ id, data });
       const updated = apiToPerson(response as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? replacePersonById(prev, updated) : prev,
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? syncMembersWithPerson(prev, updated) : prev,
-      );
-      queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev
-          ? prev.map((registration) =>
-              registration.personId === id
-                ? {
-                    ...registration,
-                    person: {
-                      id: updated.id,
-                      name: updated.name,
-                      email: updated.email,
-                      phone: updated.phone,
-                    },
-                  }
-                : registration,
-            )
-          : prev,
-      );
-      setDetailRegistration((prev) =>
-        prev?.person.id === id
-          ? {
-              ...prev,
-              person: {
-                id: updated.id,
-                name: updated.name,
-                email: updated.email,
-                phone: updated.phone,
-              },
-            }
-          : prev,
-      );
+      await applyAdminPersonUpdated(peopleCollections, updated, isCurrent);
+      patchRegistrationPerson(updated);
     },
-    [
-      membersQueryKey,
-      peopleQueryKey,
-      queryClient,
-      registrationsQueryKey,
-      setDetailRegistration,
-      updatePersonMutation,
-    ],
+    [patchRegistrationPerson, peopleCollections, updatePersonMutation],
   );
 
   const handleDeletePerson = useCallback(
     async (id: string) => {
+      const isCurrent = captureAdminPeopleFence();
       await deletePersonMutation.mutateAsync(id);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? prev.filter((person) => person.id !== id) : prev,
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev ? prev.filter((member) => member.id !== id) : prev,
-      );
+      await applyAdminPersonDeleted(peopleCollections, id, isCurrent);
     },
-    [deletePersonMutation, membersQueryKey, peopleQueryKey, queryClient],
+    [deletePersonMutation, peopleCollections],
   );
 
   const handleCreateVolunteer = useCallback(
     async (data: VolunteerFormData) => {
+      const isCurrent = captureAdminPeopleFence();
       const response = await createVolunteerMutation.mutateAsync(data);
-      const createdVolunteer = apiToPerson(response as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? [mergeVolunteerPerson(undefined, createdVolunteer), ...prev] : prev,
+      await applyAdminVolunteerCreated(
+        peopleCollections,
+        apiToPerson(response as Record<string, unknown>),
+        isCurrent,
       );
     },
-    [createVolunteerMutation, peopleQueryKey, queryClient],
+    [createVolunteerMutation, peopleCollections],
   );
 
   const handleUpdateVolunteer = useCallback(
     async (id: string, data: VolunteerFormData) => {
+      const isCurrent = captureAdminPeopleFence();
       const response = await updateVolunteerMutation.mutateAsync({ id, data });
-      const updatedVolunteer = apiToPerson(response as Record<string, unknown>);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev ? replaceVolunteerById(prev, updatedVolunteer) : prev,
-      );
-      queryClient.setQueryData<Person[]>(membersQueryKey, (prev) =>
-        prev
-          ? prev.map((member) =>
-              member.id === id
-                ? {
-                    ...member,
-                    name: updatedVolunteer.name,
-                    address: updatedVolunteer.address,
-                    active: updatedVolunteer.active,
-                    updatedAt: updatedVolunteer.updatedAt,
-                  }
-                : member,
-            )
-          : prev,
+      await applyAdminVolunteerUpdated(
+        peopleCollections,
+        apiToPerson(response as Record<string, unknown>),
+        isCurrent,
       );
     },
-    [membersQueryKey, peopleQueryKey, queryClient, updateVolunteerMutation],
+    [peopleCollections, updateVolunteerMutation],
   );
 
   const handleDeleteVolunteer = useCallback(
     async (id: string) => {
+      const isCurrent = captureAdminPeopleFence();
       await deleteVolunteerMutation.mutateAsync(id);
-      queryClient.setQueryData<Person[]>(peopleQueryKey, (prev) =>
-        prev
-          ? prev.map((person) =>
-              person.id !== id
-                ? person
-                : {
-                    ...person,
-                    roles: person.roles.filter((role) => role !== "volunteer"),
-                    helpPeriods: [],
-                  },
-            )
-          : prev,
-      );
+      await applyAdminVolunteerDeleted(peopleCollections, id, isCurrent);
     },
-    [deleteVolunteerMutation, peopleQueryKey, queryClient],
+    [deleteVolunteerMutation, peopleCollections],
   );
 
   return {

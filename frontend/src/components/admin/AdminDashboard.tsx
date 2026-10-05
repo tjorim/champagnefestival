@@ -119,6 +119,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     areasQuery,
     peopleQuery,
     membersQuery,
+    peopleCollections,
     isAnyPending,
     isAnyFetching,
     registrationsQueryKey,
@@ -128,8 +129,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     layoutsQueryKey,
     exhibitorsQueryKey,
     areasQueryKey,
-    peopleQueryKey,
-    membersQueryKey,
     loadData: loadDataBase,
   } = useAdminQueries({
     visible,
@@ -197,9 +196,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   } = useAdminPeopleActions({
     authHeaders,
     exhibitorsQueryKey,
-    membersQueryKey,
-    people,
-    peopleQueryKey,
+    peopleCollections,
     queryClient,
     registrationsQueryKey,
     setDetailRegistration,
@@ -310,9 +307,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // underlying query errors actually changes, not on every render.
   const dashboardQueryErrors = useMemo(
     (): (Error | null)[] => [
-      // registrationsQuery.error and tablesQuery.error come from the tanstack-db
-      // collections' lastError, typed loosely by the library; the other queries
-      // are plain react-query errors. Both are Error instances or null at runtime.
+      // The registrations, tables, people and members errors come from the
+      // tanstack-db collections' lastError, typed loosely by the library; the
+      // other queries are plain react-query errors. Both are Error instances or
+      // null at runtime.
       registrationsQuery.error as Error | null,
       tablesQuery.error as Error | null,
       venuesQuery.error,
@@ -321,8 +319,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       layoutsQuery.error,
       exhibitorsQuery.error,
       areasQuery.error,
-      peopleQuery.error,
-      membersQuery.error,
+      peopleQuery.error as Error | null,
+      membersQuery.error as Error | null,
     ],
     [
       registrationsQuery.error,
