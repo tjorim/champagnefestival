@@ -240,8 +240,6 @@
   --breakpoint-site-sm: 36rem;
   --breakpoint-site-md: 48rem;
   --breakpoint-site-lg: 62rem;
-  --breakpoint-site-xl: 75rem;
-  --breakpoint-site-2xl: 87.5rem;
   --text-tiny: 0.7rem;
   --text-micro: 0.65rem;
   --text-plan: 0.55rem;
@@ -303,8 +301,8 @@
     transform: rotate(180deg);
   }
 
-  /* Structural utilities coexist with theme-owned widget surfaces. These defaults
-     precede the runtime stylesheet so each theme can retain its existing shapes. */
+  /* Default surfaces for the widget slots. Runtime themes restyle the same slots
+     in their own `components` rules, which come later and win ties. */
   [data-slot="tabs-list"] {
     border-bottom: 1px solid var(--surface-border);
   }

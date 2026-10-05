@@ -825,7 +825,7 @@
   /* ----------------------------------------------------------------- forms */
 
   /* Owned public controls follow --surface-* tokens; Cuvée tunes them per control
-   because important utilities outrank unlayered rules for ordinary properties. */
+   because utilities outrank this layer for ordinary properties. */
   [data-public-form][data-slot="input"],
   [data-public-form][data-slot="textarea"],
   [data-public-form][data-slot="select-trigger"] {

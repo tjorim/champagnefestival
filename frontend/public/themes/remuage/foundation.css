@@ -29,8 +29,8 @@
 }
 
 html[data-visual-theme="remuage"] {
-  /* Semantic palette for Tailwind and Base UI; legacy Remuage rules keep
-     consuming --rem-* directly during coexistence. */
+  /* Semantic palette for Tailwind and Base UI; the Remuage rules keep
+     consuming --rem-* directly. */
   --surface-background: var(--rem-rack);
   --surface-foreground: var(--rem-ink);
   --surface-primary: var(--rem-blue);
