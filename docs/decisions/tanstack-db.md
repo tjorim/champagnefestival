@@ -1,189 +1,155 @@
-# TanStack DB evaluation for admin/event-day operational state
+# TanStack DB for admin/event-day operational state
 
-**Status:** Deferred — revisit when TanStack DB reaches a stable release (≥ 1.0)
-**Date:** 2026-05-26
-**Issue:** [#442](https://github.com/tjorim/champagnefestival/issues/442)
+**Status:** Adopted for the registrations pilot; other resources are open follow-ups (see [Roadmap](#roadmap))
+**Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
+**Record updated:** 2026-10-05, [#1169](https://github.com/tjorim/champagnefestival/issues/1169)
 
 ---
 
 ## Context
 
-Champagnefestival's frontend already uses TanStack Query, Form, Router, and Table.
-TanStack DB (`@tanstack/db` + `@tanstack/react-db`) is a new reactive client-side
-collection store that complements TanStack Query for highly interactive, relational
-domains. The issue asks us to evaluate whether it would reduce complexity in the
-admin/event-day operational workflows.
+The admin and event-day screens load ten related resources (registrations, tables,
+venues, rooms, table types, layouts, exhibitors, areas, people, members). Writes
+used to patch each affected TanStack Query cache by hand with `setQueryData`, and
+one user action could touch up to four caches (a person update reaches `members`,
+`registrations` and `exhibitors`; a table assignment reaches `registrations` and
+`tables`). A missed patch silently leaves the UI stale.
 
----
+The first evaluation (2026-05-26) recommended deferring until TanStack DB reached
+1.0 and a live event stream existed. #442 reversed that: the packages were stable
+enough for a narrow production pilot, and the SSE live-update layer
+([#446](https://github.com/tjorim/champagnefestival/issues/446)) now exists, which is
+where a collection pays off most. The original deferral reasoning is in Git history
+(the version of this file before #1169).
 
-## Current architecture
+## What was built
 
-Admin state is fetched and cached through `useAdminQueries`
-(`frontend/src/hooks/useAdminQueries.ts`), which wires ten independent `useQuery`
-calls — one per resource: registrations, tables, venues, rooms, table types,
-layouts, exhibitors, areas, people, and members.
+The pilot domain is **registrations** (including the table, check-in, strap,
+payment, order and delivery fields carried on each registration).
 
-Mutations live in `AdminDashboard` and use `useMutation` from TanStack Query.
-After each mutation succeeds, the code manually updates the relevant cache entries
-with `queryClient.setQueryData`. Because resources are related — a table assignment
-touches both `registrations` and `tables` — several mutations must call
-`setQueryData` on two separate caches:
+- `frontend/src/state/adminRegistrationsCollection.ts`: the collection factory,
+  live-event patching and reset helpers.
+- `frontend/src/hooks/useAdminQueries.ts`: creates the collection and reads it.
+- `frontend/src/state/LiveUpdatesProvider.tsx`: routes live events to the patching
+  helpers.
 
-```ts
-// handleAssignTable in AdminDashboard.tsx (abridged)
-queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-  prev?.map((r) => r.id === registrationId ? { ...r, tableId: updated.tableId } : r),
-);
-queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-  prev?.map((t) => {
-    // remove from old table, add to new table
-    ...
-  }),
-);
-```
+### Collection and reads
 
-`AdminDashboard.tsx` currently contains **40+ `setQueryData` calls** across
-table placement, area management, people/member CRUD, registration status, payment
-status, check-in, and bottle-delivery updates.
+`createAdminRegistrationsCollection` builds the collection with `createCollection`
+and `queryCollectionOptions` from `@tanstack/query-db-collection`:
 
----
+- `queryKey: queryKeys.admin.registrations`, `queryFn: fetchAllRegistrations`,
+  `getKey: (registration) => registration.id`.
+- `enabled` follows `visible && isAuthenticated`; `staleTime` is 60 seconds and
+  `retry` is `false`, matching the other admin queries.
+- `useAdminQueries` memoizes one collection per `(enabled, authHeaders,
+  queryClient)` and reads it with `useLiveQuery(() => collection, [collection])`.
+  It exposes a `registrationsQuery` shaped like a query result (`data`, `error`
+  from `collection.utils.lastError`, `isPending` from the live query's
+  `isLoading`, `isFetching` from `collection.utils.isFetching`) so callers such as
+  `AdminDashboard` did not need to change.
 
-## Candidate domains for TanStack DB
+### Live-event patching
 
-| Domain | Why it's a candidate | Current pain |
-|---|---|---|
-| Registrations + check-in state | Mutated frequently; check-in updates should propagate to all views | Dual `setQueryData` for registration + table on every table assignment |
-| Tables / seating | Occupancy is derived from registrations; table updates affect layout views | Same dual-update problem |
-| People / members | Related: updating a person must sync to `members`, `registrations`, and `exhibitors` | Up to 4 separate `setQueryData` calls per person update |
-| Check-in / strap state | Event-day operational; high update rate expected | Single-cache but high-frequency |
+`LiveUpdatesProvider` receives invalidation envelopes from the SSE stream. When the
+registrations query has succeeded and
+`canPatchAdminRegistrationLiveEvent(envelope)` is true (an active collection is
+registered, the topic is one of `check_in`, `delivery`, `order`, `registration` or
+`seating`, the envelope carries the registrations key, and it has a
+`scope.registration_id`), the provider calls `patchAdminRegistrationLiveEvent`
+instead of invalidating the whole registrations query:
 
----
+- `registration` + `deleted` removes the row with `collection.utils.writeDelete`.
+- Any other matching event refetches that single registration with
+  `fetchRegistration` and upserts it with `collection.utils.writeUpsert`.
+- A per-registration timestamp map drops events older than the newest one seen,
+  both before the fetch and after it resolves, so out-of-order delivery cannot
+  overwrite newer state.
+- Patches are applied to every collection registered through
+  `registerAdminRegistrationsCollection` (a collection registers on mount and
+  unregisters on unmount; the timestamp map is cleared when the last one leaves).
+- The check-in statistics nested under the registrations key
+  (`queryKeys.admin.eventCheckInStats`) are server-counted, so they are still
+  invalidated explicitly on a patched event.
+- If a patch cannot be applied or the fetch fails, the provider falls back to
+  `invalidateQueries` on the registrations key. Events that cannot be patched
+  (no `registration_id`, other topics) and stream reconnects (`onReconnect`) also
+  use plain invalidation.
 
-## What TanStack DB offers
+### Reset behavior
 
-`@tanstack/db` (v0.6.7 as of this evaluation) provides:
+`resetAdminRegistrationsCollection` deletes every row in one `writeBatch` and drops
+the matching timestamps. `useAdminQueries` calls it, and removes the query cache
+entry, whenever `isAuthenticated` becomes false, so no registration data survives
+sign-out.
 
-- **`createCollection`** — a typed in-memory store keyed by entity id, populated
-  from any async source (a `queryFn`, a WebSocket, Server-Sent Events, etc.)
-- **`useCollectionQuery`** / **`useCollectionCount`** — reactive hooks that
-  subscribe to collection changes and re-render only the affected components
-- **Built-in optimistic mutations** — the library owns the write path so rollback
-  on error is automatic
-- **No deduplication headaches** — there is one authoritative copy of each entity;
-  derived views query the collection rather than a per-view cache slice
+### Writes today
 
-For a domain like "registration + table assignment", TanStack DB would replace the
-dual `setQueryData` dance with a single collection update:
+The pilot migrated reads and live updates. Registration writes still go through
+`useMutation` hooks (`useRegistrationAdminMutations.ts`) and then patch the same
+query key with `queryClient.setQueryData` in `useAdminRegistrationActions.ts`. The
+collection observes that query cache, so those patches reach `useLiveQuery`. No
+collection write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet, and a
+table assignment still patches the `registrations` and `tables` caches separately
+until tables move to a collection ([#1165](https://github.com/tjorim/champagnefestival/issues/1165)).
 
-```ts
-// hypothetical with TanStack DB
-collection.mutate(registrationId, (draft) => {
-  draft.tableId = newTableId;
-});
-// The tables view re-derives occupancy from the same collection automatically
-```
+## Rules that still apply
 
----
+These come from #442 and apply to every further migration:
 
-## Evaluation against project rules
+1. **Do not add TanStack DB unless it reduces real complexity.** Each migration
+   must remove more patching code than it adds.
+2. **Never serve one domain from both a collection and a standalone `useQuery`.**
+   A migrated resource is removed from `ADMIN_RESOURCE_KEYS` and
+   `shouldRefetchAdminResourceQuery` in `useAdminQueries.ts` and has no remaining
+   `useQuery` or `setQueryData` path.
+3. **Keep payloads normalized** so a resource has one authoritative copy; derive
+   views (for example table occupancy) from the collection rather than storing
+   them twice.
+4. **Keep MSW handlers aligned with collection-backed tests** and define how the
+   collection is reset between tests and on sign-out.
+5. **Document retry safety.** Every new or changed write needs an entry in
+   [`docs/retry-safety.md`](../retry-safety.md); do not advertise or automatically
+   retry a write unless that strategy is implemented and tested. Moving a write
+   behind a collection handler does not make it retry safe.
 
-> **Rule:** Do not add TanStack DB unless it reduces real complexity.
+## `@tanstack/query-db-collection` 1.3 notes for new write handlers
 
-### Does it reduce real complexity?
+Installed versions: `@tanstack/db` 0.11.3, `@tanstack/react-db` ^0.5.3,
+`@tanstack/query-db-collection` ^1.3.4.
 
-**Yes — materially.** The 40+ manual `setQueryData` calls are the main complexity
-driver. Several mutations update 2–4 separate caches to keep related resources in
-sync; any missed update silently leaves the UI stale. A single authoritative
-collection would eliminate this class of bug and remove ~200 lines of boilerplate
-from `AdminDashboard`.
+- **Auto-refetch after a handler is deprecated.** A write handler
+  (`onInsert`/`onUpdate`/`onDelete`) should call `collection.utils.refetch()`
+  explicitly and return `{ refetch: false }` instead of relying on the implicit
+  refetch.
+- Direct writes (`writeUpsert`, `writeDelete`, `writeBatch`) return a promise that
+  resolves once the write is applied (1.3.2). The live-event patching does not
+  await it yet ([#1167](https://github.com/tjorim/champagnefestival/issues/1167)).
+- `tx.when('settled')` and `$hasPendingWrites` (`@tanstack/db` 0.11.1) can confirm
+  a server response and show pending state.
+- Rows returned from a live query are the source collection's row objects, not
+  copies. Do not mutate them.
 
-However, the *existing* complexity can also be partially addressed by replacing
-`setQueryData` with `queryClient.invalidateQueries` for the few domains (like
-people/members) where cross-cache sync is needed. That is a lower-risk option that
-does not require adopting a new library.
+## Roadmap
 
-### Other rules
+| Follow-up | Issue |
+| --- | --- |
+| Migrate `people` and `members` (fixes the up-to-four-cache person update) | [#1164](https://github.com/tjorim/champagnefestival/issues/1164) |
+| Migrate `tables` and derive seating occupancy from the registrations collection | [#1165](https://github.com/tjorim/champagnefestival/issues/1165) |
+| Decide per resource for venues, rooms, areas, layouts, table types and exhibitors (migrate, or stay on Query with `invalidateQueries`) | [#1166](https://github.com/tjorim/champagnefestival/issues/1166) |
+| Await write receipts in registration live-event patching | [#1167](https://github.com/tjorim/champagnefestival/issues/1167) |
+| Explore persisted collections for event-day resilience (privacy, staleness, offline) | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
 
-> Do not duplicate a Query collection and standalone `useQuery` for the same domain.
-
-This is the key constraint. Mixing TanStack DB collections and `useQuery` for the
-same resource (e.g., a `registrations` collection *and* a `["admin","registrations"]`
-query key) would create exactly the duplication the rule forbids. Migrating to
-TanStack DB would require fully replacing the corresponding `useQuery`/`setQueryData`
-paths for the pilot domain.
-
-> Keep payloads normalized enough to avoid stale duplicated resource copies.
-
-TanStack DB's single-collection model is designed for normalization. This rule would
-be *easier* to satisfy with TanStack DB than with the current multi-cache approach.
-
-> Keep MSW handlers aligned with collection-backed tests.
-
-The existing MSW handlers (`src/mocks/handlers/admin.ts`) already expose REST
-endpoints. TanStack DB collections can be seeded from those same endpoints, so no
-handler changes would be required.
-
----
-
-## Recommendation: Defer
-
-Adopt TanStack DB when the following conditions are met:
-
-1. **Library stability** — `@tanstack/db` and `@tanstack/react-db` reach a stable
-   release (≥ 1.0). As of this evaluation both packages are at pre-1.0 versions
-   (0.6.7 and 0.1.85 respectively), published only days before this note was
-   written. Pre-1.0 TanStack packages have historically had breaking API changes
-   between minor releases.
-
-2. **Live event streams arrive** — TanStack DB becomes most valuable when
-   collections receive server-sent incremental updates (e.g., a check-in WebSocket
-   event updates the local collection without a full re-fetch). There is no live
-   stream infrastructure today, so the incremental-update benefit does not apply.
-
-3. **Cross-cache sync pain grows** — If new mutation handlers continue to require
-   multi-cache `setQueryData` updates, the break-even point shifts toward adoption.
-   A useful threshold: if a single user action requires updating ≥ 3 separate query
-   caches, that handler is a strong candidate for a collection.
-
-Until these conditions are met, the current TanStack Query approach is sufficient.
-The manual `setQueryData` calls are verbose but explicit, auditable, and type-safe.
-
----
-
-## If the decision changes to "adopt"
-
-The recommended pilot domain is **registrations + table assignment + check-in state**
-because:
-
-- It is the most update-heavy domain (status, payment, table, check-in, strap,
-  bottle delivery — 6 distinct mutation targets per registration)
-- Table assignment currently requires the most complex dual-cache sync
-- Check-in state propagates across admin, check-in, and future event-day views
-
-Implementation steps when adopting:
-
-1. Install `@tanstack/react-db` and `@tanstack/db`.
-2. Create a `registrationsCollection` in a new file
-   `frontend/src/store/registrationsCollection.ts` using `createCollection`,
-   seeded by the existing `/api/registrations` endpoint.
-3. Replace the `useQuery` + `setQueryData` paths in `useAdminQueries` and
-   `AdminDashboard` with `useCollectionQuery`.
-4. Remove the `["admin","registrations"]` query key from `queryKeys.ts` and
-   `ADMIN_RESOURCE_KEYS` in `useAdminQueries.ts`.
-5. Derive table occupancy from the collection rather than from a separate
-   `["admin","tables"]` cache entry (tables remain a separate query; only the
-   `registrationIds` field is derived from the collection).
-6. Write tests using the existing MSW handlers; seed the collection in `beforeEach`
-   and call the collection's reset method in `afterEach`.
-
----
+The per-resource decisions from #1166 will be recorded in this file when made.
 
 ## References
 
-- TanStack DB npm: <https://www.npmjs.com/package/@tanstack/db>
-- TanStack React DB npm: <https://www.npmjs.com/package/@tanstack/react-db>
-- Related issue [#441](https://github.com/tjorim/champagnefestival/issues/441) —
+- TanStack DB: <https://tanstack.com/db>
+- Related issue [#441](https://github.com/tjorim/champagnefestival/issues/441):
   TanStack Router/Query architecture standardization
-- `frontend/src/hooks/useAdminQueries.ts` — current multi-query hook
-- `frontend/src/components/admin/AdminDashboard.tsx` — current mutation +
-  `setQueryData` patterns
+- Live-update stream: [#446](https://github.com/tjorim/champagnefestival/issues/446)
+- `frontend/src/state/adminRegistrationsCollection.ts`
+- `frontend/src/hooks/useAdminQueries.ts`
+- `frontend/src/state/LiveUpdatesProvider.tsx`
+- `frontend/src/hooks/useAdminRegistrationActions.ts`: current registration write
+  patches
