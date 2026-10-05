@@ -137,8 +137,9 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   collection still holds, because `writeDelete` throws for a missing key.
   `handleAddRegistration` no longer seeds an unloaded registrations list with a
   single row. Venues, rooms, layouts, areas and table types are still plain
-  queries whose `setQueryData` calls can recreate an entry after sign-out; that
-  belongs to [#1166](https://github.com/tjorim/champagnefestival/issues/1166).
+  queries whose `setQueryData` calls can recreate an entry after sign-out; the
+  direction recorded in [#1166](https://github.com/tjorim/champagnefestival/issues/1166)
+  is to migrate them and fix this as part of that work.
 - **Reset and refresh.** `isAuthenticated` turning false empties the collection
   and removes its query. `"tables"` is no longer in `ADMIN_RESOURCE_KEYS`;
   `loadData` refetches the collection through `utils.refetch()` and no
@@ -148,8 +149,12 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
 
 These come from #442 and apply to every further migration:
 
-1. **Do not add TanStack DB unless it reduces real complexity.** Each migration
-   must remove more patching code than it adds.
+1. **Do not add TanStack DB unless it reduces real complexity, or the
+   migration is needed to keep the admin state pattern consistent.** Each
+   migration should remove more patching code than it adds; since 2026-10-05
+   ([#1166](https://github.com/tjorim/champagnefestival/issues/1166)) the
+   remaining admin resources are expected to migrate for consistency, and the
+   collections' pre-1.0 status is an accepted risk.
 2. **Never serve one domain from both a collection and a standalone `useQuery`.**
    A migrated resource is removed from `ADMIN_RESOURCE_KEYS` and
    `shouldRefetchAdminResourceQuery` in `useAdminQueries.ts` and has no remaining
@@ -186,11 +191,11 @@ Installed versions: `@tanstack/db` 0.11.3, `@tanstack/react-db` ^0.5.3,
 | Follow-up | Issue |
 | --- | --- |
 | Migrate `people` and `members` (fixes the up-to-four-cache person update) | [#1164](https://github.com/tjorim/champagnefestival/issues/1164) |
-| Decide per resource for venues, rooms, areas, layouts, table types and exhibitors (migrate, or stay on Query with `invalidateQueries`) | [#1166](https://github.com/tjorim/champagnefestival/issues/1166) |
+| Migrate venues, rooms, areas, layouts and table types as a group, then exhibitors after #1164; extract a shared collection factory (registration, sign-out reset, session fence, guarded writes) first. Default is migrate; staying on Query needs a stated reason | [#1166](https://github.com/tjorim/champagnefestival/issues/1166) |
 | Await write receipts in registration live-event patching | [#1167](https://github.com/tjorim/champagnefestival/issues/1167) |
 | Explore persisted collections for event-day resilience (privacy, staleness, offline) | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
 
-The per-resource decisions from #1166 will be recorded in this file when made.
+The per-resource decisions from #1166 will be recorded in this file when made; the default is to migrate.
 
 ## References
 
