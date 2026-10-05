@@ -32,7 +32,7 @@ function Language() {
 }
 
 describe("owned public fields", () => {
-  it("associates labels, descriptions and validation errors without Bootstrap form classes", async () => {
+  it("associates labels, descriptions and validation errors", async () => {
     const user = userEvent.setup();
     const { container } = render(
       <form noValidate>

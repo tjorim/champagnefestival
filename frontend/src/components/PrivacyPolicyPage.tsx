@@ -33,13 +33,13 @@ export default function PrivacyPolicyPage() {
   });
 
   return (
-    <section id="privacy-policy" className="tw:py-12">
-      <div className="site-container tw:mx-auto tw:w-full">
-        <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
-          <div className="tw:w-full site-content-column tw:site-md:w-content-md tw:site-lg:w-content-lg">
-            <h1 className="tw:mb-2 tw:text-highlight">{m.privacy_title()}</h1>
+    <section id="privacy-policy" className="py-12">
+      <div className="site-container mx-auto w-full">
+        <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter justify-center">
+          <div className="w-full site-content-column site-md:w-content-md site-lg:w-content-lg">
+            <h1 className="mb-2 text-highlight">{m.privacy_title()}</h1>
             {query.data && (
-              <p className="tw:text-subtle tw:mb-6">
+              <p className="text-subtle mb-6">
                 {m.privacy_last_updated()}:{" "}
                 {new Date(query.data.published_at).toLocaleDateString(locale, {
                   year: "numeric",
@@ -49,7 +49,7 @@ export default function PrivacyPolicyPage() {
             )}
 
             {query.isLoading && (
-              <div className="tw:text-center tw:py-12">
+              <div className="text-center py-12">
                 <Spinner role="status" aria-label="Loading" />
               </div>
             )}
@@ -63,7 +63,7 @@ export default function PrivacyPolicyPage() {
             )}
 
             {settings.public_email && (
-              <a href={`mailto:${settings.public_email}`} className="tw:no-underline">
+              <a href={`mailto:${settings.public_email}`} className="no-underline">
                 {settings.public_email}
               </a>
             )}

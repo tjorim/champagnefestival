@@ -2,12 +2,12 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 const SPINNER_COLORS = {
-  primary: "tw:text-primary",
-  secondary: "tw:text-subtle",
-  success: "tw:text-success",
-  danger: "tw:text-destructive",
-  warning: "tw:text-warning",
-  light: "tw:text-inverse",
+  primary: "text-primary",
+  secondary: "text-subtle",
+  success: "text-success",
+  danger: "text-destructive",
+  warning: "text-warning",
+  light: "text-inverse",
 } as const;
 
 /**
@@ -41,18 +41,17 @@ function Spinner({
     <span
       data-slot="spinner"
       data-size={size}
-      data-tailwind-migrated="true"
       role={label ? "status" : undefined}
       aria-hidden={decorative ? true : undefined}
       className={cn(
-        "tw:inline-block tw:shrink-0 tw:rounded-full tw:border-current tw:border-e-transparent tw:align-middle tw:animate-spin tw:motion-reduce:animate-spinner-slow",
-        size === "sm" ? "tw:size-4 tw:border-2" : "tw:size-8 tw:border-4",
+        "inline-block shrink-0 rounded-full border-current border-e-transparent align-middle animate-spin motion-reduce:animate-spinner-slow",
+        size === "sm" ? "size-4 border-2" : "size-8 border-4",
         variant && SPINNER_COLORS[variant],
         className,
       )}
       {...props}
     >
-      {label ? <span className="tw:sr-only">{label}</span> : children}
+      {label ? <span className="sr-only">{label}</span> : children}
     </span>
   );
 }

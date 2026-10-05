@@ -58,13 +58,13 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
   return (
     <Card tone="secondary">
       <CardContent>
-        <CardTitle className="tw:text-base tw:font-medium tw:leading-tight">
+        <CardTitle className="text-base font-medium leading-tight">
           {m.push_opt_in_title()}
         </CardTitle>
-        <p className="tw:text-sm tw:text-subtle">{m.push_opt_in_description()}</p>
+        <p className="text-sm text-subtle">{m.push_opt_in_description()}</p>
 
         {error && (
-          <Alert variant="danger" className="tw:text-sm tw:py-2" role="alert">
+          <Alert variant="danger" className="text-sm py-2" role="alert">
             {m.push_opt_in_error()}
           </Alert>
         )}
@@ -73,7 +73,7 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
           <>
             <PublicCheck
               id="push-opt-in-consent"
-              className="tw:text-sm tw:mb-2"
+              className="text-sm mb-2"
               label={m.push_opt_in_consent_label()}
               checked={consentChecked}
               onCheckedChange={setConsentChecked}
@@ -96,10 +96,10 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
           </>
         ) : (
           <>
-            <p className="tw:text-sm tw:text-success tw:mb-2" role="status">
+            <p className="text-sm text-success mb-2" role="status">
               {m.push_opt_in_subscribed_status()}
             </p>
-            <div className="tw:flex tw:gap-2 tw:flex-wrap">
+            <div className="flex gap-2 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -134,12 +134,12 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
               )}
             </div>
             {testStatus === "sent" && (
-              <p className="tw:text-sm tw:text-success tw:mt-2 tw:mb-0" role="status">
+              <p className="text-sm text-success mt-2 mb-0" role="status">
                 {m.push_test_send_success()}
               </p>
             )}
             {testStatus === "error" && (
-              <p className="tw:text-sm tw:text-destructive tw:mt-2 tw:mb-0" role="alert">
+              <p className="text-sm text-destructive mt-2 mb-0" role="alert">
                 {m.push_opt_in_error()}
               </p>
             )}

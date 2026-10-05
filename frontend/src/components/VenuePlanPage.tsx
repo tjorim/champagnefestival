@@ -34,7 +34,7 @@ export default function VenuePlanPage() {
   if (!edition) return <Alert variant="warning">{m.venue_plan_missing_edition()}</Alert>;
   if (query.isLoading)
     return (
-      <div className="tw:text-center tw:p-12">
+      <div className="text-center p-12">
         <Spinner label={m.loading()} />
       </div>
     );
@@ -42,11 +42,11 @@ export default function VenuePlanPage() {
   if (!query.data?.layouts.length) return <Alert variant="info">{m.venue_plan_empty()}</Alert>;
 
   return (
-    <div className="site-container tw:mx-auto tw:w-full tw:py-4">
-      <p className="tw:text-subtle">{m.venue_plan_description()}</p>
+    <div className="site-container mx-auto w-full py-4">
+      <p className="text-subtle">{m.venue_plan_description()}</p>
       {query.data.layouts.map((layout) => (
-        <Card className="tw:mb-6" key={layout.id}>
-          <CardHeader className="tw:flex tw:justify-between">
+        <Card className="mb-6" key={layout.id}>
+          <CardHeader className="flex justify-between">
             <strong>
               {layout.room?.name ?? layout.label} — {layout.event_title}
             </strong>
@@ -55,7 +55,7 @@ export default function VenuePlanPage() {
           <CardContent>
             <div
               data-slot="venue-plan-canvas"
-              className="tw:relative tw:min-h-70 tw:w-full tw:overflow-hidden tw:rounded-md tw:border"
+              className="relative min-h-70 w-full overflow-hidden rounded-md border"
               /* oxlint-disable shadcn/no-inline-styles -- Room aspect ratio and saved room color are per-layout data (docs/floor-plan-coordinates.md). */
               style={{
                 aspectRatio: `${layout.room?.width_m ?? 4} / ${layout.room?.length_m ?? 3}`,
@@ -67,7 +67,7 @@ export default function VenuePlanPage() {
               {layout.areas.map((area) => (
                 <div
                   key={area.id}
-                  className="tw:absolute tw:text-subtle tw:text-sm"
+                  className="absolute text-subtle text-sm"
                   /* oxlint-disable shadcn/no-inline-styles -- Floor-plan x/y percentages and rotation per docs/floor-plan-coordinates.md. */
                   style={{
                     left: `${area.x}%`,
@@ -76,7 +76,7 @@ export default function VenuePlanPage() {
                   }}
                   /* oxlint-enable shadcn/no-inline-styles */
                 >
-                  <AreaIcon name={area.icon} className="tw:me-1" />
+                  <AreaIcon name={area.icon} className="me-1" />
                   {area.label}
                 </div>
               ))}
@@ -85,16 +85,16 @@ export default function VenuePlanPage() {
                 const occupied = item.occupied_seats;
                 const occupancyClass =
                   occupied > item.capacity
-                    ? "tw:border-destructive tw:bg-destructive/10 tw:text-destructive"
+                    ? "border-destructive bg-destructive/10 text-destructive"
                     : item.exclusive || occupied === item.capacity
-                      ? "tw:border-warning tw:bg-warning/10 tw:text-highlight"
+                      ? "border-warning bg-warning/10 text-highlight"
                       : occupied
-                        ? "tw:border-success tw:bg-muted tw:text-success"
-                        : "tw:border-subtle tw:bg-muted tw:text-foreground";
+                        ? "border-success bg-muted text-success"
+                        : "border-subtle bg-muted text-foreground";
                 return (
                   <div
                     key={item.id}
-                    className={`tw:absolute tw:rounded-md tw:border tw:min-w-18 tw:px-2 tw:py-1 tw:text-center ${selected ? "tw:border-warning tw:bg-warning tw:text-contrast" : occupancyClass}`}
+                    className={`absolute rounded-md border min-w-18 px-2 py-1 text-center ${selected ? "border-warning bg-warning text-contrast" : occupancyClass}`}
                     /* oxlint-disable shadcn/no-inline-styles -- Floor-plan x/y percentages and rotation per docs/floor-plan-coordinates.md. */
                     style={{
                       left: `${item.x}%`,
@@ -105,9 +105,9 @@ export default function VenuePlanPage() {
                     title={`${item.name}: ${occupied}/${item.capacity}`}
                     aria-current={selected ? "location" : undefined}
                   >
-                    <div className="tw:font-semibold tw:text-sm">{item.name}</div>
-                    <div className="tw:text-sm">
-                      <Icon icon={UsersIcon} className="tw:me-1" />
+                    <div className="font-semibold text-sm">{item.name}</div>
+                    <div className="text-sm">
+                      <Icon icon={UsersIcon} className="me-1" />
                       {occupied}/{item.capacity}
                     </div>
                   </div>

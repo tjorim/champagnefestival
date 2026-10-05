@@ -29,7 +29,7 @@ export function ColumnVisibilityDropdown<TData extends RowData>({
         render={<Button variant="outline" size="sm" />}
         id={`col-vis-toggle-${tableId}`}
       >
-        <Columns3 aria-hidden="true" className="tw:size-4" />
+        <Columns3 aria-hidden="true" className="size-4" />
         {m.admin_columns()}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

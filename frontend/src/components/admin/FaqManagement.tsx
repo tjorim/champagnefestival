@@ -301,7 +301,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
     <Badge
       key={label}
       variant={translated ? "success" : "secondary"}
-      className={`tw:ms-1 tw:text-tiny ${translated ? "" : "opacity-50"}`}
+      className={`ms-1 text-tiny ${translated ? "" : "opacity-50"}`}
       title={translated ? undefined : m.admin_faq_locale_missing_title({ locale: label })}
     >
       {label}
@@ -316,11 +316,11 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           header: "",
           enableSorting: false,
           cell: ({ row }) => (
-            <div className="tw:flex tw:flex-col">
+            <div className="flex flex-col">
               <Button
                 size="sm"
                 variant="link"
-                className="tw:p-0 tw:text-content"
+                className="p-0 text-content"
                 disabled={row.index === 0 || isMutating}
                 onClick={() => handleMove(row.original, "up")}
                 aria-label={m.admin_faq_move_up()}
@@ -331,7 +331,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               <Button
                 size="sm"
                 variant="link"
-                className="tw:p-0 tw:text-content"
+                className="p-0 text-content"
                 disabled={row.index === sortedItems.length - 1 || isMutating}
                 onClick={() => handleMove(row.original, "down")}
                 aria-label={m.admin_faq_move_down()}
@@ -350,17 +350,17 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
             const item = row.original;
             return (
               <>
-                <div className="tw:font-semibold">
+                <div className="font-semibold">
                   {item.questionNl}
                   {!item.active && (
-                    <Badge variant="secondary" className="tw:ms-2 tw:text-tiny">
+                    <Badge variant="secondary" className="ms-2 text-tiny">
                       {m.admin_venue_archived_badge()}
                     </Badge>
                   )}
                   {localeBadge("EN", Boolean(item.questionEn && item.answerEn))}
                   {localeBadge("FR", Boolean(item.questionFr && item.answerFr))}
                 </div>
-                <div className="tw:text-subtle tw:text-sm">{item.answerNl}</div>
+                <div className="text-subtle text-sm">{item.answerNl}</div>
               </>
             );
           },
@@ -372,7 +372,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           cell: ({ row }) => {
             const item = row.original;
             return (
-              <div className="tw:flex tw:gap-1">
+              <div className="flex gap-1">
                 <Button
                   size="sm"
                   variant="outline"
@@ -416,48 +416,46 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   return (
     <>
       <Card tone="secondary">
-        <CardHeader className="tw:flex tw:items-center tw:justify-between">
-          <span className="tw:font-semibold">{m.admin_content_faq_section()}</span>
+        <CardHeader className="flex items-center justify-between">
+          <span className="font-semibold">{m.admin_content_faq_section()}</span>
           <Button variant="outline-warning" size="sm" onClick={openAdd}>
             <Icon icon={PlusIcon} />
             {m.admin_add_faq_item()}
           </Button>
         </CardHeader>
-        <CardContent className="tw:p-0">
+        <CardContent className="p-0">
           {rowError && (
-            <Alert variant="danger" className="tw:m-4 tw:py-1 tw:text-sm">
+            <Alert variant="danger" className="m-4 py-1 text-sm">
               {rowError}
             </Alert>
           )}
           {faqItemsQuery.isError ? (
-            <Alert variant="danger" className="tw:m-4 tw:py-1 tw:text-sm">
+            <Alert variant="danger" className="m-4 py-1 text-sm">
               {m.admin_error_load_data()}
             </Alert>
           ) : faqItemsQuery.isPending ? (
-            <div className="tw:text-center tw:py-12">
+            <div className="text-center py-12">
               <Spinner size="sm" role="status">
-                <span className="tw:sr-only">{m.admin_loading()}</span>
+                <span className="sr-only">{m.admin_loading()}</span>
               </Spinner>
             </div>
           ) : sortedItems.length === 0 ? (
-            <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
-              {m.admin_no_faq_items()}
-            </p>
+            <p className="text-subtle text-center py-6 mb-0">{m.admin_no_faq_items()}</p>
           ) : (
-            <div data-tailwind-migrated="true" className="tw:w-full">
+            <div className="w-full">
               <Table>
                 <TableBody>
                   {table.getRowModel().rows.map((row) => (
                     <TableRow
                       key={row.id}
-                      className={!row.original.active ? "tw:opacity-50" : undefined}
+                      className={!row.original.active ? "opacity-50" : undefined}
                     >
                       {row.getVisibleCells().map((cell) => (
                         <TableCell
                           key={cell.id}
                           className={
                             cell.column.id === "reorder" || cell.column.id === "actions"
-                              ? "tw:w-px tw:whitespace-nowrap"
+                              ? "w-px whitespace-nowrap"
                               : undefined
                           }
                         >
@@ -487,22 +485,22 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           </DialogHeader>
           <DialogBody>
             {error && (
-              <Alert variant="danger" className="tw:py-1 tw:mb-4 tw:text-sm">
+              <Alert variant="danger" className="py-1 mb-4 text-sm">
                 {error}
               </Alert>
             )}
 
-            <div className="tw:mb-6">
-              <div className="tw:text-highlight tw:text-sm tw:font-semibold tw:mb-2">
+            <div className="mb-6">
+              <div className="text-highlight text-sm font-semibold mb-2">
                 {m.admin_faq_locale_nl_label()}
               </div>
-              <AdminField className="tw:mb-4" controlId="faq-question-nl">
+              <AdminField className="mb-4" controlId="faq-question-nl">
                 <AdminLabel>{m.admin_faq_question_label()}</AdminLabel>
                 <AdminInput
                   type="text"
                   value={form.questionNl}
                   onChange={(e) => setForm((p) => ({ ...p, questionNl: e.target.value }))}
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                 />
               </AdminField>
               <AdminField controlId="faq-answer-nl">
@@ -511,25 +509,23 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                   rows={3}
                   value={form.answerNl}
                   onChange={(e) => setForm((p) => ({ ...p, answerNl: e.target.value }))}
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                 />
               </AdminField>
             </div>
 
-            <div className="tw:mb-6">
-              <div className="tw:text-subtle tw:text-sm tw:font-semibold tw:mb-1">
+            <div className="mb-6">
+              <div className="text-subtle text-sm font-semibold mb-1">
                 {m.admin_faq_locale_en_label()}
               </div>
-              <div className="tw:text-subtle tw:text-sm tw:mb-2">
-                {m.admin_faq_locale_optional_hint()}
-              </div>
-              <AdminField className="tw:mb-4" controlId="faq-question-en">
+              <div className="text-subtle text-sm mb-2">{m.admin_faq_locale_optional_hint()}</div>
+              <AdminField className="mb-4" controlId="faq-question-en">
                 <AdminLabel>{m.admin_faq_question_label()}</AdminLabel>
                 <AdminInput
                   type="text"
                   value={form.questionEn}
                   onChange={(e) => setForm((p) => ({ ...p, questionEn: e.target.value }))}
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                 />
               </AdminField>
               <AdminField controlId="faq-answer-en">
@@ -538,25 +534,23 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                   rows={3}
                   value={form.answerEn}
                   onChange={(e) => setForm((p) => ({ ...p, answerEn: e.target.value }))}
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                 />
               </AdminField>
             </div>
 
             <div>
-              <div className="tw:text-subtle tw:text-sm tw:font-semibold tw:mb-1">
+              <div className="text-subtle text-sm font-semibold mb-1">
                 {m.admin_faq_locale_fr_label()}
               </div>
-              <div className="tw:text-subtle tw:text-sm tw:mb-2">
-                {m.admin_faq_locale_optional_hint()}
-              </div>
-              <AdminField className="tw:mb-4" controlId="faq-question-fr">
+              <div className="text-subtle text-sm mb-2">{m.admin_faq_locale_optional_hint()}</div>
+              <AdminField className="mb-4" controlId="faq-question-fr">
                 <AdminLabel>{m.admin_faq_question_label()}</AdminLabel>
                 <AdminInput
                   type="text"
                   value={form.questionFr}
                   onChange={(e) => setForm((p) => ({ ...p, questionFr: e.target.value }))}
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                 />
               </AdminField>
               <AdminField controlId="faq-answer-fr">
@@ -565,7 +559,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
                   rows={3}
                   value={form.answerFr}
                   onChange={(e) => setForm((p) => ({ ...p, answerFr: e.target.value }))}
-                  className="tw:bg-muted tw:text-content tw:border-input"
+                  className="bg-muted text-content border-input"
                 />
               </AdminField>
             </div>

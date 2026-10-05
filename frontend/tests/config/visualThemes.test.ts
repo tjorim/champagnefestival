@@ -11,31 +11,31 @@ const EXPECTED_THEMES = [
   {
     value: "refresh",
     label: "New",
-    bootstrapMode: "system",
+    colorMode: "system",
     themeColors: { dark: "#100f0d", light: "#fbf4e6" },
   },
   {
     value: "classic",
     label: "Classic",
-    bootstrapMode: "dark",
+    colorMode: "dark",
     themeColors: { dark: "#121212", light: "#121212" },
   },
   {
     value: "riviera",
     label: "Riviera",
-    bootstrapMode: "light",
+    colorMode: "light",
     themeColors: { dark: "#f7ecd2", light: "#f7ecd2" },
   },
   {
     value: "cuvee",
     label: "Cuvée",
-    bootstrapMode: "light",
+    colorMode: "light",
     themeColors: { dark: "#0c231d", light: "#0c231d" },
   },
   {
     value: "remuage",
     label: "Remuage",
-    bootstrapMode: "light",
+    colorMode: "light",
     themeColors: { dark: "#edf1f5", light: "#edf1f5" },
   },
 ] as const;

@@ -125,21 +125,21 @@ function statusBadge(status: DiffStatus) {
     case "added":
       return (
         <Badge variant="success">
-          <Icon icon={PlusIcon} className="tw:me-1" />
+          <Icon icon={PlusIcon} className="me-1" />
           {m.admin_layout_compare_added()}
         </Badge>
       );
     case "removed":
       return (
         <Badge variant="danger">
-          <Icon icon={MinusIcon} className="tw:me-1" />
+          <Icon icon={MinusIcon} className="me-1" />
           {m.admin_layout_compare_removed()}
         </Badge>
       );
     case "changed":
       return (
         <Badge variant="warning">
-          <Icon icon={PencilIcon} className="tw:me-1" />
+          <Icon icon={PencilIcon} className="me-1" />
           {m.admin_layout_compare_changed()}
         </Badge>
       );
@@ -149,16 +149,13 @@ function statusBadge(status: DiffStatus) {
 function DiffRowsList({ rows }: { rows: DiffRow[] }) {
   if (rows.length === 0) return null;
   return (
-    <PresentationList flush className="tw:mb-4">
+    <PresentationList flush className="mb-4">
       {rows.map((row) => (
-        <PresentationListItem
-          key={row.id}
-          className="tw:flex tw:justify-between tw:items-start tw:gap-2"
-        >
-          <div className="tw:min-w-0">
-            <div className="tw:font-semibold tw:text-sm">{row.name}</div>
+        <PresentationListItem key={row.id} className="flex justify-between items-start gap-2">
+          <div className="min-w-0">
+            <div className="font-semibold text-sm">{row.name}</div>
             {row.changes.length > 0 && (
-              <div className="tw:text-subtle tw:text-sm">{row.changes.join(", ")}</div>
+              <div className="text-subtle text-sm">{row.changes.join(", ")}</div>
             )}
           </div>
           {statusBadge(row.status)}
@@ -341,11 +338,11 @@ export default function LayoutRevisionsModal({
           <DialogTitle>{m.admin_layout_revisions_title()}</DialogTitle>
         </DialogHeader>
         <DialogBody>
-          <p className="tw:text-subtle tw:text-sm">{m.admin_layout_revisions_scope_note()}</p>
+          <p className="text-subtle text-sm">{m.admin_layout_revisions_scope_note()}</p>
 
           {/* Save */}
           <form
-            className="tw:flex tw:flex-wrap tw:gap-2 tw:items-start tw:mb-4"
+            className="flex flex-wrap gap-2 items-start mb-4"
             onSubmit={(e) => {
               e.preventDefault();
               void saveForm.handleSubmit();
@@ -354,7 +351,7 @@ export default function LayoutRevisionsModal({
             <saveForm.Field name="label">
               {(field) => (
                 <AdminInput
-                  className="tw:grow-1 tw:shrink-1 tw:basis-55"
+                  className="grow-1 shrink-1 basis-55"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder={m.admin_layout_revisions_label_placeholder()}
@@ -366,7 +363,7 @@ export default function LayoutRevisionsModal({
             <saveForm.Field name="changeNote">
               {(field) => (
                 <AdminInput
-                  className="tw:grow-2 tw:shrink-1 tw:basis-70"
+                  className="grow-2 shrink-1 basis-70"
                   value={field.value}
                   onChange={(e) => field.handleChange(e.target.value)}
                   placeholder={m.admin_layout_revisions_change_note_placeholder()}
@@ -379,34 +376,34 @@ export default function LayoutRevisionsModal({
             </Button>
           </form>
           {saveError && (
-            <Alert variant="danger" className="tw:py-2 tw:text-sm">
+            <Alert variant="danger" className="py-2 text-sm">
               {saveError}
             </Alert>
           )}
 
           {/* List */}
           {loading ? (
-            <div className="tw:text-center tw:py-4">
+            <div className="text-center py-4">
               <Spinner label={m.admin_loading()} size="sm" />
             </div>
           ) : loadError ? (
-            <Alert variant="danger" className="tw:py-2 tw:text-sm">
+            <Alert variant="danger" className="py-2 text-sm">
               {loadError}
             </Alert>
           ) : revisions.length === 0 ? (
-            <p className="tw:text-subtle tw:text-sm">{m.admin_layout_revisions_empty()}</p>
+            <p className="text-subtle text-sm">{m.admin_layout_revisions_empty()}</p>
           ) : (
-            <PresentationList flush className="tw:mb-4">
+            <PresentationList flush className="mb-4">
               {revisionOptions.map((revision) => (
                 <PresentationListItem
                   key={revision.id}
-                  className="tw:flex tw:justify-between tw:items-center tw:gap-2"
+                  className="flex justify-between items-center gap-2"
                 >
-                  <div className="tw:min-w-0">
-                    <div className="tw:font-semibold tw:text-sm">
+                  <div className="min-w-0">
+                    <div className="font-semibold text-sm">
                       #{revision.revisionNumber} {revision.label}
                     </div>
-                    <div className="tw:text-subtle tw:text-micro">
+                    <div className="text-subtle text-micro">
                       {m.admin_layout_revisions_created_by({ actor: revision.createdBy })} ·{" "}
                       {new Date(revision.createdAt).toLocaleString()}
                       {revision.changeNote ? ` — ${revision.changeNote}` : ""}
@@ -415,7 +412,7 @@ export default function LayoutRevisionsModal({
                   <Button
                     size="sm"
                     variant="outline-warning"
-                    className="tw:shrink-0"
+                    className="shrink-0"
                     onClick={() => void openRestorePreview(revision.revisionNumber)}
                   >
                     {m.admin_layout_revisions_restore()}
@@ -428,10 +425,10 @@ export default function LayoutRevisionsModal({
           {/* Compare */}
           {revisions.length > 0 && (
             <>
-              <h6 className="tw:text-base">{m.admin_layout_revisions_compare_title()}</h6>
-              <div className="tw:flex tw:gap-4 tw:flex-wrap tw:mb-4">
-                <AdminField className="tw:min-w-40 tw:grow-1 tw:shrink-1 tw:basis-40">
-                  <AdminLabel className="tw:text-sm tw:text-subtle">
+              <h6 className="text-base">{m.admin_layout_revisions_compare_title()}</h6>
+              <div className="flex gap-4 flex-wrap mb-4">
+                <AdminField className="min-w-40 grow-1 shrink-1 basis-40">
+                  <AdminLabel className="text-sm text-subtle">
                     {m.admin_layout_revisions_compare_from()}
                   </AdminLabel>
                   <AdminSelect
@@ -449,8 +446,8 @@ export default function LayoutRevisionsModal({
                     ))}
                   </AdminSelect>
                 </AdminField>
-                <AdminField className="tw:min-w-40 tw:grow-1 tw:shrink-1 tw:basis-40">
-                  <AdminLabel className="tw:text-sm tw:text-subtle">
+                <AdminField className="min-w-40 grow-1 shrink-1 basis-40">
+                  <AdminLabel className="text-sm text-subtle">
                     {m.admin_layout_revisions_compare_to()}
                   </AdminLabel>
                   <AdminSelect
@@ -470,17 +467,17 @@ export default function LayoutRevisionsModal({
                 </AdminField>
               </div>
               {diffLoading ? (
-                <div className="tw:text-center tw:py-2">
+                <div className="text-center py-2">
                   <Spinner label={m.admin_loading()} size="sm" />
                 </div>
               ) : diffError ? (
-                <Alert variant="danger" className="tw:py-2 tw:text-sm">
+                <Alert variant="danger" className="py-2 text-sm">
                   {diffError}
                 </Alert>
               ) : compareFrom === compareTo ? null : diff &&
                 tableDiffRows.length === 0 &&
                 areaDiffRows.length === 0 ? (
-                <p className="tw:text-subtle tw:text-sm">
+                <p className="text-subtle text-sm">
                   {m.admin_layout_revisions_compare_no_changes()}
                 </p>
               ) : (
@@ -488,7 +485,7 @@ export default function LayoutRevisionsModal({
                   <>
                     {tableDiffRows.length > 0 && (
                       <>
-                        <div className="tw:font-semibold tw:text-sm tw:mb-1">
+                        <div className="font-semibold text-sm mb-1">
                           {m.admin_layout_compare_tables()}
                         </div>
                         <DiffRowsList rows={tableDiffRows} />
@@ -496,7 +493,7 @@ export default function LayoutRevisionsModal({
                     )}
                     {areaDiffRows.length > 0 && (
                       <>
-                        <div className="tw:font-semibold tw:text-sm tw:mb-1">
+                        <div className="font-semibold text-sm mb-1">
                           {m.admin_layout_compare_areas()}
                         </div>
                         <DiffRowsList rows={areaDiffRows} />
@@ -510,28 +507,28 @@ export default function LayoutRevisionsModal({
 
           {/* Restore preview / confirm */}
           {restoreTarget !== null && (
-            <div className="tw:rounded-md tw:border tw:border-border tw:p-2 tw:mt-4">
-              <h6 className="tw:text-base">{m.admin_layout_revisions_restore_preview_title()}</h6>
+            <div className="rounded-md border border-border p-2 mt-4">
+              <h6 className="text-base">{m.admin_layout_revisions_restore_preview_title()}</h6>
               {previewLoading ? (
-                <div className="tw:text-center tw:py-2">
+                <div className="text-center py-2">
                   <Spinner label={m.admin_loading()} size="sm" />
                 </div>
               ) : previewError ? (
-                <Alert variant="danger" className="tw:py-2 tw:text-sm">
+                <Alert variant="danger" className="py-2 text-sm">
                   {previewError}
                 </Alert>
               ) : (
                 preview && (
                   <>
                     {previewTableRows.length === 0 && previewAreaRows.length === 0 ? (
-                      <p className="tw:text-subtle tw:text-sm">
+                      <p className="text-subtle text-sm">
                         {m.admin_layout_revisions_restore_no_changes()}
                       </p>
                     ) : (
                       <>
                         {previewTableRows.length > 0 && (
                           <>
-                            <div className="tw:font-semibold tw:text-sm tw:mb-1">
+                            <div className="font-semibold text-sm mb-1">
                               {m.admin_layout_compare_tables()}
                             </div>
                             <DiffRowsList rows={previewTableRows} />
@@ -539,7 +536,7 @@ export default function LayoutRevisionsModal({
                         )}
                         {previewAreaRows.length > 0 && (
                           <>
-                            <div className="tw:font-semibold tw:text-sm tw:mb-1">
+                            <div className="font-semibold text-sm mb-1">
                               {m.admin_layout_compare_areas()}
                             </div>
                             <DiffRowsList rows={previewAreaRows} />
@@ -548,11 +545,11 @@ export default function LayoutRevisionsModal({
                       </>
                     )}
                     {preview.hasConflicts && (
-                      <Alert variant="warning" className="tw:py-2 tw:text-sm">
-                        <div className="tw:font-semibold tw:mb-1">
+                      <Alert variant="warning" className="py-2 text-sm">
+                        <div className="font-semibold mb-1">
                           {m.admin_layout_revisions_restore_conflicts_title()}
                         </div>
-                        <ul className="tw:mb-2 tw:ps-4">
+                        <ul className="mb-2 ps-4">
                           {preview.allocationConflicts.map((conflict) => (
                             <li key={`${conflict.kind}-${conflict.id}`}>
                               {conflict.kind === "table" && conflict.reason === "deleted"
@@ -581,11 +578,11 @@ export default function LayoutRevisionsModal({
                       </Alert>
                     )}
                     {restoreError && (
-                      <Alert variant="danger" className="tw:py-2 tw:text-sm">
+                      <Alert variant="danger" className="py-2 text-sm">
                         {restoreError}
                       </Alert>
                     )}
-                    <div className="tw:flex tw:gap-2 tw:justify-end">
+                    <div className="flex gap-2 justify-end">
                       <Button
                         size="sm"
                         variant="outline"

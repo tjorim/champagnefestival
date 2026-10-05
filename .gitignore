@@ -157,4 +157,3 @@ frontend/playwright-report/
 frontend/e2e/.auth/
 
 # Generated CSS-backed migration lint configuration (pnpm lint).
-frontend/.oxlint-legacy-classes.json

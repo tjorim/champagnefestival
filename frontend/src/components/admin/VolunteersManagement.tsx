@@ -145,10 +145,10 @@ export default function VolunteersManagement({
           cell: ({ row }) => {
             const volunteer = row.original;
             return (
-              <div className="tw:font-semibold tw:flex tw:items-center tw:gap-1">
+              <div className="font-semibold flex items-center gap-1">
                 {volunteer.name}
                 {!volunteer.active && (
-                  <Badge variant="secondary" className="tw:ms-1">
+                  <Badge variant="secondary" className="ms-1">
                     {m.admin_people_inactive_badge_label()}
                   </Badge>
                 )}
@@ -158,35 +158,35 @@ export default function VolunteersManagement({
         }),
         columnHelper.accessor("address", {
           header: m.admin_people_address_label(),
-          cell: ({ getValue }) => <span className="tw:text-sm">{String(getValue() ?? "")}</span>,
+          cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
         }),
         columnHelper.accessor("nationalRegisterNumber", {
           header: m.admin_people_national_register_number_label(),
           enableSorting: false,
-          cell: ({ getValue }) => <span className="tw:text-sm">{String(getValue() ?? "")}</span>,
+          cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
         }),
         columnHelper.accessor("eidDocumentNumber", {
           header: m.admin_people_eid_document_number_label(),
           enableSorting: false,
-          cell: ({ getValue }) => <span className="tw:text-sm">{String(getValue() ?? "")}</span>,
+          cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
         }),
         columnHelper.display({
           id: "helpPeriods",
           header: m.admin_volunteers_help_periods_label(),
           enableSorting: false,
           cell: ({ row }) => (
-            <div className="tw:flex tw:flex-col tw:gap-1 tw:text-sm">
+            <div className="flex flex-col gap-1 text-sm">
               {row.original.helpPeriods.length > 0 ? (
                 row.original.helpPeriods.map((period) => (
-                  <span key={period.id} className="tw:text-subtle">
+                  <span key={period.id} className="text-subtle">
                     {formatPeriod(period)}
                     {period.notes && (
-                      <span className="tw:block tw:text-subtle tw:opacity-75">{period.notes}</span>
+                      <span className="block text-subtle opacity-75">{period.notes}</span>
                     )}
                   </span>
                 ))
               ) : (
-                <span className="tw:text-subtle">{m.admin_volunteers_no_help_periods()}</span>
+                <span className="text-subtle">{m.admin_volunteers_no_help_periods()}</span>
               )}
             </div>
           ),
@@ -198,7 +198,7 @@ export default function VolunteersManagement({
           cell: ({ row }) => {
             const volunteer = row.original;
             return (
-              <div className="tw:flex tw:flex-wrap tw:gap-1">
+              <div className="flex flex-wrap gap-1">
                 <Button
                   size="sm"
                   variant="outline"
@@ -253,10 +253,10 @@ export default function VolunteersManagement({
   return (
     <>
       <Card tone="secondary">
-        <CardHeader className="tw:pb-2">
-          <div className="tw:flex tw:items-center tw:justify-between tw:gap-2 tw:mb-2">
-            <span className="tw:font-semibold">{m.admin_volunteers_tab()}</span>
-            <div className="tw:flex tw:gap-2">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="font-semibold">{m.admin_volunteers_tab()}</span>
+            <div className="flex gap-2">
               <Button
                 size="sm"
                 variant="outline"
@@ -280,16 +280,16 @@ export default function VolunteersManagement({
             </div>
           </div>
           {exportError && (
-            <Alert variant="danger" className="tw:py-1 tw:mb-2" onClose={() => setExportError("")}>
+            <Alert variant="danger" className="py-1 mb-2" onClose={() => setExportError("")}>
               {exportError}
             </Alert>
           )}
-          <div className="tw:flex tw:flex-wrap tw:gap-2 tw:items-center">
+          <div className="flex flex-wrap gap-2 items-center">
             <AdminSelect
               size="sm"
               value={activeFilter}
               onValueChange={(e) => setActiveFilter(e as ActiveFilter)}
-              className="tw:bg-muted tw:text-content tw:border-input tw:max-w-45"
+              className="bg-muted text-content border-input max-w-45"
 
               aria-label={m.admin_people_active_label()}
             >
@@ -303,52 +303,38 @@ export default function VolunteersManagement({
               placeholder={m.admin_volunteers_search_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="tw:bg-muted tw:text-content tw:border-input tw:max-w-70"
+              className="bg-muted text-content border-input max-w-70"
             />
           </div>
         </CardHeader>
 
-        <CardContent className="tw:p-0">
+        <CardContent className="p-0">
           {createSuccess && (
-            <Alert
-              variant="success"
-              className="tw:m-4 tw:mb-0"
-              onClose={() => setCreateSuccess(false)}
-            >
+            <Alert variant="success" className="m-4 mb-0" onClose={() => setCreateSuccess(false)}>
               {m.admin_volunteers_create_success()}
             </Alert>
           )}
           {updateSuccess && (
-            <Alert
-              variant="success"
-              className="tw:m-4 tw:mb-0"
-              onClose={() => setUpdateSuccess(false)}
-            >
+            <Alert variant="success" className="m-4 mb-0" onClose={() => setUpdateSuccess(false)}>
               {m.admin_volunteers_update_success()}
             </Alert>
           )}
           {deleteSuccess && (
-            <Alert
-              variant="success"
-              className="tw:m-4 tw:mb-0"
-              onClose={() => setDeleteSuccess(false)}
-            >
+            <Alert variant="success" className="m-4 mb-0" onClose={() => setDeleteSuccess(false)}>
               {m.admin_volunteers_delete_success()}
             </Alert>
           )}
 
           {isLoading ? (
-            <div className="tw:text-center tw:py-6">
+            <div className="text-center py-6">
               <Spinner label={m.admin_loading()} variant="primary" size="sm" />
             </div>
           ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
-            <p className="tw:text-subtle tw:text-center tw:py-6 tw:mb-0">
-              {m.admin_volunteers_no_results()}
-            </p>
+            <p className="text-subtle text-center py-6 mb-0">{m.admin_volunteers_no_results()}</p>
           ) : (
-            <div data-tailwind-migrated="true" className="tw:w-full">
+            <div className="w-full">
               <Table>
-                <caption className="tw:sr-only">{m.admin_volunteers_table_caption()}</caption>
+                <caption className="sr-only">{m.admin_volunteers_table_caption()}</caption>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
@@ -399,8 +385,8 @@ export default function VolunteersManagement({
         >
           <DialogContent admin size="default">
             <DialogHeader>
-              <DialogTitle className="tw:text-destructive">
-                <Icon icon={TrashIcon} className="tw:me-2" />
+              <DialogTitle className="text-destructive">
+                <Icon icon={TrashIcon} className="me-2" />
                 {m.admin_volunteers_delete_title()}
               </DialogTitle>
             </DialogHeader>

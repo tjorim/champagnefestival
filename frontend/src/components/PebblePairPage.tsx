@@ -80,21 +80,19 @@ export default function PebblePairPage() {
   };
 
   return (
-    <div className="site-container tw:mx-auto tw:w-full tw:max-w-account tw:py-12 tw:text-center">
-      <h1 className="tw:text-2xl tw:font-medium tw:leading-tight tw:mb-4">
-        {m.pebble_pair_title()}
-      </h1>
-      <p className="tw:text-subtle tw:mb-6">{m.pebble_pair_description()}</p>
+    <div className="site-container mx-auto w-full max-w-account py-12 text-center">
+      <h1 className="text-2xl font-medium leading-tight mb-4">{m.pebble_pair_title()}</h1>
+      <p className="text-subtle mb-6">{m.pebble_pair_description()}</p>
 
       {authError || pairingError ? (
         <Alert variant="danger">
           <div>{authError ?? pairingError ?? m.pebble_pair_error()}</div>
           {authError ? (
-            <Button className="tw:mt-4" variant="outline-danger" size="sm" onClick={retrySignIn}>
+            <Button className="mt-4" variant="outline-danger" size="sm" onClick={retrySignIn}>
               {m.pebble_pair_retry_sign_in()}
             </Button>
           ) : (
-            <Button className="tw:mt-4" variant="outline-danger" size="sm" onClick={retryPairing}>
+            <Button className="mt-4" variant="outline-danger" size="sm" onClick={retryPairing}>
               {m.pebble_pair_retry()}
             </Button>
           )}
@@ -102,7 +100,7 @@ export default function PebblePairPage() {
       ) : closed ? (
         <Alert variant="success">{m.pebble_pair_close_instruction()}</Alert>
       ) : (
-        <div className="tw:flex tw:items-center tw:justify-center tw:gap-2 tw:text-subtle">
+        <div className="flex items-center justify-center gap-2 text-subtle">
           <Spinner size="sm" />
           {m.pebble_pair_connecting()}
         </div>

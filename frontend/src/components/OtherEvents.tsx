@@ -231,41 +231,41 @@ export default function OtherEvents() {
   return (
     <>
       <section id="other-events" className="content-section">
-        <div className="site-container tw:mx-auto tw:w-full">
+        <div className="site-container mx-auto w-full">
           <SectionHeading
             id="other-events-heading"
             title={m.other_events_title()}
             subtitle={m.other_events_subtitle()}
           />
 
-          <div className="tw:flex tw:flex-wrap tw:-mx-3 tw:*:w-full tw:*:px-column-gutter tw:justify-center">
-            <div className="site-content-column tw:site-md:w-content-md tw:site-lg:w-content-lg">
-              {isLoading && <p className="tw:text-center">{m.other_events_loading()}</p>}
+          <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter justify-center">
+            <div className="site-content-column site-md:w-content-md site-lg:w-content-lg">
+              {isLoading && <p className="text-center">{m.other_events_loading()}</p>}
 
               {isError && <Alert variant="danger">{m.other_events_error()}</Alert>}
 
               {!isLoading && !isError && items.length === 0 && (
-                <p className="tw:text-center tw:mb-0">{m.other_events_empty()}</p>
+                <p className="text-center mb-0">{m.other_events_empty()}</p>
               )}
 
               {items.map((item) => (
-                <Card key={item.id} className="event-card tw:mb-4 tw:border-0">
+                <Card key={item.id} className="event-card mb-4 border-0">
                   <CardContent>
-                    <div className="tw:flex tw:justify-between tw:items-start tw:gap-4 tw:flex-wrap">
+                    <div className="flex justify-between items-start gap-4 flex-wrap">
                       <div>
-                        <h5 className="tw:mb-1">{getEditionTitle(item.editionType)}</h5>
-                        <p className="tw:mb-1 tw:font-semibold">{item.event.title}</p>
-                        <p className="tw:mb-1 tw:text-subtle">
-                          <Icon icon={CalendarDaysIcon} className="tw:me-2" />
+                        <h5 className="mb-1">{getEditionTitle(item.editionType)}</h5>
+                        <p className="mb-1 font-semibold">{item.event.title}</p>
+                        <p className="mb-1 text-subtle">
+                          <Icon icon={CalendarDaysIcon} className="me-2" />
                           {formatDate(item.event.date)} • {item.event.startTime}
                         </p>
-                        <p className="tw:mb-1 tw:text-subtle">
-                          <Icon icon={MapPinIcon} className="tw:me-2" />
+                        <p className="mb-1 text-subtle">
+                          <Icon icon={MapPinIcon} className="me-2" />
                           {item.venueName}
                         </p>
                         {item.coOrganizerName && (
-                          <p className="tw:mb-1 tw:text-subtle">
-                            <Icon icon={UsersIcon} className="tw:me-2" />
+                          <p className="mb-1 text-subtle">
+                            <Icon icon={UsersIcon} className="me-2" />
                             {m.other_events_co_organized_with()}{" "}
                             {item.coOrganizerWebsite ? (
                               <a
@@ -280,7 +280,7 @@ export default function OtherEvents() {
                             )}
                           </p>
                         )}
-                        <p className="tw:mb-2">{item.event.description}</p>
+                        <p className="mb-2">{item.event.description}</p>
                       </div>
 
                       {(item.event.registrationRequired || item.event.products.length > 0) && (
