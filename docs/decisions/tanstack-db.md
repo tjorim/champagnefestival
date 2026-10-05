@@ -1,8 +1,8 @@
 # TanStack DB for admin/event-day operational state
 
-**Status:** Adopted for registrations, tables and people (members and volunteers are derived from people); other resources are open follow-ups (see [Roadmap](#roadmap))
+**Status:** Adopted for registrations, tables and people (members and volunteers are derived from people); venues, rooms, layouts, areas, table types and exhibitors are decided as "migrate" with follow-up issues (see [Remaining resources](#remaining-resources-1166) and [Roadmap](#roadmap))
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
-**Record updated:** 2026-10-05, [#1164](https://github.com/tjorim/champagnefestival/issues/1164)
+**Record updated:** 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166)
 
 ---
 
@@ -140,10 +140,9 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   the same through `captureAdminTablesFence()`. Deletes only touch rows the
   collection still holds, because `writeDelete` throws for a missing key.
   `handleAddRegistration` no longer seeds an unloaded registrations list with a
-  single row. Venues, rooms, layouts, areas and table types are still plain
-  queries whose `setQueryData` calls can recreate an entry after sign-out; the
-  direction recorded in [#1166](https://github.com/tjorim/champagnefestival/issues/1166)
-  is to migrate them and fix this as part of that work.
+  single row. The plain-query resources that remain (venues, rooms, layouts,
+  areas, table types, exhibitors) no longer recreate an entry after sign-out
+  either; see [Remaining resources](#remaining-resources-1166).
 - **Reset and refresh.** `isAuthenticated` turning false empties the collection
   and removes its query. `"tables"` is no longer in `ADMIN_RESOURCE_KEYS`;
   `loadData` refetches the collection through `utils.refetch()` and no
@@ -215,6 +214,67 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   live patching or timestamp map for this collection.
 - Retry-safety decisions are in `docs/retry-safety.md`.
 
+## Shared collection factory and remaining resources ([#1166](https://github.com/tjorim/champagnefestival/issues/1166))
+
+### Shared collection factory
+
+`frontend/src/state/adminCollectionFactory.ts` holds the lifecycle that the
+registrations, tables and people collections each used to copy. A collection
+module is now mostly its data handling.
+
+- `createAdminCollection<TRow, TKey>(config)` wraps `createCollection` and
+  `queryCollectionOptions` with the shared settings (60 second `staleTime`,
+  `retry: false`) and a **selectable sync mode**: `syncMode: "eager"` (default;
+  one full load, used by every admin collection today) or `"on-demand"` (rows
+  loaded for the queries that ask for them; the `queryFn` then reads the subset
+  from `context.meta.loadSubsetOptions`). Every `createAdmin…Collection` accepts
+  an optional `syncMode` and passes it through, so the server-driven tables epic
+  ([#1174](https://github.com/tjorim/champagnefestival/issues/1174), #1178)
+  switches the people collection by configuration instead of retrofitting each
+  module. Row keys may be strings or numbers (exhibitors are keyed by number).
+  Write handlers (`onUpdate`/`onDelete`) pass straight through.
+- `createAdminCollectionLifecycle({ queryKey })` returns, per collection
+  module: `register` (live-event registry, advances the fence), `reset`
+  (sign-out: advances the fence, empties the collection), `captureFence` (taken
+  before a request, checked before every post-await write), `refetch`,
+  presence-guarded writes (`deleteIfPresent`, `upsertIfPresent`), `writeToActive`
+  (write to every registered collection, rejecting after all settled),
+  `hasQueryKey` (live-envelope key match), and `claimEvent`/`isLatestEvent`
+  (drop out-of-order live events per row id).
+- The registrations, tables and people modules use it and keep their public
+  exports (`registerAdmin…Collection`, `resetAdmin…Collection`,
+  `captureAdmin…Fence`, `refetchAdmin…`). People now registers the collection
+  itself (`registerAdminPeopleCollection(collection)`) like the others.
+- Tests: `tests/state/adminCollectionFactory.test.ts`.
+
+### Sign-out safety for the plain queries
+
+The create-on-empty patterns (`prev ? [...prev, x] : [x]`) in
+`useAdminVenueActions.ts` (venues, rooms, layouts, areas, table types, and the
+layout-restore area replacement) now return `prev` when the cache is empty, so a
+create that resolves after sign-out cannot invent an entry. `useAdminQueries`
+also removes the venue, room, table-type, layout, exhibitor and area query keys
+when `isAuthenticated` turns false, so no data survives sign-out and the
+remaining `setQueryData` patches have nothing to write into. Test:
+`tests/hooks/useAdminSignOutCache.test.tsx`. The migrations below replace these
+patches with fenced collection writes.
+
+### Remaining resources (#1166)
+
+Default is migrate; nothing stays on Query.
+
+| Resource | Decision | Reason and approach | Issue |
+| --- | --- | --- | --- |
+| Venues, rooms, layouts, areas, table types | **Migrate, as one group**, one collection per resource | They are updated together: a venue delete cascades to rooms, layouts, tables and areas, a layout delete or revision restore rewrites its areas and tables, and a table-type capacity change reaches tables. A collection per resource keeps one authoritative copy of each (rule 3) and turns the roughly 30 `setQueryData` calls (21 in `useAdminVenueActions.ts`, 9 in `useVenueMutations.ts`) into direct writes, `writeDelete` cascades (the pattern the tables collection already uses) and derived views. `invalidateQueries` is not enough: a venue delete would refetch five lists, still leave the hooks with the cascade logic, and keep a second state path beside the tables collection, which rule 2 forbids. Eager sync (small, rarely changing lists). | [#1183](https://github.com/tjorim/champagnefestival/issues/1183) |
+| Exhibitors | **Migrate**, after the group (does not depend on it) | Follows the people migration and removes the last cross-collection patch: a people merge still repoints `contactPersonId` with `setQueryData`, and `AdminDashboard` patches the exhibitors query on save and delete. Numeric key (the factory supports it). | [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
+
+Does removing `setQueryData` outweigh a second state path? Yes, as the default
+assumed: the second path exists only until the migrations land, and the
+collections add no new patching code. Each follow-up issue carries the
+sign-out criterion (capture the fence before the request, check it before every
+post-await write) and the retry-safety requirement
+([`docs/retry-safety.md`](../retry-safety.md)).
+
 ## Rules that still apply
 
 These come from #442 and apply to every further migration:
@@ -262,7 +322,7 @@ Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR 
 
 | Order | Follow-up | Issue |
 | --- | --- | --- |
-| 1 | Extract a shared collection factory (registration, sign-out reset, session fence, guarded writes) with a selectable sync mode, then migrate venues, rooms, areas, layouts and table types as a group, then exhibitors (people and members are done, see [above](#people-and-members-1164)). Default is migrate; staying on Query needs a stated reason | [#1166](https://github.com/tjorim/champagnefestival/issues/1166) |
+| 1 | Migrate venues, rooms, layouts, areas and table types as a group, then exhibitors, on the shared collection factory (done in [#1166](https://github.com/tjorim/champagnefestival/issues/1166), see [above](#shared-collection-factory-and-remaining-resources-1166)) | [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
 | 2 | Spike and decision: on-demand collection sync or Query with `keepPreviousData`, plus the data scope for registrations and the full-people-list consumers. Read-only; may run in parallel with order 1 | [#1175](https://github.com/tjorim/champagnefestival/issues/1175) |
 | 2 | Backend: shared paged list contract (sort, filters, deterministic order, indexes) for people and volunteers. May start with the spike | [#1176](https://github.com/tjorim/champagnefestival/issues/1176) |
 | 3 | Persisted collections for event-day resilience (privacy, staleness, offline). Taken after the spike, because a partial on-demand cache must not be persisted as if complete; its privacy question can proceed earlier | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
@@ -273,9 +333,9 @@ Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR 
 | 6 | Move Members, Volunteers and People onto `AdminDataTable` and the server contract | [#1181](https://github.com/tjorim/champagnefestival/issues/1181) |
 | 6 | Scope the registrations collection; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
 
-Done: [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
+Done: [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
 
-The per-resource decisions from #1166 and the on-demand decision from #1175 will be recorded in this file when made; the default for #1166 is to migrate.
+The on-demand decision from #1175 will be recorded in this file when made.
 
 ## References
 
@@ -286,6 +346,7 @@ The per-resource decisions from #1166 and the on-demand decision from #1175 will
 - `frontend/src/state/adminRegistrationsCollection.ts`
 - `frontend/src/state/adminTablesCollection.ts`, `frontend/src/state/tableOccupancy.ts`
 - `frontend/src/state/adminPeopleCollection.ts`
+- `frontend/src/state/adminCollectionFactory.ts`
 - `frontend/src/hooks/useAdminQueries.ts`
 - `frontend/src/state/LiveUpdatesProvider.tsx`
 - `frontend/src/hooks/useAdminRegistrationActions.ts`: current registration write

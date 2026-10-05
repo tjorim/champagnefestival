@@ -1,10 +1,12 @@
-import { createCollection } from "@tanstack/react-db";
-import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import type { QueryClient } from "@tanstack/react-query";
 import type { FloorTableRecord } from "@/types/admin";
 import type { LiveEnvelope } from "@/utils/liveStream";
 import { queryKeys } from "@/utils/queryKeys";
-import { createEpochFence } from "@/state/epochFence";
+import {
+  createAdminCollection,
+  createAdminCollectionLifecycle,
+  type AdminCollectionSyncMode,
+} from "@/state/adminCollectionFactory";
 import {
   createTable,
   deleteTable,
@@ -20,6 +22,7 @@ interface CreateAdminTablesCollectionOptions {
   queryClient: QueryClient;
   authHeaders: AuthHeadersProvider;
   enabled: boolean;
+  syncMode?: AdminCollectionSyncMode;
 }
 
 /**
@@ -56,51 +59,35 @@ export function createAdminTablesCollection({
   queryClient,
   authHeaders,
   enabled,
+  syncMode,
 }: CreateAdminTablesCollectionOptions) {
-  return createCollection(
-    queryCollectionOptions({
-      queryKey: queryKeys.admin.tables,
-      queryFn: () => fetchTables(authHeaders),
-      queryClient,
-      enabled,
-      staleTime: 60 * 1000,
-      retry: false,
-      getKey: (table) => table.id,
-      onUpdate: async ({ transaction, collection }) => {
-        await persistThenRefetch(collection, async () => {
-          for (const mutation of transaction.mutations) {
-            await updateTable(authHeaders, String(mutation.key), mutation.changes);
-          }
-        });
-        return { refetch: false };
-      },
-      onDelete: async ({ transaction, collection }) => {
-        await persistThenRefetch(collection, async () => {
-          for (const mutation of transaction.mutations) {
-            await deleteTable(authHeaders, String(mutation.key));
-          }
-        });
-        return { refetch: false };
-      },
-    }),
-  );
+  return createAdminCollection<FloorTableRecord>({
+    queryKey: queryKeys.admin.tables,
+    queryFn: () => fetchTables(authHeaders),
+    queryClient,
+    enabled,
+    syncMode,
+    getKey: (table) => table.id,
+    onUpdate: async ({ transaction, collection }) => {
+      await persistThenRefetch(collection, async () => {
+        for (const mutation of transaction.mutations) {
+          await updateTable(authHeaders, String(mutation.key), mutation.changes);
+        }
+      });
+      return { refetch: false };
+    },
+    onDelete: async ({ transaction, collection }) => {
+      await persistThenRefetch(collection, async () => {
+        for (const mutation of transaction.mutations) {
+          await deleteTable(authHeaders, String(mutation.key));
+        }
+      });
+      return { refetch: false };
+    },
+  });
 }
 
 export type AdminTablesCollection = ReturnType<typeof createAdminTablesCollection>;
-
-/** Refetches the tables from the server; failures stay on `collection.utils.lastError`. */
-export async function refetchAdminTables(collection: AdminTablesCollection): Promise<void> {
-  await collection.utils.refetch().catch(() => undefined);
-}
-
-/**
- * Deleting a key the collection no longer holds throws, and a row can already
- * be gone (a live `deleted` event or a reset got there first), so only delete
- * what is still present.
- */
-async function deleteIfPresent(collection: AdminTablesCollection, key: string): Promise<void> {
-  if (collection.has(key)) await collection.utils.writeDelete(key);
-}
 
 /**
  * Creates a table through the API and stores the server's row. Not optimistic:
@@ -112,7 +99,7 @@ export async function addAdminTable(
   authHeaders: AuthHeadersProvider,
   input: TableCreateInput,
 ): Promise<void> {
-  const isCurrent = tablesFence.capture();
+  const isCurrent = captureAdminTablesFence();
   const table = await createTable(authHeaders, input);
   if (!isCurrent()) return;
   await collection.utils.writeUpsert(table);
@@ -151,64 +138,24 @@ export async function replaceAdminTablesForLayout(
   });
 }
 
-const activeAdminTablesCollections = new Set<AdminTablesCollection>();
-const latestTableEventTimestamps = new Map<string, number>();
-
 /**
- * Advanced whenever the set of active collections changes or a collection is
- * reset (sign-out); see `epochFence.ts`.
+ * The shared lifecycle (registry, session fence, timestamps, guarded writes);
+ * see `adminCollectionFactory.ts`. Its fence advances whenever the set of
+ * active collections changes or a collection is reset (sign-out).
  */
-const tablesFence = createEpochFence();
+const lifecycle = createAdminCollectionLifecycle<FloorTableRecord, AdminTablesCollection>({
+  queryKey: queryKeys.admin.tables,
+});
 
 /** Captures the current session for a write that follows an API call. */
-export const captureAdminTablesFence = tablesFence.capture;
+export const captureAdminTablesFence = lifecycle.captureFence;
+export const registerAdminTablesCollection = lifecycle.register;
+export const resetAdminTablesCollection = lifecycle.reset;
 
-export function registerAdminTablesCollection(collection: AdminTablesCollection): () => void {
-  tablesFence.advance();
-  activeAdminTablesCollections.add(collection);
-  return () => {
-    tablesFence.advance();
-    activeAdminTablesCollections.delete(collection);
-    if (activeAdminTablesCollections.size === 0) {
-      latestTableEventTimestamps.clear();
-    }
-  };
-}
+/** Refetches the tables from the server; failures stay on `collection.utils.lastError`. */
+export const refetchAdminTables = lifecycle.refetch;
 
-export async function resetAdminTablesCollection(collection: AdminTablesCollection): Promise<void> {
-  tablesFence.advance();
-  latestTableEventTimestamps.clear();
-  if (collection.size === 0) return;
-  await collection.utils.writeBatch(() => {
-    for (const key of collection.keys()) {
-      void collection.utils.writeDelete(key);
-      latestTableEventTimestamps.delete(key);
-    }
-  });
-}
-
-/**
- * Applies a write to every active collection and resolves once all of them have
- * applied it, rejecting with the first failure after every write has settled
- * (see the same helper in `adminRegistrationsCollection.ts`).
- */
-async function writeToActiveCollections(
-  write: (collection: AdminTablesCollection) => Promise<void>,
-): Promise<void> {
-  const results = await Promise.allSettled(
-    Array.from(activeAdminTablesCollections, async (collection) => write(collection)),
-  );
-  const failure = results.find((result) => result.status === "rejected");
-  if (failure) throw failure.reason;
-}
-
-export function hasAdminTablesKey(envelope: LiveEnvelope): boolean {
-  return envelope.keys.some(
-    (key) =>
-      key.length === queryKeys.admin.tables.length &&
-      key.every((part, index) => part === queryKeys.admin.tables[index]),
-  );
-}
+export const hasAdminTablesKey = lifecycle.hasQueryKey;
 
 /**
  * A seating event scoped to a registration is an allocation change. It alters
@@ -227,7 +174,7 @@ export function isTableRowUnaffectedByLiveEvent(envelope: LiveEnvelope): boolean
 /** True for a table create/update/delete event that can be applied to one row. */
 export function canPatchAdminTableLiveEvent(envelope: LiveEnvelope): boolean {
   return (
-    activeAdminTablesCollections.size > 0 &&
+    lifecycle.hasActiveCollections() &&
     envelope.topic === "seating" &&
     hasAdminTablesKey(envelope) &&
     !isTableRowUnaffectedByLiveEvent(envelope) &&
@@ -245,16 +192,14 @@ export async function patchAdminTableLiveEvent(
   }
 
   const tableId = envelope.scope.table_id!;
-  const isCurrent = tablesFence.capture();
+  const isCurrent = captureAdminTablesFence();
   const eventTime = Date.parse(envelope.ts);
   if (isNaN(eventTime)) return;
 
-  const lastTime = latestTableEventTimestamps.get(tableId);
-  if (lastTime !== undefined && eventTime < lastTime) return;
-  latestTableEventTimestamps.set(tableId, eventTime);
+  if (!lifecycle.claimEvent(tableId, eventTime)) return;
 
   if (envelope.action === "deleted") {
-    await writeToActiveCollections((collection) => deleteIfPresent(collection, tableId));
+    await lifecycle.writeToActive((collection) => lifecycle.deleteIfPresent(collection, tableId));
     return;
   }
 
@@ -263,8 +208,7 @@ export async function patchAdminTableLiveEvent(
   // Sign-out or a collection swap happened while the row was in flight.
   if (!isCurrent()) return;
 
-  const currentLastTime = latestTableEventTimestamps.get(tableId);
-  if (currentLastTime !== undefined && eventTime < currentLastTime) return;
+  if (!lifecycle.isLatestEvent(tableId, eventTime)) return;
 
-  await writeToActiveCollections((collection) => collection.utils.writeUpsert(table));
+  await lifecycle.writeToActive((collection) => collection.utils.writeUpsert(table));
 }
