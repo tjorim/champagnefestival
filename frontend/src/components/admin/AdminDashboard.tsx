@@ -119,6 +119,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     areasQuery,
     peopleQuery,
     membersQuery,
+    volunteersQuery,
+    peopleCollection,
     isAnyPending,
     isAnyFetching,
     registrationsQueryKey,
@@ -128,8 +130,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     layoutsQueryKey,
     exhibitorsQueryKey,
     areasQueryKey,
-    peopleQueryKey,
-    membersQueryKey,
     loadData: loadDataBase,
   } = useAdminQueries({
     visible,
@@ -153,6 +153,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const areas = areasQuery.data ?? [];
   const people = peopleQuery.data ?? [];
   const members = membersQuery.data ?? [];
+  const volunteers = volunteersQuery.data ?? [];
   const {
     activeDayIndex,
     activeEditionDateKeys,
@@ -161,7 +162,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     isActiveEditionDay,
     layoutDayOptions,
     registrationCountByPersonId,
-    volunteers,
   } = useAdminDashboardData({
     activeEdition,
     detailRegistration,
@@ -197,9 +197,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   } = useAdminPeopleActions({
     authHeaders,
     exhibitorsQueryKey,
-    membersQueryKey,
-    people,
-    peopleQueryKey,
+    peopleCollection,
     queryClient,
     registrationsQueryKey,
     setDetailRegistration,
@@ -310,9 +308,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // underlying query errors actually changes, not on every render.
   const dashboardQueryErrors = useMemo(
     (): (Error | null)[] => [
-      // registrationsQuery.error and tablesQuery.error come from the tanstack-db
-      // collections' lastError, typed loosely by the library; the other queries
-      // are plain react-query errors. Both are Error instances or null at runtime.
+      // The registrations, tables, people and members errors come from the
+      // tanstack-db collections' lastError, typed loosely by the library; the
+      // other queries are plain react-query errors. Both are Error instances or
+      // null at runtime.
       registrationsQuery.error as Error | null,
       tablesQuery.error as Error | null,
       venuesQuery.error,
@@ -321,8 +320,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       layoutsQuery.error,
       exhibitorsQuery.error,
       areasQuery.error,
-      peopleQuery.error,
-      membersQuery.error,
+      peopleQuery.error as Error | null,
     ],
     [
       registrationsQuery.error,
@@ -334,7 +332,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       exhibitorsQuery.error,
       areasQuery.error,
       peopleQuery.error,
-      membersQuery.error,
     ],
   );
 

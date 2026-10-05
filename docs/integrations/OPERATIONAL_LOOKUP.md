@@ -60,9 +60,9 @@ rows per page (an explicit `limit`, up to 1000, overrides it) whether or not
 a bare array — `total` lets a client tell when a page was truncated instead
 of rendering a partial result as if it were complete. Aggregate views that
 need the whole working set (per-event capacity, status/edition counts, the
-floor-plan editor's table occupancy) still request a large bounded page
-(`fetchAllRegistrations`, capped at 1000) rather than relying on this
-pagination.
+floor-plan editor's table occupancy) read every page
+(`fetchAllRegistrations`; 1000 rows is the page size, not a limit on how many
+registrations there can be) rather than relying on this pagination.
 
 ## MCP Consumers
 

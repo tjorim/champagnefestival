@@ -1,8 +1,8 @@
 # TanStack DB for admin/event-day operational state
 
-**Status:** Adopted for registrations and tables; other resources are open follow-ups (see [Roadmap](#roadmap))
+**Status:** Adopted for registrations, tables and people (members and volunteers are derived from people); other resources are open follow-ups (see [Roadmap](#roadmap))
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
-**Record updated:** 2026-10-05, [#1165](https://github.com/tjorim/champagnefestival/issues/1165)
+**Record updated:** 2026-10-05, [#1164](https://github.com/tjorim/champagnefestival/issues/1164)
 
 ---
 
@@ -149,6 +149,72 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   `loadData` refetches the collection through `utils.refetch()` and no
   `useQuery`/`setQueryData` path for tables remains.
 
+## People and members ([#1164](https://github.com/tjorim/champagnefestival/issues/1164))
+
+`people` is the third collection-backed domain; `members` and `volunteers` are views over it.
+
+- `frontend/src/state/adminPeopleCollection.ts`: `createAdminPeopleCollection`
+  builds one collection from `fetchPeople` (which merges the volunteer help
+  periods in) with `queryCollectionOptions` and `getKey: (person) => person.id`.
+  `useAdminQueries` reads it with `useLiveQuery` and exposes query-shaped
+  `peopleQuery`/`membersQuery` objects, so `AdminDashboard` reads them as before.
+- **Members and volunteers are derived, not stored.** A member (or volunteer) is a
+  person holding that role, so `membersQuery.data` is `selectMembers(people)` and
+  `volunteersQuery.data` is `selectVolunteers(people)`; both share the people
+  collection's loading and error state, and `AdminDashboard` no longer computes
+  volunteers itself. There is no members collection, no member-only fetch
+  (`fetchMembers` and `queryKeys.admin.members` are gone) and no member-sync code:
+  a person update, role change or delete reaches the members view by itself (rule 3
+  below: derive views instead of storing them twice). An earlier iteration of this
+  migration had a second collection kept in step by hand; that reintroduced the
+  multi-cache patching this issue set out to remove.
+- **No list cap.** `fetchPeople` reads every page of `/api/people` and
+  `/api/volunteers` (`fetchAllPersonPages`): the first page reveals the total and
+  the remaining pages are fetched concurrently. The backend's 1,000-row ceiling is
+  the page size, not a limit on how many people there can be, so the old
+  "showing N of M" warning is gone, and members and volunteers are complete by
+  construction (which is also why no role-filtered members request is needed).
+  Both lists are ordered deterministically, and rows are deduplicated by id in case
+  one is added mid-read. A people *search* (`fetchPeopleSearch`) stays one page: a
+  query matching more than a page is too broad to be useful, so it is reported
+  instead. It returns only the people that matched: help periods are attached to
+  matching volunteers (and the volunteer list is only fetched when one matched),
+  but volunteers who did not match are never added to the results. The registrations list is read the same way: `fetchAllRegistrations` (the registrations collection's `queryFn`) and the registration list's "select/export all matching" read every page through `fetchAllRegistrationPages`, so there is no cap or truncation warning there either.
+- **Writes are direct, not handlers.** The admin forms validate server-side, and
+  the server assigns ids and `updated_at`, so nothing is shown optimistically.
+  `useAdminPeopleActions` keeps one `useMutation` per API call and then calls an
+  `applyAdmin…` helper that writes the server's row into the collection (create,
+  update, delete, the volunteer variants, and merge, which removes the duplicate
+  and keeps the survivor's own help periods; a survivor the collection does not hold
+  yet is inserted, with a volunteer's help periods loaded from
+  `GET /api/volunteers/{id}`, or not inserted at all if that fails, so an empty list
+  is never shown as the real one). That replaces the roughly 22
+  `setQueryData` calls on the people and members keys. The registrations and
+  exhibitors copies of a person are still patched with `setQueryData` there (those
+  domains are out of scope here; see #1166).
+- **Refetch.** `usePeopleMutations`' `onSettled` calls `collection.utils.refetch()`
+  explicitly through `refetchAdminPeople`. The per-person queries nested under
+  the people key (`peopleRegistrations`, `peoplePaymentSummary`) share its prefix
+  but are plain queries, so `invalidateAdminPersonDetailQueries` invalidates them
+  with a depth predicate; invalidating the bare key would refetch the collection a
+  second time.
+- **Session fence and reset.** Each action captures `captureAdminPeopleFence()`
+  before its request. The collection helpers drop the write if it moved, and the
+  actions check it again before patching the registrations and exhibitors caches
+  and the open registration detail, so a response from an earlier session never
+  reaches the next session's rows. The fence moves on sign-out
+  (`resetAdminPeopleCollection`) and on collection swaps (`registerAdminPeopleCollection`).
+  A local write that fails after the server committed (for example a
+  collection whose sync stopped) is not reported as a failed action; the refetch
+  reconciles. `isAuthenticated` turning false empties the collection and removes
+  the people query key (and the nested per-person queries).
+- **Keys.** `"people"` is no longer in `ADMIN_RESOURCE_KEYS`; `loadData` refetches
+  the collection through `refetchAdminPeople`, and no `useQuery`/`setQueryData`
+  path for people or members remains.
+- **No live events.** The stream carries no people topic today, so there is no
+  live patching or timestamp map for this collection.
+- Retry-safety decisions are in `docs/retry-safety.md`.
+
 ## Rules that still apply
 
 These come from #442 and apply to every further migration:
@@ -192,14 +258,24 @@ Installed versions: `@tanstack/db` 0.11.3, `@tanstack/react-db` ^0.5.3,
 
 ## Roadmap
 
-| Follow-up | Issue |
-| --- | --- |
-| Migrate `people` and `members` (fixes the up-to-four-cache person update) | [#1164](https://github.com/tjorim/champagnefestival/issues/1164) |
-| Migrate venues, rooms, areas, layouts and table types as a group, then exhibitors after #1164; extract a shared collection factory (registration, sign-out reset, session fence, guarded writes) first. Default is migrate; staying on Query needs a stated reason | [#1166](https://github.com/tjorim/champagnefestival/issues/1166) |
-| Await write receipts in registration live-event patching | [#1167](https://github.com/tjorim/champagnefestival/issues/1167) |
-| Explore persisted collections for event-day resilience (privacy, staleness, offline) | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
+Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR #1173) has merged. The server-driven tables work is the epic [#1174](https://github.com/tjorim/champagnefestival/issues/1174); its sub-issues are listed in dependency order.
 
-The per-resource decisions from #1166 will be recorded in this file when made; the default is to migrate.
+| Order | Follow-up | Issue |
+| --- | --- | --- |
+| 1 | Extract a shared collection factory (registration, sign-out reset, session fence, guarded writes) with a selectable sync mode, then migrate venues, rooms, areas, layouts and table types as a group, then exhibitors (people and members are done, see [above](#people-and-members-1164)). Default is migrate; staying on Query needs a stated reason | [#1166](https://github.com/tjorim/champagnefestival/issues/1166) |
+| 2 | Spike and decision: on-demand collection sync or Query with `keepPreviousData`, plus the data scope for registrations and the full-people-list consumers. Read-only; may run in parallel with order 1 | [#1175](https://github.com/tjorim/champagnefestival/issues/1175) |
+| 2 | Backend: shared paged list contract (sort, filters, deterministic order, indexes) for people and volunteers. May start with the spike | [#1176](https://github.com/tjorim/champagnefestival/issues/1176) |
+| 3 | Persisted collections for event-day resilience (privacy, staleness, offline). Taken after the spike, because a partial on-demand cache must not be persisted as if complete; its privacy question can proceed earlier | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
+| 4 | Backend: counts, registration count per person, duplicate-email lookup and exports for people and volunteers | [#1177](https://github.com/tjorim/champagnefestival/issues/1177) |
+| 4 | Server-driven data layer for the people collection | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
+| 4 | `AdminDataTable` on TanStack Table manual mode | [#1180](https://github.com/tjorim/champagnefestival/issues/1180) |
+| 5 | Optimistic edit and delete handlers with pending state for people | [#1179](https://github.com/tjorim/champagnefestival/issues/1179) |
+| 6 | Move Members, Volunteers and People onto `AdminDataTable` and the server contract | [#1181](https://github.com/tjorim/champagnefestival/issues/1181) |
+| 6 | Scope the registrations collection; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
+
+Done: [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
+
+The per-resource decisions from #1166 and the on-demand decision from #1175 will be recorded in this file when made; the default for #1166 is to migrate.
 
 ## References
 
@@ -209,6 +285,7 @@ The per-resource decisions from #1166 will be recorded in this file when made; t
 - Live-update stream: [#446](https://github.com/tjorim/champagnefestival/issues/446)
 - `frontend/src/state/adminRegistrationsCollection.ts`
 - `frontend/src/state/adminTablesCollection.ts`, `frontend/src/state/tableOccupancy.ts`
+- `frontend/src/state/adminPeopleCollection.ts`
 - `frontend/src/hooks/useAdminQueries.ts`
 - `frontend/src/state/LiveUpdatesProvider.tsx`
 - `frontend/src/hooks/useAdminRegistrationActions.ts`: current registration write

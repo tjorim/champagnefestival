@@ -42,6 +42,7 @@ import {
   apiLayoutRevisionToLayoutRevision,
   apiLayoutRevisionDiffToLayoutRevisionDiff,
   apiLayoutRestorePreviewToLayoutRestorePreview,
+  attachVolunteerDetails,
   mergePeopleWithVolunteers,
 } from "@/utils/adminApiMappers";
 
@@ -133,28 +134,51 @@ export async function fetchRegistrationsPage(
   };
 }
 
+// The backend caps one registrations page at 1000 rows (`Pagination`). That is a
+// page size, not a limit on how many registrations there can be.
+const REGISTRATIONS_PAGE_SIZE = 1000;
+
+/**
+ * Reads every page of the registrations matching `options` (concurrently once
+ * the first page reveals the total) and deduplicates by id. The backend orders
+ * the list deterministically (newest first, then id), so pages do not overlap
+ * unless a row is added mid-read.
+ */
+export async function fetchAllRegistrationPages(
+  authHeaders: () => Record<string, string>,
+  options: Omit<RegistrationsPageOptions, "limit" | "page"> = {},
+): Promise<Registration[]> {
+  const first = await fetchRegistrationsPage(authHeaders, {
+    ...options,
+    limit: REGISTRATIONS_PAGE_SIZE,
+    page: 1,
+  });
+  const pageCount = Math.ceil(first.total / REGISTRATIONS_PAGE_SIZE);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+      fetchRegistrationsPage(authHeaders, {
+        ...options,
+        limit: REGISTRATIONS_PAGE_SIZE,
+        page: index + 2,
+      }),
+    ),
+  );
+  const byId = new Map<string, Registration>();
+  for (const { registrations } of [first, ...rest]) {
+    for (const registration of registrations) byId.set(registration.id, registration);
+  }
+  return [...byId.values()];
+}
+
 // LayoutEditor's floor-plan occupancy and the dashboard's status/edition/capacity
 // aggregates genuinely need the complete working set (they summarize across every
-// registration, not one page of it) — same reasoning as fetchPeople's full pull
-// below. ADMIN_REGISTRATIONS_FULL_LIST_LIMIT mirrors backend/app/routers/registrations.py's
-// Pagination ceiling so the request is bounded (not literally unlimited) while
-// still covering any realistic guest list. The registrations *table* itself does
-// not use this — see fetchRegistrationsPage, used directly by RegistrationList.
-export const ADMIN_REGISTRATIONS_FULL_LIST_LIMIT = 1000;
-
-export async function fetchAllRegistrations(
+// registration, not one page of it), so this reads every page. The registrations
+// *table* itself does not use this — see fetchRegistrationsPage, used directly by
+// RegistrationList.
+export function fetchAllRegistrations(
   authHeaders: () => Record<string, string>,
 ): Promise<Registration[]> {
-  const { registrations, total } = await fetchRegistrationsPage(authHeaders, {
-    limit: ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
-  });
-  if (total > registrations.length) {
-    devError(
-      `Admin registrations dashboard is showing ${registrations.length} of ${total} registrations; ` +
-        "raise ADMIN_REGISTRATIONS_FULL_LIST_LIMIT or add server-side pagination to the admin table.",
-    );
-  }
-  return registrations;
+  return fetchAllRegistrationPages(authHeaders);
 }
 
 export async function fetchRegistration(
@@ -432,14 +456,13 @@ interface PersonListEnvelope {
 // GET /api/people and /api/volunteers page like GET /api/registrations (see
 // backend/app/routers/{people,volunteers}.py) — {items, total, limit, page}.
 // GET /api/members doesn't exist (retired — it was functionally identical to
-// /api/people?role=member; see backend/app/routers/members.py), so the
-// member list is read through /api/people?role=member instead. Unlike the
-// registrations table, the People/Volunteers/Members admin tabs are still
+// /api/people?role=member; see backend/app/routers/members.py); members are the
+// people holding the member role. The People/Volunteers/Members admin tabs are
 // full client-side tables (see PeopleManagement/VolunteersManagement/
-// MembersManagement), so instead of real server-side pagination we fetch one
-// bounded "everything" page and warn loudly if it was ever truncated,
-// mirroring fetchAllRegistrations.
-export const PEOPLE_FULL_LIST_LIMIT = 1000;
+// MembersManagement), so `fetchAllPersonPages` reads every page. The backend
+// caps one page at 1000 rows (`Pagination`), which is the page size here, not a
+// limit on how many people there can be.
+const PERSON_PAGE_SIZE = 1000;
 
 async function fetchPersonListEnvelope(
   url: string,
@@ -465,47 +488,83 @@ async function fetchPersonListEnvelope(
   return { people: payload.items.map(apiToPerson), total: payload.total };
 }
 
-function warnIfPersonListTruncated(label: string, count: number, total: number): void {
-  if (total > count) {
-    devError(
-      `Admin ${label} fetch is showing ${count} of ${total}; raise PEOPLE_FULL_LIST_LIMIT or add server-side pagination.`,
-    );
+/**
+ * Reads every page of a person list endpoint. Pages are fetched concurrently
+ * once the first one reveals the total. The backend orders both lists
+ * deterministically (newest first, then id), so pages do not overlap unless a
+ * row is added mid-read, and the result is deduplicated by id for that case.
+ */
+async function fetchAllPersonPages(
+  path: string,
+  authHeaders: () => Record<string, string>,
+): Promise<Person[]> {
+  const separator = path.includes("?") ? "&" : "?";
+  const pageUrl = (page: number) => `${path}${separator}limit=${PERSON_PAGE_SIZE}&page=${page}`;
+  const first = await fetchPersonListEnvelope(pageUrl(1), authHeaders);
+  const pageCount = Math.ceil(first.total / PERSON_PAGE_SIZE);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+      fetchPersonListEnvelope(pageUrl(index + 2), authHeaders),
+    ),
+  );
+  const byId = new Map<string, Person>();
+  for (const { people } of [first, ...rest]) {
+    for (const person of people) byId.set(person.id, person);
   }
+  return [...byId.values()];
 }
 
+/**
+ * People matching a search. A search is one page by design: a query that
+ * matches more than a page is too broad to be useful, so that is reported
+ * rather than paged through. Volunteer details (help periods) are attached to
+ * the matches that hold the volunteer role; volunteers who did not match the
+ * query are not added, and the volunteer list is not fetched at all when no
+ * match is a volunteer.
+ */
 export async function fetchPeopleSearch(
   authHeaders: () => Record<string, string>,
   query: string,
 ): Promise<Person[]> {
-  const [peopleResult, volunteersResult] = await Promise.all([
-    fetchPersonListEnvelope(
-      `/api/people?q=${encodeURIComponent(query.trim())}&limit=${PEOPLE_FULL_LIST_LIMIT}`,
-      authHeaders,
-    ),
-    fetchPersonListEnvelope(`/api/volunteers?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
-  ]);
-  warnIfPersonListTruncated("people search", peopleResult.people.length, peopleResult.total);
-  warnIfPersonListTruncated("volunteers", volunteersResult.people.length, volunteersResult.total);
-  return mergePeopleWithVolunteers(peopleResult.people, volunteersResult.people);
-}
-
-export async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  const [peopleResult, volunteersResult] = await Promise.all([
-    fetchPersonListEnvelope(`/api/people?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
-    fetchPersonListEnvelope(`/api/volunteers?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
-  ]);
-  warnIfPersonListTruncated("people", peopleResult.people.length, peopleResult.total);
-  warnIfPersonListTruncated("volunteers", volunteersResult.people.length, volunteersResult.total);
-  return mergePeopleWithVolunteers(peopleResult.people, volunteersResult.people);
-}
-
-export async function fetchMembers(authHeaders: () => Record<string, string>): Promise<Person[]> {
   const result = await fetchPersonListEnvelope(
-    `/api/people?role=member&limit=${PEOPLE_FULL_LIST_LIMIT}`,
+    `/api/people?q=${encodeURIComponent(query.trim())}&limit=${PERSON_PAGE_SIZE}`,
     authHeaders,
   );
-  warnIfPersonListTruncated("members", result.people.length, result.total);
-  return result.people;
+  if (result.total > result.people.length) {
+    devError(
+      `Admin people search matched ${result.total} people but only the first ` +
+        `${result.people.length} are shown; narrow the query.`,
+    );
+  }
+  if (!result.people.some((person) => person.roles.includes("volunteer"))) return result.people;
+  const volunteers = await fetchAllPersonPages("/api/volunteers", authHeaders);
+  return attachVolunteerDetails(result.people, volunteers);
+}
+
+/**
+ * Every person, with volunteer help periods merged in. All pages are read, so
+ * members (the people holding the member role) and volunteers are complete
+ * however many people there are.
+ */
+export async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
+  const [people, volunteers] = await Promise.all([
+    fetchAllPersonPages("/api/people", authHeaders),
+    fetchAllPersonPages("/api/volunteers", authHeaders),
+  ]);
+  return mergePeopleWithVolunteers(people, volunteers);
+}
+
+/** One volunteer with their help periods (`GET /api/volunteers/{id}`). */
+export async function fetchVolunteer(
+  id: string,
+  authHeaders: () => Record<string, string>,
+): Promise<Person> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/volunteers/${encodeURIComponent(id)}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+  return apiToPerson(payload);
 }
 
 export interface AuditEntryFilters {

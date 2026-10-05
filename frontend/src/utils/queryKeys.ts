@@ -54,7 +54,6 @@ export const queryKeys = {
     exhibitors: ["admin", "exhibitors"] as const,
     areas: ["admin", "areas"] as const,
     people: ["admin", "people"] as const,
-    members: ["admin", "members"] as const,
     activeEditionEvents: ["admin", "active-edition", "events"] as const,
     personOptions: (query: string) => ["admin", "person-options", query] as const,
     personOptionsRoot: ["admin", "person-options"] as const,

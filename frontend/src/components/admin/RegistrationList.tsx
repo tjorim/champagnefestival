@@ -58,9 +58,9 @@ import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import {
-  ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
   downloadRegistrationsCsv,
   fetchEventCheckInStats,
+  fetchAllRegistrationPages,
   fetchRegistrationsPage,
   type RegistrationSortKey,
 } from "@/utils/adminFetch";
@@ -466,22 +466,10 @@ export default function RegistrationList({
     pageRegistrations.every((r) => selectedIds.has(r.id));
 
   // Fetches every registration matching the current filters (not just the
-  // current page), bounded the same way fetchAllRegistrations is — used by
-  // "export all matching" and by the "select all N matching" bulk action.
+  // current page), reading all pages — used by "export all matching" and by the
+  // "select all N matching" bulk action.
   const fetchAllMatchingRegistrations = useCallback(async (): Promise<Registration[]> => {
-    const { registrations: matched, total: matchedTotal } = await fetchRegistrationsPage(
-      authHeaders,
-      {
-        ...currentFilterParams,
-        limit: ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
-      },
-    );
-    if (matchedTotal > matched.length) {
-      devError(
-        `Bulk selection/export is covering ${matched.length} of ${matchedTotal} matching registrations; ` +
-          "raise ADMIN_REGISTRATIONS_FULL_LIST_LIMIT if this recurs.",
-      );
-    }
+    const matched = await fetchAllRegistrationPages(authHeaders, currentFilterParams);
     return matched.map((r) => registrationsById.get(r.id) ?? r);
   }, [authHeaders, currentFilterParams, registrationsById]);
 

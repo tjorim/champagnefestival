@@ -7,6 +7,14 @@ import {
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
 import {
+  createAdminPeopleCollection,
+  refetchAdminPeople,
+  registerAdminPeopleCollection,
+  resetAdminPeopleCollection,
+  selectMembers,
+  selectVolunteers,
+} from "@/state/adminPeopleCollection";
+import {
   createAdminTablesCollection,
   refetchAdminTables,
   registerAdminTablesCollection,
@@ -21,8 +29,6 @@ import {
   fetchLayouts,
   fetchExhibitors,
   fetchAreas,
-  fetchPeople,
-  fetchMembers,
 } from "@/utils/adminFetch";
 
 interface UseAdminQueriesOptions {
@@ -32,9 +38,9 @@ interface UseAdminQueriesOptions {
   authHeaders: () => Record<string, string>;
 }
 
-// "tables" is deliberately absent: it is served by the admin tables collection,
-// which is refetched through its own utils (see `loadData`), never by a
-// standalone query.
+// "tables" and "people" are deliberately absent: they are served by
+// collections, which are refetched through their own utils (see `loadData`),
+// never by a standalone query.
 export const ADMIN_RESOURCE_KEYS = [
   "registrations",
   "venues",
@@ -43,8 +49,6 @@ export const ADMIN_RESOURCE_KEYS = [
   "layouts",
   "exhibitors",
   "areas",
-  "people",
-  "members",
 ] as const;
 
 export const ADMIN_ONLY_RESOURCE_KEYS = ADMIN_RESOURCE_KEYS.filter(
@@ -99,8 +103,6 @@ export function useAdminQueries({
   const layoutsQueryKey = queryKeys.admin.layouts;
   const exhibitorsQueryKey = queryKeys.admin.exhibitors;
   const areasQueryKey = queryKeys.admin.areas;
-  const peopleQueryKey = queryKeys.admin.people;
-  const membersQueryKey = queryKeys.admin.members;
 
   const registrationsQueryOptions = {
     enabled: visible && isAuthenticated,
@@ -168,6 +170,40 @@ export function useAdminQueries({
     isFetching: tablesCollection.utils.isFetching,
   };
 
+  const peopleCollection = useMemo(
+    () =>
+      createAdminPeopleCollection({
+        queryClient,
+        authHeaders,
+        enabled: adminQueryOptions.enabled,
+      }),
+    [adminQueryOptions.enabled, authHeaders, queryClient],
+  );
+  const peopleLiveQuery = useLiveQuery(() => peopleCollection, [peopleCollection]);
+  const peopleCollectionRef = useRef(peopleCollection);
+  useEffect(() => {
+    peopleCollectionRef.current = peopleCollection;
+  }, [peopleCollection]);
+  useEffect(() => registerAdminPeopleCollection(), [peopleCollection]);
+  const peopleQuery = {
+    data: peopleLiveQuery.data,
+    error: peopleCollection.utils.lastError ?? null,
+    isPending: peopleLiveQuery.isLoading,
+    isFetching: peopleCollection.utils.isFetching,
+  };
+  // Members and volunteers are views over the people rows, never second copies.
+  // They share the people collection's loading and error state.
+  const membersData = useMemo(
+    () => selectMembers(peopleLiveQuery.data ?? []),
+    [peopleLiveQuery.data],
+  );
+  const volunteersData = useMemo(
+    () => selectVolunteers(peopleLiveQuery.data ?? []),
+    [peopleLiveQuery.data],
+  );
+  const membersQuery = { ...peopleQuery, data: membersData };
+  const volunteersQuery = { ...peopleQuery, data: volunteersData };
+
   useEffect(() => {
     if (isAuthenticated) return;
     // The cached queries are removed right below, so a failed reset needs no extra handling.
@@ -175,8 +211,11 @@ export function useAdminQueries({
       () => undefined,
     );
     void resetAdminTablesCollection(tablesCollectionRef.current).catch(() => undefined);
+    void resetAdminPeopleCollection(peopleCollectionRef.current).catch(() => undefined);
     void queryClient.removeQueries({ queryKey: registrationsQueryKey });
     void queryClient.removeQueries({ queryKey: queryKeys.admin.tables });
+    // Also removes the per-person queries nested under the people key.
+    void queryClient.removeQueries({ queryKey: queryKeys.admin.people });
   }, [isAuthenticated, queryClient, registrationsQueryKey]);
   const venuesQuery = useQuery({
     queryKey: venuesQueryKey,
@@ -208,17 +247,6 @@ export function useAdminQueries({
     queryFn: () => fetchAreas(authHeaders),
     ...adminQueryOptions,
   });
-  const peopleQuery = useQuery({
-    queryKey: peopleQueryKey,
-    queryFn: () => fetchPeople(authHeaders),
-    ...adminQueryOptions,
-  });
-  const membersQuery = useQuery({
-    queryKey: membersQueryKey,
-    queryFn: () => fetchMembers(authHeaders),
-    ...adminQueryOptions,
-  });
-
   const allQueries = [
     registrationsQuery,
     ...(canManageAdminSections
@@ -231,7 +259,6 @@ export function useAdminQueries({
           exhibitorsQuery,
           areasQuery,
           peopleQuery,
-          membersQuery,
         ]
       : []),
   ];
@@ -245,8 +272,9 @@ export function useAdminQueries({
           }),
       }),
       canManageAdminSections ? refetchAdminTables(tablesCollection) : undefined,
+      canManageAdminSections ? refetchAdminPeople(peopleCollection) : undefined,
     ]);
-  }, [canManageAdminSections, queryClient, tablesCollection]);
+  }, [canManageAdminSections, peopleCollection, queryClient, tablesCollection]);
 
   return {
     // Query objects (for error/loading state access)
@@ -261,6 +289,8 @@ export function useAdminQueries({
     areasQuery,
     peopleQuery,
     membersQuery,
+    volunteersQuery,
+    peopleCollection,
     // Derived booleans
     isAnyPending: allQueries.some((q) => q.isPending),
     isAnyFetching: allQueries.some((q) => q.isFetching),
@@ -272,8 +302,6 @@ export function useAdminQueries({
     layoutsQueryKey,
     exhibitorsQueryKey,
     areasQueryKey,
-    peopleQueryKey,
-    membersQueryKey,
     // Refetch all
     loadData,
   };

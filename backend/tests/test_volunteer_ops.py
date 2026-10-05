@@ -333,3 +333,78 @@ async def test_volunteer_table_order_lookup_returns_candidates_for_ambiguous_ref
 async def test_volunteer_table_resolution_requires_authentication(unauth_client):
     r = await unauth_client.get("/api/volunteer/tables/resolve", params={"reference": "12"})
     assert r.status_code in {401, 403}
+
+
+async def _bulk_registrations(db_session, *, event_id: str, count: int, name_prefix: str) -> list[str]:
+    """Insert plain registrations directly (a request each would be slow at this volume)."""
+    from app.models import Person, Registration
+
+    ids = []
+    for index in range(count):
+        person = Person(id=f"{name_prefix}-person-{index:04d}", name=f"{name_prefix} {index:04d}")
+        db_session.add(person)
+        registration = Registration(
+            id=f"{name_prefix}-reg-{index:04d}",
+            event_id=event_id,
+            person_id=person.id,
+            guest_count=1,
+            order_items=[],
+            check_in_token=f"{name_prefix}-tok-{index:04d}",
+        )
+        db_session.add(registration)
+        ids.append(registration.id)
+    await db_session.commit()
+    return ids
+
+
+@pytest.mark.anyio
+async def test_volunteer_order_filters_find_guests_beyond_the_first_250_by_name(client, db_session):
+    # The target sorts after 300 earlier guests, none of whom have an order. A
+    # candidate cap applied before the order filters would drop it silently.
+    target = await _post_registration_with_order(client, quantity=1)
+    assert target.status_code == 201
+    event_id = target.json()["event_id"]
+    await _bulk_registrations(db_session, event_id=event_id, count=300, name_prefix="Aaa")
+
+    r = await client.get(
+        "/api/volunteer/registrations",
+        params={"event_id": event_id, "order_category": "champagne", "delivery_state": "pending"},
+    )
+
+    assert r.status_code == 200
+    assert [row["id"] for row in r.json()] == [target.json()["id"]]
+
+
+@pytest.mark.anyio
+async def test_volunteer_search_pages_past_the_first_250_guests(client, db_session):
+    target = await _post_registration_with_order(client, quantity=1)
+    event_id = target.json()["event_id"]
+    ids = await _bulk_registrations(db_session, event_id=event_id, count=300, name_prefix="Bbb")
+
+    seen: list[str] = []
+    for page in range(1, 9):
+        r = await client.get("/api/volunteer/registrations", params={"event_id": event_id, "limit": 50, "page": page})
+        assert r.status_code == 200
+        seen.extend(row["id"] for row in r.json())
+
+    assert set(seen) == {*ids, target.json()["id"]}
+
+
+@pytest.mark.anyio
+async def test_volunteer_table_orders_list_every_registration_on_the_table(client, db_session):
+    from app.models import RegistrationAllocation
+
+    first = await _post_registration_with_order(client, quantity=1)
+    event_id = first.json()["event_id"]
+    table_id = await _create_table(client, name="table-30", event_id=event_id)
+    ids = await _bulk_registrations(db_session, event_id=event_id, count=30, name_prefix="Ccc")
+    for registration_id in ids:
+        db_session.add(RegistrationAllocation(registration_id=registration_id, table_id=table_id, guest_count=1))
+    await db_session.commit()
+
+    r = await client.get("/api/volunteer/table-orders", params={"table_id": table_id})
+
+    assert r.status_code == 200
+    payload = r.json()
+    assert payload["count"] == 30
+    assert {row["id"] for row in payload["registrations"]} == set(ids)

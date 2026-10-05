@@ -16,10 +16,8 @@ import {
   apiAreaToArea,
   mergeVolunteerPerson,
   mergePeopleWithVolunteers,
+  attachVolunteerDetails,
   mergePersonUpdate,
-  replacePersonById,
-  replaceVolunteerById,
-  syncMembersWithPerson,
 } from "./adminApiMappers";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -599,81 +597,31 @@ describe("mergePersonUpdate", () => {
   });
 });
 
-// ─── replacePersonById ────────────────────────────────────────────────────────
+// ─── attachVolunteerDetails ───────────────────────────────────────────────────
 
-describe("replacePersonById", () => {
-  it("replaces the person with matching id", () => {
-    const p1 = makePerson({ id: "p1", name: "Alice" });
-    const p2 = makePerson({ id: "p2", name: "Bob" });
-    const updated = makePerson({ id: "p1", name: "Alice Updated" });
-    const result = replacePersonById([p1, p2], updated);
-    expect(result[0]?.name).toBe("Alice Updated");
-    expect(result[1]?.name).toBe("Bob");
+describe("attachVolunteerDetails", () => {
+  it("adds help periods to a matching volunteer and leaves other rows untouched", () => {
+    const helpPeriods = [{ id: 1, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" }];
+    const person = makePerson({ id: "p1", roles: ["volunteer"] });
+    const other = makePerson({ id: "p2", roles: ["member"] });
+
+    const result = attachVolunteerDetails(
+      [person, other],
+      [makePerson({ id: "p1", roles: ["volunteer"], helpPeriods })],
+    );
+
+    expect(result[0]?.helpPeriods).toEqual(helpPeriods);
+    expect(result[1]).toBe(other);
   });
 
-  it("returns original people when no id matches", () => {
-    const p1 = makePerson({ id: "p1" });
-    const updated = makePerson({ id: "p99" });
-    const result = replacePersonById([p1], updated);
-    expect(result[0]).toBe(p1);
-  });
-
-  it("returns a new array (immutability)", () => {
-    const people = [makePerson({ id: "p1" })];
-    const result = replacePersonById(people, makePerson({ id: "p1" }));
-    expect(result).not.toBe(people);
-  });
-});
-
-// ─── replaceVolunteerById ─────────────────────────────────────────────────────
-
-describe("replaceVolunteerById", () => {
-  it("merges the volunteer into the matching person", () => {
+  it("never adds a volunteer that is not already in the list", () => {
     const person = makePerson({ id: "p1", roles: ["member"] });
-    const updatedVolunteer = makePerson({ id: "p1", roles: ["volunteer"] });
-    const result = replaceVolunteerById([person], updatedVolunteer);
-    expect(result[0]?.roles).toContain("volunteer");
-    expect(result[0]?.roles).toContain("member");
-  });
 
-  it("does not modify non-matching entries", () => {
-    const p1 = makePerson({ id: "p1" });
-    const p2 = makePerson({ id: "p2" });
-    const updatedVolunteer = makePerson({ id: "p1", roles: ["volunteer"] });
-    const result = replaceVolunteerById([p1, p2], updatedVolunteer);
-    expect(result[1]).toBe(p2);
-  });
-});
+    const result = attachVolunteerDetails(
+      [person],
+      [makePerson({ id: "v9", roles: ["volunteer"] })],
+    );
 
-// ─── syncMembersWithPerson ────────────────────────────────────────────────────
-
-describe("syncMembersWithPerson", () => {
-  it("removes the person from members when updated person has no member role", () => {
-    const member = makePerson({ id: "p1", roles: ["member"] });
-    const updated = makePerson({ id: "p1", roles: [] });
-    const result = syncMembersWithPerson([member], updated);
-    expect(result).toHaveLength(0);
-  });
-
-  it("prepends person when they are a new member not yet in the list", () => {
-    const existing = makePerson({ id: "p2", roles: ["member"] });
-    const newMember = makePerson({ id: "p1", roles: ["member"] });
-    const result = syncMembersWithPerson([existing], newMember);
-    expect(result).toHaveLength(2);
-    expect(result[0]?.id).toBe("p1");
-  });
-
-  it("updates the existing member record in place when already present", () => {
-    const member = makePerson({ id: "p1", name: "Old Name", roles: ["member"] });
-    const updated = makePerson({ id: "p1", name: "New Name", roles: ["member"] });
-    const result = syncMembersWithPerson([member], updated);
-    expect(result).toHaveLength(1);
-    expect(result[0]?.name).toBe("New Name");
-  });
-
-  it("returns a new array (immutability)", () => {
-    const members = [makePerson({ id: "p1", roles: ["member"] })];
-    const updated = makePerson({ id: "p1", roles: ["member"] });
-    expect(syncMembersWithPerson(members, updated)).not.toBe(members);
+    expect(result.map((p) => p.id)).toEqual(["p1"]);
   });
 });

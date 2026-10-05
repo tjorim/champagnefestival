@@ -3,14 +3,19 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import { server } from "@/mocks/server";
+import type { AdminPeopleCollection } from "@/state/adminPeopleCollection";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 describe("usePeopleMutations", () => {
-  it("wires create person requests and invalidates people/member keys", async () => {
+  it("wires create person requests and refetches the people collection", async () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const invalidateQueries = vi
       .spyOn(queryClient, "invalidateQueries")
       .mockResolvedValue(undefined);
+    const refetchPeople = vi.fn().mockResolvedValue(undefined);
+    const peopleCollection = {
+      utils: { refetch: refetchPeople },
+    } as unknown as AdminPeopleCollection;
     const seen = {
       authorization: "",
       body: {} as Record<string, unknown>,
@@ -32,8 +37,7 @@ describe("usePeopleMutations", () => {
             "Content-Type": "application/json",
             Authorization: "Bearer test-token",
           }),
-          peopleQueryKey: ["admin", "people"],
-          membersQueryKey: ["admin", "members"],
+          peopleCollection,
           registrationsQueryKey: ["admin", "registrations"],
           exhibitorsQueryKey: ["admin", "exhibitors"],
         }),
@@ -65,8 +69,14 @@ describe("usePeopleMutations", () => {
       active: true,
     });
     await waitFor(() => {
-      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["admin", "people"] });
-      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["admin", "members"] });
+      expect(refetchPeople).toHaveBeenCalledTimes(1);
     });
+    // The per-person queries nested under the people key are still invalidated,
+    // but never the collection's own key: that is refetched explicitly.
+    const calls = invalidateQueries.mock.calls.map(([filters]) => filters);
+    expect(calls).not.toContainEqual({ queryKey: ["admin", "people"] });
+    expect(calls).toContainEqual(
+      expect.objectContaining({ queryKey: ["admin", "people"], predicate: expect.any(Function) }),
+    );
   });
 });

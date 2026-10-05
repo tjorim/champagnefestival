@@ -131,8 +131,26 @@ async def test_outbox_diagnostics_list_jobs_without_deduplication_key(client, db
     await _enqueue(db_session, "reg-visible")
     response = await client.get("/api/outbox?state=pending")
     assert response.status_code == 200
-    assert response.json()[0]["resource_id"] == "reg-visible"
-    assert "deduplication_key" not in response.json()[0]
+    body = response.json()
+    assert (body["total"], body["page"]) == (1, 1)
+    assert body["items"][0]["resource_id"] == "reg-visible"
+    assert "deduplication_key" not in body["items"][0]
+
+
+@pytest.mark.anyio
+async def test_outbox_diagnostics_page_through_every_job(client, db_session):
+    for index in range(5):
+        await _enqueue(db_session, f"reg-{index}")
+
+    first = (await client.get("/api/outbox", params={"limit": 2, "page": 1})).json()
+    second = (await client.get("/api/outbox", params={"limit": 2, "page": 2})).json()
+    third = (await client.get("/api/outbox", params={"limit": 2, "page": 3})).json()
+
+    # `total` reports every job, so a client can tell the first page was partial.
+    assert [first["total"], second["total"], third["total"]] == [5, 5, 5]
+    ids = [job["id"] for page in (first, second, third) for job in page["items"]]
+    assert len(ids) == 5
+    assert len(set(ids)) == 5
 
 
 @pytest.mark.anyio

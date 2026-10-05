@@ -64,11 +64,6 @@ export function useAdminDashboardData({
     return Object.fromEntries(people.map((person) => [person.id, counts[person.id] ?? 0]));
   }, [people, registrations]);
 
-  const volunteers = useMemo(
-    () => people.filter((person) => person.roles.includes("volunteer")),
-    [people],
-  );
-
   const emailDuplicates = useMemo(() => {
     if (!detailRegistration || !detailRegistration.person.email) return [];
     const personEmail = detailRegistration.person.email.toLowerCase();
@@ -91,6 +86,5 @@ export function useAdminDashboardData({
     layoutDayOptions,
     registrationCountByPersonId,
     todayKey,
-    volunteers,
   };
 }
