@@ -3,6 +3,7 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
 import { server } from "@/mocks/server";
+import { createAdminTablesCollection } from "@/state/adminTablesCollection";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 describe("useVenueMutations", () => {
@@ -32,7 +33,11 @@ describe("useVenueMutations", () => {
             "Content-Type": "application/json",
             Authorization: "Bearer test-token",
           }),
-          tablesQueryKey: ["admin", "tables"],
+          tablesCollection: createAdminTablesCollection({
+            queryClient,
+            authHeaders: () => ({}),
+            enabled: false,
+          }),
           venuesQueryKey: ["admin", "venues"],
           roomsQueryKey: ["admin", "rooms"],
           tableTypesQueryKey: ["admin", "table-types"],

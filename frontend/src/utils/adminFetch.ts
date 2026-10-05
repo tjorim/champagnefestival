@@ -1,6 +1,6 @@
 import type {
   Room,
-  FloorTable,
+  FloorTableRecord,
   FloorArea,
   TableType,
   Layout,
@@ -24,6 +24,7 @@ import {
   downloadFileOrThrow,
   fetchArrayOrThrow,
   fetchJsonOrThrowWithUnauthorized,
+  fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
 import { devError } from "@/utils/devLog";
@@ -170,13 +171,102 @@ export async function fetchRegistration(
 
 export async function fetchTables(
   authHeaders: () => Record<string, string>,
-): Promise<FloorTable[]> {
+): Promise<FloorTableRecord[]> {
   const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
     "/api/tables",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
   return Array.isArray(payload) ? payload.map(apiTableToTable) : [];
+}
+
+export async function fetchTable(
+  tableId: string,
+  authHeaders: () => Record<string, string>,
+): Promise<FloorTableRecord> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/tables/${encodeURIComponent(tableId)}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+  return apiTableToTable(payload);
+}
+
+export interface TableCreateInput {
+  name: string;
+  layoutId: string;
+  tableTypeId: string;
+}
+
+export async function createTable(
+  authHeaders: () => Record<string, string>,
+  { name, layoutId, tableTypeId }: TableCreateInput,
+): Promise<FloorTableRecord> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    "/api/tables",
+    {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        name,
+        x: 10,
+        y: 10,
+        rotation: 0,
+        layout_id: layoutId,
+        table_type_id: tableTypeId,
+      }),
+    },
+    m.admin_error_add_table(),
+  );
+  return apiTableToTable((payload.table ?? payload) as Record<string, unknown>);
+}
+
+/** The fields an admin can change on an existing table. */
+export type TableUpdateChanges = Partial<
+  Pick<FloorTableRecord, "name" | "x" | "y" | "rotation" | "tableTypeId">
+>;
+
+function tableUpdateErrorMessage(changes: TableUpdateChanges): string {
+  if (changes.tableTypeId !== undefined) {
+    return m.admin_error_change_table_type_status({ status: 500 });
+  }
+  if (changes.name !== undefined) return m.admin_error_update_table_name_status({ status: 500 });
+  if (changes.rotation !== undefined) return m.admin_error_persist_table_rotation();
+  return m.admin_error_persist_table_position();
+}
+
+export async function updateTable(
+  authHeaders: () => Record<string, string>,
+  tableId: string,
+  changes: TableUpdateChanges,
+): Promise<void> {
+  const { name, x, y, rotation, tableTypeId } = changes;
+  await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/tables/${encodeURIComponent(tableId)}`,
+    {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify({
+        ...(name !== undefined ? { name } : {}),
+        ...(x !== undefined ? { x } : {}),
+        ...(y !== undefined ? { y } : {}),
+        ...(rotation !== undefined ? { rotation } : {}),
+        ...(tableTypeId !== undefined ? { table_type_id: tableTypeId } : {}),
+      }),
+    },
+    tableUpdateErrorMessage(changes),
+  );
+}
+
+export async function deleteTable(
+  authHeaders: () => Record<string, string>,
+  tableId: string,
+): Promise<void> {
+  await fetchVoidOrThrowWithUnauthorized(
+    `/api/tables/${encodeURIComponent(tableId)}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_error_delete_table(),
+  );
 }
 
 export async function fetchVenues(authHeaders: () => Record<string, string>): Promise<Venue[]> {

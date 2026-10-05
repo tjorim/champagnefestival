@@ -14,6 +14,11 @@ describe("useAdminQueries invalidation rules", () => {
     }
   });
 
+  it("leaves tables to their collection instead of a standalone query", () => {
+    expect(ADMIN_RESOURCE_KEYS).not.toContain("tables");
+    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.tables)).toBe(false);
+  });
+
   it("can limit refetches to registration resources for non-admin users", () => {
     expect(
       shouldRefetchAdminResourceQuery(queryKeys.admin.registrations, { includeAdminOnly: false }),

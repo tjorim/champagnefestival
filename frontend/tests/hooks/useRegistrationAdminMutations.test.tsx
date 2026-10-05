@@ -6,7 +6,7 @@ import { server } from "@/mocks/server";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 describe("useRegistrationAdminMutations", () => {
-  it("wires registration updates and invalidates registration/table keys", async () => {
+  it("wires registration updates and invalidates only the registrations key", async () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const invalidateQueries = vi
       .spyOn(queryClient, "invalidateQueries")
@@ -33,7 +33,6 @@ describe("useRegistrationAdminMutations", () => {
             Authorization: "Bearer test-token",
           }),
           registrationsQueryKey: ["admin", "registrations"],
-          tablesQueryKey: ["admin", "tables"],
         }),
       { wrapper: Wrapper },
     );
@@ -50,7 +49,9 @@ describe("useRegistrationAdminMutations", () => {
     expect(seen.body).toEqual({ checked_in: true });
     await waitFor(() => {
       expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["admin", "registrations"] });
-      expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ["admin", "tables"] });
     });
+    // Table occupancy is derived from the registrations, so a seating write has
+    // no second cache to invalidate.
+    expect(invalidateQueries).not.toHaveBeenCalledWith({ queryKey: ["admin", "tables"] });
   });
 });

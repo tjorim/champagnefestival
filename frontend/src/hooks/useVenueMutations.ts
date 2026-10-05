@@ -1,10 +1,11 @@
 import { useMutation, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import type { FloorArea, FloorTable, Room, TableType } from "@/types/admin";
+import type { FloorArea, Room, TableType } from "@/types/admin";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { apiAreaToArea } from "@/utils/adminApiMappers";
+import { refetchAdminTables, type AdminTablesCollection } from "@/state/adminTablesCollection";
 import { saveLayoutRevision, restoreLayoutRevision } from "@/utils/adminFetch";
 import { devError } from "@/utils/devLog";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
@@ -13,7 +14,7 @@ import { m } from "@/paraglide/messages";
 interface UseVenueMutationsOptions {
   queryClient: QueryClient;
   authHeaders: () => Record<string, string>;
-  tablesQueryKey: QueryKey;
+  tablesCollection: AdminTablesCollection;
   venuesQueryKey: QueryKey;
   roomsQueryKey: QueryKey;
   tableTypesQueryKey: QueryKey;
@@ -24,182 +25,13 @@ interface UseVenueMutationsOptions {
 export function useVenueMutations({
   queryClient,
   authHeaders,
-  tablesQueryKey,
+  tablesCollection,
   venuesQueryKey,
   roomsQueryKey,
   tableTypesQueryKey,
   layoutsQueryKey,
   areasQueryKey,
 }: UseVenueMutationsOptions) {
-  const createTableMutation = useMutation({
-    mutationFn: ({
-      name,
-      layoutId,
-      tableTypeId,
-      x,
-      y,
-      rotation,
-    }: {
-      name: string;
-      layoutId: string;
-      tableTypeId: string;
-      x?: number;
-      y?: number;
-      rotation?: number;
-    }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        "/api/tables",
-        {
-          method: "POST",
-          headers: authHeaders(),
-          body: JSON.stringify({
-            name,
-            x: x ?? 10,
-            y: y ?? 10,
-            rotation: rotation ?? 0,
-            layout_id: layoutId,
-            table_type_id: tableTypeId,
-          }),
-        },
-        m.admin_error_add_table(),
-      ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [tablesQueryKey]);
-    },
-    retry: false,
-  });
-
-  const changeTableTypeMutation = useMutation<
-    Record<string, unknown>,
-    Error,
-    { tableId: string; tableTypeId: string },
-    { previousTables: FloorTable[] | undefined }
-  >({
-    mutationFn: ({ tableId, tableTypeId }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/tables/${tableId}`,
-        {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ table_type_id: tableTypeId }),
-        },
-        m.admin_error_change_table_type_status({ status: 500 }),
-      ),
-    onMutate: ({ tableId, tableTypeId }) => {
-      const previousTables = queryClient.getQueryData<FloorTable[]>(tablesQueryKey);
-      queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (old) =>
-        old ? old.map((t) => (t.id === tableId ? { ...t, tableTypeId } : t)) : old,
-      );
-      return { previousTables };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
-    },
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [tablesQueryKey]);
-    },
-    retry: false,
-  });
-
-  const updateTableNameMutation = useMutation<
-    Record<string, unknown>,
-    Error,
-    { tableId: string; name: string },
-    { previousTables: FloorTable[] | undefined }
-  >({
-    mutationFn: ({ tableId, name }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/tables/${tableId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ name }) },
-        m.admin_error_update_table_name_status({ status: 500 }),
-      ),
-    onMutate: ({ tableId, name }) => {
-      const previousTables = queryClient.getQueryData<FloorTable[]>(tablesQueryKey);
-      queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (old) =>
-        old ? old.map((t) => (t.id === tableId ? { ...t, name } : t)) : old,
-      );
-      return { previousTables };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
-    },
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [tablesQueryKey]);
-    },
-    retry: false,
-  });
-
-  const moveTableMutation = useMutation<
-    Record<string, unknown>,
-    Error,
-    { tableId: string; x: number; y: number },
-    { previousTables: FloorTable[] | undefined }
-  >({
-    mutationFn: ({ tableId, x, y }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/tables/${tableId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ x, y }) },
-        m.admin_error_persist_table_position(),
-      ),
-    onMutate: ({ tableId, x, y }) => {
-      const previousTables = queryClient.getQueryData<FloorTable[]>(tablesQueryKey);
-      queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (old) =>
-        old ? old.map((t) => (t.id === tableId ? { ...t, x, y } : t)) : old,
-      );
-      return { previousTables };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
-      devError("Failed to persist table position");
-    },
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [tablesQueryKey]);
-    },
-    retry: false,
-  });
-
-  const rotateTableMutation = useMutation<
-    Record<string, unknown>,
-    Error,
-    { tableId: string; rotation: number },
-    { previousTables: FloorTable[] | undefined }
-  >({
-    mutationFn: ({ tableId, rotation }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/tables/${tableId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ rotation }) },
-        m.admin_error_persist_table_rotation(),
-      ),
-    onMutate: ({ tableId, rotation }) => {
-      const previousTables = queryClient.getQueryData<FloorTable[]>(tablesQueryKey);
-      queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (old) =>
-        old ? old.map((t) => (t.id === tableId ? { ...t, rotation } : t)) : old,
-      );
-      return { previousTables };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousTables) queryClient.setQueryData(tablesQueryKey, context.previousTables);
-      devError("Failed to persist table rotation");
-    },
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [tablesQueryKey]);
-    },
-    retry: false,
-  });
-
-  const deleteTableMutation = useMutation({
-    mutationFn: (tableId: string) =>
-      fetchVoidOrThrowWithUnauthorized(
-        `/api/tables/${tableId}`,
-        { method: "DELETE", headers: authHeaders() },
-        m.admin_error_delete_table(),
-      ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [tablesQueryKey]);
-    },
-    retry: false,
-  });
-
   const createVenueMutation = useMutation({
     mutationFn: ({
       name,
@@ -279,12 +111,14 @@ export function useVenueMutations({
         m.admin_error_delete_venue(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [
-        venuesQueryKey,
-        roomsQueryKey,
-        layoutsQueryKey,
-        tablesQueryKey,
-        areasQueryKey,
+      void Promise.all([
+        invalidateAdmin(queryClient, [
+          venuesQueryKey,
+          roomsQueryKey,
+          layoutsQueryKey,
+          areasQueryKey,
+        ]),
+        refetchAdminTables(tablesCollection),
       ]);
     },
     retry: false,
@@ -397,13 +231,16 @@ export function useVenueMutations({
         m.admin_error_delete_layout(),
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [layoutsQueryKey, tablesQueryKey, areasQueryKey]);
+      void Promise.all([
+        invalidateAdmin(queryClient, [layoutsQueryKey, areasQueryKey]),
+        refetchAdminTables(tablesCollection),
+      ]);
     },
     retry: false,
   });
 
   // Layout revisions (#1021): save is geometry-only and doesn't touch the
-  // live tables/areas caches, so it needs no invalidation. Restore does —
+  // live tables/areas, so it needs no invalidation. Restore does —
   // it applies the snapshot back onto the layout's tables/areas.
   const saveLayoutRevisionMutation = useMutation({
     mutationFn: ({
@@ -429,7 +266,10 @@ export function useVenueMutations({
       resolveAllocations?: boolean;
     }) => restoreLayoutRevision(authHeaders, layoutId, revisionNumber, resolveAllocations),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [layoutsQueryKey, tablesQueryKey, areasQueryKey]);
+      void Promise.all([
+        invalidateAdmin(queryClient, [layoutsQueryKey, areasQueryKey]),
+        refetchAdminTables(tablesCollection),
+      ]);
     },
     retry: false,
   });
@@ -700,12 +540,6 @@ export function useVenueMutations({
   });
 
   return {
-    createTableMutation,
-    changeTableTypeMutation,
-    updateTableNameMutation,
-    moveTableMutation,
-    rotateTableMutation,
-    deleteTableMutation,
     createVenueMutation,
     updateVenueMutation,
     deleteVenueMutation,

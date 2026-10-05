@@ -1,9 +1,17 @@
 import { useCallback } from "react";
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
-import type { FloorArea, FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
+import type { FloorArea, FloorTableRecord, Layout, Room, TableType, Venue } from "@/types/admin";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
+import {
+  refetchAdminTables,
+  removeAdminTablesForLayouts,
+  replaceAdminTablesForLayout,
+  type AdminTablesCollection,
+} from "@/state/adminTablesCollection";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
+import { createTable, deleteTable } from "@/utils/adminFetch";
+import { devError } from "@/utils/devLog";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
 import {
@@ -22,7 +30,7 @@ interface UseAdminVenueActionsOptions {
   queryClient: QueryClient;
   roomsQueryKey: QueryKey;
   tableTypesQueryKey: QueryKey;
-  tablesQueryKey: QueryKey;
+  tablesCollection: AdminTablesCollection;
   venuesQueryKey: QueryKey;
 }
 
@@ -33,40 +41,34 @@ export function useAdminVenueActions({
   queryClient,
   roomsQueryKey,
   tableTypesQueryKey,
-  tablesQueryKey,
+  tablesCollection,
   venuesQueryKey,
 }: UseAdminVenueActionsOptions) {
   const {
     assignAreaMutation,
-    changeTableTypeMutation,
     createAreaMutation,
     createLayoutMutation,
     createRoomMutation,
     deleteRoomMutation,
-    createTableMutation,
     createTableTypeMutation,
     createVenueMutation,
     deleteAreaMutation,
     deleteLayoutMutation,
-    deleteTableMutation,
     deleteTableTypeMutation,
     deleteVenueMutation,
     moveAreaMutation,
-    moveTableMutation,
     resizeAreaMutation,
     restoreLayoutRevisionMutation,
     rotateAreaMutation,
-    rotateTableMutation,
     saveLayoutRevisionMutation,
     updateAreaLabelMutation,
     updateRoomMutation,
-    updateTableNameMutation,
     updateTableTypeMutation,
     updateVenueMutation,
   } = useVenueMutations({
     queryClient,
     authHeaders,
-    tablesQueryKey,
+    tablesCollection,
     venuesQueryKey,
     roomsQueryKey,
     tableTypesQueryKey,
@@ -76,51 +78,65 @@ export function useAdminVenueActions({
 
   const handleAddTable = useCallback(
     async (name: string, layoutId: string, tableTypeId: string) => {
-      const data = await createTableMutation.mutateAsync({ name, layoutId, tableTypeId });
-      const table = (data.table ?? data) as Record<string, unknown>;
-      queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-        prev ? [...prev, apiTableToTable(table)] : [apiTableToTable(table)],
-      );
+      // Not optimistic: the server assigns the id and the type's capacity.
+      const table = await createTable(authHeaders, { name, layoutId, tableTypeId });
+      await tablesCollection.utils.writeUpsert(table);
     },
-    [createTableMutation, queryClient, tablesQueryKey],
+    [authHeaders, tablesCollection],
+  );
+
+  // Optimistic update through the collection's write handler: the row changes
+  // at once, rolls back if the PUT fails, and is reconciled by a refetch.
+  const updateTableRow = useCallback(
+    async (tableId: string, apply: (draft: FloorTableRecord) => void) => {
+      await tablesCollection.update(tableId, apply).isPersisted.promise;
+    },
+    [tablesCollection],
   );
 
   const handleMoveTable = useCallback(
     (tableId: string, x: number, y: number) => {
-      moveTableMutation.mutate({ tableId, x, y });
+      updateTableRow(tableId, (table) => {
+        table.x = x;
+        table.y = y;
+      }).catch(() => devError("Failed to persist table position"));
     },
-    [moveTableMutation],
+    [updateTableRow],
   );
 
   const handleRotateTable = useCallback(
     (tableId: string, rotation: number) => {
-      rotateTableMutation.mutate({ tableId, rotation: ((rotation % 360) + 360) % 360 });
+      const normalized = ((rotation % 360) + 360) % 360;
+      updateTableRow(tableId, (table) => {
+        table.rotation = normalized;
+      }).catch(() => devError("Failed to persist table rotation"));
     },
-    [rotateTableMutation],
+    [updateTableRow],
   );
 
   const handleDeleteTable = useCallback(
     async (tableId: string) => {
-      await deleteTableMutation.mutateAsync(tableId);
-      queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-        prev ? prev.filter((t) => t.id !== tableId) : prev,
-      );
+      // Not optimistic: the server rejects deleting a table that still holds bookings.
+      await deleteTable(authHeaders, tableId);
+      await tablesCollection.utils.writeDelete(tableId);
     },
-    [deleteTableMutation, queryClient, tablesQueryKey],
+    [authHeaders, tablesCollection],
   );
 
   const handleChangeTableType = useCallback(
-    async (tableId: string, tableTypeId: string) => {
-      await changeTableTypeMutation.mutateAsync({ tableId, tableTypeId });
-    },
-    [changeTableTypeMutation],
+    (tableId: string, tableTypeId: string) =>
+      updateTableRow(tableId, (table) => {
+        table.tableTypeId = tableTypeId;
+      }),
+    [updateTableRow],
   );
 
   const handleUpdateTable = useCallback(
-    async (tableId: string, name: string) => {
-      await updateTableNameMutation.mutateAsync({ tableId, name });
-    },
-    [updateTableNameMutation],
+    (tableId: string, name: string) =>
+      updateTableRow(tableId, (table) => {
+        table.name = name;
+      }),
+    [updateTableRow],
   );
 
   const handleAddVenue = useCallback(
@@ -198,9 +214,7 @@ export function useAdminVenueActions({
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
         prev ? prev.filter((l) => !venueRoomIds.includes(l.roomId ?? "")) : prev,
       );
-      queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-        prev ? prev.filter((t) => !venueLayoutIds.includes(t.layoutId)) : prev,
-      );
+      await removeAdminTablesForLayouts(tablesCollection, venueLayoutIds);
       queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
         prev ? prev.filter((a) => !venueLayoutIds.includes(a.layoutId)) : prev,
       );
@@ -211,7 +225,7 @@ export function useAdminVenueActions({
       layoutsQueryKey,
       queryClient,
       roomsQueryKey,
-      tablesQueryKey,
+      tablesCollection,
       venuesQueryKey,
     ],
   );
@@ -286,7 +300,10 @@ export function useAdminVenueActions({
         queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
           prev ? [...prev, createdLayout] : [createdLayout],
         );
-        await invalidateAdmin(queryClient, [layoutsQueryKey, tablesQueryKey, areasQueryKey]);
+        await Promise.all([
+          invalidateAdmin(queryClient, [layoutsQueryKey, areasQueryKey]),
+          refetchAdminTables(tablesCollection),
+        ]);
         return;
       }
 
@@ -301,7 +318,7 @@ export function useAdminVenueActions({
       createLayoutMutation,
       layoutsQueryKey,
       queryClient,
-      tablesQueryKey,
+      tablesCollection,
     ],
   );
 
@@ -311,14 +328,12 @@ export function useAdminVenueActions({
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
         prev ? prev.filter((l) => l.id !== layoutId) : prev,
       );
-      queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) =>
-        prev ? prev.filter((t) => t.layoutId !== layoutId) : prev,
-      );
+      await removeAdminTablesForLayouts(tablesCollection, [layoutId]);
       queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
         prev ? prev.filter((a) => a.layoutId !== layoutId) : prev,
       );
     },
-    [areasQueryKey, deleteLayoutMutation, layoutsQueryKey, queryClient, tablesQueryKey],
+    [areasQueryKey, deleteLayoutMutation, layoutsQueryKey, queryClient, tablesCollection],
   );
 
   // Layout revisions (#1021): save takes an immutable geometry snapshot;
@@ -341,11 +356,11 @@ export function useAdminVenueActions({
       const restoredTables = data.tables as Record<string, unknown>[] | undefined;
       const restoredAreas = data.areas as Record<string, unknown>[] | undefined;
       if (Array.isArray(restoredTables)) {
-        const mapped = restoredTables.map(apiTableToTable);
-        queryClient.setQueryData<FloorTable[]>(tablesQueryKey, (prev) => [
-          ...(prev ?? []).filter((t) => t.layoutId !== layoutId),
-          ...mapped,
-        ]);
+        await replaceAdminTablesForLayout(
+          tablesCollection,
+          layoutId,
+          restoredTables.map(apiTableToTable),
+        );
       }
       if (Array.isArray(restoredAreas)) {
         const mapped = restoredAreas.map(apiAreaToArea);
@@ -355,7 +370,7 @@ export function useAdminVenueActions({
         ]);
       }
     },
-    [areasQueryKey, queryClient, restoreLayoutRevisionMutation, tablesQueryKey],
+    [areasQueryKey, queryClient, restoreLayoutRevisionMutation, tablesCollection],
   );
 
   const handleAddArea = useCallback(

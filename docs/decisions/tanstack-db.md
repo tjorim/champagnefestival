@@ -1,8 +1,8 @@
 # TanStack DB for admin/event-day operational state
 
-**Status:** Adopted for the registrations pilot; other resources are open follow-ups (see [Roadmap](#roadmap))
+**Status:** Adopted for registrations and tables; other resources are open follow-ups (see [Roadmap](#roadmap))
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
-**Record updated:** 2026-10-05, [#1169](https://github.com/tjorim/champagnefestival/issues/1169)
+**Record updated:** 2026-10-05, [#1165](https://github.com/tjorim/champagnefestival/issues/1165)
 
 ---
 
@@ -12,8 +12,8 @@ The admin and event-day screens load ten related resources (registrations, table
 venues, rooms, table types, layouts, exhibitors, areas, people, members). Writes
 used to patch each affected TanStack Query cache by hand with `setQueryData`, and
 one user action could touch up to four caches (a person update reaches `members`,
-`registrations` and `exhibitors`; a table assignment reaches `registrations` and
-`tables`). A missed patch silently leaves the UI stale.
+`registrations` and `exhibitors`; a table assignment used to reach `registrations`
+and `tables` before #1165). A missed patch silently leaves the UI stale.
 
 The first evaluation (2026-05-26) recommended deferring until TanStack DB reached
 1.0 and a live event stream existed. #442 reversed that: the packages were stable
@@ -89,9 +89,48 @@ The pilot migrated reads and live updates. Registration writes still go through
 `useMutation` hooks (`useRegistrationAdminMutations.ts`) and then patch the same
 query key with `queryClient.setQueryData` in `useAdminRegistrationActions.ts`. The
 collection observes that query cache, so those patches reach `useLiveQuery`. No
-collection write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet, and a
-table assignment still patches the `registrations` and `tables` caches separately
-until tables move to a collection ([#1165](https://github.com/tjorim/champagnefestival/issues/1165)).
+registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
+
+## Tables ([#1165](https://github.com/tjorim/champagnefestival/issues/1165))
+
+`tables` is the second collection-backed domain.
+
+- `frontend/src/state/adminTablesCollection.ts`: the collection factory, write
+  helpers, live-event patching and reset. `useAdminQueries` creates it beside the
+  registrations collection and registers it for live events.
+- **Rows hold no occupancy.** A stored row is a `FloorTableRecord` (the table
+  without `registrationIds`); `apiTableToTable` ignores the server's
+  `registration_ids`. `frontend/src/state/tableOccupancy.ts` groups registration
+  ids by `allocation.tableId` over the registrations collection's rows, and
+  `useAdminQueries` joins them into the `FloorTable[]` the views already consume.
+  Assigning, moving or removing a registration's table is therefore one
+  registrations write, and the check-in and seating views follow it; nothing
+  patches or invalidates a tables cache for it.
+- **Occupancy shape.** Occupancy is derived in a single in-memory pass (one
+  grouping over the registrations live query) rather than one live query per
+  table. That avoids depending on the equality-partition conditions of
+  `@tanstack/db` 0.11 (`eq(field, literal)` with no other clauses) and returns
+  the source rows unmodified.
+- **Writes.** Position, rotation, rename and table-type changes are optimistic
+  through the collection's `onUpdate` handler: one `PUT` per changed row, an
+  explicit `collection.utils.refetch()` and `{ refetch: false }` on success, a
+  refetch before rollback on failure. Create and delete are not optimistic (a
+  create needs the server's id and capacity; the server rejects deleting a table
+  that still holds bookings), so they call the API and then apply
+  `writeUpsert`/`writeDelete`. Layout and venue deletes remove their tables with
+  `writeDelete`, and a layout revision restore replaces the layout's tables with
+  one `writeBatch`. Retry-safety decisions are in `docs/retry-safety.md`.
+- **Live events.** A `seating` event with a `table_id` and no `registration_id`
+  (table created/updated/deleted) patches one row: `writeDelete` for `deleted`,
+  otherwise `fetchTable` and `writeUpsert`, with the same per-id timestamp guard
+  as registrations and a fallback `invalidateQueries` on the tables key. A
+  `seating` event with a `registration_id` is an allocation change; it only
+  touches the registrations key, because occupancy is derived and no table row
+  changes. Reconnects still invalidate both keys.
+- **Reset and refresh.** `isAuthenticated` turning false empties the collection
+  and removes its query. `"tables"` is no longer in `ADMIN_RESOURCE_KEYS`;
+  `loadData` refetches the collection through `utils.refetch()` and no
+  `useQuery`/`setQueryData` path for tables remains.
 
 ## Rules that still apply
 
@@ -135,7 +174,6 @@ Installed versions: `@tanstack/db` 0.11.3, `@tanstack/react-db` ^0.5.3,
 | Follow-up | Issue |
 | --- | --- |
 | Migrate `people` and `members` (fixes the up-to-four-cache person update) | [#1164](https://github.com/tjorim/champagnefestival/issues/1164) |
-| Migrate `tables` and derive seating occupancy from the registrations collection | [#1165](https://github.com/tjorim/champagnefestival/issues/1165) |
 | Decide per resource for venues, rooms, areas, layouts, table types and exhibitors (migrate, or stay on Query with `invalidateQueries`) | [#1166](https://github.com/tjorim/champagnefestival/issues/1166) |
 | Await write receipts in registration live-event patching | [#1167](https://github.com/tjorim/champagnefestival/issues/1167) |
 | Explore persisted collections for event-day resilience (privacy, staleness, offline) | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
@@ -149,6 +187,7 @@ The per-resource decisions from #1166 will be recorded in this file when made.
   TanStack Router/Query architecture standardization
 - Live-update stream: [#446](https://github.com/tjorim/champagnefestival/issues/446)
 - `frontend/src/state/adminRegistrationsCollection.ts`
+- `frontend/src/state/adminTablesCollection.ts`, `frontend/src/state/tableOccupancy.ts`
 - `frontend/src/hooks/useAdminQueries.ts`
 - `frontend/src/state/LiveUpdatesProvider.tsx`
 - `frontend/src/hooks/useAdminRegistrationActions.ts`: current registration write

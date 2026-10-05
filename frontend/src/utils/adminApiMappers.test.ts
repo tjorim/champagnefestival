@@ -3,7 +3,7 @@
  * person-merge helpers used by the admin dashboard.
  */
 
-import type { FloorArea, FloorTable, Layout, Room, TableType, Venue } from "../types/admin";
+import type { FloorArea, FloorTableRecord, Layout, Room, TableType, Venue } from "../types/admin";
 import type { Person } from "../types/person";
 
 import { describe, expect, it } from "vitest";
@@ -141,7 +141,7 @@ describe("apiTableToTable", () => {
   };
 
   it("maps all fields from a fully populated response", () => {
-    expect(apiTableToTable(full)).toEqual<FloorTable>({
+    expect(apiTableToTable(full)).toEqual<FloorTableRecord>({
       id: "t1",
       name: "Table 1",
       capacity: 4,
@@ -150,7 +150,6 @@ describe("apiTableToTable", () => {
       tableTypeId: "tt1",
       rotation: 90,
       layoutId: "l1",
-      registrationIds: ["r1", "r2"],
     });
   });
 
@@ -170,13 +169,8 @@ describe("apiTableToTable", () => {
     expect(apiTableToTable({ ...minimal, rotation: 270 }).rotation).toBe(270);
   });
 
-  it("defaults registrationIds to empty array when absent", () => {
-    expect(apiTableToTable(minimal).registrationIds).toEqual([]);
-  });
-
-  it("preserves registration_ids array", () => {
-    const result = apiTableToTable({ ...minimal, registration_ids: ["r1", "r2", "r3"] });
-    expect(result.registrationIds).toEqual(["r1", "r2", "r3"]);
+  it("ignores the server's registration_ids: occupancy is derived, not stored", () => {
+    expect(apiTableToTable(full)).not.toHaveProperty("registrationIds");
   });
 
   it("preserves x and y positions", () => {

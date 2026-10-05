@@ -1064,6 +1064,14 @@ export const adminHandlers = [
     return HttpResponse.json(tablesWithRegistrationAssignments());
   }),
 
+  http.get("/api/tables/:id", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const table = tablesWithRegistrationAssignments().find((t) => t.id === params.id);
+    if (!table) return HttpResponse.json(null, { status: 404 });
+    return HttpResponse.json(table);
+  }),
+
   http.post("/api/tables", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
