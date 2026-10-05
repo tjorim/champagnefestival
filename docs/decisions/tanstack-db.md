@@ -314,10 +314,14 @@ migration. They are now one eager collection on the shared factory
   moved. The old `prev ? … : prev` guard in the dashboard is gone with the
   patches it protected; `useAdminQueries` still removes the exhibitors query key
   on sign-out because the collection reads through it.
-- **Keys and refresh.** `"exhibitors"` is no longer in `ADMIN_RESOURCE_KEYS`, which
-  is now just `registrations` (the admin-only variant `ADMIN_ONLY_RESOURCE_KEYS`,
-  `shouldRefetchAdminOnlyResourceQuery` and the `includeAdminOnly` option are removed);
-  `loadData` refetches the collection through `refetchAdminExhibitors`. The
+- **Keys and refresh.** `ADMIN_RESOURCE_KEYS` held only `registrations` once exhibitors
+  left it, so it is removed together with `ADMIN_ONLY_RESOURCE_KEYS`,
+  `shouldRefetchAdminResourceQuery` and the `includeAdminOnly` option: `loadData`
+  now refetches every collection, registrations included
+  (`refetchAdminRegistrations`, skipped while the dashboard is hidden or signed
+  out, because a refetch ignores `enabled`), through its own helper, and no
+  `queryClient.refetchQueries` predicate remains. `loadData` refetches the exhibitors
+  through `refetchAdminExhibitors`. The
   dashboard's exhibitors error comes from the collection's `lastError` like the
   others. The `ContentSection` list and `EditionModal`'s exhibitor picker keep
   their own queries (`contentManagement.section`, `editionModalExhibitors`); they
@@ -403,9 +407,9 @@ These come from #442 and apply to every further migration:
    remaining admin resources are expected to migrate for consistency, and the
    collections' pre-1.0 status is an accepted risk.
 2. **Never serve one domain from both a collection and a standalone `useQuery`.**
-   A migrated resource is removed from `ADMIN_RESOURCE_KEYS` and
-   `shouldRefetchAdminResourceQuery` in `useAdminQueries.ts` and has no remaining
-   `useQuery` or `setQueryData` path.
+   A migrated resource is refetched by `loadData` in `useAdminQueries.ts`
+   through its collection's `refetch…` helper and has no remaining `useQuery` or
+   `setQueryData` path.
 3. **Keep payloads normalized** so a resource has one authoritative copy; derive
    views (for example table occupancy) from the collection rather than storing
    them twice.

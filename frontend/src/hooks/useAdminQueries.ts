@@ -3,6 +3,7 @@ import { useLiveQuery } from "@tanstack/react-db";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   createAdminRegistrationsCollection,
+  refetchAdminRegistrations,
   registerAdminRegistrationsCollection,
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
@@ -40,20 +41,6 @@ interface UseAdminQueriesOptions {
   isAuthenticated: boolean;
   canManageAdminSections: boolean;
   authHeaders: () => Record<string, string>;
-}
-
-// "tables", "people", "exhibitors", "venues", "rooms", "table-types", "layouts"
-// and "areas" are deliberately absent: they are served by collections, which are refetched
-// through their own utils (see `loadData`), never by a standalone query.
-export const ADMIN_RESOURCE_KEYS = ["registrations"] as const;
-
-export function shouldRefetchAdminResourceQuery(queryKey: readonly unknown[]): boolean {
-  return (
-    queryKey.length === 2 &&
-    queryKey[0] === "admin" &&
-    typeof queryKey[1] === "string" &&
-    (ADMIN_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
-  );
 }
 
 export function useAdminQueries({
@@ -284,9 +271,10 @@ export function useAdminQueries({
 
   const loadData = useCallback(async () => {
     await Promise.all([
-      queryClient.refetchQueries({
-        predicate: (query) => shouldRefetchAdminResourceQuery(query.queryKey),
-      }),
+      // A refetch ignores `enabled`, so a hidden or signed-out dashboard must not start one.
+      registrationsQueryOptions.enabled
+        ? refetchAdminRegistrations(registrationsCollection)
+        : undefined,
       canManageAdminSections ? refetchAdminTables(tablesCollection) : undefined,
       canManageAdminSections ? refetchAdminPeople(peopleCollection) : undefined,
       canManageAdminSections ? refetchAdminVenueCollections(venueCollections) : undefined,
@@ -296,7 +284,8 @@ export function useAdminQueries({
     canManageAdminSections,
     exhibitorsCollection,
     peopleCollection,
-    queryClient,
+    registrationsCollection,
+    registrationsQueryOptions.enabled,
     tablesCollection,
     venueCollections,
   ]);

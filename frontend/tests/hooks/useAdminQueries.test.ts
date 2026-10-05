@@ -1,46 +1,63 @@
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { ADMIN_RESOURCE_KEYS, shouldRefetchAdminResourceQuery } from "@/hooks/useAdminQueries";
-import { queryKeys } from "@/utils/queryKeys";
+import { useAdminQueries } from "@/hooks/useAdminQueries";
+import { server } from "@/mocks/server";
+import { createTestQueryClientHarness } from "../utils/queryClient";
 
-describe("useAdminQueries invalidation rules", () => {
-  it("refetches all top-level admin resource keys", () => {
-    for (const resource of ADMIN_RESOURCE_KEYS) {
-      expect(shouldRefetchAdminResourceQuery(["admin", resource])).toBe(true);
-    }
-  });
+const authHeaders = () => ({
+  "Content-Type": "application/json",
+  Authorization: "Bearer ".concat("mock-access-token"),
+});
 
-  it("leaves tables to their collection instead of a standalone query", () => {
-    expect(ADMIN_RESOURCE_KEYS).not.toContain("tables");
-    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.tables)).toBe(false);
-  });
+const emptyPage = { items: [], total: 0, limit: 1000, page: 1 };
 
-  it("leaves people to their collection instead of a standalone query", () => {
-    expect(ADMIN_RESOURCE_KEYS).not.toContain("people");
-    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.people)).toBe(false);
-  });
+function renderQueries(options: { visible?: boolean; isAuthenticated?: boolean } = {}) {
+  const { Wrapper } = createTestQueryClientHarness();
+  return renderHook(
+    () =>
+      useAdminQueries({
+        visible: options.visible ?? true,
+        isAuthenticated: options.isAuthenticated ?? true,
+        canManageAdminSections: true,
+        authHeaders,
+      }),
+    { wrapper: Wrapper },
+  );
+}
 
-  it("leaves exhibitors to their collection instead of a standalone query", () => {
-    expect(ADMIN_RESOURCE_KEYS).not.toContain("exhibitors");
-    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.exhibitors)).toBe(false);
-  });
-
-  it("leaves the venue group to its collections instead of standalone queries", () => {
-    for (const resource of ["venues", "rooms", "table-types", "layouts", "areas"]) {
-      expect(ADMIN_RESOURCE_KEYS).not.toContain(resource);
-      expect(shouldRefetchAdminResourceQuery(["admin", resource])).toBe(false);
-    }
-  });
-
-  it("does not refetch non-resource admin keys", () => {
-    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.personOptions("ali"))).toBe(false);
-    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.editionEvents("ed-01"))).toBe(false);
-    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.peopleRegistrations("person-1"))).toBe(
-      false,
+describe("useAdminQueries loadData", () => {
+  it("refetches the registrations and exhibitors collections", async () => {
+    const { result } = renderQueries();
+    await waitFor(() => {
+      expect(result.current.registrationsQuery.data?.length).toBeGreaterThan(0);
+      expect(result.current.exhibitorsQuery.data?.length).toBeGreaterThan(0);
+    });
+    server.use(
+      http.get("/api/registrations", () => HttpResponse.json(emptyPage)),
+      http.get("/api/exhibitors", () => HttpResponse.json([])),
     );
+
+    await act(() => result.current.loadData());
+
+    await waitFor(() => {
+      expect(result.current.registrationsQuery.data).toHaveLength(0);
+      expect(result.current.exhibitorsQuery.data).toHaveLength(0);
+    });
   });
 
-  it("does not refetch public keys", () => {
-    expect(shouldRefetchAdminResourceQuery(queryKeys.activeEdition)).toBe(false);
-    expect(shouldRefetchAdminResourceQuery(queryKeys.myRegistrations("token-1"))).toBe(false);
+  it("does not start a registrations request while the dashboard is hidden", async () => {
+    let requests = 0;
+    server.use(
+      http.get("/api/registrations", () => {
+        requests += 1;
+        return HttpResponse.json(emptyPage);
+      }),
+    );
+    const { result } = renderQueries({ visible: false });
+
+    await act(() => result.current.loadData());
+
+    expect(requests).toBe(0);
   });
 });
