@@ -60,7 +60,7 @@ describe("admin people collections in the admin hooks", () => {
         });
         const actions = useAdminPeopleActions({
           authHeaders,
-          exhibitorsQueryKey: queries.exhibitorsQueryKey,
+          exhibitorsCollection: queries.exhibitorsCollection,
           peopleCollection: queries.peopleCollection,
           queryClient,
           registrationsQueryKey: queries.registrationsQueryKey,

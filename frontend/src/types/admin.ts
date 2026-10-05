@@ -75,6 +75,15 @@ export interface Layout {
   createdAt: string;
 }
 
+/** An exhibitor as the admin dashboard reads it from `GET /api/exhibitors`. */
+export interface Exhibitor {
+  id: number;
+  name: string;
+  active: boolean;
+  /** The person who is the exhibitor's contact; repointed by a people merge. */
+  contactPersonId: string | null;
+}
+
 export interface Venue {
   id: string;
   name: string;

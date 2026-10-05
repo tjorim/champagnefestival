@@ -18,10 +18,16 @@ import {
   captureAdminPeopleFence,
   type AdminPeopleCollection,
 } from "@/state/adminPeopleCollection";
+import {
+  applyAdminExhibitorContactsMerged,
+  captureAdminExhibitorsFence,
+  refetchAdminExhibitors,
+  type AdminExhibitorsCollection,
+} from "@/state/adminExhibitorsCollection";
 
 interface UseAdminPeopleActionsOptions {
   authHeaders: () => Record<string, string>;
-  exhibitorsQueryKey: QueryKey;
+  exhibitorsCollection: AdminExhibitorsCollection;
   peopleCollection: AdminPeopleCollection;
   queryClient: QueryClient;
   registrationsQueryKey: QueryKey;
@@ -29,12 +35,17 @@ interface UseAdminPeopleActionsOptions {
 }
 
 function toRegistrationPerson(person: Person): Registration["person"] {
-  return { id: person.id, name: person.name, email: person.email, phone: person.phone };
+  return {
+    id: person.id,
+    name: person.name,
+    email: person.email,
+    phone: person.phone,
+  };
 }
 
 export function useAdminPeopleActions({
   authHeaders,
-  exhibitorsQueryKey,
+  exhibitorsCollection,
   peopleCollection,
   queryClient,
   registrationsQueryKey,
@@ -56,11 +67,10 @@ export function useAdminPeopleActions({
     authHeaders,
     peopleCollection,
     registrationsQueryKey,
-    exhibitorsQueryKey,
   });
 
-  // Registrations and exhibitors still carry a copy of the person, so a
-  // person change patches those caches too. The people row (and with it the
+  // Registrations still carry a copy of the person, so a person change
+  // patches that cache too. The people row (and with it the
   // members and volunteers views) is written through the collection helpers,
   // which drop the write if the session changed while the request was in flight.
   const patchRegistrationPerson = useCallback(
@@ -86,7 +96,18 @@ export function useAdminPeopleActions({
   const handleMergePeople = useCallback(
     async (canonicalId: string, duplicateId: string) => {
       const isCurrent = captureAdminPeopleFence();
-      const updated = await mergePeopleMutation.mutateAsync({ canonicalId, duplicateId });
+      const isExhibitorsCurrent = captureAdminExhibitorsFence();
+      let updated: Record<string, unknown>;
+      try {
+        updated = await mergePeopleMutation.mutateAsync({
+          canonicalId,
+          duplicateId,
+        });
+      } catch (error) {
+        // A failed merge may still have committed: learn the real contacts.
+        void refetchAdminExhibitors(exhibitorsCollection, isExhibitorsCurrent);
+        throw error;
+      }
       const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
       await applyAdminPeopleMerged(
         peopleCollection,
@@ -100,28 +121,30 @@ export function useAdminPeopleActions({
         prev
           ? prev.map((registration) =>
               registration.personId === duplicateId
-                ? { ...registration, personId: canonicalId, person: canonicalPerson }
+                ? {
+                    ...registration,
+                    personId: canonicalId,
+                    person: canonicalPerson,
+                  }
                 : registration.personId === canonicalId
                   ? { ...registration, person: canonicalPerson }
                   : registration,
             )
           : prev,
       );
-      queryClient.setQueryData<
-        { id: number; name: string; active: boolean; contactPersonId: string | null }[]
-      >(exhibitorsQueryKey, (prev) =>
-        prev
-          ? prev.map((exhibitor) =>
-              exhibitor.contactPersonId === duplicateId
-                ? { ...exhibitor, contactPersonId: canonicalId }
-                : exhibitor,
-            )
-          : prev,
+      // The server repointed the duplicate's exhibitor contacts; mirror that,
+      // then refetch to pick up anything the local repoint did not cover.
+      await applyAdminExhibitorContactsMerged(
+        exhibitorsCollection,
+        duplicateId,
+        canonicalId,
+        isExhibitorsCurrent,
       );
+      await refetchAdminExhibitors(exhibitorsCollection, isExhibitorsCurrent);
     },
     [
       authHeaders,
-      exhibitorsQueryKey,
+      exhibitorsCollection,
       mergePeopleMutation,
       peopleCollection,
       queryClient,

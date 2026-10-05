@@ -25,6 +25,12 @@ describe("useAdminQueries invalidation rules", () => {
     expect(shouldRefetchAdminOnlyResourceQuery(queryKeys.admin.people)).toBe(false);
   });
 
+  it("leaves exhibitors to their collection instead of a standalone query", () => {
+    expect(ADMIN_RESOURCE_KEYS).not.toContain("exhibitors");
+    expect(shouldRefetchAdminResourceQuery(queryKeys.admin.exhibitors)).toBe(false);
+    expect(shouldRefetchAdminOnlyResourceQuery(queryKeys.admin.exhibitors)).toBe(false);
+  });
+
   it("leaves the venue group to its collections instead of standalone queries", () => {
     for (const resource of ["venues", "rooms", "table-types", "layouts", "areas"]) {
       expect(ADMIN_RESOURCE_KEYS).not.toContain(resource);
