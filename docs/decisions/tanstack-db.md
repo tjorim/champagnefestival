@@ -263,6 +263,7 @@ Installed versions: `@tanstack/db` 0.11.3, `@tanstack/react-db` ^0.5.3,
 | Migrate venues, rooms, areas, layouts and table types as a group, then exhibitors (people and members are done, see [above](#people-and-members-1164)); extract a shared collection factory (registration, sign-out reset, session fence, guarded writes) first. Default is migrate; staying on Query needs a stated reason | [#1166](https://github.com/tjorim/champagnefestival/issues/1166) |
 | Await write receipts in registration live-event patching | [#1167](https://github.com/tjorim/champagnefestival/issues/1167) |
 | Explore persisted collections for event-day resilience (privacy, staleness, offline) | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
+| Server-driven admin data tables: TanStack Table manual mode, on-demand collection sync and one paged list contract, replacing load-everything for people, volunteers and registrations. Starts after #1164 merges and builds on the shared collection factory from #1166; #1168 informs what a partial cache may persist | [#1174](https://github.com/tjorim/champagnefestival/issues/1174) |
 
 The per-resource decisions from #1166 will be recorded in this file when made; the default is to migrate.
 
