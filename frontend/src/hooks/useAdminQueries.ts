@@ -12,6 +12,7 @@ import {
   registerAdminPeopleCollection,
   resetAdminPeopleCollection,
   selectMembers,
+  selectVolunteers,
 } from "@/state/adminPeopleCollection";
 import {
   createAdminTablesCollection,
@@ -190,12 +191,18 @@ export function useAdminQueries({
     isPending: peopleLiveQuery.isLoading,
     isFetching: peopleCollection.utils.isFetching,
   };
-  // Members are a view over the people rows, never a second copy.
+  // Members and volunteers are views over the people rows, never second copies.
+  // They share the people collection's loading and error state.
   const membersData = useMemo(
     () => selectMembers(peopleLiveQuery.data ?? []),
     [peopleLiveQuery.data],
   );
+  const volunteersData = useMemo(
+    () => selectVolunteers(peopleLiveQuery.data ?? []),
+    [peopleLiveQuery.data],
+  );
   const membersQuery = { ...peopleQuery, data: membersData };
+  const volunteersQuery = { ...peopleQuery, data: volunteersData };
 
   useEffect(() => {
     if (isAuthenticated) return;
@@ -252,7 +259,6 @@ export function useAdminQueries({
           exhibitorsQuery,
           areasQuery,
           peopleQuery,
-          membersQuery,
         ]
       : []),
   ];
@@ -283,6 +289,7 @@ export function useAdminQueries({
     areasQuery,
     peopleQuery,
     membersQuery,
+    volunteersQuery,
     peopleCollection,
     // Derived booleans
     isAnyPending: allQueries.some((q) => q.isPending),

@@ -16,10 +16,11 @@ interface CreateAdminPeopleCollectionOptions {
 }
 
 /**
- * Every person, with the volunteer help periods merged in. Members are not a
- * second copy: they are the rows holding the `member` role, derived from this
- * collection (see `selectMembers`), so a person change reaches the members view
- * without a second patch.
+ * Every person, with the volunteer help periods merged in. Members and
+ * volunteers are not second copies: they are the rows holding the `member` or
+ * `volunteer` role, derived from this collection (see `selectMembers` and
+ * `selectVolunteers`), so a person change reaches those views without a second
+ * patch.
  *
  * Rows are written from the server's response after the API call succeeds
  * (the admin forms validate server-side, so there are no optimistic write
@@ -46,9 +47,23 @@ export function createAdminPeopleCollection({
 
 export type AdminPeopleCollection = ReturnType<typeof createAdminPeopleCollection>;
 
+/**
+ * A role view over the people rows. Members and volunteers are not stored
+ * separately: they are the people holding that role, so one person write reaches
+ * every view.
+ */
+function selectPeopleWithRole(people: readonly Person[], role: string): Person[] {
+  return people.filter((person) => person.roles.includes(role));
+}
+
 /** The members view: every person who holds the member role. */
 export function selectMembers(people: readonly Person[]): Person[] {
-  return people.filter((person) => person.roles.includes("member"));
+  return selectPeopleWithRole(people, "member");
+}
+
+/** The volunteers view: every person who holds the volunteer role. */
+export function selectVolunteers(people: readonly Person[]): Person[] {
+  return selectPeopleWithRole(people, "volunteer");
 }
 
 /**

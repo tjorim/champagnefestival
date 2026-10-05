@@ -60,8 +60,8 @@ export function useAdminPeopleActions({
 
   // Registrations and exhibitors still carry a copy of the person, so a
   // person change patches those caches too. The people row (and with it the
-  // members view) is written through the collection helpers, which drop the write if the
-  // session changed while the request was in flight.
+  // members and volunteers views) is written through the collection helpers,
+  // which drop the write if the session changed while the request was in flight.
   const patchRegistrationPerson = useCallback(
     (person: Person) => {
       queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>

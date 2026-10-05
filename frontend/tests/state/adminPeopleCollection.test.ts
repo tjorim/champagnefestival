@@ -16,6 +16,7 @@ import {
   registerAdminPeopleCollection,
   resetAdminPeopleCollection,
   selectMembers,
+  selectVolunteers,
 } from "@/state/adminPeopleCollection";
 import { apiToPerson, type Person } from "@/types/person";
 import { createTestQueryClient } from "../utils/queryClient";
@@ -64,6 +65,18 @@ describe("admin people collection", () => {
     expect(memberIds(collection)).toEqual(
       seedPeople.filter((p) => (p.roles as string[]).includes("member")).map((p) => p.id),
     );
+  });
+
+  it("derives volunteers from the people rows the same way", async () => {
+    const { collection } = await createLoadedCollection();
+
+    expect(selectVolunteers(collection.toArray).map((p) => p.id)).toEqual(
+      seedPeople.filter((p) => (p.roles as string[]).includes("volunteer")).map((p) => p.id),
+    );
+
+    await applyAdminVolunteerDeleted(collection, "person-01", always);
+    expect(selectVolunteers(collection.toArray).map((p) => p.id)).not.toContain("person-01");
+    expect(selectMembers(collection.toArray).map((p) => p.id)).toContain("person-01");
   });
 
   it("refetches the collection explicitly", async () => {

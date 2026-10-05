@@ -33,6 +33,9 @@ describe("admin people collections in the admin hooks", () => {
       expect(view.result.current.membersQuery.data).toHaveLength(
         seedPeople.filter((p) => (p.roles as string[]).includes("member")).length,
       );
+      expect(view.result.current.volunteersQuery.data).toHaveLength(
+        seedPeople.filter((p) => (p.roles as string[]).includes("volunteer")).length,
+      );
     });
 
     view.rerender({ isAuthenticated: false });
@@ -40,6 +43,7 @@ describe("admin people collections in the admin hooks", () => {
     await waitFor(() => {
       expect(view.result.current.peopleQuery.data).toHaveLength(0);
       expect(view.result.current.membersQuery.data).toHaveLength(0);
+      expect(view.result.current.volunteersQuery.data).toHaveLength(0);
     });
     expect(queryClient.getQueryData(["admin", "people"])).toBeUndefined();
   });

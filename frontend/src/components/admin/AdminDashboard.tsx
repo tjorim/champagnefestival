@@ -119,6 +119,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     areasQuery,
     peopleQuery,
     membersQuery,
+    volunteersQuery,
     peopleCollection,
     isAnyPending,
     isAnyFetching,
@@ -152,6 +153,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const areas = areasQuery.data ?? [];
   const people = peopleQuery.data ?? [];
   const members = membersQuery.data ?? [];
+  const volunteers = volunteersQuery.data ?? [];
   const {
     activeDayIndex,
     activeEditionDateKeys,
@@ -160,7 +162,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     isActiveEditionDay,
     layoutDayOptions,
     registrationCountByPersonId,
-    volunteers,
   } = useAdminDashboardData({
     activeEdition,
     detailRegistration,
@@ -320,7 +321,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       exhibitorsQuery.error,
       areasQuery.error,
       peopleQuery.error as Error | null,
-      membersQuery.error as Error | null,
     ],
     [
       registrationsQuery.error,
@@ -332,7 +332,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       exhibitorsQuery.error,
       areasQuery.error,
       peopleQuery.error,
-      membersQuery.error,
     ],
   );
 

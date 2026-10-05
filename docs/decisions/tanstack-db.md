@@ -1,6 +1,6 @@
 # TanStack DB for admin/event-day operational state
 
-**Status:** Adopted for registrations, tables and people (members are derived from people); other resources are open follow-ups (see [Roadmap](#roadmap))
+**Status:** Adopted for registrations, tables and people (members and volunteers are derived from people); other resources are open follow-ups (see [Roadmap](#roadmap))
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
 **Record updated:** 2026-10-05, [#1164](https://github.com/tjorim/champagnefestival/issues/1164)
 
@@ -151,15 +151,18 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
 
 ## People and members ([#1164](https://github.com/tjorim/champagnefestival/issues/1164))
 
-`people` is the third collection-backed domain; `members` is a view over it.
+`people` is the third collection-backed domain; `members` and `volunteers` are views over it.
 
 - `frontend/src/state/adminPeopleCollection.ts`: `createAdminPeopleCollection`
   builds one collection from `fetchPeople` (which merges the volunteer help
   periods in) with `queryCollectionOptions` and `getKey: (person) => person.id`.
   `useAdminQueries` reads it with `useLiveQuery` and exposes query-shaped
   `peopleQuery`/`membersQuery` objects, so `AdminDashboard` reads them as before.
-- **Members are derived, not stored.** A member is a person holding the `member`
-  role, so `membersQuery.data` is `selectMembers(people)`. There is no members
+- **Members and volunteers are derived, not stored.** A member (or volunteer) is a
+  person holding that role, so `membersQuery.data` is `selectMembers(people)` and
+  `volunteersQuery.data` is `selectVolunteers(people)`; both share the people
+  collection's loading and error state, and `AdminDashboard` no longer computes
+  volunteers itself. There is no members
   collection, no `/api/people?role=member` request (`fetchMembers` and
   `queryKeys.admin.members` are gone) and no member-sync code: a person update,
   role change or delete reaches the members view by itself (rule 3 below: derive
