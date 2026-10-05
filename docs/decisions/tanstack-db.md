@@ -177,7 +177,7 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   Both lists are ordered deterministically, and rows are deduplicated by id in case
   one is added mid-read. A people *search* (`fetchPeopleSearch`) stays one page: a
   query matching more than a page is too broad to be useful, so it is reported
-  instead. The registrations list still has its own single-page cap, which this change does not touch.
+  instead. The registrations list is read the same way: `fetchAllRegistrations` (the registrations collection's `queryFn`) and the registration list's "select/export all matching" read every page through `fetchAllRegistrationPages`, so there is no cap or truncation warning there either.
 - **Writes are direct, not handlers.** The admin forms validate server-side, and
   the server assigns ids and `updated_at`, so nothing is shown optimistically.
   `useAdminPeopleActions` keeps one `useMutation` per API call and then calls an

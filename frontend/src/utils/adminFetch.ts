@@ -133,28 +133,51 @@ export async function fetchRegistrationsPage(
   };
 }
 
+// The backend caps one registrations page at 1000 rows (`Pagination`). That is a
+// page size, not a limit on how many registrations there can be.
+const REGISTRATIONS_PAGE_SIZE = 1000;
+
+/**
+ * Reads every page of the registrations matching `options` (concurrently once
+ * the first page reveals the total) and deduplicates by id. The backend orders
+ * the list deterministically (newest first, then id), so pages do not overlap
+ * unless a row is added mid-read.
+ */
+export async function fetchAllRegistrationPages(
+  authHeaders: () => Record<string, string>,
+  options: Omit<RegistrationsPageOptions, "limit" | "page"> = {},
+): Promise<Registration[]> {
+  const first = await fetchRegistrationsPage(authHeaders, {
+    ...options,
+    limit: REGISTRATIONS_PAGE_SIZE,
+    page: 1,
+  });
+  const pageCount = Math.ceil(first.total / REGISTRATIONS_PAGE_SIZE);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+      fetchRegistrationsPage(authHeaders, {
+        ...options,
+        limit: REGISTRATIONS_PAGE_SIZE,
+        page: index + 2,
+      }),
+    ),
+  );
+  const byId = new Map<string, Registration>();
+  for (const { registrations } of [first, ...rest]) {
+    for (const registration of registrations) byId.set(registration.id, registration);
+  }
+  return [...byId.values()];
+}
+
 // LayoutEditor's floor-plan occupancy and the dashboard's status/edition/capacity
 // aggregates genuinely need the complete working set (they summarize across every
-// registration, not one page of it) — same reasoning as fetchPeople's full pull
-// below. ADMIN_REGISTRATIONS_FULL_LIST_LIMIT mirrors backend/app/routers/registrations.py's
-// Pagination ceiling so the request is bounded (not literally unlimited) while
-// still covering any realistic guest list. The registrations *table* itself does
-// not use this — see fetchRegistrationsPage, used directly by RegistrationList.
-export const ADMIN_REGISTRATIONS_FULL_LIST_LIMIT = 1000;
-
-export async function fetchAllRegistrations(
+// registration, not one page of it), so this reads every page. The registrations
+// *table* itself does not use this — see fetchRegistrationsPage, used directly by
+// RegistrationList.
+export function fetchAllRegistrations(
   authHeaders: () => Record<string, string>,
 ): Promise<Registration[]> {
-  const { registrations, total } = await fetchRegistrationsPage(authHeaders, {
-    limit: ADMIN_REGISTRATIONS_FULL_LIST_LIMIT,
-  });
-  if (total > registrations.length) {
-    devError(
-      `Admin registrations dashboard is showing ${registrations.length} of ${total} registrations; ` +
-        "raise ADMIN_REGISTRATIONS_FULL_LIST_LIMIT or add server-side pagination to the admin table.",
-    );
-  }
-  return registrations;
+  return fetchAllRegistrationPages(authHeaders);
 }
 
 export async function fetchRegistration(
