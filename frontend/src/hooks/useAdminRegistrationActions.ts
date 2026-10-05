@@ -347,8 +347,11 @@ export function useAdminRegistrationActions({
 
   const handleAddRegistration = useCallback(
     (registration: Registration) => {
+      // Never seed an unloaded list with a single row: that would present a
+      // one-booking list as loaded (and repopulate the collection after a
+      // sign-out reset). The initial fetch returns the new booking itself.
       queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev ? [registration, ...prev] : [registration],
+        prev ? [registration, ...prev] : prev,
       );
     },
     [queryClient, registrationsQueryKey],

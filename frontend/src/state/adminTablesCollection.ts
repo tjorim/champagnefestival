@@ -4,7 +4,15 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { FloorTableRecord } from "@/types/admin";
 import type { LiveEnvelope } from "@/utils/liveStream";
 import { queryKeys } from "@/utils/queryKeys";
-import { fetchTable, fetchTables, updateTable } from "@/utils/adminFetch";
+import { createEpochFence } from "@/state/epochFence";
+import {
+  createTable,
+  deleteTable,
+  fetchTable,
+  fetchTables,
+  updateTable,
+  type TableCreateInput,
+} from "@/utils/adminFetch";
 
 type AuthHeadersProvider = () => Record<string, string>;
 
@@ -65,11 +73,53 @@ export async function refetchAdminTables(collection: AdminTablesCollection): Pro
   await collection.utils.refetch().catch(() => undefined);
 }
 
+/**
+ * Deleting a key the collection no longer holds throws, and a row can already
+ * be gone (a live `deleted` event or a reset got there first), so only delete
+ * what is still present.
+ */
+async function deleteIfPresent(collection: AdminTablesCollection, key: string): Promise<void> {
+  if (collection.has(key)) await collection.utils.writeDelete(key);
+}
+
+/**
+ * Creates a table through the API and stores the server's row. Not optimistic:
+ * the server assigns the id and the table type's capacity. A response that
+ * arrives after sign-out or a collection swap is dropped.
+ */
+export async function addAdminTable(
+  collection: AdminTablesCollection,
+  authHeaders: AuthHeadersProvider,
+  input: TableCreateInput,
+): Promise<void> {
+  const isCurrent = tablesFence.capture();
+  const table = await createTable(authHeaders, input);
+  if (!isCurrent()) return;
+  await collection.utils.writeUpsert(table);
+}
+
+/**
+ * Deletes a table through the API and removes the row. Not optimistic: the
+ * server rejects deleting a table that still holds bookings.
+ */
+export async function deleteAdminTable(
+  collection: AdminTablesCollection,
+  authHeaders: AuthHeadersProvider,
+  tableId: string,
+): Promise<void> {
+  const isCurrent = tablesFence.capture();
+  await deleteTable(authHeaders, tableId);
+  if (!isCurrent()) return;
+  await deleteIfPresent(collection, tableId);
+}
+
 /** Removes every table that belongs to one of the given layouts (a layout/venue delete cascade). */
 export async function removeAdminTablesForLayouts(
   collection: AdminTablesCollection,
   layoutIds: ReadonlySet<string> | readonly string[],
+  isCurrent: () => boolean = () => true,
 ): Promise<void> {
+  if (!isCurrent()) return;
   const ids = new Set(layoutIds);
   const keys = Array.from(collection.values())
     .filter((table) => ids.has(table.layoutId))
@@ -83,7 +133,9 @@ export async function replaceAdminTablesForLayout(
   collection: AdminTablesCollection,
   layoutId: string,
   tables: readonly FloorTableRecord[],
+  isCurrent: () => boolean = () => true,
 ): Promise<void> {
+  if (!isCurrent()) return;
   const keep = new Set(tables.map((table) => table.id));
   const stale = Array.from(collection.values())
     .filter((table) => table.layoutId === layoutId && !keep.has(table.id))
@@ -98,19 +150,19 @@ const activeAdminTablesCollections = new Set<AdminTablesCollection>();
 const latestTableEventTimestamps = new Map<string, number>();
 
 /**
- * Bumped whenever the set of active collections changes or a collection is
- * reset (sign-out). A live-event patch fetches a row with the session that
- * received the event and writes it only after the response arrives; if the
- * epoch moved in between, that response belongs to a previous session or
- * collection and must not be written into the replacement state.
+ * Advanced whenever the set of active collections changes or a collection is
+ * reset (sign-out); see `epochFence.ts`.
  */
-let collectionEpoch = 0;
+const tablesFence = createEpochFence();
+
+/** Captures the current session for a write that follows an API call. */
+export const captureAdminTablesFence = tablesFence.capture;
 
 export function registerAdminTablesCollection(collection: AdminTablesCollection): () => void {
-  collectionEpoch += 1;
+  tablesFence.advance();
   activeAdminTablesCollections.add(collection);
   return () => {
-    collectionEpoch += 1;
+    tablesFence.advance();
     activeAdminTablesCollections.delete(collection);
     if (activeAdminTablesCollections.size === 0) {
       latestTableEventTimestamps.clear();
@@ -119,7 +171,7 @@ export function registerAdminTablesCollection(collection: AdminTablesCollection)
 }
 
 export async function resetAdminTablesCollection(collection: AdminTablesCollection): Promise<void> {
-  collectionEpoch += 1;
+  tablesFence.advance();
   latestTableEventTimestamps.clear();
   if (collection.size === 0) return;
   await collection.utils.writeBatch(() => {
@@ -188,7 +240,7 @@ export async function patchAdminTableLiveEvent(
   }
 
   const tableId = envelope.scope.table_id!;
-  const epoch = collectionEpoch;
+  const isCurrent = tablesFence.capture();
   const eventTime = Date.parse(envelope.ts);
   if (isNaN(eventTime)) return;
 
@@ -197,14 +249,14 @@ export async function patchAdminTableLiveEvent(
   latestTableEventTimestamps.set(tableId, eventTime);
 
   if (envelope.action === "deleted") {
-    await writeToActiveCollections((collection) => collection.utils.writeDelete(tableId));
+    await writeToActiveCollections((collection) => deleteIfPresent(collection, tableId));
     return;
   }
 
   const table = await fetchTable(tableId, authHeaders);
 
   // Sign-out or a collection swap happened while the row was in flight.
-  if (epoch !== collectionEpoch) return;
+  if (!isCurrent()) return;
 
   const currentLastTime = latestTableEventTimestamps.get(tableId);
   if (currentLastTime !== undefined && eventTime < currentLastTime) return;

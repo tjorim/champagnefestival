@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it } from "vitest";
 import { http, HttpResponse } from "msw";
 import { server } from "@/mocks/server";
 import {
+  addAdminTable,
   canPatchAdminTableLiveEvent,
+  captureAdminTablesFence,
+  deleteAdminTable,
   createAdminTablesCollection,
   isTableRowUnaffectedByLiveEvent,
   patchAdminTableLiveEvent,
@@ -195,6 +198,102 @@ describe("admin tables collection", () => {
   });
 });
 
+function gatedResponse() {
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { gate, release: () => release() };
+}
+
+describe("admin tables writes after an API call", () => {
+  it("stores a created table through the API", async () => {
+    const { collection } = await createLoadedCollection();
+
+    await addAdminTable(collection, authHeaders, {
+      name: "T9",
+      layoutId: "layout-01",
+      tableTypeId: "tt-01",
+    });
+
+    expect(Array.from(collection.values()).some((t) => t.name === "T9")).toBe(true);
+  });
+
+  it("drops a created table whose response arrives after a reset", async () => {
+    const { collection } = await createLoadedCollection();
+    const { gate, release } = gatedResponse();
+    server.use(
+      http.post("/api/tables", async () => {
+        await gate;
+        return HttpResponse.json(
+          { ...seedTables[0], id: "late-table", name: "Late" },
+          { status: 201 },
+        );
+      }),
+    );
+
+    const add = addAdminTable(collection, authHeaders, {
+      name: "Late",
+      layoutId: "layout-01",
+      tableTypeId: "tt-01",
+    });
+    await resetAdminTablesCollection(collection);
+    release();
+    await add;
+
+    expect(collection.size).toBe(0);
+  });
+
+  it("does not fail a delete whose row a live event already removed", async () => {
+    const { collection } = await createLoadedCollection();
+    const { gate, release } = gatedResponse();
+    server.use(
+      http.delete("/api/tables/:id", async () => {
+        await gate;
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+
+    const removal = deleteAdminTable(collection, authHeaders, "table-02");
+    await collection.utils.writeDelete("table-02");
+    release();
+
+    await expect(removal).resolves.toBeUndefined();
+    expect(collection.has("table-02")).toBe(false);
+  });
+
+  it("skips cascades and restores once the captured session is gone", async () => {
+    const { collection } = await createLoadedCollection();
+    const isCurrent = captureAdminTablesFence();
+    await resetAdminTablesCollection(collection);
+    await collection.utils.writeUpsert(createRow("table-new"));
+
+    await replaceAdminTablesForLayout(
+      collection,
+      "layout-01",
+      [createRow("table-restored")],
+      isCurrent,
+    );
+    await removeAdminTablesForLayouts(collection, ["layout-01"], isCurrent);
+
+    expect(collection.has("table-restored")).toBe(false);
+    expect(collection.has("table-new")).toBe(true);
+  });
+});
+
+function createRow(id: string): FloorTableRecord {
+  return {
+    id,
+    name: id,
+    capacity: 6,
+    x: 1,
+    y: 1,
+    tableTypeId: "tt-01",
+    rotation: 0,
+    layoutId: "layout-01",
+  };
+}
+
 describe("admin tables live events", () => {
   it("only patches table-scoped seating events while a collection is active", async () => {
     const { collection } = await createLoadedCollection();
@@ -236,6 +335,16 @@ describe("admin tables live events", () => {
 
     expect(collection.get("table-01")?.name).toBe("Renamed elsewhere");
     expect(collection.size).toBe(seedTables.length);
+  });
+
+  it("tolerates a live delete for a table the collection no longer holds", async () => {
+    const { collection } = await createLoadedCollection();
+    cleanups.push(registerAdminTablesCollection(collection));
+    await collection.utils.writeDelete("table-01");
+
+    await expect(
+      patchAdminTableLiveEvent(seatingEnvelope({ action: "deleted" }), authHeaders),
+    ).resolves.toBeUndefined();
   });
 
   it("removes a deleted table without fetching it", async () => {

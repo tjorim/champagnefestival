@@ -127,6 +127,18 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   `seating` event with a `registration_id` is an allocation change; it only
   touches the registrations key, because occupancy is derived and no table row
   changes. Reconnects still invalidate both keys.
+- **Session fence.** A response that arrives after sign-out or a collection swap
+  must not be written into the replacement state. `state/epochFence.ts` gives
+  each collection module an epoch that advances on reset and on
+  (un)registration. The registrations and table live-event patchers capture it
+  before their fetch and drop the row if it moved; table writes that follow an
+  API call (create, delete, layout/venue delete cascades, revision restore) do
+  the same through `captureAdminTablesFence()`. Deletes only touch rows the
+  collection still holds, because `writeDelete` throws for a missing key.
+  `handleAddRegistration` no longer seeds an unloaded registrations list with a
+  single row. Venues, rooms, layouts, areas and table types are still plain
+  queries whose `setQueryData` calls can recreate an entry after sign-out; that
+  belongs to [#1166](https://github.com/tjorim/champagnefestival/issues/1166).
 - **Reset and refresh.** `isAuthenticated` turning false empties the collection
   and removes its query. `"tables"` is no longer in `ADMIN_RESOURCE_KEYS`;
   `loadData` refetches the collection through `utils.refetch()` and no

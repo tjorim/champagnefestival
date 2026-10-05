@@ -4,13 +4,15 @@ import { m } from "@/paraglide/messages";
 import type { FloorArea, FloorTableRecord, Layout, Room, TableType, Venue } from "@/types/admin";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
 import {
+  addAdminTable,
+  captureAdminTablesFence,
+  deleteAdminTable,
   refetchAdminTables,
   removeAdminTablesForLayouts,
   replaceAdminTablesForLayout,
   type AdminTablesCollection,
 } from "@/state/adminTablesCollection";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
-import { createTable, deleteTable } from "@/utils/adminFetch";
 import { devError } from "@/utils/devLog";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
@@ -78,9 +80,7 @@ export function useAdminVenueActions({
 
   const handleAddTable = useCallback(
     async (name: string, layoutId: string, tableTypeId: string) => {
-      // Not optimistic: the server assigns the id and the type's capacity.
-      const table = await createTable(authHeaders, { name, layoutId, tableTypeId });
-      await tablesCollection.utils.writeUpsert(table);
+      await addAdminTable(tablesCollection, authHeaders, { name, layoutId, tableTypeId });
     },
     [authHeaders, tablesCollection],
   );
@@ -116,9 +116,7 @@ export function useAdminVenueActions({
 
   const handleDeleteTable = useCallback(
     async (tableId: string) => {
-      // Not optimistic: the server rejects deleting a table that still holds bookings.
-      await deleteTable(authHeaders, tableId);
-      await tablesCollection.utils.writeDelete(tableId);
+      await deleteAdminTable(tablesCollection, authHeaders, tableId);
     },
     [authHeaders, tablesCollection],
   );
@@ -197,6 +195,7 @@ export function useAdminVenueActions({
 
   const handleDeleteVenue = useCallback(
     async (venueId: string) => {
+      const tablesFenceIsCurrent = captureAdminTablesFence();
       await deleteVenueMutation.mutateAsync(venueId);
       queryClient.setQueryData<Venue[]>(venuesQueryKey, (prev) =>
         prev ? prev.filter((v) => v.id !== venueId) : prev,
@@ -214,7 +213,7 @@ export function useAdminVenueActions({
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
         prev ? prev.filter((l) => !venueRoomIds.includes(l.roomId ?? "")) : prev,
       );
-      await removeAdminTablesForLayouts(tablesCollection, venueLayoutIds);
+      await removeAdminTablesForLayouts(tablesCollection, venueLayoutIds, tablesFenceIsCurrent);
       queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
         prev ? prev.filter((a) => !venueLayoutIds.includes(a.layoutId)) : prev,
       );
@@ -324,11 +323,12 @@ export function useAdminVenueActions({
 
   const handleDeleteLayout = useCallback(
     async (layoutId: string) => {
+      const tablesFenceIsCurrent = captureAdminTablesFence();
       await deleteLayoutMutation.mutateAsync(layoutId);
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
         prev ? prev.filter((l) => l.id !== layoutId) : prev,
       );
-      await removeAdminTablesForLayouts(tablesCollection, [layoutId]);
+      await removeAdminTablesForLayouts(tablesCollection, [layoutId], tablesFenceIsCurrent);
       queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
         prev ? prev.filter((a) => a.layoutId !== layoutId) : prev,
       );
@@ -348,6 +348,7 @@ export function useAdminVenueActions({
 
   const handleRestoreRevision = useCallback(
     async (layoutId: string, revisionNumber: number, resolveAllocations?: boolean) => {
+      const tablesFenceIsCurrent = captureAdminTablesFence();
       const data = await restoreLayoutRevisionMutation.mutateAsync({
         layoutId,
         revisionNumber,
@@ -360,6 +361,7 @@ export function useAdminVenueActions({
           tablesCollection,
           layoutId,
           restoredTables.map(apiTableToTable),
+          tablesFenceIsCurrent,
         );
       }
       if (Array.isArray(restoredAreas)) {

@@ -1,6 +1,7 @@
 import { createCollection } from "@tanstack/react-db";
 import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import type { QueryClient } from "@tanstack/react-query";
+import { createEpochFence } from "@/state/epochFence";
 import type { LiveEnvelope } from "@/utils/liveStream";
 import { queryKeys } from "@/utils/queryKeys";
 import { fetchAllRegistrations, fetchRegistration } from "@/utils/adminFetch";
@@ -36,11 +37,20 @@ type AuthHeadersProvider = () => Record<string, string>;
 const activeAdminRegistrationsCollections = new Set<AdminRegistrationsCollection>();
 const latestRegistrationEventTimestamps = new Map<string, number>();
 
+/**
+ * Advanced whenever the set of active collections changes or a collection is
+ * reset (sign-out), so a live-event fetch that resolves afterwards is dropped
+ * instead of written into the replacement state; see `epochFence.ts`.
+ */
+const registrationsFence = createEpochFence();
+
 export function registerAdminRegistrationsCollection(
   collection: AdminRegistrationsCollection,
 ): () => void {
+  registrationsFence.advance();
   activeAdminRegistrationsCollections.add(collection);
   return () => {
+    registrationsFence.advance();
     activeAdminRegistrationsCollections.delete(collection);
     if (activeAdminRegistrationsCollections.size === 0) {
       latestRegistrationEventTimestamps.clear();
@@ -51,6 +61,8 @@ export function registerAdminRegistrationsCollection(
 export async function resetAdminRegistrationsCollection(
   collection: AdminRegistrationsCollection,
 ): Promise<void> {
+  registrationsFence.advance();
+  latestRegistrationEventTimestamps.clear();
   if (collection.size === 0) return;
   await collection.utils.writeBatch(() => {
     for (const key of collection.keys()) {
@@ -58,6 +70,18 @@ export async function resetAdminRegistrationsCollection(
       latestRegistrationEventTimestamps.delete(key);
     }
   });
+}
+
+/**
+ * Deleting a key the collection no longer holds throws, and a row can already
+ * be gone (a reset or an earlier event got there first), so only delete what
+ * is still present.
+ */
+async function deleteIfPresent(
+  collection: AdminRegistrationsCollection,
+  key: string,
+): Promise<void> {
+  if (collection.has(key)) await collection.utils.writeDelete(key);
 }
 
 /**
@@ -108,6 +132,7 @@ export async function patchAdminRegistrationLiveEvent(
   }
 
   const registrationId = envelope.scope.registration_id!;
+  const isCurrent = registrationsFence.capture();
   const eventTime = Date.parse(envelope.ts);
   if (isNaN(eventTime)) return;
 
@@ -118,11 +143,14 @@ export async function patchAdminRegistrationLiveEvent(
   latestRegistrationEventTimestamps.set(registrationId, eventTime);
 
   if (envelope.topic === "registration" && envelope.action === "deleted") {
-    await writeToActiveCollections((collection) => collection.utils.writeDelete(registrationId));
+    await writeToActiveCollections((collection) => deleteIfPresent(collection, registrationId));
     return;
   }
 
   const registration = await fetchRegistration(registrationId, authHeaders);
+
+  // Sign-out or a collection swap happened while the booking was in flight.
+  if (!isCurrent()) return;
 
   const currentLastTime = latestRegistrationEventTimestamps.get(registrationId);
   if (currentLastTime !== undefined && eventTime < currentLastTime) {
