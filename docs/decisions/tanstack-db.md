@@ -167,10 +167,17 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   a person update, role change or delete reaches the members view by itself (rule 3
   below: derive views instead of storing them twice). An earlier iteration of this
   migration had a second collection kept in step by hand; that reintroduced the
-  multi-cache patching this issue set out to remove. `fetchPeople` still issues the
-  role-filtered `/api/people?role=member` request inside the one `queryFn` and
-  deduplicates by id: the limit applies after the filter, so a member who falls
-  outside the first 1,000 people is still loaded.
+  multi-cache patching this issue set out to remove.
+- **No list cap.** `fetchPeople` reads every page of `/api/people` and
+  `/api/volunteers` (`fetchAllPersonPages`): the first page reveals the total and
+  the remaining pages are fetched concurrently. The backend's 1,000-row ceiling is
+  the page size, not a limit on how many people there can be, so the old
+  "showing N of M" warning is gone, and members and volunteers are complete by
+  construction (which is also why no role-filtered members request is needed).
+  Both lists are ordered deterministically, and rows are deduplicated by id in case
+  one is added mid-read. A people *search* (`fetchPeopleSearch`) stays one page: a
+  query matching more than a page is too broad to be useful, so it is reported
+  instead. The registrations list still has its own single-page cap, which this change does not touch.
 - **Writes are direct, not handlers.** The admin forms validate server-side, and
   the server assigns ids and `updated_at`, so nothing is shown optimistically.
   `useAdminPeopleActions` keeps one `useMutation` per API call and then calls an

@@ -432,14 +432,13 @@ interface PersonListEnvelope {
 // GET /api/people and /api/volunteers page like GET /api/registrations (see
 // backend/app/routers/{people,volunteers}.py) — {items, total, limit, page}.
 // GET /api/members doesn't exist (retired — it was functionally identical to
-// /api/people?role=member; see backend/app/routers/members.py), so the
-// member list is read through /api/people?role=member instead. Unlike the
-// registrations table, the People/Volunteers/Members admin tabs are still
+// /api/people?role=member; see backend/app/routers/members.py); members are the
+// people holding the member role. The People/Volunteers/Members admin tabs are
 // full client-side tables (see PeopleManagement/VolunteersManagement/
-// MembersManagement), so instead of real server-side pagination we fetch one
-// bounded "everything" page and warn loudly if it was ever truncated,
-// mirroring fetchAllRegistrations.
-export const PEOPLE_FULL_LIST_LIMIT = 1000;
+// MembersManagement), so `fetchAllPersonPages` reads every page. The backend
+// caps one page at 1000 rows (`Pagination`), which is the page size here, not a
+// limit on how many people there can be.
+const PERSON_PAGE_SIZE = 1000;
 
 async function fetchPersonListEnvelope(
   url: string,
@@ -465,52 +464,68 @@ async function fetchPersonListEnvelope(
   return { people: payload.items.map(apiToPerson), total: payload.total };
 }
 
-function warnIfPersonListTruncated(label: string, count: number, total: number): void {
-  if (total > count) {
-    devError(
-      `Admin ${label} fetch is showing ${count} of ${total}; raise PEOPLE_FULL_LIST_LIMIT or add server-side pagination.`,
-    );
+/**
+ * Reads every page of a person list endpoint. Pages are fetched concurrently
+ * once the first one reveals the total. The backend orders both lists
+ * deterministically (newest first, then id), so pages do not overlap unless a
+ * row is added mid-read, and the result is deduplicated by id for that case.
+ */
+async function fetchAllPersonPages(
+  path: string,
+  authHeaders: () => Record<string, string>,
+): Promise<Person[]> {
+  const separator = path.includes("?") ? "&" : "?";
+  const pageUrl = (page: number) => `${path}${separator}limit=${PERSON_PAGE_SIZE}&page=${page}`;
+  const first = await fetchPersonListEnvelope(pageUrl(1), authHeaders);
+  const pageCount = Math.ceil(first.total / PERSON_PAGE_SIZE);
+  const rest = await Promise.all(
+    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
+      fetchPersonListEnvelope(pageUrl(index + 2), authHeaders),
+    ),
+  );
+  const byId = new Map<string, Person>();
+  for (const { people } of [first, ...rest]) {
+    for (const person of people) byId.set(person.id, person);
   }
+  return [...byId.values()];
 }
 
+/**
+ * People matching a search, with volunteer help periods merged in. A search is
+ * one page by design: a query that matches more than a page is too broad to be
+ * useful, so that is reported rather than paged through.
+ */
 export async function fetchPeopleSearch(
   authHeaders: () => Record<string, string>,
   query: string,
 ): Promise<Person[]> {
-  const [peopleResult, volunteersResult] = await Promise.all([
+  const [peopleResult, volunteers] = await Promise.all([
     fetchPersonListEnvelope(
-      `/api/people?q=${encodeURIComponent(query.trim())}&limit=${PEOPLE_FULL_LIST_LIMIT}`,
+      `/api/people?q=${encodeURIComponent(query.trim())}&limit=${PERSON_PAGE_SIZE}`,
       authHeaders,
     ),
-    fetchPersonListEnvelope(`/api/volunteers?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
+    fetchAllPersonPages("/api/volunteers", authHeaders),
   ]);
-  warnIfPersonListTruncated("people search", peopleResult.people.length, peopleResult.total);
-  warnIfPersonListTruncated("volunteers", volunteersResult.people.length, volunteersResult.total);
-  return mergePeopleWithVolunteers(peopleResult.people, volunteersResult.people);
+  if (peopleResult.total > peopleResult.people.length) {
+    devError(
+      `Admin people search matched ${peopleResult.total} people but only the first ` +
+        `${peopleResult.people.length} are shown; narrow the query.`,
+    );
+  }
+  return mergePeopleWithVolunteers(peopleResult.people, volunteers);
 }
 
 /**
- * Every person, with volunteer help periods merged in. Members are not fetched
- * as a separate resource any more (the admin state derives them from the
- * people), but the role-filtered request still runs here: it applies the limit
- * after the filter, so a member who falls outside the first page of all people
- * is still loaded. Rows are deduplicated by id.
+ * Every person, with volunteer help periods merged in. All pages are read, so
+ * members (the people holding the member role) and volunteers are complete
+ * however many people there are.
  */
 export async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  const [peopleResult, membersResult, volunteersResult] = await Promise.all([
-    fetchPersonListEnvelope(`/api/people?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
-    fetchPersonListEnvelope(`/api/people?role=member&limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
-    fetchPersonListEnvelope(`/api/volunteers?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
+  const [people, volunteers] = await Promise.all([
+    fetchAllPersonPages("/api/people", authHeaders),
+    fetchAllPersonPages("/api/volunteers", authHeaders),
   ]);
-  warnIfPersonListTruncated("people", peopleResult.people.length, peopleResult.total);
-  warnIfPersonListTruncated("members", membersResult.people.length, membersResult.total);
-  warnIfPersonListTruncated("volunteers", volunteersResult.people.length, volunteersResult.total);
-  const knownIds = new Set(peopleResult.people.map((person) => person.id));
-  const people = [
-    ...peopleResult.people,
-    ...membersResult.people.filter((member) => !knownIds.has(member.id)),
-  ];
-  return mergePeopleWithVolunteers(people, volunteersResult.people);
+  return mergePeopleWithVolunteers(people, volunteers);
 }
 
 /** One volunteer with their help periods (`GET /api/volunteers/{id}`). */

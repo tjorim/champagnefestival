@@ -81,18 +81,17 @@ describe("admin people collection", () => {
 
   it("refetches the collection explicitly", async () => {
     const { collection } = await createLoadedCollection();
-    const roles: (string | null)[] = [];
+    let requests = 0;
     server.use(
-      http.get("/api/people", ({ request }) => {
-        roles.push(new URL(request.url).searchParams.get("role"));
+      http.get("/api/people", () => {
+        requests += 1;
         return HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 });
       }),
     );
 
     await refetchAdminPeople(collection);
 
-    // One load of the collection: all people plus the role-filtered member page.
-    expect(roles.sort()).toEqual(["member", null]);
+    expect(requests).toBe(1);
     // Only the volunteer-only rows survive an empty people response.
     expect(collection.has("person-02")).toBe(false);
   });

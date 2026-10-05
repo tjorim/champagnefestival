@@ -71,18 +71,20 @@ describe("fetchPeople / fetchPeopleSearch — envelope handling", () => {
     expect(people.map((p) => p.id)).toEqual(["p2"]);
   });
 
-  it("fetchPeople keeps a member outside the first people page and deduplicates by id", async () => {
+  it("fetchPeople reads every page, however many people there are", async () => {
+    const total = 2500;
     const requested: string[] = [];
     server.use(
       http.get("/api/people", ({ request }) => {
         const url = new URL(request.url);
         requested.push(url.search);
-        const membersOnly = url.searchParams.get("role") === "member";
-        // 2 people in total, but the unfiltered page only holds the first one.
-        const items = membersOnly
-          ? [personPayload("p1", { roles: ["member"] }), personPayload("m2", { roles: ["member"] })]
-          : [personPayload("p1", { roles: ["member"] })];
-        return HttpResponse.json({ items, total: items.length, limit: 1000, page: 1 });
+        const limit = Number(url.searchParams.get("limit"));
+        const page = Number(url.searchParams.get("page"));
+        const first = (page - 1) * limit;
+        const items = Array.from({ length: Math.max(0, Math.min(limit, total - first)) }, (_, i) =>
+          personPayload(`p${first + i}`, { roles: ["member"] }),
+        );
+        return HttpResponse.json({ items, total, limit, page });
       }),
       http.get("/api/volunteers", () =>
         HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 }),
@@ -91,8 +93,39 @@ describe("fetchPeople / fetchPeopleSearch — envelope handling", () => {
 
     const people = await fetchPeople(authHeaders);
 
-    expect(people.map((p) => p.id).sort()).toEqual(["m2", "p1"]);
-    expect(requested).toContain("?role=member&limit=1000");
+    expect(people).toHaveLength(total);
+    expect(new Set(people.map((p) => p.id)).size).toBe(total);
+    expect(requested.sort()).toEqual([
+      "?limit=1000&page=1",
+      "?limit=1000&page=2",
+      "?limit=1000&page=3",
+    ]);
+  });
+
+  it("fetchPeople reads every page of volunteers too and deduplicates a row seen twice", async () => {
+    server.use(
+      http.get("/api/people", () =>
+        HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 }),
+      ),
+      http.get("/api/volunteers", ({ request }) => {
+        const page = Number(new URL(request.url).searchParams.get("page"));
+        // A row added mid-read shifts the next page by one, so v1 shows up twice.
+        const items =
+          page === 1
+            ? Array.from({ length: 1000 }, (_, i) =>
+                personPayload(`v${i}`, { roles: ["volunteer"] }),
+              )
+            : [
+                personPayload("v999", { roles: ["volunteer"] }),
+                personPayload("v1000", { roles: ["volunteer"] }),
+              ];
+        return HttpResponse.json({ items, total: 1001, limit: 1000, page });
+      }),
+    );
+
+    const people = await fetchPeople(authHeaders);
+
+    expect(people).toHaveLength(1001);
   });
 
   it("fetchVolunteer returns one volunteer with their help periods", async () => {
