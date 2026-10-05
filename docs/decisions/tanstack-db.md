@@ -258,18 +258,24 @@ Installed versions: `@tanstack/db` 0.11.3, `@tanstack/react-db` ^0.5.3,
 
 ## Roadmap
 
-Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR #1173) has merged:
+Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR #1173) has merged. The server-driven tables work is the epic [#1174](https://github.com/tjorim/champagnefestival/issues/1174); its sub-issues are listed in dependency order.
 
 | Order | Follow-up | Issue |
 | --- | --- | --- |
 | 1 | Extract a shared collection factory (registration, sign-out reset, session fence, guarded writes) with a selectable sync mode, then migrate venues, rooms, areas, layouts and table types as a group, then exhibitors (people and members are done, see [above](#people-and-members-1164)). Default is migrate; staying on Query needs a stated reason | [#1166](https://github.com/tjorim/champagnefestival/issues/1166) |
-| 2 | Server-driven admin data tables, phase 1 spike and decision: TanStack Table manual mode, on-demand collection sync or Query with `keepPreviousData`, one paged list contract. Read-only, so it may run in parallel with order 1 | [#1174](https://github.com/tjorim/champagnefestival/issues/1174) |
-| 3 | Explore persisted collections for event-day resilience (privacy, staleness, offline). Taken after the #1174 spike, because a partial on-demand cache must not be persisted as if complete; its privacy question can proceed earlier | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
-| 4 | Server-driven admin data tables, phases 2 to 5: backend list contract, on-demand data layer with optimistic handlers, `AdminDataTable`, screen migration | [#1174](https://github.com/tjorim/champagnefestival/issues/1174) |
+| 2 | Spike and decision: on-demand collection sync or Query with `keepPreviousData`, plus the data scope for registrations and the full-people-list consumers. Read-only; may run in parallel with order 1 | [#1175](https://github.com/tjorim/champagnefestival/issues/1175) |
+| 2 | Backend: shared paged list contract (sort, filters, deterministic order, indexes) for people and volunteers. May start with the spike | [#1176](https://github.com/tjorim/champagnefestival/issues/1176) |
+| 3 | Persisted collections for event-day resilience (privacy, staleness, offline). Taken after the spike, because a partial on-demand cache must not be persisted as if complete; its privacy question can proceed earlier | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
+| 4 | Backend: counts, registration count per person, duplicate-email lookup and exports for people and volunteers | [#1177](https://github.com/tjorim/champagnefestival/issues/1177) |
+| 4 | Server-driven data layer for the people collection | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
+| 4 | `AdminDataTable` on TanStack Table manual mode | [#1180](https://github.com/tjorim/champagnefestival/issues/1180) |
+| 5 | Optimistic edit and delete handlers with pending state for people | [#1179](https://github.com/tjorim/champagnefestival/issues/1179) |
+| 6 | Move Members, Volunteers and People onto `AdminDataTable` and the server contract | [#1181](https://github.com/tjorim/champagnefestival/issues/1181) |
+| 6 | Scope the registrations collection; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
 
 Done: [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
 
-The per-resource decisions from #1166 will be recorded in this file when made; the default is to migrate.
+The per-resource decisions from #1166 and the on-demand decision from #1175 will be recorded in this file when made; the default for #1166 is to migrate.
 
 ## References
 
