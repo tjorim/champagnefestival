@@ -50,6 +50,9 @@ const lifecycle = createAdminCollectionLifecycle<Registration, AdminRegistration
 export const registerAdminRegistrationsCollection = lifecycle.register;
 export const resetAdminRegistrationsCollection = lifecycle.reset;
 
+/** Refetches the registrations from the server; failures stay on `collection.utils.lastError`. */
+export const refetchAdminRegistrations = lifecycle.refetch;
+
 function isRegistrationCollectionLiveEvent(envelope: LiveEnvelope): boolean {
   if (!lifecycle.hasQueryKey(envelope)) return false;
 

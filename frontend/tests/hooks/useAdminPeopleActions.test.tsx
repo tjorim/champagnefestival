@@ -14,6 +14,10 @@ import { describe, expect, it, vi } from "vitest";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import { server } from "@/mocks/server";
 import {
+  createAdminExhibitorsCollection,
+  resetAdminExhibitorsCollection,
+} from "@/state/adminExhibitorsCollection";
+import {
   createAdminPeopleCollection,
   resetAdminPeopleCollection,
 } from "@/state/adminPeopleCollection";
@@ -21,7 +25,6 @@ import type { Person } from "@/types/person";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
 const REGISTRATIONS_KEY = ["admin", "registrations"];
-const EXHIBITORS_KEY = ["admin", "exhibitors"];
 
 function makePerson(overrides: Partial<Person> & { id: string }): Person {
   return {
@@ -107,6 +110,12 @@ async function renderMergeHook(people: Person[]) {
       const items = people.map(toApiPerson);
       return HttpResponse.json({ items, total: items.length, limit: 1000, page: 1 });
     }),
+    http.get("/api/exhibitors", () =>
+      HttpResponse.json([
+        { id: 1, name: "Maison Un", active: true, contact_person_id: DUPLICATE.id },
+        { id: 2, name: "Maison Deux", active: true, contact_person_id: "per_other" },
+      ]),
+    ),
     http.get("/api/volunteers", () =>
       HttpResponse.json({
         items: volunteers.map((person) => ({
@@ -130,6 +139,12 @@ async function renderMergeHook(people: Person[]) {
     enabled: true,
   });
   await peopleCollection.preload();
+  const exhibitorsCollection = createAdminExhibitorsCollection({
+    queryClient,
+    authHeaders: () => ({ "Content-Type": "application/json" }),
+    enabled: true,
+  });
+  await exhibitorsCollection.preload();
   // Keep the refetch out of the way: this is about what the hook writes itself.
   const refetchPeople = vi
     .spyOn(peopleCollection.utils, "refetch")
@@ -139,13 +154,12 @@ async function renderMergeHook(people: Person[]) {
     { id: "reg-1", personId: CANONICAL.id, person: { id: CANONICAL.id, name: "Before" } },
     { id: "reg-2", personId: DUPLICATE.id, person: { id: DUPLICATE.id, name: "Before" } },
   ]);
-  queryClient.setQueryData(EXHIBITORS_KEY, [{ id: 1, contactPersonId: DUPLICATE.id }]);
 
   const { result } = renderHook(
     () =>
       useAdminPeopleActions({
         authHeaders: () => ({ "Content-Type": "application/json" }),
-        exhibitorsQueryKey: EXHIBITORS_KEY,
+        exhibitorsCollection,
         peopleCollection,
         queryClient,
         registrationsQueryKey: REGISTRATIONS_KEY,
@@ -154,10 +168,56 @@ async function renderMergeHook(people: Person[]) {
     { wrapper: Wrapper },
   );
 
-  return { peopleCollection, queryClient, result, refetchPeople, setDetailRegistration };
+  return {
+    exhibitorsCollection,
+    peopleCollection,
+    queryClient,
+    result,
+    refetchPeople,
+    setDetailRegistration,
+  };
 }
 
 describe("useAdminPeopleActions — merge", () => {
+  it("repoints the duplicate's exhibitor contacts through the exhibitors collection", async () => {
+    server.use(
+      http.post("/api/people/:canonicalId/merge/:duplicateId", () =>
+        HttpResponse.json(MERGE_RESPONSE),
+      ),
+    );
+    const { exhibitorsCollection, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
+    const refetchExhibitors = vi
+      .spyOn(exhibitorsCollection.utils, "refetch")
+      .mockResolvedValue(undefined as never);
+
+    await act(async () => {
+      await result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
+    });
+
+    expect(exhibitorsCollection.get(1)?.contactPersonId).toBe(CANONICAL.id);
+    expect(exhibitorsCollection.get(2)?.contactPersonId).toBe("per_other");
+    expect(refetchExhibitors).toHaveBeenCalled();
+  });
+
+  it("refetches the exhibitors when the merge request fails", async () => {
+    server.use(
+      http.post("/api/people/:canonicalId/merge/:duplicateId", () =>
+        HttpResponse.json({ detail: "boom" }, { status: 500 }),
+      ),
+    );
+    const { exhibitorsCollection, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
+    const refetchExhibitors = vi
+      .spyOn(exhibitorsCollection.utils, "refetch")
+      .mockResolvedValue(undefined as never);
+
+    await act(async () => {
+      await expect(result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id)).rejects.toThrow();
+    });
+
+    expect(refetchExhibitors).toHaveBeenCalled();
+    expect(exhibitorsCollection.get(1)?.contactPersonId).toBe(DUPLICATE.id);
+  });
+
   it("keeps the survivor's own help periods and does not adopt the duplicate's", async () => {
     server.use(
       http.post("/api/people/:canonicalId/merge/:duplicateId", () =>
@@ -240,13 +300,20 @@ describe("useAdminPeopleActions — responses from an ended session", () => {
         return HttpResponse.json(MERGE_RESPONSE);
       }),
     );
-    const { peopleCollection, queryClient, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
+    const { exhibitorsCollection, peopleCollection, queryClient, result } = await renderMergeHook([
+      CANONICAL,
+      DUPLICATE,
+    ]);
+    const refetchExhibitors = vi
+      .spyOn(exhibitorsCollection.utils, "refetch")
+      .mockResolvedValue(undefined as never);
 
     let merge: Promise<void> = Promise.resolve();
     act(() => {
       merge = result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
     });
     await resetAdminPeopleCollection(peopleCollection);
+    await resetAdminExhibitorsCollection(exhibitorsCollection);
     release();
     await act(async () => {
       await merge;
@@ -257,9 +324,8 @@ describe("useAdminPeopleActions — responses from an ended session", () => {
       CANONICAL.id,
       DUPLICATE.id,
     ]);
-    expect(queryClient.getQueryData(EXHIBITORS_KEY)).toEqual([
-      { id: 1, contactPersonId: DUPLICATE.id },
-    ]);
+    expect(exhibitorsCollection.size).toBe(0);
+    expect(refetchExhibitors).not.toHaveBeenCalled();
     expect(peopleCollection.size).toBe(0);
   });
 

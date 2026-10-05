@@ -37,6 +37,11 @@ import { useAdminRegistrationActions } from "@/hooks/useAdminRegistrationActions
 import { useAdminSessionRecovery } from "@/hooks/useAdminSessionRecovery";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
+import {
+  applyAdminExhibitorDeleted,
+  applyAdminExhibitorSaved,
+  captureAdminExhibitorsFence,
+} from "@/state/adminExhibitorsCollection";
 import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { devError } from "@/utils/devLog";
@@ -116,6 +121,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     tableTypesQuery,
     layoutsQuery,
     exhibitorsQuery,
+    exhibitorsCollection,
     areasQuery,
     peopleQuery,
     membersQuery,
@@ -125,7 +131,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     isAnyFetching,
     registrationsQueryKey,
     venueCollections,
-    exhibitorsQueryKey,
     loadData: loadDataBase,
   } = useAdminQueries({
     visible,
@@ -192,7 +197,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleUpdateVolunteer,
   } = useAdminPeopleActions({
     authHeaders,
-    exhibitorsQueryKey,
+    exhibitorsCollection,
     peopleCollection,
     queryClient,
     registrationsQueryKey,
@@ -260,52 +265,35 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     auth.logout();
   }, [auth]);
 
+  // A saved or deleted exhibitor is written into the collection from the
+  // server's response, unless the session ended while the request was in flight.
   const handleExhibitorSaved = useCallback(
-    (item: ItemDraft) => {
-      queryClient.setQueryData<
-        { id: number; name: string; active: boolean; contactPersonId: string | null }[]
-      >(exhibitorsQueryKey, (prev) => {
-        const entry = {
-          id: item.id,
-          name: item.name,
-          active: item.active ?? true,
-          contactPersonId: item.contactPersonId ?? null,
-        };
-        if (!prev) return prev;
-        const idx = prev.findIndex((e) => e.id === item.id);
-        if (idx >= 0) {
-          return prev.map((e) => (e.id === item.id ? entry : e));
-        }
-        return [...prev, entry];
-      });
+    (item: ItemDraft, isCurrent: () => boolean) => {
+      void applyAdminExhibitorSaved(exhibitorsCollection, item, isCurrent);
     },
-    [exhibitorsQueryKey, queryClient],
+    [exhibitorsCollection],
   );
 
   const handleExhibitorDeleted = useCallback(
-    (id: number) => {
-      queryClient.setQueryData<
-        { id: number; name: string; active: boolean; contactPersonId: string | null }[]
-      >(exhibitorsQueryKey, (prev) => (prev ? prev.filter((e) => e.id !== id) : prev));
+    (id: number, isCurrent: () => boolean) => {
+      void applyAdminExhibitorDeleted(exhibitorsCollection, id, isCurrent);
     },
-    [exhibitorsQueryKey, queryClient],
+    [exhibitorsCollection],
   );
 
   // A stable array so the recovery hook's effect only re-runs when one of the
   // underlying query errors actually changes, not on every render.
   const dashboardQueryErrors = useMemo(
     (): (Error | null)[] => [
-      // The registrations, tables, venue group and people errors come from the
-      // tanstack-db collections' lastError, typed loosely by the library; the
-      // exhibitors error is a plain react-query error. Both are Error
-      // instances or null at runtime.
+      // Every error comes from a tanstack-db collection's lastError, typed
+      // loosely by the library; each is an Error instance or null at runtime.
       registrationsQuery.error as Error | null,
       tablesQuery.error as Error | null,
       venuesQuery.error as Error | null,
       roomsQuery.error as Error | null,
       tableTypesQuery.error as Error | null,
       layoutsQuery.error as Error | null,
-      exhibitorsQuery.error,
+      exhibitorsQuery.error as Error | null,
       areasQuery.error as Error | null,
       peopleQuery.error as Error | null,
     ],
@@ -470,7 +458,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 </span>
                 {isActiveEditionDay && (
                   <span>
-                    {m.admin_active_edition_events_today({ count: activeEditionStats.eventsToday })}
+                    {m.admin_active_edition_events_today({
+                      count: activeEditionStats.eventsToday,
+                    })}
                   </span>
                 )}
               </button>
@@ -529,6 +519,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                         authHeaders={authHeaders}
                         onItemSaved={handleExhibitorSaved}
                         onItemDeleted={handleExhibitorDeleted}
+                        captureFence={captureAdminExhibitorsFence}
                       />
                     </CardContent>
                   </Card>

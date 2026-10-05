@@ -20,7 +20,7 @@ vi.mock("@/paraglide/messages", () => ({
 // object would 401 and never surface the seeded exhibitors.
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
-function renderContentManagement() {
+function renderContentManagement(captureExhibitorsFence?: () => () => boolean) {
   const queryClient = createTestQueryClient();
   const onExhibitorSaved = vi.fn();
   const onExhibitorDeleted = vi.fn();
@@ -33,6 +33,7 @@ function renderContentManagement() {
         venues={[]}
         onExhibitorSaved={onExhibitorSaved}
         onExhibitorDeleted={onExhibitorDeleted}
+        captureExhibitorsFence={captureExhibitorsFence}
         onEditionMutated={onEditionMutated}
       />
     </QueryClientProvider>,
@@ -117,6 +118,43 @@ describe("ContentManagement", () => {
     const row = archivedRow.closest('[data-slot="presentation-list-item"]');
     expect(row).not.toBeNull();
     expect(row).toHaveClass("opacity-50");
+  });
+
+  it("takes the session fence before the write request and hands it to the saved callback", async () => {
+    const events: string[] = [];
+    const isCurrent = () => true;
+    const captureExhibitorsFence = vi.fn(() => {
+      events.push("capture");
+      return isCurrent;
+    });
+    server.use(
+      http.put("/api/exhibitors/:id", async ({ params }) => {
+        events.push("request");
+        return HttpResponse.json({
+          id: Number(params.id),
+          name: "Maison Moët & Chandon",
+          image: "/images/moet.png",
+          active: false,
+          type: "producer",
+          contact_person_id: null,
+          created_at: "2024-01-01T00:00:00Z",
+          updated_at: "2024-01-02T00:00:00Z",
+        });
+      }),
+    );
+
+    const { onExhibitorSaved } = renderContentManagement(captureExhibitorsFence);
+    await screen.findByText("Maison Moët & Chandon");
+    fireEvent.click(
+      screen.getByRole("button", { name: "admin_content_archive Maison Moët & Chandon" }),
+    );
+
+    await waitFor(() => expect(onExhibitorSaved).toHaveBeenCalled());
+    expect(events).toEqual(["capture", "request"]);
+    expect(onExhibitorSaved).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Maison Moët & Chandon", active: false }),
+      isCurrent,
+    );
   });
 
   it("shows an error alert when loading exhibitors fails", async () => {

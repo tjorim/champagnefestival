@@ -8,6 +8,7 @@ import type {
   AuditEntry,
   EditionAttendanceStats,
   EventCheckInStats,
+  Exhibitor,
   FaqItem,
   LayoutRevision,
   LayoutRevisionDiff,
@@ -459,7 +460,7 @@ export async function restoreLayoutRevision(
 
 export async function fetchExhibitors(
   authHeaders: () => Record<string, string>,
-): Promise<{ id: number; name: string; active: boolean; contactPersonId: string | null }[]> {
+): Promise<Exhibitor[]> {
   const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
     "/api/exhibitors",
     { headers: authHeaders() },

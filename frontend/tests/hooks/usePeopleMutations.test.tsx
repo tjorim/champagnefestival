@@ -39,7 +39,6 @@ describe("usePeopleMutations", () => {
           }),
           peopleCollection,
           registrationsQueryKey: ["admin", "registrations"],
-          exhibitorsQueryKey: ["admin", "exhibitors"],
         }),
       { wrapper: Wrapper },
     );

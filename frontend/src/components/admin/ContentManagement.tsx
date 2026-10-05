@@ -88,8 +88,10 @@ function editionTypeLabel(type: EditionType | "all") {
 interface ContentManagementProps {
   authHeaders: () => Record<string, string>;
   venues: Venue[];
-  onExhibitorSaved?: (item: ItemDraft) => void;
-  onExhibitorDeleted?: (id: number) => void;
+  onExhibitorSaved?: (item: ItemDraft, isCurrent: () => boolean) => void;
+  onExhibitorDeleted?: (id: number, isCurrent: () => boolean) => void;
+  /** Takes the exhibitors collection's session fence; called before each write request. */
+  captureExhibitorsFence?: () => () => boolean;
   onEditionMutated?: () => void;
 }
 
@@ -100,9 +102,14 @@ interface ContentSectionProps {
   sectionKey: string;
   title: string;
   authHeaders: () => Record<string, string>;
-  onItemSaved?: (item: ItemDraft) => void;
-  onItemDeleted?: (id: number) => void;
+  /** `isCurrent` is the session fence taken before the request (always true without `captureFence`). */
+  onItemSaved?: (item: ItemDraft, isCurrent: () => boolean) => void;
+  onItemDeleted?: (id: number, isCurrent: () => boolean) => void;
+  /** Takes a session fence before each write request, so a write that settles after sign-out can be dropped. */
+  captureFence?: () => () => boolean;
 }
+
+const ALWAYS_CURRENT = () => true;
 
 export function ContentSection({
   sectionKey,
@@ -110,6 +117,7 @@ export function ContentSection({
   authHeaders,
   onItemSaved,
   onItemDeleted,
+  captureFence,
 }: ContentSectionProps) {
   const queryClient = useQueryClient();
   const [actionError, setActionError] = useState<string | null>(null);
@@ -237,6 +245,7 @@ export function ContentSection({
   const handleModalSave = useCallback(
     async (draft: ItemDraft) => {
       setActionError(null);
+      const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
       try {
         const saved = await saveItemMutation.mutateAsync(draft);
         queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) => {
@@ -250,65 +259,75 @@ export function ContentSection({
           copy.delete(saved.id);
           return copy;
         });
-        onItemSaved?.(saved);
+        onItemSaved?.(saved, isCurrent);
         setModalOpen(false);
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
     },
-    [onItemSaved, queryClient, saveItemMutation, sectionKey],
+    [captureFence, onItemSaved, queryClient, saveItemMutation, sectionKey],
   );
 
   const handleArchive = useCallback(
     async (id: number) => {
       setActionError(null);
+      const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
       try {
-        const saved = await updateItemActiveMutation.mutateAsync({ id, active: false });
+        const saved = await updateItemActiveMutation.mutateAsync({
+          id,
+          active: false,
+        });
         queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
           prev.map((item) => (item.id === id ? saved : item)),
         );
-        onItemSaved?.(saved);
+        onItemSaved?.(saved, isCurrent);
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
     },
-    [onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
+    [captureFence, onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
   );
 
   const handleRestore = useCallback(
     async (id: number) => {
       setActionError(null);
+      const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
       try {
-        const saved = await updateItemActiveMutation.mutateAsync({ id, active: true });
+        const saved = await updateItemActiveMutation.mutateAsync({
+          id,
+          active: true,
+        });
         queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
           prev.map((item) => (item.id === id ? saved : item)),
         );
-        onItemSaved?.(saved);
+        onItemSaved?.(saved, isCurrent);
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
     },
-    [onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
+    [captureFence, onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
   );
 
   const handleDelete = useCallback(
     async (id: number) => {
       setActionError(null);
+      const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
       try {
         await deleteItemMutation.mutateAsync(id);
         queryClient.setQueryData<ItemDraft[]>(contentSectionQueryKey(sectionKey), (prev = []) =>
           prev.filter((item) => item.id !== id),
         );
-        onItemDeleted?.(id);
+        onItemDeleted?.(id, isCurrent);
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
     },
-    [deleteItemMutation, onItemDeleted, queryClient, sectionKey],
+    [captureFence, deleteItemMutation, onItemDeleted, queryClient, sectionKey],
   );
 
   const handleBulkArchive = useCallback(async () => {
     setBulkArchiveInProgress(true);
+    const isCurrent = captureFence?.() ?? ALWAYS_CURRENT;
     const snapshot = [...activeItems];
     const results = await Promise.allSettled(
       snapshot.map((item) => updateItemActiveMutation.mutateAsync({ id: item.id, active: false })),
@@ -322,17 +341,20 @@ export function ContentSection({
       );
       snapshot
         .filter((item) => succeededIds.has(item.id))
-        .forEach((item) => onItemSaved?.({ ...item, active: false }));
+        .forEach((item) => onItemSaved?.({ ...item, active: false }, isCurrent));
     }
     const failedCount = results.filter((r) => r.status === "rejected").length;
     if (failedCount > 0) {
       setActionError(
-        m.admin_bulk_content_archive_error({ failed: failedCount, total: snapshot.length }),
+        m.admin_bulk_content_archive_error({
+          failed: failedCount,
+          total: snapshot.length,
+        }),
       );
     }
     setBulkArchiveInProgress(false);
     setBulkArchiveOpen(false);
-  }, [activeItems, onItemSaved, queryClient, sectionKey, updateItemActiveMutation]);
+  }, [activeItems, captureFence, onItemSaved, queryClient, sectionKey, updateItemActiveMutation]);
 
   function renderItemRow(item: ItemDraft, isArchived: boolean) {
     return (
@@ -495,7 +517,9 @@ export function ContentSection({
             size="sm"
             variant="outline-warning"
             onClick={() => setBulkArchiveOpen(true)}
-            title={m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
+            title={m.admin_bulk_content_archive_all({
+              type: typeLabels[typeFilter],
+            })}
           >
             <Icon icon={ArchiveIcon} />
             {m.admin_bulk_content_archive_all({ type: typeLabels[typeFilter] })}
@@ -757,6 +781,7 @@ export default function ContentManagement({
   venues,
   onExhibitorSaved,
   onExhibitorDeleted,
+  captureExhibitorsFence,
   onEditionMutated,
 }: ContentManagementProps) {
   return (
@@ -769,6 +794,7 @@ export default function ContentManagement({
             authHeaders={authHeaders}
             onItemSaved={onExhibitorSaved}
             onItemDeleted={onExhibitorDeleted}
+            captureFence={captureExhibitorsFence}
           />
           <hr className="border-subtle" />
           <EditionsSection

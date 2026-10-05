@@ -19,7 +19,6 @@ interface UsePeopleMutationsOptions {
   authHeaders: () => Record<string, string>;
   peopleCollection: AdminPeopleCollection;
   registrationsQueryKey: QueryKey;
-  exhibitorsQueryKey: QueryKey;
 }
 
 export function usePeopleMutations({
@@ -27,7 +26,6 @@ export function usePeopleMutations({
   authHeaders,
   peopleCollection,
   registrationsQueryKey,
-  exhibitorsQueryKey,
 }: UsePeopleMutationsOptions) {
   // Refetches the people collection (explicitly: the implicit refetch after a
   // write is deprecated) and the plain queries that show the same person.
@@ -47,7 +45,7 @@ export function usePeopleMutations({
         m.admin_people_merge_error(),
       ),
     onSettled: () => {
-      refreshPeople([registrationsQueryKey, exhibitorsQueryKey]);
+      refreshPeople([registrationsQueryKey]);
     },
     retry: false,
   });

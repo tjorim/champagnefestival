@@ -1,11 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useLiveQuery } from "@tanstack/react-db";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   createAdminRegistrationsCollection,
+  refetchAdminRegistrations,
   registerAdminRegistrationsCollection,
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
+import {
+  createAdminExhibitorsCollection,
+  refetchAdminExhibitors,
+  registerAdminExhibitorsCollection,
+  resetAdminExhibitorsCollection,
+} from "@/state/adminExhibitorsCollection";
 import {
   createAdminPeopleCollection,
   refetchAdminPeople,
@@ -28,54 +35,12 @@ import {
 } from "@/state/adminVenueCollections";
 import { withTableOccupancy } from "@/state/tableOccupancy";
 import { queryKeys } from "@/utils/queryKeys";
-import { fetchExhibitors } from "@/utils/adminFetch";
 
 interface UseAdminQueriesOptions {
   visible: boolean;
   isAuthenticated: boolean;
   canManageAdminSections: boolean;
   authHeaders: () => Record<string, string>;
-}
-
-// "tables", "people", "venues", "rooms", "table-types", "layouts" and "areas"
-// are deliberately absent: they are served by collections, which are refetched
-// through their own utils (see `loadData`), never by a standalone query.
-export const ADMIN_RESOURCE_KEYS = ["registrations", "exhibitors"] as const;
-
-export const ADMIN_ONLY_RESOURCE_KEYS = ADMIN_RESOURCE_KEYS.filter(
-  (resource) => resource !== "registrations",
-);
-
-interface ShouldRefetchAdminResourceQueryOptions {
-  includeAdminOnly?: boolean;
-}
-
-export function shouldRefetchAdminResourceQuery(
-  queryKey: readonly unknown[],
-  { includeAdminOnly = true }: ShouldRefetchAdminResourceQueryOptions = {},
-): boolean {
-  if (
-    !(
-      queryKey.length === 2 &&
-      queryKey[0] === "admin" &&
-      typeof queryKey[1] === "string" &&
-      (ADMIN_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
-    )
-  ) {
-    return false;
-  }
-
-  if (includeAdminOnly) return true;
-  return !(ADMIN_ONLY_RESOURCE_KEYS as readonly string[]).includes(queryKey[1]);
-}
-
-export function shouldRefetchAdminOnlyResourceQuery(queryKey: readonly unknown[]): boolean {
-  return (
-    queryKey.length === 2 &&
-    queryKey[0] === "admin" &&
-    typeof queryKey[1] === "string" &&
-    (ADMIN_ONLY_RESOURCE_KEYS as readonly string[]).includes(queryKey[1])
-  );
 }
 
 export function useAdminQueries({
@@ -88,7 +53,6 @@ export function useAdminQueries({
 
   // Per-resource query keys (no longer scoped to a token; OIDC manages the session)
   const registrationsQueryKey = queryKeys.admin.registrations;
-  const exhibitorsQueryKey = queryKeys.admin.exhibitors;
 
   const registrationsQueryOptions = {
     enabled: visible && isAuthenticated,
@@ -242,6 +206,28 @@ export function useAdminQueries({
     isFetching: venueCollections.areas.utils.isFetching,
   };
 
+  const exhibitorsCollection = useMemo(
+    () =>
+      createAdminExhibitorsCollection({
+        queryClient,
+        authHeaders,
+        enabled: adminQueryOptions.enabled,
+      }),
+    [adminQueryOptions.enabled, authHeaders, queryClient],
+  );
+  const exhibitorsLiveQuery = useLiveQuery(() => exhibitorsCollection, [exhibitorsCollection]);
+  const exhibitorsCollectionRef = useRef(exhibitorsCollection);
+  useEffect(() => {
+    exhibitorsCollectionRef.current = exhibitorsCollection;
+  }, [exhibitorsCollection]);
+  useEffect(() => registerAdminExhibitorsCollection(exhibitorsCollection), [exhibitorsCollection]);
+  const exhibitorsQuery = {
+    data: exhibitorsLiveQuery.data,
+    error: exhibitorsCollection.utils.lastError ?? null,
+    isPending: exhibitorsLiveQuery.isLoading,
+    isFetching: exhibitorsCollection.utils.isFetching,
+  };
+
   useEffect(() => {
     if (isAuthenticated) return;
     // The cached queries are removed right below, so a failed reset needs no extra handling.
@@ -251,6 +237,7 @@ export function useAdminQueries({
     void resetAdminTablesCollection(tablesCollectionRef.current).catch(() => undefined);
     void resetAdminPeopleCollection(peopleCollectionRef.current).catch(() => undefined);
     void resetAdminVenueCollections(venueCollectionsRef.current).catch(() => undefined);
+    void resetAdminExhibitorsCollection(exhibitorsCollectionRef.current).catch(() => undefined);
     void queryClient.removeQueries({ queryKey: registrationsQueryKey });
     void queryClient.removeQueries({ queryKey: queryKeys.admin.tables });
     // Also removes the per-person queries nested under the people key.
@@ -264,16 +251,8 @@ export function useAdminQueries({
     ]) {
       void queryClient.removeQueries({ queryKey });
     }
-    // Exhibitors are still a plain query: with the cache entry gone, the
-    // `prev ? … : prev` patches in the dashboard have nothing to recreate
-    // (see docs/decisions/tanstack-db.md).
     void queryClient.removeQueries({ queryKey: queryKeys.admin.exhibitors });
   }, [isAuthenticated, queryClient, registrationsQueryKey]);
-  const exhibitorsQuery = useQuery({
-    queryKey: exhibitorsQueryKey,
-    queryFn: () => fetchExhibitors(authHeaders),
-    ...adminQueryOptions,
-  });
   const allQueries = [
     registrationsQuery,
     ...(canManageAdminSections
@@ -292,17 +271,24 @@ export function useAdminQueries({
 
   const loadData = useCallback(async () => {
     await Promise.all([
-      queryClient.refetchQueries({
-        predicate: (query) =>
-          shouldRefetchAdminResourceQuery(query.queryKey, {
-            includeAdminOnly: canManageAdminSections,
-          }),
-      }),
+      // A refetch ignores `enabled`, so a hidden or signed-out dashboard must not start one.
+      registrationsQueryOptions.enabled
+        ? refetchAdminRegistrations(registrationsCollection)
+        : undefined,
       canManageAdminSections ? refetchAdminTables(tablesCollection) : undefined,
       canManageAdminSections ? refetchAdminPeople(peopleCollection) : undefined,
       canManageAdminSections ? refetchAdminVenueCollections(venueCollections) : undefined,
+      canManageAdminSections ? refetchAdminExhibitors(exhibitorsCollection) : undefined,
     ]);
-  }, [canManageAdminSections, peopleCollection, queryClient, tablesCollection, venueCollections]);
+  }, [
+    canManageAdminSections,
+    exhibitorsCollection,
+    peopleCollection,
+    registrationsCollection,
+    registrationsQueryOptions.enabled,
+    tablesCollection,
+    venueCollections,
+  ]);
 
   return {
     // Query objects (for error/loading state access)
@@ -314,6 +300,7 @@ export function useAdminQueries({
     tableTypesQuery,
     layoutsQuery,
     exhibitorsQuery,
+    exhibitorsCollection,
     areasQuery,
     venueCollections,
     peopleQuery,
@@ -325,7 +312,6 @@ export function useAdminQueries({
     isAnyFetching: allQueries.some((q) => q.isFetching),
     // Stable query keys (needed by mutations in the parent)
     registrationsQueryKey,
-    exhibitorsQueryKey,
     // Refetch all
     loadData,
   };
