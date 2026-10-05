@@ -273,6 +273,52 @@ describe("admin tables live events", () => {
     expect(collection.get("table-01")?.name).toBe("Newest");
   });
 
+  it("discards a fetched row when the collection is reset while the fetch is in flight", async () => {
+    const { collection } = await createLoadedCollection();
+    cleanups.push(registerAdminTablesCollection(collection));
+    let respond: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      respond = resolve;
+    });
+    server.use(
+      http.get("/api/tables/:id", async () => {
+        await gate;
+        return HttpResponse.json({ ...seedTables[0], name: "Late response" });
+      }),
+    );
+
+    const patch = patchAdminTableLiveEvent(seatingEnvelope(), authHeaders);
+    await resetAdminTablesCollection(collection);
+    expect(collection.size).toBe(0);
+
+    respond();
+    await patch;
+
+    expect(collection.size).toBe(0);
+  });
+
+  it("discards a fetched row when its collection unregisters while the fetch is in flight", async () => {
+    const { collection } = await createLoadedCollection();
+    const unregister = registerAdminTablesCollection(collection);
+    let respond: () => void = () => {};
+    const gate = new Promise<void>((resolve) => {
+      respond = resolve;
+    });
+    server.use(
+      http.get("/api/tables/:id", async () => {
+        await gate;
+        return HttpResponse.json({ ...seedTables[0], name: "Late response" });
+      }),
+    );
+
+    const patch = patchAdminTableLiveEvent(seatingEnvelope(), authHeaders);
+    unregister();
+    respond();
+    await patch;
+
+    expect(collection.get("table-01")?.name).toBe("T1");
+  });
+
   it("rejects events that cannot be applied incrementally", async () => {
     await expect(patchAdminTableLiveEvent(seatingEnvelope(), authHeaders)).rejects.toThrow(
       "cannot be applied incrementally",

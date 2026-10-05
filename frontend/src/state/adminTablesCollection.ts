@@ -97,9 +97,20 @@ export async function replaceAdminTablesForLayout(
 const activeAdminTablesCollections = new Set<AdminTablesCollection>();
 const latestTableEventTimestamps = new Map<string, number>();
 
+/**
+ * Bumped whenever the set of active collections changes or a collection is
+ * reset (sign-out). A live-event patch fetches a row with the session that
+ * received the event and writes it only after the response arrives; if the
+ * epoch moved in between, that response belongs to a previous session or
+ * collection and must not be written into the replacement state.
+ */
+let collectionEpoch = 0;
+
 export function registerAdminTablesCollection(collection: AdminTablesCollection): () => void {
+  collectionEpoch += 1;
   activeAdminTablesCollections.add(collection);
   return () => {
+    collectionEpoch += 1;
     activeAdminTablesCollections.delete(collection);
     if (activeAdminTablesCollections.size === 0) {
       latestTableEventTimestamps.clear();
@@ -108,6 +119,8 @@ export function registerAdminTablesCollection(collection: AdminTablesCollection)
 }
 
 export async function resetAdminTablesCollection(collection: AdminTablesCollection): Promise<void> {
+  collectionEpoch += 1;
+  latestTableEventTimestamps.clear();
   if (collection.size === 0) return;
   await collection.utils.writeBatch(() => {
     for (const key of collection.keys()) {
@@ -175,6 +188,7 @@ export async function patchAdminTableLiveEvent(
   }
 
   const tableId = envelope.scope.table_id!;
+  const epoch = collectionEpoch;
   const eventTime = Date.parse(envelope.ts);
   if (isNaN(eventTime)) return;
 
@@ -188,6 +202,9 @@ export async function patchAdminTableLiveEvent(
   }
 
   const table = await fetchTable(tableId, authHeaders);
+
+  // Sign-out or a collection swap happened while the row was in flight.
+  if (epoch !== collectionEpoch) return;
 
   const currentLastTime = latestTableEventTimestamps.get(tableId);
   if (currentLastTime !== undefined && eventTime < currentLastTime) return;
