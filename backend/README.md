@@ -257,7 +257,7 @@ See `.env.example` for a template.
 | `PUT`    | `/api/contact/{id}/handled`     | admin          | Mark a contact message as handled                                          |
 | `GET`    | `/api/settings`                 | public         | Get maintenance mode and public contact settings                           |
 | `PUT`    | `/api/settings`                 | admin          | Update maintenance mode or public contact settings                         |
-| `GET`    | `/api/outbox`                   | admin          | Inspect recent durable delivery jobs, optionally filtered by state         |
+| `GET`    | `/api/outbox`                   | admin          | Inspect durable delivery jobs, newest first, optionally filtered by state; paged `{items, total, limit, page}` |
 | `POST`   | `/api/tables`                   | admin          | Create table                                                               |
 | `GET`    | `/api/tables`                   | admin          | List tables                                                                |
 | `GET`    | `/api/tables/{id}`              | admin          | Get table                                                                  |

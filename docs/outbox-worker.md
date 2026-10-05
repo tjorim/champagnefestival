@@ -28,6 +28,11 @@ duplicate, but never loses the durable booking or its job. Logs, admin
 `GET /api/outbox`, audit entries, and delivery-attempt rows contain identifiers
 and error classes, not addresses, tokens, message bodies, or SMTP credentials.
 
+`GET /api/outbox` lists jobs newest first, optionally filtered by `state`, as a
+paged `{items, total, limit, page}` envelope (200 per page by default, up to
+1000). `total` counts every matching job, so a caller reads them all by paging
+instead of getting a silently truncated list.
+
 Delivered and terminally failed jobs, including their cascading attempt rows,
 are retained for 90 days by default and removed by the daily housekeeping
 command (below). Pending/processing jobs are never removed. Issue #934 may revise the window when the broader retention

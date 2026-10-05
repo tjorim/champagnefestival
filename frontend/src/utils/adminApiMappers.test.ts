@@ -16,6 +16,7 @@ import {
   apiAreaToArea,
   mergeVolunteerPerson,
   mergePeopleWithVolunteers,
+  attachVolunteerDetails,
   mergePersonUpdate,
 } from "./adminApiMappers";
 
@@ -593,5 +594,34 @@ describe("mergePersonUpdate", () => {
     const updated = makePerson({ roles: ["volunteer"], helpPeriods: [] });
     const result = mergePersonUpdate(existing, updated);
     expect(result.helpPeriods).toEqual(helpPeriods);
+  });
+});
+
+// ─── attachVolunteerDetails ───────────────────────────────────────────────────
+
+describe("attachVolunteerDetails", () => {
+  it("adds help periods to a matching volunteer and leaves other rows untouched", () => {
+    const helpPeriods = [{ id: 1, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" }];
+    const person = makePerson({ id: "p1", roles: ["volunteer"] });
+    const other = makePerson({ id: "p2", roles: ["member"] });
+
+    const result = attachVolunteerDetails(
+      [person, other],
+      [makePerson({ id: "p1", roles: ["volunteer"], helpPeriods })],
+    );
+
+    expect(result[0]?.helpPeriods).toEqual(helpPeriods);
+    expect(result[1]).toBe(other);
+  });
+
+  it("never adds a volunteer that is not already in the list", () => {
+    const person = makePerson({ id: "p1", roles: ["member"] });
+
+    const result = attachVolunteerDetails(
+      [person],
+      [makePerson({ id: "v9", roles: ["volunteer"] })],
+    );
+
+    expect(result.map((p) => p.id)).toEqual(["p1"]);
   });
 });

@@ -135,7 +135,6 @@ async def get_table_order_summary(
                 .where(allocated_registration_filter([table.id]))
                 .options(selectinload(Registration.person), selectinload(Registration.event))
                 .order_by(Registration.created_at)
-                .limit(DEFAULT_RESULT_LIMIT)
             )
         )
         .scalars()
@@ -233,7 +232,6 @@ async def search_registrations(
                     ]
                 )
         stmt = stmt.where(or_(*or_conditions))
-    stmt = stmt.limit(250)
     rows = (await db.execute(stmt)).all()
     ranked_rows = []
     for registration, table_name in rows:

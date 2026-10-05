@@ -359,6 +359,21 @@ export function mergePeopleWithVolunteers(people: Person[], volunteers: Person[]
   return [...mergedPeople, ...volunteerOnly];
 }
 
+/**
+ * Adds volunteer details (help periods and identity numbers) to the people that
+ * hold the volunteer role, leaving every other row alone. Unlike
+ * `mergePeopleWithVolunteers` it never adds a volunteer who is not already in
+ * `people`, which is what a search needs: a volunteer who did not match the
+ * query must not appear in the results.
+ */
+export function attachVolunteerDetails(people: Person[], volunteers: Person[]): Person[] {
+  const volunteerById = new Map(volunteers.map((volunteer) => [volunteer.id, volunteer]));
+  return people.map((person) => {
+    const volunteer = volunteerById.get(person.id);
+    return volunteer ? mergeVolunteerPerson(person, volunteer) : person;
+  });
+}
+
 export function mergePersonUpdate(existing: Person | undefined, updated: Person): Person {
   if (!existing) {
     return updated;

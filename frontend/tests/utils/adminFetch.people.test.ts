@@ -50,7 +50,8 @@ describe("fetchPeople / fetchPeopleSearch — envelope handling", () => {
     expect(people.map((p) => p.id).sort()).toEqual(["p1", "v1"]);
   });
 
-  it("fetchPeopleSearch merges the searched people envelope with the volunteers envelope", async () => {
+  it("fetchPeopleSearch returns only the people that match the query", async () => {
+    let volunteerRequests = 0;
     server.use(
       http.get("/api/people", ({ request }) => {
         const q = new URL(request.url).searchParams.get("q");
@@ -62,13 +63,54 @@ describe("fetchPeople / fetchPeopleSearch — envelope handling", () => {
           page: 1,
         });
       }),
+      http.get("/api/volunteers", () => {
+        volunteerRequests += 1;
+        return HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 });
+      }),
+    );
+
+    const people = await fetchPeopleSearch(authHeaders, "anne");
+
+    expect(people.map((p) => p.id)).toEqual(["p2"]);
+    // Nothing matched holds the volunteer role, so the volunteer list is not needed.
+    expect(volunteerRequests).toBe(0);
+  });
+
+  it("fetchPeopleSearch attaches help periods to matching volunteers without adding the others", async () => {
+    server.use(
+      http.get("/api/people", () =>
+        HttpResponse.json({
+          items: [personPayload("v1", { name: "Anne", roles: ["volunteer"] })],
+          total: 1,
+          limit: 1000,
+          page: 1,
+        }),
+      ),
       http.get("/api/volunteers", () =>
-        HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 }),
+        HttpResponse.json({
+          items: [
+            {
+              ...personPayload("v1", { name: "Anne", roles: ["volunteer"] }),
+              help_periods: [
+                { id: 5, first_help_day: "2026-10-10", last_help_day: null, notes: "" },
+              ],
+            },
+            // A volunteer who does not match the search must not show up in it.
+            personPayload("v2", { name: "Bob", roles: ["volunteer"] }),
+          ],
+          total: 2,
+          limit: 1000,
+          page: 1,
+        }),
       ),
     );
 
     const people = await fetchPeopleSearch(authHeaders, "anne");
-    expect(people.map((p) => p.id)).toEqual(["p2"]);
+
+    expect(people.map((p) => p.id)).toEqual(["v1"]);
+    expect(people[0]?.helpPeriods).toEqual([
+      { id: 5, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" },
+    ]);
   });
 
   it("fetchPeople reads every page, however many people there are", async () => {

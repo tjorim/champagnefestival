@@ -42,6 +42,7 @@ import {
   apiLayoutRevisionToLayoutRevision,
   apiLayoutRevisionDiffToLayoutRevisionDiff,
   apiLayoutRestorePreviewToLayoutRestorePreview,
+  attachVolunteerDetails,
   mergePeopleWithVolunteers,
 } from "@/utils/adminApiMappers";
 
@@ -514,28 +515,30 @@ async function fetchAllPersonPages(
 }
 
 /**
- * People matching a search, with volunteer help periods merged in. A search is
- * one page by design: a query that matches more than a page is too broad to be
- * useful, so that is reported rather than paged through.
+ * People matching a search. A search is one page by design: a query that
+ * matches more than a page is too broad to be useful, so that is reported
+ * rather than paged through. Volunteer details (help periods) are attached to
+ * the matches that hold the volunteer role; volunteers who did not match the
+ * query are not added, and the volunteer list is not fetched at all when no
+ * match is a volunteer.
  */
 export async function fetchPeopleSearch(
   authHeaders: () => Record<string, string>,
   query: string,
 ): Promise<Person[]> {
-  const [peopleResult, volunteers] = await Promise.all([
-    fetchPersonListEnvelope(
-      `/api/people?q=${encodeURIComponent(query.trim())}&limit=${PERSON_PAGE_SIZE}`,
-      authHeaders,
-    ),
-    fetchAllPersonPages("/api/volunteers", authHeaders),
-  ]);
-  if (peopleResult.total > peopleResult.people.length) {
+  const result = await fetchPersonListEnvelope(
+    `/api/people?q=${encodeURIComponent(query.trim())}&limit=${PERSON_PAGE_SIZE}`,
+    authHeaders,
+  );
+  if (result.total > result.people.length) {
     devError(
-      `Admin people search matched ${peopleResult.total} people but only the first ` +
-        `${peopleResult.people.length} are shown; narrow the query.`,
+      `Admin people search matched ${result.total} people but only the first ` +
+        `${result.people.length} are shown; narrow the query.`,
     );
   }
-  return mergePeopleWithVolunteers(peopleResult.people, volunteers);
+  if (!result.people.some((person) => person.roles.includes("volunteer"))) return result.people;
+  const volunteers = await fetchAllPersonPages("/api/volunteers", authHeaders);
+  return attachVolunteerDetails(result.people, volunteers);
 }
 
 /**
