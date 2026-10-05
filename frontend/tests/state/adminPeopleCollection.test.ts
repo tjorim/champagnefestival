@@ -278,7 +278,7 @@ describe("admin people collection", () => {
 
     it("drops a response that arrives after the collection was swapped", async () => {
       const { collection } = await createLoadedCollection();
-      const unregister = registerAdminPeopleCollection();
+      const unregister = registerAdminPeopleCollection(collection);
       const isCurrent = captureAdminPeopleFence();
 
       unregister();

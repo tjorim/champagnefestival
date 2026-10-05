@@ -158,7 +158,7 @@ export function useAdminVenueActions({
         lng,
       });
       queryClient.setQueryData<Venue[]>(venuesQueryKey, (prev) =>
-        prev ? [...prev, apiVenueToVenue(d)] : [apiVenueToVenue(d)],
+        prev ? [...prev, apiVenueToVenue(d)] : prev,
       );
     },
     [createVenueMutation, queryClient, venuesQueryKey],
@@ -234,7 +234,7 @@ export function useAdminVenueActions({
     async (venueId: string, name: string, widthM: number, lengthM: number, color: string) => {
       const data = await createRoomMutation.mutateAsync({ venueId, name, widthM, lengthM, color });
       queryClient.setQueryData<Room[]>(roomsQueryKey, (prev) =>
-        prev ? [...prev, apiRoomToRoom(data)] : [apiRoomToRoom(data)],
+        prev ? [...prev, apiRoomToRoom(data)] : prev,
       );
     },
     [createRoomMutation, queryClient, roomsQueryKey],
@@ -298,7 +298,7 @@ export function useAdminVenueActions({
         );
         const createdLayout = apiLayoutToLayout(copied);
         queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
-          prev ? [...prev, createdLayout] : [createdLayout],
+          prev ? [...prev, createdLayout] : prev,
         );
         await Promise.all([
           invalidateAdmin(queryClient, [layoutsQueryKey, areasQueryKey]),
@@ -309,7 +309,7 @@ export function useAdminVenueActions({
 
       const d = await createLayoutMutation.mutateAsync({ roomId, eventId, label });
       queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
-        prev ? [...prev, apiLayoutToLayout(d)] : [apiLayoutToLayout(d)],
+        prev ? [...prev, apiLayoutToLayout(d)] : prev,
       );
     },
     [
@@ -367,10 +367,9 @@ export function useAdminVenueActions({
       }
       if (Array.isArray(restoredAreas)) {
         const mapped = restoredAreas.map(apiAreaToArea);
-        queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) => [
-          ...(prev ?? []).filter((a) => a.layoutId !== layoutId),
-          ...mapped,
-        ]);
+        queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
+          prev ? [...prev.filter((a) => a.layoutId !== layoutId), ...mapped] : prev,
+        );
       }
     },
     [areasQueryKey, queryClient, restoreLayoutRevisionMutation, tablesCollection],
@@ -394,7 +393,7 @@ export function useAdminVenueActions({
         exhibitorId,
       });
       queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-        prev ? [...prev, apiAreaToArea(data)] : [apiAreaToArea(data)],
+        prev ? [...prev, apiAreaToArea(data)] : prev,
       );
     },
     [areasQueryKey, createAreaMutation, queryClient],
@@ -472,7 +471,7 @@ export function useAdminVenueActions({
     async (data: Omit<TableType, "id">) => {
       const d = await createTableTypeMutation.mutateAsync(data);
       queryClient.setQueryData<TableType[]>(tableTypesQueryKey, (prev) =>
-        prev ? [...prev, apiTableTypeToTableType(d)] : [apiTableTypeToTableType(d)],
+        prev ? [...prev, apiTableTypeToTableType(d)] : prev,
       );
     },
     [createTableTypeMutation, queryClient, tableTypesQueryKey],

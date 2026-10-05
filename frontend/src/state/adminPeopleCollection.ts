@@ -1,7 +1,9 @@
-import { createCollection } from "@tanstack/react-db";
-import { queryCollectionOptions } from "@tanstack/query-db-collection";
 import type { QueryClient } from "@tanstack/react-query";
-import { createEpochFence } from "@/state/epochFence";
+import {
+  createAdminCollection,
+  createAdminCollectionLifecycle,
+  type AdminCollectionSyncMode,
+} from "@/state/adminCollectionFactory";
 import type { Person } from "@/types/person";
 import { fetchPeople } from "@/utils/adminFetch";
 import { mergePersonUpdate, mergeVolunteerPerson } from "@/utils/adminApiMappers";
@@ -13,6 +15,7 @@ interface CreateAdminPeopleCollectionOptions {
   queryClient: QueryClient;
   authHeaders: AuthHeadersProvider;
   enabled: boolean;
+  syncMode?: AdminCollectionSyncMode;
 }
 
 /**
@@ -31,18 +34,16 @@ export function createAdminPeopleCollection({
   queryClient,
   authHeaders,
   enabled,
+  syncMode,
 }: CreateAdminPeopleCollectionOptions) {
-  return createCollection(
-    queryCollectionOptions({
-      queryKey: queryKeys.admin.people,
-      queryFn: () => fetchPeople(authHeaders),
-      queryClient,
-      enabled,
-      staleTime: 60 * 1000,
-      retry: false,
-      getKey: (person) => person.id,
-    }),
-  );
+  return createAdminCollection<Person>({
+    queryKey: queryKeys.admin.people,
+    queryFn: () => fetchPeople(authHeaders),
+    queryClient,
+    enabled,
+    syncMode,
+    getKey: (person) => person.id,
+  });
 }
 
 export type AdminPeopleCollection = ReturnType<typeof createAdminPeopleCollection>;
@@ -67,41 +68,33 @@ export function selectVolunteers(people: readonly Person[]): Person[] {
 }
 
 /**
- * Advanced whenever the collection is replaced or reset (sign-out), so a
- * response that resolves afterwards is dropped instead of written into the
- * replacement state; see `epochFence.ts`.
+ * The shared lifecycle (registry, session fence, guarded writes); see
+ * `adminCollectionFactory.ts`. Its fence advances whenever the collection is
+ * replaced or reset (sign-out), so a response that resolves afterwards is
+ * dropped instead of written into the replacement state.
  */
-const peopleFence = createEpochFence();
+const lifecycle = createAdminCollectionLifecycle<Person, AdminPeopleCollection>({
+  queryKey: queryKeys.admin.people,
+});
 
 /** Captures the current session for a write that follows an API call. */
-export const captureAdminPeopleFence = peopleFence.capture;
+export const captureAdminPeopleFence = lifecycle.captureFence;
 
 /**
  * Marks the collection as mounted. A mount or unmount (a new collection
  * replacing the old one) invalidates every capture taken for the previous one.
  */
-export function registerAdminPeopleCollection(): () => void {
-  peopleFence.advance();
-  return () => peopleFence.advance();
-}
+export const registerAdminPeopleCollection = lifecycle.register;
 
 /** Empties the collection (sign-out) and drops every write still waiting on an API response. */
-export async function resetAdminPeopleCollection(collection: AdminPeopleCollection): Promise<void> {
-  peopleFence.advance();
-  if (collection.size === 0) return;
-  await collection.utils.writeBatch(() => {
-    for (const key of collection.keys()) void collection.utils.writeDelete(key);
-  });
-}
+export const resetAdminPeopleCollection = lifecycle.reset;
 
 /**
  * Refetches the people from the server (the implicit refetch after a write is
  * deprecated, so every write refetches explicitly). Failures stay on
  * `collection.utils.lastError`, which the dashboard already surfaces.
  */
-export async function refetchAdminPeople(collection: AdminPeopleCollection): Promise<void> {
-  await collection.utils.refetch().catch(() => undefined);
-}
+export const refetchAdminPeople = lifecycle.refetch;
 
 /**
  * The per-person queries (`["admin", "people", id, ...]`) share the people
@@ -115,24 +108,8 @@ export function invalidateAdminPersonDetailQueries(queryClient: QueryClient): Pr
   });
 }
 
-/**
- * Deleting a key the collection no longer holds throws, and a row can already
- * be gone (a refetch or a reset got there first), so only delete what is
- * still present.
- */
-async function removeRow(collection: AdminPeopleCollection, id: string): Promise<void> {
-  if (collection.has(id)) await collection.utils.writeDelete(id);
-}
-
-/** Replaces a row only when the collection already holds it; an absent row is not invented. */
-async function replaceRow(
-  collection: AdminPeopleCollection,
-  id: string,
-  next: (existing: Person) => Person,
-): Promise<void> {
-  const existing = collection.get(id);
-  if (existing) await collection.utils.writeUpsert(next(existing));
-}
+const removeRow = lifecycle.deleteIfPresent;
+const replaceRow = lifecycle.upsertIfPresent;
 
 /**
  * Applies the local effect of a successful write. The server already

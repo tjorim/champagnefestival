@@ -184,7 +184,7 @@ export function useAdminQueries({
   useEffect(() => {
     peopleCollectionRef.current = peopleCollection;
   }, [peopleCollection]);
-  useEffect(() => registerAdminPeopleCollection(), [peopleCollection]);
+  useEffect(() => registerAdminPeopleCollection(peopleCollection), [peopleCollection]);
   const peopleQuery = {
     data: peopleLiveQuery.data,
     error: peopleCollection.utils.lastError ?? null,
@@ -216,6 +216,19 @@ export function useAdminQueries({
     void queryClient.removeQueries({ queryKey: queryKeys.admin.tables });
     // Also removes the per-person queries nested under the people key.
     void queryClient.removeQueries({ queryKey: queryKeys.admin.people });
+    // The plain-query resources keep no data past sign-out either; with the cache
+    // entries gone, the `prev ? … : prev` patches in the venue and exhibitor
+    // actions have nothing to recreate (see docs/decisions/tanstack-db.md).
+    for (const queryKey of [
+      queryKeys.admin.venues,
+      queryKeys.admin.rooms,
+      queryKeys.admin.tableTypes,
+      queryKeys.admin.layouts,
+      queryKeys.admin.exhibitors,
+      queryKeys.admin.areas,
+    ]) {
+      void queryClient.removeQueries({ queryKey });
+    }
   }, [isAuthenticated, queryClient, registrationsQueryKey]);
   const venuesQuery = useQuery({
     queryKey: venuesQueryKey,
