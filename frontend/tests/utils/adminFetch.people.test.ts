@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { fetchPeople, fetchPeopleSearch } from "@/utils/adminFetch";
+import { fetchPeople, fetchPeopleSearch, fetchVolunteer } from "@/utils/adminFetch";
 import { server } from "@/mocks/server";
 
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
@@ -69,6 +69,48 @@ describe("fetchPeople / fetchPeopleSearch — envelope handling", () => {
 
     const people = await fetchPeopleSearch(authHeaders, "anne");
     expect(people.map((p) => p.id)).toEqual(["p2"]);
+  });
+
+  it("fetchPeople keeps a member outside the first people page and deduplicates by id", async () => {
+    const requested: string[] = [];
+    server.use(
+      http.get("/api/people", ({ request }) => {
+        const url = new URL(request.url);
+        requested.push(url.search);
+        const membersOnly = url.searchParams.get("role") === "member";
+        // 2 people in total, but the unfiltered page only holds the first one.
+        const items = membersOnly
+          ? [personPayload("p1", { roles: ["member"] }), personPayload("m2", { roles: ["member"] })]
+          : [personPayload("p1", { roles: ["member"] })];
+        return HttpResponse.json({ items, total: items.length, limit: 1000, page: 1 });
+      }),
+      http.get("/api/volunteers", () =>
+        HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 }),
+      ),
+    );
+
+    const people = await fetchPeople(authHeaders);
+
+    expect(people.map((p) => p.id).sort()).toEqual(["m2", "p1"]);
+    expect(requested).toContain("?role=member&limit=1000");
+  });
+
+  it("fetchVolunteer returns one volunteer with their help periods", async () => {
+    server.use(
+      http.get("/api/volunteers/:id", ({ params }) =>
+        HttpResponse.json({
+          ...personPayload(String(params.id), { roles: ["volunteer"] }),
+          help_periods: [{ id: 4, first_help_day: "2026-10-10", last_help_day: null, notes: "" }],
+        }),
+      ),
+    );
+
+    const volunteer = await fetchVolunteer("v1", authHeaders);
+
+    expect(volunteer.id).toBe("v1");
+    expect(volunteer.helpPeriods).toEqual([
+      { id: 4, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" },
+    ]);
   });
 
   it("fetchPeople rejects a bare-array (pre-envelope) response instead of silently returning it", async () => {

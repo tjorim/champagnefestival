@@ -81,17 +81,18 @@ describe("admin people collection", () => {
 
   it("refetches the collection explicitly", async () => {
     const { collection } = await createLoadedCollection();
-    let requests = 0;
+    const roles: (string | null)[] = [];
     server.use(
-      http.get("/api/people", () => {
-        requests += 1;
+      http.get("/api/people", ({ request }) => {
+        roles.push(new URL(request.url).searchParams.get("role"));
         return HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 });
       }),
     );
 
     await refetchAdminPeople(collection);
 
-    expect(requests).toBe(1);
+    // One load of the collection: all people plus the role-filtered member page.
+    expect(roles.sort()).toEqual(["member", null]);
     // Only the volunteer-only rows survive an empty people response.
     expect(collection.has("person-02")).toBe(false);
   });
@@ -193,6 +194,57 @@ describe("admin people collection", () => {
     expect(collection.get("person-01")).toMatchObject({
       name: "Merged",
       helpPeriods: survivorPeriods,
+    });
+  });
+
+  describe("merge survivor that the collection does not hold", () => {
+    const helpPeriods = [{ id: 9, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" }];
+
+    it("inserts a non-volunteer survivor", async () => {
+      const { collection } = await createLoadedCollection();
+      const survivor = person({ id: "survivor", roles: ["member"], name: "Survivor" });
+
+      await applyAdminPeopleMerged(collection, survivor, "person-02", always);
+
+      expect(collection.get("survivor")).toMatchObject({ name: "Survivor", helpPeriods: [] });
+      expect(collection.has("person-02")).toBe(false);
+    });
+
+    it("inserts a volunteer survivor with the help periods the loader supplies", async () => {
+      const { collection } = await createLoadedCollection();
+      const survivor = person({ id: "survivor", roles: ["volunteer"] });
+
+      await applyAdminPeopleMerged(collection, survivor, "person-02", always, () =>
+        Promise.resolve(helpPeriods),
+      );
+
+      expect(collection.get("survivor")?.helpPeriods).toEqual(helpPeriods);
+    });
+
+    it("does not insert a volunteer survivor it cannot load help periods for", async () => {
+      const { collection } = await createLoadedCollection();
+      const survivor = person({ id: "survivor", roles: ["volunteer"] });
+
+      await applyAdminPeopleMerged(collection, survivor, "person-02", always);
+      await applyAdminPeopleMerged(collection, survivor, "person-03", always, () =>
+        Promise.reject(new Error("offline")),
+      );
+
+      // An empty list would be shown as the real one; the refetch adds the row.
+      expect(collection.has("survivor")).toBe(false);
+    });
+
+    it("drops the survivor when the session ends while the help periods load", async () => {
+      const { collection } = await createLoadedCollection();
+      const isCurrent = captureAdminPeopleFence();
+      const survivor = person({ id: "survivor", roles: ["volunteer"] });
+
+      await applyAdminPeopleMerged(collection, survivor, "person-02", isCurrent, async () => {
+        await resetAdminPeopleCollection(collection);
+        return helpPeriods;
+      });
+
+      expect(collection.has("survivor")).toBe(false);
     });
   });
 

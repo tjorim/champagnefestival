@@ -222,18 +222,30 @@ export function applyAdminVolunteerDeleted(
  * the duplicate's across: the server re-points those now, and showing them here
  * regardless is what hid the cascade delete last time. The refetch after the
  * merge brings back the real set.
+ *
+ * A survivor the collection does not hold yet is inserted so a failed refetch
+ * cannot leave it missing. A volunteer's help periods then come from
+ * `loadHelpPeriods`; without them the survivor is not inserted (the refetch
+ * adds it), because an empty list would be shown as the real one.
  */
 export function applyAdminPeopleMerged(
   collection: AdminPeopleCollection,
   canonical: Person,
   duplicateId: string,
   isCurrent: () => boolean,
+  loadHelpPeriods?: () => Promise<Person["helpPeriods"]>,
 ): Promise<void> {
   return applyWrite(isCurrent, async () => {
-    const merged = canonical.roles.includes("volunteer")
-      ? { ...canonical, helpPeriods: collection.get(canonical.id)?.helpPeriods ?? [] }
-      : canonical;
     await removeRow(collection, duplicateId);
-    await replaceRow(collection, canonical.id, () => merged);
+    // Only a volunteer carries help periods; the held row's own set is kept.
+    let helpPeriods = canonical.roles.includes("volunteer")
+      ? collection.get(canonical.id)?.helpPeriods
+      : [];
+    if (!helpPeriods) {
+      helpPeriods = await loadHelpPeriods?.().catch(() => undefined);
+      // The session may have ended while the periods were loading.
+      if (!helpPeriods || !isCurrent()) return;
+    }
+    await collection.utils.writeUpsert({ ...canonical, helpPeriods });
   });
 }

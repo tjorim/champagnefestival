@@ -5,6 +5,7 @@ import type { PersonFormData } from "@/components/admin/PersonFormModal";
 import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
 import type { Registration } from "@/types/registration";
 import { type Person, apiToPerson } from "@/types/person";
+import { fetchVolunteer } from "@/utils/adminFetch";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import {
   applyAdminPeopleMerged,
@@ -63,7 +64,9 @@ export function useAdminPeopleActions({
   // members and volunteers views) is written through the collection helpers,
   // which drop the write if the session changed while the request was in flight.
   const patchRegistrationPerson = useCallback(
-    (person: Person) => {
+    (person: Person, isCurrent: () => boolean) => {
+      // A response from an earlier session must not overwrite the current one's rows.
+      if (!isCurrent()) return;
       queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
         prev
           ? prev.map((registration) =>
@@ -85,7 +88,14 @@ export function useAdminPeopleActions({
       const isCurrent = captureAdminPeopleFence();
       const updated = await mergePeopleMutation.mutateAsync({ canonicalId, duplicateId });
       const canonicalPerson = apiToPerson(updated as Record<string, unknown>);
-      await applyAdminPeopleMerged(peopleCollection, canonicalPerson, duplicateId, isCurrent);
+      await applyAdminPeopleMerged(
+        peopleCollection,
+        canonicalPerson,
+        duplicateId,
+        isCurrent,
+        async () => (await fetchVolunteer(canonicalId, authHeaders)).helpPeriods,
+      );
+      if (!isCurrent()) return;
       queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
         prev
           ? prev.map((registration) =>
@@ -109,7 +119,14 @@ export function useAdminPeopleActions({
           : prev,
       );
     },
-    [exhibitorsQueryKey, mergePeopleMutation, peopleCollection, queryClient, registrationsQueryKey],
+    [
+      authHeaders,
+      exhibitorsQueryKey,
+      mergePeopleMutation,
+      peopleCollection,
+      queryClient,
+      registrationsQueryKey,
+    ],
   );
 
   const handleCreateMember = useCallback(
@@ -131,7 +148,7 @@ export function useAdminPeopleActions({
       const response = await updateMemberMutation.mutateAsync({ id, data });
       const updatedMember = apiToPerson(response as Record<string, unknown>);
       await applyAdminPersonUpdated(peopleCollection, updatedMember, isCurrent);
-      patchRegistrationPerson(updatedMember);
+      patchRegistrationPerson(updatedMember, isCurrent);
     },
     [patchRegistrationPerson, peopleCollection, updateMemberMutation],
   );
@@ -164,7 +181,7 @@ export function useAdminPeopleActions({
       const response = await updatePersonMutation.mutateAsync({ id, data });
       const updated = apiToPerson(response as Record<string, unknown>);
       await applyAdminPersonUpdated(peopleCollection, updated, isCurrent);
-      patchRegistrationPerson(updated);
+      patchRegistrationPerson(updated, isCurrent);
     },
     [patchRegistrationPerson, peopleCollection, updatePersonMutation],
   );

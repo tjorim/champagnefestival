@@ -13,7 +13,10 @@ import { http, HttpResponse } from "msw";
 import { describe, expect, it, vi } from "vitest";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import { server } from "@/mocks/server";
-import { createAdminPeopleCollection } from "@/state/adminPeopleCollection";
+import {
+  createAdminPeopleCollection,
+  resetAdminPeopleCollection,
+} from "@/state/adminPeopleCollection";
 import type { Person } from "@/types/person";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
@@ -131,6 +134,12 @@ async function renderMergeHook(people: Person[]) {
   const refetchPeople = vi
     .spyOn(peopleCollection.utils, "refetch")
     .mockResolvedValue(undefined as never);
+  const setDetailRegistration = vi.fn();
+  queryClient.setQueryData(REGISTRATIONS_KEY, [
+    { id: "reg-1", personId: CANONICAL.id, person: { id: CANONICAL.id, name: "Before" } },
+    { id: "reg-2", personId: DUPLICATE.id, person: { id: DUPLICATE.id, name: "Before" } },
+  ]);
+  queryClient.setQueryData(EXHIBITORS_KEY, [{ id: 1, contactPersonId: DUPLICATE.id }]);
 
   const { result } = renderHook(
     () =>
@@ -140,12 +149,12 @@ async function renderMergeHook(people: Person[]) {
         peopleCollection,
         queryClient,
         registrationsQueryKey: REGISTRATIONS_KEY,
-        setDetailRegistration: vi.fn(),
+        setDetailRegistration,
       }),
     { wrapper: Wrapper },
   );
 
-  return { peopleCollection, result, refetchPeople };
+  return { peopleCollection, queryClient, result, refetchPeople, setDetailRegistration };
 }
 
 describe("useAdminPeopleActions — merge", () => {
@@ -212,5 +221,111 @@ describe("useAdminPeopleActions — merge", () => {
     const survivor = peopleCollection.toArray[0];
     expect(survivor?.roles).toEqual(["member"]);
     expect(survivor?.helpPeriods).toEqual([]);
+  });
+});
+
+describe("useAdminPeopleActions — responses from an ended session", () => {
+  /** Holds a response until the test releases it, so the session can end in between. */
+  function gate() {
+    let release: () => void = () => undefined;
+    const opened = new Promise<void>((resolve) => (release = resolve));
+    return { opened, release };
+  }
+
+  it("does not patch the registrations or exhibitors caches with a stale merge response", async () => {
+    const { opened, release } = gate();
+    server.use(
+      http.post("/api/people/:canonicalId/merge/:duplicateId", async () => {
+        await opened;
+        return HttpResponse.json(MERGE_RESPONSE);
+      }),
+    );
+    const { peopleCollection, queryClient, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
+
+    let merge: Promise<void> = Promise.resolve();
+    act(() => {
+      merge = result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
+    });
+    await resetAdminPeopleCollection(peopleCollection);
+    release();
+    await act(async () => {
+      await merge;
+    });
+
+    const registrations = queryClient.getQueryData<{ personId: string }[]>(REGISTRATIONS_KEY);
+    expect(registrations?.map((registration) => registration.personId)).toEqual([
+      CANONICAL.id,
+      DUPLICATE.id,
+    ]);
+    expect(queryClient.getQueryData(EXHIBITORS_KEY)).toEqual([
+      { id: 1, contactPersonId: DUPLICATE.id },
+    ]);
+    expect(peopleCollection.size).toBe(0);
+  });
+
+  it("does not patch registration rows or the open detail with a stale person update", async () => {
+    const { opened, release } = gate();
+    server.use(
+      http.put("/api/people/:id", async () => {
+        await opened;
+        return HttpResponse.json({ ...MERGE_RESPONSE, name: "Stale name" });
+      }),
+    );
+    const { peopleCollection, queryClient, result, setDetailRegistration } = await renderMergeHook([
+      CANONICAL,
+      DUPLICATE,
+    ]);
+
+    let update: Promise<void> = Promise.resolve();
+    act(() => {
+      update = result.current.handleUpdatePerson(CANONICAL.id, {
+        name: "Stale name",
+        email: "",
+        phone: "",
+        address: "",
+        roles: ["member"],
+        notes: "",
+        clubName: "",
+        active: true,
+      });
+    });
+    await resetAdminPeopleCollection(peopleCollection);
+    release();
+    await act(async () => {
+      await update;
+    });
+
+    const registrations =
+      queryClient.getQueryData<{ person: { name: string } }[]>(REGISTRATIONS_KEY);
+    expect(registrations?.[0]?.person.name).toBe("Before");
+    expect(setDetailRegistration).not.toHaveBeenCalled();
+  });
+
+  it("patches registration rows and the open detail with a current person update", async () => {
+    server.use(
+      http.put("/api/people/:id", () => HttpResponse.json({ ...MERGE_RESPONSE, name: "New name" })),
+    );
+    const { queryClient, result, setDetailRegistration } = await renderMergeHook([
+      CANONICAL,
+      DUPLICATE,
+    ]);
+
+    await act(async () => {
+      await result.current.handleUpdatePerson(CANONICAL.id, {
+        name: "New name",
+        email: "",
+        phone: "",
+        address: "",
+        roles: ["member"],
+        notes: "",
+        clubName: "",
+        active: true,
+      });
+    });
+
+    const registrations =
+      queryClient.getQueryData<{ person: { name: string } }[]>(REGISTRATIONS_KEY);
+    expect(registrations?.[0]?.person.name).toBe("New name");
+    expect(setDetailRegistration).toHaveBeenCalled();
   });
 });

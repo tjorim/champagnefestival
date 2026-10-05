@@ -489,14 +489,41 @@ export async function fetchPeopleSearch(
   return mergePeopleWithVolunteers(peopleResult.people, volunteersResult.people);
 }
 
+/**
+ * Every person, with volunteer help periods merged in. Members are not fetched
+ * as a separate resource any more (the admin state derives them from the
+ * people), but the role-filtered request still runs here: it applies the limit
+ * after the filter, so a member who falls outside the first page of all people
+ * is still loaded. Rows are deduplicated by id.
+ */
 export async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  const [peopleResult, volunteersResult] = await Promise.all([
+  const [peopleResult, membersResult, volunteersResult] = await Promise.all([
     fetchPersonListEnvelope(`/api/people?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
+    fetchPersonListEnvelope(`/api/people?role=member&limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
     fetchPersonListEnvelope(`/api/volunteers?limit=${PEOPLE_FULL_LIST_LIMIT}`, authHeaders),
   ]);
   warnIfPersonListTruncated("people", peopleResult.people.length, peopleResult.total);
+  warnIfPersonListTruncated("members", membersResult.people.length, membersResult.total);
   warnIfPersonListTruncated("volunteers", volunteersResult.people.length, volunteersResult.total);
-  return mergePeopleWithVolunteers(peopleResult.people, volunteersResult.people);
+  const knownIds = new Set(peopleResult.people.map((person) => person.id));
+  const people = [
+    ...peopleResult.people,
+    ...membersResult.people.filter((member) => !knownIds.has(member.id)),
+  ];
+  return mergePeopleWithVolunteers(people, volunteersResult.people);
+}
+
+/** One volunteer with their help periods (`GET /api/volunteers/{id}`). */
+export async function fetchVolunteer(
+  id: string,
+  authHeaders: () => Record<string, string>,
+): Promise<Person> {
+  const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
+    `/api/volunteers/${encodeURIComponent(id)}`,
+    { headers: authHeaders() },
+    m.admin_error_load_data(),
+  );
+  return apiToPerson(payload);
 }
 
 export interface AuditEntryFilters {

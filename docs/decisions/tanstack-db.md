@@ -162,19 +162,24 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   person holding that role, so `membersQuery.data` is `selectMembers(people)` and
   `volunteersQuery.data` is `selectVolunteers(people)`; both share the people
   collection's loading and error state, and `AdminDashboard` no longer computes
-  volunteers itself. There is no members
-  collection, no `/api/people?role=member` request (`fetchMembers` and
-  `queryKeys.admin.members` are gone) and no member-sync code: a person update,
-  role change or delete reaches the members view by itself (rule 3 below: derive
-  views instead of storing them twice). An earlier iteration of this migration had
-  a second collection kept in step by hand; that reintroduced the multi-cache
-  patching this issue set out to remove.
+  volunteers itself. There is no members collection, no member-only fetch
+  (`fetchMembers` and `queryKeys.admin.members` are gone) and no member-sync code:
+  a person update, role change or delete reaches the members view by itself (rule 3
+  below: derive views instead of storing them twice). An earlier iteration of this
+  migration had a second collection kept in step by hand; that reintroduced the
+  multi-cache patching this issue set out to remove. `fetchPeople` still issues the
+  role-filtered `/api/people?role=member` request inside the one `queryFn` and
+  deduplicates by id: the limit applies after the filter, so a member who falls
+  outside the first 1,000 people is still loaded.
 - **Writes are direct, not handlers.** The admin forms validate server-side, and
   the server assigns ids and `updated_at`, so nothing is shown optimistically.
   `useAdminPeopleActions` keeps one `useMutation` per API call and then calls an
   `applyAdmin…` helper that writes the server's row into the collection (create,
   update, delete, the volunteer variants, and merge, which removes the duplicate
-  and keeps the survivor's own help periods). That replaces the roughly 22
+  and keeps the survivor's own help periods; a survivor the collection does not hold
+  yet is inserted, with a volunteer's help periods loaded from
+  `GET /api/volunteers/{id}`, or not inserted at all if that fails, so an empty list
+  is never shown as the real one). That replaces the roughly 22
   `setQueryData` calls on the people and members keys. The registrations and
   exhibitors copies of a person are still patched with `setQueryData` there (those
   domains are out of scope here; see #1166).
@@ -185,9 +190,12 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   with a depth predicate; invalidating the bare key would refetch the collection a
   second time.
 - **Session fence and reset.** Each action captures `captureAdminPeopleFence()`
-  before its request and the helpers drop the write if it moved, because sign-out
-  (`resetAdminPeopleCollection`) and collection swaps (`registerAdminPeopleCollection`)
-  advance it. A local write that fails after the server committed (for example a
+  before its request. The collection helpers drop the write if it moved, and the
+  actions check it again before patching the registrations and exhibitors caches
+  and the open registration detail, so a response from an earlier session never
+  reaches the next session's rows. The fence moves on sign-out
+  (`resetAdminPeopleCollection`) and on collection swaps (`registerAdminPeopleCollection`).
+  A local write that fails after the server committed (for example a
   collection whose sync stopped) is not reported as a failed action; the refetch
   reconciles. `isAuthenticated` turning false empties the collection and removes
   the people query key (and the nested per-person queries).
