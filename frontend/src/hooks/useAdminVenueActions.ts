@@ -1,7 +1,6 @@
 import { useCallback } from "react";
-import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
-import type { FloorArea, FloorTableRecord, Layout, Room, TableType, Venue } from "@/types/admin";
+import type { FloorArea, FloorTableRecord, Room, TableType, Venue } from "@/types/admin";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
 import {
   addAdminTable,
@@ -11,9 +10,19 @@ import {
   replaceAdminTablesForLayout,
   type AdminTablesCollection,
 } from "@/state/adminTablesCollection";
+import {
+  applyAdminLayoutDeleted,
+  applyAdminVenueDeleted,
+  applyAdminVenueRowCreated,
+  applyAdminVenueRowDeleted,
+  applyAdminVenueRowUpdated,
+  captureAdminVenueFence,
+  refetchAdminVenueCollections,
+  replaceAdminAreasForLayout,
+  type AdminVenueCollections,
+} from "@/state/adminVenueCollections";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { devError } from "@/utils/devLog";
-import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { getAreaSizePx, getCanvasSizePx } from "@/utils/layoutUtils";
 import {
   apiAreaToArea,
@@ -25,25 +34,22 @@ import {
 } from "@/utils/adminApiMappers";
 
 interface UseAdminVenueActionsOptions {
-  areasQueryKey: QueryKey;
   authHeaders: () => Record<string, string>;
-  layoutsQueryKey: QueryKey;
-  queryClient: QueryClient;
-  roomsQueryKey: QueryKey;
-  tableTypesQueryKey: QueryKey;
   tablesCollection: AdminTablesCollection;
-  venuesQueryKey: QueryKey;
+  venueCollections: AdminVenueCollections;
 }
 
+/**
+ * Venue, room, table type, layout and area actions. A create or update calls
+ * the API and then writes the server's row into the matching collection; a
+ * delete removes the row and its dependants. The fence is captured before each
+ * request and checked before every write that follows it, so a response from an
+ * earlier session never lands in the next one (see `adminVenueCollections.ts`).
+ */
 export function useAdminVenueActions({
-  areasQueryKey,
   authHeaders,
-  layoutsQueryKey,
-  queryClient,
-  roomsQueryKey,
-  tableTypesQueryKey,
   tablesCollection,
-  venuesQueryKey,
+  venueCollections,
 }: UseAdminVenueActionsOptions) {
   const {
     assignAreaMutation,
@@ -57,25 +63,13 @@ export function useAdminVenueActions({
     deleteLayoutMutation,
     deleteTableTypeMutation,
     deleteVenueMutation,
-    moveAreaMutation,
-    resizeAreaMutation,
     restoreLayoutRevisionMutation,
-    rotateAreaMutation,
     saveLayoutRevisionMutation,
-    updateAreaLabelMutation,
     updateRoomMutation,
     updateTableTypeMutation,
     updateVenueMutation,
-  } = useVenueMutations({
-    queryClient,
-    authHeaders,
-    tablesCollection,
-    venuesQueryKey,
-    roomsQueryKey,
-    tableTypesQueryKey,
-    layoutsQueryKey,
-    areasQueryKey,
-  });
+  } = useVenueMutations({ authHeaders, tablesCollection, venueCollections });
+  const { areas, layouts, rooms, tableTypes, venues } = venueCollections;
 
   const handleAddTable = useCallback(
     async (name: string, layoutId: string, tableTypeId: string) => {
@@ -148,6 +142,7 @@ export function useAdminVenueActions({
       lat: number,
       lng: number,
     ) => {
+      const isCurrent = captureAdminVenueFence();
       const d = await createVenueMutation.mutateAsync({
         name,
         address,
@@ -157,97 +152,67 @@ export function useAdminVenueActions({
         lat,
         lng,
       });
-      queryClient.setQueryData<Venue[]>(venuesQueryKey, (prev) =>
-        prev ? [...prev, apiVenueToVenue(d)] : prev,
-      );
+      await applyAdminVenueRowCreated(venues, apiVenueToVenue(d), isCurrent);
     },
-    [createVenueMutation, queryClient, venuesQueryKey],
+    [createVenueMutation, venues],
   );
 
   const handleUpdateVenue = useCallback(
     async (venueId: string, data: Partial<Omit<Venue, "id" | "active">>) => {
+      const isCurrent = captureAdminVenueFence();
       const d = await updateVenueMutation.mutateAsync({ venueId, ...data });
-      queryClient.setQueryData<Venue[]>(venuesQueryKey, (prev) =>
-        prev ? prev.map((venue) => (venue.id === venueId ? apiVenueToVenue(d) : venue)) : prev,
-      );
+      await applyAdminVenueRowUpdated(venues, apiVenueToVenue(d), isCurrent);
     },
-    [queryClient, updateVenueMutation, venuesQueryKey],
+    [updateVenueMutation, venues],
   );
 
   const handleArchiveVenue = useCallback(
     async (venueId: string) => {
+      const isCurrent = captureAdminVenueFence();
       const d = await updateVenueMutation.mutateAsync({ venueId, active: false });
-      queryClient.setQueryData<Venue[]>(venuesQueryKey, (prev) =>
-        prev ? prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)) : prev,
-      );
+      await applyAdminVenueRowUpdated(venues, apiVenueToVenue(d), isCurrent);
     },
-    [queryClient, updateVenueMutation, venuesQueryKey],
+    [updateVenueMutation, venues],
   );
 
   const handleRestoreVenue = useCallback(
     async (venueId: string) => {
+      const isCurrent = captureAdminVenueFence();
       const d = await updateVenueMutation.mutateAsync({ venueId, active: true });
-      queryClient.setQueryData<Venue[]>(venuesQueryKey, (prev) =>
-        prev ? prev.map((v) => (v.id === venueId ? apiVenueToVenue(d) : v)) : prev,
-      );
+      await applyAdminVenueRowUpdated(venues, apiVenueToVenue(d), isCurrent);
     },
-    [queryClient, updateVenueMutation, venuesQueryKey],
+    [updateVenueMutation, venues],
   );
 
   const handleDeleteVenue = useCallback(
     async (venueId: string) => {
+      const isCurrent = captureAdminVenueFence();
       const tablesFenceIsCurrent = captureAdminTablesFence();
       await deleteVenueMutation.mutateAsync(venueId);
-      queryClient.setQueryData<Venue[]>(venuesQueryKey, (prev) =>
-        prev ? prev.filter((v) => v.id !== venueId) : prev,
-      );
-      // Cascade: remove rooms and their layouts/tables/areas from local state
-      const allRooms = queryClient.getQueryData<Room[]>(roomsQueryKey) ?? [];
-      const venueRoomIds = allRooms.filter((r) => r.venueId === venueId).map((r) => r.id);
-      queryClient.setQueryData<Room[]>(roomsQueryKey, (prev) =>
-        prev ? prev.filter((r) => r.venueId !== venueId) : prev,
-      );
-      const allLayouts = queryClient.getQueryData<Layout[]>(layoutsQueryKey) ?? [];
-      const venueLayoutIds = allLayouts
-        .filter((l) => venueRoomIds.includes(l.roomId ?? ""))
-        .map((l) => l.id);
-      queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
-        prev ? prev.filter((l) => !venueRoomIds.includes(l.roomId ?? "")) : prev,
-      );
-      await removeAdminTablesForLayouts(tablesCollection, venueLayoutIds, tablesFenceIsCurrent);
-      queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-        prev ? prev.filter((a) => !venueLayoutIds.includes(a.layoutId)) : prev,
-      );
+      // Cascade: the venue's rooms, their layouts and the layouts' areas leave
+      // the collections, and the layouts' tables leave the tables collection.
+      const layoutIds = await applyAdminVenueDeleted(venueCollections, venueId, isCurrent);
+      await removeAdminTablesForLayouts(tablesCollection, layoutIds, tablesFenceIsCurrent);
     },
-    [
-      areasQueryKey,
-      deleteVenueMutation,
-      layoutsQueryKey,
-      queryClient,
-      roomsQueryKey,
-      tablesCollection,
-      venuesQueryKey,
-    ],
+    [deleteVenueMutation, tablesCollection, venueCollections],
   );
 
   const handleAddRoom = useCallback(
     async (venueId: string, name: string, widthM: number, lengthM: number, color: string) => {
+      const isCurrent = captureAdminVenueFence();
       const data = await createRoomMutation.mutateAsync({ venueId, name, widthM, lengthM, color });
-      queryClient.setQueryData<Room[]>(roomsQueryKey, (prev) =>
-        prev ? [...prev, apiRoomToRoom(data)] : prev,
-      );
+      await applyAdminVenueRowCreated(rooms, apiRoomToRoom(data), isCurrent);
     },
-    [createRoomMutation, queryClient, roomsQueryKey],
+    [createRoomMutation, rooms],
   );
 
   const handleUpdateRoom = useCallback(
     async (roomId: string, data: Partial<Omit<Room, "id" | "dimensionsPlaceholder">>) => {
+      const isCurrent = captureAdminVenueFence();
       const d = await updateRoomMutation.mutateAsync({ id: roomId, data });
-      queryClient.setQueryData<Room[]>(roomsQueryKey, (prev) =>
-        prev ? prev.map((r) => (r.id === roomId ? apiRoomToRoom(d) : r)) : prev,
-      );
+      await applyAdminVenueRowUpdated(rooms, apiRoomToRoom(d), isCurrent);
     },
-    [queryClient, roomsQueryKey, updateRoomMutation],
+    [rooms, updateRoomMutation],
   );
 
   const handleArchiveRoom = useCallback(
@@ -262,12 +227,11 @@ export function useAdminVenueActions({
 
   const handleDeleteRoom = useCallback(
     async (roomId: string) => {
+      const isCurrent = captureAdminVenueFence();
       await deleteRoomMutation.mutateAsync(roomId);
-      queryClient.setQueryData<Room[]>(roomsQueryKey, (prev) =>
-        prev ? prev.filter((room) => room.id !== roomId) : prev,
-      );
+      await applyAdminVenueRowDeleted(rooms, roomId, isCurrent);
     },
-    [deleteRoomMutation, queryClient, roomsQueryKey],
+    [deleteRoomMutation, rooms],
   );
 
   const handleAddLayout = useCallback(
@@ -278,6 +242,7 @@ export function useAdminVenueActions({
       copyFromLayoutId?: string | null,
       copyOptions?: { tables: boolean; areas: boolean },
     ) => {
+      const isCurrent = captureAdminVenueFence();
       if (copyFromLayoutId) {
         const shouldCopyTables = copyOptions?.tables ?? true;
         const shouldCopyAreas = copyOptions?.areas ?? true;
@@ -296,45 +261,30 @@ export function useAdminVenueActions({
           },
           m.admin_error_add_layout(),
         );
-        const createdLayout = apiLayoutToLayout(copied);
-        queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
-          prev ? [...prev, createdLayout] : prev,
-        );
+        await applyAdminVenueRowCreated(layouts, apiLayoutToLayout(copied), isCurrent);
+        // The copy also created areas and tables server-side, with fresh ids.
         await Promise.all([
-          invalidateAdmin(queryClient, [layoutsQueryKey, areasQueryKey]),
-          refetchAdminTables(tablesCollection),
+          refetchAdminVenueCollections(venueCollections, ["layouts", "areas"], isCurrent),
+          isCurrent() ? refetchAdminTables(tablesCollection) : undefined,
         ]);
         return;
       }
 
       const d = await createLayoutMutation.mutateAsync({ roomId, eventId, label });
-      queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
-        prev ? [...prev, apiLayoutToLayout(d)] : prev,
-      );
+      await applyAdminVenueRowCreated(layouts, apiLayoutToLayout(d), isCurrent);
     },
-    [
-      areasQueryKey,
-      authHeaders,
-      createLayoutMutation,
-      layoutsQueryKey,
-      queryClient,
-      tablesCollection,
-    ],
+    [authHeaders, createLayoutMutation, layouts, tablesCollection, venueCollections],
   );
 
   const handleDeleteLayout = useCallback(
     async (layoutId: string) => {
+      const isCurrent = captureAdminVenueFence();
       const tablesFenceIsCurrent = captureAdminTablesFence();
       await deleteLayoutMutation.mutateAsync(layoutId);
-      queryClient.setQueryData<Layout[]>(layoutsQueryKey, (prev) =>
-        prev ? prev.filter((l) => l.id !== layoutId) : prev,
-      );
+      await applyAdminLayoutDeleted(venueCollections, layoutId, isCurrent);
       await removeAdminTablesForLayouts(tablesCollection, [layoutId], tablesFenceIsCurrent);
-      queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-        prev ? prev.filter((a) => a.layoutId !== layoutId) : prev,
-      );
     },
-    [areasQueryKey, deleteLayoutMutation, layoutsQueryKey, queryClient, tablesCollection],
+    [deleteLayoutMutation, tablesCollection, venueCollections],
   );
 
   // Layout revisions (#1021): save takes an immutable geometry snapshot;
@@ -349,6 +299,7 @@ export function useAdminVenueActions({
 
   const handleRestoreRevision = useCallback(
     async (layoutId: string, revisionNumber: number, resolveAllocations?: boolean) => {
+      const isCurrent = captureAdminVenueFence();
       const tablesFenceIsCurrent = captureAdminTablesFence();
       const data = await restoreLayoutRevisionMutation.mutateAsync({
         layoutId,
@@ -366,13 +317,15 @@ export function useAdminVenueActions({
         );
       }
       if (Array.isArray(restoredAreas)) {
-        const mapped = restoredAreas.map(apiAreaToArea);
-        queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-          prev ? [...prev.filter((a) => a.layoutId !== layoutId), ...mapped] : prev,
+        await replaceAdminAreasForLayout(
+          areas,
+          layoutId,
+          restoredAreas.map(apiAreaToArea),
+          isCurrent,
         );
       }
     },
-    [areasQueryKey, queryClient, restoreLayoutRevisionMutation, tablesCollection],
+    [areas, restoreLayoutRevisionMutation, tablesCollection],
   );
 
   const handleAddArea = useCallback(
@@ -384,6 +337,7 @@ export function useAdminVenueActions({
       lengthM: number,
       exhibitorId?: number,
     ) => {
+      const isCurrent = captureAdminVenueFence();
       const data = await createAreaMutation.mutateAsync({
         label,
         icon,
@@ -392,35 +346,48 @@ export function useAdminVenueActions({
         lengthM,
         exhibitorId,
       });
-      queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-        prev ? [...prev, apiAreaToArea(data)] : prev,
-      );
+      await applyAdminVenueRowCreated(areas, apiAreaToArea(data), isCurrent);
     },
-    [areasQueryKey, createAreaMutation, queryClient],
+    [areas, createAreaMutation],
+  );
+
+  // Canvas edits are optimistic through the areas collection's `onUpdate`
+  // handler: the area follows the pointer at once, rolls back if the PUT fails
+  // and is reconciled by a refetch.
+  const updateAreaRow = useCallback(
+    async (areaId: string, apply: (draft: FloorArea) => void) => {
+      await areas.update(areaId, apply).isPersisted.promise;
+    },
+    [areas],
   );
 
   const handleMoveArea = useCallback(
     (areaId: string, x: number, y: number) => {
-      moveAreaMutation.mutate({ areaId, x, y });
+      updateAreaRow(areaId, (area) => {
+        area.x = x;
+        area.y = y;
+      }).catch(() => devError("Failed to persist area position"));
     },
-    [moveAreaMutation],
+    [updateAreaRow],
   );
 
   const handleRotateArea = useCallback(
     (areaId: string, rotation: number) => {
-      rotateAreaMutation.mutate({ areaId, rotation: ((rotation % 360) + 360) % 360 });
+      const normalized = ((rotation % 360) + 360) % 360;
+      updateAreaRow(areaId, (area) => {
+        area.rotation = normalized;
+      }).catch(() => devError("Failed to persist area rotation"));
     },
-    [rotateAreaMutation],
+    [updateAreaRow],
   );
 
   const handleDeleteArea = useCallback(
     async (areaId: string) => {
+      const isCurrent = captureAdminVenueFence();
       await deleteAreaMutation.mutateAsync(areaId);
-      queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-        prev ? prev.filter((a) => a.id !== areaId) : prev,
-      );
+      await applyAdminVenueRowDeleted(areas, areaId, isCurrent);
     },
-    [areasQueryKey, deleteAreaMutation, queryClient],
+    [areas, deleteAreaMutation],
   );
 
   const handleAssignAreaToItem = useCallback(
@@ -428,29 +395,27 @@ export function useAdminVenueActions({
       const body: Record<string, unknown> = { exhibitor_id: exhibitorId };
       if (label !== undefined) body.label = label;
       if (icon !== undefined) body.icon = icon;
-      await assignAreaMutation.mutateAsync({ areaId, body });
+      const isCurrent = captureAdminVenueFence();
+      const d = await assignAreaMutation.mutateAsync({ areaId, body });
+      await applyAdminVenueRowUpdated(areas, apiAreaToArea(d), isCurrent);
     },
-    [assignAreaMutation],
+    [areas, assignAreaMutation],
   );
 
   const handleUpdateAreaLabel = useCallback(
     (areaId: string, label: string) => {
-      updateAreaLabelMutation.mutate({ areaId, label });
+      updateAreaRow(areaId, (area) => {
+        area.label = label;
+      }).catch(() => devError("Failed to persist area label"));
     },
-    [updateAreaLabelMutation],
+    [updateAreaRow],
   );
 
   const handleResizeArea = useCallback(
     async (areaId: string, widthM: number, lengthM: number) => {
-      const area = queryClient
-        .getQueryData<FloorArea[]>(areasQueryKey)
-        ?.find((a) => a.id === areaId);
-      const layout = queryClient
-        .getQueryData<Layout[]>(layoutsQueryKey)
-        ?.find((l) => l.id === area?.layoutId);
-      const room = queryClient
-        .getQueryData<Room[]>(roomsQueryKey)
-        ?.find((r) => r.id === layout?.roomId);
+      const area = areas.get(areaId);
+      const layout = area ? layouts.get(area.layoutId) : undefined;
+      const room = layout ? rooms.get(layout.roomId) : undefined;
 
       // Clamp the area's position so it stays within the canvas after resize.
       let x = area?.x ?? 0;
@@ -462,29 +427,32 @@ export function useAdminVenueActions({
         y = (Math.max(0, Math.min((area.y / 100) * canvasH, canvasH - areaH)) / canvasH) * 100;
       }
 
-      await resizeAreaMutation.mutateAsync({ areaId, widthM, lengthM, x, y });
+      await updateAreaRow(areaId, (draft) => {
+        draft.widthM = widthM;
+        draft.lengthM = lengthM;
+        draft.x = x;
+        draft.y = y;
+      });
     },
-    [areasQueryKey, layoutsQueryKey, queryClient, resizeAreaMutation, roomsQueryKey],
+    [areas, layouts, rooms, updateAreaRow],
   );
 
   const handleAddTableType = useCallback(
     async (data: Omit<TableType, "id">) => {
+      const isCurrent = captureAdminVenueFence();
       const d = await createTableTypeMutation.mutateAsync(data);
-      queryClient.setQueryData<TableType[]>(tableTypesQueryKey, (prev) =>
-        prev ? [...prev, apiTableTypeToTableType(d)] : prev,
-      );
+      await applyAdminVenueRowCreated(tableTypes, apiTableTypeToTableType(d), isCurrent);
     },
-    [createTableTypeMutation, queryClient, tableTypesQueryKey],
+    [createTableTypeMutation, tableTypes],
   );
 
   const handleUpdateTableType = useCallback(
     async (id: string, data: Partial<Omit<TableType, "id">>) => {
+      const isCurrent = captureAdminVenueFence();
       const d = await updateTableTypeMutation.mutateAsync({ id, data });
-      queryClient.setQueryData<TableType[]>(tableTypesQueryKey, (prev) =>
-        prev ? prev.map((tt) => (tt.id === id ? apiTableTypeToTableType(d) : tt)) : prev,
-      );
+      await applyAdminVenueRowUpdated(tableTypes, apiTableTypeToTableType(d), isCurrent);
     },
-    [queryClient, tableTypesQueryKey, updateTableTypeMutation],
+    [tableTypes, updateTableTypeMutation],
   );
 
   const handleArchiveTableType = useCallback(
@@ -499,12 +467,11 @@ export function useAdminVenueActions({
 
   const handleDeleteTableType = useCallback(
     async (id: string) => {
+      const isCurrent = captureAdminVenueFence();
       await deleteTableTypeMutation.mutateAsync(id);
-      queryClient.setQueryData<TableType[]>(tableTypesQueryKey, (prev) =>
-        prev ? prev.filter((tt) => tt.id !== id) : prev,
-      );
+      await applyAdminVenueRowDeleted(tableTypes, id, isCurrent);
     },
-    [deleteTableTypeMutation, queryClient, tableTypesQueryKey],
+    [deleteTableTypeMutation, tableTypes],
   );
 
   return {

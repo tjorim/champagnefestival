@@ -20,16 +20,15 @@ import {
   registerAdminTablesCollection,
   resetAdminTablesCollection,
 } from "@/state/adminTablesCollection";
+import {
+  createAdminVenueCollections,
+  refetchAdminVenueCollections,
+  registerAdminVenueCollections,
+  resetAdminVenueCollections,
+} from "@/state/adminVenueCollections";
 import { withTableOccupancy } from "@/state/tableOccupancy";
 import { queryKeys } from "@/utils/queryKeys";
-import {
-  fetchVenues,
-  fetchRooms,
-  fetchTableTypes,
-  fetchLayouts,
-  fetchExhibitors,
-  fetchAreas,
-} from "@/utils/adminFetch";
+import { fetchExhibitors } from "@/utils/adminFetch";
 
 interface UseAdminQueriesOptions {
   visible: boolean;
@@ -38,18 +37,10 @@ interface UseAdminQueriesOptions {
   authHeaders: () => Record<string, string>;
 }
 
-// "tables" and "people" are deliberately absent: they are served by
-// collections, which are refetched through their own utils (see `loadData`),
-// never by a standalone query.
-export const ADMIN_RESOURCE_KEYS = [
-  "registrations",
-  "venues",
-  "rooms",
-  "table-types",
-  "layouts",
-  "exhibitors",
-  "areas",
-] as const;
+// "tables", "people", "venues", "rooms", "table-types", "layouts" and "areas"
+// are deliberately absent: they are served by collections, which are refetched
+// through their own utils (see `loadData`), never by a standalone query.
+export const ADMIN_RESOURCE_KEYS = ["registrations", "exhibitors"] as const;
 
 export const ADMIN_ONLY_RESOURCE_KEYS = ADMIN_RESOURCE_KEYS.filter(
   (resource) => resource !== "registrations",
@@ -97,12 +88,7 @@ export function useAdminQueries({
 
   // Per-resource query keys (no longer scoped to a token; OIDC manages the session)
   const registrationsQueryKey = queryKeys.admin.registrations;
-  const venuesQueryKey = queryKeys.admin.venues;
-  const roomsQueryKey = queryKeys.admin.rooms;
-  const tableTypesQueryKey = queryKeys.admin.tableTypes;
-  const layoutsQueryKey = queryKeys.admin.layouts;
   const exhibitorsQueryKey = queryKeys.admin.exhibitors;
-  const areasQueryKey = queryKeys.admin.areas;
 
   const registrationsQueryOptions = {
     enabled: visible && isAuthenticated,
@@ -204,6 +190,58 @@ export function useAdminQueries({
   const membersQuery = { ...peopleQuery, data: membersData };
   const volunteersQuery = { ...peopleQuery, data: volunteersData };
 
+  // The venue group (venues, rooms, table types, layouts, areas) is one set of
+  // collections, built, registered and reset together.
+  const venueCollections = useMemo(
+    () =>
+      createAdminVenueCollections({
+        queryClient,
+        authHeaders,
+        enabled: adminQueryOptions.enabled,
+      }),
+    [adminQueryOptions.enabled, authHeaders, queryClient],
+  );
+  const venuesLiveQuery = useLiveQuery(() => venueCollections.venues, [venueCollections]);
+  const roomsLiveQuery = useLiveQuery(() => venueCollections.rooms, [venueCollections]);
+  const tableTypesLiveQuery = useLiveQuery(() => venueCollections.tableTypes, [venueCollections]);
+  const layoutsLiveQuery = useLiveQuery(() => venueCollections.layouts, [venueCollections]);
+  const areasLiveQuery = useLiveQuery(() => venueCollections.areas, [venueCollections]);
+  const venueCollectionsRef = useRef(venueCollections);
+  useEffect(() => {
+    venueCollectionsRef.current = venueCollections;
+  }, [venueCollections]);
+  useEffect(() => registerAdminVenueCollections(venueCollections), [venueCollections]);
+  const venuesQuery = {
+    data: venuesLiveQuery.data,
+    error: venueCollections.venues.utils.lastError ?? null,
+    isPending: venuesLiveQuery.isLoading,
+    isFetching: venueCollections.venues.utils.isFetching,
+  };
+  const roomsQuery = {
+    data: roomsLiveQuery.data,
+    error: venueCollections.rooms.utils.lastError ?? null,
+    isPending: roomsLiveQuery.isLoading,
+    isFetching: venueCollections.rooms.utils.isFetching,
+  };
+  const tableTypesQuery = {
+    data: tableTypesLiveQuery.data,
+    error: venueCollections.tableTypes.utils.lastError ?? null,
+    isPending: tableTypesLiveQuery.isLoading,
+    isFetching: venueCollections.tableTypes.utils.isFetching,
+  };
+  const layoutsQuery = {
+    data: layoutsLiveQuery.data,
+    error: venueCollections.layouts.utils.lastError ?? null,
+    isPending: layoutsLiveQuery.isLoading,
+    isFetching: venueCollections.layouts.utils.isFetching,
+  };
+  const areasQuery = {
+    data: areasLiveQuery.data,
+    error: venueCollections.areas.utils.lastError ?? null,
+    isPending: areasLiveQuery.isLoading,
+    isFetching: venueCollections.areas.utils.isFetching,
+  };
+
   useEffect(() => {
     if (isAuthenticated) return;
     // The cached queries are removed right below, so a failed reset needs no extra handling.
@@ -212,52 +250,28 @@ export function useAdminQueries({
     );
     void resetAdminTablesCollection(tablesCollectionRef.current).catch(() => undefined);
     void resetAdminPeopleCollection(peopleCollectionRef.current).catch(() => undefined);
+    void resetAdminVenueCollections(venueCollectionsRef.current).catch(() => undefined);
     void queryClient.removeQueries({ queryKey: registrationsQueryKey });
     void queryClient.removeQueries({ queryKey: queryKeys.admin.tables });
     // Also removes the per-person queries nested under the people key.
     void queryClient.removeQueries({ queryKey: queryKeys.admin.people });
-    // The plain-query resources keep no data past sign-out either; with the cache
-    // entries gone, the `prev ? … : prev` patches in the venue and exhibitor
-    // actions have nothing to recreate (see docs/decisions/tanstack-db.md).
     for (const queryKey of [
       queryKeys.admin.venues,
       queryKeys.admin.rooms,
       queryKeys.admin.tableTypes,
       queryKeys.admin.layouts,
-      queryKeys.admin.exhibitors,
       queryKeys.admin.areas,
     ]) {
       void queryClient.removeQueries({ queryKey });
     }
+    // Exhibitors are still a plain query: with the cache entry gone, the
+    // `prev ? … : prev` patches in the dashboard have nothing to recreate
+    // (see docs/decisions/tanstack-db.md).
+    void queryClient.removeQueries({ queryKey: queryKeys.admin.exhibitors });
   }, [isAuthenticated, queryClient, registrationsQueryKey]);
-  const venuesQuery = useQuery({
-    queryKey: venuesQueryKey,
-    queryFn: () => fetchVenues(authHeaders),
-    ...adminQueryOptions,
-  });
-  const roomsQuery = useQuery({
-    queryKey: roomsQueryKey,
-    queryFn: () => fetchRooms(authHeaders),
-    ...adminQueryOptions,
-  });
-  const tableTypesQuery = useQuery({
-    queryKey: tableTypesQueryKey,
-    queryFn: () => fetchTableTypes(authHeaders),
-    ...adminQueryOptions,
-  });
-  const layoutsQuery = useQuery({
-    queryKey: layoutsQueryKey,
-    queryFn: () => fetchLayouts(authHeaders),
-    ...adminQueryOptions,
-  });
   const exhibitorsQuery = useQuery({
     queryKey: exhibitorsQueryKey,
     queryFn: () => fetchExhibitors(authHeaders),
-    ...adminQueryOptions,
-  });
-  const areasQuery = useQuery({
-    queryKey: areasQueryKey,
-    queryFn: () => fetchAreas(authHeaders),
     ...adminQueryOptions,
   });
   const allQueries = [
@@ -286,8 +300,9 @@ export function useAdminQueries({
       }),
       canManageAdminSections ? refetchAdminTables(tablesCollection) : undefined,
       canManageAdminSections ? refetchAdminPeople(peopleCollection) : undefined,
+      canManageAdminSections ? refetchAdminVenueCollections(venueCollections) : undefined,
     ]);
-  }, [canManageAdminSections, peopleCollection, queryClient, tablesCollection]);
+  }, [canManageAdminSections, peopleCollection, queryClient, tablesCollection, venueCollections]);
 
   return {
     // Query objects (for error/loading state access)
@@ -300,6 +315,7 @@ export function useAdminQueries({
     layoutsQuery,
     exhibitorsQuery,
     areasQuery,
+    venueCollections,
     peopleQuery,
     membersQuery,
     volunteersQuery,
@@ -309,12 +325,7 @@ export function useAdminQueries({
     isAnyFetching: allQueries.some((q) => q.isFetching),
     // Stable query keys (needed by mutations in the parent)
     registrationsQueryKey,
-    venuesQueryKey,
-    roomsQueryKey,
-    tableTypesQueryKey,
-    layoutsQueryKey,
     exhibitorsQueryKey,
-    areasQueryKey,
     // Refetch all
     loadData,
   };

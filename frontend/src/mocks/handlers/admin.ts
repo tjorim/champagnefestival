@@ -1219,6 +1219,9 @@ export const adminHandlers = [
     const idx = layouts.findIndex((l) => l.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     layouts.splice(idx, 1);
+    // The real API removes the layout's tables and areas with it.
+    tables = tables.filter((table) => table.layout_id !== params.id);
+    areas = areas.filter((area) => area.layout_id !== params.id);
     return new HttpResponse(null, { status: 204 });
   }),
 

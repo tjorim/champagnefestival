@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
 import { createTestQueryClientHarness } from "../utils/queryClient";
@@ -9,17 +9,16 @@ const authHeaders = () => ({
   Authorization: "Bearer ".concat("mock-access-token"),
 });
 
-const PLAIN_QUERY_KEYS = [
+const VENUE_GROUP_QUERY_KEYS = [
   ["admin", "venues"],
   ["admin", "rooms"],
   ["admin", "table-types"],
   ["admin", "layouts"],
-  ["admin", "exhibitors"],
   ["admin", "areas"],
 ] as const;
 
-describe("plain admin queries and sign-out", () => {
-  it("removes the venue, room, layout, area, table type and exhibitor entries on sign-out", async () => {
+describe("venue group collections, exhibitors and sign-out", () => {
+  it("empties the venue group and removes the exhibitors entry on sign-out", async () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const view = renderHook(
       ({ isAuthenticated }) =>
@@ -33,19 +32,29 @@ describe("plain admin queries and sign-out", () => {
     );
     await waitFor(() => {
       expect(view.result.current.venuesQuery.data?.length).toBeGreaterThan(0);
+      expect(view.result.current.roomsQuery.data?.length).toBeGreaterThan(0);
+      expect(view.result.current.tableTypesQuery.data?.length).toBeGreaterThan(0);
+      expect(view.result.current.layoutsQuery.data?.length).toBeGreaterThan(0);
+      expect(view.result.current.areasQuery.data?.length).toBeGreaterThan(0);
       expect(view.result.current.exhibitorsQuery.data).toBeDefined();
     });
 
     view.rerender({ isAuthenticated: false });
 
     await waitFor(() => {
-      for (const queryKey of PLAIN_QUERY_KEYS) {
+      expect(view.result.current.venuesQuery.data).toHaveLength(0);
+      expect(view.result.current.roomsQuery.data).toHaveLength(0);
+      expect(view.result.current.tableTypesQuery.data).toHaveLength(0);
+      expect(view.result.current.layoutsQuery.data).toHaveLength(0);
+      expect(view.result.current.areasQuery.data).toHaveLength(0);
+      for (const queryKey of VENUE_GROUP_QUERY_KEYS) {
         expect(queryClient.getQueryData(queryKey)).toBeUndefined();
       }
+      expect(queryClient.getQueryData(["admin", "exhibitors"])).toBeUndefined();
     });
   });
 
-  it("does not recreate a venue entry for a create that resolves after sign-out", async () => {
+  it("does not recreate a venue row for a create that resolves after sign-out", async () => {
     const { queryClient, Wrapper } = createTestQueryClientHarness();
     const view = renderHook(
       ({ isAuthenticated }) => {
@@ -57,13 +66,8 @@ describe("plain admin queries and sign-out", () => {
         });
         const actions = useAdminVenueActions({
           authHeaders,
-          queryClient,
           tablesCollection: queries.tablesCollection,
-          venuesQueryKey: queries.venuesQueryKey,
-          roomsQueryKey: queries.roomsQueryKey,
-          layoutsQueryKey: queries.layoutsQueryKey,
-          areasQueryKey: queries.areasQueryKey,
-          tableTypesQueryKey: queries.tableTypesQueryKey,
+          venueCollections: queries.venueCollections,
         });
         return { queries, actions };
       },
@@ -71,6 +75,11 @@ describe("plain admin queries and sign-out", () => {
     );
     await waitFor(() =>
       expect(view.result.current.queries.venuesQuery.data?.length).toBeGreaterThan(0),
+    );
+    // The action closes over the collection of the session that started it.
+    const writeUpsert = vi.spyOn(
+      view.result.current.queries.venueCollections.venues.utils,
+      "writeUpsert",
     );
 
     const pending = view.result.current.actions.handleAddVenue(
@@ -87,6 +96,11 @@ describe("plain admin queries and sign-out", () => {
       await pending.catch(() => undefined);
     });
 
+    expect(view.result.current.queries.venuesQuery.data).toHaveLength(0);
+    expect(writeUpsert).not.toHaveBeenCalled();
+    expect(view.result.current.queries.venuesQuery.data?.map((venue) => venue.name)).not.toContain(
+      "New venue",
+    );
     expect(queryClient.getQueryData(["admin", "venues"])).toBeUndefined();
   });
 });

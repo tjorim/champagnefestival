@@ -124,12 +124,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     isAnyPending,
     isAnyFetching,
     registrationsQueryKey,
-    venuesQueryKey,
-    roomsQueryKey,
-    tableTypesQueryKey,
-    layoutsQueryKey,
+    venueCollections,
     exhibitorsQueryKey,
-    areasQueryKey,
     loadData: loadDataBase,
   } = useAdminQueries({
     visible,
@@ -257,16 +253,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleUpdateRoom,
     handleUpdateTable,
     handleUpdateTableType,
-  } = useAdminVenueActions({
-    areasQueryKey,
-    authHeaders,
-    layoutsQueryKey,
-    queryClient,
-    roomsQueryKey,
-    tableTypesQueryKey,
-    tablesCollection,
-    venuesQueryKey,
-  });
+  } = useAdminVenueActions({ authHeaders, tablesCollection, venueCollections });
 
   const handleLogout = useCallback(() => {
     setDetailRegistration(null);
@@ -308,18 +295,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // underlying query errors actually changes, not on every render.
   const dashboardQueryErrors = useMemo(
     (): (Error | null)[] => [
-      // The registrations, tables, people and members errors come from the
+      // The registrations, tables, venue group and people errors come from the
       // tanstack-db collections' lastError, typed loosely by the library; the
-      // other queries are plain react-query errors. Both are Error instances or
-      // null at runtime.
+      // exhibitors error is a plain react-query error. Both are Error
+      // instances or null at runtime.
       registrationsQuery.error as Error | null,
       tablesQuery.error as Error | null,
-      venuesQuery.error,
-      roomsQuery.error,
-      tableTypesQuery.error,
-      layoutsQuery.error,
+      venuesQuery.error as Error | null,
+      roomsQuery.error as Error | null,
+      tableTypesQuery.error as Error | null,
+      layoutsQuery.error as Error | null,
       exhibitorsQuery.error,
-      areasQuery.error,
+      areasQuery.error as Error | null,
       peopleQuery.error as Error | null,
     ],
     [

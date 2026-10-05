@@ -1,37 +1,55 @@
-import { useMutation, type QueryClient, type QueryKey } from "@tanstack/react-query";
-import type { FloorArea, Room, TableType } from "@/types/admin";
+import { useMutation } from "@tanstack/react-query";
+import type { Room, TableType } from "@/types/admin";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
-import { apiAreaToArea } from "@/utils/adminApiMappers";
 import { refetchAdminTables, type AdminTablesCollection } from "@/state/adminTablesCollection";
+import {
+  captureAdminVenueFence,
+  refetchAdminVenueCollections,
+  type AdminVenueCollectionName,
+  type AdminVenueCollections,
+} from "@/state/adminVenueCollections";
 import { saveLayoutRevision, restoreLayoutRevision } from "@/utils/adminFetch";
-import { devError } from "@/utils/devLog";
-import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { m } from "@/paraglide/messages";
 
 interface UseVenueMutationsOptions {
-  queryClient: QueryClient;
   authHeaders: () => Record<string, string>;
   tablesCollection: AdminTablesCollection;
-  venuesQueryKey: QueryKey;
-  roomsQueryKey: QueryKey;
-  tableTypesQueryKey: QueryKey;
-  layoutsQueryKey: QueryKey;
-  areasQueryKey: QueryKey;
+  venueCollections: AdminVenueCollections;
 }
 
 export function useVenueMutations({
-  queryClient,
   authHeaders,
   tablesCollection,
-  venuesQueryKey,
-  roomsQueryKey,
-  tableTypesQueryKey,
-  layoutsQueryKey,
-  areasQueryKey,
+  venueCollections,
 }: UseVenueMutationsOptions) {
+  // Every write refetches the collections it touched once it settles (the
+  // implicit refetch after a write is deprecated). The fence is taken when the
+  // request starts, so a write that settles after sign-out or a collection
+  // swap does not refetch into the next session. A table-type capacity change
+  // reaches the tables, so `alsoTables` refetches that collection too.
+  const refetchAfter = <TVariables>(
+    names: readonly AdminVenueCollectionName[],
+    alsoTables: boolean | ((variables: TVariables) => boolean) = false,
+  ) => ({
+    onMutate: () => captureAdminVenueFence(),
+    onSettled: (
+      _data: unknown,
+      _error: unknown,
+      variables: TVariables,
+      isCurrent: (() => boolean) | undefined,
+    ) => {
+      const stillCurrent = isCurrent ?? (() => true);
+      const refetchTables = typeof alsoTables === "function" ? alsoTables(variables) : alsoTables;
+      void Promise.all([
+        refetchAdminVenueCollections(venueCollections, names, stillCurrent),
+        refetchTables && stillCurrent() ? refetchAdminTables(tablesCollection) : undefined,
+      ]);
+    },
+  });
+
   const createVenueMutation = useMutation({
     mutationFn: ({
       name,
@@ -59,9 +77,7 @@ export function useVenueMutations({
         },
         m.admin_error_add_venue(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [venuesQueryKey]);
-    },
+    ...refetchAfter(["venues"]),
     retry: false,
   });
 
@@ -97,9 +113,7 @@ export function useVenueMutations({
             ? m.admin_error_archive_venue()
             : m.admin_content_error_save(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [venuesQueryKey]);
-    },
+    ...refetchAfter(["venues"]),
     retry: false,
   });
 
@@ -110,17 +124,7 @@ export function useVenueMutations({
         { method: "DELETE", headers: authHeaders() },
         m.admin_error_delete_venue(),
       ),
-    onSettled: () => {
-      void Promise.all([
-        invalidateAdmin(queryClient, [
-          venuesQueryKey,
-          roomsQueryKey,
-          layoutsQueryKey,
-          areasQueryKey,
-        ]),
-        refetchAdminTables(tablesCollection),
-      ]);
-    },
+    ...refetchAfter(["venues", "rooms", "layouts", "areas"], true),
     retry: false,
   });
 
@@ -153,9 +157,7 @@ export function useVenueMutations({
         },
         m.admin_error_add_room(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [roomsQueryKey]);
-    },
+    ...refetchAfter(["rooms"]),
     retry: false,
   });
 
@@ -183,9 +185,7 @@ export function useVenueMutations({
         },
         m.admin_error_update_room(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [roomsQueryKey]);
-    },
+    ...refetchAfter(["rooms"]),
     retry: false,
   });
 
@@ -196,9 +196,7 @@ export function useVenueMutations({
         { method: "DELETE", headers: authHeaders() },
         m.admin_error_delete_room(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [roomsQueryKey]);
-    },
+    ...refetchAfter(["rooms"]),
     retry: false,
   });
 
@@ -217,9 +215,7 @@ export function useVenueMutations({
         },
         m.admin_error_add_layout(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [layoutsQueryKey]);
-    },
+    ...refetchAfter(["layouts"]),
     retry: false,
   });
 
@@ -230,12 +226,7 @@ export function useVenueMutations({
         { method: "DELETE", headers: authHeaders() },
         m.admin_error_delete_layout(),
       ),
-    onSettled: () => {
-      void Promise.all([
-        invalidateAdmin(queryClient, [layoutsQueryKey, areasQueryKey]),
-        refetchAdminTables(tablesCollection),
-      ]);
-    },
+    ...refetchAfter(["layouts", "areas"], true),
     retry: false,
   });
 
@@ -265,12 +256,7 @@ export function useVenueMutations({
       revisionNumber: number;
       resolveAllocations?: boolean;
     }) => restoreLayoutRevision(authHeaders, layoutId, revisionNumber, resolveAllocations),
-    onSettled: () => {
-      void Promise.all([
-        invalidateAdmin(queryClient, [layoutsQueryKey, areasQueryKey]),
-        refetchAdminTables(tablesCollection),
-      ]);
-    },
+    ...refetchAfter(["layouts", "areas"], true),
     retry: false,
   });
 
@@ -315,71 +301,7 @@ export function useVenueMutations({
         },
         m.admin_error_add_area(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [areasQueryKey]);
-    },
-    retry: false,
-  });
-
-  const updateAreaLabelMutation = useMutation<
-    Record<string, unknown>,
-    Error,
-    { areaId: string; label: string },
-    { previousAreas: FloorArea[] | undefined }
-  >({
-    mutationFn: ({ areaId, label }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/areas/${areaId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ label }) },
-        "Failed to persist area label.",
-      ),
-    onMutate: ({ areaId, label }) => {
-      const previousAreas = queryClient.getQueryData<FloorArea[]>(areasQueryKey);
-      queryClient.setQueryData<FloorArea[]>(areasQueryKey, (old) =>
-        old ? old.map((a) => (a.id === areaId ? { ...a, label } : a)) : old,
-      );
-      return { previousAreas };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      devError("Failed to persist area label");
-    },
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [areasQueryKey]);
-    },
-    retry: false,
-  });
-
-  const resizeAreaMutation = useMutation<
-    Record<string, unknown>,
-    Error,
-    { areaId: string; widthM: number; lengthM: number; x: number; y: number },
-    { previousAreas: FloorArea[] | undefined }
-  >({
-    mutationFn: ({ areaId, widthM, lengthM, x, y }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/areas/${areaId}`,
-        {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({ width_m: widthM, length_m: lengthM, x, y }),
-        },
-        m.admin_error_resize_area_status({ status: 500 }),
-      ),
-    onMutate: ({ areaId, widthM, lengthM, x, y }) => {
-      const previousAreas = queryClient.getQueryData<FloorArea[]>(areasQueryKey);
-      queryClient.setQueryData<FloorArea[]>(areasQueryKey, (old) =>
-        old ? old.map((a) => (a.id === areaId ? { ...a, widthM, lengthM, x, y } : a)) : old,
-      );
-      return { previousAreas };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      devError("Failed to persist area resize");
-    },
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [areasQueryKey]);
-    },
+    ...refetchAfter(["areas"]),
     retry: false,
   });
 
@@ -390,75 +312,7 @@ export function useVenueMutations({
         { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
         "Failed to assign area.",
       ),
-    onSuccess: (
-      d: Record<string, unknown>,
-      { areaId }: { areaId: string; body: Record<string, unknown> },
-    ) => {
-      queryClient.setQueryData<FloorArea[]>(areasQueryKey, (prev) =>
-        prev ? prev.map((a) => (a.id === areaId ? apiAreaToArea(d) : a)) : prev,
-      );
-    },
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [areasQueryKey]);
-    },
-    retry: false,
-  });
-
-  const moveAreaMutation = useMutation<
-    Record<string, unknown>,
-    Error,
-    { areaId: string; x: number; y: number },
-    { previousAreas: FloorArea[] | undefined }
-  >({
-    mutationFn: ({ areaId, x, y }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/areas/${areaId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ x, y }) },
-        m.admin_error_persist_area_position(),
-      ),
-    onMutate: ({ areaId, x, y }) => {
-      const previousAreas = queryClient.getQueryData<FloorArea[]>(areasQueryKey);
-      queryClient.setQueryData<FloorArea[]>(areasQueryKey, (old) =>
-        old ? old.map((a) => (a.id === areaId ? { ...a, x, y } : a)) : old,
-      );
-      return { previousAreas };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      devError("Failed to persist area position");
-    },
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [areasQueryKey]);
-    },
-    retry: false,
-  });
-
-  const rotateAreaMutation = useMutation<
-    Record<string, unknown>,
-    Error,
-    { areaId: string; rotation: number },
-    { previousAreas: FloorArea[] | undefined }
-  >({
-    mutationFn: ({ areaId, rotation }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/areas/${areaId}`,
-        { method: "PUT", headers: authHeaders(), body: JSON.stringify({ rotation }) },
-        m.admin_error_persist_area_rotation(),
-      ),
-    onMutate: ({ areaId, rotation }) => {
-      const previousAreas = queryClient.getQueryData<FloorArea[]>(areasQueryKey);
-      queryClient.setQueryData<FloorArea[]>(areasQueryKey, (old) =>
-        old ? old.map((a) => (a.id === areaId ? { ...a, rotation } : a)) : old,
-      );
-      return { previousAreas };
-    },
-    onError: (_err, _vars, context) => {
-      if (context?.previousAreas) queryClient.setQueryData(areasQueryKey, context.previousAreas);
-      devError("Failed to persist area rotation");
-    },
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [areasQueryKey]);
-    },
+    ...refetchAfter(["areas"]),
     retry: false,
   });
 
@@ -469,9 +323,7 @@ export function useVenueMutations({
         { method: "DELETE", headers: authHeaders() },
         m.admin_error_delete_area(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [areasQueryKey]);
-    },
+    ...refetchAfter(["areas"]),
     retry: false,
   });
 
@@ -494,9 +346,7 @@ export function useVenueMutations({
         },
         m.admin_error_add_table_type(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [tableTypesQueryKey]);
-    },
+    ...refetchAfter(["tableTypes"]),
     retry: false,
   });
 
@@ -520,9 +370,11 @@ export function useVenueMutations({
         },
         m.admin_error_update_table_type(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [tableTypesQueryKey]);
-    },
+    // A capacity change reaches the capacity of the tables of that type.
+    ...refetchAfter<{ id: string; data: Partial<Omit<TableType, "id">> }>(
+      ["tableTypes"],
+      ({ data }) => data.capacity !== undefined,
+    ),
     retry: false,
   });
 
@@ -533,9 +385,7 @@ export function useVenueMutations({
         { method: "DELETE", headers: authHeaders() },
         m.admin_error_delete_table_type(),
       ),
-    onSettled: () => {
-      void invalidateAdmin(queryClient, [tableTypesQueryKey]);
-    },
+    ...refetchAfter(["tableTypes"]),
     retry: false,
   });
 
@@ -551,11 +401,7 @@ export function useVenueMutations({
     saveLayoutRevisionMutation,
     restoreLayoutRevisionMutation,
     createAreaMutation,
-    updateAreaLabelMutation,
-    resizeAreaMutation,
     assignAreaMutation,
-    moveAreaMutation,
-    rotateAreaMutation,
     deleteAreaMutation,
     createTableTypeMutation,
     updateTableTypeMutation,

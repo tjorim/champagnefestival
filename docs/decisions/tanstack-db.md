@@ -1,8 +1,8 @@
 # TanStack DB for admin/event-day operational state
 
-**Status:** Adopted for registrations, tables and people (members and volunteers are derived from people); venues, rooms, layouts, areas, table types and exhibitors are decided as "migrate" with follow-up issues (see [Remaining resources](#remaining-resources-1166) and [Roadmap](#roadmap))
+**Status:** Adopted for registrations, tables, people (members and volunteers are derived from people) and the venue group (venues, rooms, table types, layouts, areas); exhibitors are decided as "migrate" with a follow-up issue (see [Remaining resources](#remaining-resources-1166) and [Roadmap](#roadmap))
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
-**Record updated:** 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166)
+**Record updated:** 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166), [#1183](https://github.com/tjorim/champagnefestival/issues/1183)
 
 ---
 
@@ -140,9 +140,10 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   the same through `captureAdminTablesFence()`. Deletes only touch rows the
   collection still holds, because `writeDelete` throws for a missing key.
   `handleAddRegistration` no longer seeds an unloaded registrations list with a
-  single row. The plain-query resources that remain (venues, rooms, layouts,
-  areas, table types, exhibitors) no longer recreate an entry after sign-out
-  either; see [Remaining resources](#remaining-resources-1166).
+  single row. The venue group was later migrated with the same fence
+  (see [#1183](#venues-rooms-table-types-layouts-and-areas-1183)); exhibitors, the
+  one plain query that remains, no longer recreates an entry after sign-out either;
+  see [Remaining resources](#remaining-resources-1166).
 - **Reset and refresh.** `isAuthenticated` turning false empties the collection
   and removes its query. `"tables"` is no longer in `ADMIN_RESOURCE_KEYS`;
   `loadData` refetches the collection through `utils.refetch()` and no
@@ -214,6 +215,73 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
   live patching or timestamp map for this collection.
 - Retry-safety decisions are in `docs/retry-safety.md`.
 
+## Venues, rooms, table types, layouts and areas ([#1183](https://github.com/tjorim/champagnefestival/issues/1183))
+
+The venue group is the fourth collection-backed domain: five collections, one per
+resource, built together and registered, reset and fenced as a group.
+
+- `frontend/src/state/adminVenueCollections.ts`: `createAdminVenueCollections`
+  builds the venues, rooms, table types, layouts and areas collections with
+  `createAdminCollection` in the default `eager` sync mode (small, rarely changing
+  lists). `useAdminQueries` creates the group in one `useMemo`, reads each with
+  `useLiveQuery` and exposes query-shaped `venuesQuery`, `roomsQuery`,
+  `tableTypesQuery`, `layoutsQuery` and `areasQuery` objects (`data`, `error` from
+  `lastError`, `isPending`, `isFetching`), so `AdminDashboard` reads them as
+  before. It also returns `venueCollections` for the actions; the per-resource
+  query-key props of `useAdminVenueActions` and `useVenueMutations` are gone.
+- **One authoritative copy each; views are derived.** The rooms of a venue, the
+  layouts of a room and the areas of a layout are filters over the collections
+  (the consumers already filter), never second stores. The dashboard's
+  `useQuery` calls and the roughly 30 `setQueryData` calls (21 in
+  `useAdminVenueActions.ts`, 9 in `useVenueMutations.ts`) are replaced by the
+  writes below.
+- **Writes are direct, except the area canvas edits.** The server assigns ids and
+  defaults, so a create, a venue/room/table-type/layout update and an area's
+  exhibitor assignment call the API and then write the server's row
+  (`applyAdminVenueRowCreated`/`applyAdminVenueRowUpdated`, which does not invent
+  a row the collection no longer holds). Moving, rotating, resizing and relabelling
+  an area are changes the client already knows the outcome of (a dragged area must
+  follow the pointer), so they run through the areas collection's `onUpdate`
+  handler like table edits: one `PUT` per changed area, an explicit `refetch()` and
+  `{ refetch: false }` on success, a refetch before the rollback on failure; the
+  handler takes the group fence before its first request and, once it moves,
+  sends no further `PUT` and skips both refetches. That
+  replaces the four optimistic `useMutation`s with `onMutate`/`onError` snapshots.
+- **Cascades are collection writes.** A venue delete removes the venue, its rooms,
+  those rooms' layouts and those layouts' areas (`applyAdminVenueDeleted`, which
+  returns the removed layout ids so `removeAdminTablesForLayouts` can remove the
+  tables from the tables collection). A layout delete removes the layout and its
+  areas (`applyAdminLayoutDeleted`) and its tables. A layout revision restore
+  replaces the layout's areas with one `writeBatch`
+  (`replaceAdminAreasForLayout`), next to the existing tables replacement. A
+  table-type capacity change refetches the tables collection (a table's capacity
+  comes from its type); a rename does not.
+- **Refetch.** Each mutation's `onSettled` refetches the collections it touched
+  through `refetchAdminVenueCollections` (the implicit refetch is deprecated).
+  `loadData` refetches the whole group. A layout copy refetches layouts, areas and
+  tables, because the server creates areas and tables with fresh ids.
+- **Session fence and reset.** `captureAdminVenueFence()` is true only while none of
+  the five lifecycles has advanced. Every action captures it before its request and
+  checks it before the local write; the `onMutate` of each mutation captures it so
+  the follow-up refetch is skipped when the session ended meanwhile. The fence
+  moves on sign-out (`resetAdminVenueCollections`) and on collection swaps
+  (`registerAdminVenueCollections`). A local write that fails after the server
+  committed is not reported as a failed action; the refetch reconciles.
+  `isAuthenticated` turning false empties all five collections and removes their
+  query keys. Tests: `tests/state/adminVenueCollections.test.ts`,
+  `tests/hooks/useAdminVenueCollections.test.tsx`,
+  `tests/hooks/useAdminSignOutCache.test.tsx`.
+- **Keys.** `"venues"`, `"rooms"`, `"table-types"`, `"layouts"` and `"areas"` are no
+  longer in `ADMIN_RESOURCE_KEYS`; `ADMIN_RESOURCE_KEYS` is now `registrations` and
+  `exhibitors`. No `useQuery` or `setQueryData` path remains for the five.
+- **MSW.** The mock `DELETE /api/layouts/:id` now removes the layout's tables and
+  areas like the real API, so a refetch after a layout delete agrees with the
+  collections' local cascade. `PUT /api/areas/:id` already accepts partial bodies.
+- **No live events.** The stream carries no topic for these resources today.
+- Retry-safety decisions are in `docs/retry-safety.md`. The shared
+  `persistThenRefetch` helper for write handlers moved into
+  `adminCollectionFactory.ts` and serves both the tables and areas handlers.
+
 ## Shared collection factory and remaining resources ([#1166](https://github.com/tjorim/champagnefestival/issues/1166))
 
 ### Shared collection factory
@@ -249,7 +317,9 @@ module is now mostly its data handling.
 
 ### Sign-out safety for the plain queries
 
-The create-on-empty patterns (`prev ? [...prev, x] : [x]`) in
+Historical note: the venue group has since moved to fenced collection writes
+([#1183](#venues-rooms-table-types-layouts-and-areas-1183)); only exhibitors is
+still a plain query. The create-on-empty patterns (`prev ? [...prev, x] : [x]`) in
 `useAdminVenueActions.ts` (venues, rooms, layouts, areas, table types, and the
 layout-restore area replacement) now return `prev` when the cache is empty, so a
 create that resolves after sign-out cannot invent an entry. `useAdminQueries`
@@ -265,7 +335,7 @@ Default is migrate; nothing stays on Query.
 
 | Resource | Decision | Reason and approach | Issue |
 | --- | --- | --- | --- |
-| Venues, rooms, layouts, areas, table types | **Migrate, as one group**, one collection per resource | They are updated together: a venue delete cascades to rooms, layouts, tables and areas, a layout delete or revision restore rewrites its areas and tables, and a table-type capacity change reaches tables. A collection per resource keeps one authoritative copy of each (rule 3) and turns the roughly 30 `setQueryData` calls (21 in `useAdminVenueActions.ts`, 9 in `useVenueMutations.ts`) into direct writes, `writeDelete` cascades (the pattern the tables collection already uses) and derived views. `invalidateQueries` is not enough: a venue delete would refetch five lists, still leave the hooks with the cascade logic, and keep a second state path beside the tables collection, which rule 2 forbids. Eager sync (small, rarely changing lists). | [#1183](https://github.com/tjorim/champagnefestival/issues/1183) |
+| Venues, rooms, layouts, areas, table types | **Migrate, as one group**, one collection per resource (done, see [above](#venues-rooms-table-types-layouts-and-areas-1183)) | They are updated together: a venue delete cascades to rooms, layouts, tables and areas, a layout delete or revision restore rewrites its areas and tables, and a table-type capacity change reaches tables. A collection per resource keeps one authoritative copy of each (rule 3) and turns the roughly 30 `setQueryData` calls (21 in `useAdminVenueActions.ts`, 9 in `useVenueMutations.ts`) into direct writes, `writeDelete` cascades (the pattern the tables collection already uses) and derived views. `invalidateQueries` is not enough: a venue delete would refetch five lists, still leave the hooks with the cascade logic, and keep a second state path beside the tables collection, which rule 2 forbids. Eager sync (small, rarely changing lists). | [#1183](https://github.com/tjorim/champagnefestival/issues/1183) |
 | Exhibitors | **Migrate**, after the group (does not depend on it) | Follows the people migration and removes the last cross-collection patch: a people merge still repoints `contactPersonId` with `setQueryData`, and `AdminDashboard` patches the exhibitors query on save and delete. Numeric key (the factory supports it). | [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
 
 Does removing `setQueryData` outweigh a second state path? Yes, as the default
@@ -322,7 +392,7 @@ Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR 
 
 | Order | Follow-up | Issue |
 | --- | --- | --- |
-| 1 | Migrate venues, rooms, layouts, areas and table types as a group, then exhibitors, on the shared collection factory (done in [#1166](https://github.com/tjorim/champagnefestival/issues/1166), see [above](#shared-collection-factory-and-remaining-resources-1166)) | [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
+| 1 | Migrate venues, rooms, layouts, areas and table types as a group (done in [#1183](https://github.com/tjorim/champagnefestival/issues/1183)), then exhibitors, on the shared collection factory (decided in [#1166](https://github.com/tjorim/champagnefestival/issues/1166), see [above](#shared-collection-factory-and-remaining-resources-1166)) | [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
 | 2 | Spike and decision: on-demand collection sync or Query with `keepPreviousData`, plus the data scope for registrations and the full-people-list consumers. Read-only; may run in parallel with order 1 | [#1175](https://github.com/tjorim/champagnefestival/issues/1175) |
 | 2 | Backend: shared paged list contract (sort, filters, deterministic order, indexes) for people and volunteers. May start with the spike | [#1176](https://github.com/tjorim/champagnefestival/issues/1176) |
 | 3 | Persisted collections for event-day resilience (privacy, staleness, offline). Taken after the spike, because a partial on-demand cache must not be persisted as if complete; its privacy question can proceed earlier | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
@@ -333,7 +403,7 @@ Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR 
 | 6 | Move Members, Volunteers and People onto `AdminDataTable` and the server contract | [#1181](https://github.com/tjorim/champagnefestival/issues/1181) |
 | 6 | Scope the registrations collection; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
 
-Done: [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
+Done: [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
 
 The on-demand decision from #1175 will be recorded in this file when made.
 
@@ -346,6 +416,7 @@ The on-demand decision from #1175 will be recorded in this file when made.
 - `frontend/src/state/adminRegistrationsCollection.ts`
 - `frontend/src/state/adminTablesCollection.ts`, `frontend/src/state/tableOccupancy.ts`
 - `frontend/src/state/adminPeopleCollection.ts`
+- `frontend/src/state/adminVenueCollections.ts`
 - `frontend/src/state/adminCollectionFactory.ts`
 - `frontend/src/hooks/useAdminQueries.ts`
 - `frontend/src/state/LiveUpdatesProvider.tsx`
