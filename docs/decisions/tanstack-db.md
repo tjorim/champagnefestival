@@ -532,7 +532,7 @@ Nothing keeps the whole people list in the browser, so the people collection
 
 ### Dependent issues
 
-#1174, #1178, #1179, #1180, #1181, #1182, #1177 and #1168 were updated to match
+#1174, #1176, #1177, #1178, #1179, #1180, #1181, #1182 and #1168 were updated to match
 (issue bodies, not comments).
 
 ## Rules that still apply
