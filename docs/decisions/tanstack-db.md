@@ -1,8 +1,8 @@
 # TanStack DB for admin/event-day operational state
 
-**Status:** Adopted for registrations, tables, people (members and volunteers are derived from people) the venue group (venues, rooms, table types, layouts, areas) and exhibitors; every admin resource except the standalone registration queries now lives in a collection (see [Remaining resources](#remaining-resources-1166) and [Roadmap](#roadmap))
+**Status:** Adopted for registrations, tables, people (members and volunteers are derived from people) the venue group (venues, rooms, table types, layouts, areas) and exhibitors; every admin resource except the standalone registration queries now lives in a collection (see [Remaining resources](#remaining-resources-1166) and [Roadmap](#roadmap)); server-driven table pages use TanStack Query, not on-demand sync (see [below](#server-driven-tables-query-with-keeppreviousdata-not-on-demand-sync-1175))
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
-**Record updated:** 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166), [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184)
+**Record updated:** 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166), [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184), [#1175](https://github.com/tjorim/champagnefestival/issues/1175)
 
 ---
 
@@ -347,10 +347,10 @@ module is now mostly its data handling.
   one full load, used by every admin collection today) or `"on-demand"` (rows
   loaded for the queries that ask for them; the `queryFn` then reads the subset
   from `context.meta.loadSubsetOptions`). Every `createAdmin…Collection` accepts
-  an optional `syncMode` and passes it through, so the server-driven tables epic
-  ([#1174](https://github.com/tjorim/champagnefestival/issues/1174), #1178)
-  switches the people collection by configuration instead of retrofitting each
-  module. Row keys may be strings or numbers (exhibitors are keyed by number).
+  an optional `syncMode` and passes it through. The #1175 spike decided that no
+  collection uses `"on-demand"` (see the
+  [server-driven tables decision](#server-driven-tables-query-with-keeppreviousdata-not-on-demand-sync-1175)),
+  so the option stays available but unused. Row keys may be strings or numbers (exhibitors are keyed by number).
   Write handlers (`onUpdate`/`onDelete`) pass straight through.
 - `createAdminCollectionLifecycle({ queryKey })` returns, per collection
   module: `register` (live-event registry, advances the fence), `reset`
@@ -395,6 +395,145 @@ collections add no new patching code. Each follow-up issue carries the
 sign-out criterion (capture the fence before the request, check it before every
 post-await write) and the retry-safety requirement
 ([`docs/retry-safety.md`](../retry-safety.md)).
+
+## Server-driven tables: Query with `keepPreviousData`, not on-demand sync ([#1175](https://github.com/tjorim/champagnefestival/issues/1175))
+
+**Decision (2026-10-05): server-driven admin tables load each page with TanStack
+Query (`placeholderData: keepPreviousData`), not with `syncMode: "on-demand"`.**
+Collections stay what they are: complete, bounded sets of one resource, loaded
+eagerly. A table page is a view of a server query, not an entity set, so it
+lives in the Query cache keyed by the table state.
+
+Proof: `frontend/tests/spikes/membersListOnDemand.spike.test.tsx` runs the
+Members list (page, sort, search, filter, cancellation, sign-out, optimistic
+edit) both ways against one fake paged server on the installed
+`@tanstack/db` 0.11.3, `@tanstack/query-db-collection` 1.3.4 and
+`@tanstack/react-query` 5.104. The assertions pin the observations below; a
+version bump that changes one is a prompt to re-read this decision.
+
+### Does on-demand sync work, and what can it express?
+
+It works, and it is the wrong fit for our list contract.
+
+| Finding (observed) | Consequence |
+| --- | --- |
+| `orderBy`, `limit`, `where` reach the `queryFn` through `ctx.meta.loadSubsetOptions`, and a filter change aborts the superseded request (`ctx.signal` and `loadSubsetOptions.signal`). | Works, but Query gives the same cancellation through `signal` with no collection code. |
+| **`offset` is not pushed down.** A live query with `limit(5).offset(10)` calls the `queryFn` with `limit: 15` and no `offset`. | Page N loads N pages from the top. The backend contract is `page` and `limit`; deep pages over-fetch and the page boundary cannot be sent. |
+| Every window also issues a **tie-break request** with no limit and no sort, filtered to `eq(sortField, boundaryValue)`. | Two requests per page, and the backend must serve arbitrary equality filters on every sortable column. |
+| `parseLoadSubsetOptions` expresses and-ed `eq`/`gt`/`gte`/`lt`/`lte`/`in`, their `not_` forms and `isNull`. It **throws** on `or`, `like` and `ilike`, and its result has no `offset`. | Unsupported predicates fail loudly: the live query reports `isError`, `collection.utils.lastError` is set and no rows load. This meets the "never silently load an unfiltered list" requirement. |
+| The pushed-down `where` is **re-evaluated on the client** against the loaded rows. A row the server returned because its phone number matched is dropped by a live query that can only push `ilike(name, ...)`. | The people search spans name, email, phone, address, NISS, eID, club, notes and roles with `OR`. A live query cannot express it, so the server's search semantics cannot be reproduced. This alone rules out on-demand for search. |
+| A page change has **no previous data**: `isLoading` is true and `data` is `[]` until the next window arrives. | The "keep the previous page visible" requirement in #1180 would need extra code on top of the live query. |
+| There is **no channel for the total**. | `rowCount` needs a second query, so Query is needed next to the collection anyway. |
+
+### Write interplay, sign-out and live events on a partial cache
+
+- **Direct writes refetch active subsets.** `writeUpsert` triggers a refetch of
+  every active subset query and the server result replaces the written row
+  (verified: a local rename is overwritten by the refetch). The write is only a
+  momentary overlay, so the #1164 approach (apply the server's response, then
+  refetch) gains nothing from the collection in on-demand mode.
+- **The shared reset does not empty an on-demand collection.**
+  `createAdminCollectionLifecycle().reset` deletes every key in a `writeBatch`;
+  on an on-demand collection the rows stay (verified: size 5 before and after).
+  Sign-out needs `queryClient.removeQueries({ queryKey })` followed by
+  `collection.cleanup()`, after which a new mount loads again. Adopting
+  on-demand would mean a second reset path in the factory.
+- **Subset keys do not match the collection key.** Each subset is cached under
+  `[...queryKey, <demand key string>]`, so `hasQueryKey` (exact match) never
+  matches a live envelope and the per-id timestamp guard has nothing to guard.
+  The key also nests under `["admin", "people"]`, where the per-person queries
+  and `invalidateAdminPersonDetailQueries` already live.
+- **An edited row that leaves the filter** stays in the window until the refetch
+  settles, then drops out and the next row fills the page. The page is never
+  short, but only because the server answered; nothing is saved by the
+  collection.
+
+### The fallback, measured the same way
+
+| Concern | Query with `keepPreviousData` (verified) |
+| --- | --- |
+| Code size | One `useQuery` per table (about 15 lines with the key and the `queryFn`), no filter parser, no tie-break handling, no window arithmetic. |
+| Page, sort, search, filter | All server-side; the key holds the table state; `total` arrives in the same response, so `rowCount` needs no second request. |
+| Previous page | Stays visible with `isPlaceholderData` while the next loads. |
+| Cancellation | `signal` aborts the superseded request when the key changes. |
+| Sign-out | `removeQueries` on the list prefix drops cached pages and aborts an in-flight request; no response writes into the next session. This is the call `useAdminQueries` already makes. |
+| Optimistic edit and delete | Patch the cached pages with `setQueriesData`, keep the snapshot, restore it when the write is refused, then invalidate the list prefix. A row leaving a filter is removed from the page and the refetch fills it. |
+| Cache sharing between screens | A page is keyed by its table state, so two screens share a page only when their states are equal. That is acceptable: screens do not share pages; they share entities through the collections that need them (see below). |
+
+`RegistrationList` already works this way: the page comes from a Query
+(`registrationsPage`) and the shared collection only overlays fresh rows. The
+decision extends that pattern to people instead of introducing a second one.
+
+### Consequences for the rules above
+
+- Rule 2 (never serve one domain from both a collection and a standalone
+  `useQuery`) concerns an entity set. A server-driven page is a query result, so
+  it is a plain query. The people list stops being served by a collection at
+  all once the screens move (#1181), so no domain has two copies.
+- The `syncMode` option in `createAdminCollection` stays: it costs nothing and
+  documents the choice, but nothing is planned to use `"on-demand"`. Do not
+  retrofit people through it (the #1166 note anticipating that is superseded).
+- The #1179 handlers become mutation callbacks with the cache patch and rollback
+  above, not `onUpdate`/`onDelete` collection handlers. The retry-safety
+  decision per write is unchanged: a mutation callback does not make a write
+  retry safe either.
+- Live events on a list invalidate the list prefix (the affected pages refetch
+  only if mounted); a row patch is not needed, and the per-id ordering guard is
+  not needed for an invalidation because the refetch returns current data.
+- Give the list queries their own prefix (for example
+  `["admin", "people", "list", params]`) so that `invalidateAdminPersonDetailQueries`
+  and the live-event matching can target pages and single people separately.
+
+### Data scope
+
+**Registrations collection: scope it to the active edition.** It stays an eager,
+complete collection, now of one edition's registrations (the list endpoint
+already filters by `edition_id`), keyed by edition so a change of active edition
+swaps it. Everything that needs the full working set is edition-bound:
+
+- Dashboard aggregates (`activeEditionStats`) already count only the active
+  edition. Cross-edition numbers come from `GET /api/editions/stats`.
+- The layout editor's day options already come from the active edition's
+  events; the floor plan, table occupancy and the volunteer check-in flow are
+  to be confirmed to work on the active edition's events in #1182.
+- The registration list pages from the server (#1087 holds); its overlay falls
+  back to the page's own row when the collection does not hold it (an older
+  edition). Check that fallback in #1182.
+- `registrationCountByPersonId` leaves the browser: the people list returns the
+  count per person (#1177).
+
+If there is no active edition the collection is empty. A registration from an
+older edition is opened by id (`fetchRegistration`).
+
+**Consumers of the full people list**, each moving to a bounded or server query:
+
+| Consumer | Decision |
+| --- | --- |
+| Members, Volunteers, People tables | Server pages with the role, active and search filters (#1181). |
+| Tab and filter counts, `peopleCount` badge | Counts from the list envelope or counts endpoint (#1177). |
+| Registration count per person | A field on the list row, sortable (#1177). |
+| Registration detail: duplicate emails | Server lookup by email, enabled only while the detail is open (#1177). |
+| Person pickers (registration, item modal, exhibitor contact) | Bounded server search (`fetchPeopleSearch` style, short page); the item modal already does this. |
+| Merge | Picker over the bounded search; after the merge invalidate the people list prefix and refetch the registrations and exhibitors collections. |
+
+Nothing keeps the whole people list in the browser, so the people collection
+(`adminPeopleCollection.ts`, #1164) is retired in #1181, together with
+`selectMembers`/`selectVolunteers` and the person direct-write helpers.
+
+### Hand-over to #1168 (persistence)
+
+- **Stay full-load, persistable as complete sets:** tables, venues, rooms, table
+  types, layouts, areas, exhibitors, and the registrations of the active edition
+  (persisted under the edition key).
+- **Never persisted:** people pages and the registration list pages. They are
+  Query results, partial by construction, and hold personal data; a persisted
+  partial page must not be mistaken for a complete set.
+- **Partial collection subsets:** none. No collection uses on-demand sync.
+
+### Dependent issues
+
+#1174, #1176, #1177, #1178, #1179, #1180, #1181, #1182 and #1168 were updated to match
+(issue bodies, not comments).
 
 ## Rules that still apply
 
@@ -444,19 +583,16 @@ Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR 
 | Order | Follow-up | Issue |
 | --- | --- | --- |
 | 1 | Migrate venues, rooms, layouts, areas and table types as a group (done in [#1183](https://github.com/tjorim/champagnefestival/issues/1183)), and exhibitors (done in [#1184](https://github.com/tjorim/champagnefestival/issues/1184)), on the shared collection factory (decided in [#1166](https://github.com/tjorim/champagnefestival/issues/1166), see [above](#shared-collection-factory-and-remaining-resources-1166)) | [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
-| 2 | Spike and decision: on-demand collection sync or Query with `keepPreviousData`, plus the data scope for registrations and the full-people-list consumers. Read-only; may run in parallel with order 1 | [#1175](https://github.com/tjorim/champagnefestival/issues/1175) |
 | 2 | Backend: shared paged list contract (sort, filters, deterministic order, indexes) for people and volunteers. May start with the spike | [#1176](https://github.com/tjorim/champagnefestival/issues/1176) |
-| 3 | Persisted collections for event-day resilience (privacy, staleness, offline). Taken after the spike, because a partial on-demand cache must not be persisted as if complete; its privacy question can proceed earlier | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
+| 3 | Persisted collections for event-day resilience (privacy, staleness, offline). Taken after the spike (done: no collection is partial, see [above](#hand-over-to-1168-persistence)); its privacy question can proceed earlier | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
 | 4 | Backend: counts, registration count per person, duplicate-email lookup and exports for people and volunteers | [#1177](https://github.com/tjorim/champagnefestival/issues/1177) |
-| 4 | Server-driven data layer for the people collection | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
+| 4 | Server-driven data layer for the people list (Query pages, no people collection) | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
 | 4 | `AdminDataTable` on TanStack Table manual mode | [#1180](https://github.com/tjorim/champagnefestival/issues/1180) |
-| 5 | Optimistic edit and delete handlers with pending state for people | [#1179](https://github.com/tjorim/champagnefestival/issues/1179) |
+| 5 | Optimistic edit and delete (mutation callbacks with cache patch and rollback) with pending state for people | [#1179](https://github.com/tjorim/champagnefestival/issues/1179) |
 | 6 | Move Members, Volunteers and People onto `AdminDataTable` and the server contract | [#1181](https://github.com/tjorim/champagnefestival/issues/1181) |
-| 6 | Scope the registrations collection; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
+| 6 | Scope the registrations collection to the active edition; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
 
-Done: [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) (exhibitors), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
-
-The on-demand decision from #1175 will be recorded in this file when made.
+Done: [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (spike and decision: Query with `keepPreviousData`, edition-scoped registrations), [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) (exhibitors), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
 
 ## References
 
