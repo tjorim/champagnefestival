@@ -1,13 +1,14 @@
 # Persisted TanStack DB collections for event-day admin resilience
 
-**Status:** Adopt narrowly, as a read-only warm start through the Query cache, gated on the privacy conditions below; TanStack's SQLite persistence is deferred
+**Status:** Adopted as a read-only warm start through the Query cache, registrations included, gated on the privacy conditions below; TanStack's SQLite persistence is deferred
 **Decided:** 2026-10-06 (revised the same day: the goal is a warm start, not an offline app), [#1168](https://github.com/tjorim/champagnefestival/issues/1168)
 **Depends on:** [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (done; see the [hand-over](tanstack-db.md#hand-over-to-1168-persistence))
 
 This record is desk research against the packages' published documentation and
-the current code. No spike branch was built and no bundle was measured; the
-items that need a measurement or a running spike are listed under
-[Unverified](#unverified-and-needed-before-adoption).
+the current code. No spike branch was built and no bundle was measured, by the
+owner's choice (2026-10-06: skip the spike). The items a spike would have answered
+are listed under [Unverified](#unverified-and-needed-before-adoption) and become the
+first tasks of the implementation issue.
 
 ## Decision
 
@@ -25,19 +26,24 @@ queue and offline check-in are not goals here (web check-in stays live-only,
   It does more than a warm start needs (a WASM database, a worker, a multi-tab
   coordinator, an alpha package that needs a newer `@tanstack/db` than ours) for the
   same read-only benefit.
-- **Phased, and gated on privacy.** Phase 1 persists the collections without guest
-  data (tables, venues, rooms, table types, layouts, areas, exhibitors). Phase 2
-  adds the registrations of the active edition, only once the
-  [privacy conditions](#privacy) are met, including owner sign-off on the retention
-  number and the policy text. **Never** persisted: people pages, registration list
-  pages, payment ledgers, `checkInToken`, NISS and eID.
-- **What it is worth.** Phase 1 alone is small (these lists are small and load
-  quickly); it exists to prove the wipe, `maxAge` and `buster` plumbing before guest
-  data is involved. The real benefit is phase 2: someone on a bad connection can
-  still look up who sits where and who has checked in, as of the last sync, with a
-  visible "last updated" state.
+- **Scope: registrations from the start** (owner decision, 2026-10-06), together with
+  the collections without guest data (tables, venues, rooms, table types, layouts,
+  areas, exhibitors). The registrations of the active edition are the part with real
+  benefit: someone on a bad connection can still look up who sits where and who has
+  checked in, as of the last sync, with a visible "last updated" state. The others
+  are small and add little alone, but they share the same plumbing. **Never**
+  persisted: people pages, registration list pages, payment ledgers, `checkInToken`,
+  NISS and eID.
+- **Gated on privacy.** The first release that persists registrations must meet every
+  [privacy condition](#privacy). The owner chose the device retention: it must
+  cover the full festival weekend, set as 72 hours since the last successful write
+  (see condition 3).
+- **No spike first** (owner decision). The open questions in
+  [Unverified](#unverified-and-needed-before-adoption) are answered by the
+  implementation's first commits, before the persistence is wired to the dashboard,
+  and a failed answer sends the work back to this record.
 
-Implementation is a separate issue (this record's scope is the decision). It needs
+Implementation is a separate issue, [#1197](https://github.com/tjorim/champagnefestival/issues/1197) (this record's scope is the decision). It needs
 tests for the restore, wipe, expiry and edition-change paths; because it adds no
 write, `docs/retry-safety.md` needs no entry, and the issue should say so.
 
@@ -172,10 +178,13 @@ Why the existing policy does not cover it:
    `removeClient` instead of restoring. A second tab's sign-out must wipe too (a
    `storage`/`BroadcastChannel` signal, or the next restore's session check).
 3. **Device retention limit.** A restore older than a fixed time since the last
-   successful write is discarded (`maxAge`). Proposed: 48 hours (an event weekend plus
-   a day); the owner confirms the number.
-4. **Owner sign-off** on the retention number and a published privacy-policy update
-   describing on-device copies, before the first release that persists.
+   successful write is discarded (`maxAge`). The owner chose "the full weekend"; as a
+   concrete number that is 72 hours, so a device that last synced on the Friday is
+   still usable through Sunday. Every successful sync restarts the clock. The
+   number is one constant, easy to change.
+4. **Published privacy-policy update** describing on-device copies, published by the
+   owner through the #944 editor before the first release that persists. The
+   retention number is settled (condition 3).
 5. **Visible state.** The UI shows when it is rendering restored rows and when they
    were last synced (from the query's `dataUpdatedAt` and `isFetching`), so nobody
    mistakes a restored list for current data.
@@ -189,9 +198,9 @@ In this order and no wider than needed:
 
 | Collection | Persist | Notes |
 | --- | --- | --- |
-| Tables, venues, rooms, table types, layouts, areas | Phase 1, as complete sets | No guest data; `buster` on row-shape changes. |
-| Exhibitors | Phase 1 | Name, active flag, contact person id. |
-| Registrations of the active edition | Phase 2, only with all five conditions | Keyed by edition, so another edition never shows. |
+| Tables, venues, rooms, table types, layouts, areas | Yes, as complete sets | No guest data; `buster` on row-shape changes. |
+| Exhibitors | Yes | Name, active flag, contact person id. |
+| Registrations of the active edition | Yes, in the first release, only with all five conditions met | Keyed by edition, so another edition never shows. |
 | People pages, registration list pages | **Never** | Query results, partial by construction. |
 
 A persisted subset is invalidated by (a) `buster`, changed with any row-shape change
@@ -250,13 +259,13 @@ Server state stays authoritative; persistence only supplies the first rows. The 
 
 ## Gates and reopen triggers
 
-Before the implementation issue merges phase 1: the wipe, `maxAge`, `buster` and
-restore-ordering tests pass, and the two unverified collection-cache items below are
-answered in a spike.
+The implementation issue carries these gates:
 
-Before it merges phase 2 (registrations): the owner confirms the retention number
-and publishes the privacy-policy update, and every [privacy condition](#privacy) is
-implemented and tested.
+1. First, before any wiring to the dashboard: answer the [unverified](#unverified-and-needed-before-adoption)
+   questions with a test or a throwaway branch. A failed answer returns to this record.
+2. The wipe, `maxAge`, `buster`, edition-change and restore-ordering tests pass.
+3. The owner has published the privacy-policy update (condition 4) before the first
+   release that persists registrations.
 
 Reopen Option A (SQLite) if one of these becomes true: the Query-cache blob proves
 too large or slow for the registrations list; the owner reverses #937 and wants a
