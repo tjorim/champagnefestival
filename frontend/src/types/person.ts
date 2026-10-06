@@ -7,6 +7,7 @@ export interface VolunteerHelpPeriod {
 
 export interface Person {
   id: string;
+  registrationCount?: number;
   name: string;
   email: string;
   phone: string;

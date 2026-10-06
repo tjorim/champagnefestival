@@ -168,6 +168,60 @@ function registrationToCheckInResponse(
   };
 }
 
+/** Mirrors the paged people contract for authenticated UI tests. */
+function filteredPeople(url: URL, role?: string) {
+  const active = url.searchParams.get("active");
+  const requestedRole = role ?? url.searchParams.get("role");
+  const q = url.searchParams.get("q")?.toLowerCase().trim();
+  return people.filter(
+    (person) =>
+      (active === null || Boolean(person.active) === (active === "true")) &&
+      (!requestedRole || (person.roles as string[]).includes(requestedRole)) &&
+      (!q ||
+        [
+          "name",
+          "email",
+          "phone",
+          "address",
+          "national_register_number",
+          "eid_document_number",
+          "club_name",
+          "notes",
+        ].some((field) =>
+          String(person[field] ?? "")
+            .toLowerCase()
+            .includes(q),
+        ) ||
+        (person.roles as string[]).some((value) => value.includes(q))),
+  );
+}
+function peopleEnvelope(url: URL, role?: string) {
+  const rows: Record<string, unknown>[] = filteredPeople(url, role).map((person) => ({
+    ...person,
+    registration_count: sharedStore.registrations.filter(
+      (registration) => registration.person_id === person.id,
+    ).length,
+  }));
+  const sort = url.searchParams.get("sort");
+  const field = sort === "created" ? "created_at" : sort === "updated" ? "updated_at" : sort;
+  const direction = url.searchParams.get("sort_dir") === "desc" ? -1 : 1;
+  if (field)
+    rows.sort((a, b) => {
+      const left = a[field as keyof typeof a];
+      const right = b[field as keyof typeof b];
+      return (
+        direction *
+          (typeof left === "number" && typeof right === "number"
+            ? left - right
+            : String(left ?? "").localeCompare(String(right ?? ""))) ||
+        String(a.id).localeCompare(String(b.id))
+      );
+    });
+  const limit = Number(url.searchParams.get("limit") ?? 20);
+  const page = Number(url.searchParams.get("page") ?? 1);
+  return { items: rows.slice((page - 1) * limit, page * limit), total: rows.length, limit, page };
+}
+
 export const adminHandlers = [
   http.get("/api/mock/scenario", () => {
     return HttpResponse.json({
@@ -415,38 +469,55 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // People
   // ──────────────────────────────────────────────────────────────
-  http.get("/api/people", ({ request }) => {
+  http.get("/api/people/counts", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const rows = filteredPeople(new URL(request.url));
+    const by_role: Record<string, number> = {};
+    for (const row of rows)
+      for (const role of row.roles as string[]) by_role[role] = (by_role[role] ?? 0) + 1;
+    const active = rows.filter((row) => row.active).length;
+    return HttpResponse.json({
+      total: rows.length,
+      active,
+      inactive: rows.length - active,
+      by_role,
+    });
+  }),
+  http.get("/api/people/by-email", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const url = new URL(request.url);
-    const q = url.searchParams.get("q");
-    const activeOnly = url.searchParams.get("active") === "true";
-    const role = url.searchParams.get("role");
-
-    let result = [...people];
-    if (activeOnly) result = result.filter((p) => p.active);
-    if (role) {
-      const lrole = role.toLowerCase();
-      result = result.filter((p) => (p.roles as string[]).includes(lrole));
-    }
-    if (q) {
-      const lq = q.toLowerCase();
-      result = result.filter(
-        (p) =>
-          String(p.name ?? "")
-            .toLowerCase()
-            .includes(lq) ||
-          String(p.email ?? "")
-            .toLowerCase()
-            .includes(lq) ||
-          String(p.phone ?? "").includes(lq),
-      );
-    }
-    const limit = Number(url.searchParams.get("limit") ?? result.length) || result.length;
-    const page = Number(url.searchParams.get("page") ?? 1) || 1;
-    const start = (page - 1) * limit;
-    const items = result.slice(start, start + limit);
-    return HttpResponse.json({ items, total: result.length, limit, page });
+    const matching = people.filter(
+      (row) =>
+        String(row.email).toLowerCase() === url.searchParams.get("email")?.toLowerCase() &&
+        row.id !== url.searchParams.get("exclude_person_id"),
+    );
+    const limit = Number(url.searchParams.get("limit") ?? 100);
+    const page = Number(url.searchParams.get("page") ?? 1);
+    return HttpResponse.json({
+      items: matching.slice((page - 1) * limit, page * limit).map((row) => ({
+        ...row,
+        registration_count: sharedStore.registrations.filter((r) => r.person_id === row.id).length,
+      })),
+      total: matching.length,
+      limit,
+      page,
+    });
+  }),
+  http.get("/api/people/export", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const rows = filteredPeople(new URL(request.url));
+    return new HttpResponse(
+      "name,email\n" + rows.map((row) => `${row.name},${row.email}`).join("\n"),
+      { headers: { "Content-Type": "text/csv" } },
+    );
+  }),
+  http.get("/api/people", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    return HttpResponse.json(peopleEnvelope(new URL(request.url)));
   }),
 
   http.post("/api/people", async ({ request }) => {
@@ -572,16 +643,24 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // Volunteers — derived from the people store (role: "volunteer")
   // ──────────────────────────────────────────────────────────────
-  http.get("/api/volunteers", ({ request }) => {
+  http.get("/api/volunteers/export", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const url = new URL(request.url);
-    const result = people.filter((p) => (p.roles as string[]).includes("volunteer"));
-    const limit = Number(url.searchParams.get("limit") ?? result.length) || result.length;
-    const page = Number(url.searchParams.get("page") ?? 1) || 1;
-    const start = (page - 1) * limit;
-    const items = result.slice(start, start + limit);
-    return HttpResponse.json({ items, total: result.length, limit, page });
+    if (!url.searchParams.has("active") && url.searchParams.get("include_inactive") !== "true")
+      url.searchParams.set("active", "true");
+    return new HttpResponse(
+      "name,address\n" +
+        filteredPeople(url, "volunteer")
+          .map((row) => `${row.name},${row.address}`)
+          .join("\n"),
+      { headers: { "Content-Type": "text/csv" } },
+    );
+  }),
+  http.get("/api/volunteers", ({ request }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    return HttpResponse.json(peopleEnvelope(new URL(request.url), "volunteer"));
   }),
 
   http.post("/api/volunteers", async ({ request }) => {
@@ -623,7 +702,11 @@ export const adminHandlers = [
     if (authError) return authError;
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
-    people.splice(idx, 1);
+    people[idx] = {
+      ...people[idx]!,
+      roles: (people[idx]!.roles as string[]).filter((role) => role !== "volunteer"),
+      help_periods: [],
+    };
     return new HttpResponse(null, { status: 204 });
   }),
 

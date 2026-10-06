@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
-import type { Person } from "@/types/person";
 import type { Registration } from "@/types/registration";
 import { isRegistrationInEdition } from "@/utils/adminUtils";
 import { toLocalDateKey } from "@/utils/dateUtils";
@@ -8,15 +7,11 @@ import { useTodayKey } from "@/hooks/useTodayKey";
 
 interface UseAdminDashboardDataOptions {
   activeEdition: ActiveEdition;
-  detailRegistration: Registration | null;
-  people: Person[];
   registrations: Registration[];
 }
 
 export function useAdminDashboardData({
   activeEdition,
-  detailRegistration,
-  people,
   registrations,
 }: UseAdminDashboardDataOptions) {
   const todayKey = useTodayKey();
@@ -55,36 +50,12 @@ export function useAdminDashboardData({
       }));
   }, [activeEdition.events]);
 
-  const registrationCountByPersonId = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const registration of registrations) {
-      if (registration.personId == null) continue;
-      counts[registration.personId] = (counts[registration.personId] ?? 0) + 1;
-    }
-    return Object.fromEntries(people.map((person) => [person.id, counts[person.id] ?? 0]));
-  }, [people, registrations]);
-
-  const emailDuplicates = useMemo(() => {
-    if (!detailRegistration || !detailRegistration.person.email) return [];
-    const personEmail = detailRegistration.person.email.toLowerCase();
-    return people
-      .filter(
-        (person) =>
-          person.id !== detailRegistration.personId &&
-          person.email &&
-          person.email.toLowerCase() === personEmail,
-      )
-      .map((person) => ({ id: person.id, name: person.name }));
-  }, [detailRegistration, people]);
-
   return {
     activeDayIndex,
     activeEditionDateKeys,
     activeEditionStats,
-    emailDuplicates,
     isActiveEditionDay,
     layoutDayOptions,
-    registrationCountByPersonId,
     todayKey,
   };
 }

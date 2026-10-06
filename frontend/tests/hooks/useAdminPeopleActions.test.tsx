@@ -1,397 +1,93 @@
-/**
- * Merging people must not invent volunteer help periods in the cache.
- *
- * The merge endpoint used to let Postgres cascade-delete the duplicate's help
- * periods, and this hook hid it: it patched the duplicate's periods onto the
- * survivor, so the admin saw a correct-looking merge over a corrupted record.
- * The server transfers those rows now, and the cache must show what the server
- * says rather than a hopeful reconstruction of it.
- */
-
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
-import { describe, expect, it, vi } from "vitest";
+import { expect, it, vi } from "vitest";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
+import type { AdminExhibitorsCollection } from "@/state/adminExhibitorsCollection";
+import type { AdminRegistrationsCollection } from "@/state/adminRegistrationsCollection";
+import { resetAdminPeopleSession } from "@/state/adminPeopleSession";
 import { server } from "@/mocks/server";
-import {
-  createAdminExhibitorsCollection,
-  resetAdminExhibitorsCollection,
-} from "@/state/adminExhibitorsCollection";
-import {
-  createAdminPeopleCollection,
-  resetAdminPeopleCollection,
-} from "@/state/adminPeopleCollection";
-import type { Person } from "@/types/person";
 import { createTestQueryClientHarness } from "../utils/queryClient";
 
-const REGISTRATIONS_KEY = ["admin", "registrations"];
-
-function makePerson(overrides: Partial<Person> & { id: string }): Person {
-  return {
-    name: "Sofie De Smet",
-    email: "",
-    phone: "",
-    address: "Dorpsstraat 12",
-    roles: ["member"],
-    nationalRegisterNumber: null,
-    eidDocumentNumber: null,
-    visitsPerMonth: null,
-    clubName: "",
-    notes: "",
-    active: true,
-    helpPeriods: [],
-    createdAt: "2026-01-01T00:00:00Z",
-    updatedAt: "2026-01-01T00:00:00Z",
-    ...overrides,
-  };
-}
-
-const CANONICAL = makePerson({
-  id: "per_canonical",
-  roles: ["member", "volunteer"],
-  helpPeriods: [{ id: 1, firstHelpDay: "2024-03-15", lastHelpDay: "2024-03-17", notes: "" }],
-});
-
-const DUPLICATE = makePerson({
-  id: "per_duplicate",
-  email: "sofie@example.com",
-  roles: ["volunteer"],
-  helpPeriods: [
-    { id: 2, firstHelpDay: "2025-10-10", lastHelpDay: null, notes: "" },
-    { id: 3, firstHelpDay: "2026-02-01", lastHelpDay: "2026-02-03", notes: "" },
-  ],
-});
-
-/** What POST /api/people/{id}/merge/{id} returns: a PersonOut, no help periods. */
-const MERGE_RESPONSE = {
-  id: CANONICAL.id,
-  name: CANONICAL.name,
-  email: "sofie@example.com",
-  phone: "",
-  address: CANONICAL.address,
-  roles: ["member", "volunteer"],
-  national_register_number: "91010112345",
-  eid_document_number: "bex123456",
-  visits_per_month: null,
-  club_name: "",
-  notes: "",
-  active: true,
-  created_at: CANONICAL.createdAt,
-  updated_at: "2026-08-05T12:00:00Z",
-};
-
-function toApiPerson(person: Person) {
-  return {
-    id: person.id,
-    name: person.name,
-    email: person.email,
-    phone: person.phone,
-    address: person.address,
-    roles: person.roles,
-    national_register_number: person.nationalRegisterNumber,
-    eid_document_number: person.eidDocumentNumber,
-    visits_per_month: person.visitsPerMonth,
-    club_name: person.clubName,
-    notes: person.notes,
-    active: person.active,
-    created_at: person.createdAt,
-    updated_at: person.updatedAt,
-  };
-}
-
-async function renderMergeHook(people: Person[]) {
+function harness() {
   const { queryClient, Wrapper } = createTestQueryClientHarness();
-  // Nothing observes these queries, and the harness defaults to gcTime 0, which
-  // collects the seeded cache before the assertions can read it.
-  queryClient.setDefaultOptions({ queries: { retry: false, gcTime: Infinity } });
-  const volunteers = people.filter((person) => person.roles.includes("volunteer"));
-  server.use(
-    http.get("/api/people", () => {
-      const items = people.map(toApiPerson);
-      return HttpResponse.json({ items, total: items.length, limit: 1000, page: 1 });
-    }),
-    http.get("/api/exhibitors", () =>
-      HttpResponse.json([
-        { id: 1, name: "Maison Un", active: true, contact_person_id: DUPLICATE.id },
-        { id: 2, name: "Maison Deux", active: true, contact_person_id: "per_other" },
-      ]),
-    ),
-    http.get("/api/volunteers", () =>
-      HttpResponse.json({
-        items: volunteers.map((person) => ({
-          ...toApiPerson(person),
-          help_periods: person.helpPeriods.map((period) => ({
-            id: period.id,
-            first_help_day: period.firstHelpDay,
-            last_help_day: period.lastHelpDay,
-            notes: period.notes,
-          })),
-        })),
-        total: volunteers.length,
-        limit: 1000,
-        page: 1,
-      }),
-    ),
-  );
-  const peopleCollection = createAdminPeopleCollection({
-    queryClient,
-    authHeaders: () => ({ "Content-Type": "application/json" }),
-    enabled: true,
-  });
-  await peopleCollection.preload();
-  const exhibitorsCollection = createAdminExhibitorsCollection({
-    queryClient,
-    authHeaders: () => ({ "Content-Type": "application/json" }),
-    enabled: true,
-  });
-  await exhibitorsCollection.preload();
-  // Keep the refetch out of the way: this is about what the hook writes itself.
-  const refetchPeople = vi
-    .spyOn(peopleCollection.utils, "refetch")
-    .mockResolvedValue(undefined as never);
-  const setDetailRegistration = vi.fn();
-  queryClient.setQueryData(REGISTRATIONS_KEY, [
-    { id: "reg-1", personId: CANONICAL.id, person: { id: CANONICAL.id, name: "Before" } },
-    { id: "reg-2", personId: DUPLICATE.id, person: { id: DUPLICATE.id, name: "Before" } },
-  ]);
-
-  const { result } = renderHook(
+  const refetchRegistrations = vi.fn().mockResolvedValue(undefined);
+  const refetchExhibitors = vi.fn().mockResolvedValue(undefined);
+  const writeUpsert = vi.fn().mockResolvedValue(undefined);
+  const registrationsCollection = {
+    utils: { refetch: refetchRegistrations },
+    get: vi.fn(),
+  } as unknown as AdminRegistrationsCollection;
+  const exhibitorsCollection = {
+    utils: { refetch: refetchExhibitors, writeUpsert },
+    values: () => [{ id: 1, name: "House", active: true, contactPersonId: "duplicate" }],
+  } as unknown as AdminExhibitorsCollection;
+  const view = renderHook(
     () =>
       useAdminPeopleActions({
-        authHeaders: () => ({ "Content-Type": "application/json" }),
-        exhibitorsCollection,
-        peopleCollection,
+        authHeaders: () => ({
+          "Content-Type": "application/json",
+          Authorization: "Bearer test-token",
+        }),
         queryClient,
-        registrationsQueryKey: REGISTRATIONS_KEY,
-        setDetailRegistration,
+        registrationsQueryKey: ["admin", "registrations"],
+        registrationsCollection,
+        exhibitorsCollection,
+        setDetailRegistration: vi.fn(),
       }),
     { wrapper: Wrapper },
   );
-
-  return {
-    exhibitorsCollection,
-    peopleCollection,
-    queryClient,
-    result,
-    refetchPeople,
-    setDetailRegistration,
-  };
+  return { ...view, queryClient, refetchRegistrations, refetchExhibitors, writeUpsert };
 }
-
-describe("useAdminPeopleActions — merge", () => {
-  it("repoints the duplicate's exhibitor contacts through the exhibitors collection", async () => {
+it.each([200, 409])(
+  "reconciles both cascade consumers after a merge returns %s",
+  async (status) => {
+    const h = harness();
     server.use(
-      http.post("/api/people/:canonicalId/merge/:duplicateId", () =>
-        HttpResponse.json(MERGE_RESPONSE),
+      http.post("/api/people/:id/merge/:duplicateId", () =>
+        HttpResponse.json({ id: "canonical", roles: ["volunteer"] }, { status }),
       ),
     );
-    const { exhibitorsCollection, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
-    const refetchExhibitors = vi
-      .spyOn(exhibitorsCollection.utils, "refetch")
-      .mockResolvedValue(undefined as never);
-
     await act(async () => {
-      await result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
+      await h.result.current.handleMergePeople("canonical", "duplicate").catch(() => undefined);
     });
-
-    expect(exhibitorsCollection.get(1)?.contactPersonId).toBe(CANONICAL.id);
-    expect(exhibitorsCollection.get(2)?.contactPersonId).toBe("per_other");
-    expect(refetchExhibitors).toHaveBeenCalled();
+    expect(h.refetchRegistrations).toHaveBeenCalled();
+    expect(h.refetchExhibitors).toHaveBeenCalled();
+    if (status === 200)
+      expect(h.writeUpsert).toHaveBeenCalledWith([
+        { id: 1, name: "House", active: true, contactPersonId: "canonical" },
+      ]);
+    // No merge response is inserted into a people cache with invented help periods.
+    expect(h.queryClient.getQueryData(["admin", "people"])).toBeUndefined();
+  },
+);
+it("drops a late merge response after sign-out", async () => {
+  const h = harness();
+  let release!: () => void;
+  let started!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
   });
-
-  it("refetches the exhibitors when the merge request fails", async () => {
-    server.use(
-      http.post("/api/people/:canonicalId/merge/:duplicateId", () =>
-        HttpResponse.json({ detail: "boom" }, { status: 500 }),
-      ),
-    );
-    const { exhibitorsCollection, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
-    const refetchExhibitors = vi
-      .spyOn(exhibitorsCollection.utils, "refetch")
-      .mockResolvedValue(undefined as never);
-
-    await act(async () => {
-      await expect(result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id)).rejects.toThrow();
-    });
-
-    expect(refetchExhibitors).toHaveBeenCalled();
-    expect(exhibitorsCollection.get(1)?.contactPersonId).toBe(DUPLICATE.id);
+  const request = new Promise<void>((resolve) => {
+    started = resolve;
   });
-
-  it("keeps the survivor's own help periods and does not adopt the duplicate's", async () => {
-    server.use(
-      http.post("/api/people/:canonicalId/merge/:duplicateId", () =>
-        HttpResponse.json(MERGE_RESPONSE),
-      ),
-    );
-    const { peopleCollection, result, refetchPeople } = await renderMergeHook([
-      CANONICAL,
-      DUPLICATE,
-    ]);
-
-    await act(async () => {
-      await result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
-    });
-
-    const people = peopleCollection.toArray;
-    expect(people.map((person) => person.id)).toEqual([CANONICAL.id]);
-    // The duplicate's two periods are transferred server-side; showing them here
-    // before the refetch confirms it is exactly what masked the cascade delete.
-    expect(people[0]?.helpPeriods).toEqual(CANONICAL.helpPeriods);
-    // ...and the refetch that supplies the transferred periods is still queued.
-    await waitFor(() => {
-      expect(refetchPeople).toHaveBeenCalled();
-    });
+  server.use(
+    http.post("/api/people/:id/merge/:duplicateId", async () => {
+      started();
+      await gate;
+      return HttpResponse.json({ id: "canonical" });
+    }),
+  );
+  let promise!: Promise<void>;
+  act(() => {
+    promise = h.result.current.handleMergePeople("canonical", "duplicate");
   });
-
-  it("takes the merged field values from the server, not from the stale cache", async () => {
-    server.use(
-      http.post("/api/people/:canonicalId/merge/:duplicateId", () =>
-        HttpResponse.json(MERGE_RESPONSE),
-      ),
-    );
-    const { peopleCollection, result } = await renderMergeHook([CANONICAL, DUPLICATE]);
-
-    await act(async () => {
-      await result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
-    });
-
-    const survivor = peopleCollection.toArray[0];
-    // The merge fills the canonical's blank email from the duplicate and adopts
-    // its identity numbers; the cached blanks must not win.
-    expect(survivor?.email).toBe("sofie@example.com");
-    expect(survivor?.nationalRegisterNumber).toBe("91010112345");
-    expect(survivor?.eidDocumentNumber).toBe("bex123456");
+  await request;
+  resetAdminPeopleSession();
+  release();
+  await act(async () => {
+    await promise;
   });
-
-  it("leaves help periods alone when the survivor is not a volunteer", async () => {
-    const plainCanonical = makePerson({ id: "per_canonical" });
-    const plainDuplicate = makePerson({ id: "per_duplicate" });
-    server.use(
-      http.post("/api/people/:canonicalId/merge/:duplicateId", () =>
-        HttpResponse.json({ ...MERGE_RESPONSE, roles: ["member"] }),
-      ),
-    );
-    const { peopleCollection, result } = await renderMergeHook([plainCanonical, plainDuplicate]);
-
-    await act(async () => {
-      await result.current.handleMergePeople(plainCanonical.id, plainDuplicate.id);
-    });
-
-    const survivor = peopleCollection.toArray[0];
-    expect(survivor?.roles).toEqual(["member"]);
-    expect(survivor?.helpPeriods).toEqual([]);
-  });
-});
-
-describe("useAdminPeopleActions — responses from an ended session", () => {
-  /** Holds a response until the test releases it, so the session can end in between. */
-  function gate() {
-    let release: () => void = () => undefined;
-    const opened = new Promise<void>((resolve) => (release = resolve));
-    return { opened, release };
-  }
-
-  it("does not patch the registrations or exhibitors caches with a stale merge response", async () => {
-    const { opened, release } = gate();
-    server.use(
-      http.post("/api/people/:canonicalId/merge/:duplicateId", async () => {
-        await opened;
-        return HttpResponse.json(MERGE_RESPONSE);
-      }),
-    );
-    const { exhibitorsCollection, peopleCollection, queryClient, result } = await renderMergeHook([
-      CANONICAL,
-      DUPLICATE,
-    ]);
-    const refetchExhibitors = vi
-      .spyOn(exhibitorsCollection.utils, "refetch")
-      .mockResolvedValue(undefined as never);
-
-    let merge: Promise<void> = Promise.resolve();
-    act(() => {
-      merge = result.current.handleMergePeople(CANONICAL.id, DUPLICATE.id);
-    });
-    await resetAdminPeopleCollection(peopleCollection);
-    await resetAdminExhibitorsCollection(exhibitorsCollection);
-    release();
-    await act(async () => {
-      await merge;
-    });
-
-    const registrations = queryClient.getQueryData<{ personId: string }[]>(REGISTRATIONS_KEY);
-    expect(registrations?.map((registration) => registration.personId)).toEqual([
-      CANONICAL.id,
-      DUPLICATE.id,
-    ]);
-    expect(exhibitorsCollection.size).toBe(0);
-    expect(refetchExhibitors).not.toHaveBeenCalled();
-    expect(peopleCollection.size).toBe(0);
-  });
-
-  it("does not patch registration rows or the open detail with a stale person update", async () => {
-    const { opened, release } = gate();
-    server.use(
-      http.put("/api/people/:id", async () => {
-        await opened;
-        return HttpResponse.json({ ...MERGE_RESPONSE, name: "Stale name" });
-      }),
-    );
-    const { peopleCollection, queryClient, result, setDetailRegistration } = await renderMergeHook([
-      CANONICAL,
-      DUPLICATE,
-    ]);
-
-    let update: Promise<void> = Promise.resolve();
-    act(() => {
-      update = result.current.handleUpdatePerson(CANONICAL.id, {
-        name: "Stale name",
-        email: "",
-        phone: "",
-        address: "",
-        roles: ["member"],
-        notes: "",
-        clubName: "",
-        active: true,
-      });
-    });
-    await resetAdminPeopleCollection(peopleCollection);
-    release();
-    await act(async () => {
-      await update;
-    });
-
-    const registrations =
-      queryClient.getQueryData<{ person: { name: string } }[]>(REGISTRATIONS_KEY);
-    expect(registrations?.[0]?.person.name).toBe("Before");
-    expect(setDetailRegistration).not.toHaveBeenCalled();
-  });
-
-  it("patches registration rows and the open detail with a current person update", async () => {
-    server.use(
-      http.put("/api/people/:id", () => HttpResponse.json({ ...MERGE_RESPONSE, name: "New name" })),
-    );
-    const { queryClient, result, setDetailRegistration } = await renderMergeHook([
-      CANONICAL,
-      DUPLICATE,
-    ]);
-
-    await act(async () => {
-      await result.current.handleUpdatePerson(CANONICAL.id, {
-        name: "New name",
-        email: "",
-        phone: "",
-        address: "",
-        roles: ["member"],
-        notes: "",
-        clubName: "",
-        active: true,
-      });
-    });
-
-    const registrations =
-      queryClient.getQueryData<{ person: { name: string } }[]>(REGISTRATIONS_KEY);
-    expect(registrations?.[0]?.person.name).toBe("New name");
-    expect(setDetailRegistration).toHaveBeenCalled();
-  });
+  expect(h.refetchRegistrations).not.toHaveBeenCalled();
+  expect(h.refetchExhibitors).not.toHaveBeenCalled();
+  expect(h.writeUpsert).not.toHaveBeenCalled();
 });

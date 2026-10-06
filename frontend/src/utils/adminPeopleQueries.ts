@@ -98,3 +98,35 @@ export function fetchPeopleCounts(
     m.admin_error_load_data(),
   );
 }
+
+export async function fetchPeopleByEmail(
+  authHeaders: () => Record<string, string>,
+  email: string,
+  excludePersonId: string,
+  signal: AbortSignal,
+): Promise<PeoplePage> {
+  const search = new URLSearchParams({
+    email,
+    exclude_person_id: excludePersonId,
+    limit: "100",
+    page: "1",
+  });
+  const page = await fetchJsonOrThrowWithUnauthorized<{
+    items: Record<string, unknown>[];
+    total: number;
+    page: number;
+    limit: number;
+  }>(
+    `/api/people/by-email?${search}`,
+    { headers: authHeaders(), signal },
+    m.admin_error_load_data(),
+  );
+  signal.throwIfAborted();
+  return {
+    ...page,
+    items: page.items.map((item) => ({
+      ...apiToPerson(item),
+      registrationCount: Number(item.registration_count ?? 0),
+    })),
+  };
+}

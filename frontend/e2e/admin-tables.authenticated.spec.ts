@@ -37,9 +37,7 @@ test("server table sorting, selection and dark column menu", async ({ page }) =>
   await expect(page.getByRole("columnheader", { name: "Guests", exact: true })).toHaveCount(0);
 });
 
-test("client table visibility persists and narrow layout hides secondary columns", async ({
-  page,
-}) => {
+test("people table visibility persists and narrow layout shows cards", async ({ page }) => {
   await page.getByRole("button", { name: /Directory/ }).click();
   await expect(page.getByRole("table")).toBeVisible();
   await page.getByRole("button", { name: "Columns", exact: true }).click();
@@ -56,6 +54,12 @@ test("client table visibility persists and narrow layout hides secondary columns
   await expect(phone).toHaveCount(1);
   await expect(phone).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("table")).toBeVisible();
+  await expect(page.getByRole("table")).toBeHidden();
   await expect(phone).toBeHidden();
+  await expect(
+    page
+      .locator("main li")
+      .filter({ has: page.getByRole("button", { name: /^Edit:/ }) })
+      .first(),
+  ).toBeVisible();
 });
