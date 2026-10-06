@@ -529,8 +529,9 @@ Nothing keeps the whole people list in the browser, so the people collection
   Query results, partial by construction, and hold personal data; a persisted
   partial page must not be mistaken for a complete set.
 - **Partial collection subsets:** none. No collection uses on-demand sync.
-- **Outcome (2026-10-06):** persistence is deferred and persisting guest data is
-  rejected until its privacy conditions are met; see
+- **Outcome (2026-10-06):** a narrow, read-only warm start through the Query cache
+  (phase 1 without guest data, phase 2 registrations once the privacy conditions are
+  met); TanStack's SQLite persistence is deferred; see
   [1168-persisted-collections.md](1168-persisted-collections.md).
 
 ### Dependent issues
@@ -617,7 +618,7 @@ Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR 
 | Order | Follow-up | Issue |
 | --- | --- | --- |
 | 1 | Migrate venues, rooms, layouts, areas and table types as a group (done in [#1183](https://github.com/tjorim/champagnefestival/issues/1183)), and exhibitors (done in [#1184](https://github.com/tjorim/champagnefestival/issues/1184)), on the shared collection factory (decided in [#1166](https://github.com/tjorim/champagnefestival/issues/1166), see [above](#shared-collection-factory-and-remaining-resources-1166)) | [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
-| 2 | Persisted collections for event-day resilience: **deferred** (2026-10-06), with reopen triggers; see [the decision](1168-persisted-collections.md) | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
+| 2 | Persisted collections for event-day resilience: **decided** (2026-10-06): read-only warm start through the Query cache, phased and gated on privacy; SQLite persistence deferred; see [the decision](1168-persisted-collections.md) | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
 | 3 | Backend: counts, registration count per person, duplicate-email lookup and exports for people and volunteers | [#1177](https://github.com/tjorim/champagnefestival/issues/1177) |
 | 3 | Server-driven data layer for the people list (Query pages, no people collection) | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
 | 3 | `AdminDataTable` on TanStack Table manual mode | [#1180](https://github.com/tjorim/champagnefestival/issues/1180) |
