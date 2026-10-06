@@ -7,6 +7,8 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 
+import { validateAdminSearch } from "./utils/adminTableState";
+
 import { LiveUpdatesProvider } from "./state/LiveUpdatesProvider";
 import { getStoredAccessToken } from "./config/oidc";
 import { venuePlanQueryOptions } from "./utils/venuePlanApi";
@@ -85,6 +87,7 @@ export function createAppRouter({
   const adminRoute = createRoute({
     getParentRoute: () => adminLayoutRoute,
     path: "/admin",
+    validateSearch: validateAdminSearch,
     component: AdminPage,
   });
 
