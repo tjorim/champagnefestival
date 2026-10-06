@@ -327,3 +327,12 @@ deleting a key by ID converges on the same state when repeated. A failed write
 rejects the returned promise, and `LiveUpdatesProvider` responds by invalidating the
 registrations query so the collection refetches from the server. No retry, queue or
 server contract is added.
+
+## Shared AdminDataTable action adapters (#1180)
+
+The shared table introduces no API writes. Confirmed row-action adapters and
+select-all-matching callbacks are invoked once per explicit activation, with no
+automatic retry. A failed confirmation stays open and an explicit second attempt
+is possible; adapters must reconcile ambiguous failures before permitting a repeat
+unless the underlying write has a documented implemented retry strategy. Export
+adapters read the full server-filtered set rather than writing displayed rows.

@@ -24,12 +24,7 @@ interface AdminTablePaginationProps {
   pageSizeOptions?: readonly number[];
 }
 
-/**
- * Client-side pagination controls for admin tables whose full dataset is
- * already in the browser (People/Volunteers/Members) — as opposed to
- * RegistrationList's server-side page controls, which fetch one page at a
- * time and so track their own page/limit state instead of using this.
- */
+/** Shared controls for server-driven and bounded client-side tables. */
 export function AdminTablePagination({
   total,
   pageIndex,
