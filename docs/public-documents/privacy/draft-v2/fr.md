@@ -1,8 +1,12 @@
 Cette politique explique quelles données personnelles le Champagnefestival collecte via notre site web et notre application Android, pourquoi, et combien de temps nous les conservons.
 
+## Qui nous sommes
+
+Le Champagnefestival est organisé par Champagnefeesten ASBL (numéro d'entreprise BE 0718.862.149). Vous pouvez nous joindre via la page de contact de notre site.
+
 ## Ce que nous collectons et pourquoi
 
-- **Formulaire de contact :** votre nom, votre adresse e-mail et votre message, afin que nous puissions vous répondre.
+- **Formulaire de contact :** votre nom, votre adresse e-mail et votre message, afin que nous puissions vous répondre, et votre adresse IP, pour écarter le spam.
 - **Inscription :** votre nom, votre adresse e-mail, votre numéro de téléphone, le nombre d'invités, votre commande et d'éventuelles remarques, comme des besoins d'accessibilité ou alimentaires, afin d'organiser l'événement. Nous attribuons un code d'enregistrement à votre réservation et notons si et quand vous vous êtes enregistré.
 - **Votre compte :** les visiteurs se connectent avec un lien envoyé par e-mail, sans mot de passe. Les bénévoles et les administrateurs se connectent via notre propre serveur de connexion, de sorte qu'aucune société externe ne gère leurs mots de passe.
 - **Bénévoles :** nom, coordonnées, numéro de registre national et numéro du document eID (nécessaires pour l'assurance), les jours où vous aidez et vos choix de repas.
@@ -18,11 +22,11 @@ L'application est réservée aux bénévoles et aux administrateurs. Elle utilis
 - Les noms et coordonnées des visiteurs et des membres sont anonymisés environ sept ans après leur dernière inscription. L'inscription reste, sans le lien avec vous.
 - Les données d'identification des bénévoles sont conservées aussi longtemps qu'elles sont nécessaires pour les demandes d'assurance.
 - Les adresses IP enregistrées lors de l'enregistrement à l'entrée sont supprimées après 30 jours.
-- Les messages de contact sont conservés aussi longtemps que nécessaire pour traiter votre demande.
+- Les messages de contact sont conservés comme les e-mails que nous recevons, jusqu'à ce que vous demandiez leur suppression.
 
 ## Qui y a accès
 
-Les organisateurs et les bénévoles voient ce dont ils ont besoin pour leur rôle. Nous utilisons un hébergeur et Cloudflare pour faire fonctionner le site, un service d'e-mail pour vous envoyer des messages et des outils de suivi des erreurs pour corriger les bugs. Les données circulent via des connexions chiffrées. Nous ne vendons pas vos données et ne les utilisons pas à des fins publicitaires.
+Les organisateurs et les bénévoles voient ce dont ils ont besoin pour leur rôle. Nous utilisons un hébergeur et Cloudflare pour faire fonctionner le site et un service d'e-mail pour vous envoyer des messages. Les données circulent via des connexions chiffrées. Nous ne vendons pas vos données et ne les utilisons pas à des fins publicitaires.
 
 ## Cookies et stockage local
 

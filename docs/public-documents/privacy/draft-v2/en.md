@@ -1,8 +1,12 @@
 This policy explains what personal data the Champagnefestival collects through our website and Android app, why, and how long we keep it.
 
+## Who we are
+
+The Champagnefestival is organised by Champagnefeesten vzw (enterprise number BE 0718.862.149). You can reach us through the contact page of our website.
+
 ## What we collect and why
 
-- **Contact form:** your name, email address and message, so we can reply.
+- **Contact form:** your name, email address and message, so we can reply, and your IP address, to keep spam out.
 - **Registration:** your name, email address, phone number, number of guests, your order and any notes, such as accessibility or dietary needs, so we can organise the event. We give your booking a check-in code and record whether and when you checked in.
 - **Your account:** visitors sign in with a link sent by email, without a password. Volunteers and administrators sign in through our own login server, so no outside company handles their passwords.
 - **Volunteers:** name, contact details, national register number and eID document number (needed for insurance), the days you help and your meal choices.
@@ -18,11 +22,11 @@ The app is for volunteers and administrators only. It uses the camera only to sc
 - Names and contact details of visitors and members are anonymised about seven years after their last registration. The registration stays, without the link to you.
 - Volunteer identification details are kept as long as needed for insurance claims.
 - IP addresses recorded at check-in are removed after 30 days.
-- Contact messages are kept as long as needed to deal with your question.
+- Contact messages are kept like the emails we receive, until you ask us to delete them.
 
 ## Who sees it
 
-Organisers and volunteers see what they need for their role. We use a hosting provider and Cloudflare to run the website, an email service to send you messages, and error-monitoring tools to fix bugs. Data travels over encrypted connections. We do not sell your data or use it for advertising.
+Organisers and volunteers see what they need for their role. We use a hosting provider and Cloudflare to run the website and an email service to send you messages. Data travels over encrypted connections. We do not sell your data or use it for advertising.
 
 ## Cookies and local storage
 

@@ -68,24 +68,30 @@ Every statement comes from the code or a recorded decision:
 | One sign-in cookie, local storage | `visitor_session.py` (HttpOnly cookie); `config/oidc.ts` and language setting in local storage |
 | Hosting provider, Cloudflare, email service | `DEPLOYMENT.md`; SMTP delivery settings in `config.py` |
 
-For the owner to confirm before publishing:
+Answered by the owner on 2026-10-06:
 
-1. **Who is the controller.** Neither version names the organiser's legal name or address,
-   which a privacy policy normally states. The draft points to the contact page, as version 1
-   does; add one line with the legal name if you want it complete.
-2. **Contact messages** have no retention window in #934 (out of its scope). The draft says
-   "as long as needed to deal with your question"; confirm that is how it is handled.
-3. **Anonymisation is admin-triggered**, not automatic (#934 lists candidates and an admin
-   runs it). The draft says data "is anonymised about seven years after"; confirm that is
-   the practice.
-4. **Check-in IP removal** is a VPS-scheduled job (`tjorim/apps#192`); confirm it runs in
-   production.
-5. **Error monitoring** (Sentry) is off unless a DSN is configured. Keep the phrase only if
-   it is enabled in production; otherwise remove it.
-6. **Marketing email.** The draft promises emails about future editions only on opt-in. No
-   sender exists yet (#934); the promise stays true for any future one.
-7. **Complaints:** it names the Belgian Data Protection Authority without a link; add the
-   address if you want one.
+- **Contact messages:** the festival does not work with the contact form yet; ordinary
+  emails are kept until someone asks for deletion, and contact messages are treated the
+  same way. The draft says so. The form also stores the sender's IP address (an abuse
+  measure, `contact_messages.client_ip`), now mentioned in the draft. The 30-day IP job
+  (#934) covers check-in audit entries only, so that IP stays as long as the message.
+- **Anonymisation after about seven years:** it was not practised before; the owner will
+  follow it from now on. Seven years is kept: it matches the accounting retention window
+  (#934), and one clock is easier to explain than two.
+- **Check-in IP removal after 30 days:** the scheduled job (`tjorim/apps#192`) is running.
+- **Error monitoring:** none is used (the backend supports Sentry but ships with it off),
+  so the draft no longer mentions it. Adding it would bring in an outside processor that
+  can receive personal data in error reports, and a line in the policy.
+- **Who we are:** the owner believes the organiser is "Champagnefestival vzw". The Crossroads
+  Bank for Enterprises lists a non-profit (vzw), enterprise number BE 0718.862.149, under
+  the name **Champagnefeesten** (registered office in Oostende, active since 2019-01-21,
+  VAT-registered per companyweb.be). The draft uses that name and number. **Verify it is
+  your entity** (name spelling, statutes) before publishing. The registered office address
+  is public in the KBO but looks like a flat, so the draft leaves it out.
+
+Still open: whether to name the Belgian Data Protection Authority with a link (optional),
+and the owner's final read of the text. The marketing-email promise (opt-in only) needs
+no action: no sender exists yet (#934).
 
 To publish: in the policy editor, create a draft for each locale, paste the matching file,
 preview, publish; then replace `privacy/{nl,en,fr}.md` with the new text, move the old
