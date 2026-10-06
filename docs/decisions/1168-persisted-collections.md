@@ -114,11 +114,15 @@ Why it fits a warm start:
   persister and an IndexedDB helper).
 - **Allowlist.** `dehydrateOptions.shouldDehydrateQuery` selects exactly the query
   keys to save, so people pages, registration list pages and payment queries are
-  excluded by construction rather than by remembering to skip them.
+  excluded by construction rather than by remembering to skip them. It must match
+  **whole keys, not prefixes**: the registrations collection's key is
+  `["admin", "registrations"]`, and the registration list pages
+  (`["admin", "registrations", "page", ...]`, with names, emails and phone numbers) and
+  the check-in statistics nest under that same prefix.
 - **Expiry and invalidation are built in.** `maxAge` discards a restore older than the
   limit (the device retention condition), and `buster` discards it when the app's row
   shapes change (the role `schemaVersion` plays in Option A). The registrations
-  query key already carries the edition.
+  query key does **not** carry the edition today; see [Dependencies](#dependencies).
 - **A deletion API exists.** A persister has `removeClient`, so the sign-out wipe is a
   documented call rather than an unknown.
 - **No new database state and no multi-tab coordinator.** The cache is one blob;
@@ -209,7 +213,7 @@ In this order and no wider than needed:
 | --- | --- | --- |
 | Tables, venues, rooms, table types, layouts, areas | Yes, as complete sets | No guest data; `buster` on row-shape changes. |
 | Exhibitors | Yes | Name, active flag, contact person id. |
-| Registrations of the active edition | Yes, in the first release, only with all five conditions met | Keyed by edition, so another edition never shows. |
+| Registrations of the active edition | Yes, in the first release, only with all five conditions met | Only after #1182: the edition is in the key, so another edition never shows. |
 | People pages, registration list pages | **Never** | Query results, partial by construction. |
 
 A persisted subset is invalidated by (a) `buster`, changed with any row-shape change
@@ -265,6 +269,24 @@ Server state stays authoritative; persistence only supplies the first rows. The 
   and a replay queue relying on the same idempotent endpoint, under its own decision
   and retry-safety entry. It should not be a persisted copy of the admin registrations
   collection (full person data, payments and notes).
+
+## Dependencies
+
+- **Registrations wait for [#1182](https://github.com/tjorim/champagnefestival/issues/1182)
+  (edition-scoped registrations collection).** Today the collection loads every
+  registration of every edition (`fetchAllRegistrations` has no edition filter) under a
+  key without the edition. Persisting it now would put the whole history on the device,
+  against the retention reasoning in [#934](934-data-retention-and-erasure.md), and a
+  change of edition could not swap the stored copy. After #1182 the key carries the
+  edition id and the collection is bounded to one edition.
+- **The rest has no dependency** and can be built first: the plumbing (persister,
+  allowlist, `maxAge`, `buster`, wipe, last-synced state) and the collections without
+  guest data (tables, venues, rooms, table types, layouts, areas, exhibitors).
+- **Exhibitor self-service ([#1190](https://github.com/tjorim/champagnefestival/issues/1190))**
+  changes the exhibitor row shape (description, translations, logo) and adds a manager
+  login. Each row-shape change bumps `buster`. The persisted cache belongs to admin and
+  volunteer sessions only; a manager or visitor session must neither restore it nor leave
+  one behind, and the wipe covers a switch to such a session.
 
 ## Gates and reopen triggers
 
