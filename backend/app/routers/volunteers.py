@@ -17,10 +17,11 @@ from starlette.responses import StreamingResponse
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.dependencies import Pagination, get_request_id
+from app.dependencies import ListQuery, get_request_id
 from app.models import Person
 from app.schemas import VolunteerCreate, VolunteerListEnvelope, VolunteerOut, VolunteerUpdate
 from app.services import volunteers_service
+from app.services.people_listing import VolunteerSortKey, filtered_people_stmt, order_people_stmt
 from app.utils import csv_safe, roles_contains
 
 router = APIRouter(
@@ -28,10 +29,6 @@ router = APIRouter(
     tags=["volunteers"],
     dependencies=[Depends(require_admin)],
 )
-
-# See app/routers/people.py's ADMIN_LIST_DEFAULT_LIMIT for why this is its own
-# constant rather than app.services.operational_search's door-lookup-sized one.
-ADMIN_LIST_DEFAULT_LIMIT = 200
 
 
 @router.post("", response_model=VolunteerOut, status_code=status.HTTP_201_CREATED)
@@ -47,21 +44,28 @@ async def create_volunteer(
 @router.get("", response_model=VolunteerListEnvelope)
 async def list_volunteers(
     db: AsyncSession = Depends(get_db),
-    q: str | None = Query(default=None, description="Search by name, address, NISS, or eID doc number"),
     active: bool | None = Query(default=None),
-    pagination: Pagination = Depends(),
+    sort: VolunteerSortKey | None = Query(
+        default=None,
+        description="Sort column; overrides the default relevance/newest-first order. "
+        "Applies across the whole filtered set, not just the current page.",
+    ),
+    list_query: ListQuery = Depends(),
 ) -> dict:
-    filtered_stmt = volunteers_service.search_volunteers_stmt(q=q, active=active)
-    total = (await db.execute(select(func.count()).select_from(filtered_stmt.order_by(None).subquery()))).scalar_one()
+    """Paged volunteer list on the shared list contract (see ``ListQuery``).
 
-    limit = pagination.limit or ADMIN_LIST_DEFAULT_LIMIT
-    page = pagination.page
-    stmt = filtered_stmt.offset((page - 1) * limit).limit(limit)
+    Same ``q`` semantics, defaults and ordering rules as ``GET /api/people``
+    (restricted to people holding the volunteer role), with help periods
+    included in each item.
+    """
+    filtered_stmt = filtered_people_stmt(q=list_query.q, role="volunteer", active=active)
+    total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
 
-    rows = (await db.execute(stmt)).scalars().all()
+    stmt = order_people_stmt(filtered_stmt, q=list_query.q, sort=sort, sort_dir=list_query.sort_dir)
+    rows = (await db.execute(list_query.apply(stmt))).scalars().all()
     periods_map = await volunteers_service.load_periods_map(db, [row.id for row in rows])
     items = [volunteers_service.to_volunteer_out(v, periods_map.get(v.id, [])) for v in rows]
-    return {"items": items, "total": total, "limit": limit, "page": page}
+    return list_query.envelope(items, total)
 
 
 @router.get("/export")

@@ -21,15 +21,17 @@ from collections import defaultdict
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.dependencies import SortDirection
 from app.models import Person, VolunteerPeriod
 from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerUpdate
+from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
-from app.utils import get_or_404, make_id, person_to_dict, roles_contains
+from app.utils import get_or_404, make_id, person_to_dict
 
 
 def ensure_volunteer_role(person: Person) -> None:
@@ -160,25 +162,19 @@ def to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> dic
     }
 
 
-def search_volunteers_stmt(*, q: str | None = None, active: bool | None = None) -> Any:
-    stmt = select(Person).where(roles_contains("volunteer"))
-
-    if active is not None:
-        stmt = stmt.where(Person.active == active)
-
-    if q:
-        q_escaped = q.strip().replace("\\", "\\\\").replace("%", r"\%").replace("_", r"\_")
-        q_like = f"%{q_escaped}%"
-        stmt = stmt.where(
-            or_(
-                Person.name.ilike(q_like, escape="\\"),
-                Person.address.ilike(q_like, escape="\\"),
-                Person.national_register_number.ilike(q_like, escape="\\"),
-                Person.eid_document_number.ilike(q_like, escape="\\"),
-            )
-        )
-
-    return stmt.order_by(Person.created_at.desc(), Person.id.desc())
+def search_volunteers_stmt(
+    *,
+    q: str | None = None,
+    active: bool | None = None,
+    sort: str | None = None,
+    sort_dir: SortDirection = "asc",
+) -> Any:
+    """Volunteers (people holding the ``volunteer`` role), filtered and ordered
+    on the shared people list contract (``app.services.people_listing``): the
+    same ``q`` semantics as ``GET /api/people``, and a deterministic order
+    ending in ``id``."""
+    stmt = filtered_people_stmt(q=q, role="volunteer", active=active)
+    return order_people_stmt(stmt, q=q, sort=sort, sort_dir=sort_dir)
 
 
 async def create_volunteer(

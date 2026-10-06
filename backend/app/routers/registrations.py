@@ -29,7 +29,7 @@ from starlette.responses import StreamingResponse
 
 from app.auth import get_actor_id, get_optional_claims, require_admin
 from app.database import get_db
-from app.dependencies import Pagination, apply_pagination
+from app.dependencies import DEFAULT_LIST_LIMIT, Pagination, apply_pagination
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Edition, Event, Person, Registration, Table
@@ -64,15 +64,6 @@ from app.utils import (
 
 router = APIRouter(prefix="/api/registrations", tags=["registrations"])
 logger = logging.getLogger(__name__)
-
-# Applies to GET /api/registrations regardless of whether `q` is set, so an
-# admin paging a guest list gets one predictable page size instead of "20
-# when searching, unbounded when not". The ceiling is `Pagination`'s own
-# `limit` validation (see app/dependencies.py, currently 1000) rather than
-# app.services.operational_search.MAX_RESULT_LIMIT (50) — that constant is
-# sized for the volunteer door-lookup use case (one guest at a time), not an
-# admin browsing or exporting a multi-year guest list.
-ADMIN_LIST_DEFAULT_LIMIT = 50
 
 RegistrationSortKey = Literal["name", "event", "guest_count", "status", "payment_status", "checked_in"]
 _SORT_COLUMNS: dict[RegistrationSortKey, Any] = {
@@ -284,7 +275,7 @@ async def list_registrations(
     else:
         stmt = stmt.order_by(Registration.created_at.desc(), Registration.id.desc())
 
-    limit = pagination.limit or ADMIN_LIST_DEFAULT_LIMIT
+    limit = pagination.limit or DEFAULT_LIST_LIMIT
     page = pagination.page
     stmt = stmt.offset((page - 1) * limit).limit(limit)
 

@@ -266,7 +266,7 @@ See `.env.example` for a template.
 | `GET`    | `/api/content/{key}`            | public         | Get CMS content (producers / sponsors)                                     |
 | `PUT`    | `/api/content/{key}`            | admin          | Save CMS content                                                           |
 | `POST`   | `/api/volunteers`               | admin          | Create volunteer profile (person with role `volunteer`)                    |
-| `GET`    | `/api/volunteers`               | admin          | Paginated volunteer list (`?q=`, `?active=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
+| `GET`    | `/api/volunteers`               | admin          | Paged volunteer list on the [shared list contract](#paged-list-contract) (`?q=`, `?active=`, `?sort=name\|created\|updated`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/volunteers/export`        | admin          | Export active volunteer insurance records as CSV                           |
 | `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
@@ -276,7 +276,7 @@ See `.env.example` for a template.
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
 | `DELETE` | `/api/members/{id}`             | admin          | Delete member                                                              |
 | `POST`   | `/api/people`                   | admin          | Create person with role tags                                               |
-| `GET`    | `/api/people`                   | admin          | Paginated people list (`?q=`, `?role=`, `?active=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
+| `GET`    | `/api/people`                   | admin          | Paged people list on the [shared list contract](#paged-list-contract) (`?q=`, `?role=`, `?active=`, `?sort=name\|email\|created\|updated`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/people/{id}`              | admin          | Get person detail                                                          |
 | `PUT`    | `/api/people/{id}`              | admin          | Update person + roles                                                      |
 | `DELETE` | `/api/people/{id}`              | admin          | Delete person                                                              |
@@ -288,6 +288,45 @@ See `.env.example` for a template.
 
 ---
 
+
+### Paged list contract
+
+`GET /api/people` and `GET /api/volunteers` share one list contract
+(`ListQuery` in `app/dependencies.py`, ordering and filtering in
+`app/services/people_listing.py`), so a table can drive them with plain query
+parameters and read `{items, total, limit, page}` back. `GET /api/registrations`
+follows the same shape.
+
+| Parameter  | Meaning |
+| ---------- | ------- |
+| `q`        | Search text; whitespace-only is treated as omitted. The same case-insensitive substring search on both endpoints: name, e-mail, phone, address, NISS, eID document number, club, notes and roles, plus fuzzy name/e-mail matching. |
+| `page`     | 1-based page number (default `1`). May be used without `limit`. |
+| `limit`    | Page size: default **50**, maximum **1000**. An omitted `limit` is never unbounded, and `0` or more than 1000 is a 422. |
+| `sort`     | One of a whitelist; any other value is a 422, never a silent default. People: `name`, `email`, `created`, `updated`. Volunteers: `name`, `created`, `updated`. |
+| `sort_dir` | `asc` (default) or `desc`; used only with `sort`. |
+
+- **Order without `sort`:** a search (`q`) is ordered by relevance, ending in
+  `name, id`; a plain list is newest first (`created_at desc, id desc`). An
+  explicit `sort` always overrides relevance.
+- **Deterministic paging:** every order ends in `id` (in the same direction as the
+  sort), so ties never make offset paging skip or repeat a row. `name` and `email`
+  sort on the unaccented, lower-cased `search_name`/`search_email` columns.
+- **Indexes:** each sortable column has a composite btree ending in `id`
+  (`ix_people_search_name_id`, `ix_people_search_email_id`,
+  `ix_people_created_at_id`, `ix_people_updated_at_id`).
+- **`total`** counts every row matching the filters (`role`, `active`, `q`), not
+  just the page.
+- **Volunteers keep their own path** rather than folding into `/api/people`: the
+  response embeds help periods, the frontend readers and the MCP tools depend on
+  that shape, and it is a role-restricted view of the same rows, so it takes the
+  same parameters, `q` semantics and ordering rules (`volunteer` role filter
+  implied). See `docs/decisions/tanstack-db.md` ("Paged list contract").
+- **Members and visitors** have no list endpoint of their own: they are people, read
+  with `GET /api/people?role=member` or `?role=festival-visitor`, so they get the
+  contract as is.
+- The MCP `list_members` and `list_volunteers` tools filter through the same code
+  (`app/services/people_listing.py`), so their `q` has the same semantics as above;
+  they stay unpaged.
 
 ## Frontend integration
 

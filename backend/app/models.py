@@ -850,6 +850,15 @@ class Person(Base):
             postgresql_using="gin",
             postgresql_ops={"search_email": "gin_trgm_ops"},
         ),
+        # One composite btree per sortable column of the paged people lists
+        # (app.services.people_listing), each ending in the id tiebreak so the
+        # index serves the full ORDER BY in either direction. Name and email
+        # sort on the normalised search_* columns. (search_email is also
+        # covered on its own by the plain index above.)
+        Index("ix_people_search_name_id", "search_name", "id"),
+        Index("ix_people_search_email_id", "search_email", "id"),
+        Index("ix_people_created_at_id", "created_at", "id"),
+        Index("ix_people_updated_at_id", "updated_at", "id"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

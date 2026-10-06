@@ -576,6 +576,37 @@ Installed versions: `@tanstack/db` 0.11.3, `@tanstack/react-db` ^0.5.3,
 - Rows returned from a live query are the source collection's row objects, not
   copies. Do not mutate them.
 
+## Paged list contract for people and volunteers ([#1176](https://github.com/tjorim/champagnefestival/issues/1176))
+
+**Decision (2026-10-05): `GET /api/people` and `GET /api/volunteers` take one
+shared contract (`ListQuery`: `q`, `page`, `limit`, `sort_dir`, plus a per-endpoint
+`sort` whitelist) and answer `{items, total, limit, page}`.** The parameter
+reference lives in `backend/README.md` ("Paged list contract"); the choices:
+
+- **Volunteers keep their own path.** Folding them into `/api/people` would force
+  every reader of the embedded help periods (and the MCP tools and the volunteer
+  mutations that return `VolunteerOut`) onto a heavier or different response, for
+  no gain: the endpoint is already a role-restricted view of the same rows. Instead
+  both endpoints go through `app/services/people_listing.py`, so they cannot drift
+  again.
+- **One `q`.** The people semantics (name, e-mail, phone, address, NISS, eID, club,
+  notes, roles, with fuzzy name/e-mail matching) is the superset the tables rely
+  on, so volunteers adopt it. The volunteer search used to cover only name,
+  address, NISS and eID, and the MCP member search only name, e-mail, phone,
+  address, club and notes; both now use the shared filter. Members and visitors
+  are people with a role, read with `GET /api/people?role=…`, and need no
+  endpoint of their own.
+- **One default, never unbounded.** `limit` defaults to 50 (the registrations
+  default) with a 1000 maximum, and `page` no longer requires `limit`. People and
+  volunteers used to default to 200, and `Pagination` (still used by the audit,
+  exhibitor and ledger endpoints) returns every row when `limit` is omitted.
+- **Total orders.** Every sort ends in `id` in the same direction, `name`/`email`
+  sort on the normalised `search_*` columns, and each sortable column has a
+  composite btree ending in `id` (migration `003`). Offset paging stays; keyset
+  paging is not needed at the expected scale.
+- **Unknown sort keys are a 422.** They are `Literal` enums, so the OpenAPI schema
+  lists the allowed values for the table to read.
+
 ## Roadmap
 
 Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR #1173) has merged. The server-driven tables work is the epic [#1174](https://github.com/tjorim/champagnefestival/issues/1174); its sub-issues are listed in dependency order.
@@ -583,16 +614,15 @@ Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR 
 | Order | Follow-up | Issue |
 | --- | --- | --- |
 | 1 | Migrate venues, rooms, layouts, areas and table types as a group (done in [#1183](https://github.com/tjorim/champagnefestival/issues/1183)), and exhibitors (done in [#1184](https://github.com/tjorim/champagnefestival/issues/1184)), on the shared collection factory (decided in [#1166](https://github.com/tjorim/champagnefestival/issues/1166), see [above](#shared-collection-factory-and-remaining-resources-1166)) | [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
-| 2 | Backend: shared paged list contract (sort, filters, deterministic order, indexes) for people and volunteers. May start with the spike | [#1176](https://github.com/tjorim/champagnefestival/issues/1176) |
-| 3 | Persisted collections for event-day resilience (privacy, staleness, offline). Taken after the spike (done: no collection is partial, see [above](#hand-over-to-1168-persistence)); its privacy question can proceed earlier | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
-| 4 | Backend: counts, registration count per person, duplicate-email lookup and exports for people and volunteers | [#1177](https://github.com/tjorim/champagnefestival/issues/1177) |
-| 4 | Server-driven data layer for the people list (Query pages, no people collection) | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
-| 4 | `AdminDataTable` on TanStack Table manual mode | [#1180](https://github.com/tjorim/champagnefestival/issues/1180) |
-| 5 | Optimistic edit and delete (mutation callbacks with cache patch and rollback) with pending state for people | [#1179](https://github.com/tjorim/champagnefestival/issues/1179) |
-| 6 | Move Members, Volunteers and People onto `AdminDataTable` and the server contract | [#1181](https://github.com/tjorim/champagnefestival/issues/1181) |
-| 6 | Scope the registrations collection to the active edition; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
+| 2 | Persisted collections for event-day resilience (privacy, staleness, offline). Taken after the spike (done: no collection is partial, see [above](#hand-over-to-1168-persistence)); its privacy question can proceed earlier | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
+| 3 | Backend: counts, registration count per person, duplicate-email lookup and exports for people and volunteers | [#1177](https://github.com/tjorim/champagnefestival/issues/1177) |
+| 3 | Server-driven data layer for the people list (Query pages, no people collection) | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
+| 3 | `AdminDataTable` on TanStack Table manual mode | [#1180](https://github.com/tjorim/champagnefestival/issues/1180) |
+| 4 | Optimistic edit and delete (mutation callbacks with cache patch and rollback) with pending state for people | [#1179](https://github.com/tjorim/champagnefestival/issues/1179) |
+| 5 | Move Members, Volunteers and People onto `AdminDataTable` and the server contract | [#1181](https://github.com/tjorim/champagnefestival/issues/1181) |
+| 5 | Scope the registrations collection to the active edition; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
 
-Done: [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (spike and decision: Query with `keepPreviousData`, edition-scoped registrations), [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) (exhibitors), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
+Done: [#1176](https://github.com/tjorim/champagnefestival/issues/1176) (shared paged list contract for people and volunteers, see [above](#paged-list-contract-for-people-and-volunteers-1176)), [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (spike and decision: Query with `keepPreviousData`, edition-scoped registrations), [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) (exhibitors), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
 
 ## References
 
