@@ -58,7 +58,7 @@ Every statement comes from the code or a recorded decision:
 | Statement | Source |
 | --- | --- |
 | Contact, registration, check-in code and check-in time | Version 1 text; `Registration.checkInToken`, `checkedInAt` |
-| Sign-in by emailed link; staff through the identity provider | [#953](../decisions/953-visitor-passwordless-session.md), `config/oidc.ts` |
+| Sign-in by emailed link; staff through our self-hosted Keycloak (described in the draft as "our own login server") | [#953](../decisions/953-visitor-passwordless-session.md), `config/oidc.ts` |
 | Volunteer NISS, eID, help days, meal choices | [#934](../decisions/934-data-retention-and-erasure.md), [#1006](../decisions/1006-volunteer-identity-self-service.md) |
 | Push and email updates only by choice | [#941](../decisions/941-web-push-foundation.md) (explicit consent before the browser prompt); unticked-by-default marketing checkbox (#934) |
 | Camera only on the device | Version 1 text; Android scanner (`android/README.md`) |

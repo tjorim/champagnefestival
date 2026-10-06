@@ -4,7 +4,7 @@ Dit beleid legt uit welke persoonsgegevens het Champagnefestival verzamelt via o
 
 - **Contactformulier:** uw naam, e-mailadres en bericht, zodat we u kunnen antwoorden.
 - **Registratie:** uw naam, e-mailadres, telefoonnummer, aantal gasten, uw bestelling en eventuele opmerkingen, zoals toegankelijkheids- of dieetwensen, zodat we het evenement kunnen organiseren. We geven uw boeking een check-incode en registreren of en wanneer u bent ingecheckt.
-- **Uw account:** bezoekers melden zich aan met een link die per e-mail wordt gestuurd, zonder wachtwoord. Vrijwilligers en beheerders melden zich aan via onze identiteitsprovider.
+- **Uw account:** bezoekers melden zich aan met een link die per e-mail wordt gestuurd, zonder wachtwoord. Vrijwilligers en beheerders melden zich aan via onze eigen aanmeldserver, zodat geen externe partij hun wachtwoorden beheert.
 - **Vrijwilligers:** naam, contactgegevens, rijksregisternummer en nummer van het eID-document (nodig voor de verzekering), de dagen waarop u helpt en uw maaltijdkeuzes.
 - **Updates:** pushmeldingen, en e-mails over volgende edities, alleen als u daarvoor kiest. Geen van beide staat standaard aan.
 

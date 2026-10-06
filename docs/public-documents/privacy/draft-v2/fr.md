@@ -4,7 +4,7 @@ Cette politique explique quelles données personnelles le Champagnefestival coll
 
 - **Formulaire de contact :** votre nom, votre adresse e-mail et votre message, afin que nous puissions vous répondre.
 - **Inscription :** votre nom, votre adresse e-mail, votre numéro de téléphone, le nombre d'invités, votre commande et d'éventuelles remarques, comme des besoins d'accessibilité ou alimentaires, afin d'organiser l'événement. Nous attribuons un code d'enregistrement à votre réservation et notons si et quand vous vous êtes enregistré.
-- **Votre compte :** les visiteurs se connectent avec un lien envoyé par e-mail, sans mot de passe. Les bénévoles et les administrateurs se connectent via notre fournisseur d'identité.
+- **Votre compte :** les visiteurs se connectent avec un lien envoyé par e-mail, sans mot de passe. Les bénévoles et les administrateurs se connectent via notre propre serveur de connexion, de sorte qu'aucune société externe ne gère leurs mots de passe.
 - **Bénévoles :** nom, coordonnées, numéro de registre national et numéro du document eID (nécessaires pour l'assurance), les jours où vous aidez et vos choix de repas.
 - **Informations :** notifications push, et e-mails sur les prochaines éditions, uniquement si vous les choisissez. Aucun des deux n'est activé par défaut.
 

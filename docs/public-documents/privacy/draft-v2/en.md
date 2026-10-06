@@ -4,7 +4,7 @@ This policy explains what personal data the Champagnefestival collects through o
 
 - **Contact form:** your name, email address and message, so we can reply.
 - **Registration:** your name, email address, phone number, number of guests, your order and any notes, such as accessibility or dietary needs, so we can organise the event. We give your booking a check-in code and record whether and when you checked in.
-- **Your account:** visitors sign in with a link sent by email, without a password. Volunteers and administrators sign in through our identity provider.
+- **Your account:** visitors sign in with a link sent by email, without a password. Volunteers and administrators sign in through our own login server, so no outside company handles their passwords.
 - **Volunteers:** name, contact details, national register number and eID document number (needed for insurance), the days you help and your meal choices.
 - **Updates:** push notifications, and emails about future editions, only if you choose them. Neither is on by default.
 
