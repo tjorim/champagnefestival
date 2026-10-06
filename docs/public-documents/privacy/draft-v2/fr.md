@@ -10,7 +10,7 @@ Cette politique explique quelles données personnelles le Champagnefestival coll
 
 ## Application Android
 
-L'application utilise la caméra uniquement pour scanner les codes QR à l'entrée. L'image est traitée sur votre appareil et n'est jamais enregistrée ni envoyée.
+L'application est réservée aux bénévoles et aux administrateurs. Elle utilise la caméra uniquement pour scanner les codes QR à l'entrée. L'image est traitée sur l'appareil et n'est jamais enregistrée ni envoyée.
 
 ## Combien de temps nous conservons les données
 

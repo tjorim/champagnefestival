@@ -10,7 +10,7 @@ Dit beleid legt uit welke persoonsgegevens het Champagnefestival verzamelt via o
 
 ## Android-app
 
-De app gebruikt de camera alleen om aan de ingang QR-codes te scannen. Het beeld wordt op uw toestel verwerkt en nooit opgeslagen of verzonden.
+De app is alleen bedoeld voor vrijwilligers en beheerders. Ze gebruikt de camera alleen om aan de ingang QR-codes te scannen. Het beeld wordt op het toestel verwerkt en nooit opgeslagen of verzonden.
 
 ## Hoe lang we gegevens bewaren
 

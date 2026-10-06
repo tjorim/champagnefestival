@@ -10,7 +10,7 @@ This policy explains what personal data the Champagnefestival collects through o
 
 ## Android app
 
-The app uses the camera only to scan QR codes at the door. The image is processed on your device and is never stored or sent.
+The app is for volunteers and administrators only. It uses the camera only to scan QR codes at the door. The image is processed on the device and is never stored or sent.
 
 ## How long we keep it
 
