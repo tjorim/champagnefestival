@@ -13,6 +13,7 @@ into another planning file.
 | Floor-plan geometry | [Coordinate contract](floor-plan-coordinates.md) |
 | API process count and shared state | [Single-worker decision](decisions/932-multi-worker-state.md) |
 | Retention, anonymisation and consent | [Retention decision](decisions/934-data-retention-and-erasure.md) |
+| Public legal text (privacy policy snapshots) | [Public documents](public-documents/README.md) |
 | Service-worker ownership and browser push | [Web Push foundation](decisions/941-web-push-foundation.md) |
 | Announcement/push composition and dispatch | [Composer decision](decisions/942-central-composer.md) |
 | Unfinished visitor-account and rendering work | [Visitor sessions](decisions/953-visitor-passwordless-session.md), [public rendering](decisions/992-live-public-render.md) |

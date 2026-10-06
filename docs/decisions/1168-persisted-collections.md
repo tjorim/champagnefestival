@@ -35,7 +35,7 @@ queue and offline check-in are not goals here (web check-in stays live-only,
   persisted: people pages, registration list pages, payment ledgers, `checkInToken`,
   NISS and eID.
 - **Gated on privacy.** The first release that persists registrations must meet every
-  [privacy condition](#privacy). The owner chose the device retention: it must
+  [privacy condition](#privacy), which add no new public text (condition 4). The owner chose the device retention: it must
   cover the full festival weekend, set as 72 hours since the last successful write
   (see condition 3).
 - **No spike first** (owner decision). The open questions in
@@ -160,9 +160,11 @@ Why the existing policy does not cover it:
 - The sign-in token already lives in `localStorage` (see `config/oidc.ts`), but a
   token expires, is revoked on sign-out (`revokeTokensOnSignout`) and is useless
   without the server. A persisted guest list outlives all three.
-- The published privacy policy is owner-managed through the #944 editor and does
-  not describe data stored in an admin's browser. This record does not author that
-  text.
+- The published privacy policy is owner-managed through the #944 editor (a
+  [snapshot](../public-documents/README.md) is kept in the repository). It says
+  cookies and local storage keep you signed in and remember your language; it does not
+  mention a guest-data cache in an admin's browser. Whether that needs wording is
+  condition 4 below; this record does not author policy text.
 
 **Conditions before any persisted collection of guest data exists:**
 
@@ -182,9 +184,16 @@ Why the existing policy does not cover it:
    concrete number that is 72 hours, so a device that last synced on the Friday is
    still usable through Sunday. Every successful sync restarts the clock. The
    number is one constant, easy to change.
-4. **Published privacy-policy update** describing on-device copies, published by the
-   owner through the #944 editor before the first release that persists. The
-   retention number is settled (condition 3).
+4. **No new public wording; a check and an internal rule instead.** The public
+   documents stay short and plain. An on-device copy is the same data, purpose and
+   controller as the server copy, so it is a security measure (conditions 1 to 3),
+   not a new disclosure; the existing policy already covers cookies and local storage
+   in general ([snapshot](../public-documents/README.md)). Before the first release
+   that persists registrations the owner reads the current policy once for a claim the
+   warm start would contradict (for example "stored only on our servers") and amends
+   only if there is one. Volunteers' devices get an internal rule: screen lock, the
+   organisation's sign-in, sign out on shared devices. The retention number is
+   settled (condition 3). This is a reading of the duty, not legal advice.
 5. **Visible state.** The UI shows when it is rendering restored rows and when they
    were last synced (from the query's `dataUpdatedAt` and `isFetching`), so nobody
    mistakes a restored list for current data.
@@ -264,8 +273,8 @@ The implementation issue carries these gates:
 1. First, before any wiring to the dashboard: answer the [unverified](#unverified-and-needed-before-adoption)
    questions with a test or a throwaway branch. A failed answer returns to this record.
 2. The wipe, `maxAge`, `buster`, edition-change and restore-ordering tests pass.
-3. The owner has published the privacy-policy update (condition 4) before the first
-   release that persists registrations.
+3. The owner has done the policy check and set the device rule (condition 4) before the
+   first release that persists registrations.
 
 Reopen Option A (SQLite) if one of these becomes true: the Query-cache blob proves
 too large or slow for the registrations list; the owner reverses #937 and wants a
