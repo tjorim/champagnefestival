@@ -61,7 +61,7 @@ Every statement comes from the code or a recorded decision:
 | Sign-in by emailed link; staff through our self-hosted Keycloak (described in the draft as "our own login server") | [#953](../decisions/953-visitor-passwordless-session.md), `config/oidc.ts` |
 | Volunteer NISS, eID, help days, meal choices | [#934](../decisions/934-data-retention-and-erasure.md), [#1006](../decisions/1006-volunteer-identity-self-service.md) |
 | Push and email updates only by choice | [#941](../decisions/941-web-push-foundation.md) (explicit consent before the browser prompt); unticked-by-default marketing checkbox (#934) |
-| Camera only on the device; app for volunteers and administrators only | Version 1 text; Android scanner (`android/README.md`); owner. The section stays short because the Play listing's data-safety links point at `/privacy` (`docs/play-store/data_safety.csv`) |
+| Camera only on the device; app for volunteers and administrators only | Version 1 text; Android scanner (`android/README.md`); owner. The section stays short because the app is published on Google Play (limited testing, 2026-10-06) and its data-safety links point at `/privacy` (`docs/play-store/data_safety.csv`) |
 | Visitor and member anonymisation after about 7 years, registrations kept | #934 retention schedule |
 | Volunteer identification kept for insurance | #934 (indefinite, deliberately) |
 | Check-in IP addresses removed after 30 days | #934 (`tjorim/apps#192`) |
