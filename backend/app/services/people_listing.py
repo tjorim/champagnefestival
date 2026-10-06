@@ -4,29 +4,34 @@
 all filter and order ``Person`` rows through this module, so ``q`` means the
 same thing everywhere and every sort is total: each ends in ``Person.id``, in
 the same direction as the sort, so offset paging never skips or repeats a row
-even when many rows share a sort value, and one btree index per sortable
-column (see ``Person.__table_args__``) can serve either direction.
+even when many rows share a sort value. Stored sort columns have composite
+btree indexes; registration counts use the indexed registration person_id.
 """
 
 from __future__ import annotations
 
 from typing import Any, Literal
 
-from sqlalchemy import Text, cast, or_, select
+from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.sql import Select
 
 from app.dependencies import SortDirection
-from app.models import Person
+from app.models import Person, Registration
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.utils import roles_contains
 
-PersonSortKey = Literal["name", "email", "created", "updated"]
+PersonSortKey = Literal["name", "email", "created", "updated", "registration_count"]
 VolunteerSortKey = Literal["name", "created", "updated"]
 
 # Name and email sort on the trigger-maintained, unaccented, lower-cased
 # `search_*` columns so "élodie" sorts with the e's and "bob" before "Chris",
 # which a plain collation-dependent sort on `name`/`email` would not guarantee.
+registration_count = (
+    select(func.count(Registration.id)).where(Registration.person_id == Person.id).correlate(Person).scalar_subquery()
+)
+
 _SORT_COLUMNS: dict[str, Any] = {
+    "registration_count": registration_count,
     "name": Person.search_name,
     "email": Person.search_email,
     "created": Person.created_at,

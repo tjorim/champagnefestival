@@ -11,12 +11,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from starlette.responses import StreamingResponse
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import ListQuery, get_request_id
 from app.models import Event, Person, Registration
 from app.schemas import (
+    PeopleCountsOut,
     PersonAdminSummaryOut,
     PersonCreate,
     PersonListEnvelope,
@@ -25,7 +27,8 @@ from app.schemas import (
     PersonUpdate,
 )
 from app.services import payments_service, people_service
-from app.services.people_listing import PersonSortKey, filtered_people_stmt, order_people_stmt
+from app.services.people_exports import stream_people_csv
+from app.services.people_listing import PersonSortKey, filtered_people_stmt, order_people_stmt, registration_count
 from app.utils import person_to_dict, registration_to_list_dict
 
 # The identity-field anonymisation window (docs/decisions/934-data-retention-and-erasure.md):
@@ -72,9 +75,72 @@ async def list_people(
     filtered_stmt = filtered_people_stmt(q=list_query.q, role=role, active=active)
     total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
 
-    stmt = order_people_stmt(filtered_stmt, q=list_query.q, sort=sort, sort_dir=list_query.sort_dir)
-    rows = (await db.execute(list_query.apply(stmt))).scalars().all()
-    return list_query.envelope([person_to_dict(p) for p in rows], total)
+    stmt = order_people_stmt(
+        filtered_stmt.add_columns(registration_count.label("registration_count")),
+        q=list_query.q,
+        sort=sort,
+        sort_dir=list_query.sort_dir,
+    )
+    rows = (await db.execute(list_query.apply(stmt))).all()
+    return list_query.envelope([{**person_to_dict(p), "registration_count": count} for p, count in rows], total)
+
+
+@router.get("/counts", response_model=PeopleCountsOut)
+async def people_counts(
+    db: AsyncSession = Depends(get_db),
+    q: str | None = Query(None),
+    role: str | None = Query(None),
+    active: bool | None = Query(None),
+) -> dict:
+    """Counts within the full intersection of q, role and active filters."""
+    matching = filtered_people_stmt(q=q, role=role, active=active).subquery()
+    total, active_count = (
+        await db.execute(select(func.count(), func.count().filter(matching.c.active.is_(True))).select_from(matching))
+    ).one()
+    expanded = select(
+        matching.c.id, func.lower(func.json_array_elements_text(matching.c.roles)).label("role")
+    ).subquery()
+    roles = (
+        await db.execute(select(expanded.c.role, func.count(func.distinct(expanded.c.id))).group_by(expanded.c.role))
+    ).all()
+    return {"total": total, "active": active_count, "inactive": total - active_count, "by_role": dict(roles)}
+
+
+@router.get("/by-email", response_model=PersonListEnvelope)
+async def people_by_email(
+    email: str = Query(min_length=1, max_length=200),
+    exclude_person_id: str | None = Query(None),
+    db: AsyncSession = Depends(get_db),
+    list_query: ListQuery = Depends(),
+) -> dict:
+    """Exact case-insensitive email lookup, including inactive people; never fuzzy."""
+    stmt = select(Person).where(Person.search_email == email.lower())
+    if exclude_person_id is not None:
+        stmt = stmt.where(Person.id != exclude_person_id)
+    total = (await db.execute(select(func.count()).select_from(stmt.subquery()))).scalar_one()
+    rows = (await db.execute(list_query.apply(stmt.add_columns(registration_count).order_by(Person.id)))).all()
+    return list_query.envelope([{**person_to_dict(p), "registration_count": count} for p, count in rows], total)
+
+
+@router.get("/export")
+async def export_people_csv(
+    db: AsyncSession = Depends(get_db),
+    role: str | None = Query(None),
+    active: bool | None = Query(None),
+    sort: PersonSortKey | None = Query(None),
+    list_query: ListQuery = Depends(),
+) -> StreamingResponse:
+    stmt = order_people_stmt(
+        filtered_people_stmt(q=list_query.q, role=role, active=active),
+        q=list_query.q,
+        sort=sort,
+        sort_dir=list_query.sort_dir,
+    )
+    return StreamingResponse(
+        stream_people_csv(db, stmt),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="people.csv"'},
+    )
 
 
 @router.get("/due-for-anonymisation", response_model=list[PersonAdminSummaryOut])

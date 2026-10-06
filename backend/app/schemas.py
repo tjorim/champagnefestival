@@ -190,6 +190,17 @@ class PersonPaymentSummary(BaseModel):
     refund_liability: Decimal
 
 
+class PersonListItemOut(PersonAdminSummaryOut):
+    registration_count: int
+
+
+class PeopleCountsOut(BaseModel):
+    total: int
+    active: int
+    inactive: int
+    by_role: dict[str, int]
+
+
 class PersonListEnvelope(BaseModel):
     """Paginated response for the admin people/members lists.
 
@@ -199,7 +210,7 @@ class PersonListEnvelope(BaseModel):
     ``RegistrationListEnvelope``, which this mirrors.
     """
 
-    items: list[PersonAdminSummaryOut]
+    items: list[PersonListItemOut]
     total: int
     limit: int
     page: int
