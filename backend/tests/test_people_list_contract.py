@@ -280,3 +280,31 @@ async def test_whitespace_only_q_is_treated_as_omitted(client, db_session):
 
     assert response.status_code == 200
     assert response.json()["total"] == len(people)
+
+
+@pytest.mark.anyio
+async def test_mcp_member_and_volunteer_lists_share_the_people_q_semantics(client, db_session):
+    """The MCP list tools filter through the same people contract as the REST
+    lists, so `q` reaches NISS, eID and roles there too, not a narrower subset."""
+    from tests.helpers import mcp_session_factory
+
+    db_session.add_all(
+        [
+            Person(id="per_m1", name="Mia", roles=["member"], national_register_number="91010112345"),
+            Person(id="per_m2", name="Max", roles=["member"], eid_document_number="BEX999"),
+            Person(id="per_v1", name="Vic", roles=["volunteer"], national_register_number="91010112399"),
+        ]
+    )
+    await db_session.commit()
+    factory = mcp_session_factory(db_session)
+
+    from app.mcp.admin import members as mcp_members
+    from app.mcp.admin import volunteers as mcp_volunteers
+
+    for q, members, volunteers in [("910101123", {"per_m1"}, {"per_v1"}), ("bex999", {"per_m2"}, set())]:
+        rest = await client.get("/api/people", params={"q": q, "role": "member"}, headers=ADMIN_HEADERS)
+        listed_members = await mcp_members.list_members(factory, q=q)
+        listed_volunteers = await mcp_volunteers.list_volunteers(factory, q=q)
+        assert {i["id"] for i in rest.json()["items"]} == members, q
+        assert {m["id"] for m in listed_members["members"]} == members, q
+        assert {v["id"] for v in listed_volunteers["volunteers"]} == volunteers, q

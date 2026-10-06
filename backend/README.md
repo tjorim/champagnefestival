@@ -321,8 +321,12 @@ follows the same shape.
   that shape, and it is a role-restricted view of the same rows, so it takes the
   same parameters, `q` semantics and ordering rules (`volunteer` role filter
   implied). See `docs/decisions/tanstack-db.md` ("Paged list contract").
-- The MCP `list_volunteers` tool shares the volunteer filter, so its `q` now has
-  the same semantics as above; it stays unpaged.
+- **Members and visitors** have no list endpoint of their own: they are people, read
+  with `GET /api/people?role=member` or `?role=festival-visitor`, so they get the
+  contract as is.
+- The MCP `list_members` and `list_volunteers` tools filter through the same code
+  (`app/services/people_listing.py`), so their `q` has the same semantics as above;
+  they stay unpaged.
 
 ## Frontend integration
 

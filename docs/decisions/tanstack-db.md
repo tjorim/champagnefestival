@@ -592,7 +592,10 @@ reference lives in `backend/README.md` ("Paged list contract"); the choices:
 - **One `q`.** The people semantics (name, e-mail, phone, address, NISS, eID, club,
   notes, roles, with fuzzy name/e-mail matching) is the superset the tables rely
   on, so volunteers adopt it. The volunteer search used to cover only name,
-  address, NISS and eID.
+  address, NISS and eID, and the MCP member search only name, e-mail, phone,
+  address, club and notes; both now use the shared filter. Members and visitors
+  are people with a role, read with `GET /api/people?role=…`, and need no
+  endpoint of their own.
 - **One default, never unbounded.** `limit` defaults to 50 (the registrations
   default) with a 1000 maximum, and `page` no longer requires `limit`. People and
   volunteers used to default to 200, and `Pagination` (still used by the audit,
