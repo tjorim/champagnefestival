@@ -267,7 +267,7 @@ See `.env.example` for a template.
 | `PUT`    | `/api/content/{key}`            | admin          | Save CMS content                                                           |
 | `POST`   | `/api/volunteers`               | admin          | Create volunteer profile (person with role `volunteer`)                    |
 | `GET`    | `/api/volunteers`               | admin          | Paged volunteer list on the [shared list contract](#paged-list-contract) (`?q=`, `?active=`, `?sort=name\|created\|updated`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
-| `GET`    | `/api/volunteers/export`        | admin          | Export active volunteer insurance records as CSV                           |
+| `GET`    | `/api/volunteers/export`        | admin          | Stream filtered volunteer insurance CSV (`q`, `active`, `sort`, `sort_dir`; active-only by default, `include_inactive=true` for all)                           |
 | `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
 | `DELETE` | `/api/volunteers/{id}`          | admin          | Delete volunteer profile                                                   |
@@ -276,7 +276,10 @@ See `.env.example` for a template.
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
 | `DELETE` | `/api/members/{id}`             | admin          | Delete member                                                              |
 | `POST`   | `/api/people`                   | admin          | Create person with role tags                                               |
-| `GET`    | `/api/people`                   | admin          | Paged people list on the [shared list contract](#paged-list-contract) (`?q=`, `?role=`, `?active=`, `?sort=name\|email\|created\|updated`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
+| `GET`    | `/api/people`                   | admin          | Paged people list on the [shared list contract](#paged-list-contract) (`?q=`, `?role=`, `?active=`, `?sort=name\|email\|created\|updated\|registration_count`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
+| `GET` | `/api/people/counts` | admin | Full-set `{total, active, inactive, by_role}` for the intersection of `q`, `role`, `active`; omit a facet filter to obtain counts for its tabs. Roles are case-insensitive and overlapping (a person counts once in each role). |
+| `GET` | `/api/people/by-email` | admin | Exact case-insensitive `email` lookup, including inactive people; optional `exclude_person_id`, standard bounded `page`/`limit` envelope. No fuzzy matching. |
+| `GET` | `/api/people/export` | admin | Stream all people matching `q`, `role`, `active`, with list ordering (`sort`, `sort_dir`); ignores pagination. General contact fields and registration count, no NISS/eID. |
 | `GET`    | `/api/people/{id}`              | admin          | Get person detail                                                          |
 | `PUT`    | `/api/people/{id}`              | admin          | Update person + roles                                                      |
 | `DELETE` | `/api/people/{id}`              | admin          | Delete person                                                              |
@@ -302,7 +305,7 @@ follows the same shape.
 | `q`        | Search text; whitespace-only is treated as omitted. The same case-insensitive substring search on both endpoints: name, e-mail, phone, address, NISS, eID document number, club, notes and roles, plus fuzzy name/e-mail matching. |
 | `page`     | 1-based page number (default `1`). May be used without `limit`. |
 | `limit`    | Page size: default **50**, maximum **1000**. An omitted `limit` is never unbounded, and `0` or more than 1000 is a 422. |
-| `sort`     | One of a whitelist; any other value is a 422, never a silent default. People: `name`, `email`, `created`, `updated`. Volunteers: `name`, `created`, `updated`. |
+| `sort`     | One of a whitelist; any other value is a 422, never a silent default. People: `name`, `email`, `created`, `updated`, `registration_count`. Volunteers: `name`, `created`, `updated`. |
 | `sort_dir` | `asc` (default) or `desc`; used only with `sort`. |
 
 - **Order without `sort`:** a search (`q`) is ordered by relevance, ending in
@@ -316,6 +319,22 @@ follows the same shape.
   `ix_people_created_at_id`, `ix_people_updated_at_id`).
 - **`total`** counts every row matching the filters (`role`, `active`, `q`), not
   just the page.
+See [people aggregates and export semantics](../docs/people-aggregates.md) for
+the consumer contract and synthetic sorting-scale evidence.
+
+- **Registration counts:** every people list row has `registration_count`, counting
+  all registrations (including cancelled ones) across all editions. Sorting uses
+  that count and `id` in the requested direction. The correlated aggregate uses
+  the existing `ix_registrations_person_id` btree; no cached counter or write
+  maintenance is required. Unlike stored sort columns, the derived count itself
+  has no index and sorting evaluates it across the matching set.
+- **Full-set exports:** people and volunteer CSVs use the exact shared search and
+  filters and list ordering, ignoring `page`/`limit`. A database cursor fetches
+  batches of 250, with volunteer periods loaded only for the current batch; every
+  cell is formula-safe. Volunteer exports preserve one row per help period and
+  the historical active-only default: use `include_inactive=true` for an
+  unfiltered list, or explicit `active=false` for inactive-only. Explicit `active`
+  wins over `include_inactive`. All endpoints require admin authorization.
 - **Volunteers keep their own path** rather than folding into `/api/people`: the
   response embeds help periods, the frontend readers and the MCP tools depend on
   that shape, and it is a role-restricted view of the same rows, so it takes the

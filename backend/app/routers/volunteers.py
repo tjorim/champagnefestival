@@ -7,9 +7,6 @@ multiple non-contiguous festival dates. Business logic lives in
 ``app.mcp.admin.volunteers``.
 """
 
-import csv
-import io
-
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,11 +15,10 @@ from starlette.responses import StreamingResponse
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import ListQuery, get_request_id
-from app.models import Person
 from app.schemas import VolunteerCreate, VolunteerListEnvelope, VolunteerOut, VolunteerUpdate
 from app.services import volunteers_service
+from app.services.people_exports import stream_people_csv
 from app.services.people_listing import VolunteerSortKey, filtered_people_stmt, order_people_stmt
-from app.utils import csv_safe, roles_contains
 
 router = APIRouter(
     prefix="/api/volunteers",
@@ -69,44 +65,27 @@ async def list_volunteers(
 
 
 @router.get("/export")
-async def export_volunteers_csv(db: AsyncSession = Depends(get_db)) -> StreamingResponse:
-    """Export active volunteers with their help periods as CSV, for insurance reporting.
+async def export_volunteers_csv(
+    db: AsyncSession = Depends(get_db),
+    active: bool | None = Query(None),
+    sort: VolunteerSortKey | None = Query(None),
+    list_query: ListQuery = Depends(),
+    include_inactive: bool = Query(False),
+) -> StreamingResponse:
+    """Stream one insurance CSV row per help period, with the shared list filters.
 
-    One row per help period (a volunteer with multiple non-contiguous periods
-    gets one row per period) since insurers typically need each covered date
-    range listed separately.
+    The legacy default is active-only; include_inactive=true removes that
+    default, while an explicit active filter still wins for inactive-only exports.
     """
-    stmt = select(Person).where(roles_contains("volunteer"), Person.active.is_(True)).order_by(Person.name)
-    volunteers = (await db.execute(stmt)).scalars().all()
-    periods_map = await volunteers_service.load_periods_map(db, [v.id for v in volunteers])
-
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(map(csv_safe, ["Name", "National Register Number", "Address", "Period Start", "Period End"]))
-    for volunteer in volunteers:
-        periods = periods_map.get(volunteer.id, [])
-        if not periods:
-            writer.writerow(
-                map(csv_safe, [volunteer.name, volunteer.national_register_number, volunteer.address, None, None])
-            )
-            continue
-        for period in periods:
-            writer.writerow(
-                map(
-                    csv_safe,
-                    [
-                        volunteer.name,
-                        volunteer.national_register_number,
-                        volunteer.address,
-                        period.first_help_day.isoformat(),
-                        period.last_help_day.isoformat() if period.last_help_day else None,
-                    ],
-                )
-            )
-    buffer.seek(0)
-
+    effective_active = active if active is not None else (None if include_inactive else True)
+    stmt = order_people_stmt(
+        filtered_people_stmt(q=list_query.q, role="volunteer", active=effective_active),
+        q=list_query.q,
+        sort=sort,
+        sort_dir=list_query.sort_dir,
+    )
     return StreamingResponse(
-        iter([buffer.getvalue()]),
+        stream_people_csv(db, stmt, volunteer=True),
         media_type="text/csv",
         headers={"Content-Disposition": 'attachment; filename="volunteers-insurance-list.csv"'},
     )
