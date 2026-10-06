@@ -1,7 +1,8 @@
-import { act, render, waitFor } from "@testing-library/react";
+import { act, render, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { usePeopleListQuery } from "@/hooks/usePeopleListQuery";
 import { useAuth } from "@/contexts/AuthContext";
 import { LiveUpdatesProvider } from "@/state/LiveUpdatesProvider";
 import type { ConnectLiveStreamOptions, LiveEnvelope } from "@/utils/liveStream";
@@ -244,6 +245,28 @@ describe("LiveUpdatesProvider", () => {
     );
 
     await waitFor(() => expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "tables"] }));
+  });
+
+  it("refetches a mounted people page on live invalidation and reconnect", async () => {
+    const fetch = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => Response.json({ items: [], total: 20, page: 1, limit: 5 }));
+    const { Wrapper } = createTestQueryClientHarness();
+    const { result, unmount } = renderHook(
+      () => {
+        LiveUpdatesProvider();
+        return usePeopleListQuery({ page: 1, limit: 5 }, () => ({}));
+      },
+      { wrapper: Wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    act(() => capturedOptions!.onInvalidate(makeEnvelope({ keys: [["admin", "people"]] })));
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(result.current.isFetching).toBe(false));
+    act(() => capturedOptions!.onReconnect?.());
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(3));
+    unmount();
+    fetch.mockRestore();
   });
 
   it("calls invalidateQueries for all live keys on reconnect", async () => {
