@@ -643,3 +643,9 @@ Done: [#1176](https://github.com/tjorim/champagnefestival/issues/1176) (shared p
 - `frontend/src/state/LiveUpdatesProvider.tsx`
 - `frontend/src/hooks/useAdminRegistrationActions.ts`: current registration write
   patches
+
+### People Query layer implementation (#1178, 2026-10-06)
+
+The reusable page and counts hooks are implemented; see
+[contract and migration handoff](../people-query-layer.md). The eager collection
+and full-list consumers remain until #1181 as specified above.

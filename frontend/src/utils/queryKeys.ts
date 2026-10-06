@@ -1,3 +1,5 @@
+import type { PeopleCountParams, PeopleListParams } from "@/utils/adminPeopleQueries";
+
 export const queryKeys = {
   activeEdition: ["active-edition"] as const,
   faq: (locale: string) => ["faq", locale] as const,
@@ -54,6 +56,9 @@ export const queryKeys = {
     exhibitors: ["admin", "exhibitors"] as const,
     areas: ["admin", "areas"] as const,
     people: ["admin", "people"] as const,
+    peopleCounts: (params: PeopleCountParams) => ["admin", "people", "counts", params] as const,
+    peopleLists: ["admin", "people", "list"] as const,
+    peopleList: (params: PeopleListParams) => ["admin", "people", "list", params] as const,
     activeEditionEvents: ["admin", "active-edition", "events"] as const,
     personOptions: (query: string) => ["admin", "person-options", query] as const,
     personOptionsRoot: ["admin", "person-options"] as const,

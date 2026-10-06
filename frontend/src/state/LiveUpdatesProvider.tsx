@@ -16,7 +16,11 @@ import { connectLiveStream } from "@/utils/liveStream";
 const LIVE_STREAM_URL = "/api/live/stream";
 
 // All keys invalidated on reconnect to recover any events missed during a gap.
-const ALL_LIVE_KEYS = [queryKeys.admin.registrations, queryKeys.admin.tables] as const;
+const ALL_LIVE_KEYS = [
+  queryKeys.admin.registrations,
+  queryKeys.admin.tables,
+  queryKeys.admin.people,
+] as const;
 
 /**
  * Side-effect component — renders nothing.
