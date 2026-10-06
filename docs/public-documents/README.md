@@ -82,12 +82,13 @@ Answered by the owner on 2026-10-06:
 - **Error monitoring:** none is used (the backend supports Sentry but ships with it off),
   so the draft no longer mentions it. Adding it would bring in an outside processor that
   can receive personal data in error reports, and a line in the policy.
-- **Who we are:** the owner believes the organiser is "Champagnefestival vzw". The Crossroads
-  Bank for Enterprises lists a non-profit (vzw), enterprise number BE 0718.862.149, under
-  the name **Champagnefeesten** (registered office in Oostende, active since 2019-01-21,
-  VAT-registered per companyweb.be). The draft uses that name and number. **Verify it is
-  your entity** (name spelling, statutes) before publishing. The registered office address
-  is public in the KBO but looks like a flat, so the draft leaves it out.
+- **Who we are:** the owner gave the details: vzw Champagnefestival, enterprise number
+  BE 0552.825.863, registered office in Oostende. The Crossroads Bank for Enterprises agrees
+  (name Champagnefestival, non-profit, active since 2014-05-20). The draft names the vzw and
+  the number only: the registered office is a flat address and the contact person's
+  personal email and phone are not wanted in a public policy; the contact page covers it.
+  (An earlier search surfaced a different non-profit, "Champagnefeesten", which is not this
+  entity.)
 
 Still open: whether to name the Belgian Data Protection Authority with a link (optional),
 and the owner's final read of the text. The marketing-email promise (opt-in only) needs

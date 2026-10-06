@@ -2,7 +2,7 @@ This policy explains what personal data the Champagnefestival collects through o
 
 ## Who we are
 
-The Champagnefestival is organised by Champagnefeesten vzw (enterprise number BE 0718.862.149). You can reach us through the contact page of our website.
+The festival is organised by Champagnefestival vzw (enterprise number BE 0552.825.863). You can reach us through the contact page of our website.
 
 ## What we collect and why
 

@@ -2,7 +2,7 @@ Cette politique explique quelles données personnelles le Champagnefestival coll
 
 ## Qui nous sommes
 
-Le Champagnefestival est organisé par Champagnefeesten ASBL (numéro d'entreprise BE 0718.862.149). Vous pouvez nous joindre via la page de contact de notre site.
+Le festival est organisé par l'ASBL Champagnefestival (numéro d'entreprise BE 0552.825.863). Vous pouvez nous joindre via la page de contact de notre site.
 
 ## Ce que nous collectons et pourquoi
 
