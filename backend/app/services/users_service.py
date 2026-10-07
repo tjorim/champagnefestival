@@ -210,15 +210,16 @@ async def _attach_subject_to_email_user(db: AsyncSession, oidc_subject: str, ver
 async def _link_email(db: AsyncSession, user: User, verified_email: str) -> None:
     """Make *user* reachable by *verified_email*, merging a duplicate if needed."""
     details: dict[str, Any] = {"method": "linked_email"}
+    email_user = await db.scalar(select(User).where(User.verified_email == verified_email).with_for_update())
+    if email_user is not None and email_user.oidc_subject is not None:
+        # Nothing is pending yet: the caller keeps its current address unchanged.
+        logger.warning("Keycloak account %s shares a verified email with another account; not linked.", user.id)
+        await db.commit()
+        return
     if user.verified_email is not None:
         user.verified_email = None
         await db.flush()
         details["replaced_previous_email"] = True
-    email_user = await db.scalar(select(User).where(User.verified_email == verified_email).with_for_update())
-    if email_user is not None and email_user.oidc_subject is not None:
-        logger.warning("Keycloak account %s shares a verified email with another account; not linked.", user.id)
-        await db.commit()
-        return
     if email_user is not None:
         moved = (
             await db.execute(

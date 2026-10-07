@@ -169,6 +169,21 @@ async def test_another_keycloak_account_holding_the_address_is_not_taken_over(cl
     assert second.verified_email is None
 
 
+async def test_conflicting_new_address_keeps_the_existing_link(client, db_session, monkeypatch):
+    db_session.add(User(id="usr-holder", oidc_subject="kc-holder", verified_email="taken@example.com"))
+    await db_session.commit()
+    token_for(monkeypatch, sub="kc-1", email="old@example.com")
+    await client.get("/api/me/registrations", headers=BEARER)
+
+    token_for(monkeypatch, sub="kc-1", email="taken@example.com")
+    await client.get("/api/me/registrations", headers=BEARER)
+
+    user = await db_session.scalar(select(User).where(User.oidc_subject == "kc-1"))
+    await db_session.refresh(user)
+    assert user.verified_email == "old@example.com"
+    assert (await db_session.get(User, "usr-holder")).verified_email == "taken@example.com"
+
+
 async def test_changed_keycloak_email_drops_the_old_address(client, db_session, emails, monkeypatch):
     token_for(monkeypatch, email="old@example.com")
     await client.get("/api/me/registrations", headers=BEARER)

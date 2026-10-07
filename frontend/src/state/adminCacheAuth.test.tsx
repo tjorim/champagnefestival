@@ -13,7 +13,12 @@ const { AuthProvider, useAuth } =
 
 function Consumer() {
   const auth = useAuth();
-  return <button onClick={auth.logout}>Sign out</button>;
+  return (
+    <>
+      <button onClick={auth.logout}>Sign out</button>
+      {auth.authError && <p role="alert">{auth.authError}</p>}
+    </>
+  );
 }
 function session(roles: string[], isAuthenticated = true) {
   const removeUser = vi.fn().mockResolvedValue(undefined);
@@ -148,7 +153,8 @@ describe("app-level persisted session ownership", () => {
       button.click();
     });
     const { signoutRedirect } = vi.mocked(useOidcAuth).mock.results[0]!.value;
-    await vi.waitFor(() => expect(client.getQueryData(["admin", "tables"])).toBeDefined());
+    await screen.findByRole("alert");
+    expect(client.getQueryData(["admin", "tables"])).toBeDefined();
     expect(signoutRedirect).not.toHaveBeenCalled();
     await adminCachePersistence(client).wipe();
     client.clear();
