@@ -22,7 +22,7 @@ export interface Edition {
   producers?: { id: number; name: string; image: string; website: string }[];
   sponsors?: { id: number; name: string; image: string; website: string }[];
   vendors?: { id: number; name: string; image: string; website: string }[];
-  /** The exhibitor co-organizing this edition with the vzw, if any. */
+  /** The organization co-organizing this edition with the vzw, if any. */
   coOrganizer?: { id: number; name: string; image: string; website: string } | null;
   active: boolean;
   createdAt: string;

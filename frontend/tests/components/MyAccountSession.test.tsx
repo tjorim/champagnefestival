@@ -17,7 +17,7 @@ import { server } from "@/mocks/server";
 import { validateMyRegistrationsSearch } from "@/router";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
-const exhibitors = [
+const organizations = [
   { id: 1, name: "Managed business", type: "producer", active: true, website: "" },
 ];
 const bookings = [
@@ -53,7 +53,7 @@ beforeEach(() => {
   });
   server.use(
     http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated: false })),
-    http.get("/api/me/exhibitors", () => HttpResponse.json([])),
+    http.get("/api/me/organizations", () => HttpResponse.json([])),
   );
 });
 
@@ -79,12 +79,12 @@ async function renderPage(initialEntry = "/me") {
   return router;
 }
 
-function signedIn(registrations = bookings, managed = exhibitors) {
+function signedIn(registrations = bookings, managed = organizations) {
   server.use(
     http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated: true })),
     http.get("/api/me/registrations", () => HttpResponse.json(registrations)),
-    http.get("/api/me/exhibitors", () => HttpResponse.json(managed)),
-    http.get("/api/me/exhibitors/1/changes", () => HttpResponse.json([])),
+    http.get("/api/me/organizations", () => HttpResponse.json(managed)),
+    http.get("/api/me/organizations/1/changes", () => HttpResponse.json([])),
   );
 }
 
@@ -113,7 +113,7 @@ describe("one emailed account login", () => {
     expect(requests).toBe(1);
   });
 
-  it("one token shows both owned bookings and managed exhibitors and one sign-out clears both", async () => {
+  it("one token shows both owned bookings and managed organizations and one sign-out clears both", async () => {
     let redemptions = 0;
     let authenticated = true;
     server.use(
@@ -121,8 +121,8 @@ describe("one emailed account login", () => {
         redemptions += 1;
         return HttpResponse.json(bookings);
       }),
-      http.get("/api/me/exhibitors", () => HttpResponse.json(exhibitors)),
-      http.get("/api/me/exhibitors/1/changes", () => HttpResponse.json([])),
+      http.get("/api/me/organizations", () => HttpResponse.json(organizations)),
+      http.get("/api/me/organizations/1/changes", () => HttpResponse.json([])),
       http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated })),
       http.get("/api/me/registrations", () => HttpResponse.json(bookings)),
       http.post("/api/visitor-sessions/sign-out", () => {
@@ -133,10 +133,10 @@ describe("one emailed account login", () => {
     const router = await renderPage("/me?token=shared-secret");
     expect(await screen.findByText("Festival booking")).toBeVisible();
     await waitFor(() => expect(router.state.location.search).toEqual({}));
-    const exhibitorTab = await screen.findByRole("tab", { name: m.manager_title() });
+    const organizationTab = await screen.findByRole("tab", { name: m.manager_title() });
     expect(redemptions).toBe(1);
     const user = userEvent.setup();
-    await user.click(exhibitorTab);
+    await user.click(organizationTab);
     expect(screen.getByText("Managed business")).toBeVisible();
     expect(screen.getAllByRole("button", { name: m.my_registrations_sign_out() })).toHaveLength(1);
     await user.click(screen.getByRole("button", { name: m.my_registrations_sign_out() }));
@@ -145,7 +145,7 @@ describe("one emailed account login", () => {
     expect(screen.queryByText("Festival booking")).not.toBeInTheDocument();
   });
 
-  it("shows the exhibitor view directly for a contact with no bookings", async () => {
+  it("shows the organization view directly for a contact with no bookings", async () => {
     signedIn([]);
     await renderPage();
     expect(await screen.findByText("Managed business")).toBeVisible();
@@ -154,7 +154,7 @@ describe("one emailed account login", () => {
     expect(screen.getByRole("button", { name: m.my_registrations_sign_out() })).toBeVisible();
   });
 
-  it("does not show an exhibitor tab for a booking-only visitor", async () => {
+  it("does not show an organization tab for a booking-only visitor", async () => {
     signedIn(bookings, []);
     await renderPage();
     expect(await screen.findByText("Festival booking")).toBeVisible();
@@ -179,7 +179,7 @@ describe("one emailed account login", () => {
     expect(screen.getByText("Managed business")).toBeVisible();
     expect(requests).toBe(1);
   });
-  it("discards an exhibitor response that arrives after shared sign-out", async () => {
+  it("discards an organization response that arrives after shared sign-out", async () => {
     signedIn();
     let authenticated = true;
     let delivered = false;
@@ -189,10 +189,10 @@ describe("one emailed account login", () => {
     });
     server.use(
       http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated })),
-      http.get("/api/me/exhibitors", async () => {
+      http.get("/api/me/organizations", async () => {
         await pending;
         delivered = true;
-        return HttpResponse.json(exhibitors);
+        return HttpResponse.json(organizations);
       }),
       http.post("/api/visitor-sessions/sign-out", () => {
         authenticated = false;

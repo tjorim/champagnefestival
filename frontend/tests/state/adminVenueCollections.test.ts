@@ -21,7 +21,7 @@ function area(id: string, layoutId: string): FloorArea {
     id,
     layoutId,
     icon: "bi-shop",
-    exhibitorId: null,
+    organizationId: null,
     label: id,
     x: 1,
     y: 1,

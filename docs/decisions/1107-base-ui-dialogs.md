@@ -40,7 +40,7 @@ explicitly preserves its existing dismiss-on-backdrop behaviour when idle.
 
 Person pickers retain the existing debounced server search, selected values,
 clear controls and loading feedback. Client filtering is disabled for these
-server-filtered results. Edition exhibitors retain grouped active/archived
+server-filtered results. Edition organizations retain grouped active/archived
 options, selected archived entries, local search, multiple selection and
 removable chips. Option equality uses stable IDs across refreshed query results.
 All picker inputs have translated accessible labels even while a portalled menu

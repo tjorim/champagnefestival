@@ -166,23 +166,23 @@ export async function fetchEditions(authHeaders: () => Record<string, string>): 
   return Array.isArray(data) ? data.map(apiToEdition) : [];
 }
 
-interface ApiExhibitor {
+interface ApiOrganization {
   id: number;
   name: string;
   active?: boolean;
   type?: string;
 }
 
-export async function fetchEditionModalExhibitors(
+export async function fetchEditionModalOrganizations(
   authHeaders: () => Record<string, string>,
 ): Promise<ItemDraft[]> {
   const response = await safeFetch(
-    "/api/exhibitors",
+    "/api/organizations",
     { headers: authHeaders() },
-    "load exhibitors",
+    "load organizations",
   );
 
-  const data = (await response.json()) as ApiExhibitor[];
+  const data = (await response.json()) as ApiOrganization[];
   return Array.isArray(data)
     ? data.map((item) => ({
         id: item.id,
@@ -202,12 +202,12 @@ export async function saveEdition(
     editionType: Edition["editionType"];
     venueId: string;
     active: boolean;
-    exhibitorIds: number[];
+    organizationIds: number[];
     /**
      * Omit to leave an existing co-organizer untouched; pass `null` to clear it.
      * The backend only acts on the field when it is present in the payload.
      */
-    coOrganizerExhibitorId?: number | null;
+    coOrganizerOrganizationId?: number | null;
   },
   authHeaders: () => Record<string, string>,
   initialId?: string,
@@ -225,14 +225,14 @@ export async function saveEdition(
         venue_id: payload.venueId,
         edition_type: payload.editionType,
         active: payload.active,
-        // Always send `exhibitors` explicitly (even `[]` for off-festival editions) so the
+        // Always send `organizations` explicitly (even `[]` for off-festival editions) so the
         // backend receives an intentional instruction rather than treating the omitted
         // field as "leave existing associations alone".
-        exhibitors: payload.editionType === "festival" ? payload.exhibitorIds : [],
+        organizations: payload.editionType === "festival" ? payload.organizationIds : [],
         // Independent of the lineup: any edition type may name a co-organizer.
-        ...(payload.coOrganizerExhibitorId === undefined
+        ...(payload.coOrganizerOrganizationId === undefined
           ? {}
-          : { co_organizer_exhibitor_id: payload.coOrganizerExhibitorId }),
+          : { co_organizer_organization_id: payload.coOrganizerOrganizationId }),
       }),
     },
     isEdit ? "update edition" : "create edition",

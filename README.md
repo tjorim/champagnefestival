@@ -69,20 +69,20 @@ and view their own bookings and organisations through one email session. Organis
 access follows the current contact email, using the email session or a
 Keycloak token with an explicitly verified email. Keycloak remains authoritative
 for staff roles. Both-method account unification is tracked in #1209.
-See [manager API documentation](backend/README.md#exhibitor-manager-self-service-1192)
-and the [design decision](docs/decisions/1192-exhibitor-manager-login.md).
+See [manager API documentation](backend/README.md#organization-manager-self-service-1192)
+and the [design decision](docs/decisions/1192-organization-manager-login.md).
 
 Organisation contacts can propose website and description changes from `/me`;
 admins review them in the Organisations tab before publication. Configure the optional
-`EXHIBITOR_REVIEW_RECIPIENT` shared mailbox and run the existing outbox worker for
-submission notifications. See [exhibitor review and API documentation](docs/exhibitor-change-review.md).
+`ORGANIZATION_REVIEW_RECIPIENT` shared mailbox and run the existing outbox worker for
+submission notifications. See [organization review and API documentation](docs/organization-change-review.md).
 
 Organisation managers can upload logos for administrator review; administrators
 can publish their own uploads immediately. PNG, JPEG and WebP uploads are
 validated and re-encoded, and pending files stay in private storage.
-See [logo upload setup, API and recovery](docs/exhibitor-logo-upload.md) for
+See [logo upload setup, API and recovery](docs/organization-logo-upload.md) for
 local directories, production volume requirements and cleanup operations.
 
 Organisation editors can request editable description drafts from the optional
 self-hosted translation service. Nothing is saved until a person saves or submits
-it. See [configuration and API contract](docs/exhibitor-description-translation.md).
+it. See [configuration and API contract](docs/organization-description-translation.md).

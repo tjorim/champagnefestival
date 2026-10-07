@@ -61,14 +61,14 @@ async def test_active_edition_returns_404_when_only_past_editions_exist(client):
 
 
 @pytest.mark.anyio
-async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
+async def test_active_edition_returns_embedded_venue_and_organizations(client):
     # Create venue
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
 
     # Create a producer and a sponsor
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={
             "name": "Bollinger",
             "type": "producer",
@@ -80,7 +80,7 @@ async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
     )
     producer_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Acme", "type": "sponsor"},
         headers=ADMIN_HEADERS,
     )
@@ -94,7 +94,7 @@ async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
             "year": 2026,
             "month": "march",
             "venue_id": venue_id,
-            "exhibitors": [producer_id, sponsor_id],
+            "organizations": [producer_id, sponsor_id],
             "active": True,
         },
         headers=ADMIN_HEADERS,
@@ -810,12 +810,12 @@ async def test_standalone_event_rejects_a_second_date(client):
 
 
 @pytest.mark.anyio
-async def test_edition_rejects_vendor_exhibitors(client):
-    """Vendor-type exhibitors must not be linked to editions."""
+async def test_edition_rejects_vendor_organizations(client):
+    """Vendor-type organizations must not be linked to editions."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Food Vendor", "type": "vendor"},
         headers=ADMIN_HEADERS,
     )
@@ -828,7 +828,7 @@ async def test_edition_rejects_vendor_exhibitors(client):
             "year": 2026,
             "month": "march",
             "venue_id": venue_id,
-            "exhibitors": [vendor_id],
+            "organizations": [vendor_id],
         },
         headers=ADMIN_HEADERS,
     )
@@ -838,21 +838,21 @@ async def test_edition_rejects_vendor_exhibitors(client):
 
 @pytest.mark.anyio
 @pytest.mark.parametrize("target_type", ["bourse", "capsule_exchange"])
-async def test_converting_festival_to_community_edition_clears_exhibitors(client, target_type):
+async def test_converting_festival_to_community_edition_clears_organizations(client, target_type):
     """Converting a festival with producers/sponsors to a community type must succeed
-    and atomically drop the now-invalid exhibitor associations, even if the caller
-    doesn't send an explicit `exhibitors` field alongside the type change.
+    and atomically drop the now-invalid organization associations, even if the caller
+    doesn't send an explicit `organizations` field alongside the type change.
     """
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Bollinger", "type": "producer"},
         headers=ADMIN_HEADERS,
     )
     producer_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Acme", "type": "sponsor"},
         headers=ADMIN_HEADERS,
     )
@@ -866,7 +866,7 @@ async def test_converting_festival_to_community_edition_clears_exhibitors(client
             "month": "march",
             "venue_id": venue_id,
             "edition_type": "festival",
-            "exhibitors": [producer_id, sponsor_id],
+            "organizations": [producer_id, sponsor_id],
         },
         headers=ADMIN_HEADERS,
     )
@@ -892,15 +892,15 @@ async def test_converting_festival_to_community_edition_clears_exhibitors(client
 
 
 @pytest.mark.anyio
-async def test_implicit_exhibitor_clearing_is_recorded_in_audit_details(client, db_session):
+async def test_implicit_organization_clearing_is_recorded_in_audit_details(client, db_session):
     """An implicit (not explicitly requested) destructive change — dropping the
-    exhibitor lineup because the edition type moved off festival — must be visible
+    organization lineup because the edition type moved off festival — must be visible
     in the audit trail, not just folded silently into `fields_changed`.
     """
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Bollinger", "type": "producer"},
         headers=ADMIN_HEADERS,
     )
@@ -913,7 +913,7 @@ async def test_implicit_exhibitor_clearing_is_recorded_in_audit_details(client, 
             "month": "march",
             "venue_id": venue_id,
             "edition_type": "festival",
-            "exhibitors": [producer_id],
+            "organizations": [producer_id],
         },
         headers=ADMIN_HEADERS,
     )
@@ -942,10 +942,10 @@ async def test_implicit_exhibitor_clearing_is_recorded_in_audit_details(client, 
         .all()
     )
     assert len(entries) == 1
-    assert entries[0].details.get("exhibitors_cleared") is True
+    assert entries[0].details.get("organizations_cleared") is True
 
     # A second update to an already-non-festival edition, changing an unrelated
-    # field, must NOT claim exhibitors were cleared again (there's nothing left).
+    # field, must NOT claim organizations were cleared again (there's nothing left).
     r = await client.put(
         "/api/editions/edition-audit-implicit-clear",
         json={"active": False},
@@ -968,18 +968,18 @@ async def test_implicit_exhibitor_clearing_is_recorded_in_audit_details(client, 
         .all()
     )
     assert len(entries) == 2
-    assert "exhibitors_cleared" not in entries[1].details
+    assert "organizations_cleared" not in entries[1].details
 
 
 @pytest.mark.anyio
-async def test_converting_festival_to_community_edition_with_explicit_empty_exhibitors(client):
-    """The frontend contract sends an explicit `exhibitors: []` alongside the type
+async def test_converting_festival_to_community_edition_with_explicit_empty_organizations(client):
+    """The frontend contract sends an explicit `organizations: []` alongside the type
     change; this must also succeed and clear associations (not just the implicit path).
     """
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Bollinger", "type": "producer"},
         headers=ADMIN_HEADERS,
     )
@@ -993,7 +993,7 @@ async def test_converting_festival_to_community_edition_with_explicit_empty_exhi
             "month": "march",
             "venue_id": venue_id,
             "edition_type": "festival",
-            "exhibitors": [producer_id],
+            "organizations": [producer_id],
         },
         headers=ADMIN_HEADERS,
     )
@@ -1001,7 +1001,7 @@ async def test_converting_festival_to_community_edition_with_explicit_empty_exhi
 
     r = await client.put(
         "/api/editions/edition-convert-explicit-empty",
-        json={"edition_type": "bourse", "exhibitors": []},
+        json={"edition_type": "bourse", "organizations": []},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200, r.text
@@ -1009,12 +1009,12 @@ async def test_converting_festival_to_community_edition_with_explicit_empty_exhi
 
 
 @pytest.mark.anyio
-async def test_festival_to_festival_edit_preserves_exhibitors(client):
-    """Editing a festival edition without touching its type must not disturb exhibitors."""
+async def test_festival_to_festival_edit_preserves_organizations(client):
+    """Editing a festival edition without touching its type must not disturb organizations."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Bollinger", "type": "producer"},
         headers=ADMIN_HEADERS,
     )
@@ -1028,7 +1028,7 @@ async def test_festival_to_festival_edit_preserves_exhibitors(client):
             "month": "march",
             "venue_id": venue_id,
             "edition_type": "festival",
-            "exhibitors": [producer_id],
+            "organizations": [producer_id],
         },
         headers=ADMIN_HEADERS,
     )
@@ -1046,14 +1046,14 @@ async def test_festival_to_festival_edit_preserves_exhibitors(client):
 
 
 @pytest.mark.anyio
-async def test_community_edition_update_still_rejects_explicit_exhibitors(client):
-    """Backend validation must still reject an explicit attempt to assign exhibitors
+async def test_community_edition_update_still_rejects_explicit_organizations(client):
+    """Backend validation must still reject an explicit attempt to assign organizations
     to a off-festival edition, whether or not the type is changing in the same request.
     """
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Bollinger", "type": "producer"},
         headers=ADMIN_HEADERS,
     )
@@ -1074,7 +1074,7 @@ async def test_community_edition_update_still_rejects_explicit_exhibitors(client
 
     r = await client.put(
         "/api/editions/edition-community-reject",
-        json={"exhibitors": [producer_id]},
+        json={"organizations": [producer_id]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 400

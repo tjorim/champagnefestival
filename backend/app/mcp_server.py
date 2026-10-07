@@ -9,7 +9,7 @@ Exposes operational tools for answering:
 
 ...and, for admins, full write/management parity with the admin REST API:
 editions, events, venues, rooms, table types, tables, layouts, areas, FAQ,
-settings, exhibitors, people, members, volunteers, registrations, and
+settings, organizations, people, members, volunteers, registrations, and
 read access to the audit trail. See ``app.mcp.admin`` for the write tool
 implementations — every mutation goes through the same ``write_audit_entry``
 path the REST admin routes use, so the audit log is complete regardless of
@@ -45,11 +45,11 @@ from app.mcp.admin import areas as mcp_admin_areas
 from app.mcp.admin import audit as mcp_admin_audit
 from app.mcp.admin import editions as mcp_admin_editions
 from app.mcp.admin import events as mcp_admin_events
-from app.mcp.admin import exhibitors as mcp_admin_exhibitors
 from app.mcp.admin import faq as mcp_admin_faq
 from app.mcp.admin import integration_clients as mcp_admin_integration_clients
 from app.mcp.admin import layouts as mcp_admin_layouts
 from app.mcp.admin import members as mcp_admin_members
+from app.mcp.admin import organizations as mcp_admin_organizations
 from app.mcp.admin import payments as mcp_admin_payments
 from app.mcp.admin import people as mcp_admin_people
 from app.mcp.admin import poll_options as mcp_admin_poll_options
@@ -855,7 +855,7 @@ class ChampagneFestivalMcpBackend:
     async def save_layout_revision(self, layout_id: str, label: str, change_note: str | None = None) -> dict:
         """Save an immutable, named snapshot of a layout's current tables and areas.
 
-        Requires the ``admin`` role. Allocations (registrations, exhibitor
+        Requires the ``admin`` role. Allocations (registrations, organization
         assignments) are never captured — a revision is geometry only.
         """
         self._require_admin()
@@ -896,8 +896,8 @@ class ChampagneFestivalMcpBackend:
 
         Requires the ``admin`` role. Refuses (see ``preview_layout_restore``)
         when the restore would delete or move a table/area with a live
-        registration or exhibitor assignment, unless ``resolve_allocations`` is
-        set. Never modifies registrations or exhibitor assignments itself.
+        registration or organization assignment, unless ``resolve_allocations`` is
+        set. Never modifies registrations or organization assignments itself.
         """
         self._require_admin()
         return await mcp_admin_layouts.restore_layout_revision(
@@ -915,14 +915,14 @@ class ChampagneFestivalMcpBackend:
         layout_id: str,
         label: str,
         icon: str = "bi-shop",
-        exhibitor_id: int | None = None,
+        organization_id: int | None = None,
         width_m: float = 1.5,
         length_m: float = 1.0,
         x: Annotated[float, Field(ge=0, le=100, description=X_POSITION_DESCRIPTION)] = 50.0,
         y: Annotated[float, Field(ge=0, le=100, description=Y_POSITION_DESCRIPTION)] = 50.0,
         rotation: Annotated[int, Field(ge=0, le=359, description=ROTATION_DESCRIPTION)] = 0,
     ) -> dict:
-        """Create a floor-plan area (e.g. an exhibitor booth) on a layout. Requires the ``admin`` role.
+        """Create a floor-plan area (e.g. an organization booth) on a layout. Requires the ``admin`` role.
 
         See ``docs/floor-plan-coordinates.md`` for the ``x``/``y``/``rotation``
         coordinate contract (identical for areas and tables).
@@ -934,7 +934,7 @@ class ChampagneFestivalMcpBackend:
             layout_id=layout_id,
             label=label,
             icon=icon,
-            exhibitor_id=exhibitor_id,
+            organization_id=organization_id,
             width_m=width_m,
             length_m=length_m,
             x=x,
@@ -957,8 +957,8 @@ class ChampagneFestivalMcpBackend:
         area_id: str,
         label: str | None = None,
         icon: str | None = None,
-        exhibitor_id: int | None = None,
-        clear_exhibitor_id: bool = False,
+        organization_id: int | None = None,
+        clear_organization_id: bool = False,
         width_m: float | None = None,
         length_m: float | None = None,
         x: Annotated[float, Field(ge=0, le=100, description=X_POSITION_DESCRIPTION)] | None = None,
@@ -967,8 +967,8 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update an area; omitted fields are left unchanged.
 
-        ``exhibitor_id`` has no natural "clear" value (a real id is never blank) —
-        pass ``clear_exhibitor_id=True`` to unassign the exhibitor instead of
+        ``organization_id`` has no natural "clear" value (a real id is never blank) —
+        pass ``clear_organization_id=True`` to unassign the organization instead of
         providing an id. Requires the ``admin`` role. See
         ``docs/floor-plan-coordinates.md`` for the ``x``/``y``/``rotation`` contract.
         """
@@ -979,8 +979,8 @@ class ChampagneFestivalMcpBackend:
             area_id,
             label=label,
             icon=icon,
-            exhibitor_id=exhibitor_id,
-            clear_exhibitor_id=clear_exhibitor_id,
+            organization_id=organization_id,
+            clear_organization_id=clear_organization_id,
             width_m=width_m,
             length_m=length_m,
             x=x,
@@ -1002,13 +1002,13 @@ class ChampagneFestivalMcpBackend:
         month: str,
         venue_id: str,
         edition_type: EditionType = "festival",
-        exhibitors: list[int] | None = None,
-        co_organizer_exhibitor_id: int | None = None,
+        organizations: list[int] | None = None,
+        co_organizer_organization_id: int | None = None,
         active: bool = True,
     ) -> dict:
         """Create a festival/bourse/capsule-exchange edition. Requires the ``admin`` role.
 
-        Only festival editions may carry an ``exhibitors`` lineup. See ``list_editions``
+        Only festival editions may carry an ``organizations`` lineup. See ``list_editions``
         for public discovery of existing edition ids.
         """
         self._require_admin()
@@ -1020,8 +1020,8 @@ class ChampagneFestivalMcpBackend:
             month=month,
             venue_id=venue_id,
             edition_type=edition_type,
-            exhibitors=exhibitors,
-            co_organizer_exhibitor_id=co_organizer_exhibitor_id,
+            organizations=organizations,
+            co_organizer_organization_id=co_organizer_organization_id,
             active=active,
         )
 
@@ -1037,15 +1037,15 @@ class ChampagneFestivalMcpBackend:
         month: str | None = None,
         venue_id: str | None = None,
         edition_type: EditionType | None = None,
-        exhibitors: list[int] | None = None,
-        co_organizer_exhibitor_id: int | None = None,
+        organizations: list[int] | None = None,
+        co_organizer_organization_id: int | None = None,
         clear_co_organizer: bool = False,
         active: bool | None = None,
     ) -> dict:
         """Partially update an edition; omitted fields are left unchanged.
 
-        ``exhibitors=None`` leaves the lineup unchanged — pass an explicit list
-        (including an empty one) to replace it. ``co_organizer_exhibitor_id`` has
+        ``organizations=None`` leaves the lineup unchanged — pass an explicit list
+        (including an empty one) to replace it. ``co_organizer_organization_id`` has
         no natural "clear" value, so pass ``clear_co_organizer=True`` to unset it.
         Requires the ``admin`` role.
         """
@@ -1058,8 +1058,8 @@ class ChampagneFestivalMcpBackend:
             month=month,
             venue_id=venue_id,
             edition_type=edition_type,
-            exhibitors=exhibitors,
-            co_organizer_exhibitor_id=co_organizer_exhibitor_id,
+            organizations=organizations,
+            co_organizer_organization_id=co_organizer_organization_id,
             clear_co_organizer=clear_co_organizer,
             active=active,
         )
@@ -1415,31 +1415,31 @@ class ChampagneFestivalMcpBackend:
             self.session_factory, self._actor(), maintenance_mode=maintenance_mode
         )
 
-    # -- Exhibitors ------------------------------------------------------
+    # -- Organizations ------------------------------------------------------
 
-    async def list_exhibitor_changes(self) -> dict:
-        """List pending exhibitor proposals and current values. Requires admin."""
+    async def list_organization_changes(self) -> dict:
+        """List pending organization proposals and current values. Requires admin."""
         self._require_admin()
-        from app.services.exhibitor_changes import list_pending
+        from app.services.organization_changes import list_pending
 
         async with self.session_factory() as db:
             return {"changes": await list_pending(db)}
 
-    async def decide_exhibitor_change(self, change_id: str, decision: str, reason: str | None = None) -> dict:
+    async def decide_organization_change(self, change_id: str, decision: str, reason: str | None = None) -> dict:
         """Accept or reject a proposal; repeated identical decisions converge. Requires admin."""
         self._require_admin()
-        from app.schemas import ExhibitorChangeDecision
+        from app.schemas import OrganizationChangeDecision
         from app.services.errors import ServiceError
-        from app.services.exhibitor_changes import decide
+        from app.services.organization_changes import decide
 
-        body = ExhibitorChangeDecision.model_validate({"decision": decision, "reason": reason})
+        body = OrganizationChangeDecision.model_validate({"decision": decision, "reason": reason})
         async with self.session_factory() as db:
             try:
                 return await decide(db, change_id, body.decision, body.reason, actor=self._actor())
             except ServiceError as exc:
                 raise ValueError(str(exc)) from exc
 
-    async def create_exhibitor(
+    async def create_organization(
         self,
         name: str,
         image: str = "",
@@ -1452,9 +1452,9 @@ class ChampagneFestivalMcpBackend:
         description_en: str | None = None,
         contact_person_id: str | None = None,
     ) -> dict:
-        """Create an exhibitor (producer/sponsor/vendor). Requires the ``admin`` role."""
+        """Create an organization (producer/sponsor/vendor). Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_exhibitors.create_exhibitor(
+        return await mcp_admin_organizations.create_organization(
             self.session_factory,
             self._actor(),
             name=name,
@@ -1469,19 +1469,19 @@ class ChampagneFestivalMcpBackend:
             contact_person_id=contact_person_id,
         )
 
-    async def get_exhibitor(self, exhibitor_id: int) -> dict:
-        """Return a single exhibitor. Requires the ``admin`` role."""
+    async def get_organization(self, organization_id: int) -> dict:
+        """Return a single organization. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_exhibitors.get_exhibitor(self.session_factory, exhibitor_id)
+        return await mcp_admin_organizations.get_organization(self.session_factory, organization_id)
 
-    async def list_exhibitors(self, exhibitor_type: str | None = None) -> dict:
-        """List exhibitors, optionally filtered by ``exhibitor_type``. Requires the ``admin`` role."""
+    async def list_organizations(self, organization_type: str | None = None) -> dict:
+        """List organizations, optionally filtered by ``organization_type``. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_exhibitors.list_exhibitors(self.session_factory, exhibitor_type)
+        return await mcp_admin_organizations.list_organizations(self.session_factory, organization_type)
 
-    async def update_exhibitor(
+    async def update_organization(
         self,
-        exhibitor_id: int,
+        organization_id: int,
         name: str | None = None,
         image: str | None = None,
         website: str | None = None,
@@ -1494,9 +1494,9 @@ class ChampagneFestivalMcpBackend:
         contact_person_id: str | None = None,
         clear_contact_person: bool = False,
     ) -> dict:
-        """Partially update an exhibitor; omitted fields are left unchanged.
+        """Partially update an organization; omitted fields are left unchanged.
 
-        Retyping to ``"vendor"`` fails while any edition still lists this exhibitor
+        Retyping to ``"vendor"`` fails while any edition still lists this organization
         (vendors may not appear in an edition lineup). ``contact_person_id`` has no
         natural "clear" value, so pass ``clear_contact_person=True`` to unset it.
         Descriptions are literal plain text (600 characters per language), with
@@ -1505,10 +1505,10 @@ class ChampagneFestivalMcpBackend:
         Requires the ``admin`` role.
         """
         self._require_admin()
-        return await mcp_admin_exhibitors.update_exhibitor(
+        return await mcp_admin_organizations.update_organization(
             self.session_factory,
             self._actor(),
-            exhibitor_id,
+            organization_id,
             name=name,
             image=image,
             website=website,
@@ -1522,10 +1522,10 @@ class ChampagneFestivalMcpBackend:
             clear_contact_person=clear_contact_person,
         )
 
-    async def delete_exhibitor(self, exhibitor_id: int) -> dict:
-        """Delete an exhibitor (also removed from any edition lineups). Requires the ``admin`` role."""
+    async def delete_organization(self, organization_id: int) -> dict:
+        """Delete an organization (also removed from any edition lineups). Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_exhibitors.delete_exhibitor(self.session_factory, self._actor(), exhibitor_id)
+        return await mcp_admin_organizations.delete_organization(self.session_factory, self._actor(), organization_id)
 
     # -- People ----------------------------------------------------------
 
@@ -1613,7 +1613,7 @@ class ChampagneFestivalMcpBackend:
         return await mcp_admin_people.delete_person(self.session_factory, self._actor(), person_id)
 
     async def merge_people(self, person_id: str, duplicate_id: str) -> dict:
-        """Merge ``duplicate_id`` into ``person_id``, re-pointing registrations/exhibitor
+        """Merge ``duplicate_id`` into ``person_id``, re-pointing registrations/organization
         contacts/volunteer periods and deleting the duplicate. Requires the ``admin`` role.
         """
         self._require_admin()
@@ -2070,7 +2070,7 @@ def create_mcp_server(
             "seating, orders, champagne delivery, and check-in status; most require the "
             "'volunteer' or 'admin' role. Admins additionally get full write/management "
             "parity with the admin REST API: editions, events, venues, rooms, table types, "
-            "tables, layouts, areas, FAQ, settings, exhibitors, people, members, volunteers, "
+            "tables, layouts, areas, FAQ, settings, organizations, people, members, volunteers, "
             "registrations, and the audit trail. Most tools are hidden: describe what you "
             "need to search_tools, then run the tool it returns with call_tool (name plus "
             "arguments). Only tools your role may use are returned. whoami and "
@@ -2184,13 +2184,13 @@ def create_mcp_server(
     register_tool(backend.reorder_faq_items)
     register_tool(backend.get_settings)
     register_tool(backend.set_maintenance_mode)
-    register_tool(backend.list_exhibitor_changes)
-    register_tool(backend.decide_exhibitor_change)
-    register_tool(backend.create_exhibitor)
-    register_tool(backend.get_exhibitor)
-    register_tool(backend.list_exhibitors)
-    register_tool(backend.update_exhibitor)
-    register_tool(backend.delete_exhibitor)
+    register_tool(backend.list_organization_changes)
+    register_tool(backend.decide_organization_change)
+    register_tool(backend.create_organization)
+    register_tool(backend.get_organization)
+    register_tool(backend.list_organizations)
+    register_tool(backend.update_organization)
+    register_tool(backend.delete_organization)
     register_tool(backend.create_person)
     register_tool(backend.get_person)
     register_tool(backend.update_person)

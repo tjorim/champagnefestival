@@ -21,7 +21,7 @@ async def create_area(
     layout_id: str,
     label: str,
     icon: str = "bi-shop",
-    exhibitor_id: int | None = None,
+    organization_id: int | None = None,
     width_m: float = 1.5,
     length_m: float = 1.0,
     x: float = 50.0,
@@ -33,7 +33,7 @@ async def create_area(
         layout_id=layout_id,
         label=label,
         icon=icon,
-        exhibitor_id=exhibitor_id,
+        organization_id=organization_id,
         width_m=width_m,
         length_m=length_m,
         x=x,
@@ -67,8 +67,8 @@ async def update_area(
     *,
     label: str | None = None,
     icon: str | None = None,
-    exhibitor_id: int | None = None,
-    clear_exhibitor_id: bool = False,
+    organization_id: int | None = None,
+    clear_organization_id: bool = False,
     width_m: float | None = None,
     length_m: float | None = None,
     x: float | None = None,
@@ -88,17 +88,17 @@ async def update_area(
         }.items()
         if v is not None
     }
-    # exhibitor_id has no natural "clear" sentinel (a real exhibitor id is
-    # never legitimately blank), so clear_exhibitor_id distinguishes "leave
-    # unchanged" (omitted, clear_exhibitor_id=False) from "explicitly unset"
-    # (clear_exhibitor_id=True) the way REST distinguishes an absent JSON key
+    # organization_id has no natural "clear" sentinel (a real organization id is
+    # never legitimately blank), so clear_organization_id distinguishes "leave
+    # unchanged" (omitted, clear_organization_id=False) from "explicitly unset"
+    # (clear_organization_id=True) the way REST distinguishes an absent JSON key
     # from an explicit ``null`` via ``model_fields_set``.
-    if exhibitor_id is not None and clear_exhibitor_id:
-        raise MCPToolError("Pass either exhibitor_id or clear_exhibitor_id, not both.")
-    if exhibitor_id is not None:
-        provided["exhibitor_id"] = exhibitor_id
-    elif clear_exhibitor_id:
-        provided["exhibitor_id"] = None
+    if organization_id is not None and clear_organization_id:
+        raise MCPToolError("Pass either organization_id or clear_organization_id, not both.")
+    if organization_id is not None:
+        provided["organization_id"] = organization_id
+    elif clear_organization_id:
+        provided["organization_id"] = None
 
     body = validate_with_schema(AreaUpdate, **provided)
     async with session_factory() as db:

@@ -12,19 +12,19 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import Area, Exhibitor, Layout
+from app.models import Area, Layout, Organization
 from app.schemas import AreaCreate, AreaUpdate
 from app.services.errors import NotFoundError, ValidationFailedError
 from app.utils import area_to_dict, make_id
 
 
-async def _check_exhibitor_assignable(db: AsyncSession, exhibitor_id: int) -> None:
-    ex = await db.execute(select(Exhibitor).where(Exhibitor.id == exhibitor_id))
-    exhibitor = ex.scalar_one_or_none()
-    if exhibitor is None:
-        raise NotFoundError(f"Exhibitor '{exhibitor_id}' not found.")
-    if not exhibitor.active:
-        raise ValidationFailedError(f"Exhibitor '{exhibitor_id}' is inactive.")
+async def _check_organization_assignable(db: AsyncSession, organization_id: int) -> None:
+    ex = await db.execute(select(Organization).where(Organization.id == organization_id))
+    organization = ex.scalar_one_or_none()
+    if organization is None:
+        raise NotFoundError(f"Organization '{organization_id}' not found.")
+    if not organization.active:
+        raise ValidationFailedError(f"Organization '{organization_id}' is inactive.")
 
 
 async def create_area(db: AsyncSession, *, actor: str, body: AreaCreate, request_id: str | None = None) -> dict:
@@ -32,15 +32,15 @@ async def create_area(db: AsyncSession, *, actor: str, body: AreaCreate, request
     if lay.scalar_one_or_none() is None:
         raise NotFoundError(f"Layout '{body.layout_id}' not found.")
 
-    if body.exhibitor_id is not None:
-        await _check_exhibitor_assignable(db, body.exhibitor_id)
+    if body.organization_id is not None:
+        await _check_organization_assignable(db, body.organization_id)
 
     a = Area(
         id=make_id("area"),
         layout_id=body.layout_id,
         label=body.label,
         icon=body.icon,
-        exhibitor_id=body.exhibitor_id,
+        organization_id=body.organization_id,
         width_m=body.width_m,
         length_m=body.length_m,
         x=body.x,
@@ -111,11 +111,11 @@ async def update_area(
     if body.rotation is not None:
         a.rotation = body.rotation
         fields_changed.append("rotation")
-    if "exhibitor_id" in body.model_fields_set:
-        if body.exhibitor_id is not None:
-            await _check_exhibitor_assignable(db, body.exhibitor_id)
-        a.exhibitor_id = body.exhibitor_id
-        fields_changed.append("exhibitor_id")
+    if "organization_id" in body.model_fields_set:
+        if body.organization_id is not None:
+            await _check_organization_assignable(db, body.organization_id)
+        a.organization_id = body.organization_id
+        fields_changed.append("organization_id")
 
     await write_audit_entry(
         db,

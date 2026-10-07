@@ -74,7 +74,7 @@ describe("createAdminCollection", () => {
 });
 
 describe("numeric row keys", () => {
-  it("supports collections keyed by a number (exhibitors)", async () => {
+  it("supports collections keyed by a number (organizations)", async () => {
     const queryClient = createTestQueryClient();
     cleanups.push(() => queryClient.clear());
     const collection = createAdminCollection<{ id: number; name: string }, number>({

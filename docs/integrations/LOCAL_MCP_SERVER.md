@@ -11,7 +11,7 @@ It exposes operational tools that allow desktop agents (Claude Desktop, Codex CL
 - How many guests are checked in?
 
 Admins additionally get full write/management parity with the admin REST API — editions,
-events, venues, rooms, table types, tables, layouts, areas, FAQ, settings, exhibitors,
+events, venues, rooms, table types, tables, layouts, areas, FAQ, settings, organizations,
 people, members, volunteers, registrations, and read access to the audit trail. See
 [Admin write/management tools](#admin-writemanagement-tools) below.
 
@@ -84,7 +84,7 @@ complete regardless of which surface made the change. All are `admin`-only excep
 | Areas | `create_area`, `list_areas` (`layout_id` filter), `get_area`, `update_area`, `delete_area` |
 | FAQ | `create_faq_item`, `list_faq_items`, `update_faq_item`, `delete_faq_item`, `reorder_faq_items` |
 | Settings | `get_settings` (public), `set_maintenance_mode` |
-| Exhibitors | `create_exhibitor`, `get_exhibitor`, `list_exhibitors`, `update_exhibitor`, `delete_exhibitor` |
+| Organizations | `create_organization`, `get_organization`, `list_organizations`, `update_organization`, `delete_organization` |
 | People | `create_person`, `get_person`, `update_person`, `delete_person`, `merge_people` |
 | Members | `create_member`, `get_member`, `list_members`, `update_member`, `delete_member` |
 | Volunteers | `create_volunteer`, `get_volunteer`, `list_volunteers`, `update_volunteer`, `delete_volunteer` |

@@ -40,10 +40,10 @@ schedule is approved.
 
 Configuration:
 
-- `FRONTEND_URL`: public origin used in check-in and exhibitor-review links.
-- `EXHIBITOR_REVIEW_RECIPIENT`: optional single shared mailbox for exhibitor
+- `FRONTEND_URL`: public origin used in check-in and organization-review links.
+- `ORGANIZATION_REVIEW_RECIPIENT`: optional single shared mailbox for organization
   proposal notifications. Empty skips queueing; a configured recipient is
-  snapshotted per submission. See [exhibitor review](exhibitor-change-review.md).
+  snapshotted per submission. See [organization review](organization-change-review.md).
 - `OUTBOX_POLL_SECONDS`: idle polling interval (default 2 seconds).
 - `OUTBOX_LEASE_SECONDS`: crash-recovery lease (default 300 seconds).
 - `OUTBOX_RETENTION_DAYS`: terminal job retention (default 90 days).

@@ -105,7 +105,7 @@ jobs:
           # (measured: total 2563 -> 2504 KiB, index 776 -> 774, admin 946 -> 937;
           # CSS 350 -> 119 kB raw, 53 -> 24 kB gzip). The public entry budget is
           # unchanged.
-          # Total raised 2560 -> 2600 for #1193 / PR #1211's private exhibitor
+          # Total raised 2560 -> 2600 for #1193 / PR #1211's private organization
           # proposal editor and admin review. Same-dependency builds before/after:
           # total 2557 -> 2568 KiB, index stays 806, admin 954 -> 956. No new
           # dependencies; retain modest headroom and the existing chunk ceilings.

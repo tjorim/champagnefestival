@@ -21,7 +21,7 @@ vi.mock("@/paraglide/messages", () => ({
     logo_upload_help: () => "PNG, JPEG or WebP",
     manager_change_help: () => "Submit for review",
     manager_title: () => "My organisations",
-    manager_error: () => "Could not load exhibitors",
+    manager_error: () => "Could not load organizations",
     manager_change_edit: () => "Edit website and description",
     my_account_title: () => "My Account",
     my_registrations_title: () => "Registrations",
@@ -75,7 +75,7 @@ async function openDeleteConfirm(user: ReturnType<typeof userEvent.setup>) {
 
 describe("MyAccountPage", () => {
   beforeEach(() => {
-    server.use(http.get("/api/me/exhibitors", () => HttpResponse.json([])));
+    server.use(http.get("/api/me/organizations", () => HttpResponse.json([])));
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -93,10 +93,10 @@ describe("MyAccountPage", () => {
     });
   });
 
-  it("shows exhibitors for the same OIDC account as staff sections", async () => {
+  it("shows organizations for the same OIDC account as staff sections", async () => {
     let authorization: string | null = null;
     server.use(
-      http.get("/api/me/exhibitors", ({ request }) => {
+      http.get("/api/me/organizations", ({ request }) => {
         authorization = request.headers.get("Authorization");
         return HttpResponse.json([
           { id: 1, name: "Shared account house", type: "producer", website: "", active: true },

@@ -142,7 +142,7 @@ interface LayoutEditorProps {
   layouts: Layout[];
   registrations: Registration[];
   rooms: Room[];
-  exhibitors: ItemRef[];
+  organizations: ItemRef[];
   areas: FloorArea[];
   onAddTable: (name: string, layoutId: string, tableTypeId: string) => Promise<void>;
   onMoveTable: (tableId: string, x: number, y: number) => void;
@@ -165,14 +165,14 @@ interface LayoutEditorProps {
     layoutId: string,
     widthM: number,
     lengthM: number,
-    exhibitorId?: number,
+    organizationId?: number,
   ) => Promise<void>;
   onMoveArea: (areaId: string, x: number, y: number) => void;
   onDeleteArea: (areaId: string) => Promise<void>;
   onRotateArea: (areaId: string, rotation: number) => void;
   onAssignAreaToItem: (
     areaId: string,
-    exhibitorId: number | null,
+    organizationId: number | null,
     label?: string,
     icon?: string,
   ) => Promise<void>;
@@ -416,7 +416,7 @@ interface RoomCanvasProps {
   roomAreas: FloorArea[];
   tableTypes: TableType[];
   registrations: Registration[];
-  exhibitors: ItemRef[];
+  organizations: ItemRef[];
   layer: "seating" | "areas";
   selectedTable: string | null;
   selectedArea: string | null;
@@ -432,7 +432,7 @@ function RoomCanvas({
   roomAreas,
   tableTypes,
   registrations,
-  exhibitors,
+  organizations,
   layer,
   selectedTable,
   selectedArea,
@@ -568,9 +568,9 @@ function RoomCanvas({
             );
           })}
           {roomAreas.map((area) => {
-            const assignedLabel = area.exhibitorId
-              ? (exhibitors.find((e) => e.id === area.exhibitorId)?.name ??
-                `Exhibitor #${area.exhibitorId}`)
+            const assignedLabel = area.organizationId
+              ? (organizations.find((e) => e.id === area.organizationId)?.name ??
+                `Organization #${area.organizationId}`)
               : null;
             return (
               <DraggableArea
@@ -605,7 +605,7 @@ export default function LayoutEditor({
   layouts,
   registrations: suppliedRegistrations,
   rooms,
-  exhibitors,
+  organizations,
   areas,
   onAddTable,
   onMoveTable,
@@ -789,14 +789,14 @@ export default function LayoutEditor({
     if (!newArea.label.trim() || !activeLayoutId) return;
     setAddAreaError(null);
     try {
-      const exhibitorId = newArea.assignedType === "e" ? newArea.assignedId : undefined;
+      const organizationId = newArea.assignedType === "e" ? newArea.assignedId : undefined;
       await onAddArea(
         newArea.label.trim(),
         newArea.icon || "bi-shop",
         activeLayoutId,
         newArea.widthM,
         newArea.lengthM,
-        exhibitorId,
+        organizationId,
       );
       setNewArea({
         label: "",
@@ -1118,7 +1118,7 @@ export default function LayoutEditor({
                   roomAreas={canvasAreas}
                   tableTypes={tableTypes}
                   registrations={registrations}
-                  exhibitors={exhibitors}
+                  organizations={organizations}
                   layer={layer}
                   selectedTable={selectedTable}
                   selectedArea={selectedArea}
@@ -1600,7 +1600,7 @@ export default function LayoutEditor({
                     try {
                       await onAssignAreaToItem(
                         selectedAreaData.id,
-                        selectedAreaData.exhibitorId,
+                        selectedAreaData.organizationId,
                         undefined,
                         newIcon,
                       );
@@ -1627,7 +1627,9 @@ export default function LayoutEditor({
               <AdminSelect
                 size="sm"
                 className="bg-muted text-content border-input"
-                value={selectedAreaData.exhibitorId ? `e:${selectedAreaData.exhibitorId}` : ""}
+                value={
+                  selectedAreaData.organizationId ? `e:${selectedAreaData.organizationId}` : ""
+                }
                 onValueChange={async (ev) => {
                   const val = ev;
                   setAssignAreaError(null);
@@ -1645,9 +1647,9 @@ export default function LayoutEditor({
                 }}
               >
                 <AdminOption value="">{m.admin_layout_area_none()}</AdminOption>
-                {exhibitors.filter((e) => e.active).length > 0 && (
-                  <AdminOptionGroup label={m.admin_layout_area_exhibitors_group()}>
-                    {exhibitors
+                {organizations.filter((e) => e.active).length > 0 && (
+                  <AdminOptionGroup label={m.admin_layout_area_organizations_group()}>
+                    {organizations
                       .filter((e) => e.active)
                       .map((e) => (
                         <AdminOption key={e.id} value={`e:${e.id}`}>
@@ -1836,7 +1838,7 @@ export default function LayoutEditor({
                     setNewArea((p) => ({ ...p, assignedType: "", assignedId: 0 }));
                   } else {
                     const [t, id] = val.split(":");
-                    const entityName = exhibitors.find((x) => x.id === Number(id))?.name;
+                    const entityName = organizations.find((x) => x.id === Number(id))?.name;
                     setNewArea((p) => ({
                       ...p,
                       assignedType: t as "e",
@@ -1848,9 +1850,9 @@ export default function LayoutEditor({
                 className="bg-muted text-content border-input"
               >
                 <AdminOption value="">{m.admin_layout_area_none()}</AdminOption>
-                {exhibitors.filter((e) => e.active).length > 0 && (
-                  <AdminOptionGroup label={m.admin_layout_area_exhibitors_group()}>
-                    {exhibitors
+                {organizations.filter((e) => e.active).length > 0 && (
+                  <AdminOptionGroup label={m.admin_layout_area_organizations_group()}>
+                    {organizations
                       .filter((e) => e.active)
                       .map((e) => (
                         <AdminOption key={e.id} value={`e:${e.id}`}>

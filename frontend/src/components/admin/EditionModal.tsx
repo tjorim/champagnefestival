@@ -44,7 +44,7 @@ import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
 import type { Venue } from "@/types/admin";
 import { queryKeys } from "@/utils/queryKeys";
-import { fetchEditionModalExhibitors, saveEdition } from "@/utils/adminContentApi";
+import { fetchEditionModalOrganizations, saveEdition } from "@/utils/adminContentApi";
 
 interface EditionModalProps {
   show: boolean;
@@ -61,7 +61,7 @@ interface ItemOption {
   isArchived: boolean;
 }
 
-const editionModalExhibitorsQueryKey = queryKeys.admin.editionModalExhibitors;
+const editionModalOrganizationsQueryKey = queryKeys.admin.editionModalOrganizations;
 
 function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOption[] } {
   const active: ItemOption[] = [];
@@ -116,7 +116,7 @@ export default function EditionModal({
       coOrganizerId: initial?.coOrganizer?.id ? String(initial.coOrganizer.id) : "",
       // Producers and sponsors only — the API rejects vendor ids on an edition,
       // so vendors are deliberately not selectable and not submitted.
-      selectedExhibitors: [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map(
+      selectedOrganizations: [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map(
         (e) => ({ value: e.id, label: e.name, isArchived: false }),
       ) as ItemOption[],
     }),
@@ -139,16 +139,16 @@ export default function EditionModal({
           venueId: value.venueId,
           active: value.active,
           // Producers and sponsors only, deliberately. The API rejects vendor ids
-          // on an edition outright ("Vendor-type exhibitors may not be linked to
+          // on an edition outright ("Vendor-type organizations may not be linked to
           // editions"), so an edition showing vendors is in a state the backend
           // considers invalid — re-sending them would make it unsaveable. Leaving
           // them out lets the next save clear the invalid link.
-          exhibitorIds:
+          organizationIds:
             value.editionType === "festival"
-              ? value.selectedExhibitors.map((option: ItemOption) => option.value)
+              ? value.selectedOrganizations.map((option: ItemOption) => option.value)
               : [],
           // Any edition type may name one; it is not part of the lineup.
-          coOrganizerExhibitorId: value.coOrganizerId ? Number(value.coOrganizerId) : null,
+          coOrganizerOrganizationId: value.coOrganizerId ? Number(value.coOrganizerId) : null,
         });
         onSaved(savedEdition);
       } catch (mutationError) {
@@ -174,14 +174,14 @@ export default function EditionModal({
   }
 
   // Ref mutations belong in an effect, not render — this just marks the
-  // exhibitor-hydration effect below as pending again for the fresh form.
+  // organization-hydration effect below as pending again for the fresh form.
   useEffect(() => {
     if (show) hydratedRef.current = false;
   }, [show]);
 
-  const exhibitorsQuery = useQuery({
-    queryKey: editionModalExhibitorsQueryKey,
-    queryFn: () => fetchEditionModalExhibitors(authHeaders),
+  const organizationsQuery = useQuery({
+    queryKey: editionModalOrganizationsQueryKey,
+    queryFn: () => fetchEditionModalOrganizations(authHeaders),
     enabled: show,
     staleTime: 60 * 1000,
     retry: false,
@@ -195,43 +195,43 @@ export default function EditionModal({
       editionType: EditionType;
       venueId: string;
       active: boolean;
-      exhibitorIds: number[];
-      coOrganizerExhibitorId: number | null;
+      organizationIds: number[];
+      coOrganizerOrganizationId: number | null;
     }) => saveEdition(payload, authHeaders, initial?.id),
     retry: false,
   });
 
-  const allExhibitors = useMemo(() => exhibitorsQuery.data ?? [], [exhibitorsQuery.data]);
+  const allOrganizations = useMemo(() => organizationsQuery.data ?? [], [organizationsQuery.data]);
   const isEdit = !!initial;
   const editionType = useSelector(form.atom, (s) => s.values.editionType as EditionType);
   const isFestival = editionType === "festival";
-  const programmableExhibitors = useMemo(
-    () => allExhibitors.filter((exhibitor) => exhibitor.type !== "vendor"),
-    [allExhibitors],
+  const programmableOrganizations = useMemo(
+    () => allOrganizations.filter((organization) => organization.type !== "vendor"),
+    [allOrganizations],
   );
 
-  // Once the exhibitor list loads, re-derive the selected options from it so the
+  // Once the organization list loads, re-derive the selected options from it so the
   // archived ones pick up their styling. Same ids as `defaultValues` seeded —
   // this only enriches them, so it must not run after the user starts editing.
   useEffect(() => {
-    if (!show || allExhibitors.length === 0 || hydratedRef.current) return;
+    if (!show || allOrganizations.length === 0 || hydratedRef.current) return;
     const ids = new Set(
       [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id),
     );
-    const { active: act, archived: arch } = toOptions(programmableExhibitors);
+    const { active: act, archived: arch } = toOptions(programmableOrganizations);
     form.setFieldValue(
-      "selectedExhibitors",
+      "selectedOrganizations",
       [...act, ...arch].filter((o) => ids.has(o.value)),
     );
     hydratedRef.current = true;
-  }, [allExhibitors, programmableExhibitors, initial, form, show]);
-  const exhibitorGroups = useMemo(() => {
-    const { active: act, archived: arch } = toOptions(programmableExhibitors);
+  }, [allOrganizations, programmableOrganizations, initial, form, show]);
+  const organizationGroups = useMemo(() => {
+    const { active: act, archived: arch } = toOptions(programmableOrganizations);
     const groups: { label: string; items: ItemOption[] }[] = [];
-    if (act.length) groups.push({ label: m.admin_edition_exhibitors(), items: act });
+    if (act.length) groups.push({ label: m.admin_edition_organizations(), items: act });
     if (arch.length) groups.push({ label: m.admin_content_archived_section(), items: arch });
     return groups;
-  }, [programmableExhibitors]);
+  }, [programmableOrganizations]);
 
   const comboboxAnchor = useComboboxAnchor();
   const previewDates = useMemo(() => initial?.dates ?? [], [initial?.dates]);
@@ -353,7 +353,7 @@ export default function EditionModal({
                       onValueChange={(e) => {
                         field.handleChange(e as EditionType);
                         if (e !== "festival") {
-                          form.setFieldValue("selectedExhibitors", [] as ItemOption[]);
+                          form.setFieldValue("selectedOrganizations", [] as ItemOption[]);
                         }
                       }}
                       onBlur={field.handleBlur}
@@ -479,11 +479,11 @@ export default function EditionModal({
                     onBlur={field.handleBlur}
                   >
                     <AdminOption value="">{m.admin_edition_co_organizer_none()}</AdminOption>
-                    {allExhibitors
-                      .filter((exhibitor) => exhibitor.active !== false)
-                      .map((exhibitor) => (
-                        <AdminOption key={exhibitor.id} value={String(exhibitor.id)}>
-                          {exhibitor.name}
+                    {allOrganizations
+                      .filter((organization) => organization.active !== false)
+                      .map((organization) => (
+                        <AdminOption key={organization.id} value={String(organization.id)}>
+                          {organization.name}
                         </AdminOption>
                       ))}
                   </AdminSelect>
@@ -493,21 +493,21 @@ export default function EditionModal({
             </AdminField>
 
             {isFestival && (
-              <AdminField className="mb-4" controlId="edition-exhibitors">
+              <AdminField className="mb-4" controlId="edition-organizations">
                 <AdminLabel className="text-subtle text-sm mb-1">
-                  {m.admin_edition_festival_exhibitors()}
+                  {m.admin_edition_festival_organizations()}
                 </AdminLabel>
-                {exhibitorsQuery.isPending ? (
+                {organizationsQuery.isPending ? (
                   <div className="text-subtle text-sm">
                     <Spinner size="sm" className="me-2" />
-                    {m.admin_edition_loading_exhibitors()}
+                    {m.admin_edition_loading_organizations()}
                   </div>
                 ) : (
-                  <form.Field name="selectedExhibitors">
+                  <form.Field name="selectedOrganizations">
                     {(field) => (
                       <Combobox
                         multiple
-                        items={exhibitorGroups}
+                        items={organizationGroups}
                         value={field.value}
                         onValueChange={(options) => field.handleChange(options)}
                         itemToStringLabel={(option: ItemOption) => option.label}
@@ -528,10 +528,10 @@ export default function EditionModal({
                                   </ComboboxChip>
                                 ))}
                                 <ComboboxChipsInput
-                                  id="edition-exhibitors"
-                                  aria-label={m.admin_edition_festival_exhibitors()}
+                                  id="edition-organizations"
+                                  aria-label={m.admin_edition_festival_organizations()}
                                   onBlur={field.handleBlur}
-                                  placeholder={m.admin_edition_exhibitors()}
+                                  placeholder={m.admin_edition_organizations()}
                                 />
                               </>
                             )}

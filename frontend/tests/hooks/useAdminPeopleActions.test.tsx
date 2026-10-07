@@ -2,7 +2,7 @@ import { act, renderHook } from "@testing-library/react";
 import { http, HttpResponse } from "msw";
 import { expect, it, vi } from "vitest";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
-import type { AdminExhibitorsCollection } from "@/state/adminExhibitorsCollection";
+import type { AdminOrganizationsCollection } from "@/state/adminOrganizationsCollection";
 import type { AdminRegistrationsCollection } from "@/state/adminRegistrationsCollection";
 import { resetAdminPeopleSession } from "@/state/adminPeopleSession";
 import { server } from "@/mocks/server";
@@ -11,16 +11,16 @@ import { createTestQueryClientHarness } from "../utils/queryClient";
 function harness() {
   const { queryClient, Wrapper } = createTestQueryClientHarness();
   const refetchRegistrations = vi.fn().mockResolvedValue(undefined);
-  const refetchExhibitors = vi.fn().mockResolvedValue(undefined);
+  const refetchOrganizations = vi.fn().mockResolvedValue(undefined);
   const writeUpsert = vi.fn().mockResolvedValue(undefined);
   const registrationsCollection = {
     utils: { refetch: refetchRegistrations },
     get: vi.fn(),
   } as unknown as AdminRegistrationsCollection;
-  const exhibitorsCollection = {
-    utils: { refetch: refetchExhibitors, writeUpsert },
+  const organizationsCollection = {
+    utils: { refetch: refetchOrganizations, writeUpsert },
     values: () => [{ id: 1, name: "House", active: true, contactPersonId: "duplicate" }],
-  } as unknown as AdminExhibitorsCollection;
+  } as unknown as AdminOrganizationsCollection;
   const view = renderHook(
     () =>
       useAdminPeopleActions({
@@ -31,12 +31,12 @@ function harness() {
         queryClient,
         registrationsQueryKey: ["admin", "registrations"],
         registrationsCollection,
-        exhibitorsCollection,
+        organizationsCollection,
         setDetailRegistration: vi.fn(),
       }),
     { wrapper: Wrapper },
   );
-  return { ...view, queryClient, refetchRegistrations, refetchExhibitors, writeUpsert };
+  return { ...view, queryClient, refetchRegistrations, refetchOrganizations, writeUpsert };
 }
 it.each([200, 409])(
   "reconciles both cascade consumers after a merge returns %s",
@@ -51,7 +51,7 @@ it.each([200, 409])(
       await h.result.current.handleMergePeople("canonical", "duplicate").catch(() => undefined);
     });
     expect(h.refetchRegistrations).toHaveBeenCalled();
-    expect(h.refetchExhibitors).toHaveBeenCalled();
+    expect(h.refetchOrganizations).toHaveBeenCalled();
     if (status === 200)
       expect(h.writeUpsert).toHaveBeenCalledWith([
         { id: 1, name: "House", active: true, contactPersonId: "canonical" },
@@ -88,6 +88,6 @@ it("drops a late merge response after sign-out", async () => {
     await promise;
   });
   expect(h.refetchRegistrations).not.toHaveBeenCalled();
-  expect(h.refetchExhibitors).not.toHaveBeenCalled();
+  expect(h.refetchOrganizations).not.toHaveBeenCalled();
   expect(h.writeUpsert).not.toHaveBeenCalled();
 });

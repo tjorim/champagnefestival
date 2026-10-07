@@ -43,10 +43,10 @@
     "month": "october",
     "venue_id": "<fill in with the id returned from creating the venue above>",
     "edition_type": "festival",
-    "exhibitors": [],
-    "co_organizer_exhibitor_id": null,
+    "organizations": [],
+    "co_organizer_organization_id": null,
     "active": true,
-    "_note": "exhibitors (producers/sponsors) weren't on the poster - add exhibitor ids once known, or leave empty and fill in later via the edition modal."
+    "_note": "organizations (producers/sponsors) weren't on the poster - add organization ids once known, or leave empty and fill in later via the edition modal."
   },
 
   "events": [

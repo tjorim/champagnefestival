@@ -1,5 +1,5 @@
 import { getLocale } from "@/paraglide/runtime";
-import { exhibitorDescription } from "@/utils/exhibitorDescription";
+import { organizationDescription } from "@/utils/organizationDescription";
 import type { SliderItem } from "@/config/editions";
 import { useEffect, useRef, useState, type FocusEvent } from "react";
 // Import Swiper React components
@@ -218,9 +218,9 @@ function MarqueeSlider({ items = [] }: MarqueeSliderProps) {
                 </div>
               </div>
               <h5 className="marquee-logo-title text-center text-sm">{item.name}</h5>
-              {exhibitorDescription(item, getLocale()) && (
+              {organizationDescription(item, getLocale()) && (
                 <p className="text-center text-sm whitespace-pre-line break-words px-3 pb-3">
-                  {exhibitorDescription(item, getLocale())}
+                  {organizationDescription(item, getLocale())}
                 </p>
               )}
             </div>

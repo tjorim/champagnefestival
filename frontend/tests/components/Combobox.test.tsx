@@ -84,7 +84,7 @@ function MultipleHarness() {
   ];
   return (
     <>
-      <label htmlFor="exhibitors">Organisations</label>
+      <label htmlFor="organizations">Organisations</label>
       <Combobox
         multiple
         items={groups}
@@ -99,7 +99,7 @@ function MultipleHarness() {
                 {items.map((item) => (
                   <ComboboxChip key={item.value}>{item.label}</ComboboxChip>
                 ))}
-                <ComboboxChipsInput id="exhibitors" />
+                <ComboboxChipsInput id="organizations" />
               </>
             )}
           </ComboboxValue>

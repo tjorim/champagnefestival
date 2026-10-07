@@ -379,6 +379,6 @@ refinements worth recording:
 
 The owner clarified that the same emailed identity should show all relevant
 self-service information. The existing magic link/session now also supports
-read-only exhibitor access through a live contact-email check, without a
+read-only organization access through a live contact-email check, without a
 stored manager flag. Staff/volunteer isolation and all session guarantees
-remain. See the [exhibitor login decision](1192-exhibitor-manager-login.md).
+remain. See the [organization login decision](1192-organization-manager-login.md).

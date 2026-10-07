@@ -28,7 +28,7 @@ queue and offline check-in are not goals here (web check-in stays live-only,
   same read-only benefit.
 - **Scope: registrations from the start** (owner decision, 2026-10-06), together with
   the collections without guest data (tables, venues, rooms, table types, layouts,
-  areas, exhibitors). The registrations of the active edition are the part with real
+  areas, organizations). The registrations of the active edition are the part with real
   benefit: someone on a bad connection can still look up who sits where and who has
   checked in, as of the last sync, with a visible "last updated" state. The others
   are small and add little alone, but they share the same plumbing. **Never**
@@ -212,7 +212,7 @@ In this order and no wider than needed:
 | Collection | Persist | Notes |
 | --- | --- | --- |
 | Tables, venues, rooms, table types, layouts, areas | Yes, as complete sets | No guest data; `buster` on row-shape changes. |
-| Exhibitors | Yes | Name, active flag, contact person id. |
+| Organizations | Yes | Name, active flag, contact person id. |
 | Registrations of the active edition | Yes, in the first release, only with all five conditions met | #1182 completed: the edition is in the key; restore and edition-switch isolation still need persistence tests. |
 | People pages, registration list pages | **Never** | Query results, partial by construction. |
 
@@ -279,9 +279,9 @@ Server state stays authoritative; persistence only supplies the first rows. The 
   edition-switch isolation, restore ordering and every privacy condition above.
 - **The rest has no dependency** and can be built first: the plumbing (persister,
   allowlist, `maxAge`, `buster`, wipe, last-synced state) and the collections without
-  guest data (tables, venues, rooms, table types, layouts, areas, exhibitors).
-- **Exhibitor self-service ([#1190](https://github.com/tjorim/champagnefestival/issues/1190))**
-  changes the exhibitor row shape (description, translations, logo) and adds a manager
+  guest data (tables, venues, rooms, table types, layouts, areas, organizations).
+- **Organization self-service ([#1190](https://github.com/tjorim/champagnefestival/issues/1190))**
+  changes the organization row shape (description, translations, logo) and adds a manager
   login. Each row-shape change bumps `buster`. The persisted cache belongs to admin and
   volunteer sessions only; a manager or visitor session must neither restore it nor leave
   one behind, and the wipe covers a switch to such a session.

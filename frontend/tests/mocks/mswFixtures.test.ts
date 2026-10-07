@@ -21,7 +21,7 @@ describe("MSW operational fixtures", () => {
       ["forbidden-token", 403],
       ["dev-token", 200],
     ] as const) {
-      const response = await fetch("/api/exhibitors/changes", {
+      const response = await fetch("/api/organizations/changes", {
         headers: token ? adminAuthHeaders(token) : {},
       });
       expect(response.status).toBe(expected);
@@ -34,7 +34,7 @@ describe("MSW operational fixtures", () => {
       [2, "mock-manager-token", 404],
       [999, "mock-manager-token", 404],
     ] as const) {
-      const response = await fetch(`/api/me/exhibitors/${id}/changes`, {
+      const response = await fetch(`/api/me/organizations/${id}/changes`, {
         headers: token ? adminAuthHeaders(token) : {},
       });
       expect(response.status).toBe(expected);
@@ -42,9 +42,9 @@ describe("MSW operational fixtures", () => {
     }
     for (const scenario of ["auth-signed-out", "auth-forbidden"] as const) {
       await setScenario(scenario);
-      const admin = await fetch("/api/exhibitors/changes", { headers: adminAuthHeaders() });
+      const admin = await fetch("/api/organizations/changes", { headers: adminAuthHeaders() });
       expect(admin.status).toBe(scenario === "auth-signed-out" ? 401 : 403);
-      const manager = await fetch("/api/me/exhibitors/1/changes", {
+      const manager = await fetch("/api/me/organizations/1/changes", {
         headers: adminAuthHeaders("mock-manager-token"),
       });
       expect(manager.status).toBe(404);

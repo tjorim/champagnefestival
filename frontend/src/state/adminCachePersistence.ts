@@ -10,7 +10,7 @@ import { queryKeys } from "@/utils/queryKeys";
 
 export const ADMIN_CACHE_MAX_AGE = 72 * 60 * 60 * 1000;
 /** Bump whenever any allowlisted frontend row shape changes. */
-export const ADMIN_CACHE_BUSTER = "admin-collections-1";
+export const ADMIN_CACHE_BUSTER = "admin-collections-2";
 export const ADMIN_CACHE_WRITE_DELAY = 1000;
 export const ADMIN_CACHE_WIPE_SIGNAL = "champagne-admin-cache-wipe";
 
@@ -21,7 +21,7 @@ const keys = [
   queryKeys.admin.tableTypes,
   queryKeys.admin.layouts,
   queryKeys.admin.areas,
-  queryKeys.admin.exhibitors,
+  queryKeys.admin.organizations,
 ];
 const sameKey = (a: QueryKey, b: QueryKey) =>
   a.length === b.length && a.every((part, index) => part === b[index]);

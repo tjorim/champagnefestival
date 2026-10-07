@@ -115,7 +115,7 @@ function makeArea(overrides: Partial<FloorArea> = {}): FloorArea {
     id: "area-1",
     layoutId: "layout-1",
     icon: "bi-shop",
-    exhibitorId: null,
+    organizationId: null,
     label: "Stand 1",
     x: 60,
     y: 60,
@@ -152,7 +152,7 @@ interface RenderOverrides {
   layouts?: Layout[];
   registrations?: Registration[];
   rooms?: Room[];
-  exhibitors?: { id: number; name: string; active: boolean }[];
+  organizations?: { id: number; name: string; active: boolean }[];
   areas?: FloorArea[];
 }
 
@@ -204,7 +204,7 @@ function renderLayoutEditor(overrides: RenderOverrides = {}) {
       layouts={overrides.layouts ?? []}
       registrations={overrides.registrations ?? []}
       rooms={overrides.rooms ?? []}
-      exhibitors={overrides.exhibitors ?? []}
+      organizations={overrides.organizations ?? []}
       areas={overrides.areas ?? []}
       {...callbacks}
     />,
@@ -222,7 +222,7 @@ function realisticFixture(): Required<
     | "layouts"
     | "registrations"
     | "rooms"
-    | "exhibitors"
+    | "organizations"
     | "areas"
   >
 > {
@@ -236,7 +236,7 @@ function realisticFixture(): Required<
     layouts: [makeLayout()],
     registrations: [makeRegistration()],
     rooms: [makeRoom()],
-    exhibitors: [{ id: 1, name: "Champagne House", active: true }],
+    organizations: [{ id: 1, name: "Champagne House", active: true }],
     areas: [makeArea()],
   };
 }
@@ -730,7 +730,7 @@ describe("LayoutEditor", () => {
             name: "Table A",
             reason: "deleted",
             registrationIds: ["reg-1"],
-            exhibitorId: null,
+            organizationId: null,
           },
         ],
         hasConflicts: true,

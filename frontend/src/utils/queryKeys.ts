@@ -54,7 +54,7 @@ export const queryKeys = {
     rooms: ["admin", "rooms"] as const,
     tableTypes: ["admin", "table-types"] as const,
     layouts: ["admin", "layouts"] as const,
-    exhibitors: ["admin", "exhibitors"] as const,
+    organizations: ["admin", "organizations"] as const,
     areas: ["admin", "areas"] as const,
     people: ["admin", "people"] as const,
     peopleCounts: (params: PeopleCountParams) => ["admin", "people", "counts", params] as const,
@@ -67,7 +67,7 @@ export const queryKeys = {
     eventProducts: (eventId: string) => ["admin", "event-products", eventId] as const,
     editionPollOptions: (editionId: string) =>
       ["admin", "edition-poll-options", editionId] as const,
-    editionModalExhibitors: ["admin", "edition-modal", "exhibitors"] as const,
+    editionModalOrganizations: ["admin", "edition-modal", "organizations"] as const,
     itemModalPeople: (query: string) => ["admin", "item-modal", "people", query] as const,
     peopleRegistrations: (personId: string) =>
       ["admin", "people", personId, "registrations"] as const,

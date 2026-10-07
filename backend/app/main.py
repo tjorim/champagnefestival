@@ -28,8 +28,6 @@ from app.routers import (
     contact,
     editions,
     events,
-    exhibitor_logos,
-    exhibitors,
     faq,
     health,
     integration_clients,
@@ -37,7 +35,9 @@ from app.routers import (
     live,
     me,
     members,
-    my_exhibitors,
+    my_organizations,
+    organization_logos,
+    organizations,
     outbox,
     people,
     policies,
@@ -196,8 +196,8 @@ app.include_router(table_types.router)
 app.include_router(venues.router)
 app.include_router(rooms.router)
 app.include_router(layouts.router)
-app.include_router(exhibitors.router)
-app.include_router(exhibitor_logos.router)
+app.include_router(organizations.router)
+app.include_router(organization_logos.router)
 app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(products.router)
@@ -211,7 +211,7 @@ app.include_router(venue_plan.router)
 app.include_router(me.router)
 app.include_router(me.pebble_router)
 app.include_router(visitor_auth.router)
-app.include_router(my_exhibitors.router)
+app.include_router(my_organizations.router)
 app.include_router(live.router)
 app.include_router(health.router)
 app.include_router(faq.router)

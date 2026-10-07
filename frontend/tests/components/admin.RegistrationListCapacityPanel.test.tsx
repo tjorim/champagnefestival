@@ -94,7 +94,7 @@ function renderRegistrationList(registrations: Registration[]) {
       <RegistrationList
         registrations={registrations}
         tables={[]}
-        exhibitors={[]}
+        organizations={[]}
         filter="all"
         onFilterChange={vi.fn()}
         onUpdateStatus={vi.fn()}

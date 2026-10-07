@@ -23,9 +23,9 @@ from app.models import (
     Area,
     Edition,
     Event,
-    Exhibitor,
     Layout,
     LayoutRevision,
+    Organization,
     Registration,
     RegistrationAllocation,
     Room,
@@ -322,20 +322,20 @@ async def copy_layout(
     source_tables = (await db.execute(select(Table).where(Table.layout_id == source_layout_id))).scalars().all()
     source_areas = (await db.execute(select(Area).where(Area.layout_id == source_layout_id))).scalars().all()
 
-    # Validate inactive exhibitors before creating any pending inserts — fail fast
+    # Validate inactive organizations before creating any pending inserts — fail fast
     # before db.add(cloned) / db.flush() or table copies.
     if body.copy_areas:
-        exhibitor_ids = {area.exhibitor_id for area in source_areas if area.exhibitor_id is not None}
-        if exhibitor_ids:
+        organization_ids = {area.organization_id for area in source_areas if area.organization_id is not None}
+        if organization_ids:
             active_result = await db.execute(
-                select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids), Exhibitor.active.is_(True))
+                select(Organization.id).where(Organization.id.in_(organization_ids), Organization.active.is_(True))
             )
             active_ids = set(active_result.scalars().all())
-            inactive_ids = sorted(exhibitor_ids - active_ids)
+            inactive_ids = sorted(organization_ids - active_ids)
             if inactive_ids:
                 raise ValidationFailedError(
                     "Cannot copy: the following areas reference an inactive or "
-                    f"deleted exhibitor: {inactive_ids}. Update those areas first."
+                    f"deleted organization: {inactive_ids}. Update those areas first."
                 )
 
     table_type_ids = {t.table_type_id for t in source_tables}
@@ -393,7 +393,7 @@ async def copy_layout(
                     layout_id=cloned.id,
                     label=area.label,
                     icon=area.icon,
-                    exhibitor_id=area.exhibitor_id,
+                    organization_id=area.organization_id,
                     width_m=area.width_m,
                     length_m=area.length_m,
                     x=area.x,
@@ -508,7 +508,7 @@ async def _build_snapshot(db: AsyncSession, layout: Layout) -> dict:
     """Build a geometry-only, stable-identity snapshot of a layout's current
     tables and areas — the shared shape used both when saving a revision and
     when treating the live layout as the ``current`` side of a compare/restore
-    preview. Excludes allocations (registrations, ``Area.exhibitor_id``): those
+    preview. Excludes allocations (registrations, ``Area.organization_id``): those
     remain live operational data, never captured or restored by a revision."""
     tables = (
         (await db.execute(select(Table).where(Table.layout_id == layout.id).order_by(Table.created_at, Table.id)))
@@ -713,8 +713,8 @@ async def _allocation_conflicts(
 ) -> list[dict]:
     """Live allocations a restore would silently orphan: a table being deleted
     or having its geometry/type changed, or an area being deleted, while still
-    holding a non-cancelled registration/exhibitor assignment. Restoring never
-    touches ``Registration``/``Area.exhibitor_id`` itself — this only flags the
+    holding a non-cancelled registration/organization assignment. Restoring never
+    touches ``Registration``/``Area.organization_id`` itself — this only flags the
     conflict so the caller can make a deliberate ``resolve_allocations`` call."""
     removed_ids = {t["id"] for t in tables_to_remove}
     moved_ids = {t["id"] for t in tables_to_update if any(c["field"] in _GEOMETRY_TABLE_FIELDS for c in t["changes"])}
@@ -754,19 +754,19 @@ async def _allocation_conflicts(
     if at_risk_area_ids:
         rows = (
             await db.execute(
-                select(Area.id, Area.exhibitor_id, Area.label).where(
-                    Area.id.in_(at_risk_area_ids), Area.exhibitor_id.isnot(None)
+                select(Area.id, Area.organization_id, Area.label).where(
+                    Area.id.in_(at_risk_area_ids), Area.organization_id.isnot(None)
                 )
             )
         ).all()
-        for area_id, exhibitor_id, label in rows:
+        for area_id, organization_id, label in rows:
             conflicts.append(
                 {
                     "kind": "area",
                     "id": area_id,
                     "name": label,
                     "reason": "deleted" if area_id in removed_area_ids else "moved",
-                    "exhibitor_id": exhibitor_id,
+                    "organization_id": organization_id,
                 }
             )
     return conflicts
@@ -847,7 +847,7 @@ async def restore_layout_revision(
     # restore plan below. A concurrent write to one of these rows (a new
     # table allocation — see allocations_service.validate_allocations's own
     # explicit lock — or a plain UPDATE from areas_service assigning an
-    # exhibitor) contends for the same Postgres row lock either way, so
+    # organization) contends for the same Postgres row lock either way, so
     # acquiring it first guarantees the conflict check and the mutations
     # further down see one consistent, serialized state — nothing can commit
     # a new allocation between "we decided this is safe" and "we changed it".

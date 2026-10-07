@@ -10,7 +10,7 @@ into another planning file.
 | Remaining product work and completion history | [Product audit](product-audit-2026-08.md) |
 | Write retries and delivery operations | [Retry safety](retry-safety.md), [outbox worker](outbox-worker.md) |
 | Authorization and external integrations | [Authorization model](authorization-model.md), [operational lookup](integrations/OPERATIONAL_LOOKUP.md), [local MCP server](integrations/LOCAL_MCP_SERVER.md) |
-| Organisation self-service and review API | [Terminology](decisions/1190-organisation-terminology.md), [manager login](decisions/1192-exhibitor-manager-login.md), [proposals and review](exhibitor-change-review.md) |
+| Organisation self-service and review API | [Terminology](decisions/1190-organisation-terminology.md), [manager login](decisions/1192-organization-manager-login.md), [proposals and review](organization-change-review.md) |
 | Floor-plan geometry | [Coordinate contract](floor-plan-coordinates.md) |
 | API process count and shared state | [Single-worker decision](decisions/932-multi-worker-state.md) |
 | Retention, anonymisation and consent | [Retention decision](decisions/934-data-retention-and-erasure.md) |

@@ -2,7 +2,7 @@
 
 Used by both ``app.routers.editions`` (REST) and ``app.mcp.admin.editions``
 (MCP) so the deferred ``active``/``edition_type`` application, target-value
-computation, implicit exhibitor clearing, the ``deactivate_conflicting_editions``
+computation, implicit organization clearing, the ``deactivate_conflicting_editions``
 call, and audit-detail assembly for ``create_edition``/``apply_edition_update``
 live in exactly one place instead of two near-identical copies (#860, following
 on from #832 and #855). The payload-building and lookup helpers below back
@@ -31,7 +31,7 @@ from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.database import violated_constraint_name
-from app.models import Edition, Event, Exhibitor, Venue
+from app.models import Edition, Event, Organization, Venue
 from app.schemas import EditionCreate, EditionScratchpadUpdate, EditionType, EditionUpdate
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
@@ -168,69 +168,71 @@ async def _load_venues_by_ids(db: AsyncSession, ids: set[str]) -> dict[str, dict
     return {venue.id: venue_to_dict(venue) for venue in result.scalars().all()}
 
 
-async def _load_exhibitors_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, dict]:
+async def _load_organizations_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, dict]:
     if not ids:
         return {}
-    result = await db.execute(select(Exhibitor).where(Exhibitor.id.in_(ids), Exhibitor.active.is_(True)))
+    result = await db.execute(select(Organization).where(Organization.id.in_(ids), Organization.active.is_(True)))
     return {
-        exhibitor.id: {
-            "id": exhibitor.id,
-            "name": exhibitor.name,
-            "image": exhibitor.image,
-            "website": exhibitor.website,
-            "description_language": exhibitor.description_language,
-            "description_nl": exhibitor.description_nl,
-            "description_fr": exhibitor.description_fr,
-            "description_en": exhibitor.description_en,
-            "type": exhibitor.type,
+        organization.id: {
+            "id": organization.id,
+            "name": organization.name,
+            "image": organization.image,
+            "website": organization.website,
+            "description_language": organization.description_language,
+            "description_nl": organization.description_nl,
+            "description_fr": organization.description_fr,
+            "description_en": organization.description_en,
+            "type": organization.type,
         }
-        for exhibitor in result.scalars().all()
+        for organization in result.scalars().all()
     }
 
 
-async def validate_exhibitor_ids(db: AsyncSession, exhibitor_ids: list[int]) -> None:
-    if not exhibitor_ids:
+async def validate_organization_ids(db: AsyncSession, organization_ids: list[int]) -> None:
+    if not organization_ids:
         return
-    # Lock the referenced exhibitor rows so a concurrent retype-to-vendor (see
-    # exhibitors.update_exhibitor, which locks the same rows) can't interleave
-    # with this check and leave a vendor exhibitor linked to an edition lineup.
+    # Lock the referenced organization rows so a concurrent retype-to-vendor (see
+    # organizations.update_organization, which locks the same rows) can't interleave
+    # with this check and leave a vendor organization linked to an edition lineup.
     # Ordered by id so two overlapping requests always acquire locks in the same
     # sequence and can't deadlock against each other.
     await db.execute(
-        select(Exhibitor.id).where(Exhibitor.id.in_(exhibitor_ids)).order_by(Exhibitor.id).with_for_update()
+        select(Organization.id).where(Organization.id.in_(organization_ids)).order_by(Organization.id).with_for_update()
     )
-    exhibitor_map = await _load_exhibitors_by_ids(db, set(exhibitor_ids))
-    invalid = [eid for eid in exhibitor_ids if eid not in exhibitor_map]
+    organization_map = await _load_organizations_by_ids(db, set(organization_ids))
+    invalid = [eid for eid in organization_ids if eid not in organization_map]
     if invalid:
-        raise HTTPException(status_code=400, detail=f"Invalid or inactive exhibitor IDs: {invalid}")
-    vendor_ids = [eid for eid in exhibitor_ids if exhibitor_map[eid]["type"] == "vendor"]
+        raise HTTPException(status_code=400, detail=f"Invalid or inactive organization IDs: {invalid}")
+    vendor_ids = [eid for eid in organization_ids if organization_map[eid]["type"] == "vendor"]
     if vendor_ids:
         raise HTTPException(
-            status_code=400, detail=f"Vendor-type exhibitors may not be linked to editions: {vendor_ids}"
+            status_code=400, detail=f"Vendor-type organizations may not be linked to editions: {vendor_ids}"
         )
 
 
-async def validate_co_organizer(db: AsyncSession, exhibitor_id: int | None) -> None:
-    """A co-organizer must be an existing, active exhibitor.
+async def validate_co_organizer(db: AsyncSession, organization_id: int | None) -> None:
+    """A co-organizer must be an existing, active organization.
 
-    Unlike the lineup, any exhibitor type is acceptable and any edition type may
+    Unlike the lineup, any organization type is acceptable and any edition type may
     have one — co-organizing says who ran the event with the vzw, not who was
     programmed at it.
     """
-    if exhibitor_id is None:
+    if organization_id is None:
         return
-    exhibitor = (
-        await db.execute(select(Exhibitor).where(Exhibitor.id == exhibitor_id, Exhibitor.active.is_(True)))
+    organization = (
+        await db.execute(select(Organization).where(Organization.id == organization_id, Organization.active.is_(True)))
     ).scalar_one_or_none()
-    if exhibitor is None:
-        raise HTTPException(status_code=400, detail=f"Invalid or inactive co-organizer exhibitor id: {exhibitor_id}")
+    if organization is None:
+        raise HTTPException(
+            status_code=400, detail=f"Invalid or inactive co-organizer organization id: {organization_id}"
+        )
 
 
-def validate_exhibitors_allowed(edition_type: EditionType, exhibitors: list[int]) -> None:
-    if edition_type != "festival" and exhibitors:
+def validate_organizations_allowed(edition_type: EditionType, organizations: list[int]) -> None:
+    if edition_type != "festival" and organizations:
         raise HTTPException(
             status_code=400,
-            detail="Exhibitors are only supported on festival editions.",
+            detail="Organizations are only supported on festival editions.",
         )
 
 
@@ -283,12 +285,14 @@ def sorted_editions(editions: list[Edition], *, active_only: bool) -> list[Editi
     return sorted(editions, key=sort_key)
 
 
-def _resolve_exhibitors(edition: Edition, exhibitor_map: dict[int, dict]) -> tuple[list[dict], list[dict], list[dict]]:
+def _resolve_organizations(
+    edition: Edition, organization_map: dict[int, dict]
+) -> tuple[list[dict], list[dict], list[dict]]:
     producers: list[dict] = []
     sponsors: list[dict] = []
     vendors: list[dict] = []
-    for exhibitor_id in edition.exhibitors:
-        item = exhibitor_map.get(exhibitor_id)
+    for organization_id in edition.organizations:
+        item = organization_map.get(organization_id)
         if item is None:
             continue
         if item["type"] == "producer":
@@ -316,10 +320,10 @@ async def edition_payloads(
     the two shapes are incompatible.
     """
     venues = await _load_venues_by_ids(db, {edition.venue_id for edition in editions})
-    exhibitor_map = await _load_exhibitors_by_ids(
+    organization_map = await _load_organizations_by_ids(
         db,
-        {eid for edition in editions for eid in edition.exhibitors}
-        | {edition.co_organizer_exhibitor_id for edition in editions if edition.co_organizer_exhibitor_id},
+        {eid for edition in editions for eid in edition.organizations}
+        | {edition.co_organizer_organization_id for edition in editions if edition.co_organizer_organization_id},
     )
     payloads = []
     for edition in editions:
@@ -330,7 +334,7 @@ async def edition_payloads(
                 edition.venue_id,
             )
             continue
-        producers, sponsors, vendors = _resolve_exhibitors(edition, exhibitor_map)
+        producers, sponsors, vendors = _resolve_organizations(edition, organization_map)
         # `Edition.events` is loaded pre-ordered by (date, start_time, created_at); filtering
         # to active events preserves that order, so no re-sort is needed here.
         events = active_events(edition) if active_only else edition.events
@@ -343,8 +347,8 @@ async def edition_payloads(
                 producers=producers,
                 sponsors=sponsors,
                 vendors=vendors,
-                co_organizer=exhibitor_map.get(edition.co_organizer_exhibitor_id)
-                if edition.co_organizer_exhibitor_id
+                co_organizer=organization_map.get(edition.co_organizer_organization_id)
+                if edition.co_organizer_organization_id
                 else None,
             )
         )
@@ -365,7 +369,7 @@ async def create_edition(db: AsyncSession, *, body: EditionCreate, actor: str, r
             detail=f"Edition '{body.id}' already exists.",
         )
     await load_venue(db, body.venue_id)
-    validate_exhibitors_allowed(body.edition_type, body.exhibitors)
+    validate_organizations_allowed(body.edition_type, body.organizations)
 
     edition = Edition(
         id=body.id,
@@ -373,12 +377,12 @@ async def create_edition(db: AsyncSession, *, body: EditionCreate, actor: str, r
         month=body.month,
         venue_id=body.venue_id,
         edition_type=body.edition_type,
-        exhibitors=list(body.exhibitors),
-        co_organizer_exhibitor_id=body.co_organizer_exhibitor_id,
+        organizations=list(body.organizations),
+        co_organizer_organization_id=body.co_organizer_organization_id,
         active=body.active,
     )
-    await validate_exhibitor_ids(db, edition.exhibitors)
-    await validate_co_organizer(db, edition.co_organizer_exhibitor_id)
+    await validate_organization_ids(db, edition.organizations)
+    await validate_co_organizer(db, edition.co_organizer_organization_id)
 
     deactivated: list[str] = []
     if edition.active:
@@ -407,9 +411,9 @@ async def create_edition(db: AsyncSession, *, body: EditionCreate, actor: str, r
 async def apply_edition_update(
     db: AsyncSession, edition: Edition, body: EditionUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
-    if "co_organizer_exhibitor_id" in body.model_fields_set:
-        await validate_co_organizer(db, body.co_organizer_exhibitor_id)
-        edition.co_organizer_exhibitor_id = body.co_organizer_exhibitor_id
+    if "co_organizer_organization_id" in body.model_fields_set:
+        await validate_co_organizer(db, body.co_organizer_organization_id)
+        edition.co_organizer_organization_id = body.co_organizer_organization_id
 
     for field in ["year", "month"]:
         if field in body.model_fields_set:
@@ -421,8 +425,8 @@ async def apply_edition_update(
 
     # `active`/`edition_type` are deliberately not applied to `edition` yet: doing so
     # here would dirty the object before `deactivate_conflicting_editions` runs below,
-    # and any autoflush in between (the exhibitor/co-organizer validations above already
-    # ran, but `validate_exhibitor_ids` below issues one too) could flush this row into
+    # and any autoflush in between (the organization/co-organizer validations above already
+    # ran, but `validate_organization_ids` below issues one too) could flush this row into
     # an (edition_type, active) state that collides with the still-active conflicting
     # row — the exact violation the deactivation step exists to avoid causing.
     persisted_edition_type = edition.edition_type
@@ -431,21 +435,21 @@ async def apply_edition_update(
     target_edition_type: EditionType = body.edition_type or persisted_edition_type
     target_active = body.active if body.active is not None else edition.active
 
-    exhibitors_implicitly_cleared = False
-    if "exhibitors" in body.model_fields_set and body.exhibitors is not None:
-        validate_exhibitors_allowed(target_edition_type, body.exhibitors)
-        await validate_exhibitor_ids(db, body.exhibitors)
-        edition.exhibitors = list(body.exhibitors)
-    elif target_edition_type != "festival" and edition.exhibitors:
-        # The edition type changed away from festival without an explicit exhibitors
+    organizations_implicitly_cleared = False
+    if "organizations" in body.model_fields_set and body.organizations is not None:
+        validate_organizations_allowed(target_edition_type, body.organizations)
+        await validate_organization_ids(db, body.organizations)
+        edition.organizations = list(body.organizations)
+    elif target_edition_type != "festival" and edition.organizations:
+        # The edition type changed away from festival without an explicit organizations
         # payload — either just now (edition_type in this update) or on an edition
         # already non-festival before this update. Off-festival editions can't carry
-        # exhibitors, so clear the now-invalid associations as part of the same atomic
+        # organizations, so clear the now-invalid associations as part of the same atomic
         # transition instead of rejecting the update.
-        edition.exhibitors = []
-        exhibitors_implicitly_cleared = True
+        edition.organizations = []
+        organizations_implicitly_cleared = True
 
-    validate_exhibitors_allowed(target_edition_type, edition.exhibitors)
+    validate_organizations_allowed(target_edition_type, edition.organizations)
 
     deactivated: list[str] = []
     if target_active:
@@ -460,8 +464,8 @@ async def apply_edition_update(
             setattr(edition, field, getattr(body, field))
 
     details: dict = {"fields_changed": sorted(body.model_fields_set)}
-    if exhibitors_implicitly_cleared:
-        details["exhibitors_cleared"] = True
+    if organizations_implicitly_cleared:
+        details["organizations_cleared"] = True
     if deactivated:
         details["deactivated_conflicting_editions"] = deactivated
     await write_audit_entry(

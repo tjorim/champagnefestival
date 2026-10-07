@@ -8,7 +8,7 @@ from sqlalchemy import select
 from app.mcp.admin import layouts as mcp_layouts
 from app.models import (
     Area,
-    Exhibitor,
+    Organization,
     Person,
     Registration,
     RegistrationAllocation,
@@ -253,10 +253,10 @@ async def test_copy_layout_clones_tables_and_areas_with_new_ids(db_session):
     assert new_tables["Outside"].id != "tbl-outside"
 
 
-async def test_copy_layout_rejects_area_with_inactive_exhibitor(db_session):
-    """An area whose exhibitor was deactivated after the area was created must not
+async def test_copy_layout_rejects_area_with_inactive_organization(db_session):
+    """An area whose organization was deactivated after the area was created must not
     be silently carried into the copy — create_area/update_area both refuse to
-    assign an inactive exhibitor, so the copy path can't create areas those tools
+    assign an inactive organization, so the copy path can't create areas those tools
     would reject."""
     factory = mcp_session_factory(db_session)
     await _seed_room(db_session)
@@ -264,10 +264,10 @@ async def test_copy_layout_rejects_area_with_inactive_exhibitor(db_session):
         factory, "admin-1", room_id="room-1", event_id=await seed_layout_event(db_session)
     )
 
-    exhibitor = Exhibitor(name="Bollinger", type="producer", active=False)
-    db_session.add(exhibitor)
+    organization = Organization(name="Bollinger", type="producer", active=False)
+    db_session.add(organization)
     await db_session.flush()
-    db_session.add(Area(id="area-1", layout_id=source["id"], label="Zone A", exhibitor_id=exhibitor.id))
+    db_session.add(Area(id="area-1", layout_id=source["id"], label="Zone A", organization_id=organization.id))
     await db_session.commit()
 
     with pytest.raises(ValueError, match="inactive"):

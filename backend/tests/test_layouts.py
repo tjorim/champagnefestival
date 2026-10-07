@@ -321,10 +321,10 @@ async def test_copy_layout_copies_areas(client):
 
 
 @pytest.mark.anyio
-async def test_copy_layout_rejects_area_with_inactive_exhibitor(client):
-    """An area whose exhibitor was deactivated after the area was created must not
+async def test_copy_layout_rejects_area_with_inactive_organization(client):
+    """An area whose organization was deactivated after the area was created must not
     be silently carried into the copy — create_area/update_area both refuse to
-    assign an inactive exhibitor, so the copy path can't create areas those tools
+    assign an inactive organization, so the copy path can't create areas those tools
     would reject."""
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
@@ -337,16 +337,16 @@ async def test_copy_layout_rejects_area_with_inactive_exhibitor(client):
     )
     source_id = r.json()["id"]
 
-    r = await client.post("/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
-    exhibitor_id = r.json()["id"]
+    r = await client.post("/api/organizations", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
+    organization_id = r.json()["id"]
     r = await client.post(
         "/api/areas",
-        json={"layout_id": source_id, "label": "Zone A", "exhibitor_id": exhibitor_id},
+        json={"layout_id": source_id, "label": "Zone A", "organization_id": organization_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
 
-    r = await client.put(f"/api/exhibitors/{exhibitor_id}", json={"active": False}, headers=ADMIN_HEADERS)
+    r = await client.put(f"/api/organizations/{organization_id}", json={"active": False}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
 
     r = await client.post(
@@ -669,7 +669,7 @@ async def test_restore_blocked_by_allocation_conflict_then_resolved(client, db_s
             "name": "T1",
             "reason": "deleted",
             "registration_ids": [registration_id],
-            "exhibitor_id": None,
+            "organization_id": None,
         }
     ]
 
@@ -704,16 +704,16 @@ async def test_restore_blocked_by_allocation_conflict_then_resolved(client, db_s
 
 
 @pytest.mark.anyio
-async def test_restore_blocked_by_moving_an_exhibitor_assigned_area(client):
-    """An assigned area (live Area.exhibitor_id) that a restore would move —
+async def test_restore_blocked_by_moving_an_organization_assigned_area(client):
+    """An assigned area (live Area.organization_id) that a restore would move —
     not just delete — must also require resolve_allocations, mirroring how a
     table that would only move (not be deleted) still needs the override."""
     _, _, layout_id, _ = await _seed_layout(client)
-    r = await client.post("/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
-    exhibitor_id = r.json()["id"]
+    r = await client.post("/api/organizations", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
+    organization_id = r.json()["id"]
     r = await client.post(
         "/api/areas",
-        json={"layout_id": layout_id, "label": "Zone A", "exhibitor_id": exhibitor_id, "x": 10.0, "y": 10.0},
+        json={"layout_id": layout_id, "label": "Zone A", "organization_id": organization_id, "x": 10.0, "y": 10.0},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -737,7 +737,7 @@ async def test_restore_blocked_by_moving_an_exhibitor_assigned_area(client):
             "name": "Zone A",
             "reason": "moved",
             "registration_ids": [],
-            "exhibitor_id": exhibitor_id,
+            "organization_id": organization_id,
         }
     ]
 
@@ -752,19 +752,19 @@ async def test_restore_blocked_by_moving_an_exhibitor_assigned_area(client):
     assert r.status_code == 200, r.text
     restored_area = next(a for a in r.json()["areas"] if a["id"] == area_id)
     assert restored_area["x"] == 10.0
-    assert restored_area["exhibitor_id"] == exhibitor_id
+    assert restored_area["organization_id"] == organization_id
 
 
 @pytest.mark.anyio
 async def test_revision_snapshot_excludes_allocations(client):
-    """A saved revision never captures exhibitor assignments or registration
+    """A saved revision never captures organization assignments or registration
     links — both remain live operational data outside any revision's scope."""
     _, _, layout_id, tt_id = await _seed_layout(client)
-    r = await client.post("/api/exhibitors", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
-    exhibitor_id = r.json()["id"]
+    r = await client.post("/api/organizations", json={"name": "Bollinger", "type": "producer"}, headers=ADMIN_HEADERS)
+    organization_id = r.json()["id"]
     r = await client.post(
         "/api/areas",
-        json={"layout_id": layout_id, "label": "Zone A", "exhibitor_id": exhibitor_id},
+        json={"layout_id": layout_id, "label": "Zone A", "organization_id": organization_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -772,7 +772,7 @@ async def test_revision_snapshot_excludes_allocations(client):
     r = await client.post(f"/api/layouts/{layout_id}/revisions", json={"label": "v1"}, headers=ADMIN_HEADERS)
     assert r.status_code == 201, r.text
     area_snapshot = r.json()["snapshot"]["areas"][0]
-    assert "exhibitor_id" not in area_snapshot
+    assert "organization_id" not in area_snapshot
     for table_snapshot in r.json()["snapshot"]["tables"]:
         assert "registration_ids" not in table_snapshot
 

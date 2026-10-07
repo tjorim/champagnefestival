@@ -115,7 +115,7 @@ async def get_venue_plan(
                 rotation=a.rotation,
                 width_m=a.width_m,
                 length_m=a.length_m,
-                exhibitor_id=a.exhibitor_id,
+                organization_id=a.organization_id,
             )
             for a in lay.areas
         ]

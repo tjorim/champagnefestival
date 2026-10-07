@@ -284,12 +284,12 @@ def _send_message_sync(message: EmailMessage) -> None:
         smtp.send_message(message)
 
 
-async def deliver_exhibitor_change_notification(change_id: str) -> bool:
+async def deliver_organization_change_notification(change_id: str) -> bool:
     """Notify the snapshotted shared mailbox about one persisted submission."""
-    from app.models import ExhibitorChange
+    from app.models import OrganizationChange
 
     async with async_session_factory() as db:
-        change = await db.get(ExhibitorChange, change_id)
+        change = await db.get(OrganizationChange, change_id)
         if change is None:
             return False
         recipient = change.notification_recipient
@@ -301,14 +301,14 @@ async def deliver_exhibitor_change_notification(change_id: str) -> bool:
         message["Subject"] = "Champagnefestival: organisation change awaiting review"
         message["From"] = settings.smtp_from
         message["To"] = recipient
-        message["Message-ID"] = f"<exhibitor-change-{change.id}@champagnefestival>"
+        message["Message-ID"] = f"<organization-change-{change.id}@champagnefestival>"
         message.set_content(
-            f"Organisation {change.exhibitor_id} submitted proposal {change.id}.\n"
+            f"Organisation {change.organization_id} submitted proposal {change.id}.\n"
             f"Review the pending changes in the admin Content page: {settings.frontend_url}/admin\n"
         )
         try:
             await asyncio.to_thread(_send_message_sync, message)
         except Exception:
-            logger.exception("Failed to send exhibitor proposal notification for change_id=%s", change_id)
+            logger.exception("Failed to send organization proposal notification for change_id=%s", change_id)
             return False
         return True

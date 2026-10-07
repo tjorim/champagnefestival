@@ -385,10 +385,10 @@ class PushSubscription(Base):
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
 
 
-class Exhibitor(Base):
-    """A unified exhibitor: champagne producer, sponsor, or vendor."""
+class Organization(Base):
+    """A unified organization: champagne producer, sponsor, or vendor."""
 
-    __tablename__ = "exhibitors"
+    __tablename__ = "organizations"
 
     __table_args__ = (
         CheckConstraint(
@@ -398,7 +398,7 @@ class Exhibitor(Base):
             "(description_language = 'nl' AND length(trim(description_nl)) > 0) OR "
             "(description_language = 'fr' AND length(trim(description_fr)) > 0) OR "
             "(description_language = 'en' AND length(trim(description_en)) > 0)) IS TRUE)",
-            name="ck_exhibitors_description_original",
+            name="ck_organizations_description_original",
         ),
     )
 
@@ -422,18 +422,24 @@ class Exhibitor(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
-class ExhibitorChange(Base):
+class OrganizationChange(Base):
     """Private proposal history; the partial unique index permits one pending proposal."""
 
-    __tablename__ = "exhibitor_changes"
+    __tablename__ = "organization_changes"
     __table_args__ = (
-        Index("uq_exhibitor_pending_change", "exhibitor_id", unique=True, postgresql_where=text("status = 'pending'")),
+        Index(
+            "uq_organization_pending_change",
+            "organization_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
         CheckConstraint(
-            "status IN ('pending', 'accepted', 'rejected', 'superseded', 'replaced')", name="ck_exhibitor_change_status"
+            "status IN ('pending', 'accepted', 'rejected', 'superseded', 'replaced')",
+            name="ck_organization_change_status",
         ),
     )
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    exhibitor_id: Mapped[int] = mapped_column(ForeignKey("exhibitors.id", ondelete="CASCADE"), index=True)
+    organization_id: Mapped[int] = mapped_column(ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
     submitted_by: Mapped[str] = mapped_column(String(255))
     submitted_auth_source: Mapped[str | None] = mapped_column(String(64), nullable=True)
     submitted_values: Mapped[dict] = mapped_column(JSON)
@@ -621,8 +627,8 @@ class Area(Base):
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     layout_id: Mapped[str] = mapped_column(String(64), ForeignKey("layouts.id", ondelete="CASCADE"), nullable=False)
-    exhibitor_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("exhibitors.id", ondelete="SET NULL"), nullable=True
+    organization_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True
     )
     label: Mapped[str] = mapped_column(String(200))
     icon: Mapped[str] = mapped_column(String(50), default="bi-shop")
@@ -660,7 +666,7 @@ class LayoutRevision(Base):
     each table/area's stable ``id`` plus geometry (matching the ``id`` is
     what lets compare/restore align objects across a rename — see
     ``LayoutRevisionSnapshot``); it deliberately excludes allocations
-    (``exhibitor_id``, registration links), which remain live operational
+    (``organization_id``, registration links), which remain live operational
     data outside any revision's scope.
     """
 
@@ -700,15 +706,15 @@ class Edition(Base):
 
     venue_id: Mapped[str] = mapped_column(String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False)
     edition_type: Mapped[str] = mapped_column(String(20), default="festival")
-    exhibitors: Mapped[list[int]] = mapped_column(JSON, default=list)
+    organizations: Mapped[list[int]] = mapped_column(JSON, default=list)
     """The festival lineup — producers and sponsors programmed for this edition."""
 
-    co_organizer_exhibitor_id: Mapped[int | None] = mapped_column(
-        Integer, ForeignKey("exhibitors.id", ondelete="SET NULL"), nullable=True
+    co_organizer_organization_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True
     )
-    """The exhibitor co-organizing this edition with the vzw, if any.
+    """The organization co-organizing this edition with the vzw, if any.
 
-    Deliberately separate from `exhibitors`: co-organizing is a different
+    Deliberately separate from `organizations`: co-organizing is a different
     relationship from being in the lineup, and it applies to editions (such as a
     bourse) that carry no lineup at all. The vzw remains the organizer either way.
     """

@@ -8,11 +8,11 @@ import {
   resetAdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
 import {
-  createAdminExhibitorsCollection,
-  refetchAdminExhibitors,
-  registerAdminExhibitorsCollection,
-  resetAdminExhibitorsCollection,
-} from "@/state/adminExhibitorsCollection";
+  createAdminOrganizationsCollection,
+  refetchAdminOrganizations,
+  registerAdminOrganizationsCollection,
+  resetAdminOrganizationsCollection,
+} from "@/state/adminOrganizationsCollection";
 import { resetAdminPeopleSession } from "@/state/adminPeopleSession";
 import { useRegistrationCountsQuery } from "@/hooks/useRegistrationListQuery";
 import { useTodayKey } from "@/hooks/useTodayKey";
@@ -187,26 +187,32 @@ export function useAdminQueries({
     isFetching: venueCollections.areas.utils.isFetching,
   };
 
-  const exhibitorsCollection = useMemo(
+  const organizationsCollection = useMemo(
     () =>
-      createAdminExhibitorsCollection({
+      createAdminOrganizationsCollection({
         queryClient,
         authHeaders,
         enabled: adminQueryOptions.enabled,
       }),
     [adminQueryOptions.enabled, authHeaders, queryClient],
   );
-  const exhibitorsLiveQuery = useLiveQuery(() => exhibitorsCollection, [exhibitorsCollection]);
-  const exhibitorsCollectionRef = useRef(exhibitorsCollection);
+  const organizationsLiveQuery = useLiveQuery(
+    () => organizationsCollection,
+    [organizationsCollection],
+  );
+  const organizationsCollectionRef = useRef(organizationsCollection);
   useEffect(() => {
-    exhibitorsCollectionRef.current = exhibitorsCollection;
-  }, [exhibitorsCollection]);
-  useEffect(() => registerAdminExhibitorsCollection(exhibitorsCollection), [exhibitorsCollection]);
-  const exhibitorsQuery = {
-    data: exhibitorsLiveQuery.data,
-    error: exhibitorsCollection.utils.lastError ?? null,
-    isPending: exhibitorsLiveQuery.isLoading,
-    isFetching: exhibitorsCollection.utils.isFetching,
+    organizationsCollectionRef.current = organizationsCollection;
+  }, [organizationsCollection]);
+  useEffect(
+    () => registerAdminOrganizationsCollection(organizationsCollection),
+    [organizationsCollection],
+  );
+  const organizationsQuery = {
+    data: organizationsLiveQuery.data,
+    error: organizationsCollection.utils.lastError ?? null,
+    isPending: organizationsLiveQuery.isLoading,
+    isFetching: organizationsCollection.utils.isFetching,
   };
 
   useEffect(() => {
@@ -217,7 +223,9 @@ export function useAdminQueries({
     );
     void resetAdminTablesCollection(tablesCollectionRef.current).catch(() => undefined);
     void resetAdminVenueCollections(venueCollectionsRef.current).catch(() => undefined);
-    void resetAdminExhibitorsCollection(exhibitorsCollectionRef.current).catch(() => undefined);
+    void resetAdminOrganizationsCollection(organizationsCollectionRef.current).catch(
+      () => undefined,
+    );
     void queryClient.removeQueries({ queryKey: queryKeys.admin.registrations });
     void queryClient.removeQueries({ queryKey: queryKeys.admin.tables });
     // Also removes the per-person queries nested under the people key.
@@ -231,7 +239,7 @@ export function useAdminQueries({
     ]) {
       void queryClient.removeQueries({ queryKey });
     }
-    void queryClient.removeQueries({ queryKey: queryKeys.admin.exhibitors });
+    void queryClient.removeQueries({ queryKey: queryKeys.admin.organizations });
   }, [isAuthenticated, queryClient, registrationsQueryKey]);
   const allQueries = [
     registrationsQuery,
@@ -242,7 +250,7 @@ export function useAdminQueries({
           roomsQuery,
           tableTypesQuery,
           layoutsQuery,
-          exhibitorsQuery,
+          organizationsQuery,
           areasQuery,
           peopleCountsQuery,
           registrationCountsQuery,
@@ -270,13 +278,13 @@ export function useAdminQueries({
         ? queryClient.invalidateQueries({ queryKey: queryKeys.admin.people })
         : undefined,
       canManageAdminSections ? refetchAdminVenueCollections(venueCollections) : undefined,
-      canManageAdminSections ? refetchAdminExhibitors(exhibitorsCollection) : undefined,
+      canManageAdminSections ? refetchAdminOrganizations(organizationsCollection) : undefined,
     ]);
   }, [
     canManageAdminSections,
     adminQueryOptions.enabled,
     queryClient,
-    exhibitorsCollection,
+    organizationsCollection,
     registrationsCollection,
     registrationsQueryOptions.enabled,
     tablesCollection,
@@ -294,8 +302,8 @@ export function useAdminQueries({
     roomsQuery,
     tableTypesQuery,
     layoutsQuery,
-    exhibitorsQuery,
-    exhibitorsCollection,
+    organizationsQuery,
+    organizationsCollection,
     areasQuery,
     venueCollections,
     peopleCountsQuery,

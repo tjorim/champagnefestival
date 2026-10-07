@@ -49,7 +49,7 @@ export interface FloorArea {
   id: string;
   layoutId: string;
   icon: string;
-  exhibitorId: number | null;
+  organizationId: number | null;
   label: string;
   /** Same x/y/rotation contract as FloorTable — see docs/floor-plan-coordinates.md. */
   x: number;
@@ -75,8 +75,8 @@ export interface Layout {
   createdAt: string;
 }
 
-/** An exhibitor as the admin dashboard reads it from `GET /api/exhibitors`. */
-export interface Exhibitor {
+/** An organization as the admin dashboard reads it from `GET /api/organizations`. */
+export interface Organization {
   description_language?: "nl" | "fr" | "en" | null;
   description_nl?: string | null;
   description_fr?: string | null;
@@ -85,7 +85,7 @@ export interface Exhibitor {
   id: number;
   name: string;
   active: boolean;
-  /** The person who is the exhibitor's contact; repointed by a people merge. */
+  /** The person who is the organization's contact; repointed by a people merge. */
   contactPersonId: string | null;
 }
 
@@ -162,7 +162,7 @@ export interface LayoutRevisionSnapshotTable {
 }
 
 /** One area's stable identity and geometry — same contract as
- * LayoutRevisionSnapshotTable. Deliberately excludes exhibitorId: exhibitor
+ * LayoutRevisionSnapshotTable. Deliberately excludes organizationId: organization
  * assignments are live operational data, never part of a revision. */
 export interface LayoutRevisionSnapshotArea {
   id: string;
@@ -228,8 +228,8 @@ export interface LayoutRevisionDiff {
 }
 
 /** One live allocation a restore would silently orphan by deleting or moving
- * its table, or deleting an exhibitor-assigned area. Restoring never touches
- * the registration/exhibitor assignment itself — this only flags the
+ * its table, or deleting an organization-assigned area. Restoring never touches
+ * the registration/organization assignment itself — this only flags the
  * conflict so the caller can make a deliberate resolveAllocations call. */
 export interface LayoutRestoreAllocationConflict {
   kind: "table" | "area";
@@ -237,7 +237,7 @@ export interface LayoutRestoreAllocationConflict {
   name: string;
   reason: "deleted" | "moved";
   registrationIds: string[];
-  exhibitorId: number | null;
+  organizationId: number | null;
 }
 
 export interface LayoutRestorePreview {

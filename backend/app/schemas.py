@@ -1049,11 +1049,11 @@ class PersonUpdate(RequestModel):
 
 
 # ---------------------------------------------------------------------------
-# Exhibitors
+# Organizations
 # ---------------------------------------------------------------------------
 
 
-class ExhibitorDescription(RequestModel):
+class OrganizationDescription(RequestModel):
     description_language: Literal["nl", "fr", "en"] | None = None
     description_nl: str | None = Field(default=None, max_length=600)
     description_fr: str | None = Field(default=None, max_length=600)
@@ -1074,7 +1074,7 @@ class ExhibitorDescription(RequestModel):
         return self
 
 
-class ExhibitorCreate(ExhibitorDescription):
+class OrganizationCreate(OrganizationDescription):
     name: str = Field(min_length=1, max_length=200)
     image: str = Field(default="", max_length=500)
     website: str = Field(default="", max_length=500)
@@ -1087,7 +1087,7 @@ class ExhibitorCreate(ExhibitorDescription):
         return self.validate_original()
 
 
-class ExhibitorUpdate(ExhibitorDescription):
+class OrganizationUpdate(OrganizationDescription):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     image: str | None = Field(default=None, max_length=500)
     website: str | None = Field(default=None, max_length=500)
@@ -1096,7 +1096,7 @@ class ExhibitorUpdate(ExhibitorDescription):
     contact_person_id: str | None = None
 
 
-class ExhibitorOut(BaseModel):
+class OrganizationOut(BaseModel):
     description_language: Literal["nl", "fr", "en"] | None = None
     description_nl: str | None = None
     description_fr: str | None = None
@@ -1316,7 +1316,7 @@ class AreaCreate(RequestModel):
     layout_id: str = Field(max_length=64)
     label: str = Field(min_length=1, max_length=200)
     icon: str = Field(default="bi-shop", max_length=50)
-    exhibitor_id: int | None = None
+    organization_id: int | None = None
     width_m: float = Field(ge=0.1, le=50.0, default=1.5)
     length_m: float = Field(ge=0.1, le=50.0, default=1.0)
     x: float = Field(ge=0, le=100, default=50.0, description=X_POSITION_DESCRIPTION)
@@ -1327,7 +1327,7 @@ class AreaCreate(RequestModel):
 class AreaUpdate(RequestModel):
     label: str | None = Field(default=None, min_length=1, max_length=200)
     icon: str | None = Field(default=None, max_length=50)
-    exhibitor_id: int | None = None
+    organization_id: int | None = None
     width_m: float | None = Field(default=None, ge=0.1, le=50.0)
     length_m: float | None = Field(default=None, ge=0.1, le=50.0)
     x: float | None = Field(default=None, ge=0, le=100, description=X_POSITION_DESCRIPTION)
@@ -1339,7 +1339,7 @@ class AreaOut(BaseModel):
     id: str
     layout_id: str
     icon: str
-    exhibitor_id: int | None
+    organization_id: int | None
     label: str
     x: float
     y: float
@@ -1398,7 +1398,7 @@ class LayoutRevisionSnapshotArea(BaseModel):
 
     ``id`` is the source ``Area.id`` — the stable identity compare/restore
     match on, never the mutable ``label``. Deliberately excludes
-    ``exhibitor_id``: allocations are live operational data, not part of any
+    ``organization_id``: allocations are live operational data, not part of any
     revision (see ``LayoutRevisionSnapshot``).
     """
 
@@ -1421,7 +1421,7 @@ class LayoutRevisionSnapshot(BaseModel):
     """A geometry-only snapshot of a layout's tables and areas.
 
     Excludes allocations (``Registration``/``RegistrationAllocation``) and
-    area ``exhibitor_id`` — those remain live operational data outside any
+    area ``organization_id`` — those remain live operational data outside any
     revision's scope (#1021 acceptance criteria).
     """
 
@@ -1507,7 +1507,7 @@ class LayoutRevisionDiff(BaseModel):
 class LayoutRestoreAllocationConflict(BaseModel):
     """One live allocation that would be silently invalidated by a restore.
 
-    Restoring never touches ``Registration``/``Area.exhibitor_id`` itself —
+    Restoring never touches ``Registration``/``Area.organization_id`` itself —
     this only flags that the *geometry* change (delete/move) would orphan an
     existing allocation, so the caller can make a deliberate call via
     ``LayoutRestoreRequest.resolve_allocations``.
@@ -1518,7 +1518,7 @@ class LayoutRestoreAllocationConflict(BaseModel):
     name: str
     reason: Literal["deleted", "moved"]
     registration_ids: list[str] = Field(default_factory=list)
-    exhibitor_id: int | None = None
+    organization_id: int | None = None
 
 
 class LayoutRestorePreview(BaseModel):
@@ -1568,7 +1568,7 @@ class VenuePlanAreaOut(BaseModel):
     rotation: int
     width_m: float
     length_m: float
-    exhibitor_id: int | None
+    organization_id: int | None
 
 
 class VenuePlanLayoutOut(BaseModel):
@@ -1697,8 +1697,8 @@ class EditionCreate(RequestModel):
     month: str
     venue_id: str
     edition_type: EditionType = "festival"
-    exhibitors: list[int] = Field(default_factory=list)
-    co_organizer_exhibitor_id: int | None = None
+    organizations: list[int] = Field(default_factory=list)
+    co_organizer_organization_id: int | None = None
     active: bool = True
 
 
@@ -1707,8 +1707,8 @@ class EditionUpdate(RequestModel):
     month: str | None = None
     venue_id: str | None = None
     edition_type: EditionType | None = None
-    exhibitors: list[int] | None = None
-    co_organizer_exhibitor_id: int | None = None
+    organizations: list[int] | None = None
+    co_organizer_organization_id: int | None = None
     active: bool | None = None
 
     @model_validator(mode="after")
@@ -1720,7 +1720,7 @@ class EditionUpdate(RequestModel):
 
 
 class EditionItemOut(BaseModel):
-    """Slim exhibitor shape embedded in the public edition response.
+    """Slim organization shape embedded in the public edition response.
     Only active items are included; contact person and active flag are
     intentionally excluded — they are internal admin data."""
 
@@ -2294,7 +2294,7 @@ class ComposedMessageScheduleRequest(RequestModel):
         return value
 
 
-class ManagedExhibitorOut(ExhibitorDescription):
+class ManagedOrganizationOut(OrganizationDescription):
     id: int
     name: str
     type: str
@@ -2302,7 +2302,7 @@ class ManagedExhibitorOut(ExhibitorDescription):
     active: bool
 
 
-class ExhibitorChangeSubmit(ExhibitorDescription):
+class OrganizationChangeSubmit(OrganizationDescription):
     submission_id: UUID
     website: str | None = Field(default=None, max_length=500)
 
@@ -2317,15 +2317,15 @@ class ExhibitorChangeSubmit(ExhibitorDescription):
         return value
 
 
-class ExhibitorChangeDecision(RequestModel):
+class OrganizationChangeDecision(RequestModel):
     decision: Literal["accepted", "rejected"]
     reason: str | None = Field(default=None, max_length=2000)
 
 
-class ExhibitorChangeOut(BaseModel):
+class OrganizationChangeOut(BaseModel):
     id: str
-    exhibitor_id: int
-    exhibitor_name: str
+    organization_id: int
+    organization_name: str
     status: Literal["pending", "accepted", "rejected", "superseded", "replaced"]
     proposed: dict[str, str | None]
     current: dict[str, str | None]

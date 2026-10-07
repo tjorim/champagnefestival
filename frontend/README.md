@@ -165,7 +165,7 @@ src/mocks/
 ├── browser.ts          # setupWorker entry point
 ├── data/               # seed data modules
 │   ├── editions.ts
-│   ├── exhibitors.ts
+│   ├── organizations.ts
 │   ├── people.ts
 │   ├── registrations.ts
 │   └── venue.ts
@@ -211,9 +211,9 @@ production builds**.
 - Top-level admin resources are owned by `queryKeys.admin.*` and consumed by `useAdminQueries`.
 - `useAdminQueries` centralizes bulk admin refetch behavior via `shouldRefetchAdminResourceQuery`,
   which only matches the stable top-level admin resources (`registrations`, `tables`, `venues`,
-  `rooms`, `table-types`, `layouts`, `exhibitors`, `areas`, `people`, `members`).
+  `rooms`, `table-types`, `layouts`, `organizations`, `areas`, `people`, `members`).
 - Check-in uses `queryKeys.checkInRegistration(id, token)`.
-- `/me` stores booking responses in its session controller; exhibitors use a
+- `/me` stores booking responses in its session controller; organizations use a
   private account-scoped query with no retained cache after unmount.
 
 ## Technologies

@@ -31,7 +31,7 @@ function setup() {
   return onSave;
 }
 
-describe("exhibitor description editor", () => {
+describe("organization description editor", () => {
   it("loads and saves descriptions and their original language", async () => {
     const onSave = setup();
     expect(screen.getByLabelText("admin_item_description_fr")).toHaveValue("Bonjour");

@@ -5,7 +5,7 @@
  * `saveContentSectionItem` read as "existing" and sent as an update against an
  * id the server had never seen.
  *
- * EditionModal's exhibitor payload is pinned here too: the API rejects vendor
+ * EditionModal's organization payload is pinned here too: the API rejects vendor
  * ids on an edition, so the form must submit producers and sponsors only.
  */
 
@@ -67,25 +67,25 @@ describe("new content items are created, not updated", () => {
       seen.push(`${request.method} ${new URL(request.url).pathname}`);
     });
 
-    const saved = await saveContentSectionItem("exhibitors", draft as never, authHeaders);
+    const saved = await saveContentSectionItem("organizations", draft as never, authHeaders);
 
-    expect(seen).toContain("POST /api/exhibitors");
-    expect(seen.some((entry) => entry.startsWith("PUT /api/exhibitors/"))).toBe(false);
+    expect(seen).toContain("POST /api/organizations");
+    expect(seen.some((entry) => entry.startsWith("PUT /api/organizations/"))).toBe(false);
     expect(saved.name).toBe("New Vendor");
     expect(saved.id).toBeGreaterThan(0);
   });
 });
 
-describe("saving a festival edition submits only programmable exhibitors", () => {
+describe("saving a festival edition submits only programmable organizations", () => {
   it("leaves vendor ids out of the payload", async () => {
-    // The API rejects vendor ids on an edition ("Vendor-type exhibitors may not
+    // The API rejects vendor ids on an edition ("Vendor-type organizations may not
     // be linked to editions"), so an edition that surfaces vendors is already in
     // a state the backend considers invalid. Re-sending them would make the
     // edition permanently unsaveable; omitting them lets the save clear it.
-    let submitted: { exhibitors?: number[] } | null = null;
+    let submitted: { organizations?: number[] } | null = null;
     server.use(
       http.put("/api/editions/:id", async ({ request }) => {
-        submitted = (await request.json()) as { exhibitors?: number[] };
+        submitted = (await request.json()) as { organizations?: number[] };
         return HttpResponse.json({
           id: "march-2027",
           year: 2027,
@@ -129,12 +129,12 @@ describe("saving a festival edition submits only programmable exhibitors", () =>
     );
 
     await waitFor(() => {
-      expect(screen.queryByText("admin_edition_loading_exhibitors")).not.toBeInTheDocument();
+      expect(screen.queryByText("admin_edition_loading_organizations")).not.toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole("button", { name: /admin_save/ }));
 
     await waitFor(() => expect(submitted).not.toBeNull());
-    expect(submitted!.exhibitors).toContain(1);
-    expect(submitted!.exhibitors).not.toContain(5);
+    expect(submitted!.organizations).toContain(1);
+    expect(submitted!.organizations).not.toContain(5);
   });
 });
