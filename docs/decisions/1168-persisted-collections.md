@@ -415,3 +415,9 @@ unrestricted run passed its isolated rerun). The authenticated Chromium warm-sta
 regression passed with reads deliberately pending across reload, then rejected;
 saved venue/room rows remained visible in both states. The additional token-expiry
 regression covers removal without a dashboard or provider state update.
+
+## Cross-app lifecycle alignment
+
+The [browser persistence contract](../browser-persistence-contract.md) aligns account isolation,
+schema checks, asynchronous cleanup and storage failure across the five apps.
+App-specific retention and offline capabilities remain as documented here.
