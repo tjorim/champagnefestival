@@ -45,10 +45,17 @@ async def my_exhibitors(
     ]
 
 
-async def owned(db: AsyncSession, exhibitor_id: int, email: str | None) -> Exhibitor:
-    # Lock first, then check the current contact after any concurrent admin edit.
+async def owned(db: AsyncSession, exhibitor_id: int, email: str | None, *, lock: bool = True) -> Exhibitor:
+    """Check live ownership; unlocked preflight must be repeated under the lock before writing."""
     try:
-        row = await exhibitor_changes.lock_exhibitor(db, exhibitor_id)
+        if lock:
+            row = await exhibitor_changes.lock_exhibitor(db, exhibitor_id)
+        else:
+            row = await db.scalar(
+                select(Exhibitor).where(Exhibitor.id == exhibitor_id).execution_options(populate_existing=True)
+            )
+            if row is None:
+                raise HTTPException(404, "Exhibitor not found.")
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
     contact = await db.scalar(
@@ -109,10 +116,11 @@ async def upload_logo(
 ) -> dict:
     """Upload a private proposal. Repeating an upload replaces the pending proposal."""
     response.headers["Cache-Control"] = "no-store"
-    row = await owned(db, exhibitor_id, email)
+    await owned(db, exhibitor_id, email, lock=False)
     actor, auth_source = actor_for_user(user)
     try:
         logo = await exhibitor_logos.read_upload(file)
+        row = await owned(db, exhibitor_id, email)
         return await exhibitor_changes.submit(
             db, row, ExhibitorChangeSubmit(submission_id=uuid4()), actor=actor, auth_source=auth_source, logo=logo
         )

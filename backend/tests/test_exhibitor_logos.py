@@ -1,12 +1,16 @@
 """Logo validation, private access, publication and transactional cleanup."""
 
+import asyncio
 from io import BytesIO
 from uuid import uuid4
 
 import pytest
 from PIL import Image
+from sqlalchemy import text, update
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.config import settings
+from app.models import Exhibitor
 from app.services import exhibitor_changes, exhibitor_logos
 from app.services.errors import ServiceError
 from tests import test_my_exhibitors
@@ -241,3 +245,52 @@ async def test_public_logo_rejects_directory_and_public_symlink(client, storage)
     (storage[0] / name).symlink_to(target)
     assert (await client.get(exhibitor_logos.PREFIX + name)).status_code == 404
     assert (await client.get(exhibitor_logos.PREFIX + target.name)).status_code == 200
+
+
+@pytest.mark.parametrize("admin", [False, True])
+async def test_encoding_does_not_hold_storage_lock(client, engine, manager, storage, monkeypatch, admin):
+    await login(client, manager)
+    started, release = asyncio.Event(), asyncio.Event()
+    original = exhibitor_logos.read_upload
+
+    async def paused(file):
+        started.set()
+        await release.wait()
+        return await original(file)
+
+    monkeypatch.setattr(exhibitor_logos, "read_upload", paused)
+    task = asyncio.create_task(upload(client, manager[1][0], admin=admin))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=5)
+        async with async_sessionmaker(engine)() as other:
+            assert await other.scalar(text("SELECT pg_try_advisory_xact_lock(1194)")) is True
+        assert not list(storage[0].iterdir()) and not list(storage[1].iterdir())
+    finally:
+        release.set()
+        response = await task
+    assert response.status_code == 200
+
+
+async def test_manager_contact_revocation_during_encoding(client, engine, manager, storage, monkeypatch):
+    await login(client, manager)
+    row = manager[1][0]
+    started, release = asyncio.Event(), asyncio.Event()
+    original = exhibitor_logos.read_upload
+
+    async def paused(file):
+        started.set()
+        await release.wait()
+        return await original(file)
+
+    monkeypatch.setattr(exhibitor_logos, "read_upload", paused)
+    task = asyncio.create_task(upload(client, row))
+    try:
+        await asyncio.wait_for(started.wait(), timeout=5)
+        async with async_sessionmaker(engine)() as other:
+            await other.execute(update(Exhibitor).where(Exhibitor.id == row.id).values(contact_person_id="per-other"))
+            await other.commit()
+    finally:
+        release.set()
+        response = await task
+    assert response.status_code == 404
+    assert not list(storage[0].iterdir()) and not list(storage[1].iterdir())

@@ -108,3 +108,9 @@ from a trusted public-directory inventory, rejecting directories and all
 symlinks. Request data is used only for comparison and never constructs a path.
 This lookup scans the directory; production Caddy serves it directly. Traversal
 and symlinks into private storage are regression-tested.
+
+Upload validation and encoding run before the shared storage lock. Managers are
+checked for current ownership before decoding and again under the lock before
+writing; administrators check existence before decoding and reload under lock.
+Regression tests verify that decoding does not block another storage operation
+and that contact revocation during decoding prevents proposal/file creation.

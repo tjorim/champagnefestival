@@ -127,8 +127,9 @@ async def upload_logo(
 ) -> dict:
     """Publish a validated logo immediately, superseding the manager's logo proposal."""
     try:
-        row = await exhibitor_changes.lock_exhibitor(db, exhibitor_id)
+        await get_or_404(db, Exhibitor, exhibitor_id, "Exhibitor not found.")
         logo = await exhibitor_logos.read_upload(file)
+        row = await exhibitor_changes.lock_exhibitor(db, exhibitor_id)
         return await exhibitors_service.apply_exhibitor_update(db, row, ExhibitorUpdate(), actor=actor, logo=logo)
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
