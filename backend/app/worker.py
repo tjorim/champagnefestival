@@ -9,9 +9,14 @@ from pathlib import Path
 from app.composer_delivery import COMPOSER_MESSAGE_PUSH, deliver_composer_message_dispatch, deliver_composer_push
 from app.config import settings
 from app.database import async_session_factory
-from app.email import deliver_contact_notification, deliver_registration_confirmation
+from app.email import (
+    deliver_contact_notification,
+    deliver_exhibitor_change_notification,
+    deliver_registration_confirmation,
+)
 from app.push import WEB_PUSH_TEST, deliver_web_push_test
 from app.services.composer_service import COMPOSER_MESSAGE_DISPATCH
+from app.services.exhibitor_changes import NOTIFICATION
 from app.services.outbox_service import (
     CONTACT_NOTIFICATION,
     REGISTRATION_CONFIRMATION,
@@ -31,6 +36,7 @@ async def run() -> None:
     handlers = {
         REGISTRATION_CONFIRMATION: deliver_registration_confirmation,
         CONTACT_NOTIFICATION: deliver_contact_notification,
+        NOTIFICATION: deliver_exhibitor_change_notification,
         WEB_PUSH_TEST: deliver_web_push_test,
         COMPOSER_MESSAGE_DISPATCH: deliver_composer_message_dispatch,
         COMPOSER_MESSAGE_PUSH: deliver_composer_push,

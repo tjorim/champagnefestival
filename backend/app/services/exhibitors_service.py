@@ -91,6 +91,9 @@ async def apply_exhibitor_update(
     ``body.model_fields_set`` and so never needs the flag (it always passes
     ``False``).
     """
+    from app.services.exhibitor_changes import lock_exhibitor, supersede
+
+    e = await lock_exhibitor(db, e.id)
     # Validate the merged state before mutating: a partial update may change only one translation.
     descriptions = {field: getattr(e, field) for field in DESCRIPTION_FIELDS}
     descriptions.update(body.model_dump(include=set(DESCRIPTION_FIELDS), exclude_unset=True))
@@ -128,6 +131,8 @@ async def apply_exhibitor_update(
         e.type = body.type
 
     fields_changed = set(body.model_fields_set)
+    if body.website is None:
+        fields_changed.discard("website")
     if clear_contact_person:
         e.contact_person_id = None
         fields_changed.add("contact_person_id")
@@ -138,6 +143,7 @@ async def apply_exhibitor_update(
                 raise NotFoundError("Person not found.")
         e.contact_person_id = body.contact_person_id
 
+    await supersede(db, e, fields_changed, actor=actor)
     await write_audit_entry(
         db,
         actor=actor,

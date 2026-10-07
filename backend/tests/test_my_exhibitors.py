@@ -52,7 +52,17 @@ async def test_one_link_unlocks_own_bookings_and_exhibitors(client, db_session, 
     exhibitors = await client.get("/api/me/exhibitors")
     assert exhibitors.headers["cache-control"] == "no-store"
     assert [row["name"] for row in exhibitors.json()] == ["One", "Two"]
-    assert set(exhibitors.json()[0]) == {"id", "name", "type", "website", "active"}
+    assert set(exhibitors.json()[0]) == {
+        "id",
+        "name",
+        "type",
+        "website",
+        "active",
+        "description_language",
+        "description_nl",
+        "description_fr",
+        "description_en",
+    }
 
 
 async def test_live_contact_revocation_keeps_shared_login(client, db_session, manager):

@@ -1,13 +1,15 @@
 """Read exhibitors managed by a verified email or OIDC identity (#1192)."""
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.models import Exhibitor, Person
-from app.schemas import ManagedExhibitorOut
-from app.visitor_session import get_exhibitor_contact_email
+from app.models import Exhibitor, ExhibitorChange, Person, User
+from app.schemas import ExhibitorChangeOut, ExhibitorChangeSubmit, ManagedExhibitorOut
+from app.services import exhibitor_changes
+from app.services.errors import ServiceError, to_http_exception
+from app.visitor_session import actor_for_user, get_current_user, get_exhibitor_contact_email
 
 router = APIRouter(prefix="/api/me/exhibitors", tags=["me", "exhibitors"])
 
@@ -28,5 +30,66 @@ async def my_exhibitors(
         )
     ).all()
     return [
-        {"id": row.id, "name": row.name, "type": row.type, "website": row.website, "active": row.active} for row in rows
+        {
+            "id": row.id,
+            "name": row.name,
+            "type": row.type,
+            "website": row.website,
+            "active": row.active,
+            **{field: getattr(row, field) for field in exhibitor_changes.DESCRIPTION_FIELDS},
+        }
+        for row in rows
     ]
+
+
+async def owned(db: AsyncSession, exhibitor_id: int, email: str | None) -> Exhibitor:
+    # Lock first, then check the current contact after any concurrent admin edit.
+    try:
+        row = await exhibitor_changes.lock_exhibitor(db, exhibitor_id)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+    contact = await db.scalar(
+        select(Person).where(Person.id == row.contact_person_id).execution_options(populate_existing=True)
+    )
+    if email is None or contact is None or contact.email.strip().lower() != email:
+        raise HTTPException(404, "Exhibitor not found.")
+    return row
+
+
+@router.get("/{exhibitor_id}/changes", response_model=list[ExhibitorChangeOut])
+async def my_changes(
+    exhibitor_id: int,
+    response: Response,
+    email: str | None = Depends(get_exhibitor_contact_email),
+    db: AsyncSession = Depends(get_db),
+) -> list[dict]:
+    """Private proposal history, authorized against the current contact email."""
+    response.headers["Cache-Control"] = "no-store"
+    row = await owned(db, exhibitor_id, email)
+    changes = (
+        await db.scalars(
+            select(ExhibitorChange)
+            .where(ExhibitorChange.exhibitor_id == row.id)
+            .order_by(ExhibitorChange.created_at.desc(), ExhibitorChange.id)
+        )
+    ).all()
+    return [exhibitor_changes.payload(change, row) for change in changes]
+
+
+@router.post("/{exhibitor_id}/changes", response_model=ExhibitorChangeOut)
+async def propose_change(
+    exhibitor_id: int,
+    body: ExhibitorChangeSubmit,
+    response: Response,
+    email: str | None = Depends(get_exhibitor_contact_email),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Submit private website/description fields; reuse submission_id for retries."""
+    response.headers["Cache-Control"] = "no-store"
+    row = await owned(db, exhibitor_id, email)
+    actor, auth_source = actor_for_user(user)
+    try:
+        return await exhibitor_changes.submit(db, row, body, actor=actor, auth_source=auth_source)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc

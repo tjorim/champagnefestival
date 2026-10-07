@@ -84,6 +84,7 @@ function signedIn(registrations = bookings, managed = exhibitors) {
     http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated: true })),
     http.get("/api/me/registrations", () => HttpResponse.json(registrations)),
     http.get("/api/me/exhibitors", () => HttpResponse.json(managed)),
+    http.get("/api/me/exhibitors/1/changes", () => HttpResponse.json([])),
   );
 }
 
@@ -121,6 +122,7 @@ describe("one emailed account login", () => {
         return HttpResponse.json(bookings);
       }),
       http.get("/api/me/exhibitors", () => HttpResponse.json(exhibitors)),
+      http.get("/api/me/exhibitors/1/changes", () => HttpResponse.json([])),
       http.get("/api/visitor-sessions/status", () => HttpResponse.json({ authenticated })),
       http.get("/api/me/registrations", () => HttpResponse.json(bookings)),
       http.post("/api/visitor-sessions/sign-out", () => {

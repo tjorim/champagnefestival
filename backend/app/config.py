@@ -141,6 +141,9 @@ class Settings(BaseSettings):
     guest_access_token_ttl_minutes: int = 30
     """How long a visitor reservation access link remains valid."""
 
+    exhibitor_review_recipient: str = ""
+    """Optional shared mailbox for pending exhibitor proposals; no fallback."""
+
     # --- SMTP delivery ---
     smtp_host: str = ""
     smtp_port: int = 587

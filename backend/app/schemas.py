@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date as dt_date
 from datetime import datetime
 from decimal import Decimal
 from typing import Any, Literal, Self
 from urllib.parse import urlsplit
+from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
@@ -2292,9 +2294,41 @@ class ComposedMessageScheduleRequest(RequestModel):
         return value
 
 
-class ManagedExhibitorOut(BaseModel):
+class ManagedExhibitorOut(ExhibitorDescription):
     id: int
     name: str
     type: str
     website: str
     active: bool
+
+
+class ExhibitorChangeSubmit(ExhibitorDescription):
+    submission_id: UUID
+    website: str | None = Field(default=None, max_length=500)
+
+    @field_validator("website")
+    @classmethod
+    def validate_website(cls, value: str | None) -> str | None:
+        if value is None:
+            raise ValueError("Use an empty string to clear the website.")
+        value = value.strip()
+        if value and not re.match(r"^https?://.+", value):
+            raise ValueError("Website must start with http:// or https://.")
+        return value
+
+
+class ExhibitorChangeDecision(RequestModel):
+    decision: Literal["accepted", "rejected"]
+    reason: str | None = Field(default=None, max_length=2000)
+
+
+class ExhibitorChangeOut(BaseModel):
+    id: str
+    exhibitor_id: int
+    exhibitor_name: str
+    status: Literal["pending", "accepted", "rejected", "superseded", "replaced"]
+    proposed: dict[str, str | None]
+    current: dict[str, str | None]
+    superseded_fields: list[str]
+    reason: str | None
+    created_at: datetime

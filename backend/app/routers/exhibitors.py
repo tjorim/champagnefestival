@@ -13,8 +13,8 @@ from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
 from app.models import Exhibitor
-from app.schemas import ExhibitorCreate, ExhibitorOut, ExhibitorUpdate
-from app.services import exhibitors_service
+from app.schemas import ExhibitorChangeDecision, ExhibitorChangeOut, ExhibitorCreate, ExhibitorOut, ExhibitorUpdate
+from app.services import exhibitor_changes, exhibitors_service
 from app.services.errors import ServiceError, to_http_exception
 from app.utils import exhibitor_to_dict, get_or_404
 
@@ -56,6 +56,26 @@ async def create_exhibitor(
         return await exhibitors_service.create_exhibitor(
             db, body=body, actor=actor, request_id=getattr(request.state, "request_id", None)
         )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.get("/changes", response_model=list[ExhibitorChangeOut], dependencies=[Depends(require_admin)])
+async def pending_changes(db: AsyncSession = Depends(get_db)) -> list[dict]:
+    """List private pending proposals with current values for side-by-side review."""
+    return await exhibitor_changes.list_pending(db)
+
+
+@router.post("/changes/{change_id}/decision", response_model=ExhibitorChangeOut, dependencies=[Depends(require_admin)])
+async def decide_change(
+    change_id: str,
+    body: ExhibitorChangeDecision,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    """Accept/reject once. Repeating the same decision returns the recorded outcome."""
+    try:
+        return await exhibitor_changes.decide(db, change_id, body.decision, body.reason, actor=actor)
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
 

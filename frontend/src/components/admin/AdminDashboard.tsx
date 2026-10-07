@@ -1,3 +1,4 @@
+import ExhibitorChangeReview from "./ExhibitorChangeReview";
 import { useSyncExternalStore } from "react";
 import { adminCachePersistence } from "@/state/adminCachePersistence";
 import { AdminCacheStatus } from "./AdminCacheStatus";
@@ -45,6 +46,7 @@ import {
   applyAdminExhibitorDeleted,
   applyAdminExhibitorSaved,
   captureAdminExhibitorsFence,
+  refetchAdminExhibitors,
 } from "@/state/adminExhibitorsCollection";
 import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
@@ -520,6 +522,18 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 {canManageAdminSections && activeKey === "exhibitors" && (
                   <Card tone="secondary" className="mb-4">
                     <CardContent>
+                      <ExhibitorChangeReview
+                        authHeaders={authHeaders}
+                        onDecided={() => {
+                          void refetchAdminExhibitors(
+                            exhibitorsCollection,
+                            captureAdminExhibitorsFence(),
+                          );
+                          void queryClient.invalidateQueries({
+                            queryKey: queryKeys.admin.contentManagement.section("exhibitors"),
+                          });
+                        }}
+                      />
                       <ContentSection
                         sectionKey="exhibitors"
                         title={m.admin_content_exhibitors_section()}
