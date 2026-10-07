@@ -25,6 +25,7 @@ vi.mock("@/paraglide/messages", () => ({
     manager_change_edit: () => "Edit website and description",
     my_account_title: () => "My Account",
     my_registrations_title: () => "Registrations",
+    my_registrations_sign_out: () => "Sign out",
     my_account_signed_in_as: ({ account }: { account: string }) => `Signed in as ${account}`,
     my_account_delete_heading: () => "Delete my account",
     my_account_delete_description: () => "Your festival records are kept.",
@@ -454,5 +455,30 @@ describe("MyAccountPage", () => {
     await user.click(dishOption);
 
     await waitFor(() => expect(dishOption).toBeChecked());
+  });
+
+  it("signs out an OIDC account through one button that also ends the emailed session", async () => {
+    const logout = vi.fn();
+    vi.mocked(useAuth).mockReturnValue({
+      isAuthenticated: true,
+      isLoading: false,
+      isSigningIn: false,
+      isSigningOut: false,
+      accountLabel: "mock-staff",
+      roles: ["admin"],
+      hasRole: vi.fn((role: string) => role === "admin"),
+      getAccessToken: vi.fn().mockReturnValue("oidc-access-token"),
+      authError: null,
+      clearAuthError: vi.fn(),
+      login: vi.fn(),
+      logout,
+      renewSession: vi.fn().mockResolvedValue(false),
+    });
+
+    const user = userEvent.setup();
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await user.click(await screen.findByRole("button", { name: "Sign out" }));
+
+    expect(logout).toHaveBeenCalledTimes(1);
   });
 });

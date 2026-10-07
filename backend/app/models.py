@@ -37,34 +37,37 @@ def _utcnow() -> datetime:
 
 
 class User(Base):
-    """An authenticated portal user, provisioned on first OIDC login or first
-    redeemed visitor magic link (#953 decision 1).
+    """One portal account, provisioned on first OIDC login or first redeemed
+    emailed magic link (#953 decision 1).
 
-    Exactly one of ``oidc_subject``/``verified_email`` is set — staff/volunteer
-    accounts are provisioned via Keycloak OIDC login
-    (``app.services.users_service.get_or_create_user``); visitor accounts are
-    provisioned by redeeming a magic link
-    (``get_or_create_user_by_email``). Both read through the same
-    ``registrations`` relationship and the same ``/me`` handlers — see
-    ``app.visitor_session.get_current_user``, the dependency that resolves
-    either kind of caller to one ``User``.
+    At least one of ``oidc_subject``/``verified_email`` is set. Keycloak
+    accounts are provisioned via OIDC login
+    (``app.services.users_service.resolve_oidc_user``); email-only accounts by
+    redeeming a magic link (``get_or_create_user_by_email``). Since #1209 a
+    Keycloak login whose token carries an explicitly verified email joins the
+    matching email-only account (or sets the email itself), so password and
+    magic-link sign-in reach the same row, bookings and audit trail; both
+    identities set means "linked". Roles are never stored here — Keycloak
+    stays authoritative. Both kinds read through the same ``registrations``
+    relationship and ``/me`` handlers — see
+    ``app.visitor_session.get_current_user``.
     """
 
     __tablename__ = "users"
     __table_args__ = (
         CheckConstraint(
-            "(oidc_subject IS NOT NULL) != (verified_email IS NOT NULL)",
-            name="ck_users_exactly_one_identity",
+            "oidc_subject IS NOT NULL OR verified_email IS NOT NULL",
+            name="ck_users_has_identity",
         ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     oidc_subject: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, nullable=True)
     """OIDC ``sub`` claim — stable identifier from the identity provider. Set
-    for staff/volunteer accounts, ``NULL`` for visitor accounts."""
+    for every Keycloak-backed account, ``NULL`` for email-only accounts."""
     verified_email: Mapped[str | None] = mapped_column(String(320), unique=True, index=True, nullable=True)
-    """Email address a visitor proved control of by redeeming a magic link.
-    Set for visitor accounts, ``NULL`` for staff/volunteer accounts."""
+    """Email address proven by redeeming a magic link or attested by Keycloak
+    (``email_verified`` true). ``NULL`` for a Keycloak account without one."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

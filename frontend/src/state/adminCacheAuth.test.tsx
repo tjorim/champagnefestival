@@ -2,7 +2,9 @@ import "fake-indexeddb/auto";
 import { act, render, screen, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuth as useOidcAuth } from "react-oidc-context";
+import { http, HttpResponse } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/mocks/server";
 import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
 import { AdminCacheStorage } from "./adminCacheStorage";
 import { adminCachePersistence, ADMIN_CACHE_WIPE_SIGNAL } from "./adminCachePersistence";
@@ -123,6 +125,31 @@ describe("app-level persisted session ownership", () => {
     await vi.waitFor(() => expect(removeUser).toHaveBeenCalled());
     await vi.waitFor(async () => expect(await new AdminCacheStorage().read()).toBeUndefined());
     expect(client.getQueryData(["admin", "tables"])).toBeUndefined();
+    await adminCachePersistence(client).wipe();
+    client.clear();
+  });
+
+  it("keeps the session and cached views when the emailed session cannot be revoked", async () => {
+    server.use(
+      http.post("/api/visitor-sessions/sign-out", () => new HttpResponse(null, { status: 500 })),
+    );
+    const client = new QueryClient();
+    session(["admin"]);
+    render(
+      <QueryClientProvider client={client}>
+        <AuthProvider>
+          <Consumer />
+        </AuthProvider>
+      </QueryClientProvider>,
+    );
+    const button = await screen.findByRole("button");
+    client.setQueryData(["admin", "tables"], [{ id: "table" }]);
+    await act(async () => {
+      button.click();
+    });
+    const { signoutRedirect } = vi.mocked(useOidcAuth).mock.results[0]!.value;
+    await vi.waitFor(() => expect(client.getQueryData(["admin", "tables"])).toBeDefined());
+    expect(signoutRedirect).not.toHaveBeenCalled();
     await adminCachePersistence(client).wipe();
     client.clear();
   });

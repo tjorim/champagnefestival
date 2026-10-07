@@ -390,13 +390,12 @@ async def test_cleanup_expired_magic_links_removes_only_stale_rows(db_session):
     assert remaining == ["fresh-link@example.com"]
 
 
-async def test_user_requires_exactly_one_identity(db_session):
+async def test_user_requires_at_least_one_identity(db_session):
     db_session.add(User(id="usr-neither", oidc_subject=None, verified_email=None))
     with pytest.raises(IntegrityError):
         await db_session.commit()
     await db_session.rollback()
 
+    # #1209: one account may hold both identities once an email joins a Keycloak login.
     db_session.add(User(id="usr-both", oidc_subject="sub-x", verified_email="both@example.com"))
-    with pytest.raises(IntegrityError):
-        await db_session.commit()
-    await db_session.rollback()
+    await db_session.commit()

@@ -6,6 +6,7 @@ import { adminCachePersistence, ADMIN_CACHE_WIPE_SIGNAL } from "@/state/adminCac
 import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
 import { devError } from "@/utils/devLog";
 import { removeAuthenticatedQueries } from "@/utils/queryInvalidation";
+import { signOutVisitorSession } from "@/utils/publicRegistrationApi";
 
 export interface AuthContextType {
   isAuthenticated: boolean;
@@ -246,16 +247,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const logout = useCallback(() => {
-    void cache.wipe(true);
-    removeAuthenticatedQueries(queryClient);
     setRedirectError(null);
     setDismissedOidcError(null);
     setIsSigningOut(true);
-    signoutRedirect().catch((error: unknown) => {
-      devError("signoutRedirect failed:", error);
-      setIsSigningOut(false);
-      setRedirectError(formatAuthError(error, "Could not sign out. Please try again."));
-    });
+    // One account can hold both an IdP session and an emailed-link session
+    // (#1209). Revoke the latter first and keep every view if the server does
+    // not confirm, so a failed sign-out never looks like a completed one.
+    signOutVisitorSession()
+      .then(() => {
+        void cache.wipe(true);
+        removeAuthenticatedQueries(queryClient);
+        return signoutRedirect();
+      })
+      .catch((error: unknown) => {
+        devError("sign out failed:", error);
+        setIsSigningOut(false);
+        setRedirectError(formatAuthError(error, "Could not sign out. Please try again."));
+      });
   }, [cache, queryClient, signoutRedirect]);
 
   const accountLabel = useMemo(

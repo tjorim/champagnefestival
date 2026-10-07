@@ -33,7 +33,7 @@ from app.config import settings
 from app.database import get_db
 from app.models import User, VisitorMagicLink, VisitorSession
 from app.oidc_config import OIDCTokenError, decode_token
-from app.services.users_service import get_or_create_user
+from app.services.users_service import resolve_oidc_user, verified_email_from_claims
 from app.utils import make_id
 
 #: Confirmed by the project owner 2026-09-06 — matches worktime's existing
@@ -204,7 +204,7 @@ async def _resolve_current_user(
         subject = claims.get("sub")
         if not isinstance(subject, str) or not subject:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing sub claim in token")
-        return await get_or_create_user(db, subject), claims
+        return await resolve_oidc_user(db, subject, verified_email_from_claims(claims)), claims
 
     session_id = request.cookies.get(COOKIE_NAME)
     if session_id:
@@ -245,18 +245,21 @@ async def get_current_user_with_claims(
     return await _resolve_current_user(request, db, credentials)
 
 
-def actor_for_user(user: User) -> tuple[str, str | None]:
+def actor_for_user(user: User, claims: dict[str, Any] | None) -> tuple[str, str | None]:
     """Return the ``(actor, auth_source)`` pair to pass to ``write_audit_entry``
-    for an action taken by *user*, resolved via ``get_current_user`` above.
+    for an action taken by *user*, resolved via ``get_current_user_with_claims``.
 
-    An OIDC-backed user keeps the existing "actor is the oidc_subject,
-    auth_source inferred as keycloak" shape. A visitor session has no OIDC
-    subject to log — its actor is the opaque ``User.id`` (never the email:
-    that would put PII in an audit trail kept indefinitely, unlike this
-    project's other actor values — see AuditEntry.actor's docstring), with
-    an explicit ``auth_source`` so it's never mistaken for one.
+    Provenance follows how the caller authenticated, not what the account
+    holds: since #1209 one ``User`` can have both an OIDC subject and a
+    verified email. A bearer-token caller (``claims`` present) keeps the
+    existing "actor is the oidc_subject, auth_source inferred as keycloak"
+    shape. An emailed-session caller has no token to log — its actor is the
+    opaque ``User.id`` (never the email: that would put PII in an audit trail
+    kept indefinitely, unlike this project's other actor values — see
+    AuditEntry.actor's docstring), with an explicit ``auth_source`` so it's
+    never mistaken for one.
     """
-    if user.oidc_subject is not None:
+    if claims is not None and user.oidc_subject is not None:
         return user.oidc_subject, None
     return user.id, VISITOR_AUTH_SOURCE
 
@@ -269,15 +272,11 @@ async def get_organization_contact_email(
     Keycloak password and magic-link sign-ins produce the same OIDC subject
     and roles. Only an explicitly verified token email can grant contact
     access; usernames and unverified profile fields cannot. An authenticated
-    account without a verified email simply has no managed organizations.
+    account without a verified email simply has no managed organizations. A
+    bearer token always wins over a cookie, so a linked account never borrows
+    contact access from its stored ``verified_email`` while using Keycloak.
     """
     user, claims = user_and_claims
     if claims is None:
         return user.verified_email.lower().strip() if user.verified_email else None
-    email = claims.get("email")
-    username = claims.get("preferred_username")
-    if isinstance(username, str) and username.startswith("service-account-"):
-        return None
-    if claims.get("email_verified") is True and isinstance(email, str) and email.strip():
-        return email.lower().strip()
-    return None
+    return verified_email_from_claims(claims)

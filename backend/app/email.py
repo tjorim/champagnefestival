@@ -274,6 +274,40 @@ async def send_visitor_magic_link_email(
     return True
 
 
+async def send_account_sign_in_email(email: str, request_id: str) -> bool:
+    """Tell a Keycloak-linked address to use the account sign-in (#1209).
+
+    Sent instead of an app magic link so a staff or volunteer account is never
+    handed a roleless application session; no credential is included.
+    """
+    if not settings.smtp_host or not settings.smtp_from:
+        logger.warning(
+            "Account sign-in email not sent for request_id=%s because SMTP is not configured.",
+            request_id,
+        )
+        return False
+
+    message = EmailMessage()
+    message["Subject"] = "Sign in to your Champagnefestival account"
+    message["From"] = settings.smtp_from
+    message["To"] = email
+    message.set_content(
+        "Hello,\n\n"
+        "This email address belongs to a Champagnefestival account. "
+        "Open the link below and choose Sign in; you can use your password or "
+        "request a sign-in link from the account page:\n\n"
+        f"{settings.frontend_url.rstrip('/')}/me\n\n"
+        "If you did not request this email, you can ignore it.\n"
+    )
+    try:
+        await asyncio.to_thread(_send_message_sync, message)
+    except Exception:
+        logger.exception("Failed to send account sign-in email for request_id=%s.", request_id)
+        return False
+    logger.info("Sent account sign-in email for request_id=%s.", request_id)
+    return True
+
+
 def _send_message_sync(message: EmailMessage) -> None:
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
         smtp.ehlo()

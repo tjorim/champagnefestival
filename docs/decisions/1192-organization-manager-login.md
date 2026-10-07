@@ -50,11 +50,66 @@ private organization queries have no retained cache across page instances.
 Writes are not automatically retried; see the existing visitor write entries
 and the #1192 extension in [retry safety](../retry-safety.md).
 
-## Both sign-in methods for one account — follow-up #1209
+## Both sign-in methods for one account — #1209
 
-Password and magic-link login for the same account, including staff and
-volunteers, remains tracked in [#1209](https://github.com/tjorim/champagnefestival/issues/1209).
-Matching verified emails grant organization contact access, but existing email
-and OIDC accounts still have separate User identities. Account linking/migration,
-registration policy, a coherent entry point and end-to-end sign-out require
-cross-repository work with `tjorim/apps`; see the [active work](../product-audit-2026-08.md).
+The owner decision (2026-10-07) is that password login and magic links open
+**one** account whose `/me` shows everything the person is entitled to. The
+app side is implemented; production activation is not (see "Still open").
+
+**Identity model.** `users` now requires *at least one* of `oidc_subject` and
+`verified_email` (migration `005`, constraint `ck_users_has_identity`). Both set
+means the Keycloak account and its verified address are one row. Roles are
+never stored; staff and volunteer dependencies read only the bearer token, so
+an emailed session can never satisfy them.
+
+**Joining rules** (`users_service.resolve_oidc_user`, run when a bearer token is
+resolved; only a boolean `email_verified: true` on a non-service-account token
+counts):
+
+| Situation | Result |
+| --- | --- |
+| New subject, an email-only user holds the address | The subject is attached to that user: id, bookings, sessions and audit history are kept |
+| Subject and an email-only user both exist | Bookings and sessions move to the Keycloak user, the duplicate is deleted, `account_linked` is audited with the counts. Both identities proved the same address; registrations are never matched by email alone, and another user's bookings are never moved |
+| Keycloak email changed | The stale address is released first (it reaches a fresh email-only account), then the new one is linked |
+| Another Keycloak account already holds the address | Nothing is linked or transferred; the caller keeps their own account |
+| Unverified, absent or service-account email | No link |
+
+Concurrent first logins converge through row locks and unique-constraint
+recovery. Existing emailed sessions survive linking until their normal
+idle/hard-cap expiry.
+
+**Transition: which emailed link is used.**
+
+- An address *not* linked to a Keycloak account keeps today's app magic link
+  (`/me?token=…`), which opens an email-only account.
+- An address linked to a Keycloak account no longer receives an app link. The
+  request still answers `202` identically, and the email says to use the
+  account sign-in at `/me` (password, or Keycloak's own magic link once its
+  SMTP is configured). A link issued before linking is refused on redemption.
+  A staff user therefore never ends up with a roleless application session
+  instead of the Keycloak account.
+- The first Keycloak login with a verified email joins the accounts, so the
+  link is created by signing in once, not by a separate step or admin action.
+
+**Audit provenance** follows the sign-in method, not the account:
+`actor_for_user(user, claims)` logs the OIDC subject for a bearer call and the
+opaque user id with `visitor_session` for a cookie call.
+
+**Sign-out.** `AuthContext.logout` revokes the emailed session on the server
+first and only then clears cached views and redirects to the IdP; a failed
+revocation keeps the views and shows an error. The `/me` button is the same for
+both methods. The emailed-only button is unchanged.
+
+**Deliberate limits.** Disabling a Keycloak account stops bearer access at once
+but does not end an already-issued emailed session of the linked row (at most 30
+days, no roles, bookings and organizations only); delete the row's sessions to
+force it. Self-registration and "create nonexistent user" stay off.
+
+**Rollback.** Migration `005` downgrade clears `verified_email` on every row
+that has an OIDC subject (the address then signs in as a fresh email-only
+account) before restoring the exactly-one constraint. Application rollback
+before downgrading is safe: older code treats linked rows as OIDC users.
+
+**Still open** (tracked on #1209): configure and verify Keycloak SMTP and
+activate the prepared flow in `tjorim/apps`, then verify both complete browser
+logins in production. Until then the issue stays open.
