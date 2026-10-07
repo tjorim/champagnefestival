@@ -58,7 +58,7 @@ reject is audited once; retrying does not duplicate the mutation or audit.
 
 ## Notification and deployment
 
-Apply migration `005` before deploying the API and worker. Set
+Apply migration `004` before deploying the API and worker. Set
 `EXHIBITOR_REVIEW_RECIPIENT` to one shared mailbox in the environment's infra env
 file, and configure the existing SMTP settings. An unset/empty value skips
 queueing, without fallback or error. Submission snapshots the recipient and
@@ -89,6 +89,7 @@ Backend coverage includes all 1,406 collected tests. The initial full run passed
 files and workflow, and all nine workflow tests passed again after strengthening
 public visibility and reviewer-identity assertions. Frontend tests: 975 passing.
 Browser checks: 163 public and 113 authenticated/setup passing. Backend lint,
-format and type checks, fresh migration through `005`, and frontend lint, format,
+format and type checks, a fresh upgrade through combined migration `004`, downgrade
+to `003` and re-upgrade, and frontend lint, format,
 type checks and production build passed. The real browser workflow also verified
 acceptance and the manager's accepted state. No production deployment was performed.

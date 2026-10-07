@@ -427,7 +427,7 @@ in the admin Exhibitors tab. Direct admin edits supersede pending fields; manage
 see the outcome and any rejection reason. Admin REST and MCP review operations
 share the same service and concurrency/retry contract.
 
-Apply migration `005` and configure `EXHIBITOR_REVIEW_RECIPIENT` in the environment
+Apply migration `004` and configure `EXHIBITOR_REVIEW_RECIPIENT` in the environment
 infra env file to notify a shared mailbox through the existing SMTP outbox worker.
 Leave it unset to use only the pending list. No new Keycloak roles are needed.
 See the [API and workflow contract](../docs/exhibitor-change-review.md) and
