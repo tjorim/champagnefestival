@@ -210,3 +210,36 @@ describe("admin cache privacy boundary", () => {
     expect(JSON.stringify(await storage.read())).toContain('"19"');
   });
 });
+
+it("uses zero for a success notification without saved data", async () => {
+  const { client, cache } = setup();
+  await cache.setSession("user");
+  const query = client.getQueryCache().build(client, { queryKey: queryKeys.admin.tables });
+  client
+    .getQueryCache()
+    .notify({ type: "updated", query, action: { type: "success", data: undefined } });
+  expect(cache.getSnapshot().lastSynced).toBe(0);
+});
+it("keeps restored shared rows visible when the first edition becomes known", async () => {
+  const { client, cache, storage } = setup();
+  const source = new QueryClient();
+  source.setQueryData(queryKeys.admin.tables, [{ id: "table" }]);
+  await storage.write(
+    {
+      owner: "user",
+      editionId: "",
+      client: { timestamp: Date.now(), buster: ADMIN_CACHE_BUSTER, clientState: dehydrate(source) },
+    },
+    () => true,
+  );
+  source.clear();
+  await cache.setSession("user");
+  await cache.setEdition("edition");
+  expect(client.getQueryData(queryKeys.admin.tables)).toEqual([{ id: "table" }]);
+  expect(cache.getSnapshot()).toMatchObject({
+    editionId: "edition",
+    warmStart: true,
+    restored: true,
+  });
+  expect(cache.getSnapshot().lastSynced).toBeGreaterThan(0);
+});

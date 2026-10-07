@@ -3,6 +3,7 @@ import { act, render, screen, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
 import { AdminCacheStorage } from "./adminCacheStorage";
 import { adminCachePersistence, ADMIN_CACHE_WIPE_SIGNAL } from "./adminCachePersistence";
 const { AuthProvider, useAuth } =
@@ -30,6 +31,31 @@ afterEach(async () => {
 });
 
 describe("app-level persisted session ownership", () => {
+  it.each([null, ADMIN_CACHE_WIPE_SIGNAL, OIDC_USER_STORAGE_KEY])(
+    "ignores storage event %s for public sessions",
+    async (key) => {
+      const client = new QueryClient();
+      const removeUser = session(["visitor"]);
+      render(
+        <QueryClientProvider client={client}>
+          <AuthProvider>
+            <Consumer />
+          </AuthProvider>
+        </QueryClientProvider>,
+      );
+      await screen.findByRole("button");
+      const wipe = vi.spyOn(adminCachePersistence(client), "wipe");
+      wipe.mockClear();
+      await act(async () => {
+        window.dispatchEvent(new StorageEvent("storage", { key, newValue: null }));
+      });
+      expect(removeUser).not.toHaveBeenCalled();
+      expect(wipe).not.toHaveBeenCalled();
+      wipe.mockRestore();
+      await adminCachePersistence(client).wipe();
+      client.clear();
+    },
+  );
   it("wipes on role loss with no dashboard mounted", async () => {
     const client = new QueryClient();
     session(["admin"]);

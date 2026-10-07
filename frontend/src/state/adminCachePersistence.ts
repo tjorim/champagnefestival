@@ -251,7 +251,7 @@ export class AdminCachePersistence {
         this.publish({
           ...this.status,
           restored: this.restoredKeys.size > 0,
-          lastSynced: Math.min(...times),
+          lastSynced: times.length ? Math.min(...times) : 0,
         });
         clearTimeout(this.expiryTimer);
         this.expiryTimer = setTimeout(() => {
@@ -286,11 +286,27 @@ export class AdminCachePersistence {
     // A first network answer must validate (or replace) the restored edition.
     this.stop();
     const epoch = this.epoch;
-    this.restoredKeys.clear();
-    this.publish({ editionId, restored: false, warmStart: false, lastSynced: 0 });
+    const wasWarmStart = this.status.warmStart;
     this.queryClient.removeQueries({
       queryKey: queryKeys.admin.registrations,
       predicate: (query) => query.queryKey[2] === "edition" && query.queryKey[3] !== editionId,
+    });
+    const remaining = this.queryClient
+      .getQueryCache()
+      .getAll()
+      .filter(
+        (query) =>
+          isPersistableAdminKey(query.queryKey, editionId) && query.state.data !== undefined,
+      );
+    const hashes = new Set(remaining.map((query) => query.queryHash));
+    this.restoredKeys = new Set([...this.restoredKeys].filter((hash) => hashes.has(hash)));
+    this.publish({
+      editionId,
+      restored: this.restoredKeys.size > 0,
+      warmStart: wasWarmStart && remaining.length > 0,
+      lastSynced: remaining.length
+        ? Math.min(...remaining.map((query) => query.state.dataUpdatedAt))
+        : 0,
     });
     await this.storage.remove().catch(() => undefined);
     if (this.epoch !== epoch || this.owner !== owner || !owner) return;

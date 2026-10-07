@@ -155,6 +155,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => clearTimeout(timer);
   }, [cache, cacheOwner, expiresAt, removeUser]);
   useEffect(() => {
+    if (!cacheOwner) return;
     const onStorage = (event: StorageEvent) => {
       let sessionLost = event.key === ADMIN_CACHE_WIPE_SIGNAL || event.key === null;
       if (event.key === OIDC_USER_STORAGE_KEY) {
@@ -184,7 +185,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
-  }, [cache, cacheSubject, removeUser]);
+  }, [cache, cacheOwner, cacheSubject, removeUser]);
   const { signinRedirect, signoutRedirect, signinSilent } = oidcAuth;
   const [redirectError, setRedirectError] = useState<string | null>(null);
   const [dismissedOidcError, setDismissedOidcError] = useState<string | null>(null);
