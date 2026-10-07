@@ -2,7 +2,7 @@
 
 **Status:** TanStack DB adopted for registrations, tables, the venue group (venues, rooms, table types, layouts, areas) and exhibitors. People, members and volunteers use server-driven TanStack Query pages with mutation callbacks (#1179/#1181), not a collection or on-demand sync. See [Remaining resources](#remaining-resources-1166), [Roadmap](#roadmap) and the [server-driven table decision](#server-driven-tables-query-with-keeppreviousdata-not-on-demand-sync-1175).
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
-**Record updated:** 2026-10-07, [#1182](https://github.com/tjorim/champagnefestival/issues/1182), 2026-10-06, [#1168](https://github.com/tjorim/champagnefestival/issues/1168), 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166), [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184), [#1175](https://github.com/tjorim/champagnefestival/issues/1175)
+**Record updated:** 2026-10-07, [#1174](https://github.com/tjorim/champagnefestival/issues/1174), [#1182](https://github.com/tjorim/champagnefestival/issues/1182), 2026-10-06, [#1168](https://github.com/tjorim/champagnefestival/issues/1168), 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166), [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184), [#1175](https://github.com/tjorim/champagnefestival/issues/1175)
 
 ---
 
@@ -150,73 +150,14 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
 
 ## People and members ([#1164](https://github.com/tjorim/champagnefestival/issues/1164))
 
-Historical implementation of #1164, superseded on 2026-10-06 by #1179/#1181.
-People, members and volunteers now read server Query pages. The collection and
-its direct-write helpers below have been retired; this section preserves the
-original decision. See [the Query implementation](../people-query-layer.md).
+The #1164 implementation loaded the complete people set into one collection and
+derived members and volunteers from roles. It used direct writes, session fences
+and exhaustive page reads. #1179/#1181 replaced it on 2026-10-06 with server Query
+pages and optimistic mutation callbacks; the collection, selectors and direct-write
+helpers were removed. See the [current Query contract](../people-query-layer.md).
 
-- `frontend/src/state/adminPeopleCollection.ts`: `createAdminPeopleCollection`
-  builds one collection from `fetchPeople` (which merges the volunteer help
-  periods in) with `queryCollectionOptions` and `getKey: (person) => person.id`.
-  `useAdminQueries` reads it with `useLiveQuery` and exposes query-shaped
-  `peopleQuery`/`membersQuery` objects, so `AdminDashboard` reads them as before.
-- **Members and volunteers are derived, not stored.** A member (or volunteer) is a
-  person holding that role, so `membersQuery.data` is `selectMembers(people)` and
-  `volunteersQuery.data` is `selectVolunteers(people)`; both share the people
-  collection's loading and error state, and `AdminDashboard` no longer computes
-  volunteers itself. There is no members collection, no member-only fetch
-  (`fetchMembers` and `queryKeys.admin.members` are gone) and no member-sync code:
-  a person update, role change or delete reaches the members view by itself (rule 3
-  below: derive views instead of storing them twice). An earlier iteration of this
-  migration had a second collection kept in step by hand; that reintroduced the
-  multi-cache patching this issue set out to remove.
-- **No list cap.** `fetchPeople` reads every page of `/api/people` and
-  `/api/volunteers` (`fetchAllPersonPages`): the first page reveals the total and
-  the remaining pages are fetched concurrently. The backend's 1,000-row ceiling is
-  the page size, not a limit on how many people there can be, so the old
-  "showing N of M" warning is gone, and members and volunteers are complete by
-  construction (which is also why no role-filtered members request is needed).
-  Both lists are ordered deterministically, and rows are deduplicated by id in case
-  one is added mid-read. A people *search* (`fetchPeopleSearch`) stays one page: a
-  query matching more than a page is too broad to be useful, so it is reported
-  instead. It returns only the people that matched: help periods are attached to
-  matching volunteers (and the volunteer list is only fetched when one matched),
-  but volunteers who did not match are never added to the results. The registrations list is read the same way: `fetchAllRegistrations` (the registrations collection's `queryFn`) and the registration list's "select/export all matching" read every page through `fetchAllRegistrationPages`, so there is no cap or truncation warning there either.
-- **Writes are direct, not handlers.** The admin forms validate server-side, and
-  the server assigns ids and `updated_at`, so nothing is shown optimistically.
-  `useAdminPeopleActions` keeps one `useMutation` per API call and then calls an
-  `applyAdmin…` helper that writes the server's row into the collection (create,
-  update, delete, the volunteer variants, and merge, which removes the duplicate
-  and keeps the survivor's own help periods; a survivor the collection does not hold
-  yet is inserted, with a volunteer's help periods loaded from
-  `GET /api/volunteers/{id}`, or not inserted at all if that fails, so an empty list
-  is never shown as the real one). That replaces the roughly 22
-  `setQueryData` calls on the people and members keys. The registrations and
-  exhibitors copies of a person were still patched with `setQueryData` there (those
-  domains were out of scope here; the exhibitors patch was removed in
-  [#1184](#exhibitors-1184), registrations still carry a copy).
-- **Refetch.** `usePeopleMutations`' `onSettled` calls `collection.utils.refetch()`
-  explicitly through `refetchAdminPeople`. The per-person queries nested under
-  the people key (`peopleRegistrations`, `peoplePaymentSummary`) share its prefix
-  but are plain queries, so `invalidateAdminPersonDetailQueries` invalidates them
-  with a depth predicate; invalidating the bare key would refetch the collection a
-  second time.
-- **Session fence and reset.** Each action captures `captureAdminPeopleFence()`
-  before its request. The collection helpers drop the write if it moved, and the
-  actions check it again before patching the registrations cache
-  and the open registration detail, so a response from an earlier session never
-  reaches the next session's rows. The fence moves on sign-out
-  (`resetAdminPeopleCollection`) and on collection swaps (`registerAdminPeopleCollection`).
-  A local write that fails after the server committed (for example a
-  collection whose sync stopped) is not reported as a failed action; the refetch
-  reconciles. `isAuthenticated` turning false empties the collection and removes
-  the people query key (and the nested per-person queries).
-- **Keys.** `"people"` is no longer in `ADMIN_RESOURCE_KEYS`; `loadData` refetches
-  the collection through `refetchAdminPeople`, and no `useQuery`/`setQueryData`
-  path for people or members remains.
-- **No live events.** The stream carries no people topic today, so there is no
-  live patching or timestamp map for this collection.
-- Retry-safety decisions are in `docs/retry-safety.md`.
+The detailed retired implementation is preserved in
+[Git history at 311cb1d](https://github.com/tjorim/champagnefestival/blob/311cb1d/docs/decisions/tanstack-db.md#people-and-members-1164).
 
 ## Venues, rooms, table types, layouts and areas ([#1183](https://github.com/tjorim/champagnefestival/issues/1183))
 
@@ -363,41 +304,38 @@ module is now mostly its data handling.
   (write to every registered collection, rejecting after all settled),
   `hasQueryKey` (live-envelope key match), and `claimEvent`/`isLatestEvent`
   (drop out-of-order live events per row id).
-- The registrations, tables and people modules use it and keep their public
-  exports (`registerAdmin…Collection`, `resetAdmin…Collection`,
-  `captureAdmin…Fence`, `refetchAdmin…`). People now registers the collection
-  itself (`registerAdminPeopleCollection(collection)`) like the others.
+- Registrations, tables, the venue group and exhibitors use it and keep their
+  public exports (`registerAdmin…Collection`, `resetAdmin…Collection`,
+  `captureAdmin…Fence`, `refetchAdmin…`). People uses Query session fencing
+  instead; its former collection integration was retired in #1181.
 - Tests: `tests/state/adminCollectionFactory.test.ts`.
 
 ### Sign-out safety for the plain queries
 
-Historical note: the venue group and exhibitors have since moved to fenced
-collection writes ([#1183](#venues-rooms-table-types-layouts-and-areas-1183),
-[#1184](#exhibitors-1184)); no admin resource is a plain query any more. The create-on-empty patterns (`prev ? [...prev, x] : [x]`) in
-`useAdminVenueActions.ts` (venues, rooms, layouts, areas, table types, and the
-layout-restore area replacement) now return `prev` when the cache is empty, so a
-create that resolves after sign-out cannot invent an entry. `useAdminQueries`
-also removes the venue, room, table-type, layout, exhibitor and area query keys
-when `isAuthenticated` turns false, so no data survives sign-out and the
-remaining `setQueryData` patches have nothing to write into. Test:
-`tests/hooks/useAdminSignOutCache.test.tsx`. The migrations below replace these
-patches with fenced collection writes.
+The venue group and exhibitors now use fenced collection writes
+([#1183](#venues-rooms-table-types-layouts-and-areas-1183),
+[#1184](#exhibitors-1184)). Their earlier empty-cache guards are historical;
+the current collection lifecycle rejects writes after a session change.
+People and registration list pages remain plain queries: authentication gates,
+query removal and session fencing prevent late responses or mutation callbacks
+from repopulating a signed-out session. See the
+[people Query contract](../people-query-layer.md) and
+[registration scope](#registration-scope-and-shared-table-1182-2026-10-07).
 
 ### Remaining resources (#1166)
 
-Default is migrate; nothing stays on Query.
+These bounded resources completed their migrations in #1183/#1184. People and
+registration list pages use Query under the separate #1175 decision.
 
 | Resource | Decision | Reason and approach | Issue |
 | --- | --- | --- | --- |
-| Venues, rooms, layouts, areas, table types | **Migrate, as one group**, one collection per resource (done, see [above](#venues-rooms-table-types-layouts-and-areas-1183)) | They are updated together: a venue delete cascades to rooms, layouts, tables and areas, a layout delete or revision restore rewrites its areas and tables, and a table-type capacity change reaches tables. A collection per resource keeps one authoritative copy of each (rule 3) and turns the roughly 30 `setQueryData` calls (21 in `useAdminVenueActions.ts`, 9 in `useVenueMutations.ts`) into direct writes, `writeDelete` cascades (the pattern the tables collection already uses) and derived views. `invalidateQueries` is not enough: a venue delete would refetch five lists, still leave the hooks with the cascade logic, and keep a second state path beside the tables collection, which rule 2 forbids. Eager sync (small, rarely changing lists). | [#1183](https://github.com/tjorim/champagnefestival/issues/1183) |
-| Exhibitors | **Migrate**, after the group (does not depend on it); done, see [above](#exhibitors-1184) | Follows the people migration and removes the last cross-collection patch: a people merge still repoints `contactPersonId` with `setQueryData`, and `AdminDashboard` patches the exhibitors query on save and delete. Numeric key (the factory supports it). | [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
+| Venues, rooms, layouts, areas, table types | **Completed**, one collection per resource | Small, bounded sets loaded eagerly; shared fenced writes handle venue/layout delete cascades and revision restores. See [implementation](#venues-rooms-table-types-layouts-and-areas-1183). | [#1183](https://github.com/tjorim/champagnefestival/issues/1183) |
+| Exhibitors | **Completed** | Eager collection with numeric keys; fenced writes and server reconciliation replace contact/dashboard cache patches. See [implementation](#exhibitors-1184). | [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
 
-Does removing `setQueryData` outweigh a second state path? Yes, as the default
-assumed: the second path exists only until the migrations land, and the
-collections add no new patching code. Each follow-up issue carries the
-sign-out criterion (capture the fence before the request, check it before every
-post-await write) and the retry-safety requirement
-([`docs/retry-safety.md`](../retry-safety.md)).
+The migrations removed the former standalone resource caches. Collection writes
+capture a fence before the request and check it before every post-await write;
+their retry policies remain documented in
+[retry safety](../retry-safety.md).
 
 ## Server-driven tables: Query with `keepPreviousData`, not on-demand sync ([#1175](https://github.com/tjorim/champagnefestival/issues/1175))
 
@@ -469,10 +407,11 @@ decision extends that pattern to people instead of introducing a second one.
 
 ### Consequences for the rules above
 
-- Rule 2 (never serve one domain from both a collection and a standalone
-  `useQuery`) concerns an entity set. A server-driven page is a query result, so
+- Rule 2 avoids duplicate complete entity sets. A server-driven page is a query result, so
   it is a plain query. The people list is now served entirely by Query pages
-  after #1181, so no domain has two copies.
+  after #1181. Registrations intentionally have both a complete active-edition
+  collection for working-set consumers and separate server pages for the list;
+  live events and mutations reconcile or invalidate each path.
 - The `syncMode` option in `createAdminCollection` stays: it costs nothing and
   documents the choice, but nothing is planned to use `"on-demand"`. Do not
   retrofit people through it (the #1166 note anticipating that is superseded).
@@ -504,8 +443,8 @@ swaps it. Everything that needs the full working set is edition-bound:
 - The registration list pages from the server (#1087 holds); its overlay falls
   back to the page's own row when the collection does not hold it (an older
   edition). The fallback is covered by the #1182 pagination tests.
-- `registrationCountByPersonId` leaves the browser: the people list returns the
-  count per person (#1177).
+- The former browser `registrationCountByPersonId` aggregate was removed:
+  the people list returns the count per person (#1177).
 
 If there is no active edition the collection is empty. A registration from an
 older edition is opened by id (`fetchRegistration`).
@@ -551,14 +490,13 @@ These come from #442 and apply to every further migration:
 
 1. **Do not add TanStack DB unless it reduces real complexity, or the
    migration is needed to keep the admin state pattern consistent.** Each
-   migration should remove more patching code than it adds; since 2026-10-05
-   ([#1166](https://github.com/tjorim/champagnefestival/issues/1166)) the
-   remaining admin resources are expected to migrate for consistency, and the
-   collections' pre-1.0 status is an accepted risk.
-2. **Never serve one domain from both a collection and a standalone `useQuery`.**
-   A migrated resource is refetched by `loadData` in `useAdminQueries.ts`
-   through its collection's `refetch…` helper and has no remaining `useQuery` or
-   `setQueryData` path.
+   migration should remove more patching code than it adds. The bounded resource
+   migrations from #1166 are complete; server-driven list pages follow #1175
+   instead. The collections' pre-1.0 status is an accepted risk.
+2. **Avoid duplicate complete entity sets.** Bounded resources use collections
+   refetched through their `refetch…` helpers. Server-driven pages use Query;
+   registrations have both active-edition working-set and list-page consumers,
+   with shared mutation/live-event reconciliation as described above.
 3. **Keep payloads normalized** so a resource has one authoritative copy; derive
    views (for example table occupancy) from the collection rather than storing
    them twice.
@@ -579,8 +517,8 @@ Installed versions: `@tanstack/db` 0.11.3, `@tanstack/react-db` ^0.5.3,
   explicitly and return `{ refetch: false }` instead of relying on the implicit
   refetch.
 - Direct writes (`writeUpsert`, `writeDelete`, `writeBatch`) return a promise that
-  resolves once the write is applied (1.3.2). The live-event patching does not
-  await it yet ([#1167](https://github.com/tjorim/champagnefestival/issues/1167)).
+  resolves once the write is applied (1.3.2). Registration live-event patching
+  awaits these receipts through the shared lifecycle; #1167 completed this work.
 - `tx.when('settled')` and `$hasPendingWrites` (`@tanstack/db` 0.11.1) can confirm
   a server response and show pending state.
 - Rows returned from a live query are the source collection's row objects, not

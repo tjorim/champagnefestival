@@ -213,7 +213,7 @@ In this order and no wider than needed:
 | --- | --- | --- |
 | Tables, venues, rooms, table types, layouts, areas | Yes, as complete sets | No guest data; `buster` on row-shape changes. |
 | Exhibitors | Yes | Name, active flag, contact person id. |
-| Registrations of the active edition | Yes, in the first release, only with all five conditions met | Only after #1182: the edition is in the key, so another edition never shows. |
+| Registrations of the active edition | Yes, in the first release, only with all five conditions met | #1182 completed: the edition is in the key; restore and edition-switch isolation still need persistence tests. |
 | People pages, registration list pages | **Never** | Query results, partial by construction. |
 
 A persisted subset is invalidated by (a) `buster`, changed with any row-shape change
@@ -272,13 +272,11 @@ Server state stays authoritative; persistence only supplies the first rows. The 
 
 ## Dependencies
 
-- **Registrations wait for [#1182](https://github.com/tjorim/champagnefestival/issues/1182)
-  (edition-scoped registrations collection).** Today the collection loads every
-  registration of every edition (`fetchAllRegistrations` has no edition filter) under a
-  key without the edition. Persisting it now would put the whole history on the device,
-  against the retention reasoning in [#934](934-data-retention-and-erasure.md), and a
-  change of edition could not swap the stored copy. After #1182 the key carries the
-  edition id and the collection is bounded to one edition.
+- **Registration scoping is complete ([#1182](https://github.com/tjorim/champagnefestival/issues/1182),
+  2026-10-07).** The collection loads only the active edition, keyed by its edition
+  id, and loads nothing without an active edition. This removes the former
+  all-history dependency. Persistence implementation (#1197) must still verify
+  edition-switch isolation, restore ordering and every privacy condition above.
 - **The rest has no dependency** and can be built first: the plumbing (persister,
   allowlist, `maxAge`, `buster`, wipe, last-synced state) and the collections without
   guest data (tables, venues, rooms, table types, layouts, areas, exhibitors).
