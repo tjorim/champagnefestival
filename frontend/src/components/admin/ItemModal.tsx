@@ -1,3 +1,4 @@
+import ExhibitorTranslationSuggestion from "@/components/ExhibitorTranslationSuggestion";
 import ExhibitorLogoUpload from "@/components/ExhibitorLogoUpload";
 import { captureAdminExhibitorsFence } from "@/state/adminExhibitorsCollection";
 import {
@@ -326,6 +327,21 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                     />
                   )}
                 </form.Field>
+                <form.Subscribe selector={(state) => state.values}>
+                  {(values) => (
+                    <ExhibitorTranslationSuggestion
+                      key={`${show}-${initial?.id ?? "new"}-${language}`}
+                      url="/api/exhibitors/translation"
+                      headers={authHeaders}
+                      source={values.description_language}
+                      target={language}
+                      text={values[`description_${values.description_language}`]}
+                      targetText={values[`description_${language}`]}
+                      onDraft={(text) => form.setFieldValue(`description_${language}`, text)}
+                      admin
+                    />
+                  )}
+                </form.Subscribe>
               </AdminField>
             ))}
             <AdminField className="mb-4" controlId="item-type">

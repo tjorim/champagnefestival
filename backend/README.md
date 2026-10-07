@@ -432,3 +432,11 @@ infra env file to notify a shared mailbox through the existing SMTP outbox worke
 Leave it unset to use only the pending list. No new Keycloak roles are needed.
 See the [API and workflow contract](../docs/exhibitor-change-review.md) and
 [retry safety](../docs/retry-safety.md#exhibitor-proposals-and-review-1193).
+
+### Exhibitor description draft translation (#1195)
+
+Set `TRANSLATION_SERVICE_URL` to the self-hosted LibreTranslate base URL to enable
+explicit drafts. `TRANSLATION_LANGUAGES` defaults to `nl,en`; leaving the URL empty
+hides the action. Admin and live manager capabilities/draft endpoints are documented
+in [the API contract](../docs/exhibitor-description-translation.md), including
+90-second timeout, identity limits, retry safety and the apps#263 production gate.

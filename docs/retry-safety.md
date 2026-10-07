@@ -441,3 +441,14 @@ Upload decoding occurs before the shared storage lock. Managers undergo an
 unlocked ownership preflight and a fresh ownership check under the lock before
 any file/proposal is created. Revocation during decoding therefore rejects the
 write without creating files; the retry and audit contracts remain unchanged.
+
+### Exhibitor description draft translation (#1195)
+
+`POST /api/exhibitors/translation` and
+`POST /api/me/exhibitors/{id}/translation` persist no description, proposal,
+notification or audit record. Repeating a request is content-safe, consumes the
+identity rate limit and service CPU, and may return a different draft. The client
+never automatically retries; the user can explicitly request another draft.
+A process-wide single-flight limit rejects bursts instead of queuing them. Saving
+or submitting the resulting text retains the existing exhibitor write contracts.
+See [API, configuration and limits](exhibitor-description-translation.md).

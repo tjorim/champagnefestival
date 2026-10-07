@@ -1211,5 +1211,12 @@
   "logo_upload_admin_help": "Uploading publishes the logo immediately and replaces any pending manager logo.",
   "logo_upload_success": "Logo uploaded.",
   "logo_upload_error": "Unable to upload the logo. Check the format and size, then try again.",
-  "logo_preview_error": "Unable to load the pending logo."
+  "logo_preview_error": "Unable to load the pending logo.",
+  "translation_suggest": "Suggest translation",
+  "translation_pending": "Translating…",
+  "translation_wait": "The service may take up to 90 seconds to start and translate. You can keep writing.",
+  "translation_help": "An editable draft from our self-hosted service. Review it before saving. Clear an existing translation to request a new draft.",
+  "translation_error": "Translation is unavailable or timed out. Try again later or write the translation yourself.",
+  "translation_rate_limit": "Too many translation requests. Please wait ten minutes before trying again.",
+  "translation_changed": "The text changed while translating. The draft was discarded to preserve your edits."
 }

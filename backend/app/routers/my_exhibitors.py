@@ -11,6 +11,7 @@ from app.database import get_db
 from app.models import Exhibitor, ExhibitorChange, Person, User
 from app.schemas import ExhibitorChangeOut, ExhibitorChangeSubmit, ManagedExhibitorOut
 from app.services import exhibitor_changes, exhibitor_logos
+from app.services import exhibitor_translation as translation
 from app.services.errors import ServiceError, to_http_exception
 from app.visitor_session import actor_for_user, get_current_user, get_exhibitor_contact_email
 
@@ -64,6 +65,36 @@ async def owned(db: AsyncSession, exhibitor_id: int, email: str | None, *, lock:
     if email is None or contact is None or contact.email.strip().lower() != email:
         raise HTTPException(404, "Exhibitor not found.")
     return row
+
+
+@router.get("/{exhibitor_id}/translation", response_model=translation.TranslationCapabilities)
+async def translation_capabilities(
+    exhibitor_id: int,
+    response: Response,
+    email: str | None = Depends(get_exhibitor_contact_email),
+    db: AsyncSession = Depends(get_db),
+) -> translation.TranslationCapabilities:
+    response.headers["Cache-Control"] = "no-store"
+    await owned(db, exhibitor_id, email, lock=False)
+    return translation.capabilities()
+
+
+@router.post("/{exhibitor_id}/translation", response_model=translation.TranslationDraft)
+async def suggest_translation(
+    exhibitor_id: int,
+    body: translation.TranslationRequest,
+    response: Response,
+    email: str | None = Depends(get_exhibitor_contact_email),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> translation.TranslationDraft:
+    """Live manager authorization, editable draft only; no proposal or publication."""
+    response.headers["Cache-Control"] = "no-store"
+    await owned(db, exhibitor_id, email, lock=False)
+    # Release the read transaction before waiting for a cold service startup.
+    actor, auth_source = actor_for_user(user)
+    await db.rollback()
+    return await translation.suggest(body, f"{auth_source or 'keycloak'}:{actor}")
 
 
 @router.get("/{exhibitor_id}/changes", response_model=list[ExhibitorChangeOut])

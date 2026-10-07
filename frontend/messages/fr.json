@@ -1211,5 +1211,12 @@
   "logo_upload_admin_help": "L’importation publie immédiatement le logo et remplace tout logo proposé en attente.",
   "logo_upload_success": "Logo importé.",
   "logo_upload_error": "Impossible d’importer le logo. Vérifiez le format et la taille, puis réessayez.",
-  "logo_preview_error": "Impossible de charger le logo proposé."
+  "logo_preview_error": "Impossible de charger le logo proposé.",
+  "translation_suggest": "Proposer une traduction",
+  "translation_pending": "Traduction en cours…",
+  "translation_wait": "Le service peut prendre jusqu’à 90 secondes pour démarrer et traduire. Vous pouvez continuer à écrire.",
+  "translation_help": "Un brouillon modifiable de notre service de traduction auto-hébergé. Vérifiez-le avant de l’enregistrer. Effacez une traduction existante pour demander un nouveau brouillon.",
+  "translation_error": "La traduction est indisponible ou a pris trop de temps. Réessayez plus tard ou rédigez la traduction vous-même.",
+  "translation_rate_limit": "Trop de demandes de traduction. Veuillez patienter dix minutes avant de réessayer.",
+  "translation_changed": "Le texte a changé pendant la traduction. Le brouillon a été écarté pour conserver vos modifications."
 }

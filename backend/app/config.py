@@ -141,6 +141,11 @@ class Settings(BaseSettings):
     guest_access_token_ttl_minutes: int = 30
     """How long a visitor reservation access link remains valid."""
 
+    translation_service_url: str = ""
+    """Self-hosted LibreTranslate base URL; empty disables description drafts."""
+    translation_languages: str = "nl,en"
+    """Comma-separated loaded site languages; French requires infra approval."""
+
     exhibitor_review_recipient: str = ""
     exhibitor_logo_public_root: str = "./uploads/public/exhibitors"
     exhibitor_logo_pending_root: str = "./uploads/pending/exhibitors"
@@ -216,6 +221,21 @@ class Settings(BaseSettings):
     # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
+
+    @field_validator("translation_languages")
+    @classmethod
+    def validate_translation_languages(cls, value: str) -> str:
+        languages = list(dict.fromkeys(part.strip() for part in value.split(",")))
+        if len(languages) < 2 or any(language not in {"nl", "fr", "en"} for language in languages):
+            raise ValueError("TRANSLATION_LANGUAGES requires at least two of nl, fr, en.")
+        return ",".join(languages)
+
+    @field_validator("translation_service_url")
+    @classmethod
+    def validate_translation_service_url(cls, value: str) -> str:
+        if value and not value.startswith(("http://", "https://")):
+            raise ValueError("TRANSLATION_SERVICE_URL must be an HTTP(S) base URL.")
+        return value.rstrip("/")
 
     @field_validator("database_url")
     @classmethod
