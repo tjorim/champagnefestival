@@ -28,7 +28,6 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { m } from "@/paraglide/messages";
-import { devError } from "@/utils/devLog";
 import {
   apiVenueToVenue,
   apiLayoutToLayout,
@@ -43,8 +42,6 @@ import {
   apiLayoutRevisionToLayoutRevision,
   apiLayoutRevisionDiffToLayoutRevisionDiff,
   apiLayoutRestorePreviewToLayoutRestorePreview,
-  attachVolunteerDetails,
-  mergePeopleWithVolunteers,
 } from "@/utils/adminApiMappers";
 
 export interface RegistrationsPage {
@@ -484,114 +481,6 @@ export async function fetchAreas(authHeaders: () => Record<string, string>): Pro
     m.admin_error_load_data(),
   );
   return Array.isArray(payload) ? payload.map(apiAreaToArea) : [];
-}
-
-interface PersonListEnvelope {
-  items?: Record<string, unknown>[];
-  total?: number;
-  limit?: number;
-  page?: number;
-}
-
-// GET /api/people and /api/volunteers page like GET /api/registrations (see
-// backend/app/routers/{people,volunteers}.py) — {items, total, limit, page}.
-// GET /api/members doesn't exist (retired — it was functionally identical to
-// /api/people?role=member; see backend/app/routers/members.py); members are the
-// people holding the member role. The People/Volunteers/Members admin tabs are
-// full client-side tables (see PeopleManagement/VolunteersManagement/
-// MembersManagement), so `fetchAllPersonPages` reads every page. The backend
-// caps one page at 1000 rows (`Pagination`), which is the page size here, not a
-// limit on how many people there can be.
-const PERSON_PAGE_SIZE = 1000;
-
-async function fetchPersonListEnvelope(
-  url: string,
-  authHeaders: () => Record<string, string>,
-): Promise<{ people: Person[]; total: number }> {
-  const payload = await fetchJsonOrThrowWithUnauthorized<PersonListEnvelope>(
-    url,
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-  );
-  if (
-    !Array.isArray(payload.items) ||
-    typeof payload.total !== "number" ||
-    typeof payload.limit !== "number" ||
-    typeof payload.page !== "number"
-  ) {
-    // A bare array (the old, pre-envelope shape) or any other malformed
-    // response must not be swallowed into an empty/zero-valued list — that
-    // would look exactly like the silent-truncation bug this endpoint was
-    // fixed for (see #931).
-    throw new Error(`Invalid ${url} response: expected {items, total, limit, page}.`);
-  }
-  return { people: payload.items.map(apiToPerson), total: payload.total };
-}
-
-/**
- * Reads every page of a person list endpoint. Pages are fetched concurrently
- * once the first one reveals the total. The backend orders both lists
- * deterministically (newest first, then id), so pages do not overlap unless a
- * row is added mid-read, and the result is deduplicated by id for that case.
- */
-async function fetchAllPersonPages(
-  path: string,
-  authHeaders: () => Record<string, string>,
-): Promise<Person[]> {
-  const separator = path.includes("?") ? "&" : "?";
-  const pageUrl = (page: number) => `${path}${separator}limit=${PERSON_PAGE_SIZE}&page=${page}`;
-  const first = await fetchPersonListEnvelope(pageUrl(1), authHeaders);
-  const pageCount = Math.ceil(first.total / PERSON_PAGE_SIZE);
-  const rest = await Promise.all(
-    Array.from({ length: Math.max(0, pageCount - 1) }, (_, index) =>
-      fetchPersonListEnvelope(pageUrl(index + 2), authHeaders),
-    ),
-  );
-  const byId = new Map<string, Person>();
-  for (const { people } of [first, ...rest]) {
-    for (const person of people) byId.set(person.id, person);
-  }
-  return [...byId.values()];
-}
-
-/**
- * People matching a search. A search is one page by design: a query that
- * matches more than a page is too broad to be useful, so that is reported
- * rather than paged through. Volunteer details (help periods) are attached to
- * the matches that hold the volunteer role; volunteers who did not match the
- * query are not added, and the volunteer list is not fetched at all when no
- * match is a volunteer.
- */
-export async function fetchPeopleSearch(
-  authHeaders: () => Record<string, string>,
-  query: string,
-): Promise<Person[]> {
-  const result = await fetchPersonListEnvelope(
-    `/api/people?q=${encodeURIComponent(query.trim())}&limit=${PERSON_PAGE_SIZE}`,
-    authHeaders,
-  );
-  if (result.total > result.people.length) {
-    devError(
-      `Admin people search matched ${result.total} people but only the first ` +
-        `${result.people.length} are shown; narrow the query.`,
-    );
-  }
-  if (!result.people.some((person) => person.roles.includes("volunteer"))) return result.people;
-  const volunteers = await fetchAllPersonPages("/api/volunteers", authHeaders);
-  return attachVolunteerDetails(result.people, volunteers);
-}
-
-/**
- * Every person, with volunteer help periods merged in. All pages are read, so
- * members (the people holding the member role) and volunteers are complete
- * however many people there are.
- */
-export async function fetchPeople(authHeaders: () => Record<string, string>): Promise<Person[]> {
-  const [people, volunteers] = await Promise.all([
-    fetchAllPersonPages("/api/people", authHeaders),
-    fetchAllPersonPages("/api/volunteers", authHeaders),
-  ]);
-  return mergePeopleWithVolunteers(people, volunteers);
 }
 
 /** One volunteer with their help periods (`GET /api/volunteers/{id}`). */

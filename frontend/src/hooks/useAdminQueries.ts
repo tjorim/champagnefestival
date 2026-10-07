@@ -13,14 +13,8 @@ import {
   registerAdminExhibitorsCollection,
   resetAdminExhibitorsCollection,
 } from "@/state/adminExhibitorsCollection";
-import {
-  createAdminPeopleCollection,
-  refetchAdminPeople,
-  registerAdminPeopleCollection,
-  resetAdminPeopleCollection,
-  selectMembers,
-  selectVolunteers,
-} from "@/state/adminPeopleCollection";
+import { resetAdminPeopleSession } from "@/state/adminPeopleSession";
+import { usePeopleCountsQuery } from "@/hooks/usePeopleListQuery";
 import {
   createAdminTablesCollection,
   refetchAdminTables,
@@ -120,39 +114,11 @@ export function useAdminQueries({
     isFetching: tablesCollection.utils.isFetching,
   };
 
-  const peopleCollection = useMemo(
-    () =>
-      createAdminPeopleCollection({
-        queryClient,
-        authHeaders,
-        enabled: adminQueryOptions.enabled,
-      }),
-    [adminQueryOptions.enabled, authHeaders, queryClient],
-  );
-  const peopleLiveQuery = useLiveQuery(() => peopleCollection, [peopleCollection]);
-  const peopleCollectionRef = useRef(peopleCollection);
+  const peopleCountsQuery = usePeopleCountsQuery({}, authHeaders, adminQueryOptions.enabled);
   useEffect(() => {
-    peopleCollectionRef.current = peopleCollection;
-  }, [peopleCollection]);
-  useEffect(() => registerAdminPeopleCollection(peopleCollection), [peopleCollection]);
-  const peopleQuery = {
-    data: peopleLiveQuery.data,
-    error: peopleCollection.utils.lastError ?? null,
-    isPending: peopleLiveQuery.isLoading,
-    isFetching: peopleCollection.utils.isFetching,
-  };
-  // Members and volunteers are views over the people rows, never second copies.
-  // They share the people collection's loading and error state.
-  const membersData = useMemo(
-    () => selectMembers(peopleLiveQuery.data ?? []),
-    [peopleLiveQuery.data],
-  );
-  const volunteersData = useMemo(
-    () => selectVolunteers(peopleLiveQuery.data ?? []),
-    [peopleLiveQuery.data],
-  );
-  const membersQuery = { ...peopleQuery, data: membersData };
-  const volunteersQuery = { ...peopleQuery, data: volunteersData };
+    resetAdminPeopleSession();
+    return resetAdminPeopleSession;
+  }, [authHeaders, adminQueryOptions.enabled]);
 
   // The venue group (venues, rooms, table types, layouts, areas) is one set of
   // collections, built, registered and reset together.
@@ -235,7 +201,6 @@ export function useAdminQueries({
       () => undefined,
     );
     void resetAdminTablesCollection(tablesCollectionRef.current).catch(() => undefined);
-    void resetAdminPeopleCollection(peopleCollectionRef.current).catch(() => undefined);
     void resetAdminVenueCollections(venueCollectionsRef.current).catch(() => undefined);
     void resetAdminExhibitorsCollection(exhibitorsCollectionRef.current).catch(() => undefined);
     void queryClient.removeQueries({ queryKey: registrationsQueryKey });
@@ -264,7 +229,7 @@ export function useAdminQueries({
           layoutsQuery,
           exhibitorsQuery,
           areasQuery,
-          peopleQuery,
+          peopleCountsQuery,
         ]
       : []),
   ];
@@ -276,14 +241,17 @@ export function useAdminQueries({
         ? refetchAdminRegistrations(registrationsCollection)
         : undefined,
       canManageAdminSections ? refetchAdminTables(tablesCollection) : undefined,
-      canManageAdminSections ? refetchAdminPeople(peopleCollection) : undefined,
+      adminQueryOptions.enabled
+        ? queryClient.invalidateQueries({ queryKey: queryKeys.admin.people })
+        : undefined,
       canManageAdminSections ? refetchAdminVenueCollections(venueCollections) : undefined,
       canManageAdminSections ? refetchAdminExhibitors(exhibitorsCollection) : undefined,
     ]);
   }, [
     canManageAdminSections,
+    adminQueryOptions.enabled,
+    queryClient,
     exhibitorsCollection,
-    peopleCollection,
     registrationsCollection,
     registrationsQueryOptions.enabled,
     tablesCollection,
@@ -291,6 +259,7 @@ export function useAdminQueries({
   ]);
 
   return {
+    registrationsCollection,
     // Query objects (for error/loading state access)
     registrationsQuery,
     tablesQuery,
@@ -303,10 +272,7 @@ export function useAdminQueries({
     exhibitorsCollection,
     areasQuery,
     venueCollections,
-    peopleQuery,
-    membersQuery,
-    volunteersQuery,
-    peopleCollection,
+    peopleCountsQuery,
     // Derived booleans
     isAnyPending: allQueries.some((q) => q.isPending),
     isAnyFetching: allQueries.some((q) => q.isFetching),

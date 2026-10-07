@@ -27,6 +27,7 @@ import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 
 export interface AdminDataSourceResult<T> {
   data?: { items: T[]; total: number };
+  filters?: readonly AdminTableFilter[];
   isFetching: boolean;
   isPlaceholderData?: boolean;
   isError?: boolean;
@@ -81,7 +82,7 @@ export function AdminDataTable<T extends RowData>({
   id,
   columns,
   useDataSource,
-  filters = [],
+  filters: configuredFilters = [],
   columnVisibilityKey,
   getRowId,
   getRowLabel,
@@ -125,6 +126,7 @@ export function AdminDataTable<T extends RowData>({
       ? (visibilityParam as Record<string, boolean>)
       : savedVisibility;
   const result = useDataSource(state);
+  const filters = result.filters ?? configuredFilters;
   const [action, setAction] = useState<{ action: AdminTableAction<T>; row: T } | null>(null);
   const [busy, setBusy] = useState(false);
   const [operationError, setOperationError] = useState(false);
@@ -372,6 +374,14 @@ export function AdminDataTable<T extends RowData>({
         {table.getRowModel().rows.map((row) => (
           <li key={row.id} className="space-y-2 rounded-md border border-border p-3 break-words">
             {renderCard(row.original)}
+            {row
+              .getVisibleCells()
+              .filter((cell) => cell.column.id === "actions")
+              .map((cell) => (
+                <div key={cell.id}>
+                  <table.FlexRender cell={cell} />
+                </div>
+              ))}
             {rowActions(row.original)}
           </li>
         ))}

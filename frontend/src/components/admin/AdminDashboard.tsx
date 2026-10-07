@@ -1,3 +1,4 @@
+import { usePersonDuplicates } from "./PersonDuplicates";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
@@ -114,6 +115,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
   const {
     registrationsQuery,
+    registrationsCollection,
     tablesQuery,
     tablesCollection,
     venuesQuery,
@@ -123,10 +125,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     exhibitorsQuery,
     exhibitorsCollection,
     areasQuery,
-    peopleQuery,
-    membersQuery,
-    volunteersQuery,
-    peopleCollection,
+    peopleCountsQuery,
     isAnyPending,
     isAnyFetching,
     registrationsQueryKey,
@@ -152,21 +151,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const layouts = layoutsQuery.data ?? [];
   const exhibitors = exhibitorsQuery.data ?? [];
   const areas = areasQuery.data ?? [];
-  const people = peopleQuery.data ?? [];
-  const members = membersQuery.data ?? [];
-  const volunteers = volunteersQuery.data ?? [];
+  const duplicatesQuery = usePersonDuplicates(
+    detailRegistration?.person ?? null,
+    authHeaders,
+    visible && isAuthenticated && canManageAdminSections,
+  );
+  const emailDuplicates = duplicatesQuery.data?.items ?? [];
   const {
     activeDayIndex,
     activeEditionDateKeys,
     activeEditionStats,
-    emailDuplicates,
     isActiveEditionDay,
     layoutDayOptions,
-    registrationCountByPersonId,
   } = useAdminDashboardData({
     activeEdition,
-    detailRegistration,
-    people,
     registrations,
   });
 
@@ -198,7 +196,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   } = useAdminPeopleActions({
     authHeaders,
     exhibitorsCollection,
-    peopleCollection,
+    registrationsCollection,
     queryClient,
     registrationsQueryKey,
     setDetailRegistration,
@@ -295,7 +293,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       layoutsQuery.error as Error | null,
       exhibitorsQuery.error as Error | null,
       areasQuery.error as Error | null,
-      peopleQuery.error as Error | null,
+      peopleCountsQuery.error as Error | null,
     ],
     [
       registrationsQuery.error,
@@ -306,7 +304,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       layoutsQuery.error,
       exhibitorsQuery.error,
       areasQuery.error,
-      peopleQuery.error,
+      peopleCountsQuery.error,
     ],
   );
 
@@ -418,9 +416,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             navRef={navRef}
             handleNavKeyDown={handleNavKeyDown}
             registrationCount={registrations.length}
-            peopleCount={people.length}
-            membersCount={members.length}
-            volunteerCount={volunteers.length}
+            peopleCount={peopleCountsQuery.data?.total ?? 0}
+            membersCount={peopleCountsQuery.data?.by_role.member ?? 0}
+            volunteerCount={peopleCountsQuery.data?.by_role.volunteer ?? 0}
             isAnyFetching={isAnyFetching}
             onLoadData={loadData}
             onLogout={handleLogout}
@@ -599,9 +597,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {canManageAdminSections && activeKey === "directory" && (
                   <PeopleManagement
-                    people={people}
-                    registrationCountByPersonId={registrationCountByPersonId}
-                    isLoading={isAnyFetching}
                     authHeaders={authHeaders}
                     onMerge={handleMergePeople}
                     onCreate={handleCreatePerson}
@@ -611,9 +606,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {canManageAdminSections && activeKey === "members" && (
                   <MembersManagement
-                    members={members}
-                    registrationCountByPersonId={registrationCountByPersonId}
-                    isLoading={isAnyFetching}
+                    authHeaders={authHeaders}
                     onCreate={handleCreateMember}
                     onUpdate={handleUpdateMember}
                     onDelete={handleDeleteMember}
@@ -621,8 +614,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {canManageAdminSections && activeKey === "volunteers" && (
                   <VolunteersManagement
-                    volunteers={volunteers}
-                    isLoading={isAnyFetching}
                     authHeaders={authHeaders}
                     onCreate={handleCreateVolunteer}
                     onUpdate={handleUpdateVolunteer}

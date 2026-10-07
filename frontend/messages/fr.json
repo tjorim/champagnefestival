@@ -1169,5 +1169,7 @@
   "admin_inventory_available": "Disponible",
   "admin_action_clear_selection": "Effacer la sélection",
   "admin_action_show_options": "Afficher les options",
-  "admin_action_remove_selection": "Retirer la sélection"
+  "admin_action_remove_selection": "Retirer la sélection",
+  "admin_table_sort": "Trier",
+  "admin_table_results": "{total} résultats"
 }

@@ -1,30 +1,22 @@
+import { PersonDuplicates } from "./PersonDuplicates";
+import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import {
   ArrowLeftRightIcon,
   CalendarCheckIcon,
-  CheckIcon,
   CircleCheckIcon,
-  ClipboardIcon,
   EyeIcon,
   FileSpreadsheetIcon,
   MailIcon,
   NotebookTextIcon,
   PencilIcon,
   TrashIcon,
-  TriangleAlertIcon,
-  UserPlusIcon,
-  UserRoundCogIcon,
   UsersIcon,
+  UserRoundCogIcon,
 } from "lucide-react";
 import { Icon } from "@/components/Icon";
-import { AdminSortableHeader } from "./AdminSortableHeader";
-import { useState, useCallback, useMemo, useEffect } from "react";
-import {
-  type FilterFn,
-  type SortingState,
-  type ColumnVisibilityState,
-} from "@tanstack/react-table";
+import { useState, useCallback, useMemo } from "react";
+import { type SortingState } from "@tanstack/react-table";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -40,7 +32,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
 import { queryKeys } from "@/utils/queryKeys";
@@ -49,44 +40,20 @@ import {
   fetchPersonPaymentSummary,
 } from "@/utils/adminRegistrationApi";
 import {
-  fetchPeopleSearch,
   downloadPaymentTransactionsCsv,
   fetchPaymentTransactionsLedger,
   LEDGER_PAGE_SIZE,
 } from "@/utils/adminFetch";
 import { devError } from "@/utils/devLog";
-import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
-import { AdminTablePagination } from "./AdminTablePagination";
+import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
-import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
-import { loadColVis, saveColVis } from "@/utils/columnVisibility";
 import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
 import EmailComposeModal from "./EmailComposeModal";
 
-const COL_VIS_KEY = "admin-col-vis-people";
-
 const columnHelper = createAppColumnHelper<Person>();
 
-const peopleGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
-  row,
-  _columnId,
-  filterValue: string,
-) => {
-  const s = filterValue.toLowerCase();
-  const phoneQ = s.replace(/[\s\-().+]/g, "");
-  return (
-    row.original.name.toLowerCase().includes(s) ||
-    row.original.email.toLowerCase().includes(s) ||
-    (phoneQ.length > 0 && row.original.phone.replace(/[\s\-().+]/g, "").includes(phoneQ))
-  );
-};
-peopleGlobalFilter.autoRemove = (val: unknown) => !val || String(val) === "";
-
 interface PeopleManagementProps {
-  people: Person[];
-  registrationCountByPersonId: Record<string, number>;
-  isLoading: boolean;
   authHeaders: () => Record<string, string>;
   onMerge: (canonicalId: string, duplicateId: string) => Promise<void>;
   onCreate: (data: PersonFormData) => Promise<void>;
@@ -100,22 +67,12 @@ interface MergeState {
 }
 
 export default function PeopleManagement({
-  people,
-  registrationCountByPersonId,
-  isLoading,
   authHeaders,
   onMerge,
   onCreate,
   onUpdate,
   onDelete,
 }: PeopleManagementProps) {
-  const [q, setQ] = useState("");
-  const [debouncedQ, setDebouncedQ] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() =>
-    loadColVis(COL_VIS_KEY),
-  );
   const [mergeState, setMergeState] = useState<MergeState | null>(null);
   const [merging, setMerging] = useState(false);
   const [mergeError, setMergeError] = useState("");
@@ -128,7 +85,6 @@ export default function PeopleManagement({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
-  const [copySuccess, setCopySuccess] = useState(false);
   const [viewRegistrationsPerson, setViewRegistrationsPerson] = useState<Person | null>(null);
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [exportingLedger, setExportingLedger] = useState(false);
@@ -136,60 +92,6 @@ export default function PeopleManagement({
   const [showLedgerModal, setShowLedgerModal] = useState(false);
   const [ledgerPage, setLedgerPage] = useState(1);
   const [ledgerSorting, setLedgerSorting] = useState<SortingState>([]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setDebouncedQ(q.trim()), 300);
-    return () => clearTimeout(timer);
-  }, [q]);
-  const peopleSearchQuery = useQuery({
-    queryKey: ["admin", "people", "search", debouncedQ],
-    queryFn: () => fetchPeopleSearch(authHeaders, debouncedQ),
-    enabled: debouncedQ.length > 0,
-    staleTime: 30 * 1000,
-    retry: false,
-  });
-  const displayedPeople = useMemo(
-    () => (debouncedQ ? (peopleSearchQuery.data ?? []) : people),
-    [debouncedQ, people, peopleSearchQuery.data],
-  );
-
-  const preFiltered = useMemo(
-    () =>
-      roleFilter === "all"
-        ? displayedPeople
-        : displayedPeople.filter((p) => p.roles.includes(roleFilter)),
-    [displayedPeople, roleFilter],
-  );
-
-  // Group people by email to surface duplicates
-  const { emailGroups, duplicateEmails } = useMemo(() => {
-    const groups = new Map<string, Person[]>();
-    for (const p of people) {
-      if (!p.email) continue;
-      const key = p.email.toLowerCase();
-      const group = groups.get(key) ?? [];
-      group.push(p);
-      groups.set(key, group);
-    }
-    const dupes = new Set(
-      [...groups.entries()].filter(([, g]) => g.length > 1).map(([email]) => email),
-    );
-    return { emailGroups: groups, duplicateEmails: dupes };
-  }, [people]);
-
-  // Collect all unique roles across all people for the filter dropdown
-  const allRoles = [...new Set(people.flatMap((p) => p.roles))].sort();
-
-  const handleCopyEmails = async () => {
-    if (filteredEmails.length === 0) return;
-    try {
-      await navigator.clipboard.writeText(filteredEmails.join(", "));
-      setCopySuccess(true);
-      setTimeout(() => setCopySuccess(false), 2500);
-    } catch {
-      // Clipboard API unavailable — nothing to do in this admin context
-    }
-  };
 
   const handleMergeConfirm = async () => {
     if (!mergeState) return;
@@ -206,17 +108,14 @@ export default function PeopleManagement({
     }
   };
 
-  const openMerge = useCallback(
-    (a: Person, b: Person) => {
-      // Default: keep the one with more registrations as canonical
-      const aCount = registrationCountByPersonId[a.id] ?? 0;
-      const bCount = registrationCountByPersonId[b.id] ?? 0;
-      setMergeState({ canonical: aCount >= bCount ? a : b, duplicate: aCount >= bCount ? b : a });
-      setMergeError("");
-      setMergeSuccess(false);
-    },
-    [registrationCountByPersonId],
-  );
+  const openMerge = useCallback((a: Person, b: Person) => {
+    // Default: keep the one with more registrations as canonical
+    const aCount = a.registrationCount ?? 0;
+    const bCount = b.registrationCount ?? 0;
+    setMergeState({ canonical: aCount >= bCount ? a : b, duplicate: aCount >= bCount ? b : a });
+    setMergeError("");
+    setMergeSuccess(false);
+  }, []);
 
   const handleDeleteConfirm = async () => {
     if (!deletingId) return;
@@ -346,23 +245,9 @@ export default function PeopleManagement({
           header: m.registration_name(),
           cell: ({ row }) => {
             const person = row.original;
-            const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
             return (
               <>
-                <div className="font-semibold flex items-center gap-1">
-                  {person.name}
-                  {!person.active && (
-                    <Badge variant="secondary" className="ms-1">
-                      {m.admin_people_inactive_badge_label()}
-                    </Badge>
-                  )}
-                </div>
-                {isDuplicate && (
-                  <div className="text-highlight text-sm">
-                    <Icon icon={TriangleAlertIcon} className="me-1" />
-                    {m.admin_people_duplicates_same_email()}
-                  </div>
-                )}
+                <PersonName person={person} />
               </>
             );
           },
@@ -373,6 +258,7 @@ export default function PeopleManagement({
           meta: { tdClassName: "hidden md:table-cell" },
         }),
         columnHelper.accessor("phone", {
+          enableSorting: false,
           header: m.registration_phone(),
           cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
           meta: { tdClassName: "hidden lg:table-cell" },
@@ -392,7 +278,7 @@ export default function PeopleManagement({
           ),
           meta: { tdClassName: "hidden lg:table-cell" },
         }),
-        columnHelper.accessor((row) => registrationCountByPersonId[row.id] ?? 0, {
+        columnHelper.accessor((row) => row.registrationCount ?? 0, {
           id: "registrations",
           header: m.admin_registrations_tab(),
           cell: ({ row, getValue }) => {
@@ -423,12 +309,6 @@ export default function PeopleManagement({
           enableSorting: false,
           cell: ({ row }) => {
             const person = row.original;
-            const isDuplicate = person.email && duplicateEmails.has(person.email.toLowerCase());
-            const duplicates = isDuplicate
-              ? (emailGroups.get(person.email.toLowerCase()) ?? []).filter(
-                  (p) => p.id !== person.id,
-                )
-              : [];
             return (
               <div className="flex flex-wrap gap-1">
                 {person.email && (
@@ -474,27 +354,14 @@ export default function PeopleManagement({
                 >
                   <Icon icon={TrashIcon} />
                 </Button>
-                {duplicates.map((dup) => (
-                  <Button
-                    key={dup.id}
-                    size="sm"
-                    variant="outline-warning"
-                    onClick={() => openMerge(person, dup)}
-                    title={`${m.admin_people_merge_title()}: ${dup.name}`}
-                  >
-                    <Icon icon={UserRoundCogIcon} />
-                    {m.admin_people_merge_title()}
-                  </Button>
-                ))}
+                <PersonDuplicates person={person} authHeaders={authHeaders} onMerge={openMerge} />
               </div>
             );
           },
         }),
       ]),
     [
-      duplicateEmails,
-      emailGroups,
-      registrationCountByPersonId,
+      authHeaders,
       setEditingPerson,
       setShowForm,
       setDeletingId,
@@ -504,96 +371,11 @@ export default function PeopleManagement({
     ],
   );
 
-  const table = useAppTable(
-    {
-      data: preFiltered,
-      columns,
-      state: { sorting, globalFilter: debouncedQ ? "" : q, columnVisibility },
-      initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
-      manualPagination: false,
-      getRowId: (row) => row.id,
-      onSortingChange: setSorting,
-      onGlobalFilterChange: setQ,
-      onColumnVisibilityChange: (updater) => {
-        const next = typeof updater === "function" ? updater(columnVisibility) : updater;
-        setColumnVisibility(next);
-        saveColVis(COL_VIS_KEY, next);
-      },
-      globalFilterFn: peopleGlobalFilter,
-    },
-    (state) => ({
-      sorting: state.sorting,
-      globalFilter: state.globalFilter,
-      columnVisibility: state.columnVisibility,
-      pagination: state.pagination,
-    }),
-  );
-
-  // Emails from the currently visible (filtered + searched) rows for the copy button
-  const filteredEmails = table
-    .getFilteredRowModel()
-    .rows.map((row) => row.original.email)
-    .filter(Boolean);
-
   return (
     <>
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
       <Card tone="secondary">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="font-semibold">{m.admin_people_tab()}</span>
-            <div className="flex gap-2">
-              <ColumnVisibilityDropdown table={table} tableId="people" />
-              <Button
-                size="sm"
-                variant="outline-primary"
-                onClick={() => {
-                  setEditingPerson(null);
-                  setShowForm(true);
-                }}
-              >
-                <Icon icon={UserPlusIcon} />
-                {m.admin_people_add_person()}
-              </Button>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2 items-center">
-            <AdminSelect
-              size="sm"
-              value={roleFilter}
-              onValueChange={(e) => setRoleFilter(e)}
-              className="bg-muted text-content border-input max-w-40"
-
-              aria-label={m.admin_people_roles_label()}
-            >
-              <AdminOption value="all">{m.admin_people_all_roles()}</AdminOption>
-              {allRoles.map((role) => (
-                <AdminOption key={role} value={role}>
-                  {role}
-                </AdminOption>
-              ))}
-            </AdminSelect>
-            <Button
-              size="sm"
-              variant={copySuccess ? "success" : "outline"}
-              onClick={handleCopyEmails}
-              disabled={filteredEmails.length === 0}
-              title={m.admin_people_copy_emails_tooltip()}
-              aria-label={`${m.admin_people_copy_emails_tooltip()} (${filteredEmails.length})`}
-            >
-              <Icon icon={copySuccess ? CheckIcon : ClipboardIcon} />
-              {copySuccess ? m.admin_people_emails_copied() : `${filteredEmails.length}`}
-            </Button>
-            <AdminInput
-              size="sm"
-              type="search"
-              placeholder={m.admin_search_person_placeholder()}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="bg-muted text-content border-input max-w-60"
-            />
-          </div>
-        </CardHeader>
+        <CardHeader>{m.admin_people_tab()}</CardHeader>
 
         <CardContent className="p-0">
           {mergeSuccess && (
@@ -641,54 +423,25 @@ export default function PeopleManagement({
             </Alert>
           )}
 
-          {isLoading || peopleSearchQuery.isLoading ? (
-            <div className="text-center py-6">
-              <Spinner label={m.admin_loading()} variant="primary" size="sm" />
-            </div>
-          ) : peopleSearchQuery.isError ? (
-            <p className="text-destructive text-center py-6 mb-0">{m.admin_error_load_data()}</p>
-          ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
-            <p className="text-subtle text-center py-6 mb-0">{m.admin_people_no_results()}</p>
-          ) : (
-            <div className="w-full">
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <AdminSortableHeader key={header.id} column={header.column}>
-                          <table.FlexRender header={header} />
-                        </AdminSortableHeader>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          className={cell.column.columnDef.meta?.tdClassName}
-                        >
-                          <table.FlexRender cell={cell} />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-          <AdminTablePagination
-            total={table.getPrePaginatedRowModel().rows.length}
-            pageIndex={table.state.pagination.pageIndex}
-            pageSize={table.state.pagination.pageSize}
-            canPreviousPage={table.getCanPreviousPage()}
-            canNextPage={table.getCanNextPage()}
-            onPreviousPage={() => table.previousPage()}
-            onNextPage={() => table.nextPage()}
-            onPageSizeChange={(size) => table.setPageSize(size)}
+          <PeopleDataTable
+            id="people"
+            authHeaders={authHeaders}
+            columns={columns}
+            onOpen={(person) => {
+              setEditingPerson(person);
+              setShowForm(true);
+            }}
+            primaryAction={
+              <Button
+                variant="outline-primary"
+                onClick={() => {
+                  setEditingPerson(null);
+                  setShowForm(true);
+                }}
+              >
+                {m.admin_people_add_person()}
+              </Button>
+            }
           />
         </CardContent>
       </Card>
@@ -719,7 +472,7 @@ export default function PeopleManagement({
 
               {(["canonical", "duplicate"] as const).map((role) => {
                 const person = mergeState[role];
-                const resCount = registrationCountByPersonId[person.id] ?? 0;
+                const resCount = person.registrationCount ?? 0;
                 const label =
                   role === "canonical"
                     ? m.admin_people_merge_into()

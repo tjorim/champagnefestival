@@ -1,6 +1,6 @@
 import { http, HttpResponse } from "msw";
 import { describe, expect, it } from "vitest";
-import { fetchPeople, fetchPeopleSearch, fetchVolunteer } from "@/utils/adminFetch";
+import { fetchVolunteer } from "@/utils/adminFetch";
 import { server } from "@/mocks/server";
 
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
@@ -25,151 +25,7 @@ function personPayload(id: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe("fetchPeople / fetchPeopleSearch — envelope handling", () => {
-  it("fetchPeople merges the people and volunteers envelopes into one list", async () => {
-    server.use(
-      http.get("/api/people", () =>
-        HttpResponse.json({
-          items: [personPayload("p1")],
-          total: 1,
-          limit: 1000,
-          page: 1,
-        }),
-      ),
-      http.get("/api/volunteers", () =>
-        HttpResponse.json({
-          items: [personPayload("v1", { roles: ["volunteer"] })],
-          total: 1,
-          limit: 1000,
-          page: 1,
-        }),
-      ),
-    );
-
-    const people = await fetchPeople(authHeaders);
-    expect(people.map((p) => p.id).sort()).toEqual(["p1", "v1"]);
-  });
-
-  it("fetchPeopleSearch returns only the people that match the query", async () => {
-    let volunteerRequests = 0;
-    server.use(
-      http.get("/api/people", ({ request }) => {
-        const q = new URL(request.url).searchParams.get("q");
-        expect(q).toBe("anne");
-        return HttpResponse.json({
-          items: [personPayload("p2", { name: "Anne" })],
-          total: 1,
-          limit: 1000,
-          page: 1,
-        });
-      }),
-      http.get("/api/volunteers", () => {
-        volunteerRequests += 1;
-        return HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 });
-      }),
-    );
-
-    const people = await fetchPeopleSearch(authHeaders, "anne");
-
-    expect(people.map((p) => p.id)).toEqual(["p2"]);
-    // Nothing matched holds the volunteer role, so the volunteer list is not needed.
-    expect(volunteerRequests).toBe(0);
-  });
-
-  it("fetchPeopleSearch attaches help periods to matching volunteers without adding the others", async () => {
-    server.use(
-      http.get("/api/people", () =>
-        HttpResponse.json({
-          items: [personPayload("v1", { name: "Anne", roles: ["volunteer"] })],
-          total: 1,
-          limit: 1000,
-          page: 1,
-        }),
-      ),
-      http.get("/api/volunteers", () =>
-        HttpResponse.json({
-          items: [
-            {
-              ...personPayload("v1", { name: "Anne", roles: ["volunteer"] }),
-              help_periods: [
-                { id: 5, first_help_day: "2026-10-10", last_help_day: null, notes: "" },
-              ],
-            },
-            // A volunteer who does not match the search must not show up in it.
-            personPayload("v2", { name: "Bob", roles: ["volunteer"] }),
-          ],
-          total: 2,
-          limit: 1000,
-          page: 1,
-        }),
-      ),
-    );
-
-    const people = await fetchPeopleSearch(authHeaders, "anne");
-
-    expect(people.map((p) => p.id)).toEqual(["v1"]);
-    expect(people[0]?.helpPeriods).toEqual([
-      { id: 5, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" },
-    ]);
-  });
-
-  it("fetchPeople reads every page, however many people there are", async () => {
-    const total = 2500;
-    const requested: string[] = [];
-    server.use(
-      http.get("/api/people", ({ request }) => {
-        const url = new URL(request.url);
-        requested.push(url.search);
-        const limit = Number(url.searchParams.get("limit"));
-        const page = Number(url.searchParams.get("page"));
-        const first = (page - 1) * limit;
-        const items = Array.from({ length: Math.max(0, Math.min(limit, total - first)) }, (_, i) =>
-          personPayload(`p${first + i}`, { roles: ["member"] }),
-        );
-        return HttpResponse.json({ items, total, limit, page });
-      }),
-      http.get("/api/volunteers", () =>
-        HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 }),
-      ),
-    );
-
-    const people = await fetchPeople(authHeaders);
-
-    expect(people).toHaveLength(total);
-    expect(new Set(people.map((p) => p.id)).size).toBe(total);
-    expect(requested.sort()).toEqual([
-      "?limit=1000&page=1",
-      "?limit=1000&page=2",
-      "?limit=1000&page=3",
-    ]);
-  });
-
-  it("fetchPeople reads every page of volunteers too and deduplicates a row seen twice", async () => {
-    server.use(
-      http.get("/api/people", () =>
-        HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 }),
-      ),
-      http.get("/api/volunteers", ({ request }) => {
-        const page = Number(new URL(request.url).searchParams.get("page"));
-        // A row added mid-read shifts the next page by one, so v1 shows up twice.
-        const items =
-          page === 1
-            ? Array.from({ length: 1000 }, (_, i) =>
-                personPayload(`v${i}`, { roles: ["volunteer"] }),
-              )
-            : [
-                personPayload("v999", { roles: ["volunteer"] }),
-                personPayload("v1000", { roles: ["volunteer"] }),
-              ];
-        return HttpResponse.json({ items, total: 1001, limit: 1000, page });
-      }),
-    );
-
-    const people = await fetchPeople(authHeaders);
-
-    expect(people).toHaveLength(1001);
-  });
-
+describe("bounded volunteer detail", () => {
   it("fetchVolunteer returns one volunteer with their help periods", async () => {
     server.use(
       http.get("/api/volunteers/:id", ({ params }) =>
@@ -186,34 +42,5 @@ describe("fetchPeople / fetchPeopleSearch — envelope handling", () => {
     expect(volunteer.helpPeriods).toEqual([
       { id: 4, firstHelpDay: "2026-10-10", lastHelpDay: null, notes: "" },
     ]);
-  });
-
-  it("fetchPeople rejects a bare-array (pre-envelope) response instead of silently returning it", async () => {
-    // A bare array is exactly the pre-#931-fix shape: if this were accepted,
-    // a malformed or reverted backend response would look like an empty or
-    // truncated list instead of a loud failure.
-    server.use(
-      http.get("/api/people", () => HttpResponse.json([personPayload("m1")])),
-      http.get("/api/volunteers", () =>
-        HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 }),
-      ),
-    );
-
-    await expect(fetchPeople(authHeaders)).rejects.toThrow(
-      /expected \{items, total, limit, page\}/,
-    );
-  });
-
-  it("fetchPeople rejects a malformed envelope missing total/limit/page", async () => {
-    server.use(
-      http.get("/api/people", () => HttpResponse.json({ items: [personPayload("p3")] })),
-      http.get("/api/volunteers", () =>
-        HttpResponse.json({ items: [], total: 0, limit: 1000, page: 1 }),
-      ),
-    );
-
-    await expect(fetchPeople(authHeaders)).rejects.toThrow(
-      /expected \{items, total, limit, page\}/,
-    );
   });
 });

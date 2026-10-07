@@ -1,6 +1,6 @@
 # TanStack DB for admin/event-day operational state
 
-**Status:** Adopted for registrations, tables, people (members and volunteers are derived from people) the venue group (venues, rooms, table types, layouts, areas) and exhibitors; every admin resource except the standalone registration queries now lives in a collection (see [Remaining resources](#remaining-resources-1166) and [Roadmap](#roadmap)); server-driven table pages use TanStack Query, not on-demand sync (see [below](#server-driven-tables-query-with-keeppreviousdata-not-on-demand-sync-1175))
+**Status:** TanStack DB adopted for registrations, tables, the venue group (venues, rooms, table types, layouts, areas) and exhibitors. People, members and volunteers use server-driven TanStack Query pages with mutation callbacks (#1179/#1181), not a collection or on-demand sync. See [Remaining resources](#remaining-resources-1166), [Roadmap](#roadmap) and the [server-driven table decision](#server-driven-tables-query-with-keeppreviousdata-not-on-demand-sync-1175).
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
 **Record updated:** 2026-10-06, [#1168](https://github.com/tjorim/champagnefestival/issues/1168), 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166), [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184), [#1175](https://github.com/tjorim/champagnefestival/issues/1175)
 
@@ -150,7 +150,10 @@ registration write handlers (`onInsert`, `onUpdate`, `onDelete`) exist yet.
 
 ## People and members ([#1164](https://github.com/tjorim/champagnefestival/issues/1164))
 
-`people` is the third collection-backed domain; `members` and `volunteers` are views over it.
+Historical implementation of #1164, superseded on 2026-10-06 by #1179/#1181.
+People, members and volunteers now read server Query pages. The collection and
+its direct-write helpers below have been retired; this section preserves the
+original decision. See [the Query implementation](../people-query-layer.md).
 
 - `frontend/src/state/adminPeopleCollection.ts`: `createAdminPeopleCollection`
   builds one collection from `fetchPeople` (which merges the volunteer help
@@ -468,12 +471,12 @@ decision extends that pattern to people instead of introducing a second one.
 
 - Rule 2 (never serve one domain from both a collection and a standalone
   `useQuery`) concerns an entity set. A server-driven page is a query result, so
-  it is a plain query. The people list stops being served by a collection at
-  all once the screens move (#1181), so no domain has two copies.
+  it is a plain query. The people list is now served entirely by Query pages
+  after #1181, so no domain has two copies.
 - The `syncMode` option in `createAdminCollection` stays: it costs nothing and
   documents the choice, but nothing is planned to use `"on-demand"`. Do not
   retrofit people through it (the #1166 note anticipating that is superseded).
-- The #1179 handlers become mutation callbacks with the cache patch and rollback
+- The #1179 handlers use mutation callbacks with the cache patch and rollback
   above, not `onUpdate`/`onDelete` collection handlers. The retry-safety
   decision per write is unchanged: a mutation callback does not make a write
   retry safe either.
@@ -505,7 +508,7 @@ swaps it. Everything that needs the full working set is edition-bound:
 If there is no active edition the collection is empty. A registration from an
 older edition is opened by id (`fetchRegistration`).
 
-**Consumers of the full people list**, each moving to a bounded or server query:
+**Former consumers of the full people list**, now using bounded or server queries (#1181):
 
 | Consumer | Decision |
 | --- | --- |
@@ -513,11 +516,12 @@ older edition is opened by id (`fetchRegistration`).
 | Tab and filter counts, `peopleCount` badge | Counts from the list envelope or counts endpoint (#1177). |
 | Registration count per person | A field on the list row, sortable (#1177). |
 | Registration detail: duplicate emails | Server lookup by email, enabled only while the detail is open (#1177). |
-| Person pickers (registration, item modal, exhibitor contact) | Bounded server search (`fetchPeopleSearch` style, short page); the item modal already does this. |
+| Person pickers (registration, item modal, exhibitor contact) | Bounded server search (short page); the item modal already does this. |
 | Merge | Picker over the bounded search; after the merge invalidate the people list prefix and refetch the registrations and exhibitors collections. |
 
-Nothing keeps the whole people list in the browser, so the people collection
-(`adminPeopleCollection.ts`, #1164) is retired in #1181, together with
+Screen loading never keeps the whole people list in the browser. Explicit
+copy-matching-emails actions read bounded pages only on request. The people
+collection (`adminPeopleCollection.ts`, #1164) was retired in #1181, together with
 `selectMembers`/`selectVolunteers` and the person direct-write helpers.
 
 ### Hand-over to #1168 (persistence)
@@ -622,11 +626,9 @@ Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR 
 | 3 | Backend: counts, registration count per person, duplicate-email lookup and exports for people and volunteers | [#1177](https://github.com/tjorim/champagnefestival/issues/1177) |
 | 3 | Server-driven data layer for the people list (Query pages, no people collection) | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
 | 3 | `AdminDataTable` on TanStack Table manual mode | [#1180](https://github.com/tjorim/champagnefestival/issues/1180) |
-| 4 | Optimistic edit and delete (mutation callbacks with cache patch and rollback) with pending state for people | [#1179](https://github.com/tjorim/champagnefestival/issues/1179) |
-| 5 | Move Members, Volunteers and People onto `AdminDataTable` and the server contract | [#1181](https://github.com/tjorim/champagnefestival/issues/1181) |
-| 5 | Scope the registrations collection to the active edition; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
+| 4 | Scope the registrations collection to the active edition; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
 
-Done: [#1176](https://github.com/tjorim/champagnefestival/issues/1176) (shared paged list contract for people and volunteers, see [above](#paged-list-contract-for-people-and-volunteers-1176)), [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (spike and decision: Query with `keepPreviousData`, edition-scoped registrations), [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) (exhibitors), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
+Done: [#1179](https://github.com/tjorim/champagnefestival/issues/1179) and [#1181](https://github.com/tjorim/champagnefestival/issues/1181) (people screens and optimistic Query writes, implemented together; see below), [#1176](https://github.com/tjorim/champagnefestival/issues/1176) (shared paged list contract for people and volunteers, see [above](#paged-list-contract-for-people-and-volunteers-1176)), [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (spike and decision: Query with `keepPreviousData`, edition-scoped registrations), [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) (exhibitors), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
 
 ## References
 
@@ -636,7 +638,7 @@ Done: [#1176](https://github.com/tjorim/champagnefestival/issues/1176) (shared p
 - Live-update stream: [#446](https://github.com/tjorim/champagnefestival/issues/446)
 - `frontend/src/state/adminRegistrationsCollection.ts`
 - `frontend/src/state/adminTablesCollection.ts`, `frontend/src/state/tableOccupancy.ts`
-- `frontend/src/state/adminPeopleCollection.ts`
+- `frontend/src/state/adminPeopleSession.ts`, `frontend/src/utils/optimisticPeoplePages.ts`
 - `frontend/src/state/adminVenueCollections.ts`
 - `frontend/src/state/adminCollectionFactory.ts`
 - `frontend/src/hooks/useAdminQueries.ts`
@@ -648,4 +650,27 @@ Done: [#1176](https://github.com/tjorim/champagnefestival/issues/1176) (shared p
 
 The reusable page and counts hooks are implemented; see
 [contract and migration handoff](../people-query-layer.md). The eager collection
-and full-list consumers remain until #1181 as specified above.
+and full-list consumers were retired together with #1179/#1181 on 2026-10-06.
+See [the implementation](../people-query-layer.md) for the table adapters,
+optimistic concurrency, session fencing and search reconciliation policy.
+
+### People screens and optimistic writes (#1179/#1181, 2026-10-06)
+
+Implemented together to avoid a dependency cycle between Query mutations and
+screen adoption. All three screens use `AdminDataTable`, server pages, filters,
+sorting and full-result facets. The people collection and local selectors are
+retired. Saved column visibility retains its existing keys and ids; unsupported
+sorts are disabled. Exports stream the complete filtered result. Exact duplicate
+email lookup replaces full-list scans in people rows and registration details,
+and uses server registration counts to choose a merge survivor.
+
+Mutation callbacks cancel lists, snapshot and patch cached pages, refetch before
+rollback, and invalidate lists/counts/person details on settlement. A shared
+coordinator reapplies other pending writes during refetch and serializes writes
+for one person. Query-instance identity and an authentication epoch prevent a
+late callback from writing into a replacement session. Pending state is shown
+on rows and in the existing forms/delete dialogs. Creates remain non-optimistic;
+merge remains direct and reconciles the registrations/exhibitors collections.
+Search membership and ordering remain server-owned because fuzzy matching
+cannot be reproduced faithfully in the browser. Role and active-filter exits
+are optimistic. [Retry safety](../retry-safety.md) is unchanged in substance.

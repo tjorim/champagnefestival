@@ -1,12 +1,9 @@
+import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
-import { FileSpreadsheetIcon, PencilIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
+import { PencilIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-import { AdminSortableHeader } from "./AdminSortableHeader";
-import { useState, useMemo, useCallback } from "react";
-import { type FilterFn, type SortingState } from "@tanstack/react-table";
+import { useState, useMemo } from "react";
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import {
@@ -18,25 +15,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { Person } from "@/types/person";
-import { useAppTable, createAppColumnHelper, type AdminTableFeatures } from "@/hooks/useAdminTable";
+import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
-import { AdminTablePagination } from "./AdminTablePagination";
-import { downloadVolunteersCsv } from "@/utils/adminFetch";
-import { devError } from "@/utils/devLog";
 
 interface VolunteersManagementProps {
-  volunteers: Person[];
-  isLoading: boolean;
   authHeaders: () => Record<string, string>;
   onCreate: (data: VolunteerFormData) => Promise<void>;
   onUpdate: (id: string, data: VolunteerFormData) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
-
-type ActiveFilter = "all" | "active" | "inactive";
 
 const columnHelper = createAppColumnHelper<Person>();
 
@@ -46,38 +35,12 @@ function formatPeriod(period: Person["helpPeriods"][number]): string {
     : `${period.firstHelpDay} →`;
 }
 
-const volunteersGlobalFilter: FilterFn<AdminTableFeatures, Person> = (
-  row,
-  _columnId,
-  filterValue: string,
-) => {
-  const s = filterValue.toLowerCase();
-  return (
-    row.original.name.toLowerCase().includes(s) ||
-    row.original.address.toLowerCase().includes(s) ||
-    (row.original.nationalRegisterNumber ?? "").toLowerCase().includes(s) ||
-    (row.original.eidDocumentNumber ?? "").toLowerCase().includes(s) ||
-    row.original.helpPeriods.some(
-      (period) =>
-        period.firstHelpDay.toLowerCase().includes(s) ||
-        (period.lastHelpDay ?? "").toLowerCase().includes(s) ||
-        period.notes.toLowerCase().includes(s),
-    )
-  );
-};
-volunteersGlobalFilter.autoRemove = (val: unknown) => !val || String(val) === "";
-
 export default function VolunteersManagement({
-  volunteers,
-  isLoading,
   authHeaders,
   onCreate,
   onUpdate,
   onDelete,
 }: VolunteersManagementProps) {
-  const [q, setQ] = useState("");
-  const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [deleteSuccess, setDeleteSuccess] = useState(false);
@@ -86,31 +49,6 @@ export default function VolunteersManagement({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
-  const [exporting, setExporting] = useState(false);
-  const [exportError, setExportError] = useState("");
-
-  const handleExportCsv = useCallback(async () => {
-    setExportError("");
-    setExporting(true);
-    try {
-      await downloadVolunteersCsv(authHeaders);
-    } catch (err) {
-      devError("Failed to export volunteers", err);
-      setExportError(err instanceof Error ? err.message : m.admin_volunteers_export_csv_error());
-    } finally {
-      setExporting(false);
-    }
-  }, [authHeaders]);
-
-  // Pre-filter by active status; text search handled by TanStack
-  const preFiltered = useMemo(
-    () =>
-      activeFilter === "all"
-        ? volunteers
-        : volunteers.filter((v) => (activeFilter === "active" ? v.active : !v.active)),
-    [volunteers, activeFilter],
-  );
-
   const handleDeleteConfirm = async () => {
     if (!deletingId) return;
     setDeleting(true);
@@ -144,19 +82,11 @@ export default function VolunteersManagement({
           header: m.registration_name(),
           cell: ({ row }) => {
             const volunteer = row.original;
-            return (
-              <div className="font-semibold flex items-center gap-1">
-                {volunteer.name}
-                {!volunteer.active && (
-                  <Badge variant="secondary" className="ms-1">
-                    {m.admin_people_inactive_badge_label()}
-                  </Badge>
-                )}
-              </div>
-            );
+            return <PersonName person={volunteer} />;
           },
         }),
         columnHelper.accessor("address", {
+          enableSorting: false,
           header: m.admin_people_address_label(),
           cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
         }),
@@ -231,82 +161,10 @@ export default function VolunteersManagement({
     [setEditingVolunteer, setShowForm, setDeletingId, setDeleteError],
   );
 
-  const table = useAppTable(
-    {
-      data: preFiltered,
-      columns,
-      state: { sorting, globalFilter: q },
-      initialState: { pagination: { pageIndex: 0, pageSize: 20 } },
-      manualPagination: false,
-      getRowId: (row) => row.id,
-      onSortingChange: setSorting,
-      onGlobalFilterChange: setQ,
-      globalFilterFn: volunteersGlobalFilter,
-    },
-    (state) => ({
-      sorting: state.sorting,
-      globalFilter: state.globalFilter,
-      pagination: state.pagination,
-    }),
-  );
-
   return (
     <>
       <Card tone="secondary">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="font-semibold">{m.admin_volunteers_tab()}</span>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => void handleExportCsv()}
-                disabled={exporting}
-              >
-                <Icon icon={FileSpreadsheetIcon} />
-                {m.admin_volunteers_export_csv()}
-              </Button>
-              <Button
-                size="sm"
-                variant="outline-primary"
-                onClick={() => {
-                  setEditingVolunteer(null);
-                  setShowForm(true);
-                }}
-              >
-                <Icon icon={ThumbsUpIcon} />
-                {m.admin_volunteers_add()}
-              </Button>
-            </div>
-          </div>
-          {exportError && (
-            <Alert variant="danger" className="py-1 mb-2" onClose={() => setExportError("")}>
-              {exportError}
-            </Alert>
-          )}
-          <div className="flex flex-wrap gap-2 items-center">
-            <AdminSelect
-              size="sm"
-              value={activeFilter}
-              onValueChange={(e) => setActiveFilter(e as ActiveFilter)}
-              className="bg-muted text-content border-input max-w-45"
-
-              aria-label={m.admin_people_active_label()}
-            >
-              <AdminOption value="all">{m.admin_volunteers_filter_all()}</AdminOption>
-              <AdminOption value="active">{m.admin_volunteers_filter_active()}</AdminOption>
-              <AdminOption value="inactive">{m.admin_volunteers_filter_inactive()}</AdminOption>
-            </AdminSelect>
-            <AdminInput
-              size="sm"
-              type="search"
-              placeholder={m.admin_volunteers_search_placeholder()}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="bg-muted text-content border-input max-w-70"
-            />
-          </div>
-        </CardHeader>
+        <CardHeader>{m.admin_volunteers_tab()}</CardHeader>
 
         <CardContent className="p-0">
           {createSuccess && (
@@ -325,53 +183,25 @@ export default function VolunteersManagement({
             </Alert>
           )}
 
-          {isLoading ? (
-            <div className="text-center py-6">
-              <Spinner label={m.admin_loading()} variant="primary" size="sm" />
-            </div>
-          ) : table.getPrePaginatedRowModel().rows.length === 0 ? (
-            <p className="text-subtle text-center py-6 mb-0">{m.admin_volunteers_no_results()}</p>
-          ) : (
-            <div className="w-full">
-              <Table>
-                <caption className="sr-only">{m.admin_volunteers_table_caption()}</caption>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <AdminSortableHeader key={header.id} column={header.column}>
-                          <table.FlexRender header={header} />
-                        </AdminSortableHeader>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          className={cell.column.columnDef.meta?.tdClassName}
-                        >
-                          <table.FlexRender cell={cell} />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-          <AdminTablePagination
-            total={table.getPrePaginatedRowModel().rows.length}
-            pageIndex={table.state.pagination.pageIndex}
-            pageSize={table.state.pagination.pageSize}
-            canPreviousPage={table.getCanPreviousPage()}
-            canNextPage={table.getCanNextPage()}
-            onPreviousPage={() => table.previousPage()}
-            onNextPage={() => table.nextPage()}
-            onPageSizeChange={(size) => table.setPageSize(size)}
+          <PeopleDataTable
+            id="volunteers"
+            authHeaders={authHeaders}
+            columns={columns}
+            onOpen={(person) => {
+              setEditingVolunteer(person);
+              setShowForm(true);
+            }}
+            primaryAction={
+              <Button
+                variant="outline-primary"
+                onClick={() => {
+                  setEditingVolunteer(null);
+                  setShowForm(true);
+                }}
+              >
+                {m.admin_volunteers_add()}
+              </Button>
+            }
           />
         </CardContent>
       </Card>
