@@ -1171,5 +1171,7 @@
   "admin_action_show_options": "Show options",
   "admin_action_remove_selection": "Remove selection",
   "admin_table_sort": "Sort",
-  "admin_table_results": "{total} results"
+  "admin_table_results": "{total} results",
+  "admin_cache_restored": "Showing saved rows.",
+  "admin_cache_last_synced": "Last synced: {time}."
 }

@@ -662,3 +662,20 @@ with the seven event endpoint tests rerun after adding the title field. All 275
 e2e checks passed across the full run and rerun of three page-loading timeouts.
 The two full-matching UI tests retain their assertions with a 30-second timeout
 for rendering and bulk progress on a busy machine.
+
+
+## Read-only Query warm start (#1197, 2026-10-07)
+
+The installed adapter mirrors manual upserts/deletes into Query and initializes
+an eager collection from hydrated data before a pending network response. Failed
+refetches retain that baseline, verified with the real adapter in
+`adminWarmStart.verify.test.ts`. No extra collection initializer is necessary.
+The dashboard does need to bypass its global loading skeleton when cache restore
+succeeded, because unrelated live page/count queries can still be pending.
+
+The app-level session owner restores only whole allowlisted keys through an
+IndexedDB async persister, with 72-hour Query GC/retention, a row-shape buster,
+active-edition isolation, sensitive-field removal and epoch-fenced writes/restore.
+Collections always reconcile on mount. Saved-row and oldest-sync state is visible;
+all write handlers and retry policies remain unchanged. See
+[verification, measurements and remaining release conditions](1168-persisted-collections.md#implementation-verification-1197-2026-10-07).

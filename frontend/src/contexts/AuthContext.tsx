@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, useEffect } from "react";
 import { useAuth as useOidcAuth } from "react-oidc-context";
 import { useQueryClient } from "@tanstack/react-query";
+import { adminCachePersistence, ADMIN_CACHE_WIPE_SIGNAL } from "@/state/adminCachePersistence";
+import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
 import { devError } from "@/utils/devLog";
 import { removeAuthenticatedQueries } from "@/utils/queryInvalidation";
 
@@ -110,6 +112,79 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
   const oidcAuth = useOidcAuth();
   const queryClient = useQueryClient();
+  const cache = useMemo(() => adminCachePersistence(queryClient), [queryClient]);
+  const [cacheOwnerReady, setCacheOwnerReady] = useState<string | null | undefined>(undefined);
+  const cacheSubject = oidcAuth.user?.profile?.sub;
+  const cacheOwner =
+    !oidcAuth.isLoading &&
+    oidcAuth.isAuthenticated &&
+    !oidcAuth.user?.expired &&
+    extractRealmRoles(
+      oidcAuth.user?.profile as TokenClaims | undefined,
+      decodeTokenClaims(oidcAuth.user?.access_token),
+    ).some((role) => role === "admin" || role === "volunteer")
+      ? cacheSubject
+        ? `${OIDC_USER_STORAGE_KEY}:${cacheSubject}`
+        : null
+      : null;
+  useEffect(() => {
+    if (oidcAuth.isLoading) return;
+    let current = true;
+    void cache.setSession(cacheOwner).then(() => {
+      if (current) setCacheOwnerReady(cacheOwner);
+    });
+    return () => {
+      current = false;
+    };
+  }, [cache, cacheOwner, oidcAuth.isLoading]);
+  const { removeUser } = oidcAuth;
+  const expiresAt = oidcAuth.user?.expires_at;
+  useEffect(() => {
+    if (!cacheOwner || expiresAt === undefined) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const checkExpiry = () => {
+      const remaining = expiresAt * 1000 - Date.now();
+      if (remaining <= 0) {
+        void cache.wipe(true);
+        void removeUser();
+      } else {
+        timer = setTimeout(checkExpiry, Math.min(remaining, 2_147_483_647));
+      }
+    };
+    checkExpiry();
+    return () => clearTimeout(timer);
+  }, [cache, cacheOwner, expiresAt, removeUser]);
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      let sessionLost = event.key === ADMIN_CACHE_WIPE_SIGNAL || event.key === null;
+      if (event.key === OIDC_USER_STORAGE_KEY) {
+        try {
+          const user = event.newValue
+            ? (JSON.parse(event.newValue) as {
+                access_token?: string;
+                expires_at?: number;
+                profile?: TokenClaims & { sub?: string };
+              })
+            : null;
+          sessionLost =
+            !user ||
+            user.profile?.sub !== cacheSubject ||
+            (typeof user.expires_at === "number" && user.expires_at * 1000 <= Date.now()) ||
+            !extractRealmRoles(user.profile, decodeTokenClaims(user.access_token)).some(
+              (role) => role === "admin" || role === "volunteer",
+            );
+        } catch {
+          sessionLost = true;
+        }
+      }
+      if (sessionLost) {
+        void cache.wipe();
+        void removeUser();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, [cache, cacheSubject, removeUser]);
   const { signinRedirect, signoutRedirect, signinSilent } = oidcAuth;
   const [redirectError, setRedirectError] = useState<string | null>(null);
   const [dismissedOidcError, setDismissedOidcError] = useState<string | null>(null);
@@ -168,6 +243,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   );
 
   const logout = useCallback(() => {
+    void cache.wipe(true);
     removeAuthenticatedQueries(queryClient);
     setRedirectError(null);
     setDismissedOidcError(null);
@@ -177,7 +253,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setIsSigningOut(false);
       setRedirectError(formatAuthError(error, "Could not sign out. Please try again."));
     });
-  }, [queryClient, signoutRedirect]);
+  }, [cache, queryClient, signoutRedirect]);
 
   const accountLabel = useMemo(
     () => resolveAccountLabel(oidcAuth.user?.profile as ProfileClaims | undefined),
@@ -229,5 +305,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     ],
   );
 
-  return <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {cacheOwner !== null && (oidcAuth.isLoading || cacheOwnerReady !== cacheOwner)
+        ? null
+        : children}
+    </AuthContext.Provider>
+  );
 }

@@ -29,7 +29,6 @@ export function createAdminRegistrationsCollection({
   const collection = createAdminCollection<Registration>({
     queryKey: queryKeys.admin.registrationsEdition(editionId),
     queryFn: ({ signal }) => fetchAllRegistrations(authHeaders, editionId, signal),
-    gcTime: 0,
     queryClient,
     enabled,
     syncMode,

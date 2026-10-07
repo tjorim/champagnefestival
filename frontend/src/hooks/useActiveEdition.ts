@@ -6,7 +6,9 @@
  * initial render / network failures, then replaces it with `/api/editions/active`.
  */
 
-import { queryOptions, useQuery } from "@tanstack/react-query";
+import { useSyncExternalStore } from "react";
+import { adminCachePersistence } from "@/state/adminCachePersistence";
+import { queryOptions, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EMPTY_EDITION, type EditionDates, type SliderItem } from "@/config/editions";
 import { apiToEvent, type Event } from "@/types/event";
 import type { EditionType } from "@/components/admin/editionTypes";
@@ -222,11 +224,17 @@ export function activeEditionQueryOptions(scope: ActiveEditionScope = "festival"
 }
 
 export function useActiveEdition(scope: ActiveEditionScope = "festival"): ActiveEditionState {
+  const cache = adminCachePersistence(useQueryClient());
+  const cached = useSyncExternalStore(cache.subscribe, cache.getSnapshot);
   const query = useQuery(activeEditionQueryOptions(scope));
   const isNotFound = query.error instanceof ActiveEditionFetchError && query.error.status === 404;
 
   return {
-    edition: query.data ?? createFallbackEdition(),
+    edition:
+      query.data ??
+      (scope === "any" && cached.editionId
+        ? { ...createFallbackEdition(), id: cached.editionId, year: 0, dates: [] }
+        : createFallbackEdition()),
     isLoaded: query.status !== "pending",
     hasEdition: query.isSuccess,
     hasLoadError: query.isError && !isNotFound,

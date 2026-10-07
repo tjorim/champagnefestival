@@ -1,6 +1,7 @@
 import { createCollection } from "@tanstack/react-db";
 import { queryCollectionOptions, type QueryCollectionConfig } from "@tanstack/query-db-collection";
 import type { QueryClient, QueryFunctionContext, QueryKey } from "@tanstack/react-query";
+import { ADMIN_CACHE_MAX_AGE } from "./adminCachePersistence";
 import { createEpochFence } from "@/state/epochFence";
 import type { LiveEnvelope } from "@/utils/liveStream";
 
@@ -53,6 +54,8 @@ export function createAdminCollection<TRow extends object, TKey extends string |
   return createCollection(
     queryCollectionOptions<TRow, unknown, QueryKey, TKey>({
       staleTime: 60 * 1000,
+      gcTime: ADMIN_CACHE_MAX_AGE,
+      refetchOnMount: "always",
       retry: false,
       ...config,
       syncMode,
