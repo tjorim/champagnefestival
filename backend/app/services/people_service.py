@@ -39,7 +39,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
-from app.models import Exhibitor, Person, Registration, VolunteerPeriod
+from app.models import Organization, Person, Registration, VolunteerPeriod
 from app.schemas import PersonCreate, PersonUpdate
 from app.utils import get_or_404, make_id, person_to_dict
 
@@ -333,7 +333,7 @@ async def merge_people(
 ) -> dict:
     """Merge ``duplicate`` into ``canonical``.
 
-    - All reservations and exhibitor contacts linked to the duplicate are
+    - All reservations and organization contacts linked to the duplicate are
       re-pointed to the canonical person.
     - Blank string fields on the canonical person are filled from the duplicate.
     - Marketing consent (marketing_opt_in / marketing_opt_in_at) is adopted from
@@ -422,7 +422,9 @@ async def merge_people(
     # volunteer role with no help periods.
     await db.execute(update(Registration).where(Registration.person_id == duplicate_id).values(person_id=canonical.id))
     await db.execute(
-        update(Exhibitor).where(Exhibitor.contact_person_id == duplicate_id).values(contact_person_id=canonical.id)
+        update(Organization)
+        .where(Organization.contact_person_id == duplicate_id)
+        .values(contact_person_id=canonical.id)
     )
     await db.execute(
         update(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == duplicate_id).values(volunteer_id=canonical.id)

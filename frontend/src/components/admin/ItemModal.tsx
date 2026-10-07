@@ -1,6 +1,6 @@
-import ExhibitorTranslationSuggestion from "@/components/ExhibitorTranslationSuggestion";
-import ExhibitorLogoUpload from "@/components/ExhibitorLogoUpload";
-import { captureAdminExhibitorsFence } from "@/state/adminExhibitorsCollection";
+import OrganizationTranslationSuggestion from "@/components/OrganizationTranslationSuggestion";
+import OrganizationLogoUpload from "@/components/OrganizationLogoUpload";
+import { captureAdminOrganizationsFence } from "@/state/adminOrganizationsCollection";
 import {
   AdminField,
   AdminLabel,
@@ -206,14 +206,14 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               </form.Field>
             </AdminField>
             {initial?.id ? (
-              <ExhibitorLogoUpload
+              <OrganizationLogoUpload
                 key={initial.id}
                 admin
-                url={`/api/exhibitors/${initial.id}/logo`}
+                url={`/api/organizations/${initial.id}/logo`}
                 headers={authHeaders}
                 onSaved={(result) => {
                   if (result.image) form.setFieldValue("image", result.image);
-                  const isCurrent = captureAdminExhibitorsFence();
+                  const isCurrent = captureAdminOrganizationsFence();
                   if (isCurrent())
                     void queryClient.invalidateQueries({
                       queryKey: ["admin", "content-management"],
@@ -329,9 +329,9 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                 </form.Field>
                 <form.Subscribe selector={(state) => state.values}>
                   {(values) => (
-                    <ExhibitorTranslationSuggestion
+                    <OrganizationTranslationSuggestion
                       key={`${show}-${initial?.id ?? "new"}-${language}`}
-                      url="/api/exhibitors/translation"
+                      url="/api/organizations/translation"
                       headers={authHeaders}
                       source={values.description_language}
                       target={language}

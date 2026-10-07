@@ -1,4 +1,4 @@
-import ExhibitorChangeReview from "@/components/admin/ExhibitorChangeReview";
+import OrganizationChangeReview from "@/components/admin/OrganizationChangeReview";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { AdminInput } from "@/components/admin/AdminFields";
@@ -89,10 +89,10 @@ function editionTypeLabel(type: EditionType | "all") {
 interface ContentManagementProps {
   authHeaders: () => Record<string, string>;
   venues: Venue[];
-  onExhibitorSaved?: (item: ItemDraft, isCurrent: () => boolean) => void;
-  onExhibitorDeleted?: (id: number, isCurrent: () => boolean) => void;
-  /** Takes the exhibitors collection's session fence; called before each write request. */
-  captureExhibitorsFence?: () => () => boolean;
+  onOrganizationSaved?: (item: ItemDraft, isCurrent: () => boolean) => void;
+  onOrganizationDeleted?: (id: number, isCurrent: () => boolean) => void;
+  /** Takes the organizations collection's session fence; called before each write request. */
+  captureOrganizationsFence?: () => () => boolean;
   onEditionMutated?: () => void;
 }
 
@@ -261,8 +261,8 @@ export function ContentSection({
           return copy;
         });
         onItemSaved?.(saved, isCurrent);
-        if (sectionKey === "exhibitors" && isCurrent())
-          void queryClient.invalidateQueries({ queryKey: ["admin", "exhibitor-changes"] });
+        if (sectionKey === "organizations" && isCurrent())
+          void queryClient.invalidateQueries({ queryKey: ["admin", "organization-changes"] });
         setModalOpen(false);
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
@@ -284,8 +284,8 @@ export function ContentSection({
           prev.map((item) => (item.id === id ? saved : item)),
         );
         onItemSaved?.(saved, isCurrent);
-        if (sectionKey === "exhibitors" && isCurrent())
-          void queryClient.invalidateQueries({ queryKey: ["admin", "exhibitor-changes"] });
+        if (sectionKey === "organizations" && isCurrent())
+          void queryClient.invalidateQueries({ queryKey: ["admin", "organization-changes"] });
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
@@ -306,8 +306,8 @@ export function ContentSection({
           prev.map((item) => (item.id === id ? saved : item)),
         );
         onItemSaved?.(saved, isCurrent);
-        if (sectionKey === "exhibitors" && isCurrent())
-          void queryClient.invalidateQueries({ queryKey: ["admin", "exhibitor-changes"] });
+        if (sectionKey === "organizations" && isCurrent())
+          void queryClient.invalidateQueries({ queryKey: ["admin", "organization-changes"] });
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
@@ -790,9 +790,9 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
 export default function ContentManagement({
   authHeaders,
   venues,
-  onExhibitorSaved,
-  onExhibitorDeleted,
-  captureExhibitorsFence,
+  onOrganizationSaved,
+  onOrganizationDeleted,
+  captureOrganizationsFence,
   onEditionMutated,
 }: ContentManagementProps) {
   const reviewQueryClient = useQueryClient();
@@ -800,21 +800,21 @@ export default function ContentManagement({
     <div>
       <Card tone="secondary" className="mb-4">
         <CardContent>
-          <ExhibitorChangeReview
+          <OrganizationChangeReview
             authHeaders={authHeaders}
             onDecided={() => {
               void reviewQueryClient.invalidateQueries({
-                queryKey: contentSectionQueryKey("exhibitors"),
+                queryKey: contentSectionQueryKey("organizations"),
               });
             }}
           />
           <ContentSection
-            sectionKey="exhibitors"
-            title={m.admin_content_exhibitors_section()}
+            sectionKey="organizations"
+            title={m.admin_content_organizations_section()}
             authHeaders={authHeaders}
-            onItemSaved={onExhibitorSaved}
-            onItemDeleted={onExhibitorDeleted}
-            captureFence={captureExhibitorsFence}
+            onItemSaved={onOrganizationSaved}
+            onItemDeleted={onOrganizationDeleted}
+            captureFence={captureOrganizationsFence}
           />
           <hr className="border-subtle" />
           <EditionsSection

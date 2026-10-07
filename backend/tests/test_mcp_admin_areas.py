@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.mcp.admin import areas as mcp_areas
-from app.models import Exhibitor, Layout, Room, Venue
+from app.models import Layout, Organization, Room, Venue
 from tests.helpers import mcp_session_factory, seed_layout_event
 
 
@@ -54,40 +54,40 @@ async def test_create_area_rejects_invalid_input(db_session):
         await mcp_areas.create_area(factory, "admin-1", layout_id="lay-1", label="DJ Stage", rotation=360)  # le=359
 
 
-async def test_create_area_with_exhibitor(db_session):
+async def test_create_area_with_organization(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session)
-    exhibitor = Exhibitor(name="Oyster Bar", type="vendor", active=True)
-    db_session.add(exhibitor)
+    organization = Organization(name="Oyster Bar", type="vendor", active=True)
+    db_session.add(organization)
     await db_session.commit()
-    await db_session.refresh(exhibitor)
-    exhibitor_id = exhibitor.id
+    await db_session.refresh(organization)
+    organization_id = organization.id
 
     created = await mcp_areas.create_area(
-        factory, "admin-1", layout_id="lay-1", label="Oyster Stand", exhibitor_id=exhibitor_id
+        factory, "admin-1", layout_id="lay-1", label="Oyster Stand", organization_id=organization_id
     )
-    assert created["exhibitor_id"] == exhibitor_id
+    assert created["organization_id"] == organization_id
 
 
-async def test_create_area_exhibitor_not_found(db_session):
+async def test_create_area_organization_not_found(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session)
 
     with pytest.raises(ValueError, match="not found"):
-        await mcp_areas.create_area(factory, "admin-1", layout_id="lay-1", label="Oyster Stand", exhibitor_id=999)
+        await mcp_areas.create_area(factory, "admin-1", layout_id="lay-1", label="Oyster Stand", organization_id=999)
 
 
-async def test_create_area_exhibitor_inactive(db_session):
+async def test_create_area_organization_inactive(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session)
-    exhibitor = Exhibitor(name="Retired Vendor", type="vendor", active=False)
-    db_session.add(exhibitor)
+    organization = Organization(name="Retired Vendor", type="vendor", active=False)
+    db_session.add(organization)
     await db_session.commit()
-    await db_session.refresh(exhibitor)
+    await db_session.refresh(organization)
 
     with pytest.raises(ValueError, match="inactive"):
         await mcp_areas.create_area(
-            factory, "admin-1", layout_id="lay-1", label="Oyster Stand", exhibitor_id=exhibitor.id
+            factory, "admin-1", layout_id="lay-1", label="Oyster Stand", organization_id=organization.id
         )
 
 
@@ -122,58 +122,58 @@ async def test_update_area_not_found(db_session):
         await mcp_areas.update_area(factory, "admin-1", "nonexistent", x=40.0)
 
 
-async def test_update_area_exhibitor_assign_and_clear(db_session):
+async def test_update_area_organization_assign_and_clear(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session)
-    exhibitor = Exhibitor(name="Oyster Bar", type="vendor", active=True)
-    db_session.add(exhibitor)
+    organization = Organization(name="Oyster Bar", type="vendor", active=True)
+    db_session.add(organization)
     await db_session.commit()
-    await db_session.refresh(exhibitor)
+    await db_session.refresh(organization)
 
     created = await mcp_areas.create_area(factory, "admin-1", layout_id="lay-1", label="Oyster Stand")
-    assert created["exhibitor_id"] is None
+    assert created["organization_id"] is None
 
-    updated = await mcp_areas.update_area(factory, "admin-1", created["id"], exhibitor_id=exhibitor.id)
-    assert updated["exhibitor_id"] == exhibitor.id
+    updated = await mcp_areas.update_area(factory, "admin-1", created["id"], organization_id=organization.id)
+    assert updated["organization_id"] == organization.id
 
-    cleared = await mcp_areas.update_area(factory, "admin-1", created["id"], clear_exhibitor_id=True)
-    assert cleared["exhibitor_id"] is None
+    cleared = await mcp_areas.update_area(factory, "admin-1", created["id"], clear_organization_id=True)
+    assert cleared["organization_id"] is None
 
 
-async def test_update_area_exhibitor_not_found(db_session):
+async def test_update_area_organization_not_found(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session)
     created = await mcp_areas.create_area(factory, "admin-1", layout_id="lay-1", label="DJ Stage")
 
     with pytest.raises(ValueError, match="not found"):
-        await mcp_areas.update_area(factory, "admin-1", created["id"], exhibitor_id=999)
+        await mcp_areas.update_area(factory, "admin-1", created["id"], organization_id=999)
 
 
-async def test_update_area_exhibitor_inactive(db_session):
+async def test_update_area_organization_inactive(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session)
-    exhibitor = Exhibitor(name="Retired Vendor", type="vendor", active=False)
-    db_session.add(exhibitor)
+    organization = Organization(name="Retired Vendor", type="vendor", active=False)
+    db_session.add(organization)
     await db_session.commit()
-    await db_session.refresh(exhibitor)
+    await db_session.refresh(organization)
     created = await mcp_areas.create_area(factory, "admin-1", layout_id="lay-1", label="DJ Stage")
 
     with pytest.raises(ValueError, match="inactive"):
-        await mcp_areas.update_area(factory, "admin-1", created["id"], exhibitor_id=exhibitor.id)
+        await mcp_areas.update_area(factory, "admin-1", created["id"], organization_id=organization.id)
 
 
-async def test_update_area_rejects_both_exhibitor_id_and_clear(db_session):
+async def test_update_area_rejects_both_organization_id_and_clear(db_session):
     factory = mcp_session_factory(db_session)
     await _seed_layout(db_session)
-    exhibitor = Exhibitor(name="Oyster Bar", type="vendor", active=True)
-    db_session.add(exhibitor)
+    organization = Organization(name="Oyster Bar", type="vendor", active=True)
+    db_session.add(organization)
     await db_session.commit()
-    await db_session.refresh(exhibitor)
+    await db_session.refresh(organization)
     created = await mcp_areas.create_area(factory, "admin-1", layout_id="lay-1", label="DJ Stage")
 
     with pytest.raises(ValueError, match="not both"):
         await mcp_areas.update_area(
-            factory, "admin-1", created["id"], exhibitor_id=exhibitor.id, clear_exhibitor_id=True
+            factory, "admin-1", created["id"], organization_id=organization.id, clear_organization_id=True
         )
 
 

@@ -106,7 +106,7 @@ type DateFilter = "all" | "today";
 interface RegistrationListProps {
   registrations: Registration[];
   tables: FloorTable[];
-  exhibitors: AllocationRef[];
+  organizations: AllocationRef[];
   filter: "all" | RegistrationStatus;
   onFilterChange: (filter: "all" | RegistrationStatus) => void;
   onUpdateStatus: (id: string, status: RegistrationStatus) => Promise<void>;
@@ -178,7 +178,7 @@ const columnHelper = createAppColumnHelper<Registration>();
 export default function RegistrationList({
   registrations,
   tables,
-  exhibitors,
+  organizations,
   filter,
   onFilterChange,
   onUpdateStatus,
@@ -267,20 +267,22 @@ export default function RegistrationList({
 
   const allContactPersonIds = useMemo(
     () =>
-      new Set(exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null)),
-    [exhibitors],
+      new Set(
+        organizations.map((e) => e.contactPersonId).filter((id): id is string => id !== null),
+      ),
+    [organizations],
   );
 
   const allocationOptions: { key: string; label: string; personId: string }[] = useMemo(
     () =>
-      exhibitors
+      organizations
         .filter((e) => e.contactPersonId)
         .map((e) => ({
           key: `e:${e.id}`,
-          label: `${m.admin_allocation_exhibitor_label()}: ${e.name}`,
+          label: `${m.admin_allocation_organization_label()}: ${e.name}`,
           personId: e.contactPersonId!,
         })),
-    [exhibitors],
+    [organizations],
   );
 
   const filterPersonId = allocationFilter
@@ -586,7 +588,7 @@ export default function RegistrationList({
                   {isLinked && (
                     <span
                       role="img"
-                      title={m.admin_linked_exhibitor_title()}
+                      title={m.admin_linked_organization_title()}
                       aria-label={m.admin_allocation_contact_aria()}
                     >
                       <Icon icon={ContactRoundIcon} className="text-primary" />

@@ -1,4 +1,4 @@
-"""Editions co-organized with an exhibitor (typically a champagne producer)."""
+"""Editions co-organized with an organization (typically a champagne producer)."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ async def _venue_and_producer(client) -> tuple[str, int]:
     r = await client.post("/api/venues", json=VENUE_PAYLOAD, headers=ADMIN_HEADERS)
     venue_id = r.json()["id"]
     r = await client.post(
-        "/api/exhibitors", json={"name": "Champagne Comtesse", "type": "producer"}, headers=ADMIN_HEADERS
+        "/api/organizations", json={"name": "Champagne Comtesse", "type": "producer"}, headers=ADMIN_HEADERS
     )
     return venue_id, r.json()["id"]
 
@@ -29,7 +29,7 @@ async def test_bourse_can_be_co_organized_by_a_producer(client):
             "month": "november",
             "venue_id": venue_id,
             "edition_type": "bourse",
-            "co_organizer_exhibitor_id": producer_id,
+            "co_organizer_organization_id": producer_id,
             "active": True,
         },
         headers=ADMIN_HEADERS,
@@ -38,7 +38,7 @@ async def test_bourse_can_be_co_organized_by_a_producer(client):
     body = r.json()
     assert body["co_organizer"]["id"] == producer_id
     assert body["co_organizer"]["name"] == "Champagne Comtesse"
-    # Co-organizing is not lineup: the exhibitors list stays empty.
+    # Co-organizing is not lineup: the organizations list stays empty.
     assert body["producers"] == []
     assert body["sponsors"] == []
 
@@ -63,13 +63,15 @@ async def test_co_organizer_can_be_set_and_cleared(client):
 
     r = await client.put(
         "/api/editions/bourse-2026",
-        json={"co_organizer_exhibitor_id": producer_id},
+        json={"co_organizer_organization_id": producer_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200, r.text
     assert r.json()["co_organizer"]["id"] == producer_id
 
-    r = await client.put("/api/editions/bourse-2026", json={"co_organizer_exhibitor_id": None}, headers=ADMIN_HEADERS)
+    r = await client.put(
+        "/api/editions/bourse-2026", json={"co_organizer_organization_id": None}, headers=ADMIN_HEADERS
+    )
     assert r.status_code == 200, r.text
     assert r.json()["co_organizer"] is None
 
@@ -85,7 +87,7 @@ async def test_unknown_co_organizer_is_rejected(client):
             "month": "november",
             "venue_id": venue_id,
             "edition_type": "bourse",
-            "co_organizer_exhibitor_id": 999999,
+            "co_organizer_organization_id": 999999,
             "active": True,
         },
         headers=ADMIN_HEADERS,
@@ -96,7 +98,7 @@ async def test_unknown_co_organizer_is_rejected(client):
 
 @pytest.mark.anyio
 async def test_deleting_the_co_organizer_leaves_the_edition_intact(client):
-    """The FK is SET NULL — losing the exhibitor must not take the edition with it."""
+    """The FK is SET NULL — losing the organization must not take the edition with it."""
     venue_id, producer_id = await _venue_and_producer(client)
     await client.post(
         "/api/editions",
@@ -106,13 +108,13 @@ async def test_deleting_the_co_organizer_leaves_the_edition_intact(client):
             "month": "november",
             "venue_id": venue_id,
             "edition_type": "bourse",
-            "co_organizer_exhibitor_id": producer_id,
+            "co_organizer_organization_id": producer_id,
             "active": True,
         },
         headers=ADMIN_HEADERS,
     )
 
-    r = await client.delete(f"/api/exhibitors/{producer_id}", headers=ADMIN_HEADERS)
+    r = await client.delete(f"/api/organizations/{producer_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204, r.text
 
     r = await client.get("/api/editions/bourse-2026", headers=ADMIN_HEADERS)

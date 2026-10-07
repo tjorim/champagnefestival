@@ -61,7 +61,7 @@ applying a browser substring predicate. Refetches refill and reorder pages;
 failed reconciliation rolls back to snapshots. Pending row spinners use
 `useIsMutating`; form/delete errors remain in their existing modals. Creates
 stay non-optimistic and merge remains a direct action. Registration copies are
-refetched through their collection, and exhibitor contacts are reconciled on
+refetched through their collection, and organization contacts are reconciled on
 merge. Every asynchronous callback checks the session fence.
 
 Tests exercise page/filter/sort mapping, previous-page placeholders, server

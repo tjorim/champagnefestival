@@ -368,9 +368,9 @@ The README documents shipped behaviour; it is not a second product backlog.
 Current gaps, dependencies, and preferred implementation order live in the
 [product audit](../docs/product-audit-2026-08.md).
 
-### Exhibitor descriptions
+### Organization descriptions
 
-Admin `POST /api/exhibitors` and partial `PUT /api/exhibitors/{id}` accept
+Admin `POST /api/organizations` and partial `PUT /api/organizations/{id}` accept
 `description_language` (`nl`, `fr`, or `en`) and nullable `description_nl`,
 `description_fr`, `description_en`. Each text is limited to 600 characters;
 leading/trailing whitespace is removed and blank text becomes null. Whenever
@@ -380,29 +380,29 @@ merged stored/requested values, so translations can be edited independently.
 
 Descriptions are literal plain text: HTML and Markdown syntax is stored as text
 and escaped by the public UI, never interpreted. Admin collection responses and
-public edition exhibitors include all four fields. The visitor's language wins
+public edition organizations include all four fields. The visitor's language wins
 when non-empty, otherwise the original text is displayed. Descriptions appear
-under exhibitor names in the public carousel, including a conditional vendor
+under organization names in the public carousel, including a conditional vendor
 section when the edition payload contains vendors; floor plans and compact admin
 lists remain unchanged. The existing edition lineup restriction to producers
 and sponsors is unchanged (vendors cannot currently be linked to a lineup).
 
-MCP `create_exhibitor` and `update_exhibitor` expose the same fields and validation.
+MCP `create_organization` and `update_organization` expose the same fields and validation.
 Omitted/null MCP arguments leave update fields unchanged; empty text strings
 clear individual translations, and an empty `description_language` clears the
 original-language selector. Clearing all text requires clearing that selector
 in the same update. Admin edits are immediately live. Manager proposals and
 supersession use the private review workflow below (#1193).
 
-### Exhibitor manager self-service (#1192)
+### Organization manager self-service (#1192)
 
-Visitors and exhibitor contacts share one emailed login at `/me`, using the
+Visitors and organization contacts share one emailed login at `/me`, using the
 existing visitor magic-link/session endpoints and cookie. The page shows
-bookings and exhibitors associated with that verified identity. Contacts
-without email cannot obtain exhibitor access. Access follows the current
-contact email on every request; the view includes inactive exhibitors too.
+bookings and organizations associated with that verified identity. Contacts
+without email cannot obtain organization access. Access follows the current
+contact email on every request; the view includes inactive organizations too.
 A Keycloak bearer token with an explicitly verified matching email also
-grants exhibitor access, alongside the account’s existing role-based sections.
+grants organization access, alongside the account’s existing role-based sections.
 Staff roles alone do not grant contact access. Full both-method account
 unification remains in #1209.
 
@@ -412,31 +412,34 @@ unification remains in #1209.
 | POST | `/api/visitor-sessions/redeem` | `{token}`; establishes the shared HttpOnly-cookie session and returns owned bookings; invalid/expired/replayed links return 401. |
 | GET | `/api/visitor-sessions/status` | `{authenticated, expires_at}`; absent/expired cookie returns false; no-store. |
 | POST | `/api/visitor-sessions/sign-out` | 204; revokes the shared email session and clears its cookie; safe to repeat. |
-| GET | `/api/me/exhibitors` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active, description_language, description_nl, description_fr, description_en}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
+| GET | `/api/me/organizations` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active, description_language, description_nl, description_fr, description_en}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
 
 Uses existing SMTP/frontend URL settings and visitor credential housekeeping.
-No new authentication migration is required; migration `004` adds descriptions.
-See the [login decision](../docs/decisions/1192-exhibitor-manager-login.md)
+No new authentication migration is required.
+See the [login decision](../docs/decisions/1192-organization-manager-login.md)
 and [retry safety](../docs/retry-safety.md). Interactive schemas are at `/docs`.
 
-### Exhibitor proposals and admin review
+### Organization proposals and admin review
 
-Managers use the Exhibitors tab on `/me` to propose website and multilingual
+Managers use the Organizations tab on `/me` to propose website and multilingual
 plain-text description edits. Proposals stay private until an admin accepts them
-in the admin Exhibitors tab. Direct admin edits supersede pending fields; managers
+in the admin Organizations tab. Direct admin edits supersede pending fields; managers
 see the outcome and any rejection reason. Admin REST and MCP review operations
 share the same service and concurrency/retry contract.
 
-Apply migration `004` and configure `EXHIBITOR_REVIEW_RECIPIENT` in the environment
+Apply migrations through `004` (the full organization rename) and configure `ORGANIZATION_REVIEW_RECIPIENT` in the environment
 infra env file to notify a shared mailbox through the existing SMTP outbox worker.
 Leave it unset to use only the pending list. No new Keycloak roles are needed.
-See the [API and workflow contract](../docs/exhibitor-change-review.md) and
-[retry safety](../docs/retry-safety.md#exhibitor-proposals-and-review-1193).
+See the [API and workflow contract](../docs/organization-change-review.md) and
+[retry safety](../docs/retry-safety.md#organization-proposals-and-review-1193).
 
-### Exhibitor description draft translation (#1195)
+### Organization description draft translation (#1195)
 
 Set `TRANSLATION_SERVICE_URL` to the self-hosted LibreTranslate base URL to enable
 explicit drafts. `TRANSLATION_LANGUAGES` defaults to `nl,en`; leaving the URL empty
 hides the action. Admin and live manager capabilities/draft endpoints are documented
-in [the API contract](../docs/exhibitor-description-translation.md), including
+in [the API contract](../docs/organization-description-translation.md), including
 90-second timeout, identity limits, retry safety and the apps#263 production gate.
+
+The coordinated organization domain rename requires matching API clients, storage
+configuration and Caddy paths; see the [migration and deployment sequence](../docs/organization-change-review.md#terminology-and-upgrade).

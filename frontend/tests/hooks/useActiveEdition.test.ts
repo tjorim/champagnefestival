@@ -54,7 +54,7 @@ const apiEdition = {
 };
 
 describe("useActiveEdition", () => {
-  it("preserves descriptions for all exhibitor types in the public payload", async () => {
+  it("preserves descriptions for all organization types in the public payload", async () => {
     const item = {
       id: 1,
       name: "Maison",

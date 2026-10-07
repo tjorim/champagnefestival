@@ -19,9 +19,9 @@ from app.models import (
     Area,
     Edition,
     Event,
-    Exhibitor,
     FaqItem,
     Layout,
+    Organization,
     Person,
     Product,
     Registration,
@@ -330,7 +330,7 @@ def registration_to_guest_dict(r: Registration, person: Person, event: Event) ->
     }
 
 
-def exhibitor_to_dict(e: Exhibitor, contact_person: Person | None = None) -> dict:
+def organization_to_dict(e: Organization, contact_person: Person | None = None) -> dict:
     return {
         "id": e.id,
         "name": e.name,
@@ -353,7 +353,7 @@ def area_to_dict(a: Area) -> dict:
     return {
         "id": a.id,
         "layout_id": a.layout_id,
-        "exhibitor_id": a.exhibitor_id,
+        "organization_id": a.organization_id,
         "label": a.label,
         "icon": a.icon,
         "x": a.x,

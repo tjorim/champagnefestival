@@ -168,7 +168,7 @@ export function apiAreaToArea(d: Record<string, unknown>): FloorArea {
     id: d.id as string,
     layoutId: d.layout_id as string,
     icon: (d.icon ?? "bi-shop") as string,
-    exhibitorId: (d.exhibitor_id as number | null) ?? null,
+    organizationId: (d.organization_id as number | null) ?? null,
     label: (d.label ?? "") as string,
     x: (d.x ?? 50) as number,
     y: (d.y ?? 50) as number,
@@ -237,7 +237,7 @@ function apiLayoutRestoreAllocationConflict(
     name: d.name as string,
     reason: d.reason as "deleted" | "moved",
     registrationIds: (d.registration_ids as string[]) ?? [],
-    exhibitorId: (d.exhibitor_id as number | null) ?? null,
+    organizationId: (d.organization_id as number | null) ?? null,
   };
 }
 

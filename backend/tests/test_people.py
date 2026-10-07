@@ -525,8 +525,8 @@ async def test_merge_people_repoints_reservations(client):
 
 
 @pytest.mark.anyio
-async def test_merge_people_repoints_exhibitor_contact(client):
-    """Exhibitor contact_person_id is updated when its person is merged as duplicate."""
+async def test_merge_people_repoints_organization_contact(client):
+    """Organization contact_person_id is updated when its person is merged as duplicate."""
     r = await client.post(
         "/api/people",
         json={"name": "Main Person", "email": "main@example.com"},
@@ -542,23 +542,23 @@ async def test_merge_people_repoints_exhibitor_contact(client):
     dup_id = r.json()["id"]
 
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Wine Co", "type": "producer", "contact_person_id": dup_id},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
-    exhibitor_id = r.json()["id"]
+    organization_id = r.json()["id"]
 
     # Merge dup into canonical
     r = await client.post(f"/api/people/{canonical_id}/merge/{dup_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
 
-    # Exhibitor should now point to canonical
-    r = await client.get("/api/exhibitors", headers=ADMIN_HEADERS)
+    # Organization should now point to canonical
+    r = await client.get("/api/organizations", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    exhibitor = next((e for e in r.json() if e["id"] == exhibitor_id), None)
-    assert exhibitor is not None
-    assert exhibitor["contact_person_id"] == canonical_id
+    organization = next((e for e in r.json() if e["id"] == organization_id), None)
+    assert organization is not None
+    assert organization["contact_person_id"] == canonical_id
 
 
 @pytest.mark.anyio

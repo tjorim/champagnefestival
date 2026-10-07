@@ -267,7 +267,7 @@ export function useVenueMutations({
       layoutId,
       widthM,
       lengthM,
-      exhibitorId,
+      organizationId,
       x,
       y,
       rotation,
@@ -277,7 +277,7 @@ export function useVenueMutations({
       layoutId: string;
       widthM: number;
       lengthM: number;
-      exhibitorId?: number;
+      organizationId?: number;
       x?: number;
       y?: number;
       rotation?: number;
@@ -296,7 +296,7 @@ export function useVenueMutations({
             x: x ?? 10,
             y: y ?? 10,
             rotation: rotation ?? 0,
-            exhibitor_id: exhibitorId ?? null,
+            organization_id: organizationId ?? null,
           }),
         },
         m.admin_error_add_area(),

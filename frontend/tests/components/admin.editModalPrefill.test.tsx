@@ -180,7 +180,7 @@ describe("admin edit modals prefill from the record being edited", () => {
     expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("");
   });
 
-  it("EditionModal keeps the edition's values after the exhibitors query settles", async () => {
+  it("EditionModal keeps the edition's values after the organizations query settles", async () => {
     render(
       withQuery(
         <EditionModal
@@ -194,9 +194,9 @@ describe("admin edit modals prefill from the record being edited", () => {
       ),
     );
 
-    // The exhibitors query re-renders the modal; the record must survive that.
+    // The organizations query re-renders the modal; the record must survive that.
     await waitFor(() => {
-      expect(screen.queryByText("admin_edition_loading_exhibitors")).not.toBeInTheDocument();
+      expect(screen.queryByText("admin_edition_loading_organizations")).not.toBeInTheDocument();
     });
     expect(screen.getByLabelText("Month")).toHaveValue("march");
     expect(screen.getByLabelText("Year")).toHaveValue(2027);

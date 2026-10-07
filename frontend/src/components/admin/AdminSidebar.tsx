@@ -223,7 +223,7 @@ export default function AdminSidebar({
                 icon={LayersIcon}
                 label={m.admin_content_tab()}
                 itemKeys={[
-                  "exhibitors",
+                  "organizations",
                   "faq",
                   "announcements",
                   "composer",
@@ -234,9 +234,9 @@ export default function AdminSidebar({
                 {...groupProps}
               >
                 <SidebarItem
-                  itemKey="exhibitors"
+                  itemKey="organizations"
                   icon={StoreIcon}
-                  label={m.admin_content_exhibitors_section()}
+                  label={m.admin_content_organizations_section()}
                   {...itemProps}
                 />
                 <SidebarItem

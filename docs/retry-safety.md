@@ -50,9 +50,9 @@ deliberate decision, not an implicit idempotency guarantee.
 | Visitor session refresh (any authenticated `GET`/`POST` while a visitor-session cookie is presented) | Public browser | **Convergent — safe to retry.** Every dependency resolution that accepts the cookie extends the sliding 7-day idle window (`VisitorSession.expires_at`, capped by the never-extended 30-day `hard_expires_at`) as a side effect; repeating the same authenticated request extends the same way each time, with no additional state created. Sign-out (`POST /api/visitor-sessions/sign-out`) is likewise convergent — deleting an already-deleted session is a no-op. |
 | Single creates, layout copy, people merge, registration creation, Pebble token creation, and integration-client creation/rotation | Browser, public clients, and MCP automation | **Not retry safe.** Server-generated identity or an external side effect makes blind retry unsafe. Use server-side replay or a client-generated resource ID before adding automatic retries. Secret-returning operations must not gain replay storage without a separate security review. |
 | Admin table writes through the tables collection (#1165): create (`POST /api/tables`), update (`PUT /api/tables/{id}` for name, table type, position and rotation) and delete (`DELETE /api/tables/{id}`) | Admin browser | **No client-side retry; decisions unchanged.** The collection's `onUpdate` and `onDelete` handlers send one `PUT`/`DELETE` per changed row with `retry: false` and never resubmit. Because the outcome of a failed or ambiguous `PUT` is unknown, the handler refetches the table list before the optimistic change is rolled back, so the operator sees the server's state instead of replaying a stale write. The `PUT` is not retry safe (no version precondition; a repeat carrying the same absolute values converges, but could overwrite a concurrent edit). Create stays **not retry safe** (server-generated id) and is applied as a direct write only after the response arrives, so an ambiguous create is never shown as success. Delete stays **natural resource key, convergent state only**; it is optimistic through `onDelete` and rolls back after a refetch if the server refuses, and the layout editor blocks it up front for a table that still holds bookings (the server rejects that delete). Moving a write behind a collection handler does not add retry safety; the handlers (explicit `refetch()` plus `{ refetch: false }`) are tested in `tests/state/adminTablesCollection.test.ts`. |
-| Admin people, member and volunteer writes (#1179/#1181): `POST /api/people`, `/api/members`, `/api/volunteers`; `PUT`/`DELETE` on their `/{id}` endpoints; `POST /api/people/{id}/merge/{duplicate_id}` | Admin browser | **No client-side retry (`retry: false`); decisions unchanged.** Creates and merge remain **not retry safe** (server-generated identity or cascading side effects) and non-optimistic. Updates remain **not retry safe** (no version precondition); deletes remain **natural resource key, convergent state only**, with responses potentially changing to not-found. Update/delete mutation callbacks optimistically patch Query pages, refetch before rollback on failure, and invalidate lists, counts and person details on settlement. Failed refetches retain the pre-write snapshot; concurrent optimistic writes are reapplied instead of erased by another write's rollback. Requests for the same person persist in order. Session fences and query-instance checks discard late callbacks after sign-out or replacement. Volunteer deletion removes the role and help periods, retaining the person. Merge reconciles registrations and exhibitors from the server. Cache callbacks and request ordering do not add retry safety or prevent another administrator's lost update. Tested in `tests/hooks/usePeopleMutations.test.tsx`, `tests/hooks/useAdminPeopleActions.test.tsx` and `tests/components/admin.PeopleScreens.test.tsx`. |
-| Admin venue, room, table type, layout and area writes through the venue-group collections (#1183): create (`POST /api/venues`, `/api/rooms`, `/api/table-types`, `/api/layouts`, `/api/layouts/{id}/copy`, `/api/areas`), update (`PUT /api/venues/{id}`, `/api/rooms/{id}`, `/api/table-types/{id}`, `/api/areas/{id}` for the exhibitor assignment) and delete (`DELETE` on the same resources and `/api/layouts/{id}`), plus the optimistic area canvas edits (`PUT /api/areas/{id}` for position, rotation, size and label) | Admin browser | **No client-side retry; decisions unchanged.** Every mutation keeps `retry: false`; moving the write behind a collection adds no retry. Creates stay **not retry safe** (server-generated id): the row is written into the collection only after the response arrives, so an ambiguous create is never shown as success. Venue, room, table type and area-assignment updates stay **not retry safe** (no version precondition) and are applied as a direct write of the server's row after the response, never optimistically. Deletes stay **natural resource key, convergent state only**; the local cascade (venue to rooms, layouts, areas and tables; layout to areas and tables) mirrors what the server did and is followed by an explicit refetch. The area canvas edits go through the areas collection's `onUpdate` handler: one `PUT` per changed area, an explicit `refetch()` on success, and a refetch before the optimistic change is rolled back after a failure, so the operator sees the server's state instead of replaying a stale write (a repeat carrying the same absolute values converges, but could overwrite a concurrent edit). A table-type capacity change refetches the tables collection because a table's capacity comes from its type. Every write captures the session fence before its request and checks it before the local write and the follow-up refetch, so a response that arrives after sign-out is dropped. Tested in `tests/state/adminVenueCollections.test.ts` and `tests/hooks/useAdminVenueCollections.test.tsx`. |
-| Admin exhibitor writes through the exhibitors collection (#1184): create (`POST /api/exhibitors`), update, archive and restore (`PUT /api/exhibitors/{id}`, including each item of a bulk archive) and delete (`DELETE /api/exhibitors/{id}`), made from the admin content section, and the contact repoint that follows a people merge (`POST /api/people/{id}/merge/{id}`, already **not retry safe**) | Admin browser | **No client-side retry; decisions unchanged.** Every mutation keeps `retry: false`; moving the dashboard's copy behind a collection adds no retry. Creates stay **not retry safe** (server-generated id): the row is written into the collection only after the response arrives, so an ambiguous create is never shown as success. Updates, archives and restores stay **not retry safe** (no version precondition) and are applied as a direct write of the server's row, never optimistically; a bulk archive sends one `PUT` per exhibitor and writes only the ones that succeeded. Deletes stay **natural resource key, convergent state only**; the local delete only touches a row the collection still holds. After a people merge the duplicate's exhibitor contacts are repointed locally to mirror what the server did and the exhibitors are refetched, also when the merge request fails (it may have committed), so the operator sees the server's state. Every write captures the exhibitors session fence before its request and checks it before the local write and the refetch, so a response that arrives after sign-out is dropped. Tested in `tests/state/adminExhibitorsCollection.test.ts`, `tests/hooks/useAdminSignOutCache.test.tsx`, `tests/hooks/useAdminPeopleActions.test.tsx` and `tests/components/admin.ContentManagement.test.tsx`. |
+| Admin people, member and volunteer writes (#1179/#1181): `POST /api/people`, `/api/members`, `/api/volunteers`; `PUT`/`DELETE` on their `/{id}` endpoints; `POST /api/people/{id}/merge/{duplicate_id}` | Admin browser | **No client-side retry (`retry: false`); decisions unchanged.** Creates and merge remain **not retry safe** (server-generated identity or cascading side effects) and non-optimistic. Updates remain **not retry safe** (no version precondition); deletes remain **natural resource key, convergent state only**, with responses potentially changing to not-found. Update/delete mutation callbacks optimistically patch Query pages, refetch before rollback on failure, and invalidate lists, counts and person details on settlement. Failed refetches retain the pre-write snapshot; concurrent optimistic writes are reapplied instead of erased by another write's rollback. Requests for the same person persist in order. Session fences and query-instance checks discard late callbacks after sign-out or replacement. Volunteer deletion removes the role and help periods, retaining the person. Merge reconciles registrations and organizations from the server. Cache callbacks and request ordering do not add retry safety or prevent another administrator's lost update. Tested in `tests/hooks/usePeopleMutations.test.tsx`, `tests/hooks/useAdminPeopleActions.test.tsx` and `tests/components/admin.PeopleScreens.test.tsx`. |
+| Admin venue, room, table type, layout and area writes through the venue-group collections (#1183): create (`POST /api/venues`, `/api/rooms`, `/api/table-types`, `/api/layouts`, `/api/layouts/{id}/copy`, `/api/areas`), update (`PUT /api/venues/{id}`, `/api/rooms/{id}`, `/api/table-types/{id}`, `/api/areas/{id}` for the organization assignment) and delete (`DELETE` on the same resources and `/api/layouts/{id}`), plus the optimistic area canvas edits (`PUT /api/areas/{id}` for position, rotation, size and label) | Admin browser | **No client-side retry; decisions unchanged.** Every mutation keeps `retry: false`; moving the write behind a collection adds no retry. Creates stay **not retry safe** (server-generated id): the row is written into the collection only after the response arrives, so an ambiguous create is never shown as success. Venue, room, table type and area-assignment updates stay **not retry safe** (no version precondition) and are applied as a direct write of the server's row after the response, never optimistically. Deletes stay **natural resource key, convergent state only**; the local cascade (venue to rooms, layouts, areas and tables; layout to areas and tables) mirrors what the server did and is followed by an explicit refetch. The area canvas edits go through the areas collection's `onUpdate` handler: one `PUT` per changed area, an explicit `refetch()` on success, and a refetch before the optimistic change is rolled back after a failure, so the operator sees the server's state instead of replaying a stale write (a repeat carrying the same absolute values converges, but could overwrite a concurrent edit). A table-type capacity change refetches the tables collection because a table's capacity comes from its type. Every write captures the session fence before its request and checks it before the local write and the follow-up refetch, so a response that arrives after sign-out is dropped. Tested in `tests/state/adminVenueCollections.test.ts` and `tests/hooks/useAdminVenueCollections.test.tsx`. |
+| Admin organization writes through the organizations collection (#1184): create (`POST /api/organizations`), update, archive and restore (`PUT /api/organizations/{id}`, including each item of a bulk archive) and delete (`DELETE /api/organizations/{id}`), made from the admin content section, and the contact repoint that follows a people merge (`POST /api/people/{id}/merge/{id}`, already **not retry safe**) | Admin browser | **No client-side retry; decisions unchanged.** Every mutation keeps `retry: false`; moving the dashboard's copy behind a collection adds no retry. Creates stay **not retry safe** (server-generated id): the row is written into the collection only after the response arrives, so an ambiguous create is never shown as success. Updates, archives and restores stay **not retry safe** (no version precondition) and are applied as a direct write of the server's row, never optimistically; a bulk archive sends one `PUT` per organization and writes only the ones that succeeded. Deletes stay **natural resource key, convergent state only**; the local delete only touches a row the collection still holds. After a people merge the duplicate's organization contacts are repointed locally to mirror what the server did and the organizations are refetched, also when the merge request fails (it may have committed), so the operator sees the server's state. Every write captures the organizations session fence before its request and checks it before the local write and the refetch, so a response that arrives after sign-out is dropped. Tested in `tests/state/adminOrganizationsCollection.test.ts`, `tests/hooks/useAdminSignOutCache.test.tsx`, `tests/hooks/useAdminPeopleActions.test.tsx` and `tests/components/admin.ContentManagement.test.tsx`. |
 | Save a layout revision (`POST /api/layouts/{id}/revisions`; MCP `save_layout_revision`) (#1021) | Admin browser and MCP automation | **Not retry safe.** Server-generated revision ID and `revision_number`, the latter computed under a row lock on the parent `Layout` (mirrors `policies_service.create_draft`'s version numbering). A retry after an ambiguous result creates a second, distinct revision rather than converging on the first — reconcile via `GET /api/layouts/{id}/revisions` before retrying. |
 | Restore a layout revision (`POST /api/layouts/{id}/revisions/{revision_number}/restore`; MCP `restore_layout_revision`) (#1021) | Admin browser and MCP automation | **Not retry safe.** Restoring mutates existing tables/areas in place and deletes/recreates others under a row lock on the parent `Layout`; a blind retry after an ambiguous result would re-apply the same snapshot on top of whatever state the first (possibly successful) attempt — or an intervening edit — left behind, rather than reconciling with it. Clients must read the current layout (`GET /api/layouts/{id}?include_tables=true`) and reconcile before retrying rather than resubmit. The preceding restore-preview read (`POST .../restore/preview`) is not itself a write and is safe to repeat. |
 | Outbox enqueue within registration creation | Backend transaction | **Natural resource key.** The unique `registration-confirmation:{registration_id}` key permits one confirmation job per registration, and the job is committed atomically with the registration. This does not make registration creation itself retry safe because a repeated create receives a new registration ID. |
@@ -62,7 +62,7 @@ deliberate decision, not an implicit idempotency guarantee.
 | Web Push unsubscribe (`POST /api/push/subscriptions/unsubscribe`) | Public browser | **Natural-key upsert, convergent state only.** Deletes by `endpoint`; repeating after the row is already gone is a no-op that still returns 204. |
 | Web Push admin test-send (`POST /api/push/test`) | Admin browser | **Not retry safe.** Each call enqueues a fresh outbox job under a unique `web-push-test:{subscription_id}:{random}` deduplication key, so a repeat — deliberate or after an ambiguous response — always sends another test notification rather than replaying the first. Acceptable here because the caller is an authenticated administrator manually triggering a one-off diagnostic, not an automated or public client; the outbox delivery attempt for that job is itself at-least-once per the entry above. |
 | Volunteer identity registration (`POST /api/me/volunteer/register`) (#1006) | Authenticated OIDC volunteer browser | **Convergent, safe to blindly retry.** The very first thing this checks is whether the calling subject is already linked; if so, it returns that existing identity unconditionally, ignoring whatever the retry resubmits. So once a first attempt actually commits, a retry after an ambiguous result — same payload or not — converges on the same record rather than creating a duplicate or erroring. A first-time registration either creates a brand-new `Person` or, if one already exists with the exact same NISS *and* eID and isn't linked to anyone yet, links to it instead of duplicating it (preserving admin-imported history) — the candidate-match lookup runs under `SELECT ... FOR UPDATE`, so two subjects racing to claim the same unlinked record can't both win (CWE-367): one links, the other 409s. Both identifiers are checksum-validated (mod 97) before anything is written — that's what lets this trust the volunteer's own submitted data instead of matching against a pre-existing admin-entered record; see docs/decisions/1006-volunteer-identity-self-service.md. |
-| Volunteer eID correction (`POST /api/me/volunteer/eid-correction`) (#1006) | Authenticated OIDC volunteer browser | **Convergent, safe to blindly retry.** A direct write to the caller's own already-linked `Person.eid_document_number`, checksum-validated (mod 97) first, same trust model as registration above. Writing the same value twice is a no-op the second time — no client-generated ID or dedup table needed. Supersedes an earlier admin-reviewed `ContactMessage`/outbox design; see Decision 2 in docs/decisions/1006-volunteer-identity-self-service.md. |
+| Volunteer eID correction (`POST /api/me/volunteer/eid-correction`) (#1006) | Authenticated OIDC volunteer browser | **Convergent, safe to blindly retry.** A direct write to the caller's own already-linked `Person.eid_document_number`, checksum-validated (mod 97) first, same trust model as registration above. Writing the same value twice is a no-op the second time — no client-generated ID or dedup table needed. See the correction contract in docs/decisions/1006-volunteer-identity-self-service.md. |
 
 The check-in lookup `POST` does not mutate application state and is outside
 this write inventory.
@@ -348,13 +348,13 @@ only inserts into the matching active-edition cache. Recording payment or
 assigning a table to a historical booking first reads that registration by id;
 this read does not change the write's retry safety or advertise a retry.
 
-### Exhibitor descriptions (#1191)
+### Organization descriptions (#1191)
 
 The existing admin REST and MCP create/update operations now accept description
 texts and an original language. Retry decisions are unchanged: creates are **not
 retry safe** (server-generated IDs), and updates are **not retry safe** (no version
 precondition; replay may overwrite a newer edit). No automatic retry is added.
-Updates validate the merged description before changing any exhibitor fields or
+Updates validate the merged description before changing any organization fields or
 writing an audit entry; an invalid original-language transition makes no change.
 Clearing uses explicit nulls in REST, or empty strings for all populated texts and
 the original language in MCP. Tests cover partial updates, invalid transitions,
@@ -362,49 +362,49 @@ and explicit clearing through both adapters.
 
 ## Shared emailed account login (#1192)
 
-Exhibitor contacts reuse the existing visitor request, redemption and sign-out
+Organization contacts reuse the existing visitor request, redemption and sign-out
 writes documented above, including their implemented retry decisions. A
 single `/me?token=…` link establishes the email session; eligible bookings are
-claimed as before and current contact records determine exhibitor access.
+claimed as before and current contact records determine organization access.
 No separate manager authentication writes or credentials remain; proposal writes
 use that shared identity and are documented under #1193 below.
 
 `MyAccountPage` owns the shared sign-out action; the bookings section has no
 standalone sign-out implementation or alternate session controls. The button
 performs one request per click with retries disabled.
-Only a successful 204 clears both booking and exhibitor views. A failed or
+Only a successful 204 clears both booking and organization views. A failed or
 ambiguous response retains those views and reports an error; the caller can
 reconcile with session status. Repeating sign-out is convergent and safe.
 A session generation fences late responses from the revoked session. This is
 covered by `MyAccountSession.test.tsx`; backend shared-session revocation is
-covered by `test_my_exhibitors.py` and existing visitor tests.
+covered by `test_my_organizations.py` and existing visitor tests.
 
-`GET /api/me/exhibitors` accepts the shared cookie or an OIDC bearer token
+`GET /api/me/organizations` accepts the shared cookie or an OIDC bearer token
 with an explicitly verified email. Cookie reads refresh the same sliding
 idle deadline within the fixed hard cap. The OIDC path uses the existing
 user-provisioning dependency (unique-subject, convergent creation) and never
 links accounts or moves bookings. It introduces no business write or new
 credential. Both-method canonical account linking remains in #1209.
 
-## Exhibitor proposals and review (#1193)
+## Organization proposals and review (#1193)
 
-- `POST /api/me/exhibitors/{id}/changes`: **Client-generated resource ID with
+- `POST /api/me/organizations/{id}/changes`: **Client-generated resource ID with
   stored replay**. Required UUID `submission_id` identifies an immutable submitted
-  payload and actor. Under the exhibitor lock, replaying the same ID/payload/actor
+  payload and actor. Under the organization lock, replaying the same ID/payload/actor
   returns its current recorded outcome, even after replacement or review; a
-  different payload/actor/exhibitor returns 409. Audit and notification enqueue
+  different payload/actor/organization returns 409. Audit and notification enqueue
   happen only on first creation and commit atomically. The browser retains the ID
   while retrying unchanged form data; changing the data creates a fresh proposal.
   Automatic mutation retries are disabled. After leaving/reloading the form,
   reconcile the manager history before submitting again.
-- `POST /api/exhibitors/changes/{id}/decision` and MCP
-  `decide_exhibitor_change`: **Terminal-state replay** under the exhibitor lock.
+- `POST /api/organizations/changes/{id}/decision` and MCP
+  `decide_organization_change`: **Terminal-state replay** under the organization lock.
   The same accept/reject returns the persisted result without a second live
   update, email or audit. A repeated rejection keeps the original reason.
   The browser sends reason text only for rejection; acceptance sends `null`.
   An opposite decision, replaced ID or fully superseded ID fails with 409/error.
   A partially superseded proposal applies only the fields still pending.
-- Direct admin exhibitor updates remain **not retry safe**, with no version
+- Direct admin organization updates remain **not retry safe**, with no version
   precondition: they may overwrite a newer live edit or supersede a newer manager
   proposal. Existing browsers/MCP callers must read and reconcile after ambiguity.
   Supersession and the live edit are atomic; no automatic retry is introduced.
@@ -414,27 +414,27 @@ credential. Both-method canonical account linking remains in #1209.
 Tests cover recorded submission replay, one notification job, repeated decisions,
 replacement, partial/full supersession and concurrent opposite decisions.
 
-### Exhibitor logo uploads and review (#1194)
+### Organization logo uploads and review (#1194)
 
-`POST /api/me/exhibitors/{id}/logo` deliberately replaces the one pending
+`POST /api/me/organizations/{id}/logo` deliberately replaces the one pending
 proposal with a new proposal ID on every successful upload, retaining its other
 pending fields. Repeating an upload converges to one pending logo and removes
 the previous private file, but creates another history/audit entry. No automatic
 retry: after an ambiguous outcome refresh the proposal history before uploading
 again. A text-only replacement also deletes the replaced private logo.
 
-`POST /api/exhibitors/{id}/logo` publishes immediately under the same validation
+`POST /api/organizations/{id}/logo` publishes immediately under the same validation
 and storage rules. A repeat leaves one live logo and retires the previous
 managed file, but creates a fresh URL/audit event. No automatic retry; refresh
-the exhibitor after an ambiguous outcome. Direct REST/MCP image edits and
-exhibitor deletion now clean up managed files and pending logos after commit.
+the organization after an ambiguous outcome. Direct REST/MCP image edits and
+organization deletion now clean up managed files and pending logos after commit.
 
 The existing decision API/MCP retains its proposal-ID replay contract: repeating
 accept/reject returns the recorded outcome without another copy, audit or
 cleanup. Opposite/obsolete decisions return conflict. Files are created before
 commit, obsolete files deleted afterward, and new files removed on rollback.
 Crash leftovers/deletion failures are removed by the lock-protected
-[reconciliation command](exhibitor-logo-upload.md). There is no distributed
+[reconciliation command](organization-logo-upload.md). There is no distributed
 filesystem/database atomic commit; reconciliation is the recovery strategy.
 
 Upload decoding occurs before the shared storage lock. Managers undergo an
@@ -442,13 +442,19 @@ unlocked ownership preflight and a fresh ownership check under the lock before
 any file/proposal is created. Revocation during decoding therefore rejects the
 write without creating files; the retry and audit contracts remain unchanged.
 
-### Exhibitor description draft translation (#1195)
+### Organization description draft translation (#1195)
 
-`POST /api/exhibitors/translation` and
-`POST /api/me/exhibitors/{id}/translation` persist no description, proposal,
+`POST /api/organizations/translation` and
+`POST /api/me/organizations/{id}/translation` persist no description, proposal,
 notification or audit record. Repeating a request is content-safe, consumes the
 identity rate limit and service CPU, and may return a different draft. The client
 never automatically retries; the user can explicitly request another draft.
 A process-wide single-flight limit rejects bursts instead of queuing them. Saving
-or submitting the resulting text retains the existing exhibitor write contracts.
-See [API, configuration and limits](exhibitor-description-translation.md).
+or submitting the resulting text retains the existing organization write contracts.
+See [API, configuration and limits](organization-description-translation.md).
+
+## Organization domain rename (#1190)
+
+Renamed endpoints/tools retain the write strategies above, without aliases.
+Do not blindly retry non-idempotent writes across rollout; SMTP remains
+at-least-once, including across Message-ID changes. See [upgrade guidance](organization-change-review.md#terminology-and-upgrade).

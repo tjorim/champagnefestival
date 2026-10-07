@@ -6,7 +6,7 @@ import pytest
 
 from app.mcp.admin import audit as mcp_audit
 from app.mcp.admin import editions as mcp_editions
-from app.models import Exhibitor, Venue
+from app.models import Organization, Venue
 from tests.helpers import mcp_session_factory
 
 
@@ -63,7 +63,7 @@ async def test_update_edition_partial(db_session):
 async def test_update_edition_clear_co_organizer(db_session):
     factory = mcp_session_factory(db_session)
     venue_id = await _create_venue(db_session)
-    co_organizer = Exhibitor(name="Co-op", type="sponsor")
+    co_organizer = Organization(name="Co-op", type="sponsor")
     db_session.add(co_organizer)
     await db_session.flush()
 
@@ -74,7 +74,7 @@ async def test_update_edition_clear_co_organizer(db_session):
         year=2099,
         month="march",
         venue_id=venue_id,
-        co_organizer_exhibitor_id=co_organizer.id,
+        co_organizer_organization_id=co_organizer.id,
     )
     assert created["co_organizer"]["id"] == co_organizer.id
 
@@ -85,7 +85,7 @@ async def test_update_edition_clear_co_organizer(db_session):
 async def test_update_edition_rejects_both_co_organizer_id_and_clear(db_session):
     factory = mcp_session_factory(db_session)
     venue_id = await _create_venue(db_session)
-    co_organizer = Exhibitor(name="Co-op", type="sponsor")
+    co_organizer = Organization(name="Co-op", type="sponsor")
     db_session.add(co_organizer)
     await db_session.flush()
     created = await mcp_editions.create_edition(
@@ -97,7 +97,7 @@ async def test_update_edition_rejects_both_co_organizer_id_and_clear(db_session)
             factory,
             "admin-1",
             created["id"],
-            co_organizer_exhibitor_id=co_organizer.id,
+            co_organizer_organization_id=co_organizer.id,
             clear_co_organizer=True,
         )
 
@@ -122,11 +122,11 @@ async def test_delete_edition(db_session):
         await mcp_editions.get_edition(factory, created["id"])
 
 
-async def test_create_edition_rejects_vendor_exhibitors(db_session):
-    """Vendor-type exhibitors must not be linked to editions."""
+async def test_create_edition_rejects_vendor_organizations(db_session):
+    """Vendor-type organizations must not be linked to editions."""
     factory = mcp_session_factory(db_session)
     venue_id = await _create_venue(db_session)
-    vendor = Exhibitor(name="Food Vendor", type="vendor")
+    vendor = Organization(name="Food Vendor", type="vendor")
     db_session.add(vendor)
     await db_session.flush()
 
@@ -138,16 +138,16 @@ async def test_create_edition_rejects_vendor_exhibitors(db_session):
             year=2099,
             month="march",
             venue_id=venue_id,
-            exhibitors=[vendor.id],
+            organizations=[vendor.id],
         )
 
 
-async def test_update_edition_rejects_exhibitors_on_non_festival_edition(db_session):
-    """Backend validation must reject an explicit attempt to assign exhibitors to an
+async def test_update_edition_rejects_organizations_on_non_festival_edition(db_session):
+    """Backend validation must reject an explicit attempt to assign organizations to an
     off-festival edition."""
     factory = mcp_session_factory(db_session)
     venue_id = await _create_venue(db_session)
-    producer = Exhibitor(name="Bollinger", type="producer")
+    producer = Organization(name="Bollinger", type="producer")
     db_session.add(producer)
     await db_session.flush()
 
@@ -162,16 +162,16 @@ async def test_update_edition_rejects_exhibitors_on_non_festival_edition(db_sess
     )
 
     with pytest.raises(ValueError, match="festival"):
-        await mcp_editions.update_edition(factory, "admin-1", created["id"], exhibitors=[producer.id])
+        await mcp_editions.update_edition(factory, "admin-1", created["id"], organizations=[producer.id])
 
 
-async def test_update_edition_records_implicit_exhibitor_clearing_in_audit(db_session):
-    """Dropping the exhibitor lineup because the edition type moved off festival is
+async def test_update_edition_records_implicit_organization_clearing_in_audit(db_session):
+    """Dropping the organization lineup because the edition type moved off festival is
     an implicit, destructive change — it must be visible in the audit trail, not
     just folded silently into fields_changed."""
     factory = mcp_session_factory(db_session)
     venue_id = await _create_venue(db_session)
-    producer = Exhibitor(name="Bollinger", type="producer")
+    producer = Organization(name="Bollinger", type="producer")
     db_session.add(producer)
     await db_session.flush()
 
@@ -183,7 +183,7 @@ async def test_update_edition_records_implicit_exhibitor_clearing_in_audit(db_se
         month="march",
         venue_id=venue_id,
         edition_type="festival",
-        exhibitors=[producer.id],
+        organizations=[producer.id],
     )
     assert created["producers"]
 
@@ -194,17 +194,17 @@ async def test_update_edition_records_implicit_exhibitor_clearing_in_audit(db_se
     ]
     updated_entries = [e for e in entries if e["action"] == "edition_updated"]
     assert len(updated_entries) == 1
-    assert updated_entries[0]["details"].get("exhibitors_cleared") is True
+    assert updated_entries[0]["details"].get("organizations_cleared") is True
 
     # A second update to an already-non-festival edition, changing an unrelated
-    # field, must NOT claim exhibitors were cleared again (there's nothing left).
+    # field, must NOT claim organizations were cleared again (there's nothing left).
     await mcp_editions.update_edition(factory, "admin-1", created["id"], active=False)
     entries = (await mcp_audit.list_audit_entries(factory, resource_type="edition", resource_id=created["id"]))[
         "entries"
     ]
     updated_entries = [e for e in entries if e["action"] == "edition_updated"]
     assert len(updated_entries) == 2
-    assert "exhibitors_cleared" not in updated_entries[0]["details"]  # newest first
+    assert "organizations_cleared" not in updated_entries[0]["details"]  # newest first
 
 
 # ---------------------------------------------------------------------------

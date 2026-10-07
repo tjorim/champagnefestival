@@ -8,7 +8,7 @@ import type {
   AuditEntry,
   EditionAttendanceStats,
   EventCheckInStats,
-  Exhibitor,
+  Organization,
   FaqItem,
   LayoutRevision,
   LayoutRevisionDiff,
@@ -292,7 +292,7 @@ export async function deleteTable(
   );
 }
 
-/** The fields an admin can change on an existing area (the canvas edits, not the exhibitor assignment). */
+/** The fields an admin can change on an existing area (the canvas edits, not the organization assignment). */
 export type AreaUpdateChanges = Partial<
   Pick<FloorArea, "label" | "x" | "y" | "rotation" | "widthM" | "lengthM">
 >;
@@ -456,27 +456,29 @@ export async function restoreLayoutRevision(
   );
 }
 
-export async function fetchExhibitors(
+export async function fetchOrganizations(
   authHeaders: () => Record<string, string>,
-): Promise<Exhibitor[]> {
+): Promise<Organization[]> {
   const payload = await fetchJsonOrThrowWithUnauthorized<Record<string, unknown>[]>(
-    "/api/exhibitors",
+    "/api/organizations",
     { headers: authHeaders() },
     m.admin_error_load_data(),
   );
   return Array.isArray(payload)
-    ? payload.map((exhibitor: Record<string, unknown>) => ({
-        id: Number(exhibitor.id),
-        name: String(exhibitor.name ?? ""),
+    ? payload.map((organization: Record<string, unknown>) => ({
+        id: Number(organization.id),
+        name: String(organization.name ?? ""),
         description_language:
-          (exhibitor.description_language as Exhibitor["description_language"]) ?? null,
-        description_nl: (exhibitor.description_nl as Exhibitor["description_nl"]) ?? null,
-        description_fr: (exhibitor.description_fr as Exhibitor["description_fr"]) ?? null,
-        description_en: (exhibitor.description_en as Exhibitor["description_en"]) ?? null,
+          (organization.description_language as Organization["description_language"]) ?? null,
+        description_nl: (organization.description_nl as Organization["description_nl"]) ?? null,
+        description_fr: (organization.description_fr as Organization["description_fr"]) ?? null,
+        description_en: (organization.description_en as Organization["description_en"]) ?? null,
 
-        active: exhibitor.active !== false,
+        active: organization.active !== false,
         contactPersonId:
-          typeof exhibitor.contact_person_id === "string" ? exhibitor.contact_person_id : null,
+          typeof organization.contact_person_id === "string"
+            ? organization.contact_person_id
+            : null,
       }))
     : [];
 }

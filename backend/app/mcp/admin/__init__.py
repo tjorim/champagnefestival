@@ -32,7 +32,7 @@ Migrated so far: ``layouts``, ``tables``, ``areas``, ``venues``, ``rooms``,
 ``table_types``, ``products``.
 
 Not yet migrated (still duplicated between this package and
-``app.routers``): ``editions``, ``events``, ``exhibitors``, ``faq``,
+``app.routers``): ``editions``, ``events``, ``organizations``, ``faq``,
 ``members``, ``people``, ``registrations``, ``settings``, ``volunteers``.
 ``audit`` is read-only and has no mutation logic to share. Follow the pattern
 in ``app/services/layouts_service.py`` (the most complex migrated domain) or

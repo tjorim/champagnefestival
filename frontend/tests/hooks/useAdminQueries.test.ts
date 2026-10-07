@@ -58,22 +58,22 @@ describe("useAdminQueries loadData", () => {
     queryClient.clear();
   });
 
-  it("refetches the registrations and exhibitors collections", async () => {
+  it("refetches the registrations and organizations collections", async () => {
     const { result } = renderQueries();
     await waitFor(() => {
       expect(result.current.registrationsQuery.data?.length).toBeGreaterThan(0);
-      expect(result.current.exhibitorsQuery.data?.length).toBeGreaterThan(0);
+      expect(result.current.organizationsQuery.data?.length).toBeGreaterThan(0);
     });
     server.use(
       http.get("/api/registrations", () => HttpResponse.json(emptyPage)),
-      http.get("/api/exhibitors", () => HttpResponse.json([])),
+      http.get("/api/organizations", () => HttpResponse.json([])),
     );
 
     await act(() => result.current.loadData());
 
     await waitFor(() => {
       expect(result.current.registrationsQuery.data).toHaveLength(0);
-      expect(result.current.exhibitorsQuery.data).toHaveLength(0);
+      expect(result.current.organizationsQuery.data).toHaveLength(0);
     });
   });
 

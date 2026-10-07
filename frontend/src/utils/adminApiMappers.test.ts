@@ -190,8 +190,8 @@ describe("apiAreaToArea", () => {
     id: "a2",
     layout_id: "l2",
     icon: "bi-star",
-    exhibitor_id: 42,
-    label: "Exhibitor stand",
+    organization_id: 42,
+    label: "Organization stand",
     x: 30,
     y: 60,
     rotation: 45,
@@ -204,8 +204,8 @@ describe("apiAreaToArea", () => {
       id: "a2",
       layoutId: "l2",
       icon: "bi-star",
-      exhibitorId: 42,
-      label: "Exhibitor stand",
+      organizationId: 42,
+      label: "Organization stand",
       x: 30,
       y: 60,
       rotation: 45,
@@ -226,16 +226,16 @@ describe("apiAreaToArea", () => {
     expect(apiAreaToArea({ ...minimal, icon: "bi-cup" }).icon).toBe("bi-cup");
   });
 
-  it("defaults exhibitorId to null when absent", () => {
-    expect(apiAreaToArea(minimal).exhibitorId).toBeNull();
+  it("defaults organizationId to null when absent", () => {
+    expect(apiAreaToArea(minimal).organizationId).toBeNull();
   });
 
-  it("maps exhibitor_id to exhibitorId", () => {
-    expect(apiAreaToArea({ ...minimal, exhibitor_id: 7 }).exhibitorId).toBe(7);
+  it("maps organization_id to organizationId", () => {
+    expect(apiAreaToArea({ ...minimal, organization_id: 7 }).organizationId).toBe(7);
   });
 
-  it("preserves explicit exhibitorId null", () => {
-    expect(apiAreaToArea({ ...minimal, exhibitor_id: null }).exhibitorId).toBeNull();
+  it("preserves explicit organizationId null", () => {
+    expect(apiAreaToArea({ ...minimal, organization_id: null }).organizationId).toBeNull();
   });
 
   it("defaults label to empty string when absent", () => {

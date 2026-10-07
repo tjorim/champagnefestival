@@ -142,7 +142,7 @@ describe("venue group collections in the admin hooks", () => {
     await waitFor(() => expect(area()?.rotation).toBe(0));
   });
 
-  it("resizes an area, relabels it and reassigns its exhibitor", async () => {
+  it("resizes an area, relabels it and reassigns its organization", async () => {
     const { view } = await renderLoaded();
     const area = () => view.result.current.queries.areasQuery.data?.find((a) => a.id === "area-03");
 
@@ -155,7 +155,7 @@ describe("venue group collections in the admin hooks", () => {
     await act(() =>
       view.result.current.actions.handleAssignAreaToItem("area-03", 2, "Bollinger", "bi-shop"),
     );
-    await waitFor(() => expect(area()).toMatchObject({ exhibitorId: 2, label: "Bollinger" }));
+    await waitFor(() => expect(area()).toMatchObject({ organizationId: 2, label: "Bollinger" }));
   });
 
   it("adds and deletes an area and a table type", async () => {

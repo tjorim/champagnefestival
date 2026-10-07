@@ -261,7 +261,7 @@ def actor_for_user(user: User) -> tuple[str, str | None]:
     return user.id, VISITOR_AUTH_SOURCE
 
 
-async def get_exhibitor_contact_email(
+async def get_organization_contact_email(
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
 ) -> str | None:
     """Resolve contact email from either sign-in method's verified identity.
@@ -269,7 +269,7 @@ async def get_exhibitor_contact_email(
     Keycloak password and magic-link sign-ins produce the same OIDC subject
     and roles. Only an explicitly verified token email can grant contact
     access; usernames and unverified profile fields cannot. An authenticated
-    account without a verified email simply has no managed exhibitors.
+    account without a verified email simply has no managed organizations.
     """
     user, claims = user_and_claims
     if claims is None:

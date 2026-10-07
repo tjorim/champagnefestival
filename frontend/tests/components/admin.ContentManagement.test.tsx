@@ -15,15 +15,15 @@ vi.mock("@/paraglide/messages", () => ({
   }),
 }));
 
-// GET /api/exhibitors requires a Bearer token recognized by the mock server
+// GET /api/organizations requires a Bearer token recognized by the mock server
 // (see `validAdminTokens` in src/mocks/handlers/admin.ts) — an empty headers
-// object would 401 and never surface the seeded exhibitors.
+// object would 401 and never surface the seeded organizations.
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
-function renderContentManagement(captureExhibitorsFence?: () => () => boolean) {
+function renderContentManagement(captureOrganizationsFence?: () => () => boolean) {
   const queryClient = createTestQueryClient();
-  const onExhibitorSaved = vi.fn();
-  const onExhibitorDeleted = vi.fn();
+  const onOrganizationSaved = vi.fn();
+  const onOrganizationDeleted = vi.fn();
   const onEditionMutated = vi.fn();
 
   const { container } = render(
@@ -31,19 +31,19 @@ function renderContentManagement(captureExhibitorsFence?: () => () => boolean) {
       <ContentManagement
         authHeaders={authHeaders}
         venues={[]}
-        onExhibitorSaved={onExhibitorSaved}
-        onExhibitorDeleted={onExhibitorDeleted}
-        captureExhibitorsFence={captureExhibitorsFence}
+        onOrganizationSaved={onOrganizationSaved}
+        onOrganizationDeleted={onOrganizationDeleted}
+        captureOrganizationsFence={captureOrganizationsFence}
         onEditionMutated={onEditionMutated}
       />
     </QueryClientProvider>,
   );
 
-  return { container, onExhibitorSaved, onExhibitorDeleted, onEditionMutated };
+  return { container, onOrganizationSaved, onOrganizationDeleted, onEditionMutated };
 }
 
 describe("ContentManagement", () => {
-  it("renders seeded exhibitors after loading and hides the loading spinner", async () => {
+  it("renders seeded organizations after loading and hides the loading spinner", async () => {
     renderContentManagement();
 
     expect(screen.getAllByText("admin_content_loading").length).toBeGreaterThan(0);
@@ -63,7 +63,7 @@ describe("ContentManagement", () => {
     expect(results).toHaveNoViolations();
   });
 
-  // Primary mutation flow: archiving an exhibitor. We chose this over driving
+  // Primary mutation flow: archiving an organization. We chose this over driving
   // the full ItemModal "add item" form because ItemModal assigns a client-side
   // id via `Date.now()` for new items, which the save API treats as an
   // existing id (`isNew = draft.id <= 0`) and routes to PUT instead of POST —
@@ -71,10 +71,10 @@ describe("ContentManagement", () => {
   // The archive action is a self-contained PUT against a known, seeded id and
   // exercises the same optimistic-cache-update code path without that
   // complication.
-  it("archives an exhibitor: fires a PUT request and moves the item into the archived section", async () => {
+  it("archives an organization: fires a PUT request and moves the item into the archived section", async () => {
     let capturedBody: unknown = null;
     server.use(
-      http.put("/api/exhibitors/:id", async ({ request, params }) => {
+      http.put("/api/organizations/:id", async ({ request, params }) => {
         capturedBody = await request.json();
         return HttpResponse.json({
           id: Number(params.id),
@@ -123,12 +123,12 @@ describe("ContentManagement", () => {
   it("takes the session fence before the write request and hands it to the saved callback", async () => {
     const events: string[] = [];
     const isCurrent = () => true;
-    const captureExhibitorsFence = vi.fn(() => {
+    const captureOrganizationsFence = vi.fn(() => {
       events.push("capture");
       return isCurrent;
     });
     server.use(
-      http.put("/api/exhibitors/:id", async ({ params }) => {
+      http.put("/api/organizations/:id", async ({ params }) => {
         events.push("request");
         return HttpResponse.json({
           id: Number(params.id),
@@ -143,23 +143,23 @@ describe("ContentManagement", () => {
       }),
     );
 
-    const { onExhibitorSaved } = renderContentManagement(captureExhibitorsFence);
+    const { onOrganizationSaved } = renderContentManagement(captureOrganizationsFence);
     await screen.findByText("Maison Moët & Chandon");
     fireEvent.click(
       screen.getByRole("button", { name: "admin_content_archive Maison Moët & Chandon" }),
     );
 
-    await waitFor(() => expect(onExhibitorSaved).toHaveBeenCalled());
+    await waitFor(() => expect(onOrganizationSaved).toHaveBeenCalled());
     expect(events).toEqual(["capture", "request"]);
-    expect(onExhibitorSaved).toHaveBeenCalledWith(
+    expect(onOrganizationSaved).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Maison Moët & Chandon", active: false }),
       isCurrent,
     );
   });
 
-  it("shows an error alert when loading exhibitors fails", async () => {
+  it("shows an error alert when loading organizations fails", async () => {
     server.use(
-      http.get("/api/exhibitors", () =>
+      http.get("/api/organizations", () =>
         HttpResponse.json({ detail: "Server error" }, { status: 500 }),
       ),
     );

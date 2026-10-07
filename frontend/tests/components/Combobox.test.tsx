@@ -84,7 +84,7 @@ function MultipleHarness() {
   ];
   return (
     <>
-      <label htmlFor="exhibitors">Exhibitors</label>
+      <label htmlFor="organizations">Organisations</label>
       <Combobox
         multiple
         items={groups}
@@ -99,7 +99,7 @@ function MultipleHarness() {
                 {items.map((item) => (
                   <ComboboxChip key={item.value}>{item.label}</ComboboxChip>
                 ))}
-                <ComboboxChipsInput id="exhibitors" />
+                <ComboboxChipsInput id="organizations" />
               </>
             )}
           </ComboboxValue>
@@ -129,7 +129,7 @@ function MultipleHarness() {
 it("preserves selected archived entries, searches groups and removes individual chips", async () => {
   render(<MultipleHarness />);
   expect(screen.getByRole("status")).toHaveTextContent("Bob");
-  await userEvent.type(screen.getByRole("combobox", { name: "Exhibitors" }), "Alice");
+  await userEvent.type(screen.getByRole("combobox", { name: "Organisations" }), "Alice");
   await screen.findByRole("option", { name: "Alice" });
   await userEvent.keyboard("{ArrowDown}{Enter}");
   await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Bob,Alice"));

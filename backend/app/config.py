@@ -146,10 +146,10 @@ class Settings(BaseSettings):
     translation_languages: str = "nl,en"
     """Comma-separated loaded site languages; French requires infra approval."""
 
-    exhibitor_review_recipient: str = ""
-    exhibitor_logo_public_root: str = "./uploads/public/exhibitors"
-    exhibitor_logo_pending_root: str = "./uploads/pending/exhibitors"
-    """Optional shared mailbox for pending exhibitor proposals; no fallback."""
+    organization_review_recipient: str = ""
+    organization_logo_public_root: str = "./uploads/public/organizations"
+    organization_logo_pending_root: str = "./uploads/pending/organizations"
+    """Optional shared mailbox for pending organization proposals; no fallback."""
 
     # --- SMTP delivery ---
     smtp_host: str = ""

@@ -32,7 +32,7 @@ interface OtherEventCardData {
   editionType: ApiUpcomingEdition["edition_type"];
   event: Event;
   venueName: string;
-  /** The exhibitor who ran this edition with the vzw, credited on the card. */
+  /** The organization who ran this edition with the vzw, credited on the card. */
   coOrganizerName?: string;
   coOrganizerWebsite?: string;
 }

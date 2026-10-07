@@ -8,7 +8,7 @@ import {
   type SeedProduct,
   type SeedProductInclusion,
 } from "../data/editionStore";
-import { seedExhibitors } from "../data/exhibitors";
+import { seedOrganizations } from "../data/organizations";
 import { seedPeople } from "../data/people";
 import {
   type RegistrationScenario,
@@ -27,7 +27,7 @@ import {
 
 /** Mutable in-memory stores — reset on page reload. */
 let people: Record<string, unknown>[] = structuredClone(seedPeople);
-let exhibitors: Record<string, unknown>[] = structuredClone(seedExhibitors);
+let organizations: Record<string, unknown>[] = structuredClone(seedOrganizations);
 let venues: Record<string, unknown>[] = structuredClone(seedVenues);
 let rooms: Record<string, unknown>[] = structuredClone(seedRooms);
 let tableTypes: Record<string, unknown>[] = structuredClone(seedTableTypes);
@@ -711,12 +711,12 @@ export const adminHandlers = [
   }),
 
   // ──────────────────────────────────────────────────────────────
-  // Exhibitors
+  // Organizations
   // ──────────────────────────────────────────────────────────────
-  http.get("/api/me/exhibitors/:id/changes", ({ request, params }) => {
-    // This token represents the verified contact for the first seeded exhibitor.
+  http.get("/api/me/organizations/:id/changes", ({ request, params }) => {
+    // This token represents the verified contact for the first seeded organization.
     // Email-session tests override this handler, like the visitor-session mocks.
-    const owned = exhibitors.find(
+    const owned = organizations.find(
       (row) => String(row.id) === params.id && row.contact_person_id === "person-01",
     );
     if (
@@ -724,43 +724,43 @@ export const adminHandlers = [
       parseBearerToken(request) !== "mock-manager-token" ||
       !owned
     ) {
-      return authError(404, "Exhibitor not found.");
+      return authError(404, "Organization not found.");
     }
     return HttpResponse.json([]);
   }),
 
-  http.get("/api/exhibitors/translation", ({ request }) => {
+  http.get("/api/organizations/translation", ({ request }) => {
     const error = requireAuth(request);
     return error ?? HttpResponse.json({ languages: [] });
   }),
-  http.get("/api/me/exhibitors/:id/translation", () => HttpResponse.json({ languages: [] })),
+  http.get("/api/me/organizations/:id/translation", () => HttpResponse.json({ languages: [] })),
 
-  http.get("/api/exhibitors/changes", ({ request }) => {
+  http.get("/api/organizations/changes", ({ request }) => {
     const error = requireAuth(request);
     return error ?? HttpResponse.json([]);
   }),
 
-  http.get("/api/exhibitors", ({ request }) => {
+  http.get("/api/organizations", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
-    return HttpResponse.json(exhibitors);
+    return HttpResponse.json(organizations);
   }),
 
-  http.get("/api/exhibitors/:id", ({ request, params }) => {
+  http.get("/api/organizations/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const id = Number(params.id);
-    const exhibitor = exhibitors.find((e) => e.id === id);
-    if (!exhibitor) return HttpResponse.json(null, { status: 404 });
-    return HttpResponse.json(exhibitor);
+    const organization = organizations.find((e) => e.id === id);
+    if (!organization) return HttpResponse.json(null, { status: 404 });
+    return HttpResponse.json(organization);
   }),
 
-  http.post("/api/exhibitors", async ({ request }) => {
+  http.post("/api/organizations", async ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const body = (await request.json()) as Record<string, unknown>;
-    const maxId = exhibitors.reduce((max, e) => Math.max(max, Number(e.id) || 0), 0);
-    const newExhibitor = {
+    const maxId = organizations.reduce((max, e) => Math.max(max, Number(e.id) || 0), 0);
+    const newOrganization = {
       id: maxId + 1,
       name: String(body.name ?? ""),
       image: String(body.image ?? ""),
@@ -772,28 +772,28 @@ export const adminHandlers = [
       created_at: now(),
       updated_at: now(),
     };
-    exhibitors.push(newExhibitor);
-    return HttpResponse.json(newExhibitor, { status: 201 });
+    organizations.push(newOrganization);
+    return HttpResponse.json(newOrganization, { status: 201 });
   }),
 
-  http.put("/api/exhibitors/:id", async ({ request, params }) => {
+  http.put("/api/organizations/:id", async ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const id = Number(params.id);
-    const idx = exhibitors.findIndex((e) => e.id === id);
+    const idx = organizations.findIndex((e) => e.id === id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
-    exhibitors[idx] = { ...exhibitors[idx]!, ...body, id, updated_at: now() };
-    return HttpResponse.json(exhibitors[idx]);
+    organizations[idx] = { ...organizations[idx]!, ...body, id, updated_at: now() };
+    return HttpResponse.json(organizations[idx]);
   }),
 
-  http.delete("/api/exhibitors/:id", ({ request, params }) => {
+  http.delete("/api/organizations/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const id = Number(params.id);
-    const idx = exhibitors.findIndex((e) => e.id === id);
+    const idx = organizations.findIndex((e) => e.id === id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
-    exhibitors.splice(idx, 1);
+    organizations.splice(idx, 1);
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -1356,7 +1356,7 @@ export const adminHandlers = [
       id: uid(),
       layout_id: String(body.layout_id ?? ""),
       icon: String(body.icon ?? "bi-person-standing"),
-      exhibitor_id: typeof body.exhibitor_id === "number" ? body.exhibitor_id : null,
+      organization_id: typeof body.organization_id === "number" ? body.organization_id : null,
       label: String(body.label ?? ""),
       x: Number(body.x ?? 50),
       y: Number(body.y ?? 50),
@@ -1416,7 +1416,7 @@ export function resetAdminStore(): void {
   resetSharedStore();
   resetEditionStore();
   people = structuredClone(seedPeople);
-  exhibitors = structuredClone(seedExhibitors);
+  organizations = structuredClone(seedOrganizations);
   venues = structuredClone(seedVenues);
   rooms = structuredClone(seedRooms);
   tableTypes = structuredClone(seedTableTypes);

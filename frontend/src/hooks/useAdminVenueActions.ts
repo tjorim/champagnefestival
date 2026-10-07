@@ -289,7 +289,7 @@ export function useAdminVenueActions({
 
   // Layout revisions (#1021): save takes an immutable geometry snapshot;
   // restore applies a saved snapshot back onto the layout's live tables/areas
-  // (never touching registrations/exhibitor assignments themselves — see
+  // (never touching registrations/organization assignments themselves — see
   // preview_layout_restore/restore_layout_revision on the backend).
   const handleSaveRevision = useCallback(
     (layoutId: string, label: string, changeNote?: string) =>
@@ -335,7 +335,7 @@ export function useAdminVenueActions({
       layoutId: string,
       widthM: number,
       lengthM: number,
-      exhibitorId?: number,
+      organizationId?: number,
     ) => {
       const isCurrent = captureAdminVenueFence();
       const data = await createAreaMutation.mutateAsync({
@@ -344,7 +344,7 @@ export function useAdminVenueActions({
         layoutId,
         widthM,
         lengthM,
-        exhibitorId,
+        organizationId,
       });
       await applyAdminVenueRowCreated(areas, apiAreaToArea(data), isCurrent);
     },
@@ -391,8 +391,8 @@ export function useAdminVenueActions({
   );
 
   const handleAssignAreaToItem = useCallback(
-    async (areaId: string, exhibitorId: number | null, label?: string, icon?: string) => {
-      const body: Record<string, unknown> = { exhibitor_id: exhibitorId };
+    async (areaId: string, organizationId: number | null, label?: string, icon?: string) => {
+      const body: Record<string, unknown> = { organization_id: organizationId };
       if (label !== undefined) body.label = label;
       if (icon !== undefined) body.icon = icon;
       const isCurrent = captureAdminVenueFence();

@@ -1,4 +1,6 @@
-import MyExhibitorsSection, { type ManagedExhibitor } from "@/components/MyExhibitorsSection";
+import MyOrganizationsSection, {
+  type ManagedOrganization,
+} from "@/components/MyOrganizationsSection";
 import { signOutVisitorSession, type GuestRegistration } from "@/utils/publicRegistrationApi";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -31,8 +33,8 @@ import {
 } from "@/utils/myVolunteerApi";
 
 /**
- * Unified self-service for visitors, exhibitor contacts and OIDC accounts.
- * One emailed login supplies a verified identity; exhibitor access follows
+ * Unified self-service for visitors, organization contacts and OIDC accounts.
+ * One emailed login supplies a verified identity; organization access follows
  * current contact records. Staff and volunteer roles still use OIDC.
  */
 export default function MyAccountPage() {
@@ -59,14 +61,14 @@ export default function MyAccountPage() {
     },
     [sessionEpoch],
   );
-  const exhibitorsQuery = useQuery({
-    queryKey: ["me-exhibitors", instanceId, sessionEpoch, accountId ?? null, isAuthenticated],
+  const organizationsQuery = useQuery({
+    queryKey: ["me-organizations", instanceId, sessionEpoch, accountId ?? null, isAuthenticated],
     enabled: isAuthenticated || emailRegistrations !== null,
     gcTime: 0,
     retry: false,
-    queryFn: async ({ signal }): Promise<ManagedExhibitor[]> => {
+    queryFn: async ({ signal }): Promise<ManagedOrganization[]> => {
       const accessToken = getAccessToken();
-      const response = await fetch("/api/me/exhibitors", {
+      const response = await fetch("/api/me/organizations", {
         signal,
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       });
@@ -74,8 +76,8 @@ export default function MyAccountPage() {
       return response.json();
     },
   });
-  const exhibitors =
-    !isAuthenticated && emailRegistrations === null ? [] : (exhibitorsQuery.data ?? []);
+  const organizations =
+    !isAuthenticated && emailRegistrations === null ? [] : (organizationsQuery.data ?? []);
   const emailSignOut = useMutation({
     mutationFn: signOutVisitorSession,
     retry: false,
@@ -464,14 +466,14 @@ export default function MyAccountPage() {
       ),
     },
   ];
-  if (exhibitors.length > 0)
+  if (organizations.length > 0)
     tabs.push({
-      key: "exhibitors",
+      key: "organizations",
       title: m.manager_title(),
       content: (
-        <MyExhibitorsSection
+        <MyOrganizationsSection
           key={`${sessionEpoch}-${accountId ?? "email"}`}
-          exhibitors={exhibitors}
+          organizations={organizations}
           headers={(): Record<string, string> => {
             const token = getAccessToken();
             return token ? { Authorization: `Bearer ${token}` } : {};
@@ -490,7 +492,7 @@ export default function MyAccountPage() {
       isAuthenticated ||
       emailRegistrations === null ||
       emailRegistrations.length > 0 ||
-      exhibitors.length === 0,
+      organizations.length === 0,
   );
   const activeTab = visibleTabs.some((tab) => tab.key === selectedTab)
     ? selectedTab
@@ -538,7 +540,7 @@ export default function MyAccountPage() {
               )}
             </div>
           )}
-          {exhibitorsQuery.isError && (isAuthenticated || emailRegistrations !== null) && (
+          {organizationsQuery.isError && (isAuthenticated || emailRegistrations !== null) && (
             <Alert variant="danger" role="alert">
               {m.manager_error()}
             </Alert>

@@ -38,7 +38,7 @@ async def test_area_crud(client):
     area = r.json()
     assert area["label"] == "DJ Stage"
     assert area["icon"] == "bi-music-note-beamed"
-    assert area["exhibitor_id"] is None
+    assert area["organization_id"] is None
     area_id = area["id"]
 
     # List (filter by layout)
@@ -69,33 +69,33 @@ async def test_area_crud(client):
 
 
 @pytest.mark.anyio
-async def test_area_linked_to_exhibitor(client):
-    """An area can be assigned to an exhibitor; clearing works too."""
+async def test_area_linked_to_organization(client):
+    """An area can be assigned to an organization; clearing works too."""
     layout_id = await _create_layout_prerequisites(client)
     r = await client.post(
-        "/api/exhibitors",
+        "/api/organizations",
         json={"name": "Oyster Bar", "type": "vendor"},
         headers=ADMIN_HEADERS,
     )
-    exhibitor_id = r.json()["id"]
+    organization_id = r.json()["id"]
 
     r = await client.post(
         "/api/areas",
         json={
             "layout_id": layout_id,
             "label": "Oyster Stand",
-            "exhibitor_id": exhibitor_id,
+            "organization_id": organization_id,
         },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
     area_id = r.json()["id"]
-    assert r.json()["exhibitor_id"] == exhibitor_id
+    assert r.json()["organization_id"] == organization_id
 
-    # Clear exhibitor assignment
-    r = await client.put(f"/api/areas/{area_id}", json={"exhibitor_id": None}, headers=ADMIN_HEADERS)
+    # Clear organization assignment
+    r = await client.put(f"/api/areas/{area_id}", json={"organization_id": None}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert r.json()["exhibitor_id"] is None
+    assert r.json()["organization_id"] is None
 
 
 @pytest.mark.anyio

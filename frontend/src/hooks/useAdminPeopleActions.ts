@@ -13,15 +13,15 @@ import type { Registration } from "@/types/registration";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import { captureAdminPeopleFence } from "@/state/adminPeopleSession";
 import {
-  applyAdminExhibitorContactsMerged,
-  captureAdminExhibitorsFence,
-  refetchAdminExhibitors,
-  type AdminExhibitorsCollection,
-} from "@/state/adminExhibitorsCollection";
+  applyAdminOrganizationContactsMerged,
+  captureAdminOrganizationsFence,
+  refetchAdminOrganizations,
+  type AdminOrganizationsCollection,
+} from "@/state/adminOrganizationsCollection";
 
 interface UseAdminPeopleActionsOptions {
   authHeaders: () => Record<string, string>;
-  exhibitorsCollection: AdminExhibitorsCollection;
+  organizationsCollection: AdminOrganizationsCollection;
   registrationsCollection: AdminRegistrationsCollection;
   queryClient: QueryClient;
   registrationsQueryKey: QueryKey;
@@ -31,7 +31,7 @@ interface UseAdminPeopleActionsOptions {
 
 export function useAdminPeopleActions({
   authHeaders,
-  exhibitorsCollection,
+  organizationsCollection,
   registrationsCollection,
   queryClient,
   setDetailRegistration,
@@ -57,7 +57,7 @@ export function useAdminPeopleActions({
   const handleMergePeople = useCallback(
     async (canonicalId: string, duplicateId: string) => {
       const isCurrent = captureAdminPeopleFence();
-      const isExhibitorsCurrent = captureAdminExhibitorsFence();
+      const isOrganizationsCurrent = captureAdminOrganizationsFence();
 
       try {
         await mergePeopleMutation.mutateAsync({
@@ -66,23 +66,23 @@ export function useAdminPeopleActions({
         });
       } catch (error) {
         // A failed merge may still have committed: learn the real contacts.
-        void refetchAdminExhibitors(exhibitorsCollection, isExhibitorsCurrent);
+        void refetchAdminOrganizations(organizationsCollection, isOrganizationsCurrent);
         if (isCurrent()) await refetchAdminRegistrations(registrationsCollection);
         throw error;
       }
       if (!isCurrent()) return;
-      // The server repointed the duplicate's exhibitor contacts; mirror that,
+      // The server repointed the duplicate's organization contacts; mirror that,
       // then refetch to pick up anything the local repoint did not cover.
-      await applyAdminExhibitorContactsMerged(
-        exhibitorsCollection,
+      await applyAdminOrganizationContactsMerged(
+        organizationsCollection,
         duplicateId,
         canonicalId,
-        isExhibitorsCurrent,
+        isOrganizationsCurrent,
       );
-      await refetchAdminExhibitors(exhibitorsCollection, isExhibitorsCurrent);
+      await refetchAdminOrganizations(organizationsCollection, isOrganizationsCurrent);
       if (isCurrent()) await refetchAdminRegistrations(registrationsCollection);
     },
-    [exhibitorsCollection, mergePeopleMutation, registrationsCollection],
+    [organizationsCollection, mergePeopleMutation, registrationsCollection],
   );
 
   const handleCreateMember = useCallback(

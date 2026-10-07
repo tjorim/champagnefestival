@@ -31,35 +31,35 @@ describe("saveEdition", () => {
     active: true,
   };
 
-  it("sends the selected exhibitor ids for a festival edition", async () => {
+  it("sends the selected organization ids for a festival edition", async () => {
     const fetchMock = mockFetchResponse({ id: "2026-march" });
     vi.stubGlobal("fetch", fetchMock);
 
     await saveEdition(
-      { ...basePayload, editionType: "festival", exhibitorIds: [1, 2] },
+      { ...basePayload, editionType: "festival", organizationIds: [1, 2] },
       authHeaders,
       "2026-march",
     );
 
     const body = sentBody(fetchMock);
-    expect(body.exhibitors).toEqual([1, 2]);
+    expect(body.organizations).toEqual([1, 2]);
   });
 
   it.each(["bourse", "capsule_exchange"] as const)(
-    "explicitly sends an empty exhibitors list when converting to %s",
+    "explicitly sends an empty organizations list when converting to %s",
     async (editionType) => {
       const fetchMock = mockFetchResponse({ id: "2026-march" });
       vi.stubGlobal("fetch", fetchMock);
 
       await saveEdition(
-        { ...basePayload, editionType, exhibitorIds: [1, 2] },
+        { ...basePayload, editionType, organizationIds: [1, 2] },
         authHeaders,
         "2026-march",
       );
 
       const body = sentBody(fetchMock);
-      expect(body).toHaveProperty("exhibitors");
-      expect(body.exhibitors).toEqual([]);
+      expect(body).toHaveProperty("organizations");
+      expect(body.organizations).toEqual([]);
     },
   );
 });
@@ -118,7 +118,7 @@ describe("error handling", () => {
           editionType: "festival",
           venueId: "venue-1",
           active: true,
-          exhibitorIds: [],
+          organizationIds: [],
         },
         authHeaders,
         "2026-march",
@@ -140,7 +140,7 @@ describe("error handling", () => {
           editionType: "festival",
           venueId: "venue-1",
           active: true,
-          exhibitorIds: [],
+          organizationIds: [],
         },
         authHeaders,
         "2026-march",

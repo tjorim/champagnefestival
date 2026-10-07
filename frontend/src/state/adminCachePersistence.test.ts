@@ -64,7 +64,7 @@ describe("admin cache privacy boundary", () => {
       queryKeys.admin.tableTypes,
       queryKeys.admin.layouts,
       queryKeys.admin.areas,
-      queryKeys.admin.exhibitors,
+      queryKeys.admin.organizations,
       queryKeys.admin.registrationsEdition("edition"),
     ]) {
       expect(isPersistableAdminKey(key, "edition")).toBe(true);

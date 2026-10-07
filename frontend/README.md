@@ -111,7 +111,7 @@ resources:
 | Events          | 5                     | Grand Opening, Tasting Day 1 & 2, Gala Dinner, Closing   |
 | People          | 5                     | Alice, Bernard, Claire, David, Eva                       |
 | Registrations   | 4                     | Pending / Confirmed, Paid / Partial / Unpaid, Checked-in |
-| Exhibitors      | 5                     | 3 producers, 1 sponsor, 1 vendor                         |
+| Organisations   | 5                     | 3 producers, 1 sponsor, 1 vendor                         |
 | Venue / Rooms   | 1 venue, 2 halls      | Brussels Expo — Hall 5 & Hall 6                          |
 | Tables          | 3                     | T1 (6-seat), T2 (8-seat), T3 (4-seat)                    |
 | Layouts / Areas | 3 layouts, 3 areas    | Hall 5 + Hall 6 layouts                                  |
@@ -165,7 +165,7 @@ src/mocks/
 ├── browser.ts          # setupWorker entry point
 ├── data/               # seed data modules
 │   ├── editions.ts
-│   ├── exhibitors.ts
+│   ├── organizations.ts
 │   ├── people.ts
 │   ├── registrations.ts
 │   └── venue.ts
@@ -211,9 +211,9 @@ production builds**.
 - Top-level admin resources are owned by `queryKeys.admin.*` and consumed by `useAdminQueries`.
 - `useAdminQueries` centralizes bulk admin refetch behavior via `shouldRefetchAdminResourceQuery`,
   which only matches the stable top-level admin resources (`registrations`, `tables`, `venues`,
-  `rooms`, `table-types`, `layouts`, `exhibitors`, `areas`, `people`, `members`).
+  `rooms`, `table-types`, `layouts`, `organizations`, `areas`, `people`, `members`).
 - Check-in uses `queryKeys.checkInRegistration(id, token)`.
-- `/me` stores booking responses in its session controller; exhibitors use a
+- `/me` stores booking responses in its session controller; organizations use a
   private account-scoped query with no retained cache after unmount.
 
 ## Technologies

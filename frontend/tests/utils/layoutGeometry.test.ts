@@ -9,7 +9,7 @@ const baseArea: FloorArea = {
   id: "area-1",
   layoutId: "layout-1",
   icon: "bi-shop",
-  exhibitorId: null,
+  organizationId: null,
   label: "Stand",
   x: 40,
   y: (34 / canvasH) * 100,

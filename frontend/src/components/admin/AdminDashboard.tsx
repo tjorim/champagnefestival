@@ -1,4 +1,4 @@
-import ExhibitorChangeReview from "./ExhibitorChangeReview";
+import OrganizationChangeReview from "./OrganizationChangeReview";
 import { useSyncExternalStore } from "react";
 import { adminCachePersistence } from "@/state/adminCachePersistence";
 import { AdminCacheStatus } from "./AdminCacheStatus";
@@ -43,11 +43,11 @@ import { useAdminSessionRecovery } from "@/hooks/useAdminSessionRecovery";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";
 import {
-  applyAdminExhibitorDeleted,
-  applyAdminExhibitorSaved,
-  captureAdminExhibitorsFence,
-  refetchAdminExhibitors,
-} from "@/state/adminExhibitorsCollection";
+  applyAdminOrganizationDeleted,
+  applyAdminOrganizationSaved,
+  captureAdminOrganizationsFence,
+  refetchAdminOrganizations,
+} from "@/state/adminOrganizationsCollection";
 import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { devError } from "@/utils/devLog";
@@ -130,8 +130,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     roomsQuery,
     tableTypesQuery,
     layoutsQuery,
-    exhibitorsQuery,
-    exhibitorsCollection,
+    organizationsQuery,
+    organizationsCollection,
     areasQuery,
     peopleCountsQuery,
     isAnyPending,
@@ -158,7 +158,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const rooms = roomsQuery.data ?? [];
   const tableTypes = tableTypesQuery.data ?? [];
   const layouts = layoutsQuery.data ?? [];
-  const exhibitors = exhibitorsQuery.data ?? [];
+  const organizations = organizationsQuery.data ?? [];
   const areas = areasQuery.data ?? [];
   const duplicatesQuery = usePersonDuplicates(
     detailRegistration?.person ?? null,
@@ -205,7 +205,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   } = useAdminPeopleActions({
     detailRegistration,
     authHeaders,
-    exhibitorsCollection,
+    organizationsCollection,
     registrationsCollection,
     queryClient,
     registrationsQueryKey,
@@ -273,20 +273,20 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     auth.logout();
   }, [auth]);
 
-  // A saved or deleted exhibitor is written into the collection from the
+  // A saved or deleted organization is written into the collection from the
   // server's response, unless the session ended while the request was in flight.
-  const handleExhibitorSaved = useCallback(
+  const handleOrganizationSaved = useCallback(
     (item: ItemDraft, isCurrent: () => boolean) => {
-      void applyAdminExhibitorSaved(exhibitorsCollection, item, isCurrent);
+      void applyAdminOrganizationSaved(organizationsCollection, item, isCurrent);
     },
-    [exhibitorsCollection],
+    [organizationsCollection],
   );
 
-  const handleExhibitorDeleted = useCallback(
+  const handleOrganizationDeleted = useCallback(
     (id: number, isCurrent: () => boolean) => {
-      void applyAdminExhibitorDeleted(exhibitorsCollection, id, isCurrent);
+      void applyAdminOrganizationDeleted(organizationsCollection, id, isCurrent);
     },
-    [exhibitorsCollection],
+    [organizationsCollection],
   );
 
   // A stable array so the recovery hook's effect only re-runs when one of the
@@ -301,7 +301,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       roomsQuery.error as Error | null,
       tableTypesQuery.error as Error | null,
       layoutsQuery.error as Error | null,
-      exhibitorsQuery.error as Error | null,
+      organizationsQuery.error as Error | null,
       areasQuery.error as Error | null,
       peopleCountsQuery.error as Error | null,
     ],
@@ -312,7 +312,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       roomsQuery.error,
       tableTypesQuery.error,
       layoutsQuery.error,
-      exhibitorsQuery.error,
+      organizationsQuery.error,
       areasQuery.error,
       peopleCountsQuery.error,
     ],
@@ -496,7 +496,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <RegistrationList
                     registrations={registrations}
                     tables={tables}
-                    exhibitors={exhibitors}
+                    organizations={organizations}
                     filter={filter}
                     onFilterChange={setFilter}
                     onUpdateStatus={handleUpdateStatus}
@@ -519,28 +519,28 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 {canManageAdminSections && activeKey === "scratchpad" && (
                   <ScratchpadManagement authHeaders={authHeaders} editionId={activeEdition.id} />
                 )}
-                {canManageAdminSections && activeKey === "exhibitors" && (
+                {canManageAdminSections && activeKey === "organizations" && (
                   <Card tone="secondary" className="mb-4">
                     <CardContent>
-                      <ExhibitorChangeReview
+                      <OrganizationChangeReview
                         authHeaders={authHeaders}
                         onDecided={() => {
-                          void refetchAdminExhibitors(
-                            exhibitorsCollection,
-                            captureAdminExhibitorsFence(),
+                          void refetchAdminOrganizations(
+                            organizationsCollection,
+                            captureAdminOrganizationsFence(),
                           );
                           void queryClient.invalidateQueries({
-                            queryKey: queryKeys.admin.contentManagement.section("exhibitors"),
+                            queryKey: queryKeys.admin.contentManagement.section("organizations"),
                           });
                         }}
                       />
                       <ContentSection
-                        sectionKey="exhibitors"
-                        title={m.admin_content_exhibitors_section()}
+                        sectionKey="organizations"
+                        title={m.admin_content_organizations_section()}
                         authHeaders={authHeaders}
-                        onItemSaved={handleExhibitorSaved}
-                        onItemDeleted={handleExhibitorDeleted}
-                        captureFence={captureAdminExhibitorsFence}
+                        onItemSaved={handleOrganizationSaved}
+                        onItemDeleted={handleOrganizationDeleted}
+                        captureFence={captureAdminOrganizationsFence}
                       />
                     </CardContent>
                   </Card>
@@ -571,7 +571,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     layouts={layouts}
                     registrations={registrations}
                     rooms={rooms}
-                    exhibitors={exhibitors}
+                    organizations={organizations}
                     areas={areas}
                     authHeaders={authHeaders}
                     onAddTable={handleAddTable}
