@@ -213,3 +213,19 @@ def test_metadata_and_animation():
     )
     with pytest.raises(ServiceError, match="static"):
         exhibitor_logos.encode(animated.getvalue(), "image/png")
+
+
+@pytest.mark.parametrize(
+    "name", ["..%2Fsecret.png", "%2E%2E%2Fsecret.png", "..%5Csecret.png", "not-a-managed-logo.png"]
+)
+async def test_public_path_traversal(client, storage, name):
+    assert (await client.get(exhibitor_logos.PREFIX + name)).status_code == 404
+
+
+async def test_public_logo_cannot_follow_private_symlink(client, storage):
+    name = f"{uuid4().hex}-{'0' * 64}.png"
+    private = storage[1] / name
+    private.write_bytes(image_bytes())
+    (storage[0] / name).symlink_to(private)
+    assert (await client.get(exhibitor_logos.PREFIX + name)).status_code == 404
+    assert private.exists()

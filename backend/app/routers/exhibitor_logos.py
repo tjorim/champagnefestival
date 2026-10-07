@@ -1,5 +1,7 @@
 """Local public logo serving; production Caddy serves only the public root."""
 
+from os.path import basename
+
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
 
@@ -10,9 +12,13 @@ router = APIRouter(tags=["exhibitors"])
 
 @router.get(PREFIX + "{name}")
 async def public_logo(name: str) -> Response:
-    if not NAME.fullmatch(name):
+    filename = basename(name)
+    if filename != name or not NAME.fullmatch(filename):
         raise HTTPException(404, "Logo not found.")
-    path = roots()[0] / name
+    directory = roots()[0].resolve()
+    path = (directory / filename).resolve()
+    if path.parent != directory:
+        raise HTTPException(404, "Logo not found.")
     try:
         data = path.read_bytes()
     except FileNotFoundError as exc:
