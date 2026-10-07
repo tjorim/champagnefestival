@@ -9,9 +9,9 @@ import type { LiveEnvelope } from "@/utils/liveStream";
  *
  * - `eager`: one full load of the resource when the collection starts. Every
  *   admin resource uses this today.
- * - `on-demand`: rows are loaded for the queries that ask for them (the
- *   server-driven tables of #1174). The `queryFn` then reads the requested
- *   subset from `context.meta.loadSubsetOptions`.
+ * - `on-demand`: available for future consumers, but unused. The #1175 spike
+ *   chose Query pages for server-driven tables. An on-demand `queryFn` would
+ *   read the requested subset from `context.meta.loadSubsetOptions`.
  *
  * Both modes share the same lifecycle (registration, sign-out reset, session
  * fence, guarded direct writes), so choosing a mode is the only difference a

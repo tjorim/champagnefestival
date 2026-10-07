@@ -619,17 +619,23 @@ reference lives in `backend/README.md` ("Paged list contract"); the choices:
 
 ## Roadmap
 
-Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR #1173) has merged. The server-driven tables work is the epic [#1174](https://github.com/tjorim/champagnefestival/issues/1174); its sub-issues are listed in dependency order.
+The server-driven tables epic [#1174](https://github.com/tjorim/champagnefestival/issues/1174)
+is complete as of 2026-10-07. All eight sub-issues (#1175–#1182) are closed:
+the spike selected Query pages, the backend supplies full-result sorting,
+filtering, counts and exports, and Members, Volunteers, People and registrations
+render through `AdminDataTable`. People pages use optimistic mutation callbacks;
+the registrations collection is complete only within the active edition.
+See the implementation records below and the [shared table contract](../admin-data-table.md).
 
-| Order | Follow-up | Issue |
-| --- | --- | --- |
-| 1 | Migrate venues, rooms, layouts, areas and table types as a group (done in [#1183](https://github.com/tjorim/champagnefestival/issues/1183)), and exhibitors (done in [#1184](https://github.com/tjorim/champagnefestival/issues/1184)), on the shared collection factory (decided in [#1166](https://github.com/tjorim/champagnefestival/issues/1166), see [above](#shared-collection-factory-and-remaining-resources-1166)) | [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) |
-| 2 | Persisted collections for event-day resilience: **decided** (2026-10-06): read-only warm start through the Query cache, phased and gated on privacy; SQLite persistence deferred; see [the decision](1168-persisted-collections.md) | [#1168](https://github.com/tjorim/champagnefestival/issues/1168) |
-| 3 | Backend: counts, registration count per person, duplicate-email lookup and exports for people and volunteers | [#1177](https://github.com/tjorim/champagnefestival/issues/1177) |
-| 3 | Server-driven data layer for the people list (Query pages, no people collection) | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
-| 3 | `AdminDataTable` on TanStack Table manual mode | [#1180](https://github.com/tjorim/champagnefestival/issues/1180) |
+The preceding collection work is also complete: #1164 (initial people collection,
+retired by #1181), #1166 (shared factory and resource decisions), #1165 (tables and
+occupancy), #1167 (write receipts), #1183 (venue group), #1184 (exhibitors) and
+#1169 (this record).
 
-Done: [#1182](https://github.com/tjorim/champagnefestival/issues/1182) (active-edition registrations, shared list renderer and server counts, 2026-10-07), [#1179](https://github.com/tjorim/champagnefestival/issues/1179) and [#1181](https://github.com/tjorim/champagnefestival/issues/1181) (people screens and optimistic Query writes, implemented together; see below), [#1176](https://github.com/tjorim/champagnefestival/issues/1176) (shared paged list contract for people and volunteers, see [above](#paged-list-contract-for-people-and-volunteers-1176)), [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (spike and decision: Query with `keepPreviousData`, edition-scoped registrations), [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) (exhibitors), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
+Persistence was decided in [#1168](https://github.com/tjorim/champagnefestival/issues/1168).
+Its separate implementation is tracked by [#1197](https://github.com/tjorim/champagnefestival/issues/1197),
+subject to the [privacy and validation gates](1168-persisted-collections.md).
+It is outside #1174; list pages must never be persisted.
 
 ## References
 
