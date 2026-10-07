@@ -82,8 +82,8 @@ async def claim_unowned_registrations_for_email(
     left untouched — this only ever moves ``Registration.user_id`` from
     ``NULL`` to a value, never reassigns an already-owned one (#953's
     existing-owner-protection acceptance criterion). Shared by
-    ``app.routers.me.claim_my_registrations`` (an OIDC user proving email
-    control via a one-shot lookup token) and visitor magic-link redemption
+    ``app.routers.me.claim_verified_email_registrations`` (an OIDC user
+    confirming their own verified email) and visitor magic-link redemption
     (the link itself is that same proof).
 
     Does not commit — caller commits as part of the same transaction.

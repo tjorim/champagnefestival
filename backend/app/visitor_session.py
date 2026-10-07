@@ -3,7 +3,7 @@
 A visitor session is database-backed, not a stateless JWT: the ``HttpOnly``
 cookie's value is an opaque session ID, looked up here only by its hash
 (``VisitorSession.session_hash``), never stored or compared in cleartext —
-the same shape ``ReservationAccessToken``/``VisitorMagicLink`` already use
+the same shape ``VisitorMagicLink`` uses
 for emailed credentials. This makes the confirmed 7-day sliding idle window
 (extend ``expires_at`` on use) and 30-day hard cap (``hard_expires_at``,
 never extended) simple row operations instead of needing token-revocation
@@ -261,7 +261,7 @@ def actor_for_user(user: User) -> tuple[str, str | None]:
     return user.id, VISITOR_AUTH_SOURCE
 
 
-async def get_current_exhibitor_manager(
+async def get_exhibitor_contact_email(
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
 ) -> str | None:
     """Resolve contact email from either sign-in method's verified identity.

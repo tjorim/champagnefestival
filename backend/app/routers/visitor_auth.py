@@ -1,10 +1,8 @@
 """Shared passwordless account sign-in (#953, #1192): magic-link request/redemption
 and session status/sign-out.
 
-Distinct from the existing one-shot guest lookup
-(``app.routers.registrations``'s ``/my/request``/``/my/access``): redeeming a
-magic link here establishes a persistent ``VisitorSession`` (a cookie), not a
-single read. See docs/decisions/953-visitor-passwordless-session.md.
+Redeeming a magic link establishes a persistent ``VisitorSession`` cookie.
+See docs/decisions/953-visitor-passwordless-session.md.
 """
 
 from __future__ import annotations
@@ -163,9 +161,9 @@ async def redeem_visitor_magic_link(
 
     Single-use (the `with_for_update` lock on the link row serializes a
     concurrent double-redemption — the loser sees the link already expired
-    below and 401s, exactly like ``_get_guest_access_token_or_401``).
+    below and receives 401).
     Immediately claims any currently-unowned registration matching the
-    redeemed email, the same operation ``POST /api/me/registrations/claim``
+    redeemed email, the same operation ``POST /api/me/registrations/claim-verified-email``
     performs for an OIDC caller — this link is equally strong proof of email
     control, so no separate token is required here.
     """
@@ -173,8 +171,7 @@ async def redeem_visitor_magic_link(
 
     link = await _get_magic_link_or_401(db, body.token)
     email_norm = link.email
-    # Expire in place rather than delete, matching ReservationAccessToken's
-    # convention — the row still exists to make a replay cleanly 401.
+    # Expire in place so replay of the same link cleanly returns 401.
     link.expires_at = datetime.now(UTC)
 
     user = await get_or_create_user_by_email(db, email_norm, commit=False)

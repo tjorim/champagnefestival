@@ -414,7 +414,8 @@ describe("MyRegistrationsPage", () => {
       expect(screen.getByText("Grand Opening")).toBeInTheDocument();
     });
     expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    // The account page owns sign-out for all of its sections.
+    expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
     // toLocaleDateString's exact format is locale-dependent (varies between
     // dev machines and CI runners); only assert the locale-independent parts.
     expect(screen.getByText(/^Signed in until /)).toBeInTheDocument();
@@ -570,53 +571,5 @@ describe("MyRegistrationsPage", () => {
 
     expect(await screen.findByLabelText("Email")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Sign out" })).not.toBeInTheDocument();
-  });
-
-  it("returns to the email form after signing out of a returning-visitor session", async () => {
-    let signedOut = false;
-    server.use(
-      http.get("/api/visitor-sessions/status", () =>
-        signedOut
-          ? HttpResponse.json({ authenticated: false, expires_at: null })
-          : HttpResponse.json({ authenticated: true, expires_at: "2026-09-14T00:00:00Z" }),
-      ),
-      http.get("/api/me/registrations", () => HttpResponse.json([])),
-      http.post("/api/visitor-sessions/sign-out", () => {
-        signedOut = true;
-        return new HttpResponse(null, { status: 204 });
-      }),
-    );
-
-    await renderPage();
-
-    const signOutButton = await screen.findByRole("button", { name: "Sign out" });
-    fireEvent.click(signOutButton);
-
-    await waitFor(() => {
-      expect(screen.getByLabelText("Email")).toBeInTheDocument();
-    });
-  });
-
-  it("keeps the session and shows an error when sign-out fails", async () => {
-    server.use(
-      http.get("/api/visitor-sessions/status", () =>
-        HttpResponse.json({ authenticated: true, expires_at: "2026-09-14T00:00:00Z" }),
-      ),
-      http.get("/api/me/registrations", () => HttpResponse.json([])),
-      http.post("/api/visitor-sessions/sign-out", () => HttpResponse.json(null, { status: 500 })),
-    );
-
-    await renderPage();
-
-    const signOutButton = await screen.findByRole("button", { name: "Sign out" });
-    fireEvent.click(signOutButton);
-
-    await waitFor(() => {
-      expect(screen.getByText("Unable to load your registrations.")).toBeInTheDocument();
-    });
-    // Must still show the signed-in view, not fall back to the email form —
-    // the server session and cookie are still valid after a failed sign-out.
-    expect(screen.queryByLabelText("Email")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 });

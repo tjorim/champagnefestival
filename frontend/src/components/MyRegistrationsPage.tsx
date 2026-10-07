@@ -2,7 +2,6 @@ import {
   CalendarDaysIcon,
   CircleCheckIcon,
   InboxIcon,
-  LogOutIcon,
   MailOpenIcon,
   RefreshCwIcon,
   TriangleAlertIcon,
@@ -47,7 +46,6 @@ import {
   redeemVisitorMagicLink,
   requestBookingChange,
   requestVisitorMagicLink,
-  signOutVisitorSession,
   type GuestRegistration,
 } from "@/utils/publicRegistrationApi";
 import { EMAIL_REGEX } from "@/config/constants";
@@ -77,12 +75,10 @@ export function buildCheckInQrUrl(
 
 interface MyRegistrationsPageProps {
   onEmailSessionChange?: (registrations: GuestRegistration[] | null) => void;
-  hideSessionControls?: boolean;
 }
 
 export default function MyRegistrationsPage({
   onEmailSessionChange,
-  hideSessionControls = false,
 }: MyRegistrationsPageProps = {}) {
   const auth = useAuth();
   const { token: rawToken } = useSearch({ from: "/me" });
@@ -107,8 +103,6 @@ export default function MyRegistrationsPage({
   );
   const [sessionExpiresAt, setSessionExpiresAt] = useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const [signOutError, setSignOutError] = useState("");
   const [requestRegistration, setRequestRegistration] = useState<GuestRegistration | null>(null);
   const [requestType, setRequestType] = useState<"change" | "cancellation">("change");
   const [requestDetails, setRequestDetails] = useState("");
@@ -302,7 +296,7 @@ export default function MyRegistrationsPage({
     registrationsMutation.isError &&
     isRegistrationLookupError(registrationsMutation.error) &&
     registrationsMutation.error.code === "invalid_token";
-  const showSignOut = !auth.isAuthenticated && registrations !== null;
+  const hasEmailSession = !auth.isAuthenticated && registrations !== null;
   // Not gated on the returning-visitor session check (sessionChecked) below:
   // the common case has no session, and gating this would flash a loading
   // spinner in front of the email form on every visit just to rule that out.
@@ -330,30 +324,6 @@ export default function MyRegistrationsPage({
     setTokenAttempted(false);
     registrationsMutation.reset();
   }, [navigate, registrationsMutation, setError, setIsEmailInvalid, setRequestSent]);
-
-  const handleSignOut = useCallback(async () => {
-    setIsSigningOut(true);
-    setSignOutError("");
-    try {
-      await signOutVisitorSession();
-    } catch {
-      // Local "signed in" state must only clear once sign-out actually
-      // succeeded server-side — otherwise the UI would show the sign-in
-      // form while the session and cookie are still valid (PR #1012 review).
-      // Shown next to the sign-out button itself: the generic `error` state
-      // above only renders in the email-request form, which isn't visible
-      // while viewing results.
-      setIsSigningOut(false);
-      setSignOutError(m.my_registrations_error());
-      return;
-    }
-    setIsSigningOut(false);
-    onEmailSessionChange?.(null);
-    setSessionRegistrations(null);
-    setSessionExpiresAt(null);
-    setSessionChecked(true);
-    resetToRequestForm();
-  }, [resetToRequestForm, onEmailSessionChange]);
 
   const emailForm = useForm({
     defaultValues: { email: "" },
@@ -699,50 +669,25 @@ export default function MyRegistrationsPage({
                 </div>
               ) : null}
 
-              {showSignOut && sessionExpiresAt && (
+              {showRecoveryCTA && !auth.isAuthenticated && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-4 w-full"
+                  onClick={resetToRequestForm}
+                >
+                  <Icon icon={RefreshCwIcon} />
+                  {m.my_registrations_request_new_link()}
+                </Button>
+              )}
+
+              {hasEmailSession && sessionExpiresAt && (
                 <p className="text-sm text-subtle text-center mt-4 mb-0">
                   {m.my_registrations_session_expires({
                     date: new Date(sessionExpiresAt).toLocaleDateString(),
                   })}
                 </p>
               )}
-
-              {showSignOut && signOutError && (
-                <Alert variant="danger" className="mt-4 mb-0" role="alert">
-                  <Icon icon={TriangleAlertIcon} className="me-2" />
-                  {signOutError}
-                </Alert>
-              )}
-
-              {!hideSessionControls &&
-                (showSignOut ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 w-full"
-                    disabled={isSigningOut}
-                    onClick={() => void handleSignOut()}
-                  >
-                    {isSigningOut ? (
-                      <Spinner size="sm" role="status" aria-hidden="true" />
-                    ) : (
-                      <Icon icon={LogOutIcon} />
-                    )}
-                    {m.my_registrations_sign_out()}
-                  </Button>
-                ) : (
-                  !auth.isAuthenticated && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-4 w-full"
-                      onClick={resetToRequestForm}
-                    >
-                      <Icon icon={RefreshCwIcon} />
-                      {m.my_registrations_request_new_link()}
-                    </Button>
-                  )
-                ))}
             </>
           )}
         </>

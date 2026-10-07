@@ -7,14 +7,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
 from app.models import Exhibitor, Person
 from app.schemas import ManagedExhibitorOut
-from app.visitor_session import get_current_exhibitor_manager
+from app.visitor_session import get_exhibitor_contact_email
 
 router = APIRouter(prefix="/api/me/exhibitors", tags=["me", "exhibitors"])
 
 
 @router.get("", response_model=list[ManagedExhibitorOut])
 async def my_exhibitors(
-    response: Response, email: str | None = Depends(get_current_exhibitor_manager), db: AsyncSession = Depends(get_db)
+    response: Response, email: str | None = Depends(get_exhibitor_contact_email), db: AsyncSession = Depends(get_db)
 ) -> list[dict]:
     response.headers["Cache-Control"] = "no-store"
     if email is None:

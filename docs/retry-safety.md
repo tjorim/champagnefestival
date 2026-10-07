@@ -368,13 +368,15 @@ single `/me?token=…` link establishes the email session; eligible bookings are
 claimed as before and current contact records determine exhibitor access.
 No separate manager writes or credentials remain.
 
-The shared sign-out button performs one request per click with retries disabled.
+`MyAccountPage` owns the shared sign-out action; the bookings section has no
+standalone sign-out implementation or alternate session controls. The button
+performs one request per click with retries disabled.
 Only a successful 204 clears both booking and exhibitor views. A failed or
 ambiguous response retains those views and reports an error; the caller can
 reconcile with session status. Repeating sign-out is convergent and safe.
 A session generation fences late responses from the revoked session. This is
 covered by `MyAccountSession.test.tsx`; backend shared-session revocation is
-covered by `test_exhibitor_manager_sessions.py` and existing visitor tests.
+covered by `test_my_exhibitors.py` and existing visitor tests.
 
 `GET /api/me/exhibitors` accepts the shared cookie or an OIDC bearer token
 with an explicitly verified email. Cookie reads refresh the same sliding

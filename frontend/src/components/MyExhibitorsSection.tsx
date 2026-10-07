@@ -8,7 +8,7 @@ export interface ManagedExhibitor {
   active: boolean;
 }
 
-export default function MyExhibitorsPage({ exhibitors }: { exhibitors: ManagedExhibitor[] }) {
+export default function MyExhibitorsSection({ exhibitors }: { exhibitors: ManagedExhibitor[] }) {
   return (
     <section className="flex flex-col gap-4">
       <h2 className="text-xl font-medium">{m.manager_title()}</h2>
