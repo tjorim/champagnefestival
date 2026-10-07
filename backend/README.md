@@ -367,3 +367,29 @@ CORS_ORIGINS=https://champagnefestival.be
 The README documents shipped behaviour; it is not a second product backlog.
 Current gaps, dependencies, and preferred implementation order live in the
 [product audit](../docs/product-audit-2026-08.md).
+
+### Exhibitor descriptions
+
+Admin `POST /api/exhibitors` and partial `PUT /api/exhibitors/{id}` accept
+`description_language` (`nl`, `fr`, or `en`) and nullable `description_nl`,
+`description_fr`, `description_en`. Each text is limited to 600 characters;
+leading/trailing whitespace is removed and blank text becomes null. Whenever
+any text exists, the selected original language must have non-empty text.
+Clear the description by setting all four fields to null. Updates validate the
+merged stored/requested values, so translations can be edited independently.
+
+Descriptions are literal plain text: HTML and Markdown syntax is stored as text
+and escaped by the public UI, never interpreted. Admin collection responses and
+public edition exhibitors include all four fields. The visitor's language wins
+when non-empty, otherwise the original text is displayed. Descriptions appear
+under exhibitor names in the public carousel, including a conditional vendor
+section when the edition payload contains vendors; floor plans and compact admin
+lists remain unchanged. The existing edition lineup restriction to producers
+and sponsors is unchanged (vendors cannot currently be linked to a lineup).
+
+MCP `create_exhibitor` and `update_exhibitor` expose the same fields and validation.
+Omitted/null MCP arguments leave update fields unchanged; empty text strings
+clear individual translations, and an empty `description_language` clears the
+original-language selector. Clearing all text requires clearing that selector
+in the same update. Admin edits are immediately live. Manager proposals and
+supersession belong to #1193 and are not implemented here.

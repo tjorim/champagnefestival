@@ -1424,6 +1424,10 @@ class ChampagneFestivalMcpBackend:
         website: str = "",
         active: bool = True,
         type: str = "vendor",
+        description_language: str | None = None,
+        description_nl: str | None = None,
+        description_fr: str | None = None,
+        description_en: str | None = None,
         contact_person_id: str | None = None,
     ) -> dict:
         """Create an exhibitor (producer/sponsor/vendor). Requires the ``admin`` role."""
@@ -1436,6 +1440,10 @@ class ChampagneFestivalMcpBackend:
             website=website,
             active=active,
             type=type,
+            description_language=description_language,
+            description_nl=description_nl,
+            description_fr=description_fr,
+            description_en=description_en,
             contact_person_id=contact_person_id,
         )
 
@@ -1457,6 +1465,10 @@ class ChampagneFestivalMcpBackend:
         website: str | None = None,
         active: bool | None = None,
         type: str | None = None,
+        description_language: str | None = None,
+        description_nl: str | None = None,
+        description_fr: str | None = None,
+        description_en: str | None = None,
         contact_person_id: str | None = None,
         clear_contact_person: bool = False,
     ) -> dict:
@@ -1465,6 +1477,9 @@ class ChampagneFestivalMcpBackend:
         Retyping to ``"vendor"`` fails while any edition still lists this exhibitor
         (vendors may not appear in an edition lineup). ``contact_person_id`` has no
         natural "clear" value, so pass ``clear_contact_person=True`` to unset it.
+        Descriptions are literal plain text (600 characters per language), with
+        original language nl/fr/en. Pass empty strings for each description text
+        and description_language to clear the description.
         Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1477,6 +1492,10 @@ class ChampagneFestivalMcpBackend:
             website=website,
             active=active,
             type=type,
+            description_language=description_language,
+            description_nl=description_nl,
+            description_fr=description_fr,
+            description_en=description_en,
             contact_person_id=contact_person_id,
             clear_contact_person=clear_contact_person,
         )

@@ -33,6 +33,11 @@ export interface Event {
 }
 
 export interface SliderItem {
+  description_language?: "nl" | "fr" | "en" | null;
+  description_nl?: string | null;
+  description_fr?: string | null;
+  description_en?: string | null;
+
   id: number;
   name: string;
   image: string;

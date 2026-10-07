@@ -122,3 +122,21 @@ async def test_update_exhibitor_blocked_retype_to_vendor_while_linked(db_session
 
     with pytest.raises(ValueError, match="editions still link"):
         await mcp_exhibitors.update_exhibitor(factory, "admin-1", exhibitor_id, type="vendor")
+
+
+async def test_mcp_description_update_and_clear(db_session):
+    factory = mcp_session_factory(db_session)
+    row = await mcp_exhibitors.create_exhibitor(
+        factory, "admin-1", name="Maison", description_language="fr", description_fr="Bonjour"
+    )
+    row = await mcp_exhibitors.update_exhibitor(factory, "admin-1", row["id"], description_en="Hello")
+    assert row["description_fr"] == "Bonjour"
+    assert row["description_en"] == "Hello"
+    with pytest.raises(ValueError, match="original language"):
+        await mcp_exhibitors.update_exhibitor(factory, "admin-1", row["id"], description_fr="")
+    row = await mcp_exhibitors.update_exhibitor(
+        factory, "admin-1", row["id"], description_language="", description_fr="", description_en=""
+    )
+    assert row["description_language"] is None
+    assert row["description_fr"] is None
+    assert row["description_en"] is None

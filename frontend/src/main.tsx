@@ -136,14 +136,23 @@ function SuspendedMarqueeSlider({
   itemsType,
   items,
 }: {
-  itemsType: "producers" | "sponsors";
+  itemsType: "producers" | "sponsors" | "vendors";
   items: Array<{ id: number; name: string; image: string }>;
 }) {
   // Get appropriate loading text based on itemsType
-  const loadingText = itemsType === "producers" ? m.loading_producers() : m.loading_sponsors();
+  const loadingText =
+    itemsType === "producers"
+      ? m.loading_producers()
+      : itemsType === "vendors"
+        ? m.loading_vendors()
+        : m.loading_sponsors();
 
   const errorText =
-    itemsType === "producers" ? m.error_loading_producers() : m.error_loading_sponsors();
+    itemsType === "producers"
+      ? m.error_loading_producers()
+      : itemsType === "vendors"
+        ? m.error_loading_vendors()
+        : m.error_loading_sponsors();
 
   return (
     <SuspenseWithBoundary
@@ -271,7 +280,7 @@ function App() {
 
   // Fetch live edition data; keep an empty fallback shape on API errors.
   const { edition, hasEdition, hasLoadError } = useActiveEdition();
-  const { producers, sponsors } = edition;
+  const { producers, sponsors, vendors = [] } = edition;
 
   // Derive festival start/end dates from the active edition
   const { start: festivalDate, end: festivalEndDate } = useMemo(
@@ -630,6 +639,15 @@ function App() {
           </div>
         </section>
 
+        {/* Vendors Carousel */}
+        {vendors.length > 0 && (
+          <section id="vendors" className="content-section">
+            <div className="site-container mx-auto w-full text-center">
+              <SectionHeading id="vendors-heading" title={m.vendors_title()} />
+              <SuspendedMarqueeSlider itemsType="vendors" items={vendors} />
+            </div>
+          </section>
+        )}
         {/* Sponsors Carousel */}
         <section id="sponsors" className="content-section highlight-section">
           <div className="site-container mx-auto w-full text-center">

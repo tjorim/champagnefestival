@@ -56,6 +56,11 @@ function apiToItemDraft(d: Record<string, unknown>): ItemDraft {
     name: d.name as string,
     image: d.image as string,
     website: d.website as string | undefined,
+    description_language: (d.description_language as ItemDraft["description_language"]) ?? null,
+    description_nl: (d.description_nl as ItemDraft["description_nl"]) ?? null,
+    description_fr: (d.description_fr as ItemDraft["description_fr"]) ?? null,
+    description_en: (d.description_en as ItemDraft["description_en"]) ?? null,
+
     active: d.active as boolean | undefined,
     type: d.type as string | undefined,
     contactPersonId: (d.contact_person_id as string | null) ?? null,
@@ -86,6 +91,11 @@ export async function saveContentSectionItem(
     name: draft.name,
     image: draft.image,
     website: draft.website ?? "",
+    description_language: draft.description_language || null,
+    description_nl: draft.description_nl || null,
+    description_fr: draft.description_fr || null,
+    description_en: draft.description_en || null,
+
     type: draft.type ?? "vendor",
     contact_person_id: draft.contactPersonId ?? null,
   };

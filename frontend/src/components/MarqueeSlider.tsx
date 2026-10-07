@@ -1,3 +1,6 @@
+import { getLocale } from "@/paraglide/runtime";
+import { exhibitorDescription } from "@/utils/exhibitorDescription";
+import type { SliderItem } from "@/config/editions";
 import { useEffect, useRef, useState, type FocusEvent } from "react";
 // Import Swiper React components
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -12,11 +15,7 @@ import "./marqueeSliderVendor.css";
 /**
  * Represents an item in the carousel
  */
-interface CarouselItem {
-  id: number;
-  name: string;
-  image: string;
-}
+type CarouselItem = SliderItem;
 
 /**
  * Props for the MarqueeSlider component
@@ -25,7 +24,7 @@ interface CarouselItem {
  * in parent components, but doesn't affect the component's rendering logic
  */
 interface MarqueeSliderProps {
-  itemsType?: "producers" | "sponsors";
+  itemsType?: "producers" | "sponsors" | "vendors";
   items?: CarouselItem[];
 }
 
@@ -219,6 +218,11 @@ function MarqueeSlider({ items = [] }: MarqueeSliderProps) {
                 </div>
               </div>
               <h5 className="marquee-logo-title text-center text-sm">{item.name}</h5>
+              {exhibitorDescription(item, getLocale()) && (
+                <p className="text-center text-sm whitespace-pre-line break-words px-3 pb-3">
+                  {exhibitorDescription(item, getLocale())}
+                </p>
+              )}
             </div>
           </SwiperSlide>
         ))}

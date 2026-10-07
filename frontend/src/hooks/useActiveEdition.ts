@@ -38,6 +38,7 @@ export interface ActiveEdition {
   events: Event[];
   producers: SliderItem[];
   sponsors: SliderItem[];
+  vendors?: SliderItem[];
 }
 
 interface ApiVenue {
@@ -60,6 +61,7 @@ interface ApiEdition {
   events: Record<string, unknown>[];
   producers: SliderItem[];
   sponsors: SliderItem[];
+  vendors?: SliderItem[];
 }
 
 export interface ActiveEditionState {
@@ -171,6 +173,7 @@ function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdit
     events,
     producers: api.producers ?? [],
     sponsors: api.sponsors ?? [],
+    vendors: api.vendors ?? [],
   };
 }
 

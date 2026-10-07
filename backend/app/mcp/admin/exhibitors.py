@@ -27,6 +27,10 @@ async def create_exhibitor(
     website: str = "",
     active: bool = True,
     type: str = "vendor",
+    description_language: str | None = None,
+    description_nl: str | None = None,
+    description_fr: str | None = None,
+    description_en: str | None = None,
     contact_person_id: str | None = None,
 ) -> dict:
     body = validate_with_schema(
@@ -36,6 +40,10 @@ async def create_exhibitor(
         website=website,
         active=active,
         type=type,
+        description_language=description_language,
+        description_nl=description_nl,
+        description_fr=description_fr,
+        description_en=description_en,
         contact_person_id=contact_person_id,
     )
     async with session_factory() as db:
@@ -79,12 +87,20 @@ async def update_exhibitor(
     website: str | None = None,
     active: bool | None = None,
     type: str | None = None,
+    description_language: str | None = None,
+    description_nl: str | None = None,
+    description_fr: str | None = None,
+    description_en: str | None = None,
     contact_person_id: str | None = None,
     clear_contact_person: bool = False,
 ) -> dict:
-    provided = {
+    provided: dict[str, Any] = {
         k: v
         for k, v in {
+            "description_language": description_language,
+            "description_nl": description_nl,
+            "description_fr": description_fr,
+            "description_en": description_en,
             "name": name,
             "image": image,
             "website": website,
@@ -94,6 +110,8 @@ async def update_exhibitor(
         }.items()
         if v is not None
     }
+    if description_language == "":
+        provided["description_language"] = None
     body = validate_with_schema(ExhibitorUpdate, **provided)
     async with session_factory() as db:
         e = await get_or_error(db, Exhibitor, exhibitor_id, f"Exhibitor '{exhibitor_id}' not found.")

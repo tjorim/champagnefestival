@@ -178,6 +178,10 @@ async def _load_exhibitors_by_ids(db: AsyncSession, ids: set[int]) -> dict[int, 
             "name": exhibitor.name,
             "image": exhibitor.image,
             "website": exhibitor.website,
+            "description_language": exhibitor.description_language,
+            "description_nl": exhibitor.description_nl,
+            "description_fr": exhibitor.description_fr,
+            "description_en": exhibitor.description_en,
             "type": exhibitor.type,
         }
         for exhibitor in result.scalars().all()

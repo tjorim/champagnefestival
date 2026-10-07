@@ -1051,7 +1051,28 @@ class PersonUpdate(RequestModel):
 # ---------------------------------------------------------------------------
 
 
-class ExhibitorCreate(RequestModel):
+class ExhibitorDescription(RequestModel):
+    description_language: Literal["nl", "fr", "en"] | None = None
+    description_nl: str | None = Field(default=None, max_length=600)
+    description_fr: str | None = Field(default=None, max_length=600)
+    description_en: str | None = Field(default=None, max_length=600)
+
+    @field_validator("description_nl", "description_fr", "description_en", mode="before")
+    @classmethod
+    def normalize_description(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        texts = [self.description_nl, self.description_fr, self.description_en]
+        if any(texts):
+            if not self.description_language or not getattr(self, f"description_{self.description_language}"):
+                raise ValueError("A description requires non-empty text in its original language.")
+        elif self.description_language:
+            raise ValueError("Clear the original language when clearing all description texts.")
+        return self
+
+
+class ExhibitorCreate(ExhibitorDescription):
     name: str = Field(min_length=1, max_length=200)
     image: str = Field(default="", max_length=500)
     website: str = Field(default="", max_length=500)
@@ -1059,8 +1080,12 @@ class ExhibitorCreate(RequestModel):
     type: Literal["producer", "sponsor", "vendor"] = "vendor"
     contact_person_id: str | None = None
 
+    @model_validator(mode="after")
+    def check_description(self) -> Self:
+        return self.validate_original()
 
-class ExhibitorUpdate(RequestModel):
+
+class ExhibitorUpdate(ExhibitorDescription):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     image: str | None = Field(default=None, max_length=500)
     website: str | None = Field(default=None, max_length=500)
@@ -1070,6 +1095,10 @@ class ExhibitorUpdate(RequestModel):
 
 
 class ExhibitorOut(BaseModel):
+    description_language: Literal["nl", "fr", "en"] | None = None
+    description_nl: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
     id: int
     name: str
     image: str
@@ -1693,6 +1722,10 @@ class EditionItemOut(BaseModel):
     Only active items are included; contact person and active flag are
     intentionally excluded — they are internal admin data."""
 
+    description_language: Literal["nl", "fr", "en"] | None = None
+    description_nl: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
     id: int
     name: str
     image: str

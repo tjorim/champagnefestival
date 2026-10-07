@@ -1173,5 +1173,14 @@
   "admin_table_sort": "Sort",
   "admin_table_results": "{total} results",
   "admin_cache_restored": "Showing saved rows.",
-  "admin_cache_last_synced": "Last synced: {time}."
+  "admin_cache_last_synced": "Last synced: {time}.",
+  "admin_item_description_language": "Original language",
+  "admin_item_description_nl": "Dutch",
+  "admin_item_description_fr": "French",
+  "admin_item_description_en": "English",
+  "admin_item_description_help": "Optional plain text, up to 600 characters per language. If you add a description, include text in its original language. Other languages are optional translations.",
+  "vendors_title": "Vendors",
+  "loading_vendors": "Loading vendors…",
+  "error_loading_vendors": "Unable to load vendors.",
+  "admin_item_description_original_required": "Enter a description in its original language, or clear all description texts."
 }
