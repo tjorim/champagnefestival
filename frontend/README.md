@@ -179,6 +179,9 @@ src/mocks/
 The mock is a dynamic import guarded by `import.meta.env.DEV`, so it is **never included in
 production builds**.
 
+See the [frontend UI guide](../docs/frontend-ui.md) for cascade layers, runtime
+themes, portal scoping and interaction contracts.
+
 ## Code style guidelines
 
 - **Components**: functional components with TypeScript interfaces; PascalCase filenames

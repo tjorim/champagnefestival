@@ -1,14 +1,15 @@
 # Persisted TanStack DB collections for event-day admin resilience
 
-**Status:** Adopted as a read-only warm start through the Query cache, registrations included, gated on the privacy conditions below; TanStack's SQLite persistence is deferred
+**Status:** Read-only Query/IndexedDB warm start is implemented, including active-edition registrations. Published-policy confirmation and representative device/private-mode sizing remain acceptance gates; TanStack SQLite persistence is deferred.
 **Decided:** 2026-10-06 (revised the same day: the goal is a warm start, not an offline app), [#1168](https://github.com/tjorim/champagnefestival/issues/1168)
 **Depends on:** [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (done; see the [hand-over](tanstack-db.md#hand-over-to-1168-persistence))
 
-This record is desk research against the packages' published documentation and
-the current code. No spike branch was built and no bundle was measured, by the
-owner's choice (2026-10-06: skip the spike). The items a spike would have answered
-are listed under [Unverified](#original-verification-questions-and-remaining-checks) and become the
-first tasks of the implementation issue.
+The original choice was based on desk research without a separate spike branch
+(2026-10-06). Current implementation and verification are recorded
+[below](#implementation-verification-1197-2026-10-07); the [browser persistence
+contract](../browser-persistence-contract.md) describes the shared lifecycle
+expectations. Original verification questions are retained alongside their
+answers and remaining checks.
 
 ## Decision
 
@@ -38,14 +39,15 @@ queue and offline check-in are not goals here (web check-in stays live-only,
   [privacy condition](#privacy), which add no new public text (condition 4). The owner chose the device retention: it must
   cover the full festival weekend, set as 72 hours since the last successful write
   (see condition 3).
-- **No spike first** (owner decision). The open questions in
-  [Unverified](#original-verification-questions-and-remaining-checks) are answered by the
-  implementation's first commits, before the persistence is wired to the dashboard,
-  and a failed answer sends the work back to this record.
+- **No separate spike:** the owner chose to answer verification questions during
+  implementation. Results and remaining checks are recorded
+  [below](#implementation-verification-1197-2026-10-07).
 
-Implementation is a separate issue, [#1197](https://github.com/tjorim/champagnefestival/issues/1197) (this record's scope is the decision). It needs
-tests for the restore, wipe, expiry and edition-change paths; because it adds no
-write, `docs/retry-safety.md` needs no entry, and the issue should say so.
+Implementation is tracked by [#1197](https://github.com/tjorim/champagnefestival/issues/1197).
+Restore, wipe, expiry and edition-change paths now have regression coverage;
+the remaining acceptance gates are listed in the
+[product audit](../product-audit-2026-08.md). Read-only cache persistence adds no
+externally callable write and does not change the retry-safety inventory.
 
 ## Questions from the issue
 

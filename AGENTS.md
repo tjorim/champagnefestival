@@ -111,7 +111,7 @@ Future workflow additions should follow these conventions:
 ## Styling
 
 Tailwind v4 and Base UI are the frontend stack; Bootstrap was removed in #1111
-(decision record: `docs/decisions/1111-bootstrap-removal.md`).
+(guide: `docs/frontend-ui.md`).
 
 - UI is built from Base UI primitives in `frontend/src/components/ui/` styled
   with unprefixed Tailwind utilities (for example `flex gap-2 hover:bg-primary`).
