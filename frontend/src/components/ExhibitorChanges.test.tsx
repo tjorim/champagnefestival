@@ -42,6 +42,46 @@ afterEach(() => {
 });
 
 describe("exhibitor proposals", () => {
+  it.each([409, 500])("explains manager submission errors for HTTP %s", async (status) => {
+    server.use(
+      http.get("/api/me/exhibitors/42/changes", () => HttpResponse.json([])),
+      http.post("/api/me/exhibitors/42/changes", () =>
+        HttpResponse.json({ detail: "Submission failed" }, { status }),
+      ),
+    );
+    mount(<MyExhibitorsSection exhibitors={[row]} headers={() => ({})} />);
+    const edit = await screen.findByRole("button", { name: "Edit website and description" });
+    await waitFor(() => expect(edit).toBeEnabled());
+    fireEvent.click(edit);
+    fireEvent.change(screen.getByLabelText("Website URL"), {
+      target: { value: "https://new.example" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
+    const alert = await screen.findByRole("alert");
+    if (status === 409) expect(alert).toHaveTextContent("Refresh the list before deciding.");
+    else
+      expect(alert).toHaveTextContent(
+        "Unable to complete this request. Please try again or request a new link.",
+      );
+  });
+
+  it("sends a reason only for rejection even if text was entered before acceptance", async () => {
+    server.use(http.get("/api/exhibitors/changes", () => HttpResponse.json([change])));
+    const bodies: unknown[] = [];
+    server.use(
+      http.post("/api/exhibitors/changes/proposal/decision", async ({ request }) => {
+        bodies.push(await request.json());
+        return HttpResponse.json({ ...change, status: "accepted" });
+      }),
+    );
+    mount(<ExhibitorChangeReview authHeaders={() => ({})} onDecided={() => {}} />);
+    fireEvent.change(await screen.findByLabelText("Rejection reason (optional)"), {
+      target: { value: "Rejection-only text" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+    await waitFor(() => expect(bodies).toEqual([{ decision: "accepted", reason: null }]));
+  });
+
   it("only submits changed allowed fields and reuses the ID after an ambiguous failure", async () => {
     server.use(http.get("/api/me/exhibitors/42/changes", () => HttpResponse.json([])));
     const bodies: Record<string, unknown>[] = [];

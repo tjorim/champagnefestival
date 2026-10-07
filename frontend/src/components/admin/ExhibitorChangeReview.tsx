@@ -32,7 +32,7 @@ function Review({
         `/api/exhibitors/changes/${change.id}/decision`,
         headers(),
         undefined,
-        { decision, reason: reason || null },
+        { decision, reason: decision === "rejected" ? reason || null : null },
       );
       return isCurrent;
     },

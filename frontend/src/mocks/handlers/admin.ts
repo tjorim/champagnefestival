@@ -713,9 +713,26 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // Exhibitors
   // ──────────────────────────────────────────────────────────────
-  http.get("/api/me/exhibitors/:id/changes", () => HttpResponse.json([])),
+  http.get("/api/me/exhibitors/:id/changes", ({ request, params }) => {
+    // This token represents the verified contact for the first seeded exhibitor.
+    // Email-session tests override this handler, like the visitor-session mocks.
+    const owned = exhibitors.find(
+      (row) => String(row.id) === params.id && row.contact_person_id === "person-01",
+    );
+    if (
+      forcedAuthScenario !== "default" ||
+      parseBearerToken(request) !== "mock-manager-token" ||
+      !owned
+    ) {
+      return authError(404, "Exhibitor not found.");
+    }
+    return HttpResponse.json([]);
+  }),
 
-  http.get("/api/exhibitors/changes", () => HttpResponse.json([])),
+  http.get("/api/exhibitors/changes", ({ request }) => {
+    const error = requireAuth(request);
+    return error ?? HttpResponse.json([]);
+  }),
 
   http.get("/api/exhibitors", ({ request }) => {
     const authError = requireAuth(request);

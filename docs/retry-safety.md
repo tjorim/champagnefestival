@@ -401,6 +401,7 @@ credential. Both-method canonical account linking remains in #1209.
   `decide_exhibitor_change`: **Terminal-state replay** under the exhibitor lock.
   The same accept/reject returns the persisted result without a second live
   update, email or audit. A repeated rejection keeps the original reason.
+  The browser sends reason text only for rejection; acceptance sends `null`.
   An opposite decision, replaced ID or fully superseded ID fails with 409/error.
   A partially superseded proposal applies only the fields still pending.
 - Direct admin exhibitor updates remain **not retry safe**, with no version

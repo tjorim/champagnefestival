@@ -45,6 +45,7 @@ an empty string clears the website. Website validation matches the admin form
 The manager's exhibitor tab on `/me` shows history and an allowed-field form.
 The admin Exhibitors tab shows current and proposed texts side by side for
 every description language, with accept/reject and an optional rejection reason.
+The reason is sent only with rejection; acceptance sends no rejection text.
 Accept changes only fields still pending. Rejection preserves all live data.
 
 Submit, decisions and direct admin edits serialize on the same exhibitor row

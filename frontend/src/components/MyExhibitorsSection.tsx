@@ -13,6 +13,7 @@ import {
 } from "@/components/PublicFields";
 import {
   exhibitorChangesRequest,
+  ExhibitorChangeConflictError,
   exhibitorFieldLabel,
   exhibitorStatusLabel,
   exhibitorTextFields,
@@ -146,7 +147,9 @@ function ProposalForm({
       )}
       {mutation.isError && (
         <Alert variant="danger" role="alert">
-          {m.manager_error()}
+          {mutation.error instanceof ExhibitorChangeConflictError
+            ? mutation.error.message
+            : m.manager_error()}
         </Alert>
       )}
       <Button type="submit" disabled={mutation.isPending}>

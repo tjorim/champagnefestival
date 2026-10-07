@@ -14,6 +14,44 @@ function adminAuthHeaders(token = "dev-token"): Record<string, string> {
 }
 
 describe("MSW operational fixtures", () => {
+  it("enforces admin access and manager ownership for private proposal reads", async () => {
+    await setScenario("default");
+    for (const [token, expected] of [
+      ["", 401],
+      ["forbidden-token", 403],
+      ["dev-token", 200],
+    ] as const) {
+      const response = await fetch("/api/exhibitors/changes", {
+        headers: token ? adminAuthHeaders(token) : {},
+      });
+      expect(response.status).toBe(expected);
+      if (expected === 200) expect(await response.json()).toEqual([]);
+    }
+    for (const [id, token, expected] of [
+      [1, "", 404],
+      [1, "dev-token", 404],
+      [1, "mock-manager-token", 200],
+      [2, "mock-manager-token", 404],
+      [999, "mock-manager-token", 404],
+    ] as const) {
+      const response = await fetch(`/api/me/exhibitors/${id}/changes`, {
+        headers: token ? adminAuthHeaders(token) : {},
+      });
+      expect(response.status).toBe(expected);
+      if (expected === 200) expect(await response.json()).toEqual([]);
+    }
+    for (const scenario of ["auth-signed-out", "auth-forbidden"] as const) {
+      await setScenario(scenario);
+      const admin = await fetch("/api/exhibitors/changes", { headers: adminAuthHeaders() });
+      expect(admin.status).toBe(scenario === "auth-signed-out" ? 401 : 403);
+      const manager = await fetch("/api/me/exhibitors/1/changes", {
+        headers: adminAuthHeaders("mock-manager-token"),
+      });
+      expect(manager.status).toBe(404);
+    }
+    await setScenario("default");
+  });
+
   it("provides localized public FAQ fixtures", async () => {
     const expectedItemsByLocale = {
       en: {
