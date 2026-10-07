@@ -103,6 +103,8 @@ load, no horizontal overflow at 390 pixels and a successful multipart upload.
 Production rollout awaits the persistent volumes, Caddy route and backups in
 `tjorim/apps#262`; it is not represented as a completed deployment here.
 
-CodeQL follow-up: public serving extracts a basename, rejects any changed or
-non-managed filename and requires the resolved file’s parent to equal the
-public root. Traversal and symlinks into private storage are regression-tested.
+CodeQL follow-up: the local public route selects an exact managed filename
+from a trusted public-directory inventory, rejecting directories and all
+symlinks. Request data is used only for comparison and never constructs a path.
+This lookup scans the directory; production Caddy serves it directly. Traversal
+and symlinks into private storage are regression-tested.

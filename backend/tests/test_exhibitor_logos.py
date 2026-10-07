@@ -229,3 +229,15 @@ async def test_public_logo_cannot_follow_private_symlink(client, storage):
     (storage[0] / name).symlink_to(private)
     assert (await client.get(exhibitor_logos.PREFIX + name)).status_code == 404
     assert private.exists()
+
+
+async def test_public_logo_rejects_directory_and_public_symlink(client, storage):
+    name = f"{uuid4().hex}-{'0' * 64}.png"
+    (storage[0] / name).mkdir()
+    assert (await client.get(exhibitor_logos.PREFIX + name)).status_code == 404
+    (storage[0] / name).rmdir()
+    target = storage[0] / f"{uuid4().hex}-{'1' * 64}.png"
+    target.write_bytes(image_bytes())
+    (storage[0] / name).symlink_to(target)
+    assert (await client.get(exhibitor_logos.PREFIX + name)).status_code == 404
+    assert (await client.get(exhibitor_logos.PREFIX + target.name)).status_code == 200
