@@ -1,3 +1,6 @@
+import { useSyncExternalStore } from "react";
+import { adminCachePersistence } from "@/state/adminCachePersistence";
+import { AdminCacheStatus } from "./AdminCacheStatus";
 import { usePersonDuplicates } from "./PersonDuplicates";
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -70,6 +73,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // views have to follow whichever edition is next, including a bourse.
   const { edition: activeEdition } = useActiveEdition("any");
   const queryClient = useQueryClient();
+  const cache = adminCachePersistence(queryClient);
+  const cacheStatus = useSyncExternalStore(cache.subscribe, cache.getSnapshot);
   const auth = useAuth();
   const navRef = useRef<HTMLElement>(null);
 
@@ -432,7 +437,8 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
 
           {/* Main content */}
           <div className="admin-main" id="admin-content">
-            {activeEdition.id !== "" && (
+            <AdminCacheStatus />
+            {activeEdition.id !== "" && activeEdition.year > 0 && (
               <button
                 type="button"
                 className="admin-active-edition-strip text-left mb-4"
@@ -480,7 +486,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               </Alert>
             )}
 
-            {isAnyPending ? (
+            {isAnyPending && !cacheStatus.warmStart ? (
               <AdminSkeleton variant={skeletonVariantForSection(effectiveActiveKey)} />
             ) : (
               <div className="admin-content-pane" key={effectiveActiveKey}>

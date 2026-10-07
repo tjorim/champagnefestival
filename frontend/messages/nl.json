@@ -1171,5 +1171,7 @@
   "admin_action_show_options": "Opties tonen",
   "admin_action_remove_selection": "Selectie verwijderen",
   "admin_table_sort": "Sorteren",
-  "admin_table_results": "{total} resultaten"
+  "admin_table_results": "{total} resultaten",
+  "admin_cache_restored": "Opgeslagen gegevens worden getoond.",
+  "admin_cache_last_synced": "Laatst gesynchroniseerd: {time}."
 }

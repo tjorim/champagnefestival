@@ -7,7 +7,7 @@
 This record is desk research against the packages' published documentation and
 the current code. No spike branch was built and no bundle was measured, by the
 owner's choice (2026-10-06: skip the spike). The items a spike would have answered
-are listed under [Unverified](#unverified-and-needed-before-adoption) and become the
+are listed under [Unverified](#original-verification-questions-and-remaining-checks) and become the
 first tasks of the implementation issue.
 
 ## Decision
@@ -39,7 +39,7 @@ queue and offline check-in are not goals here (web check-in stays live-only,
   cover the full festival weekend, set as 72 hours since the last successful write
   (see condition 3).
 - **No spike first** (owner decision). The open questions in
-  [Unverified](#unverified-and-needed-before-adoption) are answered by the
+  [Unverified](#original-verification-questions-and-remaining-checks) are answered by the
   implementation's first commits, before the persistence is wired to the dashboard,
   and a failed answer sends the work back to this record.
 
@@ -290,7 +290,7 @@ Server state stays authoritative; persistence only supplies the first rows. The 
 
 The implementation issue carries these gates:
 
-1. First, before any wiring to the dashboard: answer the [unverified](#unverified-and-needed-before-adoption)
+1. First, before any wiring to the dashboard: answer the [unverified](#original-verification-questions-and-remaining-checks)
    questions with a test or a throwaway branch. A failed answer returns to this record.
 2. The wipe, `maxAge`, `buster`, edition-change and restore-ordering tests pass.
 3. The owner has done the policy check and set the device rule (condition 4) before the
@@ -301,15 +301,14 @@ too large or slow for the registrations list; the owner reverses #937 and wants 
 store that survives offline writes; or `@tanstack/browser-db-sqlite-persistence`
 reaches a stable release against the `@tanstack/db` version we run.
 
-## Unverified and needed before adoption
+## Original verification questions and remaining checks
 
-- Option B: that direct collection writes reach the Query cache, that a restored
-  cache lets the collection render before the refetch, and the serialised size and
-  write cost of the allowlisted keys (registrations of a full edition).
-- Option B: that `removeClient` and the session check really leave nothing in
-  IndexedDB after sign-out, role loss and expiry, including from a second tab.
-- IndexedDB availability and quota on the devices volunteers use, including private
-  browsing.
+The original questions below were implementation gates. Query mirroring, cached
+rendering, wipe/fences and failure fallback are now verified in the
+[implementation evidence](#implementation-verification-1197-2026-10-07).
+Production-edition sizing, volunteer-device/private-mode checks and the owner's
+current-policy check remain release work. The evidence records synthetic scale
+measurements separately from those outstanding operational checks.
 - Option A only: transferred WASM and worker size, which OPFS VFS the package uses
   and whether it needs `SharedArrayBuffer` and cross-origin isolation, and the CSP
   in `/opt/apps/infra`.
@@ -323,3 +322,102 @@ reaches a stable release against the `@tanstack/db` version we run.
 - [TanStack DB decision](tanstack-db.md), [data retention](934-data-retention-and-erasure.md), [Web Push foundation](941-web-push-foundation.md)
 - `frontend/src/hooks/useAdminQueries.ts` (sign-out reset), `frontend/src/state/epochFence.ts`,
   `frontend/src/state/LiveUpdatesProvider.tsx`, `frontend/src/components/CheckInPage.tsx`
+
+## Implementation verification (#1197, 2026-10-07)
+
+The implementation uses Query v5's `persistQueryClientRestore` and
+`persistQueryClientSave` with an IndexedDB async persister. Restore happens in a
+staging QueryClient, then hydrates the app only if the session epoch still
+matches. The app-level AuthProvider owns it even when the dashboard never mounts.
+The owner identity includes the configured OIDC authority/client and subject;
+only authenticated, unexpired admin/volunteer sessions can restore. Sign-out,
+unauthenticated startup, role loss, account changes, edition changes and a
+second tab's sign-out wipe the record. Token expiry also has an app-level
+timer, independent of dashboard mounting or an OIDC state update. Pending writes check the epoch after
+opening IndexedDB and before creating their transaction; transactions already
+started precede the wipe transaction. A restore resolving after wipe is discarded.
+
+- **Direct writes verified:** `adminWarmStart.verify.test.ts` runs the installed
+  query-collection adapter, verifies immediate cached rendering before a pending
+  fetch, retained rows after a failed fetch, and Query-cache mirroring of both
+  `writeUpsert` and `writeDelete`. No adapter workaround is needed.
+- **Restore ordering verified:** allowlisted cache entries hydrate before eligible
+  authenticated children mount. The dashboard bypasses its global skeleton after
+  a warm start: unrelated people/count/page queries cannot hide restored rows.
+  Each collection refetches on mount even when the saved data is younger than its
+  60-second stale time. Cached rows survive failed reconciliation.
+- **Scope verified:** whole-key allowlist, active-edition registrations only, no
+  mutations. Tests exclude registration pages, check-in statistics, people and
+  ledgers. A defensive recursive copy removes check-in tokens and NISS/eID fields
+  (including mapped national-register/document-number fields), since live detail
+  responses can introduce those into the collection. Failed-query error state is
+  not stored; the last successful rows remain usable.
+- **Wipe/retention verified:** IndexedDB-backed tests cover restore, unauthorized
+  startup, role loss without a dashboard, sign-out, second-tab notification,
+  account mismatch, token expiry, edition switching, 72-hour expiry, buster mismatch, delayed
+  restore and delayed-write fences. Read/write failures fall back to memory.
+  Opening a blocked/unresponsive database has a two-second bound. The single
+  `ADMIN_CACHE_MAX_AGE` also sets Query `gcTime`; the buster is
+  `admin-collections-1` and must change whenever an allowlisted frontend row shape
+  changes. The cache saves on successful collection data updates, in batches of
+  at most one write per second; failed reads do not extend retention.
+- **Visible state:** a polite status alert says that saved rows are being shown
+  and gives the oldest `dataUpdatedAt` among the cached collections. The saved-row
+  message clears once all restored queries reconcile. Only the edition ID is
+  metadata; the active-edition Query entry itself is not persisted. If its request
+  fails, the ID selects the saved registration collection, with no fabricated
+  edition title or dates. A successful different edition wipes the old copy.
+- **Browser check:** a cached development session was reloaded with API requests
+  failing; the saved venues, rooms and table types remained readable alongside
+  the saved-row/last-sync alert and connection error. Server-paginated people and
+  registration tables, content-management queries and edition metadata remain
+  live reads; persistence benefits their bounded collection consumers, not those
+  separate queries. No offline write or web check-in is added.
+
+### Size and device limits
+
+Chromium 154 on the development Linux machine, synthetic full-set fixtures made
+from the repository's registration seeds through `apiToRegistration`:
+
+| Rows | JSON bytes | JSON serialization | IndexedDB transaction |
+| --- | ---: | ---: | ---: |
+| 1,000 | 1,212,891 | 5.4 ms | 12.5 ms |
+| 10,000 | 12,138,891 | 47 ms | 123.1 ms |
+
+These single-run measurements cover mapped row payloads, not production guest
+records, the small Query envelope, or the complete persister's defensive JSON
+copy. They justify batching before dehydration rather than serializing on every
+Query notification. They are not a claim about volunteers' hardware. Quota in
+this browser was approximately 10 GiB; availability/quota errors are tested,
+but actual volunteer devices/private-browser modes and a representative full
+production edition still need an operational check before release.
+
+### Remaining release conditions
+
+The owner still needs to read the current published privacy policy for any
+contradictory claim. The repository's published snapshot contains no
+"only on our servers" claim; that inspection does not stand in for the owner's
+check of the current policy. No public policy wording was changed.
+
+Internal volunteer device rule: use a screen lock and the organisation's sign-in,
+and sign out on shared devices. The device copy is unencrypted; signing out
+removes it. Include this rule in the event briefing.
+
+No externally callable write path changed, and no automatic retry or queue was
+added. `docs/retry-safety.md` needs no new entry.
+
+
+### Validation
+
+Frontend lint, formatting, typecheck and production build passed. The full unit
+suite passed 953 tests with four workers (one pagination timeout in the earlier
+unrestricted run passed its isolated rerun). The authenticated Chromium warm-start
+regression passed with reads deliberately pending across reload, then rejected;
+saved venue/room rows remained visible in both states. The additional token-expiry
+regression covers removal without a dashboard or provider state update.
+
+## Cross-app lifecycle alignment
+
+The [browser persistence contract](../browser-persistence-contract.md) aligns account isolation,
+schema checks, asynchronous cleanup and storage failure across the five apps.
+App-specific retention and offline capabilities remain as documented here.

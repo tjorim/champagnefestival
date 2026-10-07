@@ -19,6 +19,7 @@ const OIDC_REDIRECT_URI =
   import.meta.env.VITE_OIDC_REDIRECT_URI ?? `${window.location.origin}/admin`;
 const OIDC_SILENT_REDIRECT_URI =
   import.meta.env.VITE_OIDC_SILENT_REDIRECT_URI ?? `${window.location.origin}/admin`;
+export const OIDC_USER_STORAGE_KEY = `oidc.user:${OIDC_AUTHORITY}:${OIDC_CLIENT_ID}`;
 const OIDC_SCOPE = import.meta.env.VITE_OIDC_SCOPE ?? "openid profile email";
 
 interface OidcConfigOptions {
@@ -38,7 +39,7 @@ interface OidcConfigOptions {
  */
 export function getStoredAccessToken(): string | null {
   try {
-    const raw = window.localStorage.getItem(`oidc.user:${OIDC_AUTHORITY}:${OIDC_CLIENT_ID}`);
+    const raw = window.localStorage.getItem(OIDC_USER_STORAGE_KEY);
     if (!raw) return null;
     const user = JSON.parse(raw) as { access_token?: string; expires_at?: number };
     if (!user.access_token) return null;
