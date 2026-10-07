@@ -8,3 +8,5 @@ __pycache__/
 dist/
 *.egg-info/
 .pytest_cache/
+
+/uploads/

@@ -5,16 +5,17 @@ with ``app.mcp.admin.exhibitors`` — this router is a thin adapter that
 translates ``ServiceError`` into ``HTTPException`` (see #807, #860).
 """
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import Pagination, apply_pagination
-from app.models import Exhibitor
+from app.models import Exhibitor, ExhibitorChange
 from app.schemas import ExhibitorChangeDecision, ExhibitorChangeOut, ExhibitorCreate, ExhibitorOut, ExhibitorUpdate
-from app.services import exhibitor_changes, exhibitors_service
+from app.services import exhibitor_changes, exhibitor_logos, exhibitors_service
 from app.services.errors import ServiceError, to_http_exception
 from app.utils import exhibitor_to_dict, get_or_404
 
@@ -112,6 +113,39 @@ async def delete_exhibitor(
     try:
         await exhibitors_service.delete_exhibitor(
             db, e, actor=actor, request_id=getattr(request.state, "request_id", None)
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.post("/{exhibitor_id}/logo", response_model=ExhibitorOut, dependencies=[Depends(require_admin)])
+async def upload_logo(
+    exhibitor_id: int,
+    file: UploadFile,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    """Publish a validated logo immediately, superseding the manager's logo proposal."""
+    try:
+        row = await exhibitor_changes.lock_exhibitor(db, exhibitor_id)
+        logo = await exhibitor_logos.read_upload(file)
+        return await exhibitors_service.apply_exhibitor_update(db, row, ExhibitorUpdate(), actor=actor, logo=logo)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.get("/changes/{change_id}/logo", dependencies=[Depends(require_admin)])
+async def preview_logo(change_id: str, db: AsyncSession = Depends(get_db)) -> Response:
+    change = await db.get(ExhibitorChange, change_id)
+    if change is None:
+        raise HTTPException(404, "Pending logo not found.")
+    try:
+        await exhibitor_changes.lock_exhibitor(db, change.exhibitor_id)
+        await db.refresh(change)
+        return Response(
+            exhibitor_logos.pending_path(change).read_bytes(),
+            media_type="image/png",
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
         )
     except ServiceError as exc:
         raise to_http_exception(exc) from exc

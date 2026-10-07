@@ -1205,5 +1205,11 @@
   "manager_change_none": "Geen wijzigingen ter goedkeuring.",
   "manager_change_refresh": "Vernieuwen",
   "manager_change_conflict": "Dit voorstel is gewijzigd of al beoordeeld. Vernieuw de lijst voordat je beslist.",
-  "manager_change_review_error": "De beoordeling kon niet worden voltooid. Vernieuw en probeer opnieuw."
+  "manager_change_review_error": "De beoordeling kon niet worden voltooid. Vernieuw en probeer opnieuw.",
+  "logo_upload_label": "Logo uploaden",
+  "logo_upload_help": "PNG, JPEG of WebP, maximaal 5 MiB en 16 megapixels.",
+  "logo_upload_admin_help": "Uploaden publiceert het logo onmiddellijk en vervangt een eventueel voorgesteld logo.",
+  "logo_upload_success": "Logo geüpload.",
+  "logo_upload_error": "Het logo kon niet worden geüpload. Controleer het formaat en de grootte en probeer opnieuw.",
+  "logo_preview_error": "Het voorgestelde logo kon niet worden geladen."
 }

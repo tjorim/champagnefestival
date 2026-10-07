@@ -7,11 +7,12 @@ from app.audit import write_audit_entry
 from app.config import settings
 from app.models import Exhibitor, ExhibitorChange
 from app.schemas import ExhibitorChangeSubmit, ExhibitorDescription
+from app.services import exhibitor_logos
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.exhibitors_service import DESCRIPTION_FIELDS
 from app.services.outbox_service import enqueue_job
 
-FIELDS = ("website", *DESCRIPTION_FIELDS)
+FIELDS = ("image", "website", *DESCRIPTION_FIELDS)
 NOTIFICATION = "exhibitor_change_notification"
 
 
@@ -30,6 +31,7 @@ def payload(change: ExhibitorChange, exhibitor: Exhibitor) -> dict:
 
 
 async def lock_exhibitor(db: AsyncSession, exhibitor_id: int) -> Exhibitor:
+    await exhibitor_logos.lock(db)
     row = await db.scalar(
         select(Exhibitor)
         .where(Exhibitor.id == exhibitor_id)
@@ -67,9 +69,20 @@ async def audit(
 
 
 async def submit(
-    db: AsyncSession, exhibitor: Exhibitor, body: ExhibitorChangeSubmit, *, actor: str, auth_source: str | None
+    db: AsyncSession,
+    exhibitor: Exhibitor,
+    body: ExhibitorChangeSubmit,
+    *,
+    actor: str,
+    auth_source: str | None,
+    logo: bytes | None = None,
 ) -> dict:
     values = body.model_dump(exclude_unset=True, exclude={"submission_id"})
+    if logo is not None:
+        previous = await pending(db, exhibitor.id)
+        values = {**(previous.proposed if previous else {}), **values}
+        values.pop("image", None)
+        values["image"] = exhibitor_logos.store(db, exhibitor_logos.roots()[1], logo)
     if not values:
         raise ValidationFailedError("Propose at least one field.")
     # Replay the original outcome even after replacement, supersession or review.
@@ -89,6 +102,7 @@ async def submit(
         raise ValidationFailedError(str(exc)) from exc
     previous = await pending(db, exhibitor.id)
     if previous:
+        exhibitor_logos.retire_pending(db, previous)
         previous.status = "replaced"
         await db.flush()
     change = ExhibitorChange(
@@ -133,6 +147,8 @@ async def supersede(db: AsyncSession, exhibitor: Exhibitor, fields: set[str], *,
         remaining = {key: value for key, value in remaining.items() if key not in DESCRIPTION_FIELDS}
     if not removed:
         return
+    if "image" in removed:
+        exhibitor_logos.retire_pending(db, change)
     change.proposed = remaining
     change.superseded_fields = sorted(set(change.superseded_fields) | removed)
     if not remaining:
@@ -166,9 +182,18 @@ async def decide(db: AsyncSession, change_id: str, decision: str, reason: str | 
         return payload(change, exhibitor)
     if change.status != "pending":
         raise ConflictError("Proposal was already decided, superseded or replaced. Refresh the review list.")
+    old_image = exhibitor.image
     if decision == "accepted":
         for field, value in change.proposed.items():
+            if field == "image":
+                path = exhibitor_logos.pending_path(change)
+                value = exhibitor_logos.PREFIX + exhibitor_logos.store(
+                    db, exhibitor_logos.roots()[0], path.read_bytes()
+                )
             setattr(exhibitor, field, value)
+    exhibitor_logos.retire_pending(db, change)
+    if decision == "accepted":
+        await exhibitor_logos.retire_public(db, old_image)
     change.status = decision
     change.reason = reason if decision == "rejected" else None
     await audit(db, change, decision, actor)

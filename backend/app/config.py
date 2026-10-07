@@ -142,6 +142,8 @@ class Settings(BaseSettings):
     """How long a visitor reservation access link remains valid."""
 
     exhibitor_review_recipient: str = ""
+    exhibitor_logo_public_root: str = "./uploads/public/exhibitors"
+    exhibitor_logo_pending_root: str = "./uploads/pending/exhibitors"
     """Optional shared mailbox for pending exhibitor proposals; no fallback."""
 
     # --- SMTP delivery ---

@@ -41,6 +41,7 @@ export default defineConfig({
     port: 5173,
     open: true,
     proxy: {
+      "/uploads": "http://localhost:8000",
       "/api": "http://localhost:8000",
     },
   },

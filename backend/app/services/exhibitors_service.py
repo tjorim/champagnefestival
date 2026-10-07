@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.models import Edition, Exhibitor, Person
 from app.schemas import ExhibitorCreate, ExhibitorDescription, ExhibitorUpdate
+from app.services import exhibitor_logos
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.utils import exhibitor_to_dict
 
@@ -46,6 +47,8 @@ async def load_contacts_by_ids(db: AsyncSession, ids: list[str]) -> dict[str, Pe
 async def create_exhibitor(
     db: AsyncSession, *, body: ExhibitorCreate, actor: str, request_id: str | None = None
 ) -> dict:
+    if body.image.startswith(exhibitor_logos.PREFIX):
+        raise ValidationFailedError("Upload managed logos after creating the exhibitor.")
     contact = await load_contact(db, body.contact_person_id)
     if body.contact_person_id and contact is None:
         raise NotFoundError("Person not found.")
@@ -82,6 +85,7 @@ async def apply_exhibitor_update(
     actor: str,
     request_id: str | None = None,
     clear_contact_person: bool = False,
+    logo: bytes | None = None,
 ) -> dict:
     """Apply a partial exhibitor update and return the refreshed payload.
 
@@ -106,7 +110,12 @@ async def apply_exhibitor_update(
 
     if body.name is not None:
         e.name = body.name
-    if body.image is not None:
+    old_image = e.image
+    if logo is not None:
+        e.image = exhibitor_logos.PREFIX + exhibitor_logos.store(db, exhibitor_logos.roots()[0], logo)
+    elif body.image is not None:
+        if body.image.startswith(exhibitor_logos.PREFIX) and body.image != e.image:
+            raise ValidationFailedError("Use the logo upload endpoint for managed images.")
         e.image = body.image
     if body.website is not None:
         e.website = body.website
@@ -131,6 +140,8 @@ async def apply_exhibitor_update(
         e.type = body.type
 
     fields_changed = set(body.model_fields_set)
+    if logo is not None:
+        fields_changed.add("image")
     if body.website is None:
         fields_changed.discard("website")
     if clear_contact_person:
@@ -153,6 +164,7 @@ async def apply_exhibitor_update(
         request_id=request_id,
         details={"fields_changed": sorted(fields_changed)},
     )
+    await exhibitor_logos.retire_public(db, old_image)
     await db.commit()
     await db.refresh(e)
     contact = await load_contact(db, e.contact_person_id)
@@ -160,6 +172,13 @@ async def apply_exhibitor_update(
 
 
 async def delete_exhibitor(db: AsyncSession, e: Exhibitor, *, actor: str, request_id: str | None = None) -> dict:
+    from app.services.exhibitor_changes import lock_exhibitor, pending
+
+    e = await lock_exhibitor(db, e.id)
+    change = await pending(db, e.id)
+    if change:
+        exhibitor_logos.retire_pending(db, change)
+    old_image = e.image
     exhibitor_id = e.id
     editions_result = await db.execute(select(Edition))
     for edition in editions_result.scalars().all():
@@ -175,5 +194,6 @@ async def delete_exhibitor(db: AsyncSession, e: Exhibitor, *, actor: str, reques
         request_id=request_id,
         details={},
     )
+    await exhibitor_logos.retire_public(db, old_image)
     await db.commit()
     return {"deleted": True, "id": exhibitor_id}

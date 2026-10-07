@@ -1,13 +1,16 @@
 """Read exhibitors managed by a verified email or OIDC identity (#1192)."""
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
+from fastapi.responses import Response as ImageResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Exhibitor, ExhibitorChange, Person, User
 from app.schemas import ExhibitorChangeOut, ExhibitorChangeSubmit, ManagedExhibitorOut
-from app.services import exhibitor_changes
+from app.services import exhibitor_changes, exhibitor_logos
 from app.services.errors import ServiceError, to_http_exception
 from app.visitor_session import actor_for_user, get_current_user, get_exhibitor_contact_email
 
@@ -91,5 +94,48 @@ async def propose_change(
     actor, auth_source = actor_for_user(user)
     try:
         return await exhibitor_changes.submit(db, row, body, actor=actor, auth_source=auth_source)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.post("/{exhibitor_id}/logo", response_model=ExhibitorChangeOut)
+async def upload_logo(
+    exhibitor_id: int,
+    file: UploadFile,
+    response: Response,
+    email: str | None = Depends(get_exhibitor_contact_email),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Upload a private proposal. Repeating an upload replaces the pending proposal."""
+    response.headers["Cache-Control"] = "no-store"
+    row = await owned(db, exhibitor_id, email)
+    actor, auth_source = actor_for_user(user)
+    try:
+        logo = await exhibitor_logos.read_upload(file)
+        return await exhibitor_changes.submit(
+            db, row, ExhibitorChangeSubmit(submission_id=uuid4()), actor=actor, auth_source=auth_source, logo=logo
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
+@router.get("/{exhibitor_id}/changes/{change_id}/logo")
+async def preview_logo(
+    exhibitor_id: int,
+    change_id: str,
+    email: str | None = Depends(get_exhibitor_contact_email),
+    db: AsyncSession = Depends(get_db),
+) -> ImageResponse:
+    await owned(db, exhibitor_id, email)
+    change = await db.get(ExhibitorChange, change_id)
+    if change is None or change.exhibitor_id != exhibitor_id:
+        raise HTTPException(404, "Pending logo not found.")
+    try:
+        return ImageResponse(
+            exhibitor_logos.pending_path(change).read_bytes(),
+            media_type="image/png",
+            headers={"Cache-Control": "no-store", "X-Content-Type-Options": "nosniff"},
+        )
     except ServiceError as exc:
         raise to_http_exception(exc) from exc

@@ -72,3 +72,9 @@ Exhibitor contacts can propose website and description changes from `/me`;
 admins review them in the Exhibitors tab before publication. Configure the optional
 `EXHIBITOR_REVIEW_RECIPIENT` shared mailbox and run the existing outbox worker for
 submission notifications. See [exhibitor review and API documentation](docs/exhibitor-change-review.md).
+
+Exhibitor managers can upload logos for administrator review; administrators
+can publish their own uploads immediately. PNG, JPEG and WebP uploads are
+validated and re-encoded, and pending files stay in private storage.
+See [logo upload setup, API and recovery](docs/exhibitor-logo-upload.md) for
+local directories, production volume requirements and cleanup operations.

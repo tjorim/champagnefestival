@@ -1,3 +1,5 @@
+import ExhibitorLogoUpload from "@/components/ExhibitorLogoUpload";
+import ExhibitorLogoPreview from "@/components/ExhibitorLogoPreview";
 import { useId, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
@@ -187,6 +189,21 @@ function ManagedExhibitorEditor({
     <article className="rounded-lg border border-subtle p-4 flex flex-col gap-4">
       <h3 className="text-lg font-medium">{row.name}</h3>
       {history.isError && <Alert variant="danger">{m.manager_error()}</Alert>}
+      <ExhibitorLogoUpload
+        url={`/api/me/exhibitors/${row.id}/logo`}
+        headers={headers}
+        onSaved={() => {
+          setEditing(false);
+          void history.refetch();
+        }}
+      />
+      {pending?.proposed.image && (
+        <ExhibitorLogoPreview
+          key={pending.id}
+          url={`/api/me/exhibitors/${row.id}/changes/${pending.id}/logo`}
+          headers={headers}
+        />
+      )}
       {history.data?.map((change) => (
         <div key={change.id}>
           <p>{exhibitorStatusLabel(change.status)}</p>

@@ -1,3 +1,5 @@
+import ExhibitorLogoUpload from "@/components/ExhibitorLogoUpload";
+import { captureAdminExhibitorsFence } from "@/state/adminExhibitorsCollection";
 import {
   AdminField,
   AdminLabel,
@@ -12,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useMemo, useState } from "react";
 import { useForm } from "@tanstack/react-form";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import {
   Dialog,
@@ -44,6 +46,7 @@ interface ItemModalProps {
 }
 
 export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
+  const queryClient = useQueryClient();
   const [descriptionError, setDescriptionError] = useState(false);
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
@@ -201,6 +204,22 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                 }}
               </form.Field>
             </AdminField>
+            {initial?.id ? (
+              <ExhibitorLogoUpload
+                key={initial.id}
+                admin
+                url={`/api/exhibitors/${initial.id}/logo`}
+                headers={authHeaders}
+                onSaved={(result) => {
+                  if (result.image) form.setFieldValue("image", result.image);
+                  const isCurrent = captureAdminExhibitorsFence();
+                  if (isCurrent())
+                    void queryClient.invalidateQueries({
+                      queryKey: ["admin", "content-management"],
+                    });
+                }}
+              />
+            ) : null}
             <AdminField className="mb-4" controlId="item-image">
               <AdminLabel className="text-subtle text-sm">
                 {m.admin_content_image_url_placeholder()}

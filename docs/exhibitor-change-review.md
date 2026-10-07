@@ -3,7 +3,7 @@
 Managers sign in through the existing `/me` identity (#1192). Every request
 checks their currently verified email against the exhibitor's current contact;
 other exhibitors and nonexistent IDs both return 404. No manager write can
-change names, contact identity, activity, type, images, editions or allocations.
+change names, contact identity, activity, type, editions or allocations. [Logo uploads](exhibitor-logo-upload.md) add a private image proposal through a separate validated multipart endpoint.
 
 The private `exhibitor_changes` table retains proposal history, separate from
 live exhibitors. A partial unique index allows one pending proposal per
@@ -69,7 +69,7 @@ the same ID never queues another job. SMTP transport remains at-least-once:
 an ambiguous delivery can result in duplicate mail, as with existing outbox
 notifications; a stable Message-ID helps mailbox deduplication.
 
-Logo upload (#1194), per-admin emails and automatic translation remain separate.
+Logo upload (#1194) extends this workflow; see the [storage and API contract](exhibitor-logo-upload.md). Per-admin emails and automatic translation remain separate.
 See [retry safety](retry-safety.md) for caller retry rules.
 
 
