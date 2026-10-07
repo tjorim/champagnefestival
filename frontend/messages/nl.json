@@ -1211,5 +1211,12 @@
   "logo_upload_admin_help": "Uploaden publiceert het logo onmiddellijk en vervangt een eventueel voorgesteld logo.",
   "logo_upload_success": "Logo geüpload.",
   "logo_upload_error": "Het logo kon niet worden geüpload. Controleer het formaat en de grootte en probeer opnieuw.",
-  "logo_preview_error": "Het voorgestelde logo kon niet worden geladen."
+  "logo_preview_error": "Het voorgestelde logo kon niet worden geladen.",
+  "translation_suggest": "Vertaling voorstellen",
+  "translation_pending": "Bezig met vertalen…",
+  "translation_wait": "De dienst kan tot 90 seconden nodig hebben om te starten en te vertalen. Je kunt blijven schrijven.",
+  "translation_help": "Een bewerkbaar concept van onze eigen vertaaldienst. Controleer het voor je opslaat. Wis een bestaande vertaling om een nieuw concept aan te vragen.",
+  "translation_error": "Vertalen is niet beschikbaar of duurde te lang. Probeer later opnieuw of schrijf de vertaling zelf.",
+  "translation_rate_limit": "Te veel vertaalverzoeken. Wacht tien minuten voor je opnieuw probeert.",
+  "translation_changed": "De tekst is gewijzigd tijdens het vertalen. Het concept is verwijderd om je wijzigingen te behouden."
 }

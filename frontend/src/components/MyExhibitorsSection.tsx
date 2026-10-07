@@ -1,3 +1,4 @@
+import ExhibitorTranslationSuggestion from "@/components/ExhibitorTranslationSuggestion";
 import ExhibitorLogoUpload from "@/components/ExhibitorLogoUpload";
 import ExhibitorLogoPreview from "@/components/ExhibitorLogoPreview";
 import { useId, useRef, useState } from "react";
@@ -137,6 +138,25 @@ function ProposalForm({
                   [field]: event.target.value,
                   description_language: values.description_language ?? "nl",
                 })
+              }
+            />
+            <ExhibitorTranslationSuggestion
+              url={`/api/me/exhibitors/${row.id}/translation`}
+              headers={headers}
+              source={values.description_language ?? "nl"}
+              target={language}
+              text={
+                values[
+                  `description_${values.description_language ?? "nl"}` as keyof ExhibitorTexts
+                ] ?? ""
+              }
+              targetText={values[field] ?? ""}
+              onDraft={(text) =>
+                setValues((current) => ({
+                  ...current,
+                  [field]: text,
+                  description_language: current.description_language ?? "nl",
+                }))
               }
             />
           </PublicField>

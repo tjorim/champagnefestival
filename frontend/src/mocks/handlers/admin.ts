@@ -729,6 +729,12 @@ export const adminHandlers = [
     return HttpResponse.json([]);
   }),
 
+  http.get("/api/exhibitors/translation", ({ request }) => {
+    const error = requireAuth(request);
+    return error ?? HttpResponse.json({ languages: [] });
+  }),
+  http.get("/api/me/exhibitors/:id/translation", () => HttpResponse.json({ languages: [] })),
+
   http.get("/api/exhibitors/changes", ({ request }) => {
     const error = requireAuth(request);
     return error ?? HttpResponse.json([]);

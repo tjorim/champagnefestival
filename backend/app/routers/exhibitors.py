@@ -16,10 +16,27 @@ from app.dependencies import Pagination, apply_pagination
 from app.models import Exhibitor, ExhibitorChange
 from app.schemas import ExhibitorChangeDecision, ExhibitorChangeOut, ExhibitorCreate, ExhibitorOut, ExhibitorUpdate
 from app.services import exhibitor_changes, exhibitor_logos, exhibitors_service
+from app.services import exhibitor_translation as translation
 from app.services.errors import ServiceError, to_http_exception
 from app.utils import exhibitor_to_dict, get_or_404
 
 router = APIRouter(prefix="/api/exhibitors", tags=["exhibitors"])
+
+
+@router.get("/translation", response_model=translation.TranslationCapabilities, dependencies=[Depends(require_admin)])
+async def translation_capabilities(response: Response) -> translation.TranslationCapabilities:
+    """Configured draft languages; never contacts the service or publishes text."""
+    response.headers["Cache-Control"] = "no-store"
+    return translation.capabilities()
+
+
+@router.post("/translation", response_model=translation.TranslationDraft, dependencies=[Depends(require_admin)])
+async def suggest_translation(
+    body: translation.TranslationRequest, response: Response, actor: str = Depends(get_actor_id)
+) -> translation.TranslationDraft:
+    """Request an editable draft only. Nothing is saved; no automatic retry."""
+    response.headers["Cache-Control"] = "no-store"
+    return await translation.suggest(body, f"keycloak:{actor}")
 
 
 @router.get("", response_model=list[ExhibitorOut], dependencies=[Depends(require_admin)])

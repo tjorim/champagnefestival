@@ -78,3 +78,7 @@ can publish their own uploads immediately. PNG, JPEG and WebP uploads are
 validated and re-encoded, and pending files stay in private storage.
 See [logo upload setup, API and recovery](docs/exhibitor-logo-upload.md) for
 local directories, production volume requirements and cleanup operations.
+
+Exhibitor editors can request editable description drafts from the optional
+self-hosted translation service. Nothing is saved until a person saves or submits
+it. See [configuration and API contract](docs/exhibitor-description-translation.md).
