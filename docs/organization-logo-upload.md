@@ -1,7 +1,5 @@
 # Organisation logo uploads (#1194)
 
-UI terminology: [organisation / organisatie / organisation](decisions/1190-organisation-terminology.md). The full technical rename and migration are recorded there.
-
 Managers upload from **My account** using the existing verified contact identity.
 An upload adds an `image` field to the private proposal workflow from #1193,
 retaining the other currently proposed fields. A new upload replaces that
@@ -79,40 +77,5 @@ URL on unmount. Errors are 415 for unsupported MIME type, 413 for input size or
 pixel limits, 400 for invalid images, and 404 for unavailable/unauthorised
 manager resources. Member/volunteer status alone gives no upload or review
 rights; a verified current contact may act as a manager regardless of staff role.
-
-## Verification
-
-`backend/tests/test_organization_logos.py` covers validation, private previews,
-publication/replay, replacement/rejection/admin overrides, deletion, rollback
-and orphan reconciliation. Frontend component tests cover multipart submission,
-visible errors and authenticated preview URL lifecycle alongside proposal review.
-
-Final local verification: 1,424 backend tests, 983 frontend tests and 276
-Chromium E2E tests pass. Backend/frontend lint, formatting and type checks,
-the frontend production build and migration from an empty database through
-Alembic head pass. A browser component check also confirms both review images
-load, no horizontal overflow at 390 pixels and a successful multipart upload.
-
-## Acceptance record (2026-10-07)
-
-- [x] Manager upload stays private until administrator acceptance; both logos are shown together in review.
-- [x] Administrator upload publishes immediately and supersedes the pending logo.
-- [x] MIME, size, corruption, pixel and SVG rejection are covered; stored uploads are fresh PNGs.
-- [x] Accept, reject, replace, supersede and organization deletion retire obsolete files; rollback and crash recovery are tested.
-- [x] Existing public paths and URLs keep rendering through `ResponsiveImage`.
-- [x] Retry safety, README, configuration example and API documentation describe the new writes.
-
-Production rollout awaits the persistent volumes, Caddy route and backups in
-`tjorim/apps#262`; it is not represented as a completed deployment here.
-
-CodeQL follow-up: the local public route selects an exact managed filename
-from a trusted public-directory inventory, rejecting directories and all
-symlinks. Request data is used only for comparison and never constructs a path.
-This lookup scans the directory; production Caddy serves it directly. Traversal
-and symlinks into private storage are regression-tested.
-
-Upload validation and encoding run before the shared storage lock. Managers are
-checked for current ownership before decoding and again under the lock before
-writing; administrators check existence before decoding and reload under lock.
-Regression tests verify that decoding does not block another storage operation
-and that contact revocation during decoding prevents proposal/file creation.
+Ownership is rechecked under the storage lock after decoding, so revocation
+during validation prevents proposal/file creation.

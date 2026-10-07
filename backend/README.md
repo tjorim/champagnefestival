@@ -415,7 +415,7 @@ unification remains in #1209.
 | GET | `/api/me/organizations` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active, description_language, description_nl, description_fr, description_en}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
 
 Uses existing SMTP/frontend URL settings and visitor credential housekeeping.
-No new authentication migration is required; migration `004` adds descriptions.
+No new authentication migration is required.
 See the [login decision](../docs/decisions/1192-organization-manager-login.md)
 and [retry safety](../docs/retry-safety.md). Interactive schemas are at `/docs`.
 
@@ -442,4 +442,4 @@ in [the API contract](../docs/organization-description-translation.md), includin
 90-second timeout, identity limits, retry safety and the apps#263 production gate.
 
 The coordinated organization domain rename requires matching API clients, storage
-configuration and Caddy paths; see the [migration and deployment sequence](../docs/decisions/1190-organisation-terminology.md#deployment-sequence).
+configuration and Caddy paths; see the [migration and deployment sequence](../docs/organization-change-review.md#terminology-and-upgrade).

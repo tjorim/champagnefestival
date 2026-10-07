@@ -10,14 +10,14 @@ into another planning file.
 | Remaining product work and completion history | [Product audit](product-audit-2026-08.md) |
 | Write retries and delivery operations | [Retry safety](retry-safety.md), [outbox worker](outbox-worker.md) |
 | Authorization and external integrations | [Authorization model](authorization-model.md), [operational lookup](integrations/OPERATIONAL_LOOKUP.md), [local MCP server](integrations/LOCAL_MCP_SERVER.md) |
-| Organisation self-service and review API | [Terminology](decisions/1190-organisation-terminology.md), [manager login](decisions/1192-organization-manager-login.md), [proposals and review](organization-change-review.md) |
+| Organisation self-service and review API | [manager login](decisions/1192-organization-manager-login.md), [proposals and review](organization-change-review.md) |
 | Floor-plan geometry | [Coordinate contract](floor-plan-coordinates.md) |
 | API process count and shared state | [Single-worker decision](decisions/932-multi-worker-state.md) |
 | Retention, anonymisation and consent | [Retention decision](decisions/934-data-retention-and-erasure.md) |
 | Public legal text (privacy policy snapshots) | [Public documents](public-documents/README.md) |
 | Service-worker ownership and browser push | [Web Push foundation](decisions/941-web-push-foundation.md) |
 | Announcement/push composition and dispatch | [Composer decision](decisions/942-central-composer.md) |
-| Unfinished visitor-account and rendering work | [Visitor sessions](decisions/953-visitor-passwordless-session.md), [public rendering](decisions/992-live-public-render.md) |
+| Visitor accounts and public rendering | [Visitor sessions](decisions/953-visitor-passwordless-session.md), [public rendering](decisions/992-live-public-render.md) |
 | Frontend data layer and persistence decision | [TanStack DB decision](decisions/tanstack-db.md), [persisted collections](decisions/1168-persisted-collections.md) |
 | Server-driven admin tables, people queries and exports | [Shared table](admin-data-table.md), [people Query layer](people-query-layer.md), [people aggregates](people-aggregates.md) |
 

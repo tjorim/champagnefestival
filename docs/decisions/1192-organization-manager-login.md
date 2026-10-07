@@ -1,15 +1,13 @@
 # Shared emailed account login and organization access (#1192)
 
-Decided and implemented 2026-10-07. One contact person manages each organization;
-a person may manage several organizations. One emailed login opens `/me` and
-shows the information associated with the verified identity. This increment
-is read-only; proposed organization edits remain in #1193.
+One contact person manages each organization; a person may manage several.
+A shared login opens `/me` with the data associated with the verified identity.
+[Organization proposals](../organization-change-review.md) use the same identity.
 
 ## Authentication and authorisation
 
 Reuse `VisitorMagicLink`, `VisitorSession`, the `visitor_session` cookie and
-`/api/visitor-sessions/{request,redeem,status,sign-out}`. These historical names
-remain for compatibility with existing visitors. There is one magic link,
+`/api/visitor-sessions/{request,redeem,status,sign-out}`. There is one magic link,
 one cookie and one session lifecycle for email accounts. The normalised
 `User.verified_email` is established by redeeming a link; OIDC users have an
 OIDC subject instead of a verified email, enforced by the database constraint.
@@ -33,8 +31,7 @@ SameSite=Lax cookie (Secure in production), seven-day sliding idle timeout,
 thirty-day hard cap, rate limit, generic 202 response and daily housekeeping
 are retained. A valid unknown email can sign in and see an empty account;
 requesting a link never discloses bookings or organization membership. A contact
-without email cannot obtain organization access. No new schema is needed for
-this login; migration 004 only adds organization descriptions.
+without email cannot obtain organization access. No new authentication schema is needed for this login.
 
 ## Unified page
 
@@ -53,36 +50,11 @@ private organization queries have no retained cache across page instances.
 Writes are not automatically retried; see the existing visitor write entries
 and the #1192 extension in [retry safety](../retry-safety.md).
 
-## Verification and superseded design
-
-Tests cover one link/session unlocking both owned data sets, normalised
-contact matching, live contact revocation, unknown/no-email contacts, shared
-sign-out and separation from staff authentication. Existing visitor tests
-cover hashing, expiry, replay, concurrent redemption, rate limiting and
-cleanup. Frontend tests cover one request form, both data views, contacts
-without bookings, visitors without organizations and failed sign-out.
-
-The issue originally required that a visitor session never grant manager
-access. The initial implementation therefore created separate manager tables,
-endpoints and a cookie. The owner's clarification on 2026-10-07 superseded
-that requirement: authentication should be shared and available information
-should follow current identity and records. The separate lifecycle and
-manager-specific token parameter were removed; the live contact check and
-staff isolation remain. The issue body preserves the original specification
-and records the revised contract in a headed design revision.
-
 ## Both sign-in methods for one account — follow-up #1209
 
-The owner confirmed on 2026-10-07 that password login and magic links should
-both remain available for the same account, including staff and volunteers.
-That broader requirement is tracked in [#1209](https://github.com/tjorim/champagnefestival/issues/1209).
-The app now accepts a Keycloak-verified email for contact access. This is
-compatibility work, not delivery of the universal account model.
-
-The infrastructure already prepares a Keycloak magic-link alternative beside
-password login (`tjorim/apps`, `ansible/playbooks/keycloak.yml`, apps#196),
-but its flow remains inactive pending Keycloak email delivery. Both Keycloak
-methods naturally produce the same `sub` and roles. Existing app email accounts
-still have separate User identities; linking/migration, registration policy,
-one coherent entry point and end-to-end sign-out need the cross-repository
-follow-up. No local role cache or account merging is introduced here.
+Password and magic-link login for the same account, including staff and
+volunteers, remains tracked in [#1209](https://github.com/tjorim/champagnefestival/issues/1209).
+Matching verified emails grant organization contact access, but existing email
+and OIDC accounts still have separate User identities. Account linking/migration,
+registration policy, a coherent entry point and end-to-end sign-out require
+cross-repository work with `tjorim/apps`; see the [active work](../product-audit-2026-08.md).

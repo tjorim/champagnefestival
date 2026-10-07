@@ -1,7 +1,5 @@
 # Organisation change review (#1193)
 
-UI terminology: [organisation / organisatie / organisation](decisions/1190-organisation-terminology.md). The full technical rename and migration are recorded there.
-
 Managers sign in through the existing `/me` identity (#1192). Every request
 checks their currently verified email against the organization's current contact;
 other organizations and nonexistent IDs both return 404. No manager write can
@@ -24,18 +22,6 @@ audit entries remain.
 | `GET /api/organizations/changes`; MCP `list_organization_changes` | Admin | Pending proposals with current values for review. |
 | `POST /api/organizations/changes/{id}/decision`; MCP `decide_organization_change` | Admin | `decision`: `accepted` or `rejected`; optional `reason` (2,000 characters). Repeats of the same decision converge; opposite decisions/replaced/superseded IDs return 409 (MCP error). |
 
-Example submission:
-
-```json
-{
-  "submission_id": "12ce342e-1469-46df-bde6-6d53d7cb8089",
-  "website": "https://example.com",
-  "description_language": "fr",
-  "description_fr": "Notre maison de champagne.",
-  "description_en": "Our champagne house."
-}
-```
-
 Descriptions follow #1191: plain text, 600 characters per language, original
 language Dutch/French/English and nonempty original text whenever a translation
 exists. Omitted fields retain their live value. Null clears description fields;
@@ -47,9 +33,6 @@ an empty string clears the website. Website validation matches the admin form
 The manager's organization tab on `/me` shows history and an allowed-field form.
 The admin Organisations tab shows current and proposed texts side by side for
 every description language, with accept/reject and an optional rejection reason.
-Each bounded field comparison uses the controlled `AdminDataTable` renderer
-and `useAppTable`, including the logo row. The complete pending proposal set
-remains a TanStack Query result; it does not need a paged organization API.
 The reason is sent only with rejection; acceptance sends no rejection text.
 Accept changes only fields still pending. Rejection preserves all live data.
 
@@ -77,36 +60,32 @@ notifications; a stable Message-ID helps mailbox deduplication.
 Logo upload (#1194) extends this workflow; see the [storage and API contract](organization-logo-upload.md). Per-admin emails and automatic translation remain separate.
 See [retry safety](retry-safety.md) for caller retry rules.
 
+## Terminology and upgrade
 
-## Acceptance verification (2026-10-07)
+Use **organisation** in English and French UI, **organisatie** in Dutch, and
+**organization** in code. The generic term covers companies and associations;
+keep producer, sponsor and vendor labels where the specific type matters.
+API/MCP contracts, database identifiers, settings and upload paths use the new
+name without legacy aliases.
 
-- [x] Public edition responses include the live organization but exclude proposed values; acceptance publishes them.
-- [x] Admin review compares current and proposed values for every description language.
-- [x] Any admin can review; members and volunteers cannot.
-- [x] Direct admin REST/MCP edits supersede matching/dependent pending fields, visible in manager history.
-- [x] Manager reads and writes for other/nonexistent organizations return the same 404.
-- [x] Rejection preserves live data and records its reason; acceptance applies only pending fields.
-- [x] Submission queues one mailbox notification job; an unset recipient skips it.
-- [x] Submit, review and supersession have actor audit entries; replay and concurrent decisions do not double-apply.
-- [x] Retry safety, README, API documentation, migration and backend/frontend checks are verified.
+Revised Alembic `004` renames existing records and references, managed logo URLs
+and structured audit identifiers, then adds descriptions and proposal history.
+Existing IDs, relationships and user-authored text survive; `000`–`003` are unchanged.
 
-Backend coverage includes all 1,406 collected tests. The initial full run passed
-1,385 before local PostgreSQL stopped; 76 recovery tests covered the remaining
-files and workflow, and all nine workflow tests passed again after strengthening
-public visibility and reviewer-identity assertions. Frontend tests: 975 passing.
-Browser checks: 163 public and 113 authenticated/setup passing. Backend lint,
-format and type checks, a fresh upgrade through combined migration `004`, downgrade
-to `003` and re-upgrade, and frontend lint, format,
-type checks and production build passed. The real browser workflow also verified
-acceptance and the manager's accepted state. No production deployment was performed.
+For rollout, stop the old API/worker and back up the database and both logo roots.
+Update clients and MCP integrations to the organization routes and fields. Set
+`ORGANIZATION_REVIEW_RECIPIENT`, `ORGANIZATION_LOGO_PUBLIC_ROOT` and
+`ORGANIZATION_LOGO_PENDING_ROOT`, removing the old settings. Move or remount
+existing logo contents under the new roots (local defaults:
+`uploads/{public,pending}/exhibitors` → `uploads/{public,pending}/organizations`);
+keep pending files private and update Caddy to `/uploads/organizations/`.
+Run `uv run alembic upgrade head`, then deploy matching frontend, API and worker.
+Verify public logos, private previews and queued notifications. Production storage
+and translation activation remain gated on `tjorim/apps#262` and `tjorim/apps#263`.
 
-## Shared review renderer verification (#1190, 2026-10-07)
-
-The final epic integration replaces the inline comparison markup with the
-controlled `AdminDataTable` renderer. Current/proposed text in every language,
-authenticated logo previews, rejection reasons and stale-decision handling
-retain their existing component coverage. All 993 frontend tests pass (including
-49 focused tests across eight organization/account suites), along with typecheck,
-lint, formatting and production build. Lint retains existing unrelated warnings.
-Backend behavior is unchanged and its tests were not rerun for this renderer
-change. The integration remains uncommitted pending review/merge.
+A database stamped with the previous `004` or withdrawn `005` will not rerun the
+revised migration: downgrade using the previous migration files first, or rebuild
+a disposable development database. Never stamp a mismatched schema as current.
+Rollback to `003` drops descriptions and proposal history; restore the backup
+if these must survive, and reverse the storage/configuration changes with the
+matching application version.

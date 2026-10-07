@@ -2,8 +2,8 @@
 
 Issue: [#1111](https://github.com/tjorim/champagnefestival/issues/1111), the
 final step of [#1103](https://github.com/tjorim/champagnefestival/issues/1103).
-It completes the coexistence cleanup gates recorded in
-[1104-tailwind-coexistence.md](1104-tailwind-coexistence.md).
+Bootstrap coexistence and component migration are complete. Historical audits
+and intermediate inventories remain in Git.
 
 ## What was removed
 
@@ -113,33 +113,25 @@ Theme variables in Tailwind's namespaces are listed under "Dormant declarations"
 - `AreaIcon` data keys such as `bi-shop` are persisted identifiers, not CSS
   classes; they stay (documented on the model) and map to Lucide icons.
 
-## Size
+## Component choices
 
-Same-dependency production builds of the commit before and after (KiB for JS as
-in the CI budget; kB for CSS):
+- Owned primitives live in `frontend/src/components/ui/`. Domain forms retain
+  their state, validation and submission ownership; `AdminFields` associates
+  labels, descriptions and errors. `PublicFields` adds `data-public-form` hooks
+  and public select portals follow the visitor theme.
+- Navigation uses real links through `ButtonLink`; actions use buttons.
+  Button groups have accessible names and toggle buttons expose `aria-pressed`.
+- Alerts default to `role="alert"`; use `role="status"` for polite feedback.
+  Spinners beside visible text are decorative; standalone loading indicators
+  need a label. Reduced motion slows their animation. Badges convey meaning
+  with text or an accessible label, in addition to colour.
+- Cards use stable slots for theme artwork; interactive list rows contain
+  native buttons. Public layout uses the site breakpoints (576/768/992/1200/1400px).
+- Floor plans, scanners, QR output, Leaflet/Swiper, analytics and theme artwork
+  retain their specialised renderers. Dynamic geometry and image aspect ratios
+  use narrow, explained lint exceptions. `safeRoomColor()` validates saved hex
+  colours before use and falls back to a neutral colour.
 
-| Measure | Before | After |
-| --- | --- | --- |
-| JS, all chunks | 2 563 KiB (766 722 B gzip) | 2 504 KiB (760 249 B gzip) |
-| `index` chunk | 776 KiB | 774 KiB |
-| `AdminDashboard` chunk | 946 KiB | 937 KiB |
-| CSS, all files | 350 kB raw, 53 kB gzip | 119 kB raw, 24 kB gzip |
-| `index` CSS | 328 kB | 97 kB |
-
-The CI JS budgets are lowered accordingly (total 2 700 → 2 560 KiB, admin
-1 300 → 1 000 KiB).
-
-## Verification
-
-- A computed-style comparison of every element on the public pages (home,
-  privacy, `/me`, maintenance, registration dialog, admin login) under all five
-  themes, light and dark, at 1 440 and 390 px, and of all 16 admin sections under
-  all five themes at 1 440 px, between the commit before and this change. It
-  found the dormant declarations above; after resolving them the only remaining
-  differences are native form-control default colours and preflight's `max-width: 100%` on
-  images.
-- A full-page screenshot pixel comparison of the same matrix (plus the admin at
-  390 px) is identical except for sub-pixel anti-aliasing of native date inputs and
-  the blurred dialog backdrop.
-- `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm test`, `pnpm build`
-  (including the service-worker build) and the full Playwright suite pass.
+Current table behaviour is documented in [the shared table contract](../admin-data-table.md);
+portal and focus behaviour in [the dialog guide](1107-base-ui-dialogs.md);
+public interactions in [the widget guide](1108-base-ui-public-widgets.md).

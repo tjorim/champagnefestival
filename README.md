@@ -62,7 +62,7 @@ current product work, and architectural decisions.
 
 The UI uses **organisation** (Dutch **organisatie**, French **organisation**)
 for producers, sponsors and vendors, covering companies and associations.
-See the [terminology decision](docs/decisions/1190-organisation-terminology.md).
+See the [terminology and upgrade guidance](docs/organization-change-review.md#terminology-and-upgrade).
 
 Organisation contacts can request an emailed sign-in link at `/me`
 and view their own bookings and organisations through one email session. Organisation

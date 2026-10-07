@@ -1,7 +1,5 @@
 # Organisation description drafts (#1195)
 
-UI terminology: [organisation / organisatie / organisation](decisions/1190-organisation-terminology.md). The full technical rename and migration are recorded there.
-
 Admins and current organization contacts can explicitly request an editable machine
 translation. Requests never create a proposal, change live descriptions, enqueue
 notifications or record the text in an audit log. The regular save/submit flow
@@ -78,19 +76,7 @@ Repeating a draft request is harmless to application content, but consumes the
 rate limit and service CPU and may produce a different result. No automatic
 retry is configured. See [retry safety](retry-safety.md).
 
-## Acceptance
+## Production checks
 
-- [x] Admin and live manager scope can request bounded, editable drafts.
-- [x] Drafting persists no organization change, proposal, notification or audit text.
-- [x] Configured languages/disabled mode and errors preserve manual editing.
-- [x] Authorization, validation, rate limiting and single-flight behavior tested.
-- [x] Retry safety, README and API contract documented.
-- [ ] Production cold-start connectivity and env provisioning verified (apps#263).
-- [ ] Infra French decision and cross-application contention recorded (apps#263).
-
-Local verification: all 993 frontend tests, frontend lint/format/type checks and
-production build pass. The backend suite passed 1,434 tests initially; the 19
-background-worker tests that failed due to the default database connection passed
-when both `DATABASE_URL` and `TEST_DATABASE_URL` pointed to the isolated test
-database (1,453 total). Backend lint, format and type checks pass. Translation
-service calls are mocked; production service connectivity is not claimed.
+- [ ] Cold-start connectivity and env provisioning verified (apps#263).
+- [ ] French support and cross-application contention recorded (apps#263).
