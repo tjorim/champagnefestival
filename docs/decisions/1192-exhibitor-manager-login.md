@@ -15,13 +15,18 @@ one cookie and one session lifecycle for email accounts. The normalised
 OIDC subject instead of a verified email, enforced by the database constraint.
 
 `get_current_exhibitor_manager`, in the existing session module, accepts that
-cookie and resolves its verified email. Each `GET /api/me/exhibitors` joins
+cookie or a valid OIDC bearer token and resolves its verified email. For OIDC,
+`email_verified` must be the boolean `true`; usernames and unverified email
+claims never grant contact access. Each `GET /api/me/exhibitors` joins
 the current exhibitor contact to Person and compares trimmed, lower-case
 email. Replacing/clearing the contact or changing their email removes access
 on the next request without signing them out of their other account data.
-There is no stored manager role or separate identity model. A staff bearer
-token alone does not prove contact-email control; email sessions never satisfy
-staff or volunteer dependencies.
+There is no stored manager role or separate identity model. A Keycloak
+account with a verified matching email sees its exhibitors alongside its
+role-based sections. Accounts without verified email see no exhibitors.
+Email sessions never satisfy staff or volunteer dependencies. When both
+credentials are present, the OIDC identity takes precedence; it cannot borrow
+contact access from a different cookie identity.
 
 The existing hashed credentials, configured single-use link TTL, HttpOnly
 SameSite=Lax cookie (Secure in production), seven-day sliding idle timeout,
@@ -38,7 +43,8 @@ flow removes the token before redemption and claims eligible unowned
 bookings as before. The page shows the exhibitor tab when the authenticated
 email manages exhibitors. A contact with exhibitors and no bookings sees
 the exhibitor list directly; booking-only visitors see their bookings.
-OIDC account and volunteer sections remain role dependent.
+OIDC account and volunteer sections remain role dependent. Exhibitor queries
+send the same OIDC bearer token and scope their cache by provider subject.
 
 One email sign-out clears both booking and exhibitor views only after the
 server confirms revocation. Failed sign-out retains the views and reports
@@ -64,3 +70,19 @@ should follow current identity and records. The separate lifecycle and
 manager-specific token parameter were removed; the live contact check and
 staff isolation remain. The issue body preserves the original specification
 and records the revised contract in a headed design revision.
+
+## Both sign-in methods for one account — follow-up #1209
+
+The owner confirmed on 2026-10-07 that password login and magic links should
+both remain available for the same account, including staff and volunteers.
+That broader requirement is tracked in [#1209](https://github.com/tjorim/champagnefestival/issues/1209).
+The app now accepts a Keycloak-verified email for contact access. This is
+compatibility work, not delivery of the universal account model.
+
+The infrastructure already prepares a Keycloak magic-link alternative beside
+password login (`tjorim/apps`, `ansible/playbooks/keycloak.yml`, apps#196),
+but its flow remains inactive pending Keycloak email delivery. Both Keycloak
+methods naturally produce the same `sub` and roles. Existing app email accounts
+still have separate User identities; linking/migration, registration policy,
+one coherent entry point and end-to-end sign-out need the cross-repository
+follow-up. No local role cache or account merging is introduced here.

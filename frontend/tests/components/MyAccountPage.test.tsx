@@ -18,6 +18,7 @@ vi.mock("@/paraglide/messages", () => ({
   m: {
     close: () => "Close",
     manager_title: () => "My exhibitors",
+    manager_error: () => "Could not load exhibitors",
     my_account_title: () => "My Account",
     my_registrations_title: () => "Registrations",
     my_account_signed_in_as: ({ account }: { account: string }) => `Signed in as ${account}`,
@@ -70,6 +71,7 @@ async function openDeleteConfirm(user: ReturnType<typeof userEvent.setup>) {
 
 describe("MyAccountPage", () => {
   beforeEach(() => {
+    server.use(http.get("/api/me/exhibitors", () => HttpResponse.json([])));
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -85,6 +87,24 @@ describe("MyAccountPage", () => {
       logout: vi.fn(),
       renewSession: vi.fn().mockResolvedValue(false),
     });
+  });
+
+  it("shows exhibitors for the same OIDC account as staff sections", async () => {
+    let authorization: string | null = null;
+    server.use(
+      http.get("/api/me/exhibitors", ({ request }) => {
+        authorization = request.headers.get("Authorization");
+        return HttpResponse.json([
+          { id: 1, name: "Shared account house", type: "producer", website: "", active: true },
+        ]);
+      }),
+    );
+    const user = userEvent.setup();
+    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+    await user.click(await screen.findByRole("tab", { name: "My exhibitors" }));
+    expect(screen.getByText("Shared account house")).toBeVisible();
+    expect(authorization).toBe("Bearer oidc-access-token");
+    expect(screen.getByRole("tab", { name: "My Account" })).toBeVisible();
   });
 
   it("deletes the account and signs out after confirmation", async () => {

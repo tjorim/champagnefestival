@@ -1,4 +1,4 @@
-"""Read exhibitors managed by the shared magic-link identity (#1192)."""
+"""Read exhibitors managed by a verified email or OIDC identity (#1192)."""
 
 from fastapi import APIRouter, Depends, Response
 from sqlalchemy import func, select
@@ -14,9 +14,11 @@ router = APIRouter(prefix="/api/me/exhibitors", tags=["me", "exhibitors"])
 
 @router.get("", response_model=list[ManagedExhibitorOut])
 async def my_exhibitors(
-    response: Response, email: str = Depends(get_current_exhibitor_manager), db: AsyncSession = Depends(get_db)
+    response: Response, email: str | None = Depends(get_current_exhibitor_manager), db: AsyncSession = Depends(get_db)
 ) -> list[dict]:
     response.headers["Cache-Control"] = "no-store"
+    if email is None:
+        return []
     rows = (
         await db.scalars(
             select(Exhibitor)

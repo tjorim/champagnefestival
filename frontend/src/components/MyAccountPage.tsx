@@ -40,6 +40,7 @@ export default function MyAccountPage() {
     isAuthenticated,
     isSigningOut,
     accountLabel,
+    accountId,
     hasRole,
     getAccessToken,
     authError,
@@ -59,17 +60,22 @@ export default function MyAccountPage() {
     [sessionEpoch],
   );
   const exhibitorsQuery = useQuery({
-    queryKey: ["me-exhibitors", instanceId, sessionEpoch],
-    enabled: emailRegistrations !== null,
+    queryKey: ["me-exhibitors", instanceId, sessionEpoch, accountId ?? null, isAuthenticated],
+    enabled: isAuthenticated || emailRegistrations !== null,
     gcTime: 0,
     retry: false,
     queryFn: async ({ signal }): Promise<ManagedExhibitor[]> => {
-      const response = await fetch("/api/me/exhibitors", { signal });
+      const accessToken = getAccessToken();
+      const response = await fetch("/api/me/exhibitors", {
+        signal,
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
       if (!response.ok) throw new Error(m.manager_error());
       return response.json();
     },
   });
-  const exhibitors = emailRegistrations === null ? [] : (exhibitorsQuery.data ?? []);
+  const exhibitors =
+    !isAuthenticated && emailRegistrations === null ? [] : (exhibitorsQuery.data ?? []);
   const emailSignOut = useMutation({
     mutationFn: signOutVisitorSession,
     retry: false,
@@ -527,7 +533,7 @@ export default function MyAccountPage() {
               )}
             </div>
           )}
-          {exhibitorsQuery.isError && emailRegistrations !== null && (
+          {exhibitorsQuery.isError && (isAuthenticated || emailRegistrations !== null) && (
             <Alert variant="danger" role="alert">
               {m.manager_error()}
             </Alert>

@@ -104,7 +104,7 @@ async def test_shared_email_session_never_grants_staff_access(client, manager):
     assert (await client.get("/api/me/volunteer")).status_code == 401
 
 
-async def test_oidc_user_in_a_cookie_has_no_verified_email(client, db_session):
+async def test_oidc_user_in_a_cookie_has_no_contact_access(client, db_session):
     from starlette.responses import Response
 
     from app.visitor_session import create_session
@@ -117,4 +117,65 @@ async def test_oidc_user_in_a_cookie_has_no_verified_email(client, db_session):
     await db_session.commit()
     cookie = response.headers["set-cookie"].split(";", 1)[0].split("=", 1)[1]
     client.cookies.set("visitor_session", cookie)
-    assert (await client.get("/api/me/exhibitors")).status_code == 401
+    assert (await client.get("/api/me/exhibitors")).json() == []
+
+
+@pytest.mark.parametrize("roles", [["admin"], ["volunteer"], []])
+async def test_oidc_verified_email_unlocks_contacts_regardless_of_role(client, db_session, manager, monkeypatch, roles):
+    async def decode(_token):
+        return {
+            "sub": "staff-contact",
+            "email": " CONTACT@Example.com ",
+            "email_verified": True,
+            "realm_access": {"roles": roles},
+        }
+
+    monkeypatch.setattr("app.visitor_session.decode_token", decode)
+    response = await client.get("/api/me/exhibitors", headers={"Authorization": "Bearer oidc-token"})
+    assert response.status_code == 200
+    assert [row["name"] for row in response.json()] == ["One", "Two"]
+    manager[0].email = "changed@example.com"
+    await db_session.commit()
+    revoked = await client.get("/api/me/exhibitors", headers={"Authorization": "Bearer oidc-token"})
+    assert revoked.json() == []
+
+
+@pytest.mark.parametrize("verified", [False, None, "true", 1])
+async def test_oidc_unverified_email_cannot_unlock_contacts(client, manager, monkeypatch, verified):
+    async def decode(_token):
+        return {
+            "sub": "staff-contact",
+            "email": "contact@example.com",
+            "email_verified": verified,
+            "realm_access": {"roles": ["admin"]},
+        }
+
+    monkeypatch.setattr("app.visitor_session.decode_token", decode)
+    response = await client.get("/api/me/exhibitors", headers={"Authorization": "Bearer oidc-token"})
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+async def test_oidc_identity_does_not_borrow_a_different_cookie_email(client, manager, monkeypatch):
+    await login(client, manager)
+
+    async def decode(_token):
+        return {"sub": "other-user", "email": "other@example.com", "email_verified": True}
+
+    monkeypatch.setattr("app.visitor_session.decode_token", decode)
+    response = await client.get("/api/me/exhibitors", headers={"Authorization": "Bearer oidc-token"})
+    assert [row["name"] for row in response.json()] == ["Other"]
+
+
+async def test_service_account_email_does_not_grant_contact_access(client, manager, monkeypatch):
+    async def decode(_token):
+        return {
+            "sub": "service-sub",
+            "preferred_username": "service-account-app",
+            "email": "contact@example.com",
+            "email_verified": True,
+        }
+
+    monkeypatch.setattr("app.visitor_session.decode_token", decode)
+    response = await client.get("/api/me/exhibitors", headers={"Authorization": "Bearer service-token"})
+    assert response.json() == []

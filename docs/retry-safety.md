@@ -376,5 +376,9 @@ A session generation fences late responses from the revoked session. This is
 covered by `MyAccountSession.test.tsx`; backend shared-session revocation is
 covered by `test_exhibitor_manager_sessions.py` and existing visitor tests.
 
-`GET /api/me/exhibitors` refreshes the same sliding idle deadline within the
-fixed hard cap. It introduces no business write or new credential.
+`GET /api/me/exhibitors` accepts the shared cookie or an OIDC bearer token
+with an explicitly verified email. Cookie reads refresh the same sliding
+idle deadline within the fixed hard cap. The OIDC path uses the existing
+user-provisioning dependency (unique-subject, convergent creation) and never
+links accounts or moves bookings. It introduces no business write or new
+credential. Both-method canonical account linking remains in #1209.

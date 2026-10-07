@@ -261,15 +261,23 @@ def actor_for_user(user: User) -> tuple[str, str | None]:
     return user.id, VISITOR_AUTH_SOURCE
 
 
-async def get_current_exhibitor_manager(request: Request, db: AsyncSession = Depends(get_db)) -> str:
-    """Use the shared emailed login's verified identity for live contact checks.
+async def get_current_exhibitor_manager(
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
+) -> str | None:
+    """Resolve contact email from either sign-in method's verified identity.
 
-    Bearer tokens alone do not prove email control. The cookie resolves to a
-    magic-link provisioned User; no stored manager flag grants access.
+    Keycloak password and magic-link sign-ins produce the same OIDC subject
+    and roles. Only an explicitly verified token email can grant contact
+    access; usernames and unverified profile fields cannot. An authenticated
+    account without a verified email simply has no managed exhibitors.
     """
-    session_id = request.cookies.get(COOKIE_NAME)
-    row = await resolve_session(db, session_id) if session_id else None
-    user = await db.get(User, row.user_id) if row else None
-    if user is None or user.verified_email is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
-    return user.verified_email.lower().strip()
+    user, claims = user_and_claims
+    if claims is None:
+        return user.verified_email.lower().strip() if user.verified_email else None
+    email = claims.get("email")
+    username = claims.get("preferred_username")
+    if isinstance(username, str) and username.startswith("service-account-"):
+        return None
+    if claims.get("email_verified") is True and isinstance(email, str) and email.strip():
+        return email.lower().strip()
+    return None

@@ -401,7 +401,10 @@ existing visitor magic-link/session endpoints and cookie. The page shows
 bookings and exhibitors associated with that verified identity. Contacts
 without email cannot obtain exhibitor access. Access follows the current
 contact email on every request; the view includes inactive exhibitors too.
-Staff bearer tokens alone do not grant exhibitor access.
+A Keycloak bearer token with an explicitly verified matching email also
+grants exhibitor access, alongside the account’s existing role-based sections.
+Staff roles alone do not grant contact access. Full both-method account
+unification remains in #1209.
 
 | Method | Endpoint | Contract |
 | --- | --- | --- |
@@ -409,7 +412,7 @@ Staff bearer tokens alone do not grant exhibitor access.
 | POST | `/api/visitor-sessions/redeem` | `{token}`; establishes the shared HttpOnly-cookie session and returns owned bookings; invalid/expired/replayed links return 401. |
 | GET | `/api/visitor-sessions/status` | `{authenticated, expires_at}`; absent/expired cookie returns false; no-store. |
 | POST | `/api/visitor-sessions/sign-out` | 204; revokes the shared email session and clears its cookie; safe to repeat. |
-| GET | `/api/me/exhibitors` | Shared email-session cookie required; list of `{id, name, type, website, active}` for current matching contact email; 401 without verified email session; no-store. |
+| GET | `/api/me/exhibitors` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
 
 Uses existing SMTP/frontend URL settings and visitor credential housekeeping.
 No new authentication migration is required; migration `004` adds descriptions.

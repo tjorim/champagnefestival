@@ -62,6 +62,8 @@ current product work, and architectural decisions.
 
 Exhibitor contacts can request an emailed sign-in link at `/me`
 and view their own bookings and exhibitors through one email session. Exhibitor
-access follows the current contact email; staff authentication remains separate.
+access follows the current contact email, using the email session or a
+Keycloak token with an explicitly verified email. Keycloak remains authoritative
+for staff roles. Both-method account unification is tracked in #1209.
 See [manager API documentation](backend/README.md#exhibitor-manager-self-service-1192)
 and the [design decision](docs/decisions/1192-exhibitor-manager-login.md).
