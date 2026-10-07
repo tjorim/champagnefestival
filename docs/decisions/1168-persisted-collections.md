@@ -407,15 +407,6 @@ No externally callable write path changed, and no automatic retry or queue was
 added. `docs/retry-safety.md` needs no new entry.
 
 
-### Validation
-
-Frontend lint, formatting, typecheck and production build passed. The full unit
-suite passed 953 tests with four workers (one pagination timeout in the earlier
-unrestricted run passed its isolated rerun). The authenticated Chromium warm-start
-regression passed with reads deliberately pending across reload, then rejected;
-saved venue/room rows remained visible in both states. The additional token-expiry
-regression covers removal without a dashboard or provider state update.
-
 ## Cross-app lifecycle alignment
 
 The [browser persistence contract](../browser-persistence-contract.md) aligns account isolation,

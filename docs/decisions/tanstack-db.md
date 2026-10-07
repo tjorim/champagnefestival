@@ -655,15 +655,6 @@ active collection; check-in detail/search and the visitor venue plan use their
 existing server queries. No historical collection or unbounded background read
 is introduced. Explicit select-all/export remains an on-demand full matching read.
 
-Validation: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` and
-all 935 frontend tests passed (four test workers). Backend Ruff, formatting,
-`ty`, migrations and schema drift checks passed; all 1373 backend tests passed,
-with the seven event endpoint tests rerun after adding the title field. All 275
-e2e checks passed across the full run and rerun of three page-loading timeouts.
-The two full-matching UI tests retain their assertions with a 30-second timeout
-for rendering and bulk progress on a busy machine.
-
-
 ## Read-only Query warm start (#1197, 2026-10-07)
 
 The installed adapter mirrors manual upserts/deletes into Query and initializes
