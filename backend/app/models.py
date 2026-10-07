@@ -422,6 +422,29 @@ class Exhibitor(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
+class ExhibitorChange(Base):
+    """Private proposal history; the partial unique index permits one pending proposal."""
+
+    __tablename__ = "exhibitor_changes"
+    __table_args__ = (
+        Index("uq_exhibitor_pending_change", "exhibitor_id", unique=True, postgresql_where=text("status = 'pending'")),
+        CheckConstraint(
+            "status IN ('pending', 'accepted', 'rejected', 'superseded', 'replaced')", name="ck_exhibitor_change_status"
+        ),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    exhibitor_id: Mapped[int] = mapped_column(ForeignKey("exhibitors.id", ondelete="CASCADE"), index=True)
+    submitted_by: Mapped[str] = mapped_column(String(255))
+    submitted_auth_source: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    submitted_values: Mapped[dict] = mapped_column(JSON)
+    proposed: Mapped[dict] = mapped_column(JSON)
+    superseded_fields: Mapped[list[str]] = mapped_column(JSON, default=list)
+    status: Mapped[str] = mapped_column(String(20), default="pending")
+    reason: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    notification_recipient: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
 class Venue(Base):
     """A physical venue where the festival takes place."""
 

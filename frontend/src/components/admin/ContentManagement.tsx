@@ -1,3 +1,4 @@
+import ExhibitorChangeReview from "@/components/admin/ExhibitorChangeReview";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { AdminInput } from "@/components/admin/AdminFields";
@@ -260,6 +261,8 @@ export function ContentSection({
           return copy;
         });
         onItemSaved?.(saved, isCurrent);
+        if (sectionKey === "exhibitors" && isCurrent())
+          void queryClient.invalidateQueries({ queryKey: ["admin", "exhibitor-changes"] });
         setModalOpen(false);
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
@@ -281,6 +284,8 @@ export function ContentSection({
           prev.map((item) => (item.id === id ? saved : item)),
         );
         onItemSaved?.(saved, isCurrent);
+        if (sectionKey === "exhibitors" && isCurrent())
+          void queryClient.invalidateQueries({ queryKey: ["admin", "exhibitor-changes"] });
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
@@ -301,6 +306,8 @@ export function ContentSection({
           prev.map((item) => (item.id === id ? saved : item)),
         );
         onItemSaved?.(saved, isCurrent);
+        if (sectionKey === "exhibitors" && isCurrent())
+          void queryClient.invalidateQueries({ queryKey: ["admin", "exhibitor-changes"] });
       } catch (error) {
         setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
       }
@@ -474,7 +481,7 @@ export function ContentSection({
   return (
     <div className="mb-6">
       <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
-        <h6 className="mb-0 text-primary">
+        <h2 className="mb-0 text-base font-semibold leading-tight text-primary">
           {title}
           <Badge variant="secondary" className="ms-2">
             {totalActive}
@@ -484,7 +491,7 @@ export function ContentSection({
               {totalArchived} {m.admin_content_archived_section()}
             </Badge>
           )}
-        </h6>
+        </h2>
         <Button variant="outline-primary" size="sm" onClick={openAdd}>
           <Icon icon={PlusIcon} />
           {m.admin_content_add_item()}
@@ -699,7 +706,9 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
     <div className="mb-6">
       <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
         <div>
-          <h6 className="mb-1 text-primary">{m.admin_content_editions_section()}</h6>
+          <h2 className="mb-1 text-base font-semibold leading-tight text-primary">
+            {m.admin_content_editions_section()}
+          </h2>
           <ButtonGroup aria-label={m.admin_content_edition_type_filter_aria()}>
             {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
               <Button
@@ -744,7 +753,9 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
             return (
               <div key={type}>
                 <div className="flex items-center gap-2 mb-2">
-                  <h6 className="mb-0 text-content">{editionTypeLabel(type)}</h6>
+                  <h3 className="mb-0 text-base font-semibold leading-tight text-content">
+                    {editionTypeLabel(type)}
+                  </h3>
                   <Badge variant="secondary">{grouped.length}</Badge>
                 </div>
                 {grouped.map((edition) => (
@@ -784,10 +795,19 @@ export default function ContentManagement({
   captureExhibitorsFence,
   onEditionMutated,
 }: ContentManagementProps) {
+  const reviewQueryClient = useQueryClient();
   return (
     <div>
       <Card tone="secondary" className="mb-4">
         <CardContent>
+          <ExhibitorChangeReview
+            authHeaders={authHeaders}
+            onDecided={() => {
+              void reviewQueryClient.invalidateQueries({
+                queryKey: contentSectionQueryKey("exhibitors"),
+              });
+            }}
+          />
           <ContentSection
             sectionKey="exhibitors"
             title={m.admin_content_exhibitors_section()}

@@ -67,3 +67,8 @@ Keycloak token with an explicitly verified email. Keycloak remains authoritative
 for staff roles. Both-method account unification is tracked in #1209.
 See [manager API documentation](backend/README.md#exhibitor-manager-self-service-1192)
 and the [design decision](docs/decisions/1192-exhibitor-manager-login.md).
+
+Exhibitor contacts can propose website and description changes from `/me`;
+admins review them in the Exhibitors tab before publication. Configure the optional
+`EXHIBITOR_REVIEW_RECIPIENT` shared mailbox and run the existing outbox worker for
+submission notifications. See [exhibitor review and API documentation](docs/exhibitor-change-review.md).

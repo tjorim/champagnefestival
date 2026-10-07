@@ -468,7 +468,16 @@ export default function MyAccountPage() {
     tabs.push({
       key: "exhibitors",
       title: m.manager_title(),
-      content: <MyExhibitorsSection exhibitors={exhibitors} />,
+      content: (
+        <MyExhibitorsSection
+          key={`${sessionEpoch}-${accountId ?? "email"}`}
+          exhibitors={exhibitors}
+          headers={(): Record<string, string> => {
+            const token = getAccessToken();
+            return token ? { Authorization: `Bearer ${token}` } : {};
+          }}
+        />
+      ),
     });
   if (isVolunteer)
     tabs.push({ key: "volunteer", title: m.my_eid_title(), content: volunteerSection });

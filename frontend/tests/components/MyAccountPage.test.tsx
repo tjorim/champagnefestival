@@ -19,6 +19,7 @@ vi.mock("@/paraglide/messages", () => ({
     close: () => "Close",
     manager_title: () => "My exhibitors",
     manager_error: () => "Could not load exhibitors",
+    manager_change_edit: () => "Edit website and description",
     my_account_title: () => "My Account",
     my_registrations_title: () => "Registrations",
     my_account_signed_in_as: ({ account }: { account: string }) => `Signed in as ${account}`,

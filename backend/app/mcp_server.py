@@ -1417,6 +1417,28 @@ class ChampagneFestivalMcpBackend:
 
     # -- Exhibitors ------------------------------------------------------
 
+    async def list_exhibitor_changes(self) -> dict:
+        """List pending exhibitor proposals and current values. Requires admin."""
+        self._require_admin()
+        from app.services.exhibitor_changes import list_pending
+
+        async with self.session_factory() as db:
+            return {"changes": await list_pending(db)}
+
+    async def decide_exhibitor_change(self, change_id: str, decision: str, reason: str | None = None) -> dict:
+        """Accept or reject a proposal; repeated identical decisions converge. Requires admin."""
+        self._require_admin()
+        from app.schemas import ExhibitorChangeDecision
+        from app.services.errors import ServiceError
+        from app.services.exhibitor_changes import decide
+
+        body = ExhibitorChangeDecision.model_validate({"decision": decision, "reason": reason})
+        async with self.session_factory() as db:
+            try:
+                return await decide(db, change_id, body.decision, body.reason, actor=self._actor())
+            except ServiceError as exc:
+                raise ValueError(str(exc)) from exc
+
     async def create_exhibitor(
         self,
         name: str,
@@ -2162,6 +2184,8 @@ def create_mcp_server(
     register_tool(backend.reorder_faq_items)
     register_tool(backend.get_settings)
     register_tool(backend.set_maintenance_mode)
+    register_tool(backend.list_exhibitor_changes)
+    register_tool(backend.decide_exhibitor_change)
     register_tool(backend.create_exhibitor)
     register_tool(backend.get_exhibitor)
     register_tool(backend.list_exhibitors)

@@ -366,7 +366,8 @@ Exhibitor contacts reuse the existing visitor request, redemption and sign-out
 writes documented above, including their implemented retry decisions. A
 single `/me?token=…` link establishes the email session; eligible bookings are
 claimed as before and current contact records determine exhibitor access.
-No separate manager writes or credentials remain.
+No separate manager authentication writes or credentials remain; proposal writes
+use that shared identity and are documented under #1193 below.
 
 `MyAccountPage` owns the shared sign-out action; the bookings section has no
 standalone sign-out implementation or alternate session controls. The button
@@ -384,3 +385,30 @@ idle deadline within the fixed hard cap. The OIDC path uses the existing
 user-provisioning dependency (unique-subject, convergent creation) and never
 links accounts or moves bookings. It introduces no business write or new
 credential. Both-method canonical account linking remains in #1209.
+
+## Exhibitor proposals and review (#1193)
+
+- `POST /api/me/exhibitors/{id}/changes`: **Client-generated resource ID with
+  stored replay**. Required UUID `submission_id` identifies an immutable submitted
+  payload and actor. Under the exhibitor lock, replaying the same ID/payload/actor
+  returns its current recorded outcome, even after replacement or review; a
+  different payload/actor/exhibitor returns 409. Audit and notification enqueue
+  happen only on first creation and commit atomically. The browser retains the ID
+  while retrying unchanged form data; changing the data creates a fresh proposal.
+  Automatic mutation retries are disabled. After leaving/reloading the form,
+  reconcile the manager history before submitting again.
+- `POST /api/exhibitors/changes/{id}/decision` and MCP
+  `decide_exhibitor_change`: **Terminal-state replay** under the exhibitor lock.
+  The same accept/reject returns the persisted result without a second live
+  update, email or audit. A repeated rejection keeps the original reason.
+  An opposite decision, replaced ID or fully superseded ID fails with 409/error.
+  A partially superseded proposal applies only the fields still pending.
+- Direct admin exhibitor updates remain **not retry safe**, with no version
+  precondition: they may overwrite a newer live edit or supersede a newer manager
+  proposal. Existing browsers/MCP callers must read and reconcile after ambiguity.
+  Supersession and the live edit are atomic; no automatic retry is introduced.
+- Outbox delivery uses the existing leases/backoff. One submission enqueues one
+  job; SMTP itself cannot promise exactly-once delivery after an ambiguous result.
+
+Tests cover recorded submission replay, one notification job, repeated decisions,
+replacement, partial/full supersession and concurrent opposite decisions.

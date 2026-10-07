@@ -713,6 +713,10 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // Exhibitors
   // ──────────────────────────────────────────────────────────────
+  http.get("/api/me/exhibitors/:id/changes", () => HttpResponse.json([])),
+
+  http.get("/api/exhibitors/changes", () => HttpResponse.json([])),
+
   http.get("/api/exhibitors", ({ request }) => {
     const authError = requireAuth(request);
     if (authError) return authError;

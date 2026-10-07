@@ -392,7 +392,7 @@ Omitted/null MCP arguments leave update fields unchanged; empty text strings
 clear individual translations, and an empty `description_language` clears the
 original-language selector. Clearing all text requires clearing that selector
 in the same update. Admin edits are immediately live. Manager proposals and
-supersession belong to #1193 and are not implemented here.
+supersession use the private review workflow below (#1193).
 
 ### Exhibitor manager self-service (#1192)
 
@@ -412,9 +412,23 @@ unification remains in #1209.
 | POST | `/api/visitor-sessions/redeem` | `{token}`; establishes the shared HttpOnly-cookie session and returns owned bookings; invalid/expired/replayed links return 401. |
 | GET | `/api/visitor-sessions/status` | `{authenticated, expires_at}`; absent/expired cookie returns false; no-store. |
 | POST | `/api/visitor-sessions/sign-out` | 204; revokes the shared email session and clears its cookie; safe to repeat. |
-| GET | `/api/me/exhibitors` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
+| GET | `/api/me/exhibitors` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active, description_language, description_nl, description_fr, description_en}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
 
 Uses existing SMTP/frontend URL settings and visitor credential housekeeping.
 No new authentication migration is required; migration `004` adds descriptions.
 See the [login decision](../docs/decisions/1192-exhibitor-manager-login.md)
 and [retry safety](../docs/retry-safety.md). Interactive schemas are at `/docs`.
+
+### Exhibitor proposals and admin review
+
+Managers use the Exhibitors tab on `/me` to propose website and multilingual
+plain-text description edits. Proposals stay private until an admin accepts them
+in the admin Exhibitors tab. Direct admin edits supersede pending fields; managers
+see the outcome and any rejection reason. Admin REST and MCP review operations
+share the same service and concurrency/retry contract.
+
+Apply migration `005` and configure `EXHIBITOR_REVIEW_RECIPIENT` in the environment
+infra env file to notify a shared mailbox through the existing SMTP outbox worker.
+Leave it unset to use only the pending list. No new Keycloak roles are needed.
+See the [API and workflow contract](../docs/exhibitor-change-review.md) and
+[retry safety](../docs/retry-safety.md#exhibitor-proposals-and-review-1193).
