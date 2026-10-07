@@ -1,4 +1,6 @@
-# Exhibitor description drafts (#1195)
+# Organisation description drafts (#1195)
+
+UI terminology: [organisation / organisatie / organisation](decisions/1190-organisation-terminology.md). Existing exhibitor identifiers retain their API and storage meaning.
 
 Admins and current exhibitor contacts can explicitly request an editable machine
 translation. Requests never create a proposal, change live descriptions, enqueue

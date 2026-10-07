@@ -1,4 +1,6 @@
-# Exhibitor change review (#1193)
+# Organisation change review (#1193)
+
+UI terminology: [organisation / organisatie / organisation](decisions/1190-organisation-terminology.md). Existing exhibitor identifiers retain their API and storage meaning.
 
 Managers sign in through the existing `/me` identity (#1192). Every request
 checks their currently verified email against the exhibitor's current contact;
@@ -43,8 +45,11 @@ an empty string clears the website. Website validation matches the admin form
 ## Review and precedence
 
 The manager's exhibitor tab on `/me` shows history and an allowed-field form.
-The admin Exhibitors tab shows current and proposed texts side by side for
+The admin Organisations tab shows current and proposed texts side by side for
 every description language, with accept/reject and an optional rejection reason.
+Each bounded field comparison uses the controlled `AdminDataTable` renderer
+and `useAppTable`, including the logo row. The complete pending proposal set
+remains a TanStack Query result; it does not need a paged exhibitor API.
 The reason is sent only with rejection; acceptance sends no rejection text.
 Accept changes only fields still pending. Rejection preserves all live data.
 
@@ -94,3 +99,14 @@ format and type checks, a fresh upgrade through combined migration `004`, downgr
 to `003` and re-upgrade, and frontend lint, format,
 type checks and production build passed. The real browser workflow also verified
 acceptance and the manager's accepted state. No production deployment was performed.
+
+## Shared review renderer verification (#1190, 2026-10-07)
+
+The final epic integration replaces the inline comparison markup with the
+controlled `AdminDataTable` renderer. Current/proposed text in every language,
+authenticated logo previews, rejection reasons and stale-decision handling
+retain their existing component coverage. All 993 frontend tests pass (including
+49 focused tests across eight exhibitor/account suites), along with typecheck,
+lint, formatting and production build. Lint retains existing unrelated warnings.
+Backend behavior is unchanged and its tests were not rerun for this renderer
+change. The integration remains uncommitted pending review/merge.

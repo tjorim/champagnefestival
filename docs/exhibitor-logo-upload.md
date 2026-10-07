@@ -1,4 +1,6 @@
-# Exhibitor logo uploads (#1194)
+# Organisation logo uploads (#1194)
+
+UI terminology: [organisation / organisatie / organisation](decisions/1190-organisation-terminology.md). Existing exhibitor identifiers retain their API and storage meaning.
 
 Managers upload from **My account** using the existing verified contact identity.
 An upload adds an `image` field to the private proposal workflow from #1193,

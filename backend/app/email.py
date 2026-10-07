@@ -298,12 +298,12 @@ async def deliver_exhibitor_change_notification(change_id: str) -> bool:
         if not settings.smtp_host or not settings.smtp_from:
             return False
         message = EmailMessage()
-        message["Subject"] = "Champagnefestival: exhibitor change awaiting review"
+        message["Subject"] = "Champagnefestival: organisation change awaiting review"
         message["From"] = settings.smtp_from
         message["To"] = recipient
         message["Message-ID"] = f"<exhibitor-change-{change.id}@champagnefestival>"
         message.set_content(
-            f"Exhibitor {change.exhibitor_id} submitted proposal {change.id}.\n"
+            f"Organisation {change.exhibitor_id} submitted proposal {change.id}.\n"
             f"Review the pending changes in the admin Content page: {settings.frontend_url}/admin\n"
         )
         try:

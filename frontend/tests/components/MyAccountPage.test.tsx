@@ -20,7 +20,7 @@ vi.mock("@/paraglide/messages", () => ({
     logo_upload_label: () => "Upload logo",
     logo_upload_help: () => "PNG, JPEG or WebP",
     manager_change_help: () => "Submit for review",
-    manager_title: () => "My exhibitors",
+    manager_title: () => "My organisations",
     manager_error: () => "Could not load exhibitors",
     manager_change_edit: () => "Edit website and description",
     my_account_title: () => "My Account",
@@ -105,7 +105,7 @@ describe("MyAccountPage", () => {
     );
     const user = userEvent.setup();
     render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
-    await user.click(await screen.findByRole("tab", { name: "My exhibitors" }));
+    await user.click(await screen.findByRole("tab", { name: "My organisations" }));
     expect(screen.getByText("Shared account house")).toBeVisible();
     expect(authorization).toBe("Bearer oidc-access-token");
     expect(screen.getByRole("tab", { name: "My Account" })).toBeVisible();

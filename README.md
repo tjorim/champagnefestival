@@ -60,25 +60,29 @@ The frontend dev server proxies `/api/*` to the backend automatically.
 See the [documentation guide](docs/README.md) for operational contracts,
 current product work, and architectural decisions.
 
-Exhibitor contacts can request an emailed sign-in link at `/me`
-and view their own bookings and exhibitors through one email session. Exhibitor
+The UI uses **organisation** (Dutch **organisatie**, French **organisation**)
+for producers, sponsors and vendors, covering companies and associations.
+See the [terminology decision](docs/decisions/1190-organisation-terminology.md).
+
+Organisation contacts can request an emailed sign-in link at `/me`
+and view their own bookings and organisations through one email session. Organisation
 access follows the current contact email, using the email session or a
 Keycloak token with an explicitly verified email. Keycloak remains authoritative
 for staff roles. Both-method account unification is tracked in #1209.
 See [manager API documentation](backend/README.md#exhibitor-manager-self-service-1192)
 and the [design decision](docs/decisions/1192-exhibitor-manager-login.md).
 
-Exhibitor contacts can propose website and description changes from `/me`;
-admins review them in the Exhibitors tab before publication. Configure the optional
+Organisation contacts can propose website and description changes from `/me`;
+admins review them in the Organisations tab before publication. Configure the optional
 `EXHIBITOR_REVIEW_RECIPIENT` shared mailbox and run the existing outbox worker for
 submission notifications. See [exhibitor review and API documentation](docs/exhibitor-change-review.md).
 
-Exhibitor managers can upload logos for administrator review; administrators
+Organisation managers can upload logos for administrator review; administrators
 can publish their own uploads immediately. PNG, JPEG and WebP uploads are
 validated and re-encoded, and pending files stay in private storage.
 See [logo upload setup, API and recovery](docs/exhibitor-logo-upload.md) for
 local directories, production volume requirements and cleanup operations.
 
-Exhibitor editors can request editable description drafts from the optional
+Organisation editors can request editable description drafts from the optional
 self-hosted translation service. Nothing is saved until a person saves or submits
 it. See [configuration and API contract](docs/exhibitor-description-translation.md).

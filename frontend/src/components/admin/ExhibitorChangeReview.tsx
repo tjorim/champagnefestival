@@ -2,7 +2,9 @@ import ExhibitorLogoPreview from "@/components/ExhibitorLogoPreview";
 import ResponsiveImage from "@/components/ResponsiveImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { captureAdminExhibitorsFence } from "@/state/adminExhibitorsCollection";
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
+import { createAppColumnHelper, useAppTable } from "@/hooks/useAdminTable";
+import { AdminDataTable } from "./AdminDataTable";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,14 @@ import {
   exhibitorTextFields,
   type ExhibitorChange,
 } from "@/utils/exhibitorChangesApi";
+
+interface ComparisonRow {
+  id: string;
+  label: string;
+  current: ReactNode;
+  proposed: ReactNode;
+}
+const columnHelper = createAppColumnHelper<ComparisonRow>();
 
 function Review({
   change,
@@ -48,53 +58,63 @@ function Review({
       (field !== "website" &&
         exhibitorTextFields.some((key) => key !== "website" && key in change.proposed)),
   );
+  const comparisons: ComparisonRow[] = fields.map((field) => ({
+    id: field,
+    label: exhibitorFieldLabel(field),
+    current: change.current[field] || "—",
+    proposed: (field in change.proposed ? change.proposed[field] : change.current[field]) || "—",
+  }));
+  if (change.proposed.image) {
+    comparisons.unshift({
+      id: "image",
+      label: m.logo_upload_label(),
+      current: change.current.image ? (
+        <ResponsiveImage
+          src={change.current.image}
+          alt={m.manager_change_current()}
+          className="max-w-64"
+        />
+      ) : (
+        "—"
+      ),
+      proposed: (
+        <ExhibitorLogoPreview url={`/api/exhibitors/changes/${change.id}/logo`} headers={headers} />
+      ),
+    });
+  }
+  // Review is a bounded field comparison, not a paged exhibitor list. Reuse
+  // the shared controlled renderer while Query owns the complete pending set.
+  const table = useAppTable({
+    data: comparisons,
+    getRowId: (row) => row.id,
+    enableSorting: false,
+    manualSorting: true,
+    manualFiltering: true,
+    columns: [
+      columnHelper.display({
+        id: "label",
+        header: m.manager_change_field(),
+        cell: (info) => <span className="font-medium">{info.row.original.label}</span>,
+      }),
+      columnHelper.display({
+        id: "current",
+        header: m.manager_change_current(),
+        cell: (info) => info.row.original.current,
+        meta: { tdClassName: "whitespace-pre-wrap break-words" },
+      }),
+      columnHelper.display({
+        id: "proposed",
+        header: m.manager_change_proposed(),
+        cell: (info) => info.row.original.proposed,
+        meta: { tdClassName: "whitespace-pre-wrap break-words" },
+      }),
+    ],
+  });
   return (
     <article className="rounded-lg border border-subtle p-4 flex flex-col gap-4">
       <h3 className="text-lg font-medium text-content">{change.exhibitor_name}</h3>
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr>
-              <th>{m.manager_change_field()}</th>
-              <th>{m.manager_change_current()}</th>
-              <th>{m.manager_change_proposed()}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {change.proposed.image && (
-              <tr>
-                <th>{m.logo_upload_label()}</th>
-                <td className="p-2">
-                  {change.current.image && (
-                    <ResponsiveImage
-                      src={change.current.image}
-                      alt={m.manager_change_current()}
-                      className="max-w-64"
-                    />
-                  )}
-                </td>
-                <td className="p-2">
-                  <ExhibitorLogoPreview
-                    url={`/api/exhibitors/changes/${change.id}/logo`}
-                    headers={headers}
-                  />
-                </td>
-              </tr>
-            )}
-            {fields.map((field) => (
-              <tr key={field}>
-                <th className="text-start">{exhibitorFieldLabel(field)}</th>
-                <td className="p-2 whitespace-pre-wrap break-words">
-                  {change.current[field] || "—"}
-                </td>
-                <td className="p-2 whitespace-pre-wrap break-words">
-                  {(field in change.proposed ? change.proposed[field] : change.current[field]) ||
-                    "—"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <AdminDataTable table={table} />
       </div>
       {change.superseded_fields.length > 0 && (
         <p>
