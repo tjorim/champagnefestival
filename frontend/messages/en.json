@@ -1182,5 +1182,13 @@
   "vendors_title": "Vendors",
   "loading_vendors": "Loading vendors…",
   "error_loading_vendors": "Unable to load vendors.",
-  "admin_item_description_original_required": "Enter a description in its original language, or clear all description texts."
+  "admin_item_description_original_required": "Enter a description in its original language, or clear all description texts.",
+  "manager_title": "My exhibitors",
+  "manager_email": "Contact email address",
+  "manager_request": "Email me a sign-in link",
+  "manager_sent": "If this email belongs to an exhibitor contact, a sign-in link has been sent.",
+  "manager_error": "Unable to complete this request. Please try again or request a new link.",
+  "manager_empty": "You are not currently the contact for any exhibitors.",
+  "manager_sign_out": "Sign out",
+  "manager_contact_hint": "A contact person needs an email address to sign in and view their exhibitors."
 }

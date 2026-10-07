@@ -50,6 +50,7 @@ interface AppRouteComponents {
   PrivacyPolicyRoute: RouteComponent;
   PebblePairRoute: RouteComponent;
   MyAccountRoute: RouteComponent;
+  MyExhibitorsRoute: RouteComponent;
   VenuePlanRoute: RouteComponent;
 }
 
@@ -60,6 +61,7 @@ export function createAppRouter({
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,
+  MyExhibitorsRoute,
   VenuePlanRoute,
   queryClient,
 }: AppRouteComponents & { queryClient: QueryClient }) {
@@ -150,12 +152,20 @@ export function createAppRouter({
     component: MyAccountRoute,
   });
 
+  const myExhibitorsRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/my-exhibitors",
+    validateSearch: validateMyRegistrationsSearch,
+    component: MyExhibitorsRoute,
+  });
+
   const routeTree = rootRoute.addChildren([
     indexRoute,
     adminLayoutRoute.addChildren([adminRoute, checkInRoute, venuePlanRoute]),
     privacyPolicyRoute,
     pebblePairRoute,
     myAccountRoute,
+    myExhibitorsRoute,
   ]);
 
   return createRouter({

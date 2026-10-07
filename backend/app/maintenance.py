@@ -16,6 +16,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import async_session_factory
+from app.exhibitor_manager_session import (
+    cleanup_expired_magic_links as cleanup_manager_magic_links,
+)
+from app.exhibitor_manager_session import (
+    cleanup_expired_sessions as cleanup_manager_sessions,
+)
 from app.ratelimit import cleanup_expired_rate_limit_buckets
 from app.services.outbox_service import cleanup_completed_jobs
 from app.services.push_service import cleanup_expired_subscriptions
@@ -30,6 +36,8 @@ SWEEPS: tuple[tuple[str, Sweep], ...] = (
     ("stale rate-limit buckets", cleanup_expired_rate_limit_buckets),
     ("expired visitor sessions", cleanup_expired_sessions),
     ("expired visitor magic links", cleanup_expired_magic_links),
+    ("expired manager sessions", cleanup_manager_sessions),
+    ("expired manager magic links", cleanup_manager_magic_links),
     ("stale push subscriptions", cleanup_expired_subscriptions),
 )
 

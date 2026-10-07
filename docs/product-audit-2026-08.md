@@ -41,6 +41,8 @@ For #953:
 
 ## Dependencies and accepted boundaries
 
+- #1192 supplies the separate manager identity and live contact authorisation for #1190; #1193 can build its proposed-change workflow on it and #1191’s descriptions. Editing and review remain outside this read-only increment.
+
 - #953's code prerequisites (#922, #924, #947) are complete; delivery verification is an operational gate.
 - #932 is closed under the accepted one-API-worker deployment scope. Remaining process-local limits and metrics are not a planned scaling project. Revisit only if measured load warrants it; see [deployment](../DEPLOYMENT.md).
 - #946 is closed: all communications children (#940, #943, #944, #945, #947, #941, #942) are implemented.
@@ -57,6 +59,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1192](https://github.com/tjorim/champagnefestival/issues/1192) | Completed | 2026-10-07 | Implementation in this change; [decision](decisions/1192-exhibitor-manager-login.md) | Dedicated emailed credentials, database sessions and manager cookie; live normalised contact-email authorisation; slim `GET /api/me/exhibitors`; translated read-only `/my-exhibitors` login/list page and admin email guidance. Retry safety, README and API schemas documented. Scope, revocation, expiry, replay, concurrent redemption, delivery and cleanup tests pass, as do frontend/backend checks and migration round-trip verification. Proposed edits remain in #1193. |
 | [#1191](https://github.com/tjorim/champagnefestival/issues/1191) | Completed | 2026-10-07 | Implementation in this change | Admin REST/MCP and the exhibitor editor support optional plain-text descriptions (600 characters per language), with Dutch, French or English as the original language and optional translations. Public edition payloads and carousels retain all texts and use the visitor language before the original. A conditional vendor section renders vendors when present; existing lineup eligibility is unchanged. Schema/service/database validation, clearing, fallback and escaped rendering are tested. Manager review/supersession remains in #1193. |
 | [#1174](https://github.com/tjorim/champagnefestival/issues/1174) | Completed | 2026-10-07 | Closed sub-issues #1175–#1182; implementation records below | Members, Volunteers, People and registrations share `AdminDataTable` and server paging, sorting, filters and full-result counts. Query pages retain previous data; people mutations are optimistic; only the active edition's complete registration set remains eagerly loaded. [Decision and completion record](decisions/tanstack-db.md#roadmap). Persistence implementation remains separate in #1197. |
 | [#1179](https://github.com/tjorim/champagnefestival/issues/1179) | Completed with #1181 | 2026-10-06 | Working-tree implementation; mutation regression tests | Query optimistic edits/deletes with authoritative rollback, overlapping-write coordination, pending rows and session fencing; creates and merges remain non-optimistic. [Implementation and retry policy](people-query-layer.md). |

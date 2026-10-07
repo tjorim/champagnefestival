@@ -359,3 +359,14 @@ writing an audit entry; an invalid original-language transition makes no change.
 Clearing uses explicit nulls in REST, or empty strings for all populated texts and
 the original language in MCP. Tests cover partial updates, invalid transitions,
 and explicit clearing through both adapters.
+
+## Exhibitor manager login (#1192)
+
+| Write | Retry-safety decision | Verification |
+| --- | --- | --- |
+| `POST /api/exhibitor-manager-sessions/request` | No automatic retry. Repeating rotates the outstanding single-use link and can send another email; an ambiguous response requires a deliberate new request. The 202 response does not guarantee delivery or reveal contact membership. | Replaced-link and identical-response tests in `test_exhibitor_manager_sessions.py`. |
+| `POST /api/exhibitor-manager-sessions/redeem` | No automatic retry. Single-use, row-locked redemption commits link expiry and session creation atomically; a replay returns 401. After an ambiguous response check session status before deliberately requesting another link. | Replay and session tests. |
+| `POST /api/exhibitor-manager-sessions/sign-out` | Convergent deletion and cookie clearing; repeating an absent/expired session is a 204 no-op. Frontend performs one request per click. | Repeated sign-out and revoked-cookie tests. |
+
+Authenticated reads slide the session's idle deadline within its fixed hard
+cap; this is a convergent refresh, not a new credential or business write.

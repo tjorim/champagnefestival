@@ -330,6 +330,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
               <AdminLabel className="text-subtle text-sm">
                 {m.admin_item_contact_person()}
               </AdminLabel>
+              <p className="text-sm text-muted-foreground">{m.manager_contact_hint()}</p>
               <form.Field name="contactOption">
                 {(field) => (
                   <Combobox

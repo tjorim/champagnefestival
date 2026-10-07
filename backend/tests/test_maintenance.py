@@ -21,6 +21,8 @@ def test_housekeeping_covers_every_former_worker_sweep():
         "stale rate-limit buckets",
         "expired visitor sessions",
         "expired visitor magic links",
+        "expired manager sessions",
+        "expired manager magic links",
         "stale push subscriptions",
     ]
 

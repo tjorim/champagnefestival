@@ -81,6 +81,7 @@ const CheckInPage = lazy(() => import("./components/CheckInPage"));
 const VenuePlanPage = lazy(() => import("./components/VenuePlanPage"));
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
+const MyExhibitorsPage = lazy(() => import("./components/MyExhibitorsPage"));
 const MyAccountPage = lazy(() => import("./components/MyAccountPage"));
 // Below-the-fold components
 const MarqueeSlider = lazy(() => import("./components/MarqueeSlider"));
@@ -266,6 +267,23 @@ function MyAccountRoute() {
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.my_account_delete_error()}>
           <MyAccountPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+function MyExhibitorsRoute() {
+  useNoIndex();
+  return (
+    <div className="App standalone-app">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar icon={CircleUserRoundIcon} title={m.manager_title()} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={m.manager_error()}>
+          <MyExhibitorsPage />
         </AppSuspense>
       </main>
     </div>
@@ -745,6 +763,7 @@ const router = createAppRouter({
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,
+  MyExhibitorsRoute,
   VenuePlanRoute,
   queryClient,
 });
