@@ -1,3 +1,5 @@
+import ExhibitorLogoPreview from "@/components/ExhibitorLogoPreview";
+import ResponsiveImage from "@/components/ResponsiveImage";
 import { useAuth } from "@/contexts/AuthContext";
 import { captureAdminExhibitorsFence } from "@/state/adminExhibitorsCollection";
 import { useId, useState } from "react";
@@ -59,6 +61,26 @@ function Review({
             </tr>
           </thead>
           <tbody>
+            {change.proposed.image && (
+              <tr>
+                <th>{m.logo_upload_label()}</th>
+                <td className="p-2">
+                  {change.current.image && (
+                    <ResponsiveImage
+                      src={change.current.image}
+                      alt={m.manager_change_current()}
+                      className="max-w-64"
+                    />
+                  )}
+                </td>
+                <td className="p-2">
+                  <ExhibitorLogoPreview
+                    url={`/api/exhibitors/changes/${change.id}/logo`}
+                    headers={headers}
+                  />
+                </td>
+              </tr>
+            )}
             {fields.map((field) => (
               <tr key={field}>
                 <th className="text-start">{exhibitorFieldLabel(field)}</th>

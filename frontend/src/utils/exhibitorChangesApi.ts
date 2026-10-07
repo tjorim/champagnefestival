@@ -14,8 +14,8 @@ export interface ExhibitorChange {
   exhibitor_id: number;
   exhibitor_name: string;
   status: "pending" | "accepted" | "rejected" | "superseded" | "replaced";
-  proposed: Partial<ExhibitorTexts>;
-  current: ExhibitorTexts;
+  proposed: Partial<ExhibitorTexts> & { image?: string };
+  current: ExhibitorTexts & { image?: string };
   superseded_fields: string[];
   reason: string | null;
 }

@@ -28,6 +28,7 @@ from app.routers import (
     contact,
     editions,
     events,
+    exhibitor_logos,
     exhibitors,
     faq,
     health,
@@ -196,6 +197,7 @@ app.include_router(venues.router)
 app.include_router(rooms.router)
 app.include_router(layouts.router)
 app.include_router(exhibitors.router)
+app.include_router(exhibitor_logos.router)
 app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(products.router)

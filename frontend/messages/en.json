@@ -1205,5 +1205,11 @@
   "manager_change_none": "No changes awaiting review.",
   "manager_change_refresh": "Refresh",
   "manager_change_conflict": "This proposal has changed or has already been reviewed. Refresh the list before deciding.",
-  "manager_change_review_error": "Unable to complete the review request. Refresh and try again."
+  "manager_change_review_error": "Unable to complete the review request. Refresh and try again.",
+  "logo_upload_label": "Upload logo",
+  "logo_upload_help": "PNG, JPEG or WebP, up to 5 MiB and 16 megapixels.",
+  "logo_upload_admin_help": "Uploading publishes the logo immediately and replaces any pending manager logo.",
+  "logo_upload_success": "Logo uploaded.",
+  "logo_upload_error": "Unable to upload the logo. Check the format and size, then try again.",
+  "logo_preview_error": "Unable to load the pending logo."
 }

@@ -1205,5 +1205,11 @@
   "manager_change_none": "Aucune modification à vérifier.",
   "manager_change_refresh": "Actualiser",
   "manager_change_conflict": "Cette proposition a changé ou a déjà été examinée. Actualisez la liste avant de décider.",
-  "manager_change_review_error": "Impossible de terminer la vérification. Actualisez et réessayez."
+  "manager_change_review_error": "Impossible de terminer la vérification. Actualisez et réessayez.",
+  "logo_upload_label": "Importer un logo",
+  "logo_upload_help": "PNG, JPEG ou WebP, jusqu’à 5 MiB et 16 mégapixels.",
+  "logo_upload_admin_help": "L’importation publie immédiatement le logo et remplace tout logo proposé en attente.",
+  "logo_upload_success": "Logo importé.",
+  "logo_upload_error": "Impossible d’importer le logo. Vérifiez le format et la taille, puis réessayez.",
+  "logo_preview_error": "Impossible de charger le logo proposé."
 }

@@ -17,6 +17,9 @@ vi.mock("@/components/MyRegistrationsPage", () => ({
 vi.mock("@/paraglide/messages", () => ({
   m: {
     close: () => "Close",
+    logo_upload_label: () => "Upload logo",
+    logo_upload_help: () => "PNG, JPEG or WebP",
+    manager_change_help: () => "Submit for review",
     manager_title: () => "My exhibitors",
     manager_error: () => "Could not load exhibitors",
     manager_change_edit: () => "Edit website and description",

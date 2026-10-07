@@ -413,3 +413,31 @@ credential. Both-method canonical account linking remains in #1209.
 
 Tests cover recorded submission replay, one notification job, repeated decisions,
 replacement, partial/full supersession and concurrent opposite decisions.
+
+### Exhibitor logo uploads and review (#1194)
+
+`POST /api/me/exhibitors/{id}/logo` deliberately replaces the one pending
+proposal with a new proposal ID on every successful upload, retaining its other
+pending fields. Repeating an upload converges to one pending logo and removes
+the previous private file, but creates another history/audit entry. No automatic
+retry: after an ambiguous outcome refresh the proposal history before uploading
+again. A text-only replacement also deletes the replaced private logo.
+
+`POST /api/exhibitors/{id}/logo` publishes immediately under the same validation
+and storage rules. A repeat leaves one live logo and retires the previous
+managed file, but creates a fresh URL/audit event. No automatic retry; refresh
+the exhibitor after an ambiguous outcome. Direct REST/MCP image edits and
+exhibitor deletion now clean up managed files and pending logos after commit.
+
+The existing decision API/MCP retains its proposal-ID replay contract: repeating
+accept/reject returns the recorded outcome without another copy, audit or
+cleanup. Opposite/obsolete decisions return conflict. Files are created before
+commit, obsolete files deleted afterward, and new files removed on rollback.
+Crash leftovers/deletion failures are removed by the lock-protected
+[reconciliation command](exhibitor-logo-upload.md). There is no distributed
+filesystem/database atomic commit; reconciliation is the recovery strategy.
+
+Upload decoding occurs before the shared storage lock. Managers undergo an
+unlocked ownership preflight and a fresh ownership check under the lock before
+any file/proposal is created. Revocation during decoding therefore rejects the
+write without creating files; the retry and audit contracts remain unchanged.
