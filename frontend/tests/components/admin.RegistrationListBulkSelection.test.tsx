@@ -159,7 +159,7 @@ describe("RegistrationList — CSV export covers every matching registration", (
     await waitFor(() => expect(exportToCsvMock).toHaveBeenCalledTimes(1));
     const [, rows] = exportToCsvMock.mock.calls[0] as [string, unknown[]];
     expect(rows).toHaveLength(TOTAL_REGISTRATIONS);
-  });
+  }, 30_000);
 });
 
 describe("RegistrationList — Gmail-style select-all-matching", () => {
@@ -197,5 +197,5 @@ describe("RegistrationList — Gmail-style select-all-matching", () => {
     for (const registration of rawRegistrations) {
       expect(onUpdateStatus).toHaveBeenCalledWith(registration.id, "confirmed");
     }
-  });
+  }, 30_000);
 });

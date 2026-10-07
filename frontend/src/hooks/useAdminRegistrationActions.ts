@@ -12,6 +12,7 @@ import type {
 import { apiToPaymentTransaction, apiToRegistration } from "@/types/registrationMapper";
 import { useRegistrationAdminMutations } from "@/hooks/useRegistrationAdminMutations";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
+import { fetchRegistration } from "@/utils/adminFetch";
 import { toLocalDateKey } from "@/utils/dateUtils";
 import { devError } from "@/utils/devLog";
 
@@ -219,9 +220,9 @@ export function useAdminRegistrationActions({
 
   const handleRecordPayment = useCallback(
     async (id: string) => {
-      const registration = queryClient
-        .getQueryData<Registration[]>(registrationsQueryKey)
-        ?.find((r) => r.id === id);
+      const registration =
+        queryClient.getQueryData<Registration[]>(registrationsQueryKey)?.find((r) => r.id === id) ??
+        (await fetchRegistration(id, authHeaders));
       const outstanding = Math.max(
         0,
         (registration?.amountDue ?? 0) - (registration?.amountPaid ?? 0),
@@ -233,7 +234,7 @@ export function useAdminRegistrationActions({
         idempotencyKey: crypto.randomUUID(),
       });
     },
-    [handleAddTransaction, queryClient, registrationsQueryKey],
+    [handleAddTransaction, queryClient, registrationsQueryKey, authHeaders],
   );
 
   const handleSaveAllocations = useCallback(
@@ -319,9 +320,11 @@ export function useAdminRegistrationActions({
 
   const handleAssignTable = useCallback(
     async (registrationId: string, tableId: string | undefined) => {
-      const registration = queryClient
-        .getQueryData<Registration[]>(registrationsQueryKey)
-        ?.find((r) => r.id === registrationId);
+      const registration =
+        queryClient
+          .getQueryData<Registration[]>(registrationsQueryKey)
+          ?.find((r) => r.id === registrationId) ??
+        (await fetchRegistration(registrationId, authHeaders));
       if (!registration || (registration.allocations?.length ?? 0) > 1) return;
       try {
         await handleSaveAllocations(
@@ -342,7 +345,7 @@ export function useAdminRegistrationActions({
         /* Shared action feedback already displays the error. */
       }
     },
-    [queryClient, registrationsQueryKey, handleSaveAllocations],
+    [queryClient, registrationsQueryKey, handleSaveAllocations, authHeaders],
   );
 
   const handleAddRegistration = useCallback(
@@ -351,7 +354,9 @@ export function useAdminRegistrationActions({
       // one-booking list as loaded (and repopulate the collection after a
       // sign-out reset). The initial fetch returns the new booking itself.
       queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
-        prev ? [registration, ...prev] : prev,
+        prev && registration.event?.editionId === registrationsQueryKey[3]
+          ? [registration, ...prev.filter((row) => row.id !== registration.id)]
+          : prev,
       );
     },
     [queryClient, registrationsQueryKey],

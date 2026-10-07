@@ -257,6 +257,7 @@ export interface LayoutRestorePreview {
  */
 export interface EventCheckInStats {
   eventId: string;
+  eventTitle?: string;
   total: number;
   checkedIn: number;
 }

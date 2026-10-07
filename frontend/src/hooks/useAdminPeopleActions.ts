@@ -2,6 +2,8 @@ import {
   refetchAdminRegistrations,
   type AdminRegistrationsCollection,
 } from "@/state/adminRegistrationsCollection";
+import { queryKeys } from "@/utils/queryKeys";
+import { fetchRegistration } from "@/utils/adminFetch";
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import type { MemberFormData } from "@/components/admin/MemberFormModal";
@@ -23,6 +25,7 @@ interface UseAdminPeopleActionsOptions {
   registrationsCollection: AdminRegistrationsCollection;
   queryClient: QueryClient;
   registrationsQueryKey: QueryKey;
+  detailRegistration?: Registration | null;
   setDetailRegistration: Dispatch<SetStateAction<Registration | null>>;
 }
 
@@ -31,8 +34,8 @@ export function useAdminPeopleActions({
   exhibitorsCollection,
   registrationsCollection,
   queryClient,
-  registrationsQueryKey,
   setDetailRegistration,
+  detailRegistration,
 }: UseAdminPeopleActionsOptions) {
   const {
     mergePeopleMutation,
@@ -48,7 +51,7 @@ export function useAdminPeopleActions({
   } = usePeopleMutations({
     queryClient,
     authHeaders,
-    registrationsQueryKey,
+    registrationsQueryKey: queryKeys.admin.registrations,
   });
 
   const handleMergePeople = useCallback(
@@ -97,14 +100,24 @@ export function useAdminPeopleActions({
       } finally {
         if (current()) {
           await refetchAdminRegistrations(registrationsCollection);
+          const updatedDetail = detailRegistration
+            ? (registrationsCollection.get(detailRegistration.id) ??
+              (await fetchRegistration(detailRegistration.id, authHeaders).catch(() => null)))
+            : null;
           if (current())
             setDetailRegistration((previous) =>
-              previous ? (registrationsCollection.get(previous.id) ?? null) : null,
+              previous?.id === updatedDetail?.id ? updatedDetail : previous,
             );
         }
       }
     },
-    [updateMemberMutation, registrationsCollection, setDetailRegistration],
+    [
+      updateMemberMutation,
+      registrationsCollection,
+      setDetailRegistration,
+      detailRegistration,
+      authHeaders,
+    ],
   );
 
   const handleDeleteMember = useCallback(
@@ -129,14 +142,24 @@ export function useAdminPeopleActions({
       } finally {
         if (current()) {
           await refetchAdminRegistrations(registrationsCollection);
+          const updatedDetail = detailRegistration
+            ? (registrationsCollection.get(detailRegistration.id) ??
+              (await fetchRegistration(detailRegistration.id, authHeaders).catch(() => null)))
+            : null;
           if (current())
             setDetailRegistration((previous) =>
-              previous ? (registrationsCollection.get(previous.id) ?? null) : null,
+              previous?.id === updatedDetail?.id ? updatedDetail : previous,
             );
         }
       }
     },
-    [updatePersonMutation, registrationsCollection, setDetailRegistration],
+    [
+      updatePersonMutation,
+      registrationsCollection,
+      setDetailRegistration,
+      detailRegistration,
+      authHeaders,
+    ],
   );
 
   const handleDeletePerson = useCallback(

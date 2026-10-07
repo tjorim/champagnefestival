@@ -12,7 +12,6 @@ interface UseRegistrationAdminMutationsOptions {
 export function useRegistrationAdminMutations({
   queryClient,
   authHeaders,
-  registrationsQueryKey,
 }: UseRegistrationAdminMutationsOptions) {
   const updateRegistrationMutation = useMutation({
     mutationFn: ({
@@ -30,7 +29,10 @@ export function useRegistrationAdminMutations({
         fallbackMessage,
       ),
     onSettled: () => {
-      void invalidateAdmin(queryClient, [registrationsQueryKey]);
+      void invalidateAdmin(queryClient, [
+        queryKeys.admin.registrations,
+        queryKeys.admin.editionStats,
+      ]);
     },
     retry: false,
   });
@@ -52,7 +54,8 @@ export function useRegistrationAdminMutations({
       ),
     onSettled: (_data, _error, variables) => {
       void invalidateAdmin(queryClient, [
-        registrationsQueryKey,
+        queryKeys.admin.registrations,
+        queryKeys.admin.editionStats,
         queryKeys.admin.paymentTransactions(variables.registrationId),
         // Prefix matches: refreshes every person's payment-summary/
         // registrations view and every edition/person ledger drill-down,

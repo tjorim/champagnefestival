@@ -41,6 +41,7 @@ export function apiEventCheckInStatsToEventCheckInStats(
 ): EventCheckInStats {
   return {
     eventId: d.event_id as string,
+    eventTitle: typeof d.event_title === "string" ? d.event_title : undefined,
     total: d.total as number,
     checkedIn: d.checked_in as number,
   };

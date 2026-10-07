@@ -45,8 +45,14 @@ export function LiveUpdatesProvider(): null {
       getToken: getAccessToken,
       signal: controller.signal,
       onInvalidate(envelope) {
-        const queryState = queryClient.getQueryState(queryKeys.admin.registrations);
-        const isQuerySuccess = queryState?.status === "success";
+        if (envelope.keys.some((key) => key[0] === "admin" && key[1] === "registrations")) {
+          queryClient.invalidateQueries({ queryKey: queryKeys.admin.editionStats });
+        }
+        const isQuerySuccess = queryClient
+          .getQueriesData({
+            queryKey: [...queryKeys.admin.registrations, "edition"],
+          })
+          .some(([key]) => queryClient.getQueryState(key)?.status === "success");
         const canPatchRegistration = isQuerySuccess && canPatchAdminRegistrationLiveEvent(envelope);
         const tablesQueryState = queryClient.getQueryState(queryKeys.admin.tables);
         const canPatchTable =
@@ -72,6 +78,13 @@ export function LiveUpdatesProvider(): null {
             // check-in stats nested under this key are skipped along with it —
             // a check-in changes them, so refetch them explicitly.
             queryClient.invalidateQueries({ queryKey: queryKeys.admin.eventCheckInStats });
+            queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.registrations, "page"] });
+            queryClient.invalidateQueries({
+              queryKey: [...queryKeys.admin.registrations, "counts"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: [...queryKeys.admin.registrations, "layout-event"],
+            });
           }
         }
 
@@ -93,6 +106,7 @@ export function LiveUpdatesProvider(): null {
         });
       },
       onReconnect() {
+        queryClient.invalidateQueries({ queryKey: queryKeys.admin.editionStats });
         for (const key of ALL_LIVE_KEYS) {
           queryClient.invalidateQueries({ queryKey: key });
         }

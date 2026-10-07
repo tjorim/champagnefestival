@@ -9,10 +9,13 @@ import { queryKeys } from "@/utils/queryKeys";
 import { fetchAllRegistrations, fetchRegistration } from "@/utils/adminFetch";
 import type { Registration } from "@/types/registration";
 
+const collectionEditions = new WeakMap<object, string>();
+
 interface CreateAdminRegistrationsCollectionOptions {
   queryClient: QueryClient;
   authHeaders: () => Record<string, string>;
   enabled: boolean;
+  editionId: string;
   syncMode?: AdminCollectionSyncMode;
 }
 
@@ -20,16 +23,20 @@ export function createAdminRegistrationsCollection({
   queryClient,
   authHeaders,
   enabled,
+  editionId,
   syncMode,
 }: CreateAdminRegistrationsCollectionOptions) {
-  return createAdminCollection<Registration>({
-    queryKey: queryKeys.admin.registrations,
-    queryFn: () => fetchAllRegistrations(authHeaders),
+  const collection = createAdminCollection<Registration>({
+    queryKey: queryKeys.admin.registrationsEdition(editionId),
+    queryFn: ({ signal }) => fetchAllRegistrations(authHeaders, editionId, signal),
+    gcTime: 0,
     queryClient,
     enabled,
     syncMode,
     getKey: (registration) => registration.id,
   });
+  collectionEditions.set(collection, editionId);
+  return collection;
 }
 
 export type AdminRegistrationsCollection = ReturnType<typeof createAdminRegistrationsCollection>;
@@ -97,5 +104,12 @@ export async function patchAdminRegistrationLiveEvent(
 
   if (!lifecycle.isLatestEvent(registrationId, eventTime)) return;
 
-  await lifecycle.writeToActive((collection) => collection.utils.writeUpsert(registration));
+  await lifecycle.writeToActive(async (collection) => {
+    const editionId = collectionEditions.get(collection);
+    if (editionId === undefined || (editionId && registration.event?.editionId === editionId)) {
+      await collection.utils.writeUpsert(registration);
+    } else {
+      await lifecycle.deleteIfPresent(collection, registrationId);
+    }
+  });
 }

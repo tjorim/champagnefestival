@@ -336,3 +336,14 @@ automatic retry. A failed confirmation stays open and an explicit second attempt
 is possible; adapters must reconcile ambiguous failures before permitting a repeat
 unless the underlying write has a documented implemented retry strategy. Export
 adapters read the full server-filtered set rather than writing displayed rows.
+
+## Edition-scoped registration reads (#1182, 2026-10-07)
+
+Registration and person writes retain the strategies above: registration PUTs
+and person edits are not automatically retried, and payment transactions retain
+the client-generated idempotency key. Cache reconciliation now invalidates the
+registrations prefix (active-edition collection, server pages, historical event
+occupancy and check-in stats) and edition statistics. Creating a registration
+only inserts into the matching active-edition cache. Recording payment or
+assigning a table to a historical booking first reads that registration by id;
+this read does not change the write's retry safety or advertise a retry.

@@ -1,7 +1,8 @@
 # Shared server-driven admin table (#1180)
 
 `AdminDataTable` owns pagination, sorting, debounced search, filters and column
-visibility. No screens have been migrated; that remains #1181/#1182.
+visibility. People screens adopted it in #1181; registrations use its controlled
+renderer in #1182, retaining their specialised toolbar and bulk controls.
 
 Supply column definitions, filter definitions and a stable `useDataSource` hook
 returning the Query result (`data: { items, total }`, `isFetching`,
@@ -33,3 +34,14 @@ rows. Adapters must call their server paths (and own any selection model), never
 collect the displayed page. These controls are disabled on placeholder data.
 Callbacks run once per activation with pending and error feedback; no automatic
 write retries are made. Row-action retry safety belongs to the supplied operation.
+
+## Controlled registration table
+
+`<AdminDataTable table={table} />` renders an existing `useAppTable` instance with
+the shared headers and rows. The caller owns its toolbar, pager, selection and
+row-action columns. Enable `manualPagination`, `manualSorting` and
+`manualFiltering`, and use the server page without client reordering. Registrations
+use `useRegistrationListQuery` (Query with `keepPreviousData` and cancellation),
+with a live active-edition overlay that falls back to the page row by id.
+Existing registration controls, saved column ids and full-matching exports remain
+unchanged; this controlled variant does not introduce URL state for registrations.

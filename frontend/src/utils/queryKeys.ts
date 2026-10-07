@@ -14,6 +14,8 @@ export const queryKeys = {
     /** The admin dashboard's active edition — any type, unlike the public one. */
     activeEdition: ["admin", "active-edition"] as const,
     registrations: ["admin", "registrations"] as const,
+    registrationsEdition: (editionId: string) =>
+      ["admin", "registrations", "edition", editionId] as const,
     /**
      * Nested under `registrations` on purpose: these counts are derived from
      * registrations, so every invalidation of that key — mutations, live-stream

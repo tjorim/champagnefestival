@@ -25,9 +25,13 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { AdminSortableHeader } from "./AdminSortableHeader";
+import { AdminDataTable } from "./AdminDataTable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import {
+  useRegistrationListQuery,
+  useRegistrationCountsQuery,
+} from "@/hooks/useRegistrationListQuery";
+import { useQuery } from "@tanstack/react-query";
 import { type SortingState, type ColumnVisibilityState } from "@tanstack/react-table";
 import { Alert } from "@/components/ui/alert";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
@@ -48,7 +52,6 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import { Table, TableHeader, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
 import type { FloorTable } from "@/types/admin";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
@@ -61,12 +64,10 @@ import {
   downloadRegistrationsCsv,
   fetchEventCheckInStats,
   fetchAllRegistrationPages,
-  fetchRegistrationsPage,
   type RegistrationSortKey,
 } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
 import { toLocalDateKey } from "@/utils/dateUtils";
-import { isRegistrationInEdition } from "@/utils/adminUtils";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import { useTodayKey } from "@/hooks/useTodayKey";
 import { devError } from "@/utils/devLog";
@@ -264,11 +265,6 @@ export default function RegistrationList({
   selectedIdsRef.current = selectedIds;
   const pageRegistrationsRef = useRef<Registration[]>([]);
 
-  const registrationPersonIds = useMemo(
-    () => new Set(registrations.map((r) => r.personId)),
-    [registrations],
-  );
-
   const allContactPersonIds = useMemo(
     () =>
       new Set(exhibitors.map((e) => e.contactPersonId).filter((id): id is string => id !== null)),
@@ -278,13 +274,13 @@ export default function RegistrationList({
   const allocationOptions: { key: string; label: string; personId: string }[] = useMemo(
     () =>
       exhibitors
-        .filter((e) => e.contactPersonId && registrationPersonIds.has(e.contactPersonId))
+        .filter((e) => e.contactPersonId)
         .map((e) => ({
           key: `e:${e.id}`,
           label: `${m.admin_allocation_exhibitor_label()}: ${e.name}`,
           personId: e.contactPersonId!,
         })),
-    [exhibitors, registrationPersonIds],
+    [exhibitors],
   );
 
   const filterPersonId = allocationFilter
@@ -403,29 +399,14 @@ export default function RegistrationList({
     ],
   );
 
-  const pageQuery = useQuery({
-    queryKey: queryKeys.admin.registrationsPage({
-      q: debouncedQ,
-      status: backendStatus,
-      personId: filterPersonId ?? "",
-      editionId: backendEditionId,
-      eventDate: backendEventDate,
-      editionCategory: backendEditionCategory,
-      sort: backendSort ?? "",
-      sortDir: backendSortDir,
-      page,
-      pageSize,
-    }),
-    queryFn: () =>
-      fetchRegistrationsPage(authHeaders, { ...currentFilterParams, page, limit: pageSize }),
-    placeholderData: keepPreviousData,
-    staleTime: 15 * 1000,
-    retry: false,
-  });
+  const pageQuery = useRegistrationListQuery(
+    { ...currentFilterParams, page, limit: pageSize },
+    authHeaders,
+  );
 
   // The paginated fetch decides *which* registrations are on this page (and in
   // what order) — but for the actual row data we prefer whatever the live-synced
-  // full collection (the `registrations` prop) already holds, so a check-in or
+  // active-edition collection (the `registrations` prop) already holds, so a check-in or
   // table assignment made elsewhere in the admin UI shows up on this page
   // instantly instead of waiting for the next paginated refetch.
   const registrationsById = useMemo(
@@ -480,33 +461,10 @@ export default function RegistrationList({
     [onAssignTable],
   );
 
-  const statusCounts = useMemo(
-    () => ({
-      all: registrations.length,
-      pending: registrations.filter((r) => r.status === "pending").length,
-      confirmed: registrations.filter((r) => r.status === "confirmed").length,
-    }),
-    [registrations],
-  );
-
-  const editionCounts = useMemo(
-    () => ({
-      all: registrations.length,
-      festival: registrations.filter((registration) => !isStandaloneRegistration(registration))
-        .length,
-      standalone: registrations.filter((registration) => isStandaloneRegistration(registration))
-        .length,
-      active: registrations.filter((registration) =>
-        isRegistrationInEdition(registration, activeEdition.id),
-      ).length,
-    }),
-    [activeEdition.id, registrations],
-  );
-
-  const todayCount = useMemo(
-    () => registrations.filter((registration) => registration.event?.date === todayKey).length,
-    [registrations, todayKey],
-  );
+  const countsQuery = useRegistrationCountsQuery(activeEdition.id, todayKey, authHeaders);
+  const statusCounts = countsQuery.data ?? { all: 0, pending: 0, confirmed: 0 };
+  const editionCounts = countsQuery.data ?? { all: 0, festival: 0, standalone: 0, active: 0 };
+  const todayCount = countsQuery.data?.today ?? 0;
 
   // Isolated memo so that selectedIds changes only rebuild the select column, not all columns
   const selectColumn = useMemo(
@@ -877,6 +835,8 @@ export default function RegistrationList({
   const table = useAppTable(
     {
       data: pageRegistrations,
+      manualSorting: true,
+      manualFiltering: true,
       columns,
       state: { sorting, columnVisibility },
       getRowId: (row) => row.id,
@@ -906,9 +866,8 @@ export default function RegistrationList({
   // built for exactly this, and the one the Android entrance display reads — so
   // both surfaces report the same numbers, counted server-side over every
   // registration rather than over whatever this client happens to hold. The
-  // local tally below still supplies each event's title, which the stats
-  // endpoint doesn't carry, and stands in for the counts until the query
-  // settles (or if it fails), since it measures the same thing.
+  // local tally supplies active-edition counts until the query settles; the
+  // server also carries titles so historical events need no registration load.
   const eventCapacityStats = useMemo(() => {
     const statsByEvent = new Map<string, { checkedIn: number; total: number; title: string }>();
 
@@ -938,7 +897,7 @@ export default function RegistrationList({
       statsByEvent.set(serverStats.eventId, {
         checkedIn: serverStats.checkedIn,
         total: serverStats.total,
-        title: existing?.title ?? serverStats.eventId,
+        title: serverStats.eventTitle ?? existing?.title ?? serverStats.eventId,
       });
     }
 
@@ -1360,33 +1319,7 @@ export default function RegistrationList({
             )
           ) : (
             <div className="w-full">
-              <Table>
-                <TableHeader>
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <TableRow key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <AdminSortableHeader key={header.id} column={header.column}>
-                          <table.FlexRender header={header} />
-                        </AdminSortableHeader>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableHeader>
-                <TableBody>
-                  {table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id}>
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell
-                          key={cell.id}
-                          className={cell.column.columnDef.meta?.tdClassName}
-                        >
-                          <table.FlexRender cell={cell} />
-                        </TableCell>
-                      ))}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <AdminDataTable table={table} />
             </div>
           )}
           {!pageQuery.isLoading && !pageQuery.isError && total > 0 && (

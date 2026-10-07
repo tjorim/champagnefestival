@@ -78,7 +78,88 @@ export interface AdminDataTableProps<T extends RowData> {
 }
 
 /** Server-only table: never filters, sorts or slices the returned page. */
-export function AdminDataTable<T extends RowData>({
+export function AdminDataTable<T extends RowData>(
+  props:
+    | AdminDataTableProps<T>
+    | {
+        table: Pick<
+          ReturnType<typeof useAppTable<T>>,
+          "getHeaderGroups" | "getRowModel" | "FlexRender"
+        >;
+      },
+) {
+  if ("table" in props) return <AdminControlledTable table={props.table} />;
+  return <ServerAdminDataTable {...props} />;
+}
+
+/** Reuses the shared renderer while a domain retains its specialized toolbar and bulk controls. */
+function AdminControlledTable<T extends RowData>({
+  table,
+  onOpen,
+  getRowLabel,
+  rowActions,
+  caption,
+  actionsLabel,
+}: {
+  onOpen?: (row: T) => void;
+  getRowLabel?: (row: T) => string;
+  rowActions?: (row: T) => ReactNode;
+  caption?: string;
+  actionsLabel?: string;
+  table: Pick<ReturnType<typeof useAppTable<T>>, "getHeaderGroups" | "getRowModel" | "FlexRender">;
+}) {
+  return (
+    <Table>
+      {caption && <caption className="sr-only">{caption}</caption>}
+      <TableHeader>
+        {table.getHeaderGroups().map((group) => (
+          <TableRow key={group.id}>
+            {group.headers.map((header) => (
+              <AdminSortableHeader key={header.id} column={header.column}>
+                <table.FlexRender header={header} />
+              </AdminSortableHeader>
+            ))}
+            {rowActions && <th scope="col">{actionsLabel}</th>}
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {table.getRowModel().rows.map((row) => (
+          <TableRow
+            key={row.id}
+            tabIndex={onOpen ? 0 : undefined}
+            aria-label={getRowLabel?.(row.original)}
+            onKeyDown={(event) => {
+              if (!onOpen || event.target !== event.currentTarget) return;
+              if (event.key === "Enter") onOpen(row.original);
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                const sibling =
+                  event.key === "ArrowDown"
+                    ? event.currentTarget.nextElementSibling
+                    : event.currentTarget.previousElementSibling;
+                (sibling as HTMLElement | null)?.focus();
+              }
+            }}
+            onClick={(event) => {
+              if (!(event.target as HTMLElement).closest("button, a, input, [role=menuitem]"))
+                onOpen?.(row.original);
+            }}
+          >
+            {row.getVisibleCells().map((cell) => (
+              <TableCell key={cell.id} className={cell.column.columnDef.meta?.tdClassName}>
+                <table.FlexRender cell={cell} />
+              </TableCell>
+            ))}
+            {rowActions && <TableCell>{rowActions(row.original)}</TableCell>}
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+function ServerAdminDataTable<T extends RowData>({
   id,
   columns,
   useDataSource,
@@ -304,53 +385,14 @@ export function AdminDataTable<T extends RowData>({
       )}
       {result.data && result.data.items.length === 0 && <p>{labels.empty}</p>}
       <div className="hidden md:block">
-        <Table>
-          <caption className="sr-only">{labels.caption}</caption>
-          <TableHeader>
-            {table.getHeaderGroups().map((group) => (
-              <TableRow key={group.id}>
-                {group.headers.map((header) => (
-                  <AdminSortableHeader key={header.id} column={header.column}>
-                    <table.FlexRender header={header} />
-                  </AdminSortableHeader>
-                ))}
-                <th scope="col">{labels.actions}</th>
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                tabIndex={0}
-                aria-label={getRowLabel(row.original)}
-                onKeyDown={(event) => {
-                  if (event.target !== event.currentTarget) return;
-                  if (event.key === "Enter") onOpen(row.original);
-                  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
-                    event.preventDefault();
-                    const sibling =
-                      event.key === "ArrowDown"
-                        ? event.currentTarget.nextElementSibling
-                        : event.currentTarget.previousElementSibling;
-                    (sibling as HTMLElement | null)?.focus();
-                  }
-                }}
-                onClick={(event) => {
-                  if (!(event.target as HTMLElement).closest("button, a, input, [role=menuitem]"))
-                    onOpen(row.original);
-                }}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    <table.FlexRender cell={cell} />
-                  </TableCell>
-                ))}
-                <TableCell>{rowActions(row.original)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <AdminControlledTable
+          table={table}
+          onOpen={onOpen}
+          getRowLabel={getRowLabel}
+          rowActions={rowActions}
+          caption={labels.caption}
+          actionsLabel={labels.actions}
+        />
       </div>
       <div className="flex flex-wrap gap-2 md:hidden" aria-label={labels.sort}>
         {table

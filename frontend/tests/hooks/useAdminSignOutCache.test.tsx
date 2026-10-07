@@ -28,6 +28,7 @@ describe("venue group and exhibitors collections and sign-out", () => {
     const view = renderHook(
       ({ isAuthenticated }) =>
         useAdminQueries({
+          editionId: "march-2026",
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,
@@ -65,6 +66,7 @@ describe("venue group and exhibitors collections and sign-out", () => {
     const view = renderHook(
       ({ isAuthenticated }) => {
         const queries = useAdminQueries({
+          editionId: "march-2026",
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,
@@ -115,6 +117,7 @@ describe("venue group and exhibitors collections and sign-out", () => {
     const view = renderHook(
       ({ isAuthenticated }) =>
         useAdminQueries({
+          editionId: "march-2026",
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,
