@@ -66,8 +66,8 @@ jobs:
 
       - name: Bundle size budget
         run: |
-          # Ceilings vs. the 2026-06-27 baseline: total is ~63% above baseline,
-          # AdminDashboard is ~151% above baseline (see history below).
+          # Ceilings track deliberate feature and dependency growth from the
+          # 2026-06-27 baseline (see history below).
           # Raise only after a deliberate, reviewed size increase.
           # Baselines (kB, uncompressed): total JS ≈ 1 654, index ≈ 785, AdminDashboard ≈ 517
           # AdminDashboard raised 700 -> 750 for #942's ComposerManagement admin
@@ -105,7 +105,11 @@ jobs:
           # (measured: total 2563 -> 2504 KiB, index 776 -> 774, admin 946 -> 937;
           # CSS 350 -> 119 kB raw, 53 -> 24 kB gzip). The public entry budget is
           # unchanged.
-          TOTAL_MAX_KB=2560
+          # Total raised 2560 -> 2600 for #1193 / PR #1211's private exhibitor
+          # proposal editor and admin review. Same-dependency builds before/after:
+          # total 2557 -> 2568 KiB, index stays 806, admin 954 -> 956. No new
+          # dependencies; retain modest headroom and the existing chunk ceilings.
+          TOTAL_MAX_KB=2600
           INDEX_MAX_KB=1050
           ADMIN_MAX_KB=1000
 
