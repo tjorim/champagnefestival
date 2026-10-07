@@ -30,7 +30,7 @@ def test_organization_rename_preserves_data_and_reverses(monkeypatch):
     config.set_main_option("script_location", str(root / "alembic"))
     database = create_engine(migration_url)
     try:
-        command.upgrade(config, "004")
+        command.upgrade(config, "003")
         with database.begin() as connection:
             connection.execute(text("INSERT INTO people (id, name) VALUES ('contact', 'Contact')"))
             organization_id = connection.scalar(
@@ -58,20 +58,8 @@ def test_organization_rename_preserves_data_and_reverses(monkeypatch):
                 {"id": organization_id},
             )
             connection.execute(
-                text("""INSERT INTO exhibitor_changes (id, exhibitor_id, submitted_by, submitted_values,
-                    proposed, superseded_fields, status, created_at)
-                    VALUES ('proposal', :id, 'contact', '{"website":"https://new.example"}',
-                    '{"website":"https://new.example","image":"private.png"}', '[]', 'pending', now())"""),
-                {"id": organization_id},
-            )
-            connection.execute(
-                text("""INSERT INTO outbox_jobs (id, job_type, resource_type, resource_id,
-                    deduplication_key, attempt_count) VALUES ('job', 'exhibitor_change_notification',
-                    'exhibitor_change', 'proposal', 'exhibitor-change:proposal', 2)""")
-            )
-            connection.execute(
                 text("""INSERT INTO audit_entries (id, timestamp, actor, action, resource_type, resource_id, details, auth_source)
-                    VALUES ('audit', now(), 'contact', 'exhibitor_change_submitted', 'exhibitor', :id,
+                    VALUES ('audit', now(), 'contact', 'exhibitor_created', 'exhibitor', :id,
                     CAST(:details AS json), 'email_session')"""),
                 {
                     "id": str(organization_id),
@@ -97,19 +85,24 @@ def test_organization_rename_preserves_data_and_reverses(monkeypatch):
                     organization_id,
                 )
                 assert connection.scalar(text(f"SELECT {domain}_id FROM areas")) == organization_id
-                proposal = connection.execute(text(f"SELECT {domain}_id, proposed, status FROM {domain}_changes")).one()
-                assert proposal == (
-                    organization_id,
-                    {"website": "https://new.example", "image": "private.png"},
-                    "pending",
-                )
-                assert connection.execute(
-                    text("SELECT job_type, resource_type, deduplication_key, attempt_count FROM outbox_jobs")
-                ).one() == (f"{domain}_change_notification", f"{domain}_change", f"{domain}-change:proposal", 2)
+                tables = inspector.get_table_names(schema=schema)
+                if domain == "organization":
+                    assert "organization_changes" in tables
+                    assert "organization_id" in {
+                        column["name"] for column in inspector.get_columns("organization_changes", schema=schema)
+                    }
+                    assert {"description_language", "description_nl", "description_fr", "description_en"} <= {
+                        column["name"] for column in inspector.get_columns("organizations", schema=schema)
+                    }
+                else:
+                    assert "organization_changes" not in tables and "exhibitor_changes" not in tables
+                    assert "description_language" not in {
+                        column["name"] for column in inspector.get_columns("exhibitors", schema=schema)
+                    }
                 action, resource, details = connection.execute(
                     text("SELECT action, resource_type, details FROM audit_entries WHERE id = 'audit'")
                 ).one()
-                assert (action, resource) == (f"{domain}_change_submitted", domain)
+                assert (action, resource) == (f"{domain}_created", domain)
                 assert details == {
                     "nested": [{f"{domain}_id": organization_id, "image": f"/uploads/{domain}s/logo.png"}],
                     "note": "An exhibitor wrote this text.",
@@ -138,11 +131,27 @@ def test_organization_rename_preserves_data_and_reverses(monkeypatch):
 
         command.upgrade(config, "head")
         verify("organization")
-        command.downgrade(config, "004")
+        # Revision 004 owns the new descriptions/history. Verify their creation
+        # and normal removal on downgrade, while pre-existing records survive.
+        with database.begin() as connection:
+            connection.execute(
+                text("UPDATE organizations SET description_language = 'nl', description_nl = 'Description'")
+            )
+            connection.execute(
+                text("""INSERT INTO organization_changes (id, organization_id, submitted_by,
+                submitted_values, proposed, superseded_fields, status, created_at)
+                VALUES ('proposal', :id, 'contact', '{"website":"https://new.example"}',
+                '{"website":"https://new.example"}', '[]', 'pending', now())"""),
+                {"id": organization_id},
+            )
+            assert connection.scalar(text("SELECT count(*) FROM organization_changes")) == 1
+        command.downgrade(config, "003")
         verify("exhibitor")
         command.upgrade(config, "head")
         verify("organization")
         with database.begin() as connection:
+            assert connection.scalar(text("SELECT count(*) FROM organization_changes")) == 0
+            assert connection.scalar(text("SELECT description_nl FROM organizations")) is None
             next_id = connection.scalar(text("INSERT INTO organizations (name) VALUES ('Next') RETURNING id"))
             assert next_id > organization_id
     finally:

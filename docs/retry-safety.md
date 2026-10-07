@@ -457,8 +457,10 @@ See [API, configuration and limits](organization-description-translation.md).
 
 The full rename changes write endpoint/tool identifiers without introducing
 aliases. The strategies documented above apply to the renamed operations.
-Migration `005` preserves proposal submission IDs and outbox job IDs, attempts
-and deduplication identity instead of replaying writes or enqueueing jobs.
+Revised migration `004` renames existing organization references and creates
+the proposal table directly under its final name. It does not submit proposals
+or enqueue notification jobs. Downgrading to `003` removes the description
+columns and proposal history introduced by `004`.
 Non-idempotent uploads/admin writes must not be blindly retried across the
 coordinated deployment. SMTP remains at-least-once, and the renamed Message-ID
 is not a cross-version exactly-once guarantee. See the [migration and deployment

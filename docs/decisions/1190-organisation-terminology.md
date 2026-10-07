@@ -25,12 +25,13 @@ configuration, cache keys, worker jobs and upload paths. User-facing English
 continues to use British **organisation**. There are no legacy routes, field
 aliases, settings or module shims.
 
-Migration `005` renames the tables and edition/area/proposal references in place,
-including constraints, indexes and the serial sequence. It updates managed logo
-URLs, queued job types/resource types/deduplication keys and structured audit
-keys/action names while preserving IDs, data, pending proposals, attempt counts
-and user-authored text. Downgrade reverses these transformations. Earlier
-migrations remain immutable historical steps; they do not expose runtime aliases.
+The owner authorised editing the original revision `004`. It now renames the
+existing table and edition/area references in place, including constraints,
+indexes and the serial sequence, then adds descriptions and creates
+`organization_changes` directly with organization identifiers. It updates
+managed logo URLs and structured audit keys/action names while preserving
+pre-existing IDs, contact/edition/area relationships and user-authored text.
+There is no separate rename revision. Revisions `000`–`003` remain unchanged.
 The frontend cache buster changes because persisted row keys have changed.
 
 ## Deployment sequence
@@ -51,31 +52,41 @@ production infrastructure. Before starting the renamed API or worker:
    `uploads/pending/organizations` while the application is stopped. Keep public
    and private storage separate. For mounted production roots, move/remount the
    existing volume contents and change Caddy to `/uploads/organizations/`.
-4. Run `uv run alembic upgrade head` (through `005`), then deploy the matching
+4. Run `uv run alembic upgrade head` (through `004`), then deploy the matching
    frontend, API and worker together. The private proposal filenames themselves
    do not change. Verify public logos, private previews and pending notifications.
 
-For rollback, stop the processes, downgrade to `004`, reverse the directory,
-environment and Caddy changes, then deploy the preceding application version.
-Production rollout remains in the separate infrastructure repository, including
-apps#262/apps#263; this repository change does not alter the running deployment.
+For rollback to revision `003`, stop the processes, downgrade, reverse the
+directory/environment/Caddy changes and use the matching application version.
+Downgrading `004` removes its description columns and proposal history, as the
+original revision did; restore the backup when those additions must be retained.
+A database already stamped with the previous form of `004` will not rerun it:
+roll it back using the previous migration files before changing revisions, or
+rebuild a disposable development database. The same applies to a local database
+that used the withdrawn standalone rename revision. Do not stamp a mismatched
+schema as current. Production rollout remains in the separate infrastructure
+repository, including apps#262/apps#263; no running deployment was changed here.
 
 ## Retry safety
 
 The existing write strategies remain unchanged under the renamed endpoints and
-tools; see [retry safety](../retry-safety.md). Migration preserves submission IDs
-and notification job IDs/deduplication identity, so it does not recreate proposals
-or enqueue a second job. Notifications remain at-least-once; the renamed email
+tools; see [retry safety](../retry-safety.md). Revised `004` creates the proposal
+table under its final name and does not submit proposals or enqueue notifications. Notifications remain at-least-once; the renamed email
 Message-ID does not provide a cross-version exactly-once guarantee. Never retry a
 non-idempotent write across the deployment without checking its recorded outcome.
 
 ## Verification (2026-10-07)
 
-- Fresh PostgreSQL upgrade through `005` passes. The populated migration test
-  upgrades `004` to `005`, downgrades and re-upgrades, checking table/column/FK,
-  constraint/index/sequence names, contact/edition/area references, proposal
-  content/status, job identities/attempts, structured audit keys and managed
-  logo URLs. It confirms user-authored text is unchanged and serial IDs advance.
+- Revised `004` is the sole Alembic head. Its regression test starts from a
+  fresh schema, seeds revision `003`, upgrades to `004`, downgrades to `003` and
+  re-upgrades. It checks table/column/FK, constraint/index/sequence names,
+  contact/edition/area references, audit keys and managed logo URLs, and confirms
+  user-authored text and serial IDs survive. It verifies descriptions/history
+  are created by `004`, removed on downgrade and freshly created on re-upgrade.
+- All 29 migration, organization API/review and request-correlation tests pass
+  after folding the rename into `004`; backend Ruff lint/format and ty pass.
+  The following broader runtime checks were run for the preceding domain rename;
+  application/frontend code is unchanged by this migration consolidation.
 - The contract test verifies the OpenAPI schemas contain only the new domain
   names, old routes return 404 and obsolete edition payload fields return 422.
 - 105 focused backend tests pass. The full 1,455-test run passed 1,452; an

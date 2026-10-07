@@ -64,7 +64,7 @@ reject is audited once; retrying does not duplicate the mutation or audit.
 
 ## Notification and deployment
 
-Apply migrations through `005` before deploying the renamed API and worker. Set
+Apply migrations through `004` before deploying the renamed API and worker. Set
 `ORGANIZATION_REVIEW_RECIPIENT` to one shared mailbox in the environment's infra env
 file, and configure the existing SMTP settings. An unset/empty value skips
 queueing, without fallback or error. Submission snapshots the recipient and

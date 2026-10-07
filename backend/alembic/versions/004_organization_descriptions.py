@@ -1,15 +1,15 @@
-"""Rename the exhibitor domain to organization, including persisted identifiers.
+"""Rename the organization domain; add descriptions and proposal history (#1190–#1193).
 
-Revision ID: 005
-Revises: 004
+Revision ID: 004
+Revises: 003
 """
 
 import sqlalchemy as sa
 
 from alembic import op
 
-revision = "005"
-down_revision = "004"
+revision = "004"
+down_revision = "003"
 branch_labels = None
 depends_on = None
 
@@ -29,9 +29,7 @@ def _rename(old: str, new: str) -> None:
     connection = op.get_bind()
     quote = connection.dialect.identifier_preparer.quote
     op.rename_table(f"{old}s", f"{new}s")
-    op.rename_table(f"{old}_changes", f"{new}_changes")
     for table, column in (
-        (f"{new}_changes", f"{old}_id"),
         ("areas", f"{old}_id"),
         ("editions", f"{old}s"),
         ("editions", f"co_organizer_{old}_id"),
@@ -68,25 +66,6 @@ def _rename(old: str, new: str) -> None:
         sa.text(f"UPDATE {new}s SET image = replace(image, :old_url, :new_url) WHERE image LIKE :prefix"),
         {"old_url": f"/uploads/{old}s/", "new_url": f"/uploads/{new}s/", "prefix": f"/uploads/{old}s/%"},
     )
-    # Pending job identities must match the renamed worker dispatcher. Keep the
-    # job IDs, attempts, lease state and submission IDs so no job is re-enqueued.
-    connection.execute(
-        sa.text("""
-            UPDATE outbox_jobs SET job_type = replace(job_type, :old, :new),
-                resource_type = replace(resource_type, :old, :new),
-                deduplication_key = replace(deduplication_key, :old_key, :new_key)
-            WHERE job_type = :notification OR resource_type IN (:resource, :change)
-        """),
-        {
-            "old": old,
-            "new": new,
-            "old_key": f"{old}-change:",
-            "new_key": f"{new}-change:",
-            "notification": f"{old}_change_notification",
-            "resource": old,
-            "change": f"{old}_change",
-        },
-    )
     connection.execute(
         sa.text("""
             UPDATE audit_entries SET action = replace(action, :old, :new),
@@ -105,7 +84,53 @@ def _rename(old: str, new: str) -> None:
 
 def upgrade() -> None:
     _rename("exhibitor", "organization")
+    op.add_column("organizations", sa.Column("description_language", sa.String(2), nullable=True))
+    for language in ("nl", "fr", "en"):
+        op.add_column("organizations", sa.Column(f"description_{language}", sa.String(600), nullable=True))
+    op.create_check_constraint(
+        "ck_organizations_description_original",
+        "organizations",
+        "(description_language IS NULL AND description_nl IS NULL AND description_fr IS NULL "
+        "AND description_en IS NULL) OR "
+        "(description_language IS NOT NULL AND ("
+        "(description_language = 'nl' AND length(trim(description_nl)) > 0) OR "
+        "(description_language = 'fr' AND length(trim(description_fr)) > 0) OR "
+        "(description_language = 'en' AND length(trim(description_en)) > 0)) IS TRUE)",
+    )
+
+    op.create_table(
+        "organization_changes",
+        sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column(
+            "organization_id", sa.Integer(), sa.ForeignKey("organizations.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column("submitted_by", sa.String(255), nullable=False),
+        sa.Column("submitted_auth_source", sa.String(64)),
+        sa.Column("submitted_values", sa.JSON(), nullable=False),
+        sa.Column("proposed", sa.JSON(), nullable=False),
+        sa.Column("superseded_fields", sa.JSON(), nullable=False),
+        sa.Column("status", sa.String(20), nullable=False),
+        sa.Column("reason", sa.String(2000)),
+        sa.Column("notification_recipient", sa.String(320)),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.CheckConstraint(
+            "status IN ('pending', 'accepted', 'rejected', 'superseded', 'replaced')",
+            name="ck_organization_change_status",
+        ),
+    )
+    op.create_index("ix_organization_changes_organization_id", "organization_changes", ["organization_id"])
+    op.create_index(
+        "uq_organization_pending_change",
+        "organization_changes",
+        ["organization_id"],
+        unique=True,
+        postgresql_where=sa.text("status = 'pending'"),
+    )
 
 
 def downgrade() -> None:
+    op.drop_table("organization_changes")
+    op.drop_constraint("ck_organizations_description_original", "organizations", type_="check")
+    for field in ("description_en", "description_fr", "description_nl", "description_language"):
+        op.drop_column("organizations", field)
     _rename("organization", "exhibitor")

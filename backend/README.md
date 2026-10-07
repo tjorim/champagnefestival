@@ -427,7 +427,7 @@ in the admin Organizations tab. Direct admin edits supersede pending fields; man
 see the outcome and any rejection reason. Admin REST and MCP review operations
 share the same service and concurrency/retry contract.
 
-Apply migrations through `005` (the full organization rename) and configure `ORGANIZATION_REVIEW_RECIPIENT` in the environment
+Apply migrations through `004` (the full organization rename) and configure `ORGANIZATION_REVIEW_RECIPIENT` in the environment
 infra env file to notify a shared mailbox through the existing SMTP outbox worker.
 Leave it unset to use only the pending list. No new Keycloak roles are needed.
 See the [API and workflow contract](../docs/organization-change-review.md) and
