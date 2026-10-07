@@ -16,8 +16,8 @@ unfiltered people envelope with `limit=1`.
 case-insensitive lookup over the indexed `search_email`, including inactive
 people. It uses the bounded list envelope and stable ID ordering; consumers
 must respect `total` and page if necessary. An empty email is rejected. It does
-not use fuzzy search. This replaces the full-list registration-detail scan when
-#1181 migrates the frontend.
+not use fuzzy search. This replaced the full-list registration-detail scan in
+#1181; people rows and merge actions also use this lookup.
 
 `GET /api/people/export` uses the shared `q`, `role`, `active`, `sort` and
 `sort_dir` contract. `GET /api/volunteers/export` uses the same contract with
@@ -52,7 +52,7 @@ grows materially beyond this scale.
 Integration tests cover counts under combined filters, role overlap, paged exact
 email lookup, cancelled registrations, count ties in both sort directions,
 exports across forced small cursor batches, pagination independence, volunteer
-period rows, formula safety and authorization. Frontend integration is #1181.
+period rows, formula safety and authorization. Frontend integration completed in #1181; see the [people Query contract](people-query-layer.md).
 
 ## Acceptance and verification
 

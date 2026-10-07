@@ -17,7 +17,8 @@ into another planning file.
 | Service-worker ownership and browser push | [Web Push foundation](decisions/941-web-push-foundation.md) |
 | Announcement/push composition and dispatch | [Composer decision](decisions/942-central-composer.md) |
 | Unfinished visitor-account and rendering work | [Visitor sessions](decisions/953-visitor-passwordless-session.md), [public rendering](decisions/992-live-public-render.md) |
-| Frontend data layer (TanStack DB adoption and roadmap) | [TanStack DB decision](decisions/tanstack-db.md), [persisted collections](decisions/1168-persisted-collections.md) |
+| Frontend data layer and persistence decision | [TanStack DB decision](decisions/tanstack-db.md), [persisted collections](decisions/1168-persisted-collections.md) |
+| Server-driven admin tables, people queries and exports | [Shared table](admin-data-table.md), [people Query layer](people-query-layer.md), [people aggregates](people-aggregates.md) |
 
 Fixtures, event data and Play Store assets are functional inputs or publishing
 artifacts, not disposable planning documents. Keep them with their consumers.

@@ -58,11 +58,14 @@ Unlike the volunteer endpoint above, `GET /api/registrations` defaults to 50
 rows per page (an explicit `limit`, up to 1000, overrides it) whether or not
 `q` is set, and returns a `{items, total, limit, page}` envelope rather than
 a bare array — `total` lets a client tell when a page was truncated instead
-of rendering a partial result as if it were complete. Aggregate views that
-need the whole working set (per-event capacity, status/edition counts, the
-floor-plan editor's table occupancy) read every page
-(`fetchAllRegistrations`; 1000 rows is the page size, not a limit on how many
-registrations there can be) rather than relying on this pagination.
+of rendering a partial result as if it were complete.
+
+Working-set consumers read the complete active edition only through
+`fetchAllRegistrations`; historical floor-plan occupancy loads only its selected
+event. List status/category/date facets and the sidebar badge use server totals
+with `limit=1`, while cross-edition attendance and financial aggregates use
+`GET /api/editions/stats`. They do not load the entire registration history.
+See the [registration scope decision](../decisions/tanstack-db.md#registration-scope-and-shared-table-1182-2026-10-07).
 
 ## MCP Consumers
 
