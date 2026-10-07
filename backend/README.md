@@ -396,19 +396,22 @@ supersession belong to #1193 and are not implemented here.
 
 ### Exhibitor manager self-service (#1192)
 
-Contacts sign in through `/my-exhibitors` using an emailed link. This is an
-independent cookie scope, with no staff role or visitor bookings access.
-Contacts without email cannot sign in. Access follows the current contact
-email on every request; the view includes inactive exhibitors too.
+Visitors and exhibitor contacts share one emailed login at `/me`, using the
+existing visitor magic-link/session endpoints and cookie. The page shows
+bookings and exhibitors associated with that verified identity. Contacts
+without email cannot obtain exhibitor access. Access follows the current
+contact email on every request; the view includes inactive exhibitors too.
+Staff bearer tokens alone do not grant exhibitor access.
 
 | Method | Endpoint | Contract |
 | --- | --- | --- |
-| POST | `/api/exhibitor-manager-sessions/request` | `{email}`; rate-limited, identical 202 accepted response for known/unknown contacts. Current contacts receive a single-use email link. |
-| POST | `/api/exhibitor-manager-sessions/redeem` | `{token}`; 200 session status and HttpOnly cookie, or 401 for invalid/expired/replayed links. |
-| GET | `/api/exhibitor-manager-sessions/status` | `{authenticated, expires_at}`; absent/expired cookie returns false; no-store. |
-| POST | `/api/exhibitor-manager-sessions/sign-out` | 204; revokes the session and clears its cookie; safe to repeat. |
-| GET | `/api/me/exhibitors` | Manager cookie required; list of `{id, name, type, website, active}` for the current matching contact email; 401 without valid session; no-store. |
+| POST | `/api/visitor-sessions/request` | `{email}`; rate-limited, generic 202 for every valid email, without revealing bookings or contact membership. |
+| POST | `/api/visitor-sessions/redeem` | `{token}`; establishes the shared HttpOnly-cookie session and returns owned bookings; invalid/expired/replayed links return 401. |
+| GET | `/api/visitor-sessions/status` | `{authenticated, expires_at}`; absent/expired cookie returns false; no-store. |
+| POST | `/api/visitor-sessions/sign-out` | 204; revokes the shared email session and clears its cookie; safe to repeat. |
+| GET | `/api/me/exhibitors` | Shared email-session cookie required; list of `{id, name, type, website, active}` for current matching contact email; 401 without verified email session; no-store. |
 
-Requires migration `005` and the existing SMTP/frontend URL settings. Daily
-housekeeping sweeps expired manager credentials. See the [login decision](../docs/decisions/1192-exhibitor-manager-login.md)
+Uses existing SMTP/frontend URL settings and visitor credential housekeeping.
+No new authentication migration is required; migration `004` adds descriptions.
+See the [login decision](../docs/decisions/1192-exhibitor-manager-login.md)
 and [retry safety](../docs/retry-safety.md). Interactive schemas are at `/docs`.

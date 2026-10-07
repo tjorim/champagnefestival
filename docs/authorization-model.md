@@ -22,8 +22,9 @@ provenance distinct. The SPA renews tokens, monitors the Keycloak session,
 revokes tokens on logout, and performs RP-initiated sign-out. Android now also
 opens the Keycloak end-session endpoint before clearing encrypted local state.
 
-Exhibitor managers use a separate passwordless cookie scope (#1192), described
-in the [login decision](decisions/1192-exhibitor-manager-login.md). Their verified
-email is matched against the current contact person on every exhibitor read.
-The manager cookie grants only `GET /api/me/exhibitors`; visitor cookies,
-staff bearer tokens and manager cookies cannot substitute for one another.
+Exhibitor contacts and visitors share the passwordless emailed login (#1192),
+described in the [login decision](decisions/1192-exhibitor-manager-login.md).
+The session's User supplies its verified email, matched against the current
+contact person on every exhibitor read. Authentication proves identity;
+current records determine access. Email sessions never satisfy staff or
+volunteer dependencies, and a staff bearer token alone grants no manager access.

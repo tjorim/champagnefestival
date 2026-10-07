@@ -2292,11 +2292,6 @@ class ComposedMessageScheduleRequest(RequestModel):
         return value
 
 
-class ExhibitorManagerSessionStatus(BaseModel):
-    authenticated: bool
-    expires_at: datetime | None = None
-
-
 class ManagedExhibitorOut(BaseModel):
     id: int
     name: str

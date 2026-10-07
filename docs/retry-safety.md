@@ -360,13 +360,21 @@ Clearing uses explicit nulls in REST, or empty strings for all populated texts a
 the original language in MCP. Tests cover partial updates, invalid transitions,
 and explicit clearing through both adapters.
 
-## Exhibitor manager login (#1192)
+## Shared emailed account login (#1192)
 
-| Write | Retry-safety decision | Verification |
-| --- | --- | --- |
-| `POST /api/exhibitor-manager-sessions/request` | No automatic retry. Repeating rotates the outstanding single-use link and can send another email; an ambiguous response requires a deliberate new request. The 202 response does not guarantee delivery or reveal contact membership. | Replaced-link and identical-response tests in `test_exhibitor_manager_sessions.py`. |
-| `POST /api/exhibitor-manager-sessions/redeem` | No automatic retry. Single-use, row-locked redemption commits link expiry and session creation atomically; a replay returns 401. After an ambiguous response check session status before deliberately requesting another link. | Replay and session tests. |
-| `POST /api/exhibitor-manager-sessions/sign-out` | Convergent deletion and cookie clearing; repeating an absent/expired session is a 204 no-op. Frontend performs one request per click. | Repeated sign-out and revoked-cookie tests. |
+Exhibitor contacts reuse the existing visitor request, redemption and sign-out
+writes documented above, including their implemented retry decisions. A
+single `/me?token=…` link establishes the email session; eligible bookings are
+claimed as before and current contact records determine exhibitor access.
+No separate manager writes or credentials remain.
 
-Authenticated reads slide the session's idle deadline within its fixed hard
-cap; this is a convergent refresh, not a new credential or business write.
+The shared sign-out button performs one request per click with retries disabled.
+Only a successful 204 clears both booking and exhibitor views. A failed or
+ambiguous response retains those views and reports an error; the caller can
+reconcile with session status. Repeating sign-out is convergent and safe.
+A session generation fences late responses from the revoked session. This is
+covered by `MyAccountSession.test.tsx`; backend shared-session revocation is
+covered by `test_exhibitor_manager_sessions.py` and existing visitor tests.
+
+`GET /api/me/exhibitors` refreshes the same sliding idle deadline within the
+fixed hard cap. It introduces no business write or new credential.

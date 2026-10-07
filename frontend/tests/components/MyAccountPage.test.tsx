@@ -17,6 +17,7 @@ vi.mock("@/components/MyRegistrationsPage", () => ({
 vi.mock("@/paraglide/messages", () => ({
   m: {
     close: () => "Close",
+    manager_title: () => "My exhibitors",
     my_account_title: () => "My Account",
     my_registrations_title: () => "Registrations",
     my_account_signed_in_as: ({ account }: { account: string }) => `Signed in as ${account}`,

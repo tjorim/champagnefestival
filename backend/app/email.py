@@ -250,12 +250,12 @@ async def send_visitor_magic_link_email(
     link = f"{settings.frontend_url.rstrip('/')}/me?token={token}"
 
     message = EmailMessage()
-    message["Subject"] = "Sign in to your Champagnefestival orders"
+    message["Subject"] = "Sign in to your Champagnefestival account"
     message["From"] = settings.smtp_from
     message["To"] = email
     message.set_content(
         "Hello,\n\n"
-        "Use the following secure link to sign in and view your Champagnefestival orders:\n\n"
+        "Use the following secure link to sign in and view your Champagnefestival information:\n\n"
         f"{link}\n\n"
         f"This link expires at {expires_at.isoformat()} and can only be used once.\n"
         "If you did not request this email, you can ignore it.\n"
@@ -271,47 +271,6 @@ async def send_visitor_magic_link_email(
         return False
 
     logger.info("Sent visitor magic-link email for request_id=%s.", request_id)
-    return True
-
-
-async def send_exhibitor_manager_magic_link_email(
-    email: str,
-    token: str,
-    request_id: str,
-    expires_at: datetime,
-) -> bool:
-    """Send a single-use exhibitor-manager sign-in link."""
-    if not settings.smtp_host or not settings.smtp_from:
-        logger.warning(
-            "Exhibitor-manager magic-link email not sent for request_id=%s because SMTP is not configured.",
-            request_id,
-        )
-        return False
-
-    link = f"{settings.frontend_url.rstrip('/')}/my-exhibitors?token={token}"
-
-    message = EmailMessage()
-    message["Subject"] = "Sign in to your Champagnefestival exhibitors"
-    message["From"] = settings.smtp_from
-    message["To"] = email
-    message.set_content(
-        "Hello,\n\n"
-        "Use the following secure link to sign in and view your Champagnefestival exhibitors:\n\n"
-        f"{link}\n\n"
-        f"This link expires at {expires_at.isoformat()} and can only be used once.\n"
-        "If you did not request this email, you can ignore it.\n"
-    )
-
-    try:
-        await asyncio.to_thread(_send_message_sync, message)
-    except Exception:
-        logger.exception(
-            "Failed to send exhibitor-manager magic-link email for request_id=%s.",
-            request_id,
-        )
-        return False
-
-    logger.info("Sent exhibitor-manager magic-link email for request_id=%s.", request_id)
     return True
 
 

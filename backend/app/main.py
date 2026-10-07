@@ -28,7 +28,6 @@ from app.routers import (
     contact,
     editions,
     events,
-    exhibitor_manager_auth,
     exhibitors,
     faq,
     health,
@@ -37,6 +36,7 @@ from app.routers import (
     live,
     me,
     members,
+    my_exhibitors,
     outbox,
     people,
     policies,
@@ -209,8 +209,7 @@ app.include_router(venue_plan.router)
 app.include_router(me.router)
 app.include_router(me.pebble_router)
 app.include_router(visitor_auth.router)
-app.include_router(exhibitor_manager_auth.router)
-app.include_router(exhibitor_manager_auth.me_router)
+app.include_router(my_exhibitors.router)
 app.include_router(live.router)
 app.include_router(health.router)
 app.include_router(faq.router)

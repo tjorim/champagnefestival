@@ -268,32 +268,6 @@ class VisitorSession(Base):
     user: Mapped[User] = relationship(back_populates="visitor_sessions")
 
 
-class ExhibitorManagerMagicLink(Base):
-    """Separate passwordless exhibitor-manager credential (#1192)."""
-
-    __tablename__ = "exhibitor_manager_magic_links"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    email: Mapped[str] = mapped_column(String(320), unique=True)
-    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-
-
-class ExhibitorManagerSession(Base):
-    """Separate passwordless exhibitor-manager credential (#1192)."""
-
-    __tablename__ = "exhibitor_manager_sessions"
-
-    id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    session_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    email: Mapped[str] = mapped_column(String(320))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
-    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-    hard_expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
-
-
 class ContactMessage(Base):
     """A public contact submission retained independently of e-mail delivery."""
 

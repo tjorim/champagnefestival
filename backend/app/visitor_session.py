@@ -1,4 +1,4 @@
-"""Passwordless visitor session mechanism (#953 decisions 1-3).
+"""Shared passwordless email-account sessions (#953, #1192).
 
 A visitor session is database-backed, not a stateless JWT: the ``HttpOnly``
 cookie's value is an opaque session ID, looked up here only by its hash
@@ -259,3 +259,17 @@ def actor_for_user(user: User) -> tuple[str, str | None]:
     if user.oidc_subject is not None:
         return user.oidc_subject, None
     return user.id, VISITOR_AUTH_SOURCE
+
+
+async def get_current_exhibitor_manager(request: Request, db: AsyncSession = Depends(get_db)) -> str:
+    """Use the shared emailed login's verified identity for live contact checks.
+
+    Bearer tokens alone do not prove email control. The cookie resolves to a
+    magic-link provisioned User; no stored manager flag grants access.
+    """
+    session_id = request.cookies.get(COOKIE_NAME)
+    row = await resolve_session(db, session_id) if session_id else None
+    user = await db.get(User, row.user_id) if row else None
+    if user is None or user.verified_email is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    return user.verified_email.lower().strip()

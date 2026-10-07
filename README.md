@@ -60,8 +60,8 @@ The frontend dev server proxies `/api/*` to the backend automatically.
 See the [documentation guide](docs/README.md) for operational contracts,
 current product work, and architectural decisions.
 
-Exhibitor contacts can request an emailed sign-in link at `/my-exhibitors`
-and view their own exhibitors. The manager cookie is independent of visitor
-and staff authentication, and access follows the current contact email.
+Exhibitor contacts can request an emailed sign-in link at `/me`
+and view their own bookings and exhibitors through one email session. Exhibitor
+access follows the current contact email; staff authentication remains separate.
 See [manager API documentation](backend/README.md#exhibitor-manager-self-service-1192)
 and the [design decision](docs/decisions/1192-exhibitor-manager-login.md).
