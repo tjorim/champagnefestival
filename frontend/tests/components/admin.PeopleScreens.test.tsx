@@ -50,7 +50,7 @@ const person = (index: number) => ({
   created_at: "2026-01-01",
   updated_at: "2026-01-01",
 });
-function mount(kind: "people" | "members" | "volunteers", count = 25) {
+function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "") {
   const onCreate = vi.fn().mockResolvedValue(undefined);
   const onUpdate = vi.fn().mockResolvedValue(undefined);
   const onDelete = vi.fn().mockResolvedValue(undefined);
@@ -95,7 +95,11 @@ function mount(kind: "people" | "members" | "volunteers", count = 25) {
   const root = createRootRoute({ component, validateSearch: (search) => search });
   const router = createRouter({
     routeTree: root,
-    history: createMemoryHistory({ initialEntries: ["/"] }),
+    history: createMemoryHistory({
+      initialEntries: [
+        sort ? `/?table_${kind}=${encodeURIComponent(JSON.stringify({ sort }))}` : "/",
+      ],
+    }),
   });
   const view = render(
     <QueryClientProvider client={queryClient}>
@@ -196,6 +200,30 @@ it("exports all volunteers including inactive rows when no active filter is sele
   expect(url.searchParams.has("active")).toBe(false);
   expect(url.searchParams.get("include_inactive")).toBe("true");
 });
+it.each(["unknown", "__proto__", "email", "registrations"])(
+  "ignores unsupported volunteer URL sort %s for reads and exports",
+  async (sort) => {
+    const h = mount("volunteers", 25, sort);
+    await screen.findByRole("row", { name: "Person 00" });
+    expect(h.requests.at(-1)?.searchParams.has("sort")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "admin_export_csv" }));
+    await waitFor(() => expect(download).toHaveBeenCalled());
+    const url = new URL(download.mock.calls.at(-1)![0] as string, "http://localhost");
+    expect(url.searchParams.has("sort")).toBe(false);
+  },
+);
+it.each(["people", "members"] as const)(
+  "preserves supported %s email sorting and exports",
+  async (kind) => {
+    const h = mount(kind, 25, "email");
+    await screen.findByRole("row", { name: "Person 00" });
+    expect(h.requests.at(-1)?.searchParams.get("sort")).toBe("email");
+    fireEvent.click(screen.getByRole("button", { name: "admin_export_csv" }));
+    await waitFor(() => expect(download).toHaveBeenCalled());
+    const url = new URL(download.mock.calls.at(-1)![0] as string, "http://localhost");
+    expect(url.searchParams.get("sort")).toBe("email");
+  },
+);
 it("uses exact bounded duplicate lookup and merges with server registration counts", async () => {
   const h = mount("people", 1);
   server.use(

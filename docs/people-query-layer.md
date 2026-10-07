@@ -41,7 +41,9 @@ server row. Existing bounded person pickers need no full-list props.
 `PeopleDataTable` maps the existing `registrations` column id to the server's
 `registration_count` sort, preserving saved visibility keys and column ids.
 Active-filter counts omit active; role-filter counts omit role. Unsupported
-column sorts are disabled. Exports send all current filters and ordering to
+column sorts are disabled. Unknown URL sort ids fall back to default ordering;
+volunteer list reads and exports discard email/registration-count sorts
+unsupported by their endpoints. People/member reads and exports retain those sorts. Exports send all current filters and ordering to
 the streaming server endpoint, without page or limit. Volunteer exports explicitly
 set `include_inactive=true` so an unfiltered export includes the same full set
 as the table; an explicit active filter still takes precedence. Copying matching emails

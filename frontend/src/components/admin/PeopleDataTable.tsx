@@ -25,8 +25,7 @@ export function peopleTableParams(state: AdminTableState, role?: string): People
     createdAt: "created",
     updatedAt: "updated",
   };
-  const sort = state.sort ? sorts[state.sort] : undefined;
-  if (state.sort && !sort) throw new Error(`Unsupported people sort: ${state.sort}`);
+  const sort = state.sort && Object.hasOwn(sorts, state.sort) ? sorts[state.sort] : undefined;
   return {
     page: state.page + 1,
     limit: state.pageSize,
@@ -41,6 +40,14 @@ export function peopleTableParams(state: AdminTableState, role?: string): People
           ? false
           : undefined,
   };
+}
+
+function peopleEndpointParams(state: AdminTableState, role?: string): PeopleListParams {
+  const params = peopleTableParams(state, role);
+  return params.role === "volunteer" &&
+    (params.sort === "email" || params.sort === "registration_count")
+    ? { ...params, sort: undefined }
+    : params;
 }
 
 export function PersonName({ person }: { person: Person }) {
@@ -76,7 +83,7 @@ export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryActio
   const role = id === "members" ? "member" : id === "volunteers" ? "volunteer" : undefined;
   const useDataSource = useCallback(
     function useDataSource(state: AdminTableState) {
-      const params = peopleTableParams(state, role);
+      const params = peopleEndpointParams(state, role);
       const query = usePeopleListQuery(params, authHeaders);
       const activeCounts = usePeopleCountsQuery({ q: params.q, role: params.role }, authHeaders);
       const roleCounts = usePeopleCountsQuery(
@@ -138,7 +145,7 @@ export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryActio
         id === "people"
           ? async (state) => {
               const current = captureAdminPeopleFence();
-              const params = { ...peopleTableParams(state, role), limit: 100, page: 1 };
+              const params = { ...peopleEndpointParams(state, role), limit: 100, page: 1 };
               const emails = new Set<string>();
               const signal = new AbortController().signal;
               let total = Infinity;
@@ -156,7 +163,7 @@ export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryActio
           : undefined
       }
       onExport={async (state) => {
-        const params = peopleListSearchParams(peopleTableParams(state, role));
+        const params = peopleListSearchParams(peopleEndpointParams(state, role));
         params.delete("page");
         params.delete("limit");
         if (role === "volunteer") {
