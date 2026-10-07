@@ -379,6 +379,20 @@ A session generation fences late responses from the revoked session. This is
 covered by `MyAccountSession.test.tsx`; backend shared-session revocation is
 covered by `test_my_organizations.py` and existing visitor tests.
 
+### Account linking and unified sign-out (#1209)
+
+Linking is a convergent side effect of resolving a bearer token with an
+explicitly verified email, not a client-advertised write: repeating it finds
+the accounts already joined and changes nothing, so it is safe to repeat and
+is never retried specially. Concurrent logins serialize on the user rows and
+recover from unique-constraint races. Each change writes an `account_linked`
+audit row exactly once because the second attempt finds nothing to do.
+
+`AuthContext.logout` sends `POST /api/visitor-sessions/sign-out` (convergent,
+see above) once, without retries, before leaving for the IdP. A failed response
+aborts the IdP redirect and retains the cached views; the user may press the
+button again. Tests: `test_account_unification.py`, `adminCacheAuth.test.tsx`.
+
 `GET /api/me/organizations` accepts the shared cookie or an OIDC bearer token
 with an explicitly verified email. Cookie reads refresh the same sliding
 idle deadline within the fixed hard cap. The OIDC path uses the existing

@@ -19,8 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
 from app.database import get_db
-from app.email import send_visitor_magic_link_email
-from app.models import VisitorMagicLink
+from app.email import send_account_sign_in_email, send_visitor_magic_link_email
+from app.models import User, VisitorMagicLink
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import (
     RegistrationAccessLookupRequest,
@@ -76,6 +76,19 @@ async def request_visitor_magic_link(
     expires_at = now + timedelta(minutes=settings.guest_access_token_ttl_minutes)
     request_id = _magic_link_log_id(email_norm)
     token_hash = _hash_magic_link_token(token)
+
+    if await _is_keycloak_linked(db, email_norm):
+        # The address belongs to a Keycloak account (#1209). An emailed app
+        # link would open a roleless session beside it, so point to the
+        # account sign-in instead, answering exactly like any other request.
+        try:
+            await send_account_sign_in_email(email=email_norm, request_id=request_id)
+        except Exception:
+            logger.exception("Account sign-in email delivery failed unexpectedly for request_id=%s.", request_id)
+        return RegistrationLookupRequestAccepted(
+            delivery_mode="email",
+            expires_in_minutes=settings.guest_access_token_ttl_minutes,
+        )
 
     await db.execute(delete(VisitorMagicLink).where(VisitorMagicLink.expires_at < now))
     existing = (
@@ -134,6 +147,12 @@ async def request_visitor_magic_link(
     )
 
 
+async def _is_keycloak_linked(db: AsyncSession, email: str) -> bool:
+    return bool(
+        await db.scalar(select(User.id).where(User.verified_email == email, User.oidc_subject.is_not(None)).limit(1))
+    )
+
+
 async def _get_magic_link_or_401(db: AsyncSession, token: str) -> VisitorMagicLink:
     token_hash = _hash_magic_link_token(token)
     result = await db.execute(
@@ -171,6 +190,13 @@ async def redeem_visitor_magic_link(
 
     link = await _get_magic_link_or_401(db, body.token)
     email_norm = link.email
+    if await _is_keycloak_linked(db, email_norm):
+        # Issued before the address joined a Keycloak account (#1209): never
+        # turn it into a roleless app session beside that account.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired sign-in link.",
+        )
     # Expire in place so replay of the same link cleanly returns 401.
     link.expires_at = datetime.now(UTC)
 

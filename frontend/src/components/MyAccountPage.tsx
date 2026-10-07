@@ -34,8 +34,10 @@ import {
 
 /**
  * Unified self-service for visitors, organization contacts and OIDC accounts.
- * One emailed login supplies a verified identity; organization access follows
- * current contact records. Staff and volunteer roles still use OIDC.
+ * An emailed link or a Keycloak login (password or Keycloak magic link) supplies a
+ * verified identity, and a Keycloak account joins the matching email account on the
+ * server (#1209). Organization access follows current contact records. Staff and
+ * volunteer roles still come only from Keycloak. One sign-out ends both sessions.
  */
 export default function MyAccountPage() {
   const {
@@ -523,13 +525,15 @@ export default function MyAccountPage() {
             </p>
           )}
 
-          {emailRegistrations !== null && (
+          {(isAuthenticated || emailRegistrations !== null) && (
             <div className="mb-4">
+              {/* One button for either method; an account signed in with the IdP also
+                  revokes any emailed-link session (see AuthContext.logout). */}
               <Button
                 variant="outline"
                 size="sm"
                 disabled={emailSignOut.isPending}
-                onClick={() => emailSignOut.mutate()}
+                onClick={() => (isAuthenticated ? logout() : emailSignOut.mutate())}
               >
                 {m.my_registrations_sign_out()}
               </Button>

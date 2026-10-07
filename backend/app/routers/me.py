@@ -33,7 +33,11 @@ from app.services.pebble_access import (
     revoke_pebble_token,
     rotate_pebble_token,
 )
-from app.services.users_service import claim_unowned_registrations_for_email, get_or_create_user
+from app.services.users_service import (
+    claim_unowned_registrations_for_email,
+    get_or_create_user,
+    verified_email_from_claims,
+)
 from app.utils import registration_to_guest_dict
 from app.visitor_session import actor_for_user, get_current_user_with_claims
 from app.visitor_session import get_current_user as get_current_portal_user
@@ -81,15 +85,16 @@ async def get_communication_preference(
 @router.put("/communication-preference", response_model=CommunicationPreferenceOut)
 async def update_communication_preference(
     body: CommunicationPreferenceUpdate,
-    user: User = Depends(get_current_portal_user),
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
 ) -> CommunicationPreferenceOut:
+    user, claims = user_and_claims
     people = await _user_people(db, user.id)
     changed_people = [person for person in people if person.preferred_language != body.preferred_language]
     for person in changed_people:
         person.preferred_language = body.preferred_language
     if changed_people:
-        actor, auth_source = actor_for_user(user)
+        actor, auth_source = actor_for_user(user, claims)
         await write_audit_entry(
             db,
             actor=actor,
@@ -169,9 +174,10 @@ async def request_registration_change(
     registration_id: str,
     body: BookingRequestCreate,
     request: Request,
-    user: User = Depends(get_current_portal_user),
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, bool]:
+    user, claims = user_and_claims
     row = (
         await db.execute(
             select(Registration, Person, Event)
@@ -205,7 +211,7 @@ async def request_registration_change(
         .returning(ContactMessage.id)
     )
     if inserted is not None:
-        actor, auth_source = actor_for_user(user)
+        actor, auth_source = actor_for_user(user, claims)
         await write_audit_entry(
             db,
             actor=actor,
@@ -222,23 +228,6 @@ async def request_registration_change(
         await enqueue_contact_notification(db, message_id, actor=actor, request_id=request_id)
     await db.commit()
     return {"ok": True}
-
-
-def _verified_email_from_claims(claims: dict[str, Any] | None) -> str | None:
-    """Return the caller's own email, only when Keycloak itself attests it.
-
-    An unverified email is self-asserted, not Keycloak's own attestation —
-    the same trust bar #1006 uses for volunteer identity. ``None`` means
-    there is nothing safe to auto-detect for this caller; there is no
-    fallback path for a different email (#1044 removed the manual
-    proof-token flow entirely).
-    """
-    if claims is None:
-        return None
-    email = claims.get("email")
-    if claims.get("email_verified") is True and isinstance(email, str) and email.strip():
-        return email.strip().lower()
-    return None
 
 
 @router.get("/registrations/claimable", response_model=list[RegistrationGuestOut])
@@ -261,7 +250,7 @@ async def list_claimable_registrations(
     from app.routers.registrations import _load_guest_registrations_by_email
 
     _user, claims = user_and_claims
-    email = _verified_email_from_claims(claims)
+    email = verified_email_from_claims(claims)
     if email is None:
         return []
     rows = await _load_guest_registrations_by_email(db, email)
@@ -284,13 +273,13 @@ async def claim_verified_email_registrations(
     from app.routers.registrations import _load_guest_registrations_by_email
 
     user, claims = user_and_claims
-    email = _verified_email_from_claims(claims)
+    email = verified_email_from_claims(claims)
     if email is None:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="No verified email available to claim registrations with.",
         )
-    actor, auth_source = actor_for_user(user)
+    actor, auth_source = actor_for_user(user, claims)
     await claim_unowned_registrations_for_email(db, user, email, actor=actor, auth_source=auth_source)
     rows = await _load_guest_registrations_by_email(db, email)
     await db.commit()

@@ -21,6 +21,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Changed
 
+- A Keycloak login with an explicitly verified email now joins the matching emailed-session account, so password and magic-link sign-in reach one account with the same bookings (#1209). Migration `005` relaxes `users` from exactly one to at least one identity; addresses linked to a Keycloak account get a "use your account sign-in" email instead of an app magic link; signing out of a Keycloak account also revokes its emailed session. Keycloak SMTP activation and production verification remain open. See `docs/decisions/1192-organization-manager-login.md#both-sign-in-methods-for-one-account--1209`.
 - Consolidated completed UI migration notes into `docs/frontend-ui.md`; updated documentation links, clarified the warm-start implementation status and preserved product-audit history.
 
 - **Breaking:** the exhibitor domain is renamed to organization throughout API/MCP routes, payload fields, database/storage names, configuration and code. Migration `004` renames existing records and creates descriptions/proposal history under the final organization names; deploy matching clients, application and infrastructure together. See `docs/organization-change-review.md#terminology-and-upgrade` (#1190).

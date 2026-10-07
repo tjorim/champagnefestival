@@ -1,5 +1,6 @@
 """Read organizations managed by a verified email or OIDC identity (#1192)."""
 
+from typing import Any
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
@@ -13,7 +14,7 @@ from app.schemas import ManagedOrganizationOut, OrganizationChangeOut, Organizat
 from app.services import organization_changes, organization_logos
 from app.services import organization_translation as translation
 from app.services.errors import ServiceError, to_http_exception
-from app.visitor_session import actor_for_user, get_current_user, get_organization_contact_email
+from app.visitor_session import actor_for_user, get_current_user_with_claims, get_organization_contact_email
 
 router = APIRouter(prefix="/api/me/organizations", tags=["me", "organizations"])
 
@@ -85,14 +86,14 @@ async def suggest_translation(
     body: translation.TranslationRequest,
     response: Response,
     email: str | None = Depends(get_organization_contact_email),
-    user: User = Depends(get_current_user),
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
 ) -> translation.TranslationDraft:
     """Live manager authorization, editable draft only; no proposal or publication."""
     response.headers["Cache-Control"] = "no-store"
     await owned(db, organization_id, email, lock=False)
     # Release the read transaction before waiting for a cold service startup.
-    actor, auth_source = actor_for_user(user)
+    actor, auth_source = actor_for_user(*user_and_claims)
     await db.rollback()
     return await translation.suggest(body, f"{auth_source or 'keycloak'}:{actor}")
 
@@ -123,13 +124,13 @@ async def propose_change(
     body: OrganizationChangeSubmit,
     response: Response,
     email: str | None = Depends(get_organization_contact_email),
-    user: User = Depends(get_current_user),
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Submit private website/description fields; reuse submission_id for retries."""
     response.headers["Cache-Control"] = "no-store"
     row = await owned(db, organization_id, email)
-    actor, auth_source = actor_for_user(user)
+    actor, auth_source = actor_for_user(*user_and_claims)
     try:
         return await organization_changes.submit(db, row, body, actor=actor, auth_source=auth_source)
     except ServiceError as exc:
@@ -142,13 +143,13 @@ async def upload_logo(
     file: UploadFile,
     response: Response,
     email: str | None = Depends(get_organization_contact_email),
-    user: User = Depends(get_current_user),
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Upload a private proposal. Repeating an upload replaces the pending proposal."""
     response.headers["Cache-Control"] = "no-store"
     await owned(db, organization_id, email, lock=False)
-    actor, auth_source = actor_for_user(user)
+    actor, auth_source = actor_for_user(*user_and_claims)
     try:
         logo = await organization_logos.read_upload(file)
         row = await owned(db, organization_id, email)
