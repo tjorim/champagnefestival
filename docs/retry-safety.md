@@ -347,3 +347,15 @@ occupancy and check-in stats) and edition statistics. Creating a registration
 only inserts into the matching active-edition cache. Recording payment or
 assigning a table to a historical booking first reads that registration by id;
 this read does not change the write's retry safety or advertise a retry.
+
+### Exhibitor descriptions (#1191)
+
+The existing admin REST and MCP create/update operations now accept description
+texts and an original language. Retry decisions are unchanged: creates are **not
+retry safe** (server-generated IDs), and updates are **not retry safe** (no version
+precondition; replay may overwrite a newer edit). No automatic retry is added.
+Updates validate the merged description before changing any exhibitor fields or
+writing an audit entry; an invalid original-language transition makes no change.
+Clearing uses explicit nulls in REST, or empty strings for all populated texts and
+the original language in MCP. Tests cover partial updates, invalid transitions,
+and explicit clearing through both adapters.

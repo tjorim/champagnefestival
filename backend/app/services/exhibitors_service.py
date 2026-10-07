@@ -16,9 +16,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Edition, Exhibitor, Person
-from app.schemas import ExhibitorCreate, ExhibitorUpdate
-from app.services.errors import ConflictError, NotFoundError
+from app.schemas import ExhibitorCreate, ExhibitorDescription, ExhibitorUpdate
+from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.utils import exhibitor_to_dict
+
+DESCRIPTION_FIELDS = ("description_language", "description_nl", "description_fr", "description_en")
 
 
 async def editions_linking(db: AsyncSession, exhibitor_id: int) -> list[str]:
@@ -48,6 +50,7 @@ async def create_exhibitor(
     if body.contact_person_id and contact is None:
         raise NotFoundError("Person not found.")
     e = Exhibitor(
+        **{field: getattr(body, field) for field in DESCRIPTION_FIELDS},
         name=body.name,
         image=body.image,
         website=body.website,
@@ -88,6 +91,16 @@ async def apply_exhibitor_update(
     ``body.model_fields_set`` and so never needs the flag (it always passes
     ``False``).
     """
+    # Validate the merged state before mutating: a partial update may change only one translation.
+    descriptions = {field: getattr(e, field) for field in DESCRIPTION_FIELDS}
+    descriptions.update(body.model_dump(include=set(DESCRIPTION_FIELDS), exclude_unset=True))
+    try:
+        validated = ExhibitorDescription.model_validate(descriptions).validate_original()
+    except ValueError as exc:
+        raise ValidationFailedError(str(exc)) from exc
+    for field in body.model_fields_set.intersection(DESCRIPTION_FIELDS):
+        setattr(e, field, getattr(validated, field))
+
     if body.name is not None:
         e.name = body.name
     if body.image is not None:

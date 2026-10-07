@@ -150,3 +150,67 @@ async def test_exhibitors_support_limit_and_page(client):
     all_results = [r for r in all_response.json() if r["id"] in created_ids]
     assert all_results[:2] == first_page_results
     assert all_results[2:3] == second_page_results
+
+
+@pytest.mark.anyio
+async def test_description_validation_and_partial_updates(client):
+    for payload in (
+        {"description_fr": "Bonjour"},
+        {"description_language": "fr", "description_en": "Hello"},
+        {"description_language": "de", "description_fr": "Bonjour"},
+        {"description_language": "fr", "description_fr": " "},
+        {"description_language": "fr", "description_fr": "x" * 601},
+    ):
+        response = await client.post("/api/exhibitors", json={"name": "Maison", **payload}, headers=ADMIN_HEADERS)
+        assert response.status_code == 422
+    response = await client.post(
+        "/api/exhibitors",
+        json={
+            "name": "Maison",
+            "description_language": "fr",
+            "description_fr": " Bonjour ",
+            "description_en": "<b>Hello</b> **wine**",
+        },
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 201
+    row = response.json()
+    assert row["description_fr"] == "Bonjour"
+    assert row["description_en"] == "<b>Hello</b> **wine**"
+    url = f"/api/exhibitors/{row['id']}"
+    response = await client.put(url, json={"description_nl": "Welkom"}, headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    assert response.json()["description_fr"] == "Bonjour"
+    response = await client.put(url, json={"description_fr": None}, headers=ADMIN_HEADERS)
+    assert response.status_code == 400
+    response = await client.put(url, json={"description_language": "nl", "description_fr": None}, headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    response = await client.put(
+        url, json={"description_language": None, "description_nl": None, "description_en": " "}, headers=ADMIN_HEADERS
+    )
+    assert response.status_code == 200
+    assert all(
+        response.json()[field] is None
+        for field in ("description_language", "description_nl", "description_fr", "description_en")
+    )
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "description",
+    [
+        {"description_fr": "Bonjour"},
+        {"description_language": "fr", "description_en": "Hello"},
+        {"description_language": "de", "description_fr": "Bonjour"},
+        {"description_language": "fr", "description_fr": " "},
+    ],
+)
+async def test_database_requires_original_description(db_session, description):
+    from sqlalchemy.exc import IntegrityError
+
+    from app.models import Exhibitor
+
+    with pytest.raises(IntegrityError, match="ck_exhibitors_description_original"):
+        async with db_session.begin_nested():
+            db_session.add(Exhibitor(name="Invalid description", **description))
+            await db_session.flush()

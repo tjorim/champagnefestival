@@ -193,6 +193,9 @@ export const seedEditions = [
         name: "Maison Moët & Chandon",
         image: "/images/moet.png",
         website: "https://www.moet.com",
+        description_language: "fr",
+        description_fr: "Maison de champagne présentant ses cuvées au festival.",
+        description_en: "Champagne house presenting its cuvées at the festival.",
         type: "producer",
       },
       {

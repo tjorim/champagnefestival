@@ -77,6 +77,11 @@ export interface Layout {
 
 /** An exhibitor as the admin dashboard reads it from `GET /api/exhibitors`. */
 export interface Exhibitor {
+  description_language?: "nl" | "fr" | "en" | null;
+  description_nl?: string | null;
+  description_fr?: string | null;
+  description_en?: string | null;
+
   id: number;
   name: string;
   active: boolean;

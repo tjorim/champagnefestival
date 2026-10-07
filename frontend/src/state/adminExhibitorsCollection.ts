@@ -109,6 +109,11 @@ export function applyAdminExhibitorSaved(
     collection.utils.writeUpsert({
       id: exhibitor.id,
       name: exhibitor.name,
+      description_language: exhibitor.description_language ?? null,
+      description_nl: exhibitor.description_nl ?? null,
+      description_fr: exhibitor.description_fr ?? null,
+      description_en: exhibitor.description_en ?? null,
+
       active: exhibitor.active ?? true,
       contactPersonId: exhibitor.contactPersonId ?? null,
     }),

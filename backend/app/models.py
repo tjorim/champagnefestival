@@ -390,6 +390,18 @@ class Exhibitor(Base):
 
     __tablename__ = "exhibitors"
 
+    __table_args__ = (
+        CheckConstraint(
+            "(description_language IS NULL AND description_nl IS NULL AND description_fr IS NULL "
+            "AND description_en IS NULL) OR "
+            "(description_language IS NOT NULL AND ("
+            "(description_language = 'nl' AND length(trim(description_nl)) > 0) OR "
+            "(description_language = 'fr' AND length(trim(description_fr)) > 0) OR "
+            "(description_language = 'en' AND length(trim(description_en)) > 0)) IS TRUE)",
+            name="ck_exhibitors_description_original",
+        ),
+    )
+
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200))
     image: Mapped[str] = mapped_column(String(500), default="")
@@ -400,6 +412,11 @@ class Exhibitor(Base):
     contact_person_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
     )
+
+    description_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    description_nl: Mapped[str | None] = mapped_column(String(600), nullable=True)
+    description_fr: Mapped[str | None] = mapped_column(String(600), nullable=True)
+    description_en: Mapped[str | None] = mapped_column(String(600), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)

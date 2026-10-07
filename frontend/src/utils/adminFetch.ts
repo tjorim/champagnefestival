@@ -468,6 +468,12 @@ export async function fetchExhibitors(
     ? payload.map((exhibitor: Record<string, unknown>) => ({
         id: Number(exhibitor.id),
         name: String(exhibitor.name ?? ""),
+        description_language:
+          (exhibitor.description_language as Exhibitor["description_language"]) ?? null,
+        description_nl: (exhibitor.description_nl as Exhibitor["description_nl"]) ?? null,
+        description_fr: (exhibitor.description_fr as Exhibitor["description_fr"]) ?? null,
+        description_en: (exhibitor.description_en as Exhibitor["description_en"]) ?? null,
+
         active: exhibitor.active !== false,
         contactPersonId:
           typeof exhibitor.contact_person_id === "string" ? exhibitor.contact_person_id : null,

@@ -1173,5 +1173,14 @@
   "admin_table_sort": "Sorteren",
   "admin_table_results": "{total} resultaten",
   "admin_cache_restored": "Opgeslagen gegevens worden getoond.",
-  "admin_cache_last_synced": "Laatst gesynchroniseerd: {time}."
+  "admin_cache_last_synced": "Laatst gesynchroniseerd: {time}.",
+  "admin_item_description_language": "Oorspronkelijke taal",
+  "admin_item_description_nl": "Nederlands",
+  "admin_item_description_fr": "Frans",
+  "admin_item_description_en": "Engels",
+  "admin_item_description_help": "Optionele platte tekst, maximaal 600 tekens per taal. Voeg bij een beschrijving tekst in de oorspronkelijke taal toe. Andere talen zijn optionele vertalingen.",
+  "vendors_title": "Verkopers",
+  "loading_vendors": "Verkopers laden…",
+  "error_loading_vendors": "Verkopers konden niet worden geladen.",
+  "admin_item_description_original_required": "Vul een beschrijving in de oorspronkelijke taal in, of wis alle beschrijvingsteksten."
 }

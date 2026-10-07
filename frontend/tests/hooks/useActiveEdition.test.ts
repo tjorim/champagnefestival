@@ -54,6 +54,33 @@ const apiEdition = {
 };
 
 describe("useActiveEdition", () => {
+  it("preserves descriptions for all exhibitor types in the public payload", async () => {
+    const item = {
+      id: 1,
+      name: "Maison",
+      image: "/logo.svg",
+      description_language: "fr",
+      description_fr: "Bonjour",
+      description_en: "Hello",
+    };
+    server.use(
+      http.get("/api/editions/active", () =>
+        HttpResponse.json({ ...apiEdition, producers: [item], sponsors: [item], vendors: [item] }),
+      ),
+    );
+    const { result } = renderHook(() => useActiveEdition(), {
+      wrapper: createTestQueryClientWrapper(),
+    });
+    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+    for (const items of [
+      result.current.edition.producers,
+      result.current.edition.sponsors,
+      result.current.edition.vendors,
+    ]) {
+      expect(items).toEqual([item]);
+    }
+  });
+
   it("uses the API as the source of truth for edition, venue, dates, and events", async () => {
     server.use(http.get("/api/editions/active", () => HttpResponse.json(apiEdition)));
 

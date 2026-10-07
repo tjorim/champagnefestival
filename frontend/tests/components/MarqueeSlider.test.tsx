@@ -70,6 +70,26 @@ describe("MarqueeSlider component", () => {
     vi.restoreAllMocks();
   });
 
+  it("renders descriptions as escaped plain text and falls back to the original language", () => {
+    const text = "<script>alert(1)</script> **Champagne**";
+    const { container } = render(
+      <MarqueeSlider
+        items={[
+          {
+            id: 101,
+            name: "Maison",
+            image: "/logo.svg",
+            description_language: "fr",
+            description_fr: text,
+          },
+        ]}
+      />,
+    );
+    expect(screen.getAllByText(text).length).toBeGreaterThan(0);
+    expect(container.querySelector("script")).toBeNull();
+    expect(container.querySelector("strong")).toBeNull();
+  });
+
   it("renders the Swiper container with accessibility support", () => {
     render(<MarqueeSlider />);
     expect(screen.getByTestId("swiper")).toHaveAttribute("data-module-count", "4");

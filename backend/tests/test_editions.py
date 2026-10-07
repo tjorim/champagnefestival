@@ -69,7 +69,13 @@ async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
     # Create a producer and a sponsor
     r = await client.post(
         "/api/exhibitors",
-        json={"name": "Bollinger", "type": "producer"},
+        json={
+            "name": "Bollinger",
+            "type": "producer",
+            "description_language": "fr",
+            "description_fr": "Maison de champagne",
+            "description_en": "Champagne house",
+        },
         headers=ADMIN_HEADERS,
     )
     producer_id = r.json()["id"]
@@ -122,6 +128,9 @@ async def test_active_edition_returns_embedded_venue_and_exhibitors(client):
     assert data["venue"]["name"] == "Test Venue"
     assert len(data["producers"]) == 1
     assert data["producers"][0]["name"] == "Bollinger"
+    assert data["producers"][0]["description_language"] == "fr"
+    assert data["producers"][0]["description_fr"] == "Maison de champagne"
+    assert data["producers"][0]["description_en"] == "Champagne house"
     assert len(data["sponsors"]) == 1
     assert data["sponsors"][0]["name"] == "Acme"
 

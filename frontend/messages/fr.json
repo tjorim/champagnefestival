@@ -1173,5 +1173,14 @@
   "admin_table_sort": "Trier",
   "admin_table_results": "{total} résultats",
   "admin_cache_restored": "Affichage des données enregistrées.",
-  "admin_cache_last_synced": "Dernière synchronisation : {time}."
+  "admin_cache_last_synced": "Dernière synchronisation : {time}.",
+  "admin_item_description_language": "Langue originale",
+  "admin_item_description_nl": "Néerlandais",
+  "admin_item_description_fr": "Français",
+  "admin_item_description_en": "Anglais",
+  "admin_item_description_help": "Texte brut facultatif, jusqu’à 600 caractères par langue. Une description doit contenir le texte dans sa langue originale. Les autres langues sont des traductions facultatives.",
+  "vendors_title": "Vendeurs",
+  "loading_vendors": "Chargement des vendeurs…",
+  "error_loading_vendors": "Impossible de charger les vendeurs.",
+  "admin_item_description_original_required": "Saisissez une description dans sa langue originale, ou effacez tous les textes de description."
 }
