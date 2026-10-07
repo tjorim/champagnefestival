@@ -6,7 +6,6 @@ export const queryKeys = {
   announcements: (locale: string) => ["announcements", locale] as const,
   policy: (policyKey: string, locale: string) => ["policy", policyKey, locale] as const,
   maintenanceMode: ["maintenance-mode"] as const,
-  myRegistrations: (token: string) => ["my-registrations", token] as const,
   checkInRegistration: (registrationId: string, checkInToken: string) =>
     ["check-in", registrationId, checkInToken] as const,
   volunteerRegistrationSearch: (query: string) => ["volunteer", "registrations", query] as const,

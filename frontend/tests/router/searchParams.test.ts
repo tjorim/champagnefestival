@@ -12,7 +12,7 @@ describe("router search param validation", () => {
     expect(validateCheckInSearch({ id: 12, token: true })).toEqual({ id: undefined });
   });
 
-  it("keeps my-registrations token only when string", () => {
+  it("keeps the account sign-in token only when string", () => {
     expect(validateMyRegistrationsSearch({ token: "secure-token" })).toEqual({
       token: "secure-token",
     });

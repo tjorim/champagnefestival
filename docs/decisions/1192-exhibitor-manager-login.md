@@ -14,7 +14,7 @@ one cookie and one session lifecycle for email accounts. The normalised
 `User.verified_email` is established by redeeming a link; OIDC users have an
 OIDC subject instead of a verified email, enforced by the database constraint.
 
-`get_current_exhibitor_manager`, in the existing session module, accepts that
+`get_exhibitor_contact_email`, in the existing session module, accepts that
 cookie or a valid OIDC bearer token and resolves its verified email. For OIDC,
 `email_verified` must be the boolean `true`; usernames and unverified email
 claims never grant contact access. Each `GET /api/me/exhibitors` joins

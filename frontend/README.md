@@ -206,14 +206,15 @@ production builds**.
 
 ## Query key ownership and invalidation
 
-- All query keys are defined in `src/utils/queryKeys.ts`.
+- Shared query keys are defined in `src/utils/queryKeys.ts`; private account queries
+  are scoped locally to the account identity and page/session lifetime.
 - Top-level admin resources are owned by `queryKeys.admin.*` and consumed by `useAdminQueries`.
 - `useAdminQueries` centralizes bulk admin refetch behavior via `shouldRefetchAdminResourceQuery`,
   which only matches the stable top-level admin resources (`registrations`, `tables`, `venues`,
   `rooms`, `table-types`, `layouts`, `exhibitors`, `areas`, `people`, `members`).
-- Check-in and self-service flows use route-scoped keys:
-  - `queryKeys.checkInRegistration(id, token)`
-  - `queryKeys.myRegistrations(token)`
+- Check-in uses `queryKeys.checkInRegistration(id, token)`.
+- `/me` stores booking responses in its session controller; exhibitors use a
+  private account-scoped query with no retained cache after unmount.
 
 ## Technologies
 

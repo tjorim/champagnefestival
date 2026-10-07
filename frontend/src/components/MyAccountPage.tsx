@@ -1,4 +1,4 @@
-import MyExhibitorsPage, { type ManagedExhibitor } from "@/components/MyExhibitorsPage";
+import MyExhibitorsSection, { type ManagedExhibitor } from "@/components/MyExhibitorsSection";
 import { signOutVisitorSession, type GuestRegistration } from "@/utils/publicRegistrationApi";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -460,11 +460,7 @@ export default function MyAccountPage() {
       key: "registrations",
       title: m.my_registrations_title(),
       content: (
-        <MyRegistrationsPage
-          key={sessionEpoch}
-          onEmailSessionChange={onEmailSessionChange}
-          hideSessionControls
-        />
+        <MyRegistrationsPage key={sessionEpoch} onEmailSessionChange={onEmailSessionChange} />
       ),
     },
   ];
@@ -472,7 +468,7 @@ export default function MyAccountPage() {
     tabs.push({
       key: "exhibitors",
       title: m.manager_title(),
-      content: <MyExhibitorsPage exhibitors={exhibitors} />,
+      content: <MyExhibitorsSection exhibitors={exhibitors} />,
     });
   if (isVolunteer)
     tabs.push({ key: "volunteer", title: m.my_eid_title(), content: volunteerSection });
