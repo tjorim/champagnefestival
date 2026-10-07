@@ -67,6 +67,7 @@ export type RegistrationSortKey =
   | "checked_in";
 
 export interface RegistrationsPageOptions {
+  signal?: AbortSignal;
   query?: string;
   status?: string;
   eventId?: string;
@@ -110,7 +111,7 @@ export async function fetchRegistrationsPage(
   const suffix = params.toString() ? `?${params.toString()}` : "";
   const payload = await fetchJsonOrThrowWithUnauthorized<RegistrationListEnvelope>(
     `/api/registrations${suffix}`,
-    { headers: authHeaders() },
+    { headers: authHeaders(), signal: options.signal },
     m.admin_error_load_data(),
   );
   if (
@@ -168,15 +169,15 @@ export async function fetchAllRegistrationPages(
   return [...byId.values()];
 }
 
-// LayoutEditor's floor-plan occupancy and the dashboard's status/edition/capacity
-// aggregates genuinely need the complete working set (they summarize across every
-// registration, not one page of it), so this reads every page. The registrations
-// *table* itself does not use this — see fetchRegistrationsPage, used directly by
-// RegistrationList.
+// Operational consumers need one complete edition, while lists remain server-paged.
+// Historical floor plans explicitly load one event through fetchAllRegistrationPages.
 export function fetchAllRegistrations(
   authHeaders: () => Record<string, string>,
+  editionId: string,
+  signal?: AbortSignal,
 ): Promise<Registration[]> {
-  return fetchAllRegistrationPages(authHeaders);
+  if (!editionId) return Promise.resolve([]);
+  return fetchAllRegistrationPages(authHeaders, { editionId, signal });
 }
 
 export async function fetchRegistration(

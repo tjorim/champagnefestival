@@ -112,12 +112,12 @@ function installPaginatedHandler() {
   );
 }
 
-function renderRegistrationList() {
+function renderRegistrationList(collectionRows = registrations) {
   const queryClient = createTestQueryClient();
   render(
     <QueryClientProvider client={queryClient}>
       <RegistrationList
-        registrations={registrations}
+        registrations={collectionRows}
         tables={[]}
         exhibitors={[]}
         filter="all"
@@ -138,6 +138,19 @@ function renderRegistrationList() {
 }
 
 describe("RegistrationList — server-side pagination", () => {
+  it("renders an older edition page when the active collection does not contain its rows", async () => {
+    const older = buildRawRegistration(1);
+    older.event = { ...(older.event as Record<string, unknown>), edition_id: "older-edition" };
+    older.person = { ...(older.person as Record<string, unknown>), name: "Historical guest" };
+    server.use(
+      http.get("/api/registrations", () =>
+        HttpResponse.json({ items: [older], total: 1, limit: 50, page: 1 }),
+      ),
+    );
+    renderRegistrationList([]);
+    await waitFor(() => expect(screen.getByText("Historical guest")).toBeInTheDocument());
+  });
+
   it("fits everything on one page at the default page size and disables Previous/Next", async () => {
     installPaginatedHandler();
     renderRegistrationList();

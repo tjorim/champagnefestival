@@ -36,6 +36,10 @@ import { Icon } from "@/components/Icon";
  */
 
 import clsx from "clsx";
+import { useQuery } from "@tanstack/react-query";
+import { fetchAllRegistrationPages } from "@/utils/adminFetch";
+import { queryKeys } from "@/utils/queryKeys";
+import { withTableOccupancy } from "@/state/tableOccupancy";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { DragDropProvider, PointerSensor, useDraggable } from "@dnd-kit/react";
 import { PointerActivationConstraints } from "@dnd-kit/dom";
@@ -596,10 +600,10 @@ function RoomCanvas({
 
 export default function LayoutEditor({
   dayOptions,
-  tables,
+  tables: suppliedTables,
   tableTypes,
   layouts,
-  registrations,
+  registrations: suppliedRegistrations,
   rooms,
   exhibitors,
   areas,
@@ -630,6 +634,29 @@ export default function LayoutEditor({
   const [selectedTable, setSelectedTable] = useState<string | null>(null);
   const [selectedArea, setSelectedArea] = useState<string | null>(null);
   const [layer, setLayer] = useState<"seating" | "areas">("seating");
+
+  const activeLayout = layouts.find((layout) => layout.id === activeLayoutId);
+  const historicalEventId =
+    activeLayout && !dayOptions.some((day) => day.eventId === activeLayout.eventId)
+      ? activeLayout.eventId
+      : undefined;
+  const historicalRegistrations = useQuery({
+    queryKey: [...queryKeys.admin.registrations, "layout-event", historicalEventId],
+    queryFn: ({ signal }) =>
+      fetchAllRegistrationPages(authHeaders, { eventId: historicalEventId, signal }),
+    enabled: Boolean(historicalEventId),
+    gcTime: 0,
+    staleTime: 15 * 1000,
+    retry: false,
+  });
+  const registrations = useMemo(
+    () => (historicalEventId ? (historicalRegistrations.data ?? []) : suppliedRegistrations),
+    [historicalEventId, historicalRegistrations.data, suppliedRegistrations],
+  );
+  const tables = useMemo(
+    () => (historicalEventId ? withTableOccupancy(suppliedTables, registrations) : suppliedTables),
+    [historicalEventId, suppliedTables, registrations],
+  );
 
   // Auto-select first room. Adjusted during render rather than in an effect:
   // the guard is idempotent (it stops applying the moment a room is picked),
@@ -805,7 +832,6 @@ export default function LayoutEditor({
     ? registrations.filter((r) => selectedTableData.registrationIds.includes(r.id))
     : [];
 
-  const activeLayout = layouts.find((l) => l.id === activeLayoutId);
   const eventLayoutIds = new Set(
     layouts.filter((layout) => layout.eventId === activeLayout?.eventId).map((layout) => layout.id),
   );
@@ -880,6 +906,16 @@ export default function LayoutEditor({
       setSelectedArea(null);
     }
   }, []);
+
+  if (historicalEventId && !historicalRegistrations.data) {
+    return (
+      <p role="status">
+        {historicalRegistrations.isError
+          ? m.admin_error_load_data()
+          : m.admin_search_person_placeholder()}
+      </p>
+    );
+  }
 
   return (
     <div>

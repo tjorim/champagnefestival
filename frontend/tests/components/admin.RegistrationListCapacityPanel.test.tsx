@@ -116,7 +116,14 @@ describe("RegistrationList — per-event capacity panel", () => {
   it("reports the server's guest counts, not the ones derivable from the loaded registrations", async () => {
     server.use(
       http.get("/api/events/checkin-stats", () =>
-        HttpResponse.json([{ event_id: "event-1", total: 30, checked_in: 12 }]),
+        HttpResponse.json([
+          {
+            event_id: "historical-event",
+            event_title: "Historical event title",
+            total: 30,
+            checked_in: 12,
+          },
+        ]),
       ),
     );
 
@@ -125,6 +132,7 @@ describe("RegistrationList — per-event capacity panel", () => {
     // The one loaded registration would tally 0/2 on its own.
     expect(screen.getByText(/admin_checked_in: 0\/2/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText(/admin_checked_in: 12\/30/)).toBeInTheDocument());
+    expect(screen.getByText("Historical event title")).toBeInTheDocument();
   });
 
   it("falls back to the locally derived counts when the stats request fails", async () => {

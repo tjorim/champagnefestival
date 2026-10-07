@@ -116,6 +116,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const {
     registrationsQuery,
     registrationsCollection,
+    registrationCountsQuery,
     tablesQuery,
     tablesCollection,
     venuesQuery,
@@ -132,6 +133,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     venueCollections,
     loadData: loadDataBase,
   } = useAdminQueries({
+    editionId: activeEdition.id,
     visible,
     isAuthenticated,
     canManageAdminSections,
@@ -194,6 +196,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleUpdatePerson,
     handleUpdateVolunteer,
   } = useAdminPeopleActions({
+    detailRegistration,
     authHeaders,
     exhibitorsCollection,
     registrationsCollection,
@@ -415,7 +418,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             setSidebarOpen={setSidebarOpen}
             navRef={navRef}
             handleNavKeyDown={handleNavKeyDown}
-            registrationCount={registrations.length}
+            registrationCount={registrationCountsQuery.data?.all ?? 0}
             peopleCount={peopleCountsQuery.data?.total ?? 0}
             membersCount={peopleCountsQuery.data?.by_role.member ?? 0}
             volunteerCount={peopleCountsQuery.data?.by_role.volunteer ?? 0}

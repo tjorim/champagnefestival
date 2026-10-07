@@ -14,6 +14,8 @@ import {
   resetAdminExhibitorsCollection,
 } from "@/state/adminExhibitorsCollection";
 import { resetAdminPeopleSession } from "@/state/adminPeopleSession";
+import { useRegistrationCountsQuery } from "@/hooks/useRegistrationListQuery";
+import { useTodayKey } from "@/hooks/useTodayKey";
 import { usePeopleCountsQuery } from "@/hooks/usePeopleListQuery";
 import {
   createAdminTablesCollection,
@@ -32,6 +34,7 @@ import { queryKeys } from "@/utils/queryKeys";
 
 interface UseAdminQueriesOptions {
   visible: boolean;
+  editionId: string;
   isAuthenticated: boolean;
   canManageAdminSections: boolean;
   authHeaders: () => Record<string, string>;
@@ -39,14 +42,25 @@ interface UseAdminQueriesOptions {
 
 export function useAdminQueries({
   visible,
+  editionId,
   isAuthenticated,
   canManageAdminSections,
   authHeaders,
 }: UseAdminQueriesOptions) {
   const queryClient = useQueryClient();
+  const today = useTodayKey();
+  const registrationCountsQuery = useRegistrationCountsQuery(
+    editionId,
+    today,
+    authHeaders,
+    visible && isAuthenticated && canManageAdminSections,
+  );
 
   // Per-resource query keys (no longer scoped to a token; OIDC manages the session)
-  const registrationsQueryKey = queryKeys.admin.registrations;
+  const registrationsQueryKey = useMemo(
+    () => queryKeys.admin.registrationsEdition(editionId),
+    [editionId],
+  );
 
   const registrationsQueryOptions = {
     enabled: visible && isAuthenticated,
@@ -63,9 +77,10 @@ export function useAdminQueries({
       createAdminRegistrationsCollection({
         queryClient,
         authHeaders,
+        editionId,
         enabled: registrationsQueryOptions.enabled,
       }),
-    [registrationsQueryOptions.enabled, authHeaders, queryClient],
+    [registrationsQueryOptions.enabled, authHeaders, queryClient, editionId],
   );
   const registrationsLiveQuery = useLiveQuery(
     () => registrationsCollection,
@@ -203,7 +218,7 @@ export function useAdminQueries({
     void resetAdminTablesCollection(tablesCollectionRef.current).catch(() => undefined);
     void resetAdminVenueCollections(venueCollectionsRef.current).catch(() => undefined);
     void resetAdminExhibitorsCollection(exhibitorsCollectionRef.current).catch(() => undefined);
-    void queryClient.removeQueries({ queryKey: registrationsQueryKey });
+    void queryClient.removeQueries({ queryKey: queryKeys.admin.registrations });
     void queryClient.removeQueries({ queryKey: queryKeys.admin.tables });
     // Also removes the per-person queries nested under the people key.
     void queryClient.removeQueries({ queryKey: queryKeys.admin.people });
@@ -230,12 +245,22 @@ export function useAdminQueries({
           exhibitorsQuery,
           areasQuery,
           peopleCountsQuery,
+          registrationCountsQuery,
         ]
       : []),
   ];
 
   const loadData = useCallback(async () => {
     await Promise.all([
+      registrationsQueryOptions.enabled
+        ? queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.registrations, "page"] })
+        : undefined,
+      registrationsQueryOptions.enabled
+        ? queryClient.invalidateQueries({ queryKey: [...queryKeys.admin.registrations, "counts"] })
+        : undefined,
+      adminQueryOptions.enabled
+        ? queryClient.invalidateQueries({ queryKey: queryKeys.admin.editionStats })
+        : undefined,
       // A refetch ignores `enabled`, so a hidden or signed-out dashboard must not start one.
       registrationsQueryOptions.enabled
         ? refetchAdminRegistrations(registrationsCollection)
@@ -260,6 +285,7 @@ export function useAdminQueries({
 
   return {
     registrationsCollection,
+    registrationCountsQuery,
     // Query objects (for error/loading state access)
     registrationsQuery,
     tablesQuery,

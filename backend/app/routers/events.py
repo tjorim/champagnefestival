@@ -78,18 +78,23 @@ async def get_checkin_stats(
     stmt = (
         select(
             Registration.event_id,
+            Event.title.label("event_title"),
             func.coalesce(func.sum(Registration.guest_count), 0).label("total"),
             func.coalesce(func.sum(Registration.guest_count).filter(Registration.checked_in.is_(True)), 0).label(
                 "checked_in"
             ),
         )
+        .join(Event, Event.id == Registration.event_id)
         .where(Registration.status != "cancelled")
-        .group_by(Registration.event_id)
+        .group_by(Registration.event_id, Event.title)
     )
     if edition_id is not None:
-        stmt = stmt.join(Event, Event.id == Registration.event_id).where(Event.edition_id == edition_id)
+        stmt = stmt.where(Event.edition_id == edition_id)
     rows = (await db.execute(stmt)).all()
-    return [{"event_id": row.event_id, "total": row.total, "checked_in": row.checked_in} for row in rows]
+    return [
+        {"event_id": row.event_id, "event_title": row.event_title, "total": row.total, "checked_in": row.checked_in}
+        for row in rows
+    ]
 
 
 @router.get("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])

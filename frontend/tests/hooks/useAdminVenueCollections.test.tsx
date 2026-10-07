@@ -14,6 +14,7 @@ const authHeaders = () => ({
 
 function useAdminVenues() {
   const queries = useAdminQueries({
+    editionId: "march-2026",
     visible: true,
     isAuthenticated: true,
     canManageAdminSections: true,
@@ -224,6 +225,7 @@ describe("venue group collections in the admin hooks", () => {
     const view = renderHook(
       ({ isAuthenticated }) => {
         const queries = useAdminQueries({
+          editionId: "march-2026",
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,

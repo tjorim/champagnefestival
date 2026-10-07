@@ -16,6 +16,7 @@ const authHeaders = () => ({
 
 function useAdminTables() {
   const queries = useAdminQueries({
+    editionId: "march-2026",
     visible: true,
     isAuthenticated: true,
     canManageAdminSections: true,
@@ -74,6 +75,7 @@ describe("admin tables collection in the admin hooks", () => {
     const view = renderHook(
       ({ isAuthenticated }: { isAuthenticated: boolean }) =>
         useAdminQueries({
+          editionId: "march-2026",
           visible: true,
           isAuthenticated,
           canManageAdminSections: true,

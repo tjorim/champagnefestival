@@ -416,6 +416,7 @@ class EventCheckInStats(BaseModel):
     are guest headcounts (sum of `guest_count`), not booking counts."""
 
     event_id: str
+    event_title: str
     total: int
     checked_in: int
 

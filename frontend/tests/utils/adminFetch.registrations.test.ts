@@ -32,14 +32,14 @@ describe("fetchAllRegistrations — reads every page", () => {
     const requested: string[] = [];
     serveRegistrations(2500, requested);
 
-    const registrations = await fetchAllRegistrations(authHeaders);
+    const registrations = await fetchAllRegistrations(authHeaders, "march-2026");
 
     expect(registrations).toHaveLength(2500);
     expect(new Set(registrations.map((r) => r.id)).size).toBe(2500);
     expect(requested.sort()).toEqual([
-      "?limit=1000&page=1",
-      "?limit=1000&page=2",
-      "?limit=1000&page=3",
+      "?edition_id=march-2026&limit=1000&page=1",
+      "?edition_id=march-2026&limit=1000&page=2",
+      "?edition_id=march-2026&limit=1000&page=3",
     ]);
   });
 
@@ -47,16 +47,16 @@ describe("fetchAllRegistrations — reads every page", () => {
     const requested: string[] = [];
     serveRegistrations(3, requested);
 
-    const registrations = await fetchAllRegistrations(authHeaders);
+    const registrations = await fetchAllRegistrations(authHeaders, "march-2026");
 
     expect(registrations).toHaveLength(3);
-    expect(requested).toEqual(["?limit=1000&page=1"]);
+    expect(requested).toEqual(["?edition_id=march-2026&limit=1000&page=1"]);
   });
 
   it("returns an empty list for no registrations", async () => {
     serveRegistrations(0);
 
-    await expect(fetchAllRegistrations(authHeaders)).resolves.toEqual([]);
+    await expect(fetchAllRegistrations(authHeaders, "march-2026")).resolves.toEqual([]);
   });
 
   it("applies the filters to every page", async () => {
@@ -85,13 +85,13 @@ describe("fetchAllRegistrations — reads every page", () => {
       }),
     );
 
-    await expect(fetchAllRegistrations(authHeaders)).resolves.toHaveLength(1001);
+    await expect(fetchAllRegistrations(authHeaders, "march-2026")).resolves.toHaveLength(1001);
   });
 
   it("rejects a bare-array (pre-envelope) response instead of silently returning it", async () => {
     server.use(http.get("/api/registrations", () => HttpResponse.json([registrationPayload("x")])));
 
-    await expect(fetchAllRegistrations(authHeaders)).rejects.toThrow(
+    await expect(fetchAllRegistrations(authHeaders, "march-2026")).rejects.toThrow(
       /expected \{items, total, limit, page\}/,
     );
   });

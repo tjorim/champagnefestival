@@ -2,7 +2,7 @@
 
 **Status:** TanStack DB adopted for registrations, tables, the venue group (venues, rooms, table types, layouts, areas) and exhibitors. People, members and volunteers use server-driven TanStack Query pages with mutation callbacks (#1179/#1181), not a collection or on-demand sync. See [Remaining resources](#remaining-resources-1166), [Roadmap](#roadmap) and the [server-driven table decision](#server-driven-tables-query-with-keeppreviousdata-not-on-demand-sync-1175).
 **Adopted:** 2026-05-27, [#442](https://github.com/tjorim/champagnefestival/issues/442) (closed as "adopt, not defer"), pilot merged in [#455](https://github.com/tjorim/champagnefestival/pull/455)
-**Record updated:** 2026-10-06, [#1168](https://github.com/tjorim/champagnefestival/issues/1168), 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166), [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184), [#1175](https://github.com/tjorim/champagnefestival/issues/1175)
+**Record updated:** 2026-10-07, [#1182](https://github.com/tjorim/champagnefestival/issues/1182), 2026-10-06, [#1168](https://github.com/tjorim/champagnefestival/issues/1168), 2026-10-05, [#1166](https://github.com/tjorim/champagnefestival/issues/1166), [#1183](https://github.com/tjorim/champagnefestival/issues/1183), [#1184](https://github.com/tjorim/champagnefestival/issues/1184), [#1175](https://github.com/tjorim/champagnefestival/issues/1175)
 
 ---
 
@@ -38,11 +38,11 @@ payment, order and delivery fields carried on each registration).
 `createAdminRegistrationsCollection` builds the collection with `createCollection`
 and `queryCollectionOptions` from `@tanstack/query-db-collection`:
 
-- `queryKey: queryKeys.admin.registrations`, `queryFn: fetchAllRegistrations`,
+- `queryKey: queryKeys.admin.registrationsEdition(editionId)`, `queryFn: fetchAllRegistrations` (only that edition),
   `getKey: (registration) => registration.id`.
 - `enabled` follows `visible && isAuthenticated`; `staleTime` is 60 seconds and
   `retry` is `false`, matching the other admin queries.
-- `useAdminQueries` memoizes one collection per `(enabled, authHeaders,
+- `useAdminQueries` memoizes one collection per `(editionId, enabled, authHeaders,
   queryClient)` and reads it with `useLiveQuery(() => collection, [collection])`.
   It exposes a `registrationsQuery` shaped like a query result (`data`, `error`
   from `collection.utils.lastError`, `isPending` from the live query's
@@ -498,10 +498,12 @@ swaps it. Everything that needs the full working set is edition-bound:
   edition. Cross-edition numbers come from `GET /api/editions/stats`.
 - The layout editor's day options already come from the active edition's
   events; the floor plan, table occupancy and the volunteer check-in flow are
-  to be confirmed to work on the active edition's events in #1182.
+  confirmed against the active edition in #1182. The layout editor also opens
+  historical layouts: it loads only the selected historical event on demand,
+  derives occupancy from that event, and waits for the load before enabling edits.
 - The registration list pages from the server (#1087 holds); its overlay falls
   back to the page's own row when the collection does not hold it (an older
-  edition). Check that fallback in #1182.
+  edition). The fallback is covered by the #1182 pagination tests.
 - `registrationCountByPersonId` leaves the browser: the people list returns the
   count per person (#1177).
 
@@ -626,9 +628,8 @@ Order once [#1164](https://github.com/tjorim/champagnefestival/issues/1164) (PR 
 | 3 | Backend: counts, registration count per person, duplicate-email lookup and exports for people and volunteers | [#1177](https://github.com/tjorim/champagnefestival/issues/1177) |
 | 3 | Server-driven data layer for the people list (Query pages, no people collection) | [#1178](https://github.com/tjorim/champagnefestival/issues/1178) |
 | 3 | `AdminDataTable` on TanStack Table manual mode | [#1180](https://github.com/tjorim/champagnefestival/issues/1180) |
-| 4 | Scope the registrations collection to the active edition; move the registration list and dashboard aggregates onto the shared layer | [#1182](https://github.com/tjorim/champagnefestival/issues/1182) |
 
-Done: [#1179](https://github.com/tjorim/champagnefestival/issues/1179) and [#1181](https://github.com/tjorim/champagnefestival/issues/1181) (people screens and optimistic Query writes, implemented together; see below), [#1176](https://github.com/tjorim/champagnefestival/issues/1176) (shared paged list contract for people and volunteers, see [above](#paged-list-contract-for-people-and-volunteers-1176)), [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (spike and decision: Query with `keepPreviousData`, edition-scoped registrations), [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) (exhibitors), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
+Done: [#1182](https://github.com/tjorim/champagnefestival/issues/1182) (active-edition registrations, shared list renderer and server counts, 2026-10-07), [#1179](https://github.com/tjorim/champagnefestival/issues/1179) and [#1181](https://github.com/tjorim/champagnefestival/issues/1181) (people screens and optimistic Query writes, implemented together; see below), [#1176](https://github.com/tjorim/champagnefestival/issues/1176) (shared paged list contract for people and volunteers, see [above](#paged-list-contract-for-people-and-volunteers-1176)), [#1175](https://github.com/tjorim/champagnefestival/issues/1175) (spike and decision: Query with `keepPreviousData`, edition-scoped registrations), [#1166](https://github.com/tjorim/champagnefestival/issues/1166) (shared collection factory and per-resource decisions), [#1167](https://github.com/tjorim/champagnefestival/issues/1167) (write receipts in registration live-event patching), [#1165](https://github.com/tjorim/champagnefestival/issues/1165) (tables and occupancy), [#1183](https://github.com/tjorim/champagnefestival/issues/1183) (venues, rooms, table types, layouts and areas), [#1184](https://github.com/tjorim/champagnefestival/issues/1184) (exhibitors), [#1169](https://github.com/tjorim/champagnefestival/issues/1169) (this record).
 
 ## References
 
@@ -674,3 +675,46 @@ merge remains direct and reconciles the registrations/exhibitors collections.
 Search membership and ordering remain server-owned because fuzzy matching
 cannot be reproduced faithfully in the browser. Role and active-filter exits
 are optimistic. [Retry safety](../retry-safety.md) is unchanged in substance.
+
+### Registration scope and shared table (#1182, 2026-10-07)
+
+The registrations collection eagerly reads all pages **of the active edition only**.
+Its key is `["admin", "registrations", "edition", editionId]`; without an edition,
+it returns an empty set and makes no registrations request. Collection keys have
+zero cache retention after their observers leave. The lifecycle still matches
+server envelopes carrying the registrations prefix; fetched live rows enter only
+collections of their own edition. A row moved out of the edition is removed.
+Timestamp ordering, session fences, deletion and sign-out reset remain in place.
+
+`useRegistrationListQuery` owns the server page, previous-page retention, request
+cancellation and totals. `RegistrationList` uses `AdminDataTable`'s controlled
+renderer and the same manual sorting/filtering/pagination pattern as people,
+while retaining its specialised status/edition/date controls, selection, bulk
+progress, exports and column visibility. The controlled renderer is also used
+by the full shared table. Historical rows fall back to the server page; detail,
+payment and table-assignment lookups fetch by id when absent from the collection.
+Person edits refresh an open historical registration by id rather than closing it.
+
+Dashboard `activeEditionStats` stays derived from the complete active edition.
+Cross-edition attendance/financial figures remain server-owned (`GET /api/editions/stats`).
+List status/category/date facets and the sidebar badge use the existing paged
+endpoint's server total with `limit=1` per facet, never a full registration load; registration
+live events, reconnects and mutations refresh them. Exhibitor contact filters use the exhibitor contacts directly (an empty result
+is allowed), rather than intersecting with only the active bookings. Person counts remain fields
+of server people pages. Patched live events also invalidate registration pages,
+check-in statistics (now carrying event titles, including historical events), count facets and historical floor-plan event queries.
+
+The editor's historical event query never enters the collection and has zero
+cache retention after unmount or selection change. Loading/error states block
+editing until occupancy is known. Operational seating and the dashboard use the
+active collection; check-in detail/search and the visitor venue plan use their
+existing server queries. No historical collection or unbounded background read
+is introduced. Explicit select-all/export remains an on-demand full matching read.
+
+Validation: `pnpm typecheck`, `pnpm lint`, `pnpm format:check`, `pnpm build` and
+all 935 frontend tests passed (four test workers). Backend Ruff, formatting,
+`ty`, migrations and schema drift checks passed; all 1373 backend tests passed,
+with the seven event endpoint tests rerun after adding the title field. All 275
+e2e checks passed across the full run and rerun of three page-loading timeouts.
+The two full-matching UI tests retain their assertions with a 30-second timeout
+for rendering and bulk progress on a busy machine.

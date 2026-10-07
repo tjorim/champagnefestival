@@ -14,12 +14,13 @@ import { createTestQueryClient } from "../utils/queryClient";
 
 const TEST_AUTH_HEADERS = { Authorization: "Bearer ".concat("mock-access-token") };
 
-function createTestCollection() {
+function createTestCollection(editionId = "march-2026") {
   const queryClient = createTestQueryClient();
   const collection = createAdminRegistrationsCollection({
     queryClient,
     authHeaders: () => TEST_AUTH_HEADERS,
     enabled: true,
+    editionId,
   });
   return { collection, queryClient };
 }
@@ -33,6 +34,64 @@ describe("admin registrations pilot collection", () => {
     if (lastQueryClient) lastQueryClient.clear();
     lastCollection = null;
     lastQueryClient = null;
+  });
+
+  it("keeps an empty collection without requesting registrations when there is no active edition", async () => {
+    const { collection, queryClient } = createTestCollection("");
+    lastCollection = collection;
+    lastQueryClient = queryClient;
+    server.use(
+      http.get("/api/registrations", () => {
+        throw new Error("Unexpected unscoped load");
+      }),
+    );
+    await collection.preload();
+    expect(collection.size).toBe(0);
+  });
+
+  it("loads only the requested edition and ignores a historical live row", async () => {
+    const { collection, queryClient } = createTestCollection();
+    lastCollection = collection;
+    lastQueryClient = queryClient;
+    server.use(
+      http.get("/api/registrations", ({ request }) => {
+        expect(new URL(request.url).searchParams.get("edition_id")).toBe("march-2026");
+        return HttpResponse.json({ items: [seedRegistrations[0]], total: 1, page: 1, limit: 1000 });
+      }),
+    );
+    await collection.preload();
+    const unregister = registerAdminRegistrationsCollection(collection);
+    try {
+      server.use(
+        http.get("/api/registrations/historical", () =>
+          HttpResponse.json({
+            ...seedRegistrations[0],
+            id: "historical",
+            event: { ...seedRegistrations[0]!.event, edition_id: "older" },
+          }),
+        ),
+      );
+      await patchAdminRegistrationLiveEvent(
+        {
+          topic: "registration",
+          action: "created",
+          scope: {
+            edition_id: "older",
+            event_id: null,
+            registration_id: "historical",
+            table_id: null,
+          },
+          keys: [["admin", "registrations"]],
+          ts: "2026-10-07T10:00:00Z",
+          id: "historical-event",
+        },
+        () => TEST_AUTH_HEADERS,
+      );
+      expect(collection.has("historical")).toBe(false);
+      expect(collection.size).toBe(1);
+    } finally {
+      unregister();
+    }
   });
 
   it("loads registrations from the admin query source", async () => {

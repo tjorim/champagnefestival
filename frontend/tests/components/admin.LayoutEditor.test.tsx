@@ -1,6 +1,14 @@
 import { readAdminOptions } from "../helpers/adminSelect";
 import { selectAdminOption } from "../helpers/adminSelect";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { fireEvent, render as renderUI, screen, waitFor, within } from "@testing-library/react";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { createTestQueryClient } from "../utils/queryClient";
+import type { ReactElement } from "react";
+
+const render = (ui: ReactElement) =>
+  renderUI(<QueryClientProvider client={createTestQueryClient()}>{ui}</QueryClientProvider>);
+
+import { fetchAllRegistrationPages } from "@/utils/adminFetch";
 import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import LayoutEditor, { getDayLabel } from "@/components/admin/LayoutEditor";
@@ -25,6 +33,7 @@ vi.mock("@/utils/adminFetch", () => ({
   fetchLayoutRevisions,
   compareLayoutRevisions,
   previewLayoutRestore,
+  fetchAllRegistrationPages: vi.fn().mockResolvedValue([]),
 }));
 
 // ---------------------------------------------------------------------------
@@ -266,6 +275,29 @@ describe("getDayLabel", () => {
 });
 
 describe("LayoutEditor", () => {
+  it("loads historical event occupancy on demand and blocks deleting its occupied table", async () => {
+    const fixture = realisticFixture();
+    fixture.registrations = [
+      makeRegistration({
+        allocations: [{ tableId: fixture.tables[0]!.id, guestCount: 2, exclusive: false }],
+      }),
+    ];
+    vi.mocked(fetchAllRegistrationPages).mockResolvedValueOnce(fixture.registrations);
+    renderLayoutEditor({ ...fixture, dayOptions: [] });
+    await waitFor(() =>
+      expect(fetchAllRegistrationPages).toHaveBeenCalledWith(
+        expect.any(Function),
+        expect.objectContaining({ eventId: "event-1" }),
+      ),
+    );
+    await waitFor(() => expect(screen.getByText(fixture.tables[0]!.name)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: "admin_table_label Table A" }));
+    const card = screen
+      .getByText("admin_table_label: Table A")
+      .closest('[data-slot="card"]') as HTMLElement;
+    expect(within(card).getByRole("button", { name: "admin_delete" })).toBeDisabled();
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
     vi.unstubAllGlobals();

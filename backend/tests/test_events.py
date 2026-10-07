@@ -97,6 +97,7 @@ async def test_checkin_stats_counts_guests_not_bookings(client):
     assert r.status_code == 200, r.text
     stats = {row["event_id"]: row for row in r.json()}
 
+    assert stats[event["id"]]["event_title"] == event["title"]
     assert stats[event["id"]]["total"] == 5
     assert stats[event["id"]]["checked_in"] == 3
 

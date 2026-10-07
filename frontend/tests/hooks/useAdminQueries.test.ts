@@ -17,6 +17,7 @@ function renderQueries(options: { visible?: boolean; isAuthenticated?: boolean }
   return renderHook(
     () =>
       useAdminQueries({
+        editionId: "march-2026",
         visible: options.visible ?? true,
         isAuthenticated: options.isAuthenticated ?? true,
         canManageAdminSections: true,
@@ -27,6 +28,36 @@ function renderQueries(options: { visible?: boolean; isAuthenticated?: boolean }
 }
 
 describe("useAdminQueries loadData", () => {
+  it("swaps to an empty working set when the active edition changes", async () => {
+    const { queryClient, Wrapper } = createTestQueryClientHarness();
+    const view = renderHook(
+      ({ editionId }) =>
+        useAdminQueries({
+          editionId,
+          visible: true,
+          isAuthenticated: true,
+          canManageAdminSections: true,
+          authHeaders,
+        }),
+      { wrapper: Wrapper, initialProps: { editionId: "march-2026" } },
+    );
+    await waitFor(() =>
+      expect(view.result.current.registrationsQuery.data?.length).toBeGreaterThan(0),
+    );
+    const original = view.result.current.registrationsCollection;
+    view.rerender({ editionId: "" });
+    await waitFor(() => expect(view.result.current.registrationsQuery.data).toEqual([]));
+    expect(view.result.current.registrationsCollection).not.toBe(original);
+    expect(view.result.current.registrationsQueryKey).toEqual([
+      "admin",
+      "registrations",
+      "edition",
+      "",
+    ]);
+    view.unmount();
+    queryClient.clear();
+  });
+
   it("refetches the registrations and exhibitors collections", async () => {
     const { result } = renderQueries();
     await waitFor(() => {

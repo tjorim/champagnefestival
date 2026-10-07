@@ -850,7 +850,11 @@ export const adminHandlers = [
     }
 
     return HttpResponse.json(
-      [...totals.entries()].map(([event_id, entry]) => ({ event_id, ...entry })),
+      [...totals.entries()].map(([event_id, entry]) => ({
+        event_id,
+        event_title: events.find((event) => event.id === event_id)?.title ?? event_id,
+        ...entry,
+      })),
     );
   }),
 

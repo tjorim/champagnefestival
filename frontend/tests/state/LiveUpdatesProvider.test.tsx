@@ -151,7 +151,7 @@ describe("LiveUpdatesProvider", () => {
       <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
     );
     // The patch path only runs once the registrations query has succeeded.
-    queryClient.setQueryData(["admin", "registrations"], []);
+    queryClient.setQueryData(["admin", "registrations", "edition", "march-2026"], []);
     const spy = vi.spyOn(queryClient, "invalidateQueries");
 
     render(<LiveUpdatesProvider />, { wrapper: Wrapper });
@@ -163,6 +163,8 @@ describe("LiveUpdatesProvider", () => {
     expect(spy).toHaveBeenCalledWith({
       queryKey: ["admin", "registrations", "checkin-stats"],
     });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "registrations", "page"] });
+    expect(spy).toHaveBeenCalledWith({ queryKey: ["admin", "edition-stats"] });
   });
 
   it("does not touch the tables key for a registration's seating change", async () => {
