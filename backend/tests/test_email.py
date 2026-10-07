@@ -148,3 +148,21 @@ async def test_registration_confirmation_omits_sign_in_invite_when_already_owned
     html = message.get_body(preferencelist=("html",)).get_content()
     assert "https://festival.example/me" not in plain
     assert "https://festival.example/me" not in html
+
+
+async def test_shared_link_targets_account_page(monkeypatch):
+    from datetime import UTC, datetime
+
+    sent = []
+    monkeypatch.setattr(email_module.settings, "smtp_host", "smtp.example.com")
+    monkeypatch.setattr(email_module.settings, "smtp_from", "festival@example.com")
+    monkeypatch.setattr(email_module.settings, "frontend_url", "https://festival.example/")
+    monkeypatch.setattr(email_module, "_send_message_sync", sent.append)
+    assert await email_module.send_visitor_magic_link_email(
+        "contact@example.com", "manager-secret", "request-id", datetime.now(UTC)
+    )
+    assert sent[0]["To"] == "contact@example.com"
+    body = sent[0].get_content()
+    assert "https://festival.example/me?token=manager-secret" in body
+    assert "can only be used once" in body
+    assert "Champagnefestival account" in sent[0]["Subject"]

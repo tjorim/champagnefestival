@@ -393,3 +393,28 @@ clear individual translations, and an empty `description_language` clears the
 original-language selector. Clearing all text requires clearing that selector
 in the same update. Admin edits are immediately live. Manager proposals and
 supersession belong to #1193 and are not implemented here.
+
+### Exhibitor manager self-service (#1192)
+
+Visitors and exhibitor contacts share one emailed login at `/me`, using the
+existing visitor magic-link/session endpoints and cookie. The page shows
+bookings and exhibitors associated with that verified identity. Contacts
+without email cannot obtain exhibitor access. Access follows the current
+contact email on every request; the view includes inactive exhibitors too.
+A Keycloak bearer token with an explicitly verified matching email also
+grants exhibitor access, alongside the account’s existing role-based sections.
+Staff roles alone do not grant contact access. Full both-method account
+unification remains in #1209.
+
+| Method | Endpoint | Contract |
+| --- | --- | --- |
+| POST | `/api/visitor-sessions/request` | `{email}`; rate-limited, generic 202 for every valid email, without revealing bookings or contact membership. |
+| POST | `/api/visitor-sessions/redeem` | `{token}`; establishes the shared HttpOnly-cookie session and returns owned bookings; invalid/expired/replayed links return 401. |
+| GET | `/api/visitor-sessions/status` | `{authenticated, expires_at}`; absent/expired cookie returns false; no-store. |
+| POST | `/api/visitor-sessions/sign-out` | 204; revokes the shared email session and clears its cookie; safe to repeat. |
+| GET | `/api/me/exhibitors` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
+
+Uses existing SMTP/frontend URL settings and visitor credential housekeeping.
+No new authentication migration is required; migration `004` adds descriptions.
+See the [login decision](../docs/decisions/1192-exhibitor-manager-login.md)
+and [retry safety](../docs/retry-safety.md). Interactive schemas are at `/docs`.

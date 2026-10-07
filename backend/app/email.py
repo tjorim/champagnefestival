@@ -250,12 +250,12 @@ async def send_visitor_magic_link_email(
     link = f"{settings.frontend_url.rstrip('/')}/me?token={token}"
 
     message = EmailMessage()
-    message["Subject"] = "Sign in to your Champagnefestival orders"
+    message["Subject"] = "Sign in to your Champagnefestival account"
     message["From"] = settings.smtp_from
     message["To"] = email
     message.set_content(
         "Hello,\n\n"
-        "Use the following secure link to sign in and view your Champagnefestival orders:\n\n"
+        "Use the following secure link to sign in and view your Champagnefestival information:\n\n"
         f"{link}\n\n"
         f"This link expires at {expires_at.isoformat()} and can only be used once.\n"
         "If you did not request this email, you can ignore it.\n"

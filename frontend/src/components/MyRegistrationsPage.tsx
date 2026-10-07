@@ -75,7 +75,15 @@ export function buildCheckInQrUrl(
   return `${origin}/check-in?id=${encodeURIComponent(registrationId)}#token=${encodeURIComponent(checkInToken)}`;
 }
 
-export default function MyRegistrationsPage() {
+interface MyRegistrationsPageProps {
+  onEmailSessionChange?: (registrations: GuestRegistration[] | null) => void;
+  hideSessionControls?: boolean;
+}
+
+export default function MyRegistrationsPage({
+  onEmailSessionChange,
+  hideSessionControls = false,
+}: MyRegistrationsPageProps = {}) {
   const auth = useAuth();
   const { token: rawToken } = useSearch({ from: "/me" });
   const token = rawToken?.trim() ?? "";
@@ -135,6 +143,7 @@ export default function MyRegistrationsPage() {
       return redeemVisitorMagicLink(lookupToken);
     },
     retry: false,
+    onSuccess: (registrations) => onEmailSessionChange?.(registrations),
   });
 
   useEffect(() => {
@@ -146,18 +155,23 @@ export default function MyRegistrationsPage() {
   }, [registrationsMutation, token]);
 
   useEffect(() => {
-    if (token || auth.isLoading || auth.isAuthenticated || sessionChecked) return;
+    if (token || auth.isLoading || sessionChecked) return;
     let cancelled = false;
     void getVisitorSessionStatus().then((status) => {
       if (cancelled) return;
       if (!status.authenticated) {
+        onEmailSessionChange?.(null);
         setSessionChecked(true);
         return;
       }
+      onEmailSessionChange?.([]);
       setSessionExpiresAt(status.expiresAt);
       void fetchOwnedRegistrationsViaSession()
         .then((regs) => {
-          if (!cancelled) setSessionRegistrations(regs);
+          if (!cancelled) {
+            setSessionRegistrations(regs);
+            onEmailSessionChange?.(regs);
+          }
         })
         .finally(() => {
           if (!cancelled) setSessionChecked(true);
@@ -166,7 +180,7 @@ export default function MyRegistrationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [token, auth.isLoading, auth.isAuthenticated, sessionChecked]);
+  }, [token, auth.isLoading, sessionChecked, onEmailSessionChange]);
 
   // A signed-in member/volunteer with no token in the URL — e.g. they just
   // navigated straight to /me — already owns any registration booked while
@@ -334,11 +348,12 @@ export default function MyRegistrationsPage() {
       return;
     }
     setIsSigningOut(false);
+    onEmailSessionChange?.(null);
     setSessionRegistrations(null);
     setSessionExpiresAt(null);
     setSessionChecked(true);
     resetToRequestForm();
-  }, [resetToRequestForm]);
+  }, [resetToRequestForm, onEmailSessionChange]);
 
   const emailForm = useForm({
     defaultValues: { email: "" },
@@ -699,34 +714,35 @@ export default function MyRegistrationsPage() {
                 </Alert>
               )}
 
-              {showSignOut ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 w-full"
-                  disabled={isSigningOut}
-                  onClick={() => void handleSignOut()}
-                >
-                  {isSigningOut ? (
-                    <Spinner size="sm" role="status" aria-hidden="true" />
-                  ) : (
-                    <Icon icon={LogOutIcon} />
-                  )}
-                  {m.my_registrations_sign_out()}
-                </Button>
-              ) : (
-                !auth.isAuthenticated && (
+              {!hideSessionControls &&
+                (showSignOut ? (
                   <Button
                     variant="outline"
                     size="sm"
-                    className="mt-4 w-full"
-                    onClick={resetToRequestForm}
+                    className="mt-2 w-full"
+                    disabled={isSigningOut}
+                    onClick={() => void handleSignOut()}
                   >
-                    <Icon icon={RefreshCwIcon} />
-                    {m.my_registrations_request_new_link()}
+                    {isSigningOut ? (
+                      <Spinner size="sm" role="status" aria-hidden="true" />
+                    ) : (
+                      <Icon icon={LogOutIcon} />
+                    )}
+                    {m.my_registrations_sign_out()}
                   </Button>
-                )
-              )}
+                ) : (
+                  !auth.isAuthenticated && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-4 w-full"
+                      onClick={resetToRequestForm}
+                    >
+                      <Icon icon={RefreshCwIcon} />
+                      {m.my_registrations_request_new_link()}
+                    </Button>
+                  )
+                ))}
             </>
           )}
         </>

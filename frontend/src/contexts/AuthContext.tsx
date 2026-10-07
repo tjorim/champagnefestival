@@ -20,6 +20,8 @@ export interface AuthContextType {
   isSigningOut: boolean;
   /** Human-readable label for the signed-in account, or null when signed out. */
   accountLabel: string | null;
+  /** Stable provider identity used to scope account data caches. */
+  accountId?: string | null;
   roles: string[];
   hasRole: (role: string) => boolean;
   /** Returns the current OIDC access token, or null when not authenticated. */
@@ -280,6 +282,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       isSigningIn,
       isSigningOut,
       accountLabel,
+      accountId: oidcAuth.user?.profile?.sub ?? null,
       roles,
       hasRole,
       getAccessToken,
@@ -291,6 +294,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }),
     [
       oidcAuth.isAuthenticated,
+      oidcAuth.user?.profile?.sub,
       oidcAuth.isLoading,
       isSigningIn,
       isSigningOut,

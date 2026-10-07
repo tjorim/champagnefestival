@@ -359,3 +359,26 @@ writing an audit entry; an invalid original-language transition makes no change.
 Clearing uses explicit nulls in REST, or empty strings for all populated texts and
 the original language in MCP. Tests cover partial updates, invalid transitions,
 and explicit clearing through both adapters.
+
+## Shared emailed account login (#1192)
+
+Exhibitor contacts reuse the existing visitor request, redemption and sign-out
+writes documented above, including their implemented retry decisions. A
+single `/me?token=…` link establishes the email session; eligible bookings are
+claimed as before and current contact records determine exhibitor access.
+No separate manager writes or credentials remain.
+
+The shared sign-out button performs one request per click with retries disabled.
+Only a successful 204 clears both booking and exhibitor views. A failed or
+ambiguous response retains those views and reports an error; the caller can
+reconcile with session status. Repeating sign-out is convergent and safe.
+A session generation fences late responses from the revoked session. This is
+covered by `MyAccountSession.test.tsx`; backend shared-session revocation is
+covered by `test_exhibitor_manager_sessions.py` and existing visitor tests.
+
+`GET /api/me/exhibitors` accepts the shared cookie or an OIDC bearer token
+with an explicitly verified email. Cookie reads refresh the same sliding
+idle deadline within the fixed hard cap. The OIDC path uses the existing
+user-provisioning dependency (unique-subject, convergent creation) and never
+links accounts or moves bookings. It introduces no business write or new
+credential. Both-method canonical account linking remains in #1209.

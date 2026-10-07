@@ -647,13 +647,13 @@
   "admin_people_export_ledger": "Export ledger (CSV)",
   "admin_people_export_ledger_error": "Failed to export the payment ledger.",
   "my_registrations_title": "My Registrations",
-  "my_registrations_description": "Request a secure sign-in link to view your registrations.",
+  "my_registrations_description": "Request a secure sign-in link to view your festival account.",
   "my_registrations_email_label": "Email address",
   "my_registrations_email_placeholder": "your@email.com",
   "my_registrations_request_link": "Email me a secure link",
   "my_registrations_sign_in_instead": "Already a member or volunteer? Sign in instead.",
   "my_registrations_requesting": "Preparing secure link...",
-  "my_registrations_request_success": "If we found registrations for that email address, we prepared a secure link.",
+  "my_registrations_request_success": "A secure sign-in link has been prepared.",
   "my_registrations_invalid_email": "Please enter a valid email address.",
   "my_registrations_request_pending_notice": "Check your inbox for the secure link.",
   "my_registrations_loading": "Loading your registrations...",
@@ -1182,5 +1182,8 @@
   "vendors_title": "Vendors",
   "loading_vendors": "Loading vendors…",
   "error_loading_vendors": "Unable to load vendors.",
-  "admin_item_description_original_required": "Enter a description in its original language, or clear all description texts."
+  "admin_item_description_original_required": "Enter a description in its original language, or clear all description texts.",
+  "manager_title": "My exhibitors",
+  "manager_error": "Unable to complete this request. Please try again or request a new link.",
+  "manager_contact_hint": "A contact person needs an email address to sign in and view their exhibitors."
 }

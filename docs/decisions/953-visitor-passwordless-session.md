@@ -374,3 +374,11 @@ refinements worth recording:
   `worktime` realm's idle/max session split this document's Decision 2
   follows the shape of
 - `docs/retry-safety.md` — inventory this document's new writes must join
+
+## Shared account scope extension (#1192, 2026-10-07)
+
+The owner clarified that the same emailed identity should show all relevant
+self-service information. The existing magic link/session now also supports
+read-only exhibitor access through a live contact-email check, without a
+stored manager flag. Staff/volunteer isolation and all session guarantees
+remain. See the [exhibitor login decision](1192-exhibitor-manager-login.md).

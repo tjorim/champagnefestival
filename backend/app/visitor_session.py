@@ -1,4 +1,4 @@
-"""Passwordless visitor session mechanism (#953 decisions 1-3).
+"""Shared passwordless email-account sessions (#953, #1192).
 
 A visitor session is database-backed, not a stateless JWT: the ``HttpOnly``
 cookie's value is an opaque session ID, looked up here only by its hash
@@ -259,3 +259,25 @@ def actor_for_user(user: User) -> tuple[str, str | None]:
     if user.oidc_subject is not None:
         return user.oidc_subject, None
     return user.id, VISITOR_AUTH_SOURCE
+
+
+async def get_current_exhibitor_manager(
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
+) -> str | None:
+    """Resolve contact email from either sign-in method's verified identity.
+
+    Keycloak password and magic-link sign-ins produce the same OIDC subject
+    and roles. Only an explicitly verified token email can grant contact
+    access; usernames and unverified profile fields cannot. An authenticated
+    account without a verified email simply has no managed exhibitors.
+    """
+    user, claims = user_and_claims
+    if claims is None:
+        return user.verified_email.lower().strip() if user.verified_email else None
+    email = claims.get("email")
+    username = claims.get("preferred_username")
+    if isinstance(username, str) and username.startswith("service-account-"):
+        return None
+    if claims.get("email_verified") is True and isinstance(email, str) and email.strip():
+        return email.lower().strip()
+    return None

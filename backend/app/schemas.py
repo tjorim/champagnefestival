@@ -2290,3 +2290,11 @@ class ComposedMessageScheduleRequest(RequestModel):
         if value and value.utcoffset() is None:
             raise ValueError("scheduled_at must include a timezone")
         return value
+
+
+class ManagedExhibitorOut(BaseModel):
+    id: int
+    name: str
+    type: str
+    website: str
+    active: bool

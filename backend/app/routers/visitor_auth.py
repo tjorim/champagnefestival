@@ -1,4 +1,4 @@
-"""Passwordless visitor "My orders" sign-in (#953): magic-link request/redemption
+"""Shared passwordless account sign-in (#953, #1192): magic-link request/redemption
 and session status/sign-out.
 
 Distinct from the existing one-shot guest lookup

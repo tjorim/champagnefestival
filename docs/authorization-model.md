@@ -21,3 +21,16 @@ Code + PKCE, while separate client IDs keep redirect/logout URIs and audit
 provenance distinct. The SPA renews tokens, monitors the Keycloak session,
 revokes tokens on logout, and performs RP-initiated sign-out. Android now also
 opens the Keycloak end-session endpoint before clearing encrypted local state.
+
+Exhibitor contacts and visitors share the passwordless emailed login (#1192),
+described in the [login decision](decisions/1192-exhibitor-manager-login.md).
+An email session supplies its verified email; an OIDC sign-in supplies an
+email only when the token explicitly contains `email_verified: true`. Both
+are matched against the current contact person on every exhibitor read. Authentication proves identity;
+current records determine access. Email sessions never satisfy staff or
+volunteer dependencies. A role alone grants no contact access. An OIDC
+identity takes precedence over a simultaneous cookie identity. Keeping both
+password and Keycloak magic-link login for one canonical account is the
+cross-repository follow-up [#1209](https://github.com/tjorim/champagnefestival/issues/1209);
+Keycloak email delivery/flow activation and existing email-account migration
+remain outstanding.

@@ -647,13 +647,13 @@
   "admin_people_export_ledger": "Grootboek exporteren (CSV)",
   "admin_people_export_ledger_error": "Exporteren van het grootboek is mislukt.",
   "my_registrations_title": "Mijn Inschrijvingen",
-  "my_registrations_description": "Vraag een veilige inloglink aan om je inschrijvingen te bekijken.",
+  "my_registrations_description": "Vraag een veilige aanmeldlink aan om je festivalaccount te bekijken.",
   "my_registrations_email_label": "E-mailadres",
   "my_registrations_email_placeholder": "jouw@email.be",
   "my_registrations_request_link": "Mail mij een veilige link",
   "my_registrations_sign_in_instead": "Al lid of vrijwilliger? Meld je hier aan.",
   "my_registrations_requesting": "Veilige link voorbereiden...",
-  "my_registrations_request_success": "Als we inschrijvingen voor dit e-mailadres vonden, hebben we een veilige link voorbereid.",
+  "my_registrations_request_success": "Er is een veilige aanmeldlink voorbereid.",
   "my_registrations_invalid_email": "Voer een geldig e-mailadres in.",
   "my_registrations_request_pending_notice": "Controleer uw inbox voor de beveiligde link.",
   "my_registrations_loading": "Je inschrijvingen laden...",
@@ -1182,5 +1182,8 @@
   "vendors_title": "Verkopers",
   "loading_vendors": "Verkopers laden…",
   "error_loading_vendors": "Verkopers konden niet worden geladen.",
-  "admin_item_description_original_required": "Vul een beschrijving in de oorspronkelijke taal in, of wis alle beschrijvingsteksten."
+  "admin_item_description_original_required": "Vul een beschrijving in de oorspronkelijke taal in, of wis alle beschrijvingsteksten.",
+  "manager_title": "Mijn exposanten",
+  "manager_error": "Dit verzoek kon niet worden voltooid. Probeer opnieuw of vraag een nieuwe link aan.",
+  "manager_contact_hint": "Een contactpersoon heeft een e-mailadres nodig om zich aan te melden en de exposanten te bekijken."
 }

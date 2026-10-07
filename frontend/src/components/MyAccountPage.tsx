@@ -1,6 +1,8 @@
+import MyExhibitorsPage, { type ManagedExhibitor } from "@/components/MyExhibitorsPage";
+import { signOutVisitorSession, type GuestRegistration } from "@/utils/publicRegistrationApi";
 import { useForm } from "@tanstack/react-form";
-import { useMutation } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -29,29 +31,61 @@ import {
 } from "@/utils/myVolunteerApi";
 
 /**
- * Self-service page for visitors, members, and volunteers alike, reachable
- * only by direct link (no site nav entry — the admin dashboard is the one
- * exception that keeps its own gated route). Unlike PebblePairPage or the
- * admin login, this page never forces an OIDC redirect: a visitor arrives
- * via an emailed magic-link token or an existing visitor session (see
- * MyRegistrationsPage), while a member/volunteer signs in via the "Sign in"
- * option in that same section. Organized into tabs — Registrations (open to
- * everyone), Volunteer eID (OIDC + the `volunteer` realm role, #1006), and
- * Account (OIDC only, since DELETE /api/me requires an OIDC subject) —
- * rendered directly instead of as tabs when only one applies, which is the
- * common case for an anonymous visitor.
+ * Unified self-service for visitors, exhibitor contacts and OIDC accounts.
+ * One emailed login supplies a verified identity; exhibitor access follows
+ * current contact records. Staff and volunteer roles still use OIDC.
  */
 export default function MyAccountPage() {
   const {
     isAuthenticated,
     isSigningOut,
     accountLabel,
+    accountId,
     hasRole,
     getAccessToken,
     authError,
     clearAuthError,
     logout,
   } = useAuth();
+  const instanceId = useId();
+  const [sessionEpoch, setSessionEpoch] = useState(0);
+  const sessionEpochRef = useRef(0);
+  const [emailRegistrations, setEmailRegistrations] = useState<GuestRegistration[] | null>(null);
+  const [selectedTab, setSelectedTab] = useState("registrations");
+  const onEmailSessionChange = useCallback(
+    (registrations: GuestRegistration[] | null) => {
+      // Discard a late result from the component replaced after sign-out.
+      if (sessionEpochRef.current === sessionEpoch) setEmailRegistrations(registrations);
+    },
+    [sessionEpoch],
+  );
+  const exhibitorsQuery = useQuery({
+    queryKey: ["me-exhibitors", instanceId, sessionEpoch, accountId ?? null, isAuthenticated],
+    enabled: isAuthenticated || emailRegistrations !== null,
+    gcTime: 0,
+    retry: false,
+    queryFn: async ({ signal }): Promise<ManagedExhibitor[]> => {
+      const accessToken = getAccessToken();
+      const response = await fetch("/api/me/exhibitors", {
+        signal,
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
+      if (!response.ok) throw new Error(m.manager_error());
+      return response.json();
+    },
+  });
+  const exhibitors =
+    !isAuthenticated && emailRegistrations === null ? [] : (exhibitorsQuery.data ?? []);
+  const emailSignOut = useMutation({
+    mutationFn: signOutVisitorSession,
+    retry: false,
+    onSuccess: () => {
+      sessionEpochRef.current += 1;
+      setSessionEpoch(sessionEpochRef.current);
+      setEmailRegistrations(null);
+      setSelectedTab("registrations");
+    },
+  });
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const isVolunteer = isAuthenticated && hasRole("volunteer");
 
@@ -422,12 +456,40 @@ export default function MyAccountPage() {
   );
 
   const tabs: { key: string; title: string; content: React.ReactNode }[] = [
-    { key: "registrations", title: m.my_registrations_title(), content: <MyRegistrationsPage /> },
+    {
+      key: "registrations",
+      title: m.my_registrations_title(),
+      content: (
+        <MyRegistrationsPage
+          key={sessionEpoch}
+          onEmailSessionChange={onEmailSessionChange}
+          hideSessionControls
+        />
+      ),
+    },
   ];
+  if (exhibitors.length > 0)
+    tabs.push({
+      key: "exhibitors",
+      title: m.manager_title(),
+      content: <MyExhibitorsPage exhibitors={exhibitors} />,
+    });
   if (isVolunteer)
     tabs.push({ key: "volunteer", title: m.my_eid_title(), content: volunteerSection });
   if (isAuthenticated)
     tabs.push({ key: "account", title: m.my_account_title(), content: accountSection });
+
+  const visibleTabs = tabs.filter(
+    (tab) =>
+      tab.key !== "registrations" ||
+      isAuthenticated ||
+      emailRegistrations === null ||
+      emailRegistrations.length > 0 ||
+      exhibitors.length === 0,
+  );
+  const activeTab = visibleTabs.some((tab) => tab.key === selectedTab)
+    ? selectedTab
+    : visibleTabs[0]?.key;
 
   return (
     <div className="site-container mx-auto w-full max-w-account py-12">
@@ -454,24 +516,44 @@ export default function MyAccountPage() {
             </p>
           )}
 
-          {tabs.length > 1 ? (
-            <Tabs defaultValue="registrations">
+          {emailRegistrations !== null && (
+            <div className="mb-4">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={emailSignOut.isPending}
+                onClick={() => emailSignOut.mutate()}
+              >
+                {m.my_registrations_sign_out()}
+              </Button>
+              {emailSignOut.isError && (
+                <Alert variant="danger" role="alert">
+                  {m.my_registrations_error()}
+                </Alert>
+              )}
+            </div>
+          )}
+          {exhibitorsQuery.isError && (isAuthenticated || emailRegistrations !== null) && (
+            <Alert variant="danger" role="alert">
+              {m.manager_error()}
+            </Alert>
+          )}
+          <Tabs value={activeTab} onValueChange={(value) => setSelectedTab(String(value))}>
+            {visibleTabs.length > 1 && (
               <TabsList className="mb-3">
-                {tabs.map((tab) => (
+                {visibleTabs.map((tab) => (
                   <TabsTrigger key={tab.key} value={tab.key}>
                     {tab.title}
                   </TabsTrigger>
                 ))}
               </TabsList>
-              {tabs.map((tab) => (
-                <TabsContent key={tab.key} value={tab.key} keepMounted>
-                  <div className="pt-3">{tab.content}</div>
-                </TabsContent>
-              ))}
-            </Tabs>
-          ) : (
-            tabs[0]?.content
-          )}
+            )}
+            {tabs.map((tab) => (
+              <TabsContent key={tab.key} value={tab.key} keepMounted>
+                <div className="pt-3">{tab.content}</div>
+              </TabsContent>
+            ))}
+          </Tabs>
         </>
       )}
 

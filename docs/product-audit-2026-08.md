@@ -25,6 +25,8 @@ listing does not assign a new priority.
 
 ### Active implementation and work needing scope decisions
 
+- [#1209 — one account with password and magic-link login](https://github.com/tjorim/champagnefestival/issues/1209): Owner confirmed both methods on 2026-10-07. #1192 now accepts Keycloak-verified contact email alongside email-session identity, but universal account unification remains incomplete. Activate the prepared Keycloak flow after email delivery verification, resolve existing email/OIDC account migration and registration policy, and verify matching data/roles, revocation, sign-out and account-switch isolation across both methods. Cross-repository work with `tjorim/apps`; see the [login decision](decisions/1192-exhibitor-manager-login.md#both-sign-in-methods-for-one-account--follow-up-1209).
+
 - [#1197 — read-only admin warm start](https://github.com/tjorim/champagnefestival/issues/1197): Query/IndexedDB persistence, whole-key scope, active-edition registrations, app-level session wipes, async fences and visible saved-row state are implemented with regression coverage. #1182 is complete. Remains active until the owner checks the current published policy and representative edition/device/private-mode sizing is checked; synthetic browser measurements and the internal volunteer rule are in the [implementation record](decisions/1168-persisted-collections.md#implementation-verification-1197-2026-10-07). No public policy text or externally callable write changed.
 
 
@@ -40,6 +42,8 @@ For #953:
 - [ ] Privacy/account copy published for the implemented session.
 
 ## Dependencies and accepted boundaries
+
+- #1192 reuses the shared emailed identity and supplies live contact authorisation for #1190; #1193 can build its proposed-change workflow on it and #1191’s descriptions. Editing and review remain outside this read-only increment.
 
 - #953's code prerequisites (#922, #924, #947) are complete; delivery verification is an operational gate.
 - #932 is closed under the accepted one-API-worker deployment scope. Remaining process-local limits and metrics are not a planned scaling project. Revisit only if measured load warrants it; see [deployment](../DEPLOYMENT.md).
@@ -57,6 +61,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1192](https://github.com/tjorim/champagnefestival/issues/1192) | Completed | 2026-10-07 | Implementation in this change; [decision](decisions/1192-exhibitor-manager-login.md) | One existing emailed login/session supplies both owned bookings and managed exhibitors. Live normalised contact-email checks back `GET /api/me/exhibitors`; `/me` shows the relevant sections and one shared email sign-out. Keycloak accounts with explicitly verified email can also see their exhibitors; staff roles remain Keycloak-authoritative. Universal password/magic-link account unification is split into #1209 and remains incomplete. The owner’s single-login clarification supersedes the initial separate manager cookie/tables/endpoints; no authentication migration remains. Retry safety, README, API schemas and the issue’s revised scope record the final contract. Proposed edits remain in #1193. |
 | [#1191](https://github.com/tjorim/champagnefestival/issues/1191) | Completed | 2026-10-07 | Implementation in this change | Admin REST/MCP and the exhibitor editor support optional plain-text descriptions (600 characters per language), with Dutch, French or English as the original language and optional translations. Public edition payloads and carousels retain all texts and use the visitor language before the original. A conditional vendor section renders vendors when present; existing lineup eligibility is unchanged. Schema/service/database validation, clearing, fallback and escaped rendering are tested. Manager review/supersession remains in #1193. |
 | [#1174](https://github.com/tjorim/champagnefestival/issues/1174) | Completed | 2026-10-07 | Closed sub-issues #1175–#1182; implementation records below | Members, Volunteers, People and registrations share `AdminDataTable` and server paging, sorting, filters and full-result counts. Query pages retain previous data; people mutations are optimistic; only the active edition's complete registration set remains eagerly loaded. [Decision and completion record](decisions/tanstack-db.md#roadmap). Persistence implementation remains separate in #1197. |
 | [#1179](https://github.com/tjorim/champagnefestival/issues/1179) | Completed with #1181 | 2026-10-06 | Working-tree implementation; mutation regression tests | Query optimistic edits/deletes with authoritative rollback, overlapping-write coordination, pending rows and session fencing; creates and merges remain non-optimistic. [Implementation and retry policy](people-query-layer.md). |
