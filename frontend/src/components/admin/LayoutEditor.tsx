@@ -35,7 +35,7 @@ import { Icon } from "@/components/Icon";
  * (1 metre = PX_PER_M pixels).
  */
 
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { fetchAllRegistrationPages } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
@@ -260,7 +260,7 @@ function DraggableTable({
         e.stopPropagation();
         onClick();
       }}
-      className={clsx(
+      className={cn(
         "absolute flex flex-col items-center justify-center border text-center",
         shape === "round" ? "rounded-full" : "rounded-md",
         borderCls,
@@ -352,7 +352,7 @@ function DraggableArea({
         e.stopPropagation();
         onClick();
       }}
-      className={clsx(
+      className={cn(
         "absolute flex flex-col items-center justify-center rounded-md border text-center",
         borderCls,
         bgCls,

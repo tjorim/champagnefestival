@@ -1,4 +1,4 @@
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import React from "react";
 
 interface ResponsiveImageProps {
@@ -30,7 +30,7 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
   const aspectRatio = width && height ? `${(height / width) * 100}%` : undefined;
 
   return (
-    <div className={clsx("relative", fill && "h-full w-full", className)}>
+    <div className={cn("relative", fill && "h-full w-full", className)}>
       {aspectRatio && !fill && (
         <div
           /* oxlint-disable shadcn/no-inline-styles -- Spacer height derives from each image's width/height props. */
@@ -47,7 +47,7 @@ const ResponsiveImage: React.FC<ResponsiveImageProps> = ({
         sizes={sizes}
         width={width}
         height={height}
-        className={clsx("top-0 left-0 w-full object-cover", fill && "absolute h-full")}
+        className={cn("top-0 left-0 w-full object-cover", fill && "absolute h-full")}
         onError={(e) => {
           e.currentTarget.src = "/images/logo.svg";
           e.currentTarget.onerror = null;

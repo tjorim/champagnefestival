@@ -17,7 +17,7 @@ import { Icon } from "@/components/Icon";
  * ContentManagement — admin tab for editing producers, sponsors, and editions.
  */
 
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { useCallback, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
@@ -367,7 +367,7 @@ export function ContentSection({
     return (
       <PresentationListItem
         key={item.id}
-        className={clsx("flex justify-between items-center gap-2", isArchived && "opacity-50")}
+        className={cn("flex justify-between items-center gap-2", isArchived && "opacity-50")}
       >
         <span className="flex items-center gap-2 grow truncate">
           {item.image && (
@@ -391,7 +391,7 @@ export function ContentSection({
               <TooltipTrigger
                 aria-description={`${m.admin_content_used_in_editions()}: ${editionsByItemId.get(item.id)!.join(", ")}`}
                 render={<button type="button" />}
-                className={clsx(
+                className={cn(
                   "truncate border-0 bg-transparent p-0 underline decoration-dotted",
                   isArchived ? "text-muted-foreground" : "text-foreground",
                 )}
@@ -403,7 +403,7 @@ export function ContentSection({
               </TooltipContent>
             </Tooltip>
           ) : (
-            <span className={clsx("truncate", isArchived ? "text-subtle" : "text-content")}>
+            <span className={cn("truncate", isArchived ? "text-subtle" : "text-content")}>
               {item.name}
             </span>
           )}

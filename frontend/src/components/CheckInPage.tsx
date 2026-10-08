@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Button, ButtonLink } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useCallback, useEffect } from "react";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
@@ -97,7 +97,7 @@ function CheckInCard({
   return (
     <Card tone={success ? "success" : isAlreadyCheckedIn ? "warning" : "secondary"}>
       <CardHeader
-        className={clsx(
+        className={cn(
           "flex items-center justify-between gap-4 flex-wrap",
           success ? "border-success" : isAlreadyCheckedIn ? "border-warning" : "border-border",
         )}
