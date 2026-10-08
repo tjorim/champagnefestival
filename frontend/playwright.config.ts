@@ -5,6 +5,9 @@ const baseURL = `http://localhost:${port}`;
 
 export default defineConfig({
   testDir: "./e2e",
+  // Many parallel workers share one Vite dev server, so cold app loads (and reloads)
+  // regularly outlast the default 5s assertion timeout.
+  expect: { timeout: 15_000 },
   fullyParallel: false,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,

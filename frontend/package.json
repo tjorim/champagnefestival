@@ -33,7 +33,6 @@
     "@tanstack/react-router": "^1.170.41",
     "@tanstack/react-table": "9.2.4",
     "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
     "cn": "^0.4.0",
     "dayjs": "^1.11.23",
     "jsqr": "^1.4.0",

@@ -33,7 +33,7 @@ import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import React from "react";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 
@@ -59,7 +59,7 @@ function SidebarItem({
   return (
     <button
       type="button"
-      className={clsx("admin-nav-item", activeKey === itemKey && "is-active")}
+      className={cn("admin-nav-item", activeKey === itemKey && "is-active")}
       aria-current={activeKey === itemKey ? "page" : undefined}
       onClick={() => {
         setActiveKey(itemKey);
@@ -98,7 +98,7 @@ function SidebarGroup({
     <div className="admin-nav-group">
       <button
         type="button"
-        className={clsx("admin-nav-group-header", itemKeys.includes(activeKey) && "has-active")}
+        className={cn("admin-nav-group-header", itemKeys.includes(activeKey) && "has-active")}
         onClick={() => toggleGroup(groupKey)}
         aria-expanded={expandedGroups.has(groupKey)}
         aria-controls={`admin-nav-sub-${groupKey}`}
@@ -166,7 +166,7 @@ export default function AdminSidebar({
   return (
     <>
       {/* Sidebar */}
-      <aside className={clsx("admin-sidebar", sidebarOpen && "admin-sidebar-open")}>
+      <aside className={cn("admin-sidebar", sidebarOpen && "admin-sidebar-open")}>
         {/* Brand */}
         <div className="admin-sidebar-brand">
           <Icon icon={ShieldIcon} />
@@ -376,7 +376,7 @@ export default function AdminSidebar({
               title={m.admin_refresh()}
               aria-label={m.admin_refresh()}
             >
-              <Icon icon={RotateCwIcon} className={clsx(isAnyFetching && "animate-spin")} />
+              <Icon icon={RotateCwIcon} className={cn(isAnyFetching && "animate-spin")} />
             </Button>
             {/* Labeled, not icon-only: this sits next to Refresh and is destructive
                 (it ends the session and discards loaded work), so it must not be a

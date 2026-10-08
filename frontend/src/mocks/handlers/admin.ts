@@ -713,6 +713,14 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // Organizations
   // ──────────────────────────────────────────────────────────────
+  http.get("/api/me/organizations", ({ request }) => {
+    // Same verified contact as the changes handler below; other sessions manage nothing.
+    if (forcedAuthScenario !== "default" || parseBearerToken(request) !== "mock-manager-token") {
+      return HttpResponse.json([]);
+    }
+    return HttpResponse.json(organizations.filter((row) => row.contact_person_id === "person-01"));
+  }),
+
   http.get("/api/me/organizations/:id/changes", ({ request, params }) => {
     // This token represents the verified contact for the first seeded organization.
     // Email-session tests override this handler, like the visitor-session mocks.

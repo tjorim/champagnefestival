@@ -27,7 +27,7 @@ import { Icon } from "@/components/Icon";
  * as the picker when placing a table (filtered to the room's own venue).
  */
 
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import { lazy, Suspense, useCallback, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { Alert } from "@/components/ui/alert";
@@ -632,7 +632,7 @@ export default function VenueManagement({
               .filter(Boolean)
               .join(", ");
             return (
-              <Card key={venue.id} tone="secondary" className={clsx(isArchived && "opacity-75")}>
+              <Card key={venue.id} tone="secondary" className={cn(isArchived && "opacity-75")}>
                 <CardHeader className="flex items-start justify-between gap-2">
                   <div>
                     <div className="font-semibold">
@@ -707,7 +707,7 @@ export default function VenueManagement({
                         {venueRooms.map((room) => (
                           <PresentationListItem
                             key={room.id}
-                            className={clsx(
+                            className={cn(
                               "flex justify-between items-center gap-2 py-1 px-0",
                               !room.active && "opacity-50",
                             )}
@@ -802,7 +802,7 @@ export default function VenueManagement({
                         {venueTableTypes.map((tt) => (
                           <PresentationListItem
                             key={tt.id}
-                            className={clsx(
+                            className={cn(
                               "flex justify-between items-center gap-2 py-1 px-0",
                               !tt.active && "opacity-50",
                             )}

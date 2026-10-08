@@ -1,7 +1,7 @@
 import { InfoIcon, VideoOffIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import clsx from "clsx";
+import { cn } from "@/lib/utils";
 import jsQR from "jsqr";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -178,7 +178,7 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
           muted
           playsInline
           aria-hidden="true"
-          className={clsx("h-full w-full object-cover", status === "scanning" ? "block" : "hidden")}
+          className={cn("h-full w-full object-cover", status === "scanning" ? "block" : "hidden")}
         />
         <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
         {status === "scanning" && (
