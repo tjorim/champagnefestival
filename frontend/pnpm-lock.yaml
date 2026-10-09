@@ -18,8 +18,8 @@ importers:
         specifier: ^0.5.0
         version: 0.5.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@tanstack/charts':
-        specifier: ^0.18.0
-        version: 0.18.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: ^1.0.0
+        version: 1.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@tanstack/query-db-collection':
         specifier: ^1.3.5
         version: 1.3.5(@tanstack/query-core@5.104.0)(typescript@7.0.2)
@@ -1181,8 +1181,8 @@ packages:
     peerDependencies:
       vite: ^5.2.0 || ^6 || ^7 || ^8
 
-  '@tanstack/charts@0.18.0':
-    resolution: {integrity: sha512-JzJ0nkdpZWPla1FPEo6YY6spMRkkVxvtpAF+zvwATV1DpwHegvW7N55Pyts6Gu+do+RmnCAtnOWIcQAwtNAOaw==}
+  '@tanstack/charts@1.0.0':
+    resolution: {integrity: sha512-4U+zbn5jzQF8MNDsvjMG7TE4Fv68mfIIiFlFmrWiBIHor8zCX+7W8gpyDcT1SYJYvOIZXv3uxbK/IjwGY40Sig==}
     peerDependencies:
       '@angular/core': '>=19'
       '@angular/platform-browser': '>=19'
@@ -3349,7 +3349,7 @@ snapshots:
       tailwindcss: 4.3.3
       vite: 8.3.3(@types/node@26.6.4)(jiti@2.7.0)
 
-  '@tanstack/charts@0.18.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@tanstack/charts@1.0.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@types/d3-force': 3.0.10
       '@types/d3-geo': 3.1.1
