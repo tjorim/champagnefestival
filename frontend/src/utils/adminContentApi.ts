@@ -254,6 +254,30 @@ export async function fetchEditionEvents(
   return Array.isArray(data) ? data.map(apiToEvent) : [];
 }
 
+/**
+ * Per-language title and description, as sent on both create and update. Blank
+ * translations are sent as `null`, which clears them on update. The description
+ * language is only sent with text, so clearing every description text clears it.
+ */
+export function eventTextBody(formData: EventFormData) {
+  const text = (value: string) => value.trim() || null;
+  const hasDescription = [
+    formData.descriptionNl,
+    formData.descriptionFr,
+    formData.descriptionEn,
+  ].some((value) => value.trim());
+  return {
+    title_language: formData.titleLanguage,
+    title_nl: text(formData.titleNl),
+    title_fr: text(formData.titleFr),
+    title_en: text(formData.titleEn),
+    description_language: hasDescription ? formData.descriptionLanguage : null,
+    description_nl: text(formData.descriptionNl),
+    description_fr: text(formData.descriptionFr),
+    description_en: text(formData.descriptionEn),
+  };
+}
+
 export async function saveEditionEvent(
   payload: {
     editionId: string;
@@ -269,12 +293,11 @@ export async function saveEditionEvent(
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({
         edition_id: payload.editionId,
-        title: payload.formData.title.trim(),
-        description: payload.formData.description.trim(),
+        ...eventTextBody(payload.formData),
         date: payload.formData.date,
         start_time: payload.formData.startTime,
         end_time: payload.formData.endTime || null,
-        category: payload.formData.category.trim(),
+        category: payload.formData.category,
         registration_required: payload.formData.registrationRequired,
         registrations_open_from:
           payload.formData.registrationRequired && payload.formData.registrationsOpenFrom

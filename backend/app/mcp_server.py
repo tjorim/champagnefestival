@@ -36,6 +36,7 @@ from fastmcp.tools.base import Tool
 from pydantic import Field
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.event_content import EventCategory, Language
 from app.mcp import check_in as mcp_check_in
 from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
@@ -248,7 +249,7 @@ class ChampagneFestivalMcpBackend:
         """
         return await mcp_public.list_editions(self.session_factory)
 
-    async def get_event_schedule(self, edition_id: str | None = None) -> dict:
+    async def get_event_schedule(self, edition_id: str | None = None, locale: Language | None = None) -> dict:
         """Return the event schedule for an edition.
 
         Parameters
@@ -257,11 +258,15 @@ class ChampagneFestivalMcpBackend:
             The edition ID to fetch. When omitted, the active festival edition is used —
             pass an explicit ``edition_id`` (see ``list_editions``) to target a Bourse or
             capsule-exchange edition instead.
+        locale:
+            ``nl``, ``fr`` or ``en``. ``title`` and ``description`` are resolved for this
+            language and fall back to the event's original language; omit it for the
+            original. Every stored language is also returned (``title_nl`` and so on).
 
         Returns a list of events with date, times, title, and category.
         No PII is included.
         """
-        return await mcp_public.get_event_schedule(self.session_factory, edition_id)
+        return await mcp_public.get_event_schedule(self.session_factory, edition_id, locale)
 
     async def get_venue_plan_summary(self, edition_id: str | None = None) -> dict:
         """Return a high-level overview of the venue plan for an edition.
@@ -1074,11 +1079,19 @@ class ChampagneFestivalMcpBackend:
     async def create_event(
         self,
         edition_id: str,
-        title: str,
         date: dt_date,
         start_time: str,
-        category: str,
-        description: str = "",
+        category: EventCategory,
+        title: str | None = None,
+        description: str | None = None,
+        title_language: Language = "nl",
+        title_nl: str | None = None,
+        title_fr: str | None = None,
+        title_en: str | None = None,
+        description_language: Language | None = None,
+        description_nl: str | None = None,
+        description_fr: str | None = None,
+        description_en: str | None = None,
         end_time: str | None = None,
         registration_required: bool = False,
         registrations_open_from: datetime | None = None,
@@ -1086,6 +1099,13 @@ class ChampagneFestivalMcpBackend:
         active: bool = True,
     ) -> dict:
         """Create an event within an edition. Requires the ``admin`` role.
+
+        ``category`` is one of tasting, vip, party, breakfast, exchange, general,
+        ceremony, social or other. The title (and optional description) is stored per
+        language: ``title``/``description`` is shorthand for the text in
+        ``title_language``/``description_language`` (default ``nl``), or fill
+        ``title_nl``/``title_fr``/``title_en`` directly. Visitors see their language and
+        fall back to the original.
 
         Off-festival (bourse/capsule-exchange) editions may only contain events on
         a single date. ``registrations_open_from`` may only be set when
@@ -1096,11 +1116,19 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             edition_id=edition_id,
-            title=title,
             date=date,
             start_time=start_time,
             category=category,
+            title=title,
             description=description,
+            title_language=title_language,
+            title_nl=title_nl,
+            title_fr=title_fr,
+            title_en=title_en,
+            description_language=description_language,
+            description_nl=description_nl,
+            description_fr=description_fr,
+            description_en=description_en,
             end_time=end_time,
             registration_required=registration_required,
             registrations_open_from=registrations_open_from,
@@ -1117,12 +1145,18 @@ class ChampagneFestivalMcpBackend:
         self,
         event_id: str,
         edition_id: str | None = None,
-        title: str | None = None,
-        description: str | None = None,
+        title_language: Language | None = None,
+        title_nl: str | None = None,
+        title_fr: str | None = None,
+        title_en: str | None = None,
+        description_language: Language | None = None,
+        description_nl: str | None = None,
+        description_fr: str | None = None,
+        description_en: str | None = None,
         date: dt_date | None = None,
         start_time: str | None = None,
         end_time: str | None = None,
-        category: str | None = None,
+        category: EventCategory | None = None,
         registration_required: bool | None = None,
         registrations_open_from: datetime | None = None,
         registrations_close_at: datetime | None = None,
@@ -1137,7 +1171,10 @@ class ChampagneFestivalMcpBackend:
         no natural "clear" value, so pass ``clear_end_time=True`` /
         ``clear_registrations_open_from=True`` / ``clear_registrations_close_at=True``
         to unset them instead of providing a value.
-        Requires the ``admin`` role.
+
+        Titles and descriptions are per language (``title_nl``/``title_fr``/``title_en``,
+        ``description_*``); the original language must keep its text, and an empty
+        string clears a translation. Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_events.update_event(
@@ -1145,8 +1182,14 @@ class ChampagneFestivalMcpBackend:
             self._actor(),
             event_id,
             edition_id=edition_id,
-            title=title,
-            description=description,
+            title_language=title_language,
+            title_nl=title_nl,
+            title_fr=title_fr,
+            title_en=title_en,
+            description_language=description_language,
+            description_nl=description_nl,
+            description_fr=description_fr,
+            description_en=description_en,
             date=date,
             start_time=start_time,
             end_time=end_time,

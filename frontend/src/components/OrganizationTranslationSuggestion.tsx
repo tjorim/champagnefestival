@@ -14,6 +14,7 @@ export default function OrganizationTranslationSuggestion({
   targetText,
   onDraft,
   admin = false,
+  maxLength = 600,
 }: {
   url: string;
   headers: () => Record<string, string>;
@@ -23,6 +24,8 @@ export default function OrganizationTranslationSuggestion({
   targetText: string;
   onDraft: (text: string) => void;
   admin?: boolean;
+  /** Longest source text the endpoint drafts: 600 for organisations, 2000 for events. */
+  maxLength?: number;
 }) {
   const instance = useId();
   const [pending, setPending] = useState(false);
@@ -34,7 +37,7 @@ export default function OrganizationTranslationSuggestion({
   }, [source, target, text, targetText, url]);
   useEffect(() => () => request.current?.abort(), []);
   const capabilities = useQuery({
-    queryKey: ["organization-translation", instance, url],
+    queryKey: ["translation-capabilities", instance, url],
     retry: false,
     gcTime: 0,
     queryFn: async ({ signal }) => {
@@ -98,7 +101,7 @@ export default function OrganizationTranslationSuggestion({
       <Button
         type="button"
         variant="outline"
-        disabled={pending || !text.trim() || text.length > 600 || !!targetText.trim()}
+        disabled={pending || !text.trim() || text.length > maxLength || !!targetText.trim()}
         onClick={() => void suggest()}
       >
         {pending ? m.translation_pending() : m.translation_suggest()}

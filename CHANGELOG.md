@@ -13,10 +13,12 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Added
 
+- Event titles and descriptions are translated into Dutch, French and English like organisation descriptions: `title_language`/`description_language` name the original, `title_nl/fr/en` and `description_nl/fr/en` hold the texts, and a missing translation falls back to the original. Public `GET /api/editions/active|upcoming` take `locale`, the server-rendered home page, its JSON-LD (new `subEvent` entries), the MCP `get_event_schedule` and registration confirmation emails use the visitor's language, and the admin event form edits every language with the same "suggest translation" drafts as organisations (`GET`/`POST /api/events/translation`). `POST /api/events` and MCP `create_event` still accept `title`/`description` as original-language shorthand; `PUT` and `update_event` take the per-language fields (#1222)
 - `GET /api/people` and `GET /api/volunteers` now take `sort` (people: `name`, `email`, `created`, `updated`; volunteers: `name`, `created`, `updated`) and `sort_dir`, with deterministic `id` tiebreaks and an index per sortable column. An unknown `sort` or `sort_dir` is a 422 (#1176)
 
 ### Changed
 
+- Event categories are a fixed list (`tasting`, `vip`, `party`, `breakfast`, `exchange`, `general`, `ceremony`, `social`, `other`) validated by the API, MCP and a database check constraint, and shown translated in every language. Migration `006` maps unknown existing categories to `other` and logs each affected event id for review; existing event text moves to Dutch (`nl`) as its original language (#1222)
 - Replaced the placeholder sharing image, favicons, home-screen/PWA icons, `logo.svg` fallback, Android launcher icon and Play Store graphics with the festival's brand: a real 1200×630 `og-image.jpg` (also the JSON-LD event image) and a "C" with a red script "f" mark. Sources and the generator live in `docs/brand/` (#1221)
 
 ### Removed

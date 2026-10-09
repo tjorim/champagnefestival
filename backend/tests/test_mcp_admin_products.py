@@ -24,7 +24,7 @@ async def _create_event(db_session, *, event_id: str = "evt-1") -> str:
         title="Vrijdagavond",
         date=date(2099, 3, 21),
         start_time="18:00",
-        category="festival",
+        category="general",
         registration_required=True,
     )
     db_session.add(event)

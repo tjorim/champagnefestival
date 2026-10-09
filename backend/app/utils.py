@@ -103,12 +103,32 @@ def make_id(prefix: str) -> str:
     return f"{prefix}_{ts}_{rand}"
 
 
-def event_to_summary_dict(event: Event, include_edition: bool = False, *, public: bool = False) -> dict:
+def event_text_dict(event: Event, locale: str | None = None) -> dict:
+    """Event title/description for *locale* (``title``/``description``, falling
+    back to the original language) plus every stored language."""
+    return {
+        "title": event.localized_title(locale),
+        "description": event.localized_description(locale),
+        "title_language": event.title_language,
+        "title_nl": event.title_nl,
+        "title_fr": event.title_fr,
+        "title_en": event.title_en,
+        "description_language": event.description_language,
+        "description_nl": event.description_nl,
+        "description_fr": event.description_fr,
+        "description_en": event.description_en,
+    }
+
+
+def event_to_summary_dict(
+    event: Event, include_edition: bool = False, *, public: bool = False, locale: str | None = None
+) -> dict:
+    """``locale`` resolves ``title``/``description`` for that language (original
+    language when ``None``); the per-language fields are always included."""
     data = {
         "id": event.id,
         "edition_id": event.edition_id,
-        "title": event.title,
-        "description": event.description,
+        **event_text_dict(event, locale),
         "date": event.date,
         "start_time": event.start_time,
         "end_time": event.end_time,

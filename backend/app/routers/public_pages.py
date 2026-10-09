@@ -32,7 +32,7 @@ from app.services.public_render import (
     rewrite_head_meta,
 )
 from app.services.public_render_cache import public_render_cache
-from app.utils import event_to_summary_dict, faq_item_to_public_dict
+from app.utils import faq_item_to_public_dict
 
 logger = logging.getLogger(__name__)
 
@@ -108,8 +108,8 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
     # editions never regresses to a bare site name.
     description = jsonld_service.WELCOME_SUBTITLE[locale]
     if edition is not None:
-        payload = await editions_service.edition_payload(db, edition, active_only=True, public=True)
-        events = [event_to_summary_dict(e, public=True) for e in editions_service.active_events(edition)]
+        payload = await editions_service.edition_payload(db, edition, active_only=True, public=True, locale=locale)
+        events = payload["events"]
         json_ld = jsonld_service.build_event_json_ld(payload, base_url=settings.public_url, locale=locale)
 
     html_out = rewrite_head_meta(

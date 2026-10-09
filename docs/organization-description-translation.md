@@ -80,3 +80,24 @@ retry is configured. See [retry safety](retry-safety.md).
 
 - [ ] Cold-start connectivity and env provisioning verified (apps#263).
 - [ ] French support and cross-application contention recorded (apps#263).
+
+## Event drafts (#1222)
+
+Event titles and descriptions reuse the same service, configuration, limits, errors
+and editing rules. Admin-only routes:
+
+| Capabilities | Draft |
+| --- | --- |
+| `GET /api/events/translation` | `POST /api/events/translation` |
+
+The request and response shapes match the organisation drafts. The differences:
+
+- Source text is non-blank and at most 2000 characters (an event description may be
+  up to 10000, but the single-CPU service would not translate that within the
+  timeout, so longer text is translated by hand). A draft longer than that limit is
+  rejected rather than truncated.
+- The rate limit (five requests per ten minutes) is keyed to the identity in its
+  own `event-translation` bucket, so event and organisation drafts do not consume
+  each other's allowance. The single-flight lock is shared.
+- Nothing is saved or audited by the draft request. The admin event form fills the
+  target field locally; saving the event is what publishes it.

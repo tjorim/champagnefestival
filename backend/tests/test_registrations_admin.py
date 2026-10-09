@@ -392,7 +392,7 @@ async def _create_standalone_event(client, *, edition_id: str, edition_type: str
             "date": "2099-04-01",
             "start_time": "13:00",
             "end_time": "17:00",
-            "category": "bourse",
+            "category": "exchange",
             "registration_required": True,
             "active": True,
         },

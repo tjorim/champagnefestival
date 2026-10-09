@@ -147,7 +147,7 @@ async def test_event_rejects_registration_window_without_registration_required(c
             "date": "2099-03-21",
             "start_time": "18:00",
             "end_time": "22:00",
-            "category": "festival",
+            "category": "general",
             "registration_required": False,
             "registrations_open_from": "2099-03-20T00:00:00+00:00",
         },

@@ -59,7 +59,9 @@ def reset_public_render_cache():
     changes settings.frontend_dist_path or seeds different FAQ/edition data
     could see another test's cached render instead of its own.
     """
-    public_render_cache.invalidate()
+    # `invalidate()` keeps the stale values as last-known-good, which a later test
+    # with a missing shell would be served instead of its own 404.
+    public_render_cache._entries.clear()
     public_pages_module._shell_cache._content = None
     public_pages_module._shell_cache._mtime = None
 

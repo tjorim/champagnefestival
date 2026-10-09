@@ -137,6 +137,34 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
   });
 }
 
+/** The per-language event text of a create/update body, with `title`/`description` resolved to the original language. */
+function eventTextFromBody(body: Record<string, unknown>) {
+  const text = (key: string) => (typeof body[key] === "string" ? (body[key] as string) : null);
+  const language =
+    body.title_language === "fr" || body.title_language === "en" ? body.title_language : "nl";
+  const descriptionLanguage =
+    body.description_language === "fr" || body.description_language === "en"
+      ? body.description_language
+      : body.description_language === "nl"
+        ? "nl"
+        : null;
+  const fields = {
+    title_language: language,
+    title_nl: text("title_nl"),
+    title_fr: text("title_fr"),
+    title_en: text("title_en"),
+    description_language: descriptionLanguage,
+    description_nl: text("description_nl"),
+    description_fr: text("description_fr"),
+    description_en: text("description_en"),
+  };
+  return {
+    ...fields,
+    title: fields[`title_${language}`] ?? text("title") ?? "",
+    description: (descriptionLanguage && fields[`description_${descriptionLanguage}`]) || "",
+  };
+}
+
 function uid(): string {
   return `mock-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 }
@@ -893,6 +921,10 @@ export const adminHandlers = [
     );
   }),
 
+  http.get("/api/events/translation", ({ request }) => {
+    const error = requireAuth(request);
+    return error ?? HttpResponse.json({ languages: [] });
+  }),
   http.get("/api/events/:id", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
@@ -909,8 +941,7 @@ export const adminHandlers = [
     const newEvent = {
       id: uid(),
       edition_id: String(body.edition_id ?? ""),
-      title: String(body.title ?? ""),
-      description: String(body.description ?? ""),
+      ...eventTextFromBody(body),
       date: String(body.date ?? ""),
       start_time: String(body.start_time ?? ""),
       end_time: typeof body.end_time === "string" ? body.end_time : null,
@@ -943,7 +974,8 @@ export const adminHandlers = [
     const idx = events.findIndex((e) => e.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const body = (await request.json()) as Record<string, unknown>;
-    events[idx] = { ...events[idx]!, ...body, id: String(params.id), updated_at: now() };
+    const merged = { ...events[idx]!, ...body, id: String(params.id), updated_at: now() };
+    events[idx] = { ...merged, ...eventTextFromBody(merged) };
     return HttpResponse.json(events[idx]);
   }),
 

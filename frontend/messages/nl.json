@@ -1230,5 +1230,19 @@
   "logo_wall_show_all_sponsors": "Toon alle {count} sponsors",
   "logo_wall_show_fewer": "Toon minder",
   "push_opt_in_consent_required": "Vink eerst het vakje hierboven aan om je toestemming te geven.",
-  "hero_edition_kicker": "Editie {month} {year}"
+  "hero_edition_kicker": "Editie {month} {year}",
+  "schedule_categories_ceremony": "Plechtigheid",
+  "schedule_categories_social": "Ontmoeting",
+  "schedule_categories_other": "Overig",
+  "admin_event_title_language": "Titel: oorspronkelijke taal",
+  "admin_event_description_language": "Beschrijving: oorspronkelijke taal",
+  "admin_event_language_nl": "Nederlands",
+  "admin_event_language_fr": "Frans",
+  "admin_event_language_en": "Engels",
+  "admin_event_title_label": "Titel ({language})",
+  "admin_event_description_label": "Beschrijving ({language})",
+  "admin_event_text_help": "Vul de oorspronkelijke taal in; de andere talen zijn optionele vertalingen. Bezoekers zien hun eigen taal en vallen terug op het origineel.",
+  "admin_event_title_original_required": "Vul een titel in de oorspronkelijke taal in.",
+  "admin_event_description_original_required": "Vul een beschrijving in de oorspronkelijke taal in, of wis alle beschrijvingsteksten.",
+  "admin_event_translation_limit": "Automatische voorstellen gaan tot 2000 tekens; vertaal langere tekst zelf."
 }

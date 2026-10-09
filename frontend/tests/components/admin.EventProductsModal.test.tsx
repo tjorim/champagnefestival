@@ -8,6 +8,7 @@ import EventProductsModal from "@/components/admin/EventProductsModal";
 import { server } from "@/mocks/server";
 import type { Event } from "@/types/event";
 import { createTestQueryClient } from "../utils/queryClient";
+import { noEventTranslations } from "../utils/eventFixtures";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
@@ -22,6 +23,7 @@ const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 const event: Event = {
   id: "event-01",
   editionId: "edition-01",
+  ...noEventTranslations,
   title: "VIP Evening",
   description: "",
   date: "2027-03-07",

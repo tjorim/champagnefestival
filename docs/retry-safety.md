@@ -467,6 +467,19 @@ A process-wide single-flight limit rejects bursts instead of queuing them. Savin
 or submitting the resulting text retains the existing organization write contracts.
 See [API, configuration and limits](organization-description-translation.md).
 
+### Event translations and categories (#1222)
+
+Event writes keep their current decisions: `POST /api/events` (and MCP
+`create_event`) is **not retry safe** (server-generated identity) and non-optimistic;
+`PUT /api/events/{id}` (and `update_event`) is **not retry safe** (no version
+precondition); deletes keep their current behaviour. The new per-language title and
+description fields and the fixed category do not change that. An update replays
+harmlessly only when it sends the same values, because it merges requested fields into
+the stored text and validates the result; a repeated clear (`""`) converges. The admin
+form has `retry: false` for events. `POST /api/events/translation` persists nothing,
+consumes the identity rate limit in its own bucket, and is never retried
+automatically; see [API, configuration and limits](organization-description-translation.md#event-drafts-1222).
+
 ## Organization domain rename (#1190)
 
 Renamed endpoints/tools retain the write strategies above, without aliases.

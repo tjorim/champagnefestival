@@ -34,7 +34,7 @@ async def test_create_get_event(db_session):
         title="Friday Tasting",
         date=date(2099, 3, 21),
         start_time="18:00",
-        category="festival",
+        category="general",
     )
     assert created["title"] == "Friday Tasting"
     assert created["edition_id"] == edition_id
@@ -57,7 +57,7 @@ async def test_create_event_rejects_invalid_input(db_session):
             title="Bad Event",
             date=date(2099, 3, 21),
             start_time="99:99",  # invalid HH:MM pattern
-            category="festival",
+            category="general",
         )
 
 
@@ -77,19 +77,19 @@ async def test_update_event_partial(db_session):
         title="Friday Tasting",
         date=date(2099, 3, 21),
         start_time="18:00",
-        category="festival",
+        category="general",
     )
 
-    updated = await mcp_events.update_event(factory, "admin-1", created["id"], title="Friday Tasting Updated")
+    updated = await mcp_events.update_event(factory, "admin-1", created["id"], title_nl="Friday Tasting Updated")
     assert updated["title"] == "Friday Tasting Updated"
-    assert updated["category"] == "festival"  # untouched fields survive a partial update
+    assert updated["category"] == "general"  # untouched fields survive a partial update
     assert str(updated["date"]) == "2099-03-21"
 
 
 async def test_update_event_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_events.update_event(factory, "admin-1", "nonexistent", title="New Title")
+        await mcp_events.update_event(factory, "admin-1", "nonexistent", title_nl="New Title")
 
 
 async def test_delete_event(db_session):
@@ -102,7 +102,7 @@ async def test_delete_event(db_session):
         title="Friday Tasting",
         date=date(2099, 3, 21),
         start_time="18:00",
-        category="festival",
+        category="general",
     )
 
     result = await mcp_events.delete_event(factory, "admin-1", created["id"])
@@ -129,7 +129,7 @@ async def test_delete_event_rejects_when_registrations_exist(db_session):
         title="Friday Tasting",
         date=date(2099, 3, 21),
         start_time="18:00",
-        category="festival",
+        category="general",
     )
     person = await mcp_people.create_person(factory, "admin-1", name="Alice")
     db_session.add(
@@ -203,7 +203,9 @@ async def test_standalone_edition_allows_moving_within_same_single_day(db_sessio
         category="exchange",
     )
 
-    updated = await mcp_events.update_event(factory, "admin-1", created["id"], date=date(2099, 3, 21), title="Updated")
+    updated = await mcp_events.update_event(
+        factory, "admin-1", created["id"], date=date(2099, 3, 21), title_nl="Updated"
+    )
     assert str(updated["date"]) == "2099-03-21"
 
 
@@ -219,7 +221,7 @@ async def test_create_event_rejects_registration_settings_without_registration_r
             title="Walk-in Only Event",
             date=date(2099, 3, 21),
             start_time="18:00",
-            category="festival",
+            category="general",
             registration_required=False,
             registrations_open_from=datetime(2026, 1, 1, tzinfo=UTC),
         )
@@ -235,7 +237,7 @@ async def test_update_event_rejects_registration_settings_without_registration_r
         title="Walk-in Only Event",
         date=date(2099, 3, 21),
         start_time="18:00",
-        category="festival",
+        category="general",
         registration_required=False,
     )
 
@@ -256,7 +258,7 @@ async def test_update_event_clears_nullable_fields(db_session):
         date=date(2099, 3, 21),
         start_time="18:00",
         end_time="22:00",
-        category="festival",
+        category="general",
         registration_required=True,
         registrations_open_from=datetime(2026, 1, 1, tzinfo=UTC),
     )
@@ -273,3 +275,95 @@ async def test_update_event_clears_nullable_fields(db_session):
     assert updated["end_time"] is None
     assert updated["registrations_open_from"] is None
     assert updated["title"] == "Friday Tasting"  # untouched fields survive a partial update
+
+
+async def test_create_event_stores_translations_and_rejects_a_missing_original(db_session):
+    factory = mcp_session_factory(db_session)
+    edition_id = await _create_edition(db_session)
+
+    created = await mcp_events.create_event(
+        factory,
+        "admin-1",
+        edition_id=edition_id,
+        title_language="fr",
+        title_fr="Dégustation",
+        title_en="Tasting",
+        description_language="fr",
+        description_fr="Une soirée",
+        date=date(2099, 3, 21),
+        start_time="18:00",
+        category="tasting",
+    )
+    assert created["title"] == "Dégustation"
+    assert created["title_en"] == "Tasting"
+    assert created["description"] == "Une soirée"
+
+    with pytest.raises(ValueError, match="original language"):
+        await mcp_events.create_event(
+            factory,
+            "admin-1",
+            edition_id=edition_id,
+            title_language="fr",
+            title_en="Tasting",
+            date=date(2099, 3, 21),
+            start_time="18:00",
+            category="tasting",
+        )
+
+
+async def test_create_event_rejects_an_unknown_category(db_session):
+    factory = mcp_session_factory(db_session)
+    edition_id = await _create_edition(db_session)
+
+    with pytest.raises(ValueError, match="category"):
+        await mcp_events.create_event(
+            factory,
+            "admin-1",
+            edition_id=edition_id,
+            title="Gala",
+            date=date(2099, 3, 21),
+            start_time="18:00",
+            category="gala",  # ty: ignore[invalid-argument-type]
+        )
+
+
+async def test_update_event_edits_one_translation_and_clears_it_with_an_empty_string(db_session):
+    factory = mcp_session_factory(db_session)
+    edition_id = await _create_edition(db_session)
+    created = await mcp_events.create_event(
+        factory,
+        "admin-1",
+        edition_id=edition_id,
+        title="Proeverij",
+        description="Een avond",
+        date=date(2099, 3, 21),
+        start_time="18:00",
+        category="tasting",
+    )
+
+    updated = await mcp_events.update_event(
+        factory, "admin-1", created["id"], title_en="Tasting", description_en="An evening"
+    )
+    assert (updated["title"], updated["title_en"]) == ("Proeverij", "Tasting")
+    assert updated["description_en"] == "An evening"
+
+    cleared = await mcp_events.update_event(factory, "admin-1", created["id"], title_en="")
+    assert cleared["title_en"] is None
+
+    with pytest.raises(ValueError, match="original language"):
+        await mcp_events.update_event(factory, "admin-1", created["id"], title_nl="")
+
+    # Clearing every description text also drops the description language.
+    no_description = await mcp_events.update_event(
+        factory, "admin-1", created["id"], description_nl="", description_en=""
+    )
+    assert no_description["description"] == ""
+    assert no_description["description_language"] is None
+
+    # Switching the original language needs text in the new original language.
+    with pytest.raises(ValueError, match="original language"):
+        await mcp_events.update_event(factory, "admin-1", created["id"], title_language="fr")
+    switched = await mcp_events.update_event(
+        factory, "admin-1", created["id"], title_language="fr", title_fr="Dégustation"
+    )
+    assert (switched["title_language"], switched["title"]) == ("fr", "Dégustation")

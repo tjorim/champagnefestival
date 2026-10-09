@@ -24,6 +24,7 @@ import {
   fetchEditionEvents,
   saveEditionEvent,
 } from "@/utils/adminContentApi";
+import { eventCategoryLabel } from "@/utils/eventText";
 import { queryKeys } from "@/utils/queryKeys";
 import EditionModal from "./EditionModal";
 import EditionPollOptionsModal from "./EditionPollOptionsModal";
@@ -317,7 +318,7 @@ export default function EditionCard({
                     </span>
                     <span>{event.title}</span>
                     <Badge variant="info" className="capitalize text-micro">
-                      {event.category}
+                      {eventCategoryLabel(event.category)}
                     </Badge>
                     {event.registrationRequired && (
                       <Badge variant="warning" className="text-micro">
@@ -374,6 +375,7 @@ export default function EditionCard({
         show={eventModalOpen}
         edition={edition}
         initial={editingEvent}
+        authHeaders={authHeaders}
         onSave={handleEventSaved}
         onHide={() => setEventModalOpen(false)}
       />

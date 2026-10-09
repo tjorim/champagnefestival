@@ -74,8 +74,14 @@ describe("saveEditionEvent", () => {
         editionId: "2026-march",
         formData: {
           editionId: "2026-march",
-          title: "Tasting",
-          description: "",
+          titleLanguage: "nl",
+          titleNl: "Proeverij",
+          titleFr: "",
+          titleEn: "",
+          descriptionLanguage: "nl",
+          descriptionNl: "",
+          descriptionFr: "",
+          descriptionEn: "",
           date: "2026-03-21",
           startTime: "18:00",
           endTime: "20:00",
@@ -93,6 +99,63 @@ describe("saveEditionEvent", () => {
     const body = sentBody(fetchMock);
     expect(body.registrations_open_from).toBe(new Date("2026-03-20T18:00").toISOString());
     expect(body.registrations_close_at).toBe(new Date("2026-03-21T17:00").toISOString());
+  });
+
+  it("sends the per-language text, with blank translations cleared and no stray description language", async () => {
+    const fetchMock = mockFetchResponse({ id: "event-1", products: [] });
+    vi.stubGlobal("fetch", fetchMock);
+    const formData = {
+      editionId: "2026-march",
+      titleLanguage: "fr" as const,
+      titleNl: " ",
+      titleFr: " Dégustation ",
+      titleEn: "Tasting",
+      descriptionLanguage: "fr" as const,
+      descriptionNl: "",
+      descriptionFr: "",
+      descriptionEn: "",
+      date: "2026-03-21",
+      startTime: "18:00",
+      endTime: "",
+      category: "tasting",
+      registrationRequired: false,
+      registrationsOpenFrom: "",
+      registrationsCloseAt: "",
+      sortOrder: "",
+      active: true,
+    };
+
+    await saveEditionEvent(
+      { editionId: "2026-march", editingEventId: "event-1", formData },
+      authHeaders,
+    );
+
+    expect(sentBody(fetchMock)).toMatchObject({
+      title_language: "fr",
+      title_nl: null,
+      title_fr: "Dégustation",
+      title_en: "Tasting",
+      description_language: null,
+      description_nl: null,
+      description_fr: null,
+      description_en: null,
+      category: "tasting",
+    });
+    expect(sentBody(fetchMock)).not.toHaveProperty("title");
+
+    const withDescription = mockFetchResponse({ id: "event-1", products: [] });
+    vi.stubGlobal("fetch", withDescription);
+    await saveEditionEvent(
+      {
+        editionId: "2026-march",
+        formData: { ...formData, descriptionLanguage: "en", descriptionEn: "An evening" },
+      },
+      authHeaders,
+    );
+    expect(sentBody(withDescription)).toMatchObject({
+      description_language: "en",
+      description_en: "An evening",
+    });
   });
 });
 

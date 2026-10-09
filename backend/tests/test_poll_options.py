@@ -229,7 +229,7 @@ async def test_replacing_selections_preserves_a_past_editions_picks(client, volu
         date=dt_date(2099, 3, 22),
         start_time="18:00",
         end_time="22:00",
-        category="festival",
+        category="general",
         registration_required=True,
         active=True,
     )

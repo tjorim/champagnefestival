@@ -96,7 +96,7 @@ async def test_delete_person_cascades_registrations(db_session):
             title="Vrijdagavond",
             date=date(2099, 3, 21),
             start_time="18:00",
-            category="festival",
+            category="general",
         )
     )
     await db_session.flush()

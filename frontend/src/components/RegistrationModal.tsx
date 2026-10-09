@@ -38,6 +38,7 @@ import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { RegistrationFormData, OrderItem } from "@/types/registration";
 import type { Event } from "@/types/event";
+import { eventTitle } from "@/utils/eventText";
 import {
   RegistrationSubmitError,
   submitRegistration,
@@ -296,7 +297,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         <DialogHeader>
           <DialogTitle id="registration-modal-title">
             <Icon icon={TicketIcon} className="text-warning me-2" />
-            {event?.title ?? m.registration_modal_title()}
+            {event ? eventTitle(event, getLocale()) : m.registration_modal_title()}
           </DialogTitle>
         </DialogHeader>
 

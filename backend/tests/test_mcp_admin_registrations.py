@@ -26,7 +26,7 @@ async def _seed_event(db_session, *, with_product: bool = True) -> tuple[Person,
         title="Vrijdagavond",
         date=date(2099, 3, 21),
         start_time="18:00",
-        category="festival",
+        category="general",
         registration_required=True,
     )
     db_session.add(event)
@@ -109,7 +109,7 @@ async def test_list_registrations_filters_by_edition_and_event(db_session):
         title="Zaterdagmiddag",
         date=date(2099, 3, 22),
         start_time="14:00",
-        category="festival",
+        category="general",
         registration_required=True,
     )
     db_session.add(other_event)

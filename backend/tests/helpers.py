@@ -108,7 +108,7 @@ async def _create_event(
         "date": date,
         "start_time": "18:00",
         "end_time": "22:00",
-        "category": "festival",
+        "category": "general",
         "registration_required": registration_required,
         "active": event_active,
     }

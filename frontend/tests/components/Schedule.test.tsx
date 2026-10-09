@@ -1,8 +1,10 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import Schedule from "@/components/Schedule";
+import { getLocale } from "@/paraglide/runtime";
+import { noEventTranslations } from "../utils/eventFixtures";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -22,6 +24,9 @@ vi.mock("@/paraglide/messages", () => ({
     schedule_categories_breakfast: () => "Breakfast",
     schedule_categories_exchange: () => "Exchange",
     schedule_categories_general: () => "General",
+    schedule_categories_ceremony: () => "Ceremony",
+    schedule_categories_social: () => "Social",
+    schedule_categories_other: () => "Other",
   },
 }));
 
@@ -35,6 +40,7 @@ const mockEvents = [
   {
     id: "fri-tasting",
     editionId: "ed-1",
+    ...noEventTranslations,
     title: "Winery Tour",
     startTime: "17:00",
     endTime: "23:00",
@@ -50,6 +56,7 @@ const mockEvents = [
   {
     id: "fri-vip",
     editionId: "ed-1",
+    ...noEventTranslations,
     title: "VIP",
     startTime: "19:30",
     description: "VIP event",
@@ -64,6 +71,7 @@ const mockEvents = [
   {
     id: "sat-party",
     editionId: "ed-1",
+    ...noEventTranslations,
     title: "Party",
     startTime: "20:00",
     description: "Party event",
@@ -76,6 +84,10 @@ const mockEvents = [
     updatedAt: "",
   },
 ];
+
+afterEach(() => {
+  vi.mocked(getLocale).mockReturnValue("nl");
+});
 
 describe("Schedule component", () => {
   it("links panels to tabs and switches with the keyboard without axe violations", async () => {
@@ -157,5 +169,43 @@ describe("Schedule component", () => {
     render(<Schedule events={mockEvents} />);
     expect(screen.getByText("17:00")).toBeInTheDocument();
     expect(screen.getByText("23:00")).toBeInTheDocument();
+  });
+
+  describe("translated events", () => {
+    const translated = {
+      ...mockEvents[0]!,
+      id: "fri-opening",
+      title: "Openingsavond",
+      titleNl: "Openingsavond",
+      titleFr: "Soirée d'ouverture",
+      titleEn: "Opening night",
+      description: "Een glas om te starten",
+      descriptionLanguage: "nl" as const,
+      descriptionNl: "Een glas om te starten",
+      descriptionFr: "Un verre pour commencer",
+      category: "ceremony" as const,
+    };
+
+    it.each([
+      ["nl", "Openingsavond", "Een glas om te starten"],
+      ["fr", "Soirée d'ouverture", "Un verre pour commencer"],
+      // No English description: the original shows instead of an empty paragraph.
+      ["en", "Opening night", "Een glas om te starten"],
+    ])("shows the %s text and a translated category", (locale, title, description) => {
+      vi.mocked(getLocale).mockReturnValue(locale as "nl" | "fr" | "en");
+      render(<Schedule events={[translated]} />);
+      expect(screen.getByRole("heading", { name: title })).toBeInTheDocument();
+      expect(screen.getByText(description)).toBeInTheDocument();
+      expect(screen.getByText("Ceremony")).toBeInTheDocument();
+    });
+
+    it("shows the original for every locale when it has no translations", () => {
+      for (const locale of ["nl", "fr", "en"] as const) {
+        vi.mocked(getLocale).mockReturnValue(locale);
+        const { unmount } = render(<Schedule events={[mockEvents[0]!]} />);
+        expect(screen.getByRole("heading", { name: "Winery Tour" })).toBeInTheDocument();
+        unmount();
+      }
+    });
   });
 });

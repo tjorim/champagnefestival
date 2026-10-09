@@ -394,6 +394,47 @@ original-language selector. Clearing all text requires clearing that selector
 in the same update. Admin edits are immediately live. Manager proposals and
 supersession use the private review workflow below (#1193).
 
+### Event titles, descriptions and categories (#1222)
+
+Events keep their text per language, following the organisation pattern.
+`title_language` (`nl`, `fr`, `en`; default `nl`) names the original language and
+`title_nl`/`title_fr`/`title_en` hold the texts (each at most 200 characters). The
+description works the same way with `description_language` and
+`description_nl/fr/en` (each at most 10000 characters; all null means no
+description). Whitespace is trimmed and blank text becomes null. The original
+language must have text; the others are optional. Updates validate the merged
+stored/requested values, so one translation can be edited alone, an empty string
+clears a translation, and clearing every description text also drops
+`description_language`. `POST /api/events` and MCP `create_event` still accept
+`title`/`description` as shorthand for the original-language text; updates take
+the per-language fields only.
+
+Every event response carries all stored languages plus `title`/`description`
+resolved for the `locale` query parameter (`nl`, `fr`, `en`) of the public
+`GET /api/editions/active` and `/upcoming` (MCP `get_event_schedule` takes the
+same `locale`). A missing translation falls back to the original language; with no
+`locale` the original is returned, so clients that predate translations keep
+working. The server-rendered home page (`/?lng=`) and its JSON-LD (`subEvent`
+entries) use the same resolved text, and registration confirmation emails title
+the event in the person's `preferred_language`. Admin lists, exports, audit
+entries and event-day screens keep showing the original-language title
+(`Event.title`).
+
+`category` is one of `tasting`, `vip`, `party`, `breakfast`, `exchange`, `general`,
+`ceremony`, `social`, `other` (`app/event_content.py`), enforced by the API, MCP,
+the `category` filter of `GET /api/events` and a database check constraint. Labels
+are `schedule_categories_*` in `frontend/messages/`. The list is code, not admin data,
+because every value needs a translated label and a deploy to add one is cheap.
+Migration `006` maps case/whitespace variants of a known value, maps unknown
+categories to `other` and logs each affected event id for review, and moves
+existing `title`/`description` into the `nl` columns. Its downgrade keeps only the
+original-language text.
+
+Admins can request editable machine drafts of a title or description with
+`GET`/`POST /api/events/translation` (same contract as the organisation drafts, text
+limited to 2000 characters and a separate rate-limit bucket); see
+[the API contract](../docs/organization-description-translation.md#event-drafts-1222).
+
 ### Organization manager self-service (#1192)
 
 Visitors and organization contacts share one emailed login at `/me`, using the

@@ -63,10 +63,47 @@ export interface Product {
   updatedAt: string;
 }
 
-export interface Event {
+export type EventLanguage = "nl" | "fr" | "en";
+
+export const EVENT_LANGUAGES: readonly EventLanguage[] = ["nl", "fr", "en"];
+
+/** Fixed list validated by the API; labels are `schedule_categories_*` in `messages/`. */
+export const EVENT_CATEGORIES = [
+  "tasting",
+  "vip",
+  "party",
+  "breakfast",
+  "exchange",
+  "general",
+  "ceremony",
+  "social",
+  "other",
+] as const;
+
+export type EventCategory = (typeof EVENT_CATEGORIES)[number];
+
+export function isEventCategory(value: unknown): value is EventCategory {
+  return EVENT_CATEGORIES.some((category) => category === value);
+}
+
+/** Stored text in every language; mirrors the organisation description fields. */
+export interface EventTranslations {
+  titleLanguage: EventLanguage;
+  titleNl: string | null;
+  titleFr: string | null;
+  titleEn: string | null;
+  descriptionLanguage: EventLanguage | null;
+  descriptionNl: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+}
+
+export interface Event extends EventTranslations {
   id: string;
   editionId: string;
+  /** Original-language title (what the admin lists show). Visitors use `eventTitle`. */
   title: string;
+  /** Original-language description, or "". Visitors use `eventDescription`. */
   description: string;
   date: string;
   startTime: string;
@@ -91,8 +128,14 @@ export interface Event {
 
 export interface EventFormData {
   editionId: string;
-  title: string;
-  description: string;
+  titleLanguage: EventLanguage;
+  titleNl: string;
+  titleFr: string;
+  titleEn: string;
+  descriptionLanguage: EventLanguage;
+  descriptionNl: string;
+  descriptionFr: string;
+  descriptionEn: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -102,6 +145,14 @@ export interface EventFormData {
   registrationsCloseAt: string;
   sortOrder: string;
   active: boolean;
+}
+
+function isEventLanguage(value: unknown): value is EventLanguage {
+  return value === "nl" || value === "fr" || value === "en";
+}
+
+function nullableText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
 function isOrderItemCategory(value: unknown): value is OrderItemCategory {
@@ -146,6 +197,17 @@ export function apiToEvent(data: Record<string, unknown>): Event {
     editionId: String(data.edition_id ?? ""),
     title: String(data.title ?? ""),
     description: String(data.description ?? ""),
+    // Responses always carry the stored languages; `title` is the resolved text.
+    titleLanguage: isEventLanguage(data.title_language) ? data.title_language : "nl",
+    titleNl: nullableText(data.title_nl),
+    titleFr: nullableText(data.title_fr),
+    titleEn: nullableText(data.title_en),
+    descriptionLanguage: isEventLanguage(data.description_language)
+      ? data.description_language
+      : null,
+    descriptionNl: nullableText(data.description_nl),
+    descriptionFr: nullableText(data.description_fr),
+    descriptionEn: nullableText(data.description_en),
     date: String(data.date ?? ""),
     startTime: String(data.start_time ?? ""),
     endTime: typeof data.end_time === "string" ? data.end_time : undefined,

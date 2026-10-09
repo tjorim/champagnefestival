@@ -18,6 +18,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 
 import EventStructuredData from "@/components/JsonLd";
+import { getLocale } from "@/paraglide/runtime";
 import { server } from "@/mocks/server";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 import editionFixture from "../../../docs/fixtures/jsonld-edition.json";
@@ -51,7 +52,17 @@ const apiEdition = {
     lat: editionFixture.venue.lat,
     lng: editionFixture.venue.lng,
   },
-  events: [],
+  events: editionFixture.events.map((event) => ({
+    ...event,
+    edition_id: "fixture-edition",
+    title: event.title_nl,
+    description: event.description_nl ?? "",
+    category: "ceremony",
+    registration_required: false,
+    active: true,
+    created_at: "",
+    updated_at: "",
+  })),
   producers: [],
   sponsors: [],
 };
@@ -110,7 +121,57 @@ describe("EventStructuredData contract with the shared JSON-LD fixture", () => {
         name: "Champagnefestival",
         url: import.meta.env.VITE_PUBLIC_URL,
       },
+      subEvent: [
+        {
+          "@type": "Event",
+          name: "Openingsreceptie",
+          startDate: "2027-03-19T17:00:00.000Z",
+          endDate: "2027-03-19T19:00:00.000Z",
+          description: "Welkom met een glas champagne",
+        },
+        { "@type": "Event", name: "Brunch", startDate: "2027-03-21T10:00:00.000Z" },
+      ],
     });
+  });
+
+  it("names sub-events in the visitor's language and falls back to the original", async () => {
+    vi.mocked(getLocale).mockReturnValue("en");
+    try {
+      server.use(http.get("/api/editions/active", () => HttpResponse.json(apiEdition)));
+      const { container } = render(<EventStructuredData />, {
+        wrapper: createTestQueryClientWrapper(),
+      });
+      await vi.waitFor(() => {
+        expect(container.querySelector('script[type="application/ld+json"]')).not.toBeNull();
+      });
+
+      const names = getStructuredData(container).subEvent.map(
+        (event: { name: string }) => event.name,
+      );
+      expect(names).toEqual(["Opening reception", "Brunch"]);
+    } finally {
+      vi.mocked(getLocale).mockReturnValue("nl");
+    }
+  });
+
+  it("escapes markup in event text so it cannot close the script element", async () => {
+    const hostile = {
+      ...apiEdition,
+      events: [
+        { ...apiEdition.events[1]!, title_nl: "</script><b>x</b>", title: "</script><b>x</b>" },
+      ],
+    };
+    server.use(http.get("/api/editions/active", () => HttpResponse.json(hostile)));
+    const { container } = render(<EventStructuredData />, {
+      wrapper: createTestQueryClientWrapper(),
+    });
+    await vi.waitFor(() => {
+      expect(container.querySelector('script[type="application/ld+json"]')).not.toBeNull();
+    });
+
+    const script = container.querySelector('script[type="application/ld+json"]')!;
+    expect(script.innerHTML).not.toContain("<b>");
+    expect(getStructuredData(container).subEvent[0].name).toBe("</script><b>x</b>");
   });
 
   it("renders nothing when the backend already rendered JSON-LD into <head> (#992)", async () => {

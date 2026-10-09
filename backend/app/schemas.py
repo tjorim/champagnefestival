@@ -13,6 +13,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
+from app.event_content import DEFAULT_ORIGINAL_LANGUAGE, EventCategory, Language
 
 # ---------------------------------------------------------------------------
 # Shared value types
@@ -233,39 +234,121 @@ class EditionSummaryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class EventCreate(RequestModel):
+class EventTextFields(RequestModel):
+    """Per-language event title and description (#1222).
+
+    Same contract as ``OrganizationDescription``: the original language must be
+    filled, the others are optional, and public reads fall back to the original.
+    A blank text is stored as ``None``. Unlike an organisation, an event always
+    has a title.
+    """
+
+    title_language: Language | None = None
+    title_nl: str | None = Field(default=None, max_length=200)
+    title_fr: str | None = Field(default=None, max_length=200)
+    title_en: str | None = Field(default=None, max_length=200)
+    description_language: Language | None = None
+    description_nl: str | None = Field(default=None, max_length=10000)
+    description_fr: str | None = Field(default=None, max_length=10000)
+    description_en: str | None = Field(default=None, max_length=10000)
+
+    @field_validator(
+        "title_nl",
+        "title_fr",
+        "title_en",
+        "description_nl",
+        "description_fr",
+        "description_en",
+        mode="before",
+    )
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        if not self.title_language or not getattr(self, f"title_{self.title_language}"):
+            raise ValueError("A title requires non-empty text in its original language.")
+        if any((self.description_nl, self.description_fr, self.description_en)):
+            if not self.description_language or not getattr(self, f"description_{self.description_language}"):
+                raise ValueError("A description requires non-empty text in its original language.")
+        elif self.description_language:
+            raise ValueError("Clear the original language when clearing all description texts.")
+        return self
+
+
+class EventCreate(EventTextFields):
     edition_id: str = Field(min_length=1, max_length=100)
-    title: str = Field(min_length=1, max_length=200)
-    description: str = Field(default="", max_length=10000)
+    title_language: Language = "nl"
+    title: str | None = Field(
+        default=None,
+        max_length=200,
+        description="Shorthand for the title in `title_language` (default `nl`), for clients that predate translations.",
+    )
+    description: str | None = Field(
+        default=None,
+        max_length=10000,
+        description="Shorthand for the description in `description_language` (default `nl`); blank means none.",
+    )
     date: dt_date
     start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    category: str = Field(min_length=1, max_length=50)
+    category: EventCategory
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
     active: bool = True
 
+    @model_validator(mode="after")
+    def check_text(self) -> Self:
+        if self.title is not None:
+            self._fold_shorthand("title", self.title_language)
+        if self.description is not None and self.description.strip():
+            self.description_language = self.description_language or DEFAULT_ORIGINAL_LANGUAGE
+            self._fold_shorthand("description", self.description_language)
+        self.title = self.description = None
+        return self.validate_original()
 
-class EventUpdate(RequestModel):
+    def _fold_shorthand(self, field: str, language: str) -> None:
+        if getattr(self, f"{field}_{language}") is not None:
+            raise ValueError(f"Send either {field} or {field}_{language}, not both.")
+        setattr(self, f"{field}_{language}", (getattr(self, field) or "").strip() or None)
+
+
+class EventUpdate(EventTextFields):
     edition_id: str | None = Field(default=None, min_length=1, max_length=100)
-    title: str | None = Field(default=None, min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=10000)
     date: dt_date | None = None
     start_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    category: str | None = Field(default=None, min_length=1, max_length=50)
+    category: EventCategory | None = None
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
     active: bool | None = None
 
 
-class EventOut(BaseModel):
-    id: str
-    edition_id: str
+class EventTextOut(BaseModel):
+    """The stored text of an event in every language, plus its original language.
+
+    ``title``/``description`` on the enclosing model are the text resolved for
+    the request locale (the original language when none is requested), so
+    clients that predate translations keep working.
+    """
+
     title: str
     description: str
+    title_language: Language
+    title_nl: str | None = None
+    title_fr: str | None = None
+    title_en: str | None = None
+    description_language: Language | None = None
+    description_nl: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
+
+
+class EventOut(EventTextOut):
+    id: str
+    edition_id: str
     date: dt_date
     start_time: str
     end_time: str | None
@@ -283,14 +366,12 @@ class EventOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class EventPublicOut(BaseModel):
+class EventPublicOut(EventTextOut):
     """Visitor-facing event shape — see ProductPublicOut for why `products`
     differs from `EventOut.products`."""
 
     id: str
     edition_id: str
-    title: str
-    description: str
     date: dt_date
     start_time: str
     end_time: str | None

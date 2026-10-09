@@ -305,7 +305,7 @@ def _resolve_organizations(
 
 
 async def edition_payloads(
-    db: AsyncSession, editions: list[Edition], *, active_only: bool, public: bool = False
+    db: AsyncSession, editions: list[Edition], *, active_only: bool, public: bool = False, locale: str | None = None
 ) -> list[dict]:
     """Build edition response payloads.
 
@@ -318,6 +318,9 @@ async def edition_payloads(
     Public endpoints pass `True`; the caller must also use a response_model
     built from `ProductPublicOut` (see `app.schemas.EditionPublicOut`), since
     the two shapes are incompatible.
+
+    `locale` resolves each event's `title`/`description` for that language
+    (original language when `None`); see `event_to_summary_dict`.
     """
     venues = await _load_venues_by_ids(db, {edition.venue_id for edition in editions})
     organization_map = await _load_organizations_by_ids(
@@ -343,7 +346,7 @@ async def edition_payloads(
                 edition,
                 venue=venues[edition.venue_id],
                 dates=_edition_dates(events),
-                events=[event_to_summary_dict(event, public=public) for event in events],
+                events=[event_to_summary_dict(event, public=public, locale=locale) for event in events],
                 producers=producers,
                 sponsors=sponsors,
                 vendors=vendors,
@@ -355,8 +358,10 @@ async def edition_payloads(
     return payloads
 
 
-async def edition_payload(db: AsyncSession, edition: Edition, *, active_only: bool, public: bool = False) -> dict:
-    payloads = await edition_payloads(db, [edition], active_only=active_only, public=public)
+async def edition_payload(
+    db: AsyncSession, edition: Edition, *, active_only: bool, public: bool = False, locale: str | None = None
+) -> dict:
+    payloads = await edition_payloads(db, [edition], active_only=active_only, public=public, locale=locale)
     if not payloads:
         raise HTTPException(status_code=404, detail="Edition not found.")
     return payloads[0]

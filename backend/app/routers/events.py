@@ -11,16 +11,18 @@ from __future__ import annotations
 
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, Request, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.auth import get_actor_id, require_admin, require_volunteer
 from app.database import get_db
+from app.event_content import EventCategory
 from app.models import Event, Registration
 from app.schemas import EventCheckInStats, EventCreate, EventOut, EventUpdate
 from app.services import events_service
+from app.services import organization_translation as translation
 from app.utils import event_to_summary_dict
 
 router = APIRouter(prefix="/api/events", tags=["events"])
@@ -32,7 +34,7 @@ async def list_events(
     edition_id: str | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
-    category: str | None = Query(default=None),
+    category: EventCategory | None = Query(default=None),
     registration_required: bool | None = Query(default=None),
     active: bool | None = Query(default=None),
 ) -> list[dict]:
@@ -86,7 +88,7 @@ async def get_checkin_stats(
         )
         .join(Event, Event.id == Registration.event_id)
         .where(Registration.status != "cancelled")
-        .group_by(Registration.event_id, Event.title)
+        .group_by(Registration.event_id, Event.id)
     )
     if edition_id is not None:
         stmt = stmt.where(Event.edition_id == edition_id)
@@ -95,6 +97,29 @@ async def get_checkin_stats(
         {"event_id": row.event_id, "event_title": row.event_title, "total": row.total, "checked_in": row.checked_in}
         for row in rows
     ]
+
+
+@router.get("/translation", response_model=translation.TranslationCapabilities, dependencies=[Depends(require_admin)])
+async def translation_capabilities(response: Response) -> translation.TranslationCapabilities:
+    """Configured draft languages; never contacts the service or publishes text."""
+    response.headers["Cache-Control"] = "no-store"
+    return translation.capabilities()
+
+
+@router.post("/translation", response_model=translation.TranslationDraft, dependencies=[Depends(require_admin)])
+async def suggest_translation(
+    body: translation.EventTranslationRequest, response: Response, actor: str = Depends(get_actor_id)
+) -> translation.TranslationDraft:
+    """Request an editable draft of an event title or description only.
+
+    Nothing is saved; no automatic retry. Same capability shape, limits and
+    errors as the organisation drafts (`docs/organization-description-translation.md`),
+    with its own rate-limit bucket.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    return await translation.suggest(
+        body, f"keycloak:{actor}", scope="event-translation", max_length=translation.EVENT_TEXT_LIMIT
+    )
 
 
 @router.get("/{event_id}", response_model=EventOut, dependencies=[Depends(require_admin)])

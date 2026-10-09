@@ -28,6 +28,8 @@ def _load_edition_fixture() -> dict:
     here to exercise the function with the shape it actually receives."""
     raw = json.loads(_FIXTURE.read_text(encoding="utf-8"))
     raw["dates"] = [date.fromisoformat(d) for d in raw["dates"]]
+    for event in raw["events"]:
+        event["date"] = date.fromisoformat(event["date"])
     return raw
 
 
@@ -74,6 +76,16 @@ def test_build_event_json_ld_matches_the_expected_structure():
             "name": "Champagnefestival",
             "url": "https://champagnefestival.tjor.im",
         },
+        "subEvent": [
+            {
+                "@type": "Event",
+                "name": "Openingsreceptie",
+                "startDate": "2027-03-19T17:00:00.000Z",
+                "endDate": "2027-03-19T19:00:00.000Z",
+                "description": "Welkom met een glas champagne",
+            },
+            {"@type": "Event", "name": "Brunch", "startDate": "2027-03-21T10:00:00.000Z"},
+        ],
     }
 
 
@@ -84,6 +96,25 @@ def test_build_event_json_ld_uses_the_requested_locale_for_description_and_langu
 
     assert result["description"] == "A celebration of fine champagne and community"
     assert result["inLanguage"] == "en"
+
+
+def test_build_event_json_ld_names_sub_events_in_the_requested_locale_with_fallback():
+    edition = _load_edition_fixture()
+
+    english = build_event_json_ld(edition, base_url="https://example.test", locale="en")["subEvent"]
+    french = build_event_json_ld(edition, base_url="https://example.test", locale="fr")["subEvent"]
+
+    assert [event["name"] for event in english] == ["Opening reception", "Brunch"]
+    assert [event["name"] for event in french] == ["Réception d'ouverture", "Brunch"]
+    # Only the Dutch description exists, so every locale shows it.
+    assert english[0]["description"] == french[0]["description"] == "Welkom met een glas champagne"
+
+
+def test_build_event_json_ld_omits_sub_events_without_events():
+    edition = _load_edition_fixture()
+    edition["events"] = []
+
+    assert "subEvent" not in build_event_json_ld(edition, base_url="https://example.test", locale="nl")
 
 
 def test_frontend_i18n_snippets_match_the_real_translation_files():

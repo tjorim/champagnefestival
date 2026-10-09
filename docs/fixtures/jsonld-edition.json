@@ -1,6 +1,10 @@
 {
   "year": 2027,
-  "dates": ["2027-03-19", "2027-03-20", "2027-03-21"],
+  "dates": [
+    "2027-03-19",
+    "2027-03-20",
+    "2027-03-21"
+  ],
   "venue": {
     "name": "Kursaal Oostende",
     "address": "Monacoplein 24",
@@ -9,5 +13,35 @@
     "country": "Belgium",
     "lat": 51.2298,
     "lng": 2.9203
-  }
+  },
+  "events": [
+    {
+      "id": "evt-opening",
+      "date": "2027-03-19",
+      "start_time": "18:00",
+      "end_time": "20:00",
+      "title_language": "nl",
+      "title_nl": "Openingsreceptie",
+      "title_fr": "Réception d'ouverture",
+      "title_en": "Opening reception",
+      "description_language": "nl",
+      "description_nl": "Welkom met een glas champagne",
+      "description_fr": null,
+      "description_en": null
+    },
+    {
+      "id": "evt-brunch",
+      "date": "2027-03-21",
+      "start_time": "11:00",
+      "end_time": null,
+      "title_language": "nl",
+      "title_nl": "Brunch",
+      "title_fr": null,
+      "title_en": null,
+      "description_language": null,
+      "description_nl": null,
+      "description_fr": null,
+      "description_en": null
+    }
+  ]
 }

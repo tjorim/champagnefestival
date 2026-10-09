@@ -20,6 +20,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    case,
     cast,
     func,
     select,
@@ -30,6 +31,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
+from app.event_content import DEFAULT_ORIGINAL_LANGUAGE, EVENT_CATEGORIES, resolve_text
 
 
 def _utcnow() -> datetime:
@@ -747,23 +749,119 @@ class Edition(Base):
     )
 
 
+def _original_language_text(language_column, *text_columns):
+    """SQL for the original-language text, ``NULL`` when none is stored."""
+    return case(
+        (language_column == "nl", text_columns[0]),
+        (language_column == "fr", text_columns[1]),
+        (language_column == "en", text_columns[2]),
+        else_=None,
+    )
+
+
 class Event(Base):
     __tablename__ = "events"
+
+    __table_args__ = (
+        CheckConstraint(
+            "((title_language = 'nl' AND length(trim(title_nl)) > 0) OR "
+            "(title_language = 'fr' AND length(trim(title_fr)) > 0) OR "
+            "(title_language = 'en' AND length(trim(title_en)) > 0)) IS TRUE",
+            name="ck_events_title_original",
+        ),
+        CheckConstraint(
+            "(description_language IS NULL AND description_nl IS NULL AND description_fr IS NULL "
+            "AND description_en IS NULL) OR "
+            "(description_language IS NOT NULL AND ("
+            "(description_language = 'nl' AND length(trim(description_nl)) > 0) OR "
+            "(description_language = 'fr' AND length(trim(description_fr)) > 0) OR "
+            "(description_language = 'en' AND length(trim(description_en)) > 0)) IS TRUE)",
+            name="ck_events_description_original",
+        ),
+        CheckConstraint(
+            "category IN (" + ", ".join(f"'{value}'" for value in EVENT_CATEGORIES) + ")",
+            name="ck_events_category",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    title: Mapped[str] = mapped_column(String(200))
-    description: Mapped[str] = mapped_column(Text, default="")
+    title_language: Mapped[str] = mapped_column(String(2), default=DEFAULT_ORIGINAL_LANGUAGE)
+    title_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    description_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    description_nl: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description_fr: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    @hybrid_property
+    def title(self) -> str:
+        """Original-language title: what admin lists, audit entries and
+        exports show. Visitors get ``localized_title`` instead. Assigning
+        writes the original-language column (``nl`` when none is set yet), so
+        set ``title_language`` first when it should not be Dutch."""
+        return resolve_text({"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, self.title_language, None)
+
+    @title.inplace.setter
+    def _title_setter(self, value: str) -> None:
+        self.title_language = self.title_language or DEFAULT_ORIGINAL_LANGUAGE
+        setattr(self, f"title_{self.title_language}", value)
+
+    @title.inplace.expression
+    @classmethod
+    def _title_expression(cls):
+        return func.coalesce(_original_language_text(cls.title_language, cls.title_nl, cls.title_fr, cls.title_en), "")
+
+    @hybrid_property
+    def description(self) -> str:
+        """Original-language description, ``""`` when there is none (see ``title``)."""
+        return resolve_text(
+            {"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en},
+            self.description_language,
+            None,
+        )
+
+    @description.inplace.setter
+    def _description_setter(self, value: str) -> None:
+        if not value.strip():
+            self.description_language = self.description_nl = self.description_fr = self.description_en = None
+            return
+        self.description_language = self.description_language or DEFAULT_ORIGINAL_LANGUAGE
+        setattr(self, f"description_{self.description_language}", value)
+
+    @description.inplace.expression
+    @classmethod
+    def _description_expression(cls):
+        return func.coalesce(
+            _original_language_text(
+                cls.description_language, cls.description_nl, cls.description_fr, cls.description_en
+            ),
+            "",
+        )
+
+    def localized_title(self, locale: str | None) -> str:
+        return resolve_text(
+            {"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, self.title_language, locale
+        )
+
+    def localized_description(self, locale: str | None) -> str:
+        return resolve_text(
+            {"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en},
+            self.description_language,
+            locale,
+        )
+
     date: Mapped[dt_date] = mapped_column(Date, index=True)
     start_time: Mapped[str] = mapped_column(String(10))
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
     category: Mapped[str] = mapped_column(String(50))
-    """Free-text display label for the public schedule (e.g. "tasting", "vip",
-    "exchange") — purely cosmetic, does not affect what guests can order.
-    Whether this event sells anything is answered by whether it *has*
-    products (see `Product`), not by a separate flag on the event."""
+    """Display label for the public schedule, one of ``EVENT_CATEGORIES`` — purely
+    cosmetic, does not affect what guests can order. Whether this event sells
+    anything is answered by whether it *has* products (see `Product`), not by a
+    separate flag on the event."""
 
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

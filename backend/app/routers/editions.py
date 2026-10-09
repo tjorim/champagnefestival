@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
+from app.event_content import Language
 from app.models import Event, PaymentTransaction, Registration
 from app.schemas import (
     EditionAttendanceStats,
@@ -39,8 +40,12 @@ logger = logging.getLogger(__name__)
 async def get_active_edition(
     db: AsyncSession = Depends(get_db),
     edition_type: EditionType | None = Query(default=None),
+    locale: Language | None = Query(default=None),
 ) -> dict:
     """Return the current or next upcoming active edition, optionally filtered by type.
+
+    `locale` resolves each event's `title`/`description` for that language, falling
+    back to the event's original language; every stored language is returned too.
 
     Only the edition's *active* events are considered: an inactive (draft/cancelled)
     event neither keeps an otherwise-finished edition classified as upcoming, nor
@@ -50,15 +55,18 @@ async def get_active_edition(
     active = await editions_service.find_active_edition(db, edition_type=edition_type)
     if active is None:
         raise HTTPException(status_code=404, detail="No active or upcoming editions found.")
-    return await editions_service.edition_payload(db, active, active_only=True, public=True)
+    return await editions_service.edition_payload(db, active, active_only=True, public=True, locale=locale)
 
 
 @router.get("/upcoming", response_model=list[EditionPublicOut])
 async def list_upcoming_editions(
     db: AsyncSession = Depends(get_db),
     edition_type: EditionType | None = Query(default=None),
+    locale: Language | None = Query(default=None),
 ) -> list[dict]:
     """List upcoming active editions across all supported edition types.
+
+    `locale` behaves as on `get_active_edition`.
 
     Only each edition's active events count toward its upcoming status, and only
     active events are serialized in the response; see `get_active_edition`.
@@ -71,7 +79,7 @@ async def list_upcoming_editions(
         if (editions_service.edition_end_date(editions_service.active_events(edition)) or date.min) >= today
     ]
     return await editions_service.edition_payloads(
-        db, editions_service.sorted_editions(upcoming, active_only=True), active_only=True, public=True
+        db, editions_service.sorted_editions(upcoming, active_only=True), active_only=True, public=True, locale=locale
     )
 
 

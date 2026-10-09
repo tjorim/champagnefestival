@@ -6,6 +6,7 @@ import { server } from "@/mocks/server";
 import type { Event, Product } from "@/types/event";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 import { selectAdminOption } from "../helpers/adminSelect";
+import { noEventTranslations } from "../utils/eventFixtures";
 
 const authState = vi.hoisted(() => ({ accessToken: null as string | null }));
 
@@ -81,6 +82,7 @@ const champagneProduct: Product = {
 const vipEvent: Event = {
   id: "fri-vip",
   editionId: "ed-1",
+  ...noEventTranslations,
   title: "VIP Reception",
   startTime: "19:30",
   description: "VIP event",

@@ -34,7 +34,7 @@ from app.mcp_server import (
     build_keycloak_auth,
     create_mcp_server,
 )
-from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD
+from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, mcp_session_factory
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -1008,7 +1008,7 @@ class TestGetActiveEditionObjEditionTypeScoping:
                     "date": event_date,
                     "start_time": "18:00",
                     "end_time": "22:00",
-                    "category": edition_type,
+                    "category": "general",
                     "registration_required": False,
                     "active": True,
                 },
@@ -1793,3 +1793,37 @@ class TestPIIFiltering:
         # Sensitive fields that should never appear
         assert "national_register_number" not in d
         assert "eid_document_number" not in d
+
+
+class TestGetEventScheduleLocale:
+    async def test_schedule_resolves_titles_for_the_requested_locale(self, db_session):
+        from app.mcp.public import get_event_schedule
+        from app.models import Edition, Event, Venue
+
+        db_session.add(Venue(id="venue-schedule", name="Venue"))
+        await db_session.flush()
+        db_session.add(Edition(id="schedule-edition", year=2099, month="march", venue_id="venue-schedule"))
+        await db_session.flush()
+        db_session.add(
+            Event(
+                id="evt-schedule",
+                edition_id="schedule-edition",
+                title_language="nl",
+                title_nl="Proeverij",
+                title_en="Tasting",
+                date=date(2099, 3, 21),
+                start_time="18:00",
+                category="tasting",
+            )
+        )
+        await db_session.flush()
+        factory = mcp_session_factory(db_session)
+
+        english = (await get_event_schedule(factory, "schedule-edition", "en"))["events"][0]
+        french = (await get_event_schedule(factory, "schedule-edition", "fr"))["events"][0]
+        original = (await get_event_schedule(factory, "schedule-edition"))["events"][0]
+
+        assert english["title"] == "Tasting"
+        assert french["title"] == "Proeverij"  # no French translation: falls back to the original
+        assert original["title"] == "Proeverij"
+        assert original["title_en"] == "Tasting"

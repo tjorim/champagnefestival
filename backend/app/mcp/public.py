@@ -46,7 +46,7 @@ async def list_editions(session_factory: Any) -> dict:
     }
 
 
-async def get_event_schedule(session_factory: Any, edition_id: str | None = None) -> dict:
+async def get_event_schedule(session_factory: Any, edition_id: str | None = None, locale: str | None = None) -> dict:
     """Return the event schedule for an edition."""
     from sqlalchemy.orm import selectinload
 
@@ -66,7 +66,7 @@ async def get_event_schedule(session_factory: Any, edition_id: str | None = None
         events = sorted(edition.events, key=lambda ev: (ev.date, ev.start_time))
         return {
             "edition_id": edition.id,
-            "events": [event_dict(ev) for ev in events],
+            "events": [event_dict(ev, locale) for ev in events],
         }
 
 

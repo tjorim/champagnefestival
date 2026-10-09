@@ -52,7 +52,7 @@ async def _setup_edition_with_layout(client) -> tuple[str, str, str]:
         "date": "2026-03-13",
         "start_time": "19:00",
         "end_time": "22:00",
-        "category": "festival",
+        "category": "general",
         "registration_required": True,
         "active": True,
     }

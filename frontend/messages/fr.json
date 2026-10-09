@@ -1230,5 +1230,19 @@
   "logo_wall_show_all_sponsors": "Afficher les {count} sponsors",
   "logo_wall_show_fewer": "Afficher moins",
   "push_opt_in_consent_required": "Cochez d'abord la case ci-dessus pour donner votre consentement.",
-  "hero_edition_kicker": "Édition de {month} {year}"
+  "hero_edition_kicker": "Édition de {month} {year}",
+  "schedule_categories_ceremony": "Cérémonie",
+  "schedule_categories_social": "Rencontre",
+  "schedule_categories_other": "Autre",
+  "admin_event_title_language": "Titre : langue d'origine",
+  "admin_event_description_language": "Description : langue d'origine",
+  "admin_event_language_nl": "Néerlandais",
+  "admin_event_language_fr": "Français",
+  "admin_event_language_en": "Anglais",
+  "admin_event_title_label": "Titre ({language})",
+  "admin_event_description_label": "Description ({language})",
+  "admin_event_text_help": "Renseignez la langue d'origine ; les autres langues sont des traductions facultatives. Les visiteurs voient leur langue et, à défaut, l'original.",
+  "admin_event_title_original_required": "Saisissez un titre dans sa langue d'origine.",
+  "admin_event_description_original_required": "Saisissez une description dans sa langue d'origine, ou effacez tous les textes de description.",
+  "admin_event_translation_limit": "Les brouillons automatiques vont jusqu'à 2000 caractères ; traduisez vous-même les textes plus longs."
 }

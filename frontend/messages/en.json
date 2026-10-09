@@ -1230,5 +1230,19 @@
   "logo_wall_show_all_sponsors": "Show all {count} sponsors",
   "logo_wall_show_fewer": "Show fewer",
   "push_opt_in_consent_required": "Tick the box above to give your consent first.",
-  "hero_edition_kicker": "{month} {year} edition"
+  "hero_edition_kicker": "{month} {year} edition",
+  "schedule_categories_ceremony": "Ceremony",
+  "schedule_categories_social": "Social",
+  "schedule_categories_other": "Other",
+  "admin_event_title_language": "Title: original language",
+  "admin_event_description_language": "Description: original language",
+  "admin_event_language_nl": "Dutch",
+  "admin_event_language_fr": "French",
+  "admin_event_language_en": "English",
+  "admin_event_title_label": "Title ({language})",
+  "admin_event_description_label": "Description ({language})",
+  "admin_event_text_help": "Fill in the original language; the other languages are optional translations. Visitors see their own language and fall back to the original.",
+  "admin_event_title_original_required": "Enter a title in its original language.",
+  "admin_event_description_original_required": "Enter a description in its original language, or clear all description texts.",
+  "admin_event_translation_limit": "Machine drafts cover up to 2000 characters; translate longer text yourself."
 }
