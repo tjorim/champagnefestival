@@ -2,12 +2,13 @@
 
 from datetime import UTC, datetime
 
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import Announcement
-from app.schemas import AnnouncementCreate, AnnouncementUpdate
+from app.schemas import AnnouncementCreate, AnnouncementUpdate, AnnouncementWrite
 from app.services.errors import NotFoundError, ValidationFailedError
 from app.utils import make_id
 
@@ -17,9 +18,10 @@ def to_dict(item: Announcement) -> dict:
         name: getattr(item, name)
         for name in (
             "id",
+            "text_language",
             "text_nl",
-            "text_en",
             "text_fr",
+            "text_en",
             "level",
             "active",
             "sort_order",
@@ -27,8 +29,8 @@ def to_dict(item: Announcement) -> dict:
             "ends_at",
             "link_url",
             "link_label_nl",
-            "link_label_en",
             "link_label_fr",
+            "link_label_en",
             "published_at",
             "published_by",
             "created_at",
@@ -99,14 +101,18 @@ async def update(
     if item is None:
         raise NotFoundError(f"Announcement '{item_id}' not found.")
     was_active = item.active
-    for name, value in body.model_dump(include=body.model_fields_set).items():
-        setattr(item, name, value or None if name.startswith(("text_", "link_")) else value)
-    if item.starts_at and item.ends_at and item.ends_at <= item.starts_at:
-        raise ValidationFailedError("ends_at must be later than starts_at.")
-    if item.link_url and not any((item.link_label_nl, item.link_label_en, item.link_label_fr)):
-        raise ValidationFailedError("A link URL requires at least one translated link label.")
-    if item.active and not any((item.text_nl, item.text_en, item.text_fr)):
-        raise ValidationFailedError("An active announcement needs at least one translation.")
+    # Validate the merged state before mutating: a partial update may change a single translation.
+    fields_set = body.model_fields_set
+    merged = {name: getattr(item, name) for name in AnnouncementWrite.model_fields}
+    merged.update(body.model_dump(include=fields_set))
+    try:
+        validated = AnnouncementWrite.model_validate(merged)
+    except ValidationError as exc:
+        raise ValidationFailedError(
+            "; ".join(error["msg"].removeprefix("Value error, ") for error in exc.errors())
+        ) from exc
+    for name in AnnouncementWrite.model_fields:
+        setattr(item, name, getattr(validated, name))
     await write_audit_entry(
         db,
         actor=actor,

@@ -58,9 +58,89 @@ def _downgrade_faq() -> None:
     op.drop_column("faq_items", "text_language")
 
 
+# --- Announcements and composed messages ----------------------------------------
+
+ANNOUNCEMENT_TEXT_CHECK = _original("text_language", "length(trim(text_{lang})) > 0")
+ANNOUNCEMENT_LINK_CHECK = "link_url IS NULL OR " + _original("text_language", "length(trim(link_label_{lang})) > 0")
+COMPOSED_CHECK = _original("text_language", "length(trim(title_{lang})) > 0 AND length(trim(body_{lang})) > 0")
+
+
+def _first_language(*columns: str) -> str:
+    """SQL ``CASE`` naming the first language (nl, fr, en) whose column has text."""
+    return (
+        "CASE "
+        + " ".join(
+            f"WHEN length(trim({column})) > 0 THEN '{lang}'"
+            for column, lang in zip(columns, ("nl", "fr", "en"), strict=True)
+        )
+        + " ELSE 'nl' END"
+    )
+
+
+def _upgrade_announcements() -> None:
+    op.add_column("announcements", sa.Column("text_language", sa.String(2), nullable=True))
+    op.execute(f"UPDATE announcements SET text_language = {_first_language('text_nl', 'text_fr', 'text_en')}")
+    # An announcement that never had any text (an empty inactive draft) gets a placeholder so the
+    # original-language constraint holds; a link without a label in that language borrows another one.
+    op.execute(
+        "UPDATE announcements SET text_nl = '(no text)' WHERE coalesce(length(trim(text_nl)), 0) = 0 "
+        "AND coalesce(length(trim(text_fr)), 0) = 0 AND coalesce(length(trim(text_en)), 0) = 0"
+    )
+    for lang in ("nl", "fr", "en"):
+        others = ", ".join(f"link_label_{other}" for other in ("nl", "fr", "en") if other != lang)
+        op.execute(
+            f"UPDATE announcements SET link_label_{lang} = coalesce(nullif(trim(link_label_{lang}), ''), {others}) "
+            f"WHERE text_language = '{lang}' AND link_url IS NOT NULL"
+        )
+    op.execute(
+        "UPDATE announcements SET link_url = NULL WHERE link_url IS NOT NULL AND NOT ("
+        + ANNOUNCEMENT_LINK_CHECK.replace("link_url IS NULL OR ", "")
+        + ")"
+    )
+    op.alter_column("announcements", "text_language", nullable=False)
+    op.create_check_constraint("ck_announcements_text_original", "announcements", ANNOUNCEMENT_TEXT_CHECK)
+    op.create_check_constraint("ck_announcements_link_label_original", "announcements", ANNOUNCEMENT_LINK_CHECK)
+
+
+def _downgrade_announcements() -> None:
+    op.drop_constraint("ck_announcements_link_label_original", "announcements", type_="check")
+    op.drop_constraint("ck_announcements_text_original", "announcements", type_="check")
+    op.drop_column("announcements", "text_language")
+
+
+def _upgrade_composed_messages() -> None:
+    op.add_column("composed_messages", sa.Column("text_language", sa.String(2), nullable=True))
+    # The first language with a complete title/body pair is the original (messages predate the field).
+    op.execute(
+        "UPDATE composed_messages SET text_language = CASE "
+        + " ".join(
+            f"WHEN length(trim(title_{lang})) > 0 AND length(trim(body_{lang})) > 0 THEN '{lang}'"
+            for lang in ("nl", "fr", "en")
+        )
+        + " ELSE 'nl' END"
+    )
+    # A draft without any complete pair cannot satisfy the constraint; give it a placeholder pair.
+    op.execute(
+        "UPDATE composed_messages SET title_nl = coalesce(nullif(trim(title_nl), ''), '(no title)'), "
+        "body_nl = coalesce(nullif(trim(body_nl), ''), '(no text)') "
+        "WHERE text_language = 'nl' AND NOT (" + COMPOSED_CHECK + ")"
+    )
+    op.alter_column("composed_messages", "text_language", nullable=False)
+    op.create_check_constraint("ck_composed_messages_original", "composed_messages", COMPOSED_CHECK)
+
+
+def _downgrade_composed_messages() -> None:
+    op.drop_constraint("ck_composed_messages_original", "composed_messages", type_="check")
+    op.drop_column("composed_messages", "text_language")
+
+
 def upgrade() -> None:
     _upgrade_faq()
+    _upgrade_announcements()
+    _upgrade_composed_messages()
 
 
 def downgrade() -> None:
+    _downgrade_composed_messages()
+    _downgrade_announcements()
     _downgrade_faq()

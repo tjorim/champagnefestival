@@ -29,12 +29,15 @@ import { queryKeys } from "@/utils/queryKeys";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
+import { OriginalLanguageSelect } from "@/components/admin/LocalizedFields";
 
 type ComposedMessageChannel = "announcement" | "push";
 type ComposedMessageState = "draft" | "scheduled" | "sent";
 
 interface ComposedMessage {
   id: string;
+  /** Original language: the title and body must both have text there. */
+  text_language: "nl" | "fr" | "en";
   title_nl: string | null;
   title_en: string | null;
   title_fr: string | null;
@@ -58,6 +61,7 @@ interface ComposedMessage {
 
 type Draft = Pick<
   ComposedMessage,
+  | "text_language"
   | "title_nl"
   | "title_en"
   | "title_fr"
@@ -70,6 +74,7 @@ type Draft = Pick<
 >;
 
 const emptyDraft: Draft = {
+  text_language: "nl",
   title_nl: "",
   title_en: "",
   title_fr: "",
@@ -83,6 +88,7 @@ const emptyDraft: Draft = {
 
 function writePayload(draft: Draft) {
   return {
+    text_language: draft.text_language,
     title_nl: draft.title_nl || null,
     title_en: draft.title_en || null,
     title_fr: draft.title_fr || null,
@@ -160,6 +166,7 @@ export default function ComposerManagement({
     (): Draft =>
       editingItem
         ? {
+            text_language: editingItem.text_language,
             title_nl: editingItem.title_nl,
             title_en: editingItem.title_en,
             title_fr: editingItem.title_fr,
@@ -241,8 +248,7 @@ export default function ComposerManagement({
           id: "title",
           header: m.admin_composer_column_title(),
           enableSorting: false,
-          cell: ({ row }) =>
-            row.original.title_nl || row.original.title_en || row.original.title_fr,
+          cell: ({ row }) => row.original[`title_${row.original.text_language}`],
         }),
         columnHelper.display({
           id: "channels",
@@ -328,6 +334,17 @@ export default function ComposerManagement({
             void form.handleSubmit();
           }}
         >
+          <form.Field name="text_language">
+            {(field) => (
+              <OriginalLanguageSelect
+                controlId="composer-text-language"
+                label={m.admin_composer_original_language()}
+                value={field.value}
+                onChange={(language) => field.handleChange(language)}
+              />
+            )}
+          </form.Field>
+          <p className="text-sm text-subtle mb-2">{m.admin_composer_text_help()}</p>
           <div className="flex gap-2 mb-2">
             {(["nl", "en", "fr"] as const).map((locale) => (
               <Button

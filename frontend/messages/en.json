@@ -1009,7 +1009,6 @@
   "admin_announcement_order_column": "Order",
   "admin_announcement_preview_column": "Preview",
   "admin_announcement_locales_column": "Locales",
-  "admin_announcement_missing_translation": "Missing translation",
   "admin_announcement_disable_action": "Disable",
   "admin_announcement_publish_action": "Publish",
   "admin_error_load_policy": "Policy could not be loaded.",
@@ -1248,5 +1247,9 @@
   "admin_faq_original_language": "Original language",
   "admin_faq_text_help": "Fill in the question and answer in the original language. The other languages are optional translations; a language is shown only when both its question and answer are filled, otherwise visitors see the original.",
   "admin_faq_question_label_in": "Question ({language})",
-  "admin_faq_answer_label_in": "Answer ({language})"
+  "admin_faq_answer_label_in": "Answer ({language})",
+  "admin_announcement_original_language": "Original language",
+  "admin_announcement_text_help": "The text (and the link label when there is a link) is required in the original language. The other languages are optional; visitors fall back to the original.",
+  "admin_composer_original_language": "Original language",
+  "admin_composer_text_help": "Title and body are required in the original language. A language is used only when both its title and body are filled; otherwise the original is sent."
 }

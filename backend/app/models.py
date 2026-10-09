@@ -1321,9 +1321,23 @@ class Announcement(Base):
         UniqueConstraint("sort_order", name="uq_announcements_sort_order", deferrable=True, initially="DEFERRED"),
         CheckConstraint("level IN ('info', 'warning', 'urgent')", name="ck_announcements_level"),
         CheckConstraint("ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at", name="ck_announcements_window"),
+        CheckConstraint(
+            "((text_language = 'nl' AND length(trim(text_nl)) > 0) OR "
+            "(text_language = 'fr' AND length(trim(text_fr)) > 0) OR "
+            "(text_language = 'en' AND length(trim(text_en)) > 0)) IS TRUE",
+            name="ck_announcements_text_original",
+        ),
+        CheckConstraint(
+            "link_url IS NULL OR ((text_language = 'nl' AND length(trim(link_label_nl)) > 0) OR "
+            "(text_language = 'fr' AND length(trim(link_label_fr)) > 0) OR "
+            "(text_language = 'en' AND length(trim(link_label_en)) > 0)) IS TRUE",
+            name="ck_announcements_link_label_original",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    text_language: Mapped[str] = mapped_column(String(2))
+    """Original language of the text and link label: both must have text there."""
     text_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
     text_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
     text_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -1341,6 +1355,21 @@ class Announcement(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
+    def localized_text(self, locale: str | None) -> str:
+        return resolve_text({"nl": self.text_nl, "fr": self.text_fr, "en": self.text_en}, self.text_language, locale)
+
+    def localized_link_label(self, locale: str | None) -> str | None:
+        if not self.link_url:
+            return None
+        return (
+            resolve_text(
+                {"nl": self.link_label_nl, "fr": self.link_label_fr, "en": self.link_label_en},
+                self.text_language,
+                locale,
+            )
+            or None
+        )
+
 
 class ComposedMessage(Base):
     """A centrally-composed operational message delivered through one or more
@@ -1357,9 +1386,17 @@ class ComposedMessage(Base):
     __table_args__ = (
         CheckConstraint("level IN ('info', 'warning', 'urgent')", name="ck_composed_messages_level"),
         CheckConstraint("state IN ('draft', 'scheduled', 'sent')", name="ck_composed_messages_state"),
+        CheckConstraint(
+            "((text_language = 'nl' AND length(trim(title_nl)) > 0 AND length(trim(body_nl)) > 0) OR "
+            "(text_language = 'fr' AND length(trim(title_fr)) > 0 AND length(trim(body_fr)) > 0) OR "
+            "(text_language = 'en' AND length(trim(title_en)) > 0 AND length(trim(body_en)) > 0)) IS TRUE",
+            name="ck_composed_messages_original",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    text_language: Mapped[str] = mapped_column(String(2))
+    """Original language of the title and body: both must have text there."""
     title_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
     title_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
     title_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)

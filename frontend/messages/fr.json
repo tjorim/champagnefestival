@@ -1009,7 +1009,6 @@
   "admin_announcement_order_column": "Ordre",
   "admin_announcement_preview_column": "Aperçu",
   "admin_announcement_locales_column": "Langues",
-  "admin_announcement_missing_translation": "Traduction manquante",
   "admin_announcement_disable_action": "Désactiver",
   "admin_announcement_publish_action": "Publier",
   "admin_error_load_policy": "La politique n'a pas pu être chargée.",
@@ -1248,5 +1247,9 @@
   "admin_faq_original_language": "Langue d'origine",
   "admin_faq_text_help": "Renseignez la question et la réponse dans la langue d'origine. Les autres langues sont des traductions facultatives ; une langue n'est affichée que si sa question et sa réponse sont renseignées, sinon les visiteurs voient l'original.",
   "admin_faq_question_label_in": "Question ({language})",
-  "admin_faq_answer_label_in": "Réponse ({language})"
+  "admin_faq_answer_label_in": "Réponse ({language})",
+  "admin_announcement_original_language": "Langue d'origine",
+  "admin_announcement_text_help": "Le texte (et le libellé du lien s'il y a un lien) est obligatoire dans la langue d'origine. Les autres langues sont facultatives ; sinon les visiteurs voient l'original.",
+  "admin_composer_original_language": "Langue d'origine",
+  "admin_composer_text_help": "Le titre et le texte sont obligatoires dans la langue d'origine. Une langue n'est utilisée que si son titre et son texte sont renseignés ; sinon l'original est envoyé."
 }

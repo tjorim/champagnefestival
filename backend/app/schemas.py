@@ -2077,54 +2077,33 @@ class FaqItemPublicOut(BaseModel):
     answer: str
 
 
-class AnnouncementWrite(RequestModel):
+_BLANK_TO_NONE = ("text_nl", "text_fr", "text_en", "link_label_nl", "link_label_fr", "link_label_en")
+
+
+class AnnouncementFields(RequestModel):
+    """Announcement text and link label per language (#1222): the original language
+    must have the text (and the link label when there is a link), the others are
+    optional translations, and visitors fall back to the original."""
+
+    text_language: Language | None = None
     text_nl: str | None = Field(default=None, max_length=500)
-    text_en: str | None = Field(default=None, max_length=500)
     text_fr: str | None = Field(default=None, max_length=500)
-    level: AnnouncementLevel = "info"
-    active: bool = False
-    starts_at: datetime | None = None
-    ends_at: datetime | None = None
-    link_url: str | None = Field(default=None, max_length=1000)
-    link_label_nl: str | None = Field(default=None, max_length=120)
-    link_label_en: str | None = Field(default=None, max_length=120)
-    link_label_fr: str | None = Field(default=None, max_length=120)
-
-    _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
-
-    @model_validator(mode="after")
-    def validate_announcement(self):
-        if self.active and not any((self.text_nl, self.text_en, self.text_fr)):
-            raise ValueError("an active announcement needs at least one translation")
-        if self.starts_at and self.starts_at.utcoffset() is None:
-            raise ValueError("starts_at must include a timezone")
-        if self.ends_at and self.ends_at.utcoffset() is None:
-            raise ValueError("ends_at must include a timezone")
-        if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
-            raise ValueError("ends_at must be later than starts_at")
-        if self.link_url and not any((self.link_label_nl, self.link_label_en, self.link_label_fr)):
-            raise ValueError("a link URL requires at least one translated link label")
-        return self
-
-
-class AnnouncementCreate(AnnouncementWrite):
-    pass
-
-
-class AnnouncementUpdate(RequestModel):
-    text_nl: str | None = Field(default=None, max_length=500)
     text_en: str | None = Field(default=None, max_length=500)
-    text_fr: str | None = Field(default=None, max_length=500)
     level: AnnouncementLevel | None = None
     active: bool | None = None
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     link_url: str | None = Field(default=None, max_length=1000)
     link_label_nl: str | None = Field(default=None, max_length=120)
-    link_label_en: str | None = Field(default=None, max_length=120)
     link_label_fr: str | None = Field(default=None, max_length=120)
+    link_label_en: str | None = Field(default=None, max_length=120)
 
     _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
+
+    @field_validator(*_BLANK_TO_NONE, mode="before")
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
 
     @field_validator("starts_at", "ends_at")
     @classmethod
@@ -2134,15 +2113,43 @@ class AnnouncementUpdate(RequestModel):
         return value
 
 
+class AnnouncementWrite(AnnouncementFields):
+    """The complete, validated state of an announcement (create body, and what an update merges into)."""
+
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    level: AnnouncementLevel = "info"
+    active: bool = False
+
+    @model_validator(mode="after")
+    def validate_announcement(self):
+        language = self.text_language
+        if not getattr(self, f"text_{language}"):
+            raise ValueError("an announcement needs text in its original language")
+        if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
+            raise ValueError("ends_at must be later than starts_at")
+        if self.link_url and not getattr(self, f"link_label_{language}"):
+            raise ValueError("a link URL requires a link label in the announcement's original language")
+        return self
+
+
+class AnnouncementCreate(AnnouncementWrite):
+    pass
+
+
+class AnnouncementUpdate(AnnouncementFields):
+    """Partial update: an empty string clears a translation; the merged result is validated."""
+
+
 class AnnouncementReorder(RequestModel):
     ordered_ids: list[str] = Field(min_length=1)
 
 
 class AnnouncementOut(BaseModel):
     id: str
+    text_language: Language
     text_nl: str | None
-    text_en: str | None
     text_fr: str | None
+    text_en: str | None
     level: AnnouncementLevel
     active: bool
     sort_order: int
@@ -2325,52 +2332,28 @@ ComposedMessageChannel = Literal["announcement", "push"]
 ComposedMessageState = Literal["draft", "scheduled", "sent"]
 
 
-class ComposedMessageWrite(RequestModel):
+class ComposedMessageFields(RequestModel):
+    """Title and body per language (#1222): the original language must have both,
+    the others are optional, and a language is used only when both its title and
+    body have text (otherwise the original is delivered)."""
+
+    text_language: Language | None = None
     title_nl: str | None = Field(default=None, max_length=500)
-    title_en: str | None = Field(default=None, max_length=500)
     title_fr: str | None = Field(default=None, max_length=500)
-    body_nl: str | None = Field(default=None, max_length=500)
-    body_en: str | None = Field(default=None, max_length=500)
-    body_fr: str | None = Field(default=None, max_length=500)
-    level: AnnouncementLevel = "info"
-    channels: list[ComposedMessageChannel] = Field(min_length=1)
-    link_url: str | None = Field(default=None, max_length=1000)
-
-    _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
-
-    @model_validator(mode="after")
-    def validate_composed_message(self):
-        if pick_locale_text(self, "nl") is None:
-            raise ValueError("a composed message needs at least one complete translated title/body pair")
-        if "push" in self.channels:
-            for locale in LOCALES:
-                text = pick_locale_text(self, locale)
-                if text is not None:
-                    build_composer_payload(*text)
-        if len(set(self.channels)) != len(self.channels):
-            raise ValueError("channels must not contain duplicates")
-        return self
-
-
-class ComposedMessageCreate(ComposedMessageWrite):
-    pass
-
-
-class ComposedMessageUpdate(RequestModel):
-    """Only valid while the message is still ``draft`` — see
-    ``app.services.composer_service.update_draft``."""
-
-    title_nl: str | None = Field(default=None, max_length=500)
     title_en: str | None = Field(default=None, max_length=500)
-    title_fr: str | None = Field(default=None, max_length=500)
     body_nl: str | None = Field(default=None, max_length=500)
-    body_en: str | None = Field(default=None, max_length=500)
     body_fr: str | None = Field(default=None, max_length=500)
+    body_en: str | None = Field(default=None, max_length=500)
     level: AnnouncementLevel | None = None
     channels: list[ComposedMessageChannel] | None = Field(default=None, min_length=1)
     link_url: str | None = Field(default=None, max_length=1000)
 
     _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
+
+    @field_validator("title_nl", "title_fr", "title_en", "body_nl", "body_fr", "body_en", mode="before")
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
 
     @field_validator("channels")
     @classmethod
@@ -2380,14 +2363,44 @@ class ComposedMessageUpdate(RequestModel):
         return value
 
 
+class ComposedMessageWrite(ComposedMessageFields):
+    """The complete, validated state of a composed message (create body, and what an update merges into)."""
+
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    level: AnnouncementLevel = "info"
+    channels: list[ComposedMessageChannel] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_composed_message(self):
+        language = self.text_language
+        if not getattr(self, f"title_{language}") or not getattr(self, f"body_{language}"):
+            raise ValueError("a composed message needs a title and a body in its original language")
+        if "push" in self.channels:
+            for locale in LOCALES:
+                text = pick_locale_text(self, locale)
+                if text is not None:
+                    build_composer_payload(*text)
+        return self
+
+
+class ComposedMessageCreate(ComposedMessageWrite):
+    pass
+
+
+class ComposedMessageUpdate(ComposedMessageFields):
+    """Only valid while the message is still ``draft`` — see
+    ``app.services.composer_service.update_draft``."""
+
+
 class ComposedMessageOut(BaseModel):
     id: str
+    text_language: Language
     title_nl: str | None
-    title_en: str | None
     title_fr: str | None
+    title_en: str | None
     body_nl: str | None
-    body_en: str | None
     body_fr: str | None
+    body_en: str | None
     level: AnnouncementLevel
     channels: list[str]
     link_url: str | None

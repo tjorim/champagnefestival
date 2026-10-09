@@ -32,6 +32,7 @@ def _stub_composer_push_endpoint_as_public(monkeypatch):
 
 def _draft_body(**overrides) -> dict:
     body = {
+        "text_language": "nl",
         "title_nl": "Belangrijke mededeling",
         "title_en": "Important notice",
         "title_fr": "Avis important",
@@ -276,7 +277,9 @@ async def test_deliver_composer_push_success(client, db_session, monkeypatch):
     assert "The festival starts tomorrow." in calls[0]
 
 
-async def test_deliver_composer_push_falls_back_to_dutch_for_missing_locale_text(client, db_session, monkeypatch):
+async def test_deliver_composer_push_falls_back_to_the_original_for_missing_locale_text(
+    client, db_session, monkeypatch
+):
     _enable_vapid(monkeypatch)
     subscription_id = await _create_subscription(client, endpoint="https://push.example.com/fr-sub", locale="fr")
     created = await client.post(
@@ -481,19 +484,23 @@ async def test_update_validates_merged_locale_pairs(client):
     assert saved.json()["body_en"] == "Body"
 
 
-@pytest.mark.parametrize("locale", ["en", "fr"])
-def test_locale_fallback_uses_available_complete_pair(locale):
+@pytest.mark.parametrize("locale", ["nl", "fr", "en"])
+def test_locale_fallback_uses_the_original_complete_pair(locale):
     from app.composer_content import pick_locale_text
 
-    message = ComposedMessage(**{f"title_{locale}": "Title", f"body_{locale}": "Body"})
-    assert pick_locale_text(message, "nl") == ("Title", "Body")
+    message = ComposedMessage(text_language=locale, **{f"title_{locale}": "Title", f"body_{locale}": "Body"})
+    for requested in ("nl", "fr", "en"):
+        assert pick_locale_text(message, requested) == ("Title", "Body")
 
 
-def test_locale_fallback_never_mixes_languages_and_prefers_dutch():
+def test_locale_fallback_never_mixes_languages():
     from app.composer_content import pick_locale_text
 
-    message = ComposedMessage(title_nl="Titel", body_nl="Inhoud", title_en="Title", title_fr="Titre", body_fr="Corps")
-    assert pick_locale_text(message, "en") == ("Titel", "Inhoud")
+    message = ComposedMessage(
+        text_language="nl", title_nl="Titel", body_nl="Inhoud", title_en="Title", title_fr="Titre", body_fr="Corps"
+    )
+    assert pick_locale_text(message, "nl") == ("Titel", "Inhoud")
+    assert pick_locale_text(message, "en") == ("Titel", "Inhoud")  # English has a title but no body
     assert pick_locale_text(message, "fr") == ("Titre", "Corps")
 
 
@@ -509,3 +516,22 @@ async def test_schedule_revalidates_legacy_push_payload(client, db_session):
     assert message.state == "draft"
     jobs = (await db_session.execute(select(OutboxJob).where(OutboxJob.resource_id == message_id))).scalars().all()
     assert jobs == []
+
+
+async def test_composed_message_requires_a_complete_pair_in_its_original_language(client):
+    only_dutch_title = _draft_body(text_language="nl", body_nl=None)
+    assert (await client.post("/api/composer", json=only_dutch_title, headers=ADMIN_HEADERS)).status_code == 422
+    english_default = _draft_body()
+    english_default.pop("text_language")
+    created = await client.post("/api/composer", json=english_default, headers=ADMIN_HEADERS)
+    assert created.status_code == 201
+    assert created.json()["text_language"] == "en"  # English is the default original language
+
+    message_id = created.json()["id"]
+    cleared = await client.put(
+        f"/api/composer/{message_id}", json={"body_en": "", "body_nl": "x"}, headers=ADMIN_HEADERS
+    )
+    assert cleared.status_code == 400
+    switched = await client.put(f"/api/composer/{message_id}", json={"text_language": "fr"}, headers=ADMIN_HEADERS)
+    assert switched.status_code == 200
+    assert switched.json()["text_language"] == "fr"

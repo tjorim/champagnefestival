@@ -1009,7 +1009,6 @@
   "admin_announcement_order_column": "Volgorde",
   "admin_announcement_preview_column": "Voorbeeld",
   "admin_announcement_locales_column": "Talen",
-  "admin_announcement_missing_translation": "Vertaling ontbreekt",
   "admin_announcement_disable_action": "Uitschakelen",
   "admin_announcement_publish_action": "Publiceren",
   "admin_error_load_policy": "Beleid kon niet worden geladen.",
@@ -1248,5 +1247,9 @@
   "admin_faq_original_language": "Oorspronkelijke taal",
   "admin_faq_text_help": "Vul vraag en antwoord in de oorspronkelijke taal in. De andere talen zijn optionele vertalingen; een taal wordt enkel getoond als zowel vraag als antwoord zijn ingevuld, anders zien bezoekers het origineel.",
   "admin_faq_question_label_in": "Vraag ({language})",
-  "admin_faq_answer_label_in": "Antwoord ({language})"
+  "admin_faq_answer_label_in": "Antwoord ({language})",
+  "admin_announcement_original_language": "Oorspronkelijke taal",
+  "admin_announcement_text_help": "De tekst (en het linklabel als er een link is) is verplicht in de oorspronkelijke taal. De andere talen zijn optioneel; bezoekers krijgen anders het origineel.",
+  "admin_composer_original_language": "Oorspronkelijke taal",
+  "admin_composer_text_help": "Titel en tekst zijn verplicht in de oorspronkelijke taal. Een taal wordt enkel gebruikt als zowel titel als tekst zijn ingevuld; anders wordt het origineel verstuurd."
 }
