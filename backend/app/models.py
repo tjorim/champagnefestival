@@ -1430,19 +1430,32 @@ class Policy(Base):
 
     The title is mutable chrome, not content — it lives here rather than on
     ``PolicyVersion`` because only published *content* needs to be immutable.
-    ``required_locales`` is the explicit per-policy locale contract: publishing
-    is refused unless every listed locale has non-blank content, so the public
-    endpoint never has to silently substitute another locale.
+    Like other translated content it has an original language
+    (``title_language``) that must have a title; the other languages are
+    optional and visitors fall back to the original.
     """
 
     __tablename__ = "policies"
+    __table_args__ = (
+        CheckConstraint(
+            "((title_language = 'nl' AND length(trim(title_nl)) > 0) OR "
+            "(title_language = 'fr' AND length(trim(title_fr)) > 0) OR "
+            "(title_language = 'en' AND length(trim(title_en)) > 0)) IS TRUE",
+            name="ck_policies_title_original",
+        ),
+    )
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
-    title_nl: Mapped[str] = mapped_column(String(200))
-    title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    title_language: Mapped[str] = mapped_column(String(2))
+    title_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    required_locales: Mapped[str] = mapped_column(String(20), default="nl,en,fr")
+    title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+    def localized_title(self, locale: str | None) -> str:
+        return resolve_text(
+            {"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, self.title_language, locale
+        )
 
     versions: Mapped[list[PolicyVersion]] = relationship(
         back_populates="policy", order_by="PolicyVersion.version_number"
@@ -1466,6 +1479,12 @@ class PolicyVersion(Base):
     __table_args__ = (
         UniqueConstraint("policy_key", "version_number", name="uq_policy_versions_number"),
         CheckConstraint("status IN ('draft', 'published', 'superseded')", name="ck_policy_versions_status"),
+        CheckConstraint(
+            "status = 'draft' OR ((content_language = 'nl' AND length(trim(content_nl)) > 0) OR "
+            "(content_language = 'fr' AND length(trim(content_fr)) > 0) OR "
+            "(content_language = 'en' AND length(trim(content_en)) > 0)) IS TRUE",
+            name="ck_policy_versions_original",
+        ),
         Index(
             "uq_policy_versions_one_draft",
             "policy_key",
@@ -1484,6 +1503,8 @@ class PolicyVersion(Base):
     policy_key: Mapped[str] = mapped_column(String(64), ForeignKey("policies.key"))
     version_number: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(12), default="draft")
+    content_language: Mapped[str] = mapped_column(String(2))
+    """Original language of this version's content; a published version must have text there."""
     content_nl: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_fr: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -1495,3 +1516,11 @@ class PolicyVersion(Base):
     published_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     policy: Mapped[Policy] = relationship(back_populates="versions")
+
+    def localized_content(self, locale: str | None) -> tuple[str, str]:
+        """The (content, language it is written in) for *locale*, falling back to the original."""
+        values = {"nl": self.content_nl, "fr": self.content_fr, "en": self.content_en}
+        for language in (locale, self.content_language):
+            if language and (values.get(language) or "").strip():
+                return values[language] or "", language
+        return "", self.content_language

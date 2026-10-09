@@ -1017,7 +1017,6 @@
   "admin_error_discard_draft_request": "Draft could not be discarded.",
   "admin_error_publish_draft_request": "Draft could not be published.",
   "admin_error_render_preview": "Preview could not be rendered.",
-  "admin_policy_required_locales_label": "— required locales:",
   "admin_policy_currently_published": "Currently published: version {version}, last updated {date}",
   "admin_policy_create_draft_action": "Create draft from current version",
   "admin_policy_editing_draft_label": "Editing draft version {version} — locales:",
@@ -1251,5 +1250,7 @@
   "admin_announcement_original_language": "Original language",
   "admin_announcement_text_help": "The text (and the link label when there is a link) is required in the original language. The other languages are optional; visitors fall back to the original.",
   "admin_composer_original_language": "Original language",
-  "admin_composer_text_help": "Title and body are required in the original language. A language is used only when both its title and body are filled; otherwise the original is sent."
+  "admin_composer_text_help": "Title and body are required in the original language. A language is used only when both its title and body are filled; otherwise the original is sent.",
+  "admin_policy_original_language": "Original language",
+  "admin_policy_original_help": "Publishing needs content in the original language. Other languages are optional; visitors without a translation see the original."
 }

@@ -14,14 +14,14 @@ from app.services.policy_markdown import render_markdown
 from tests.helpers import ADMIN_HEADERS
 
 
-async def _seed_policy(db_session, *, key: str = "privacy", required_locales: str = "nl,en,fr") -> None:
+async def _seed_policy(db_session, *, key: str = "privacy") -> None:
     db_session.add(
         Policy(
             key=key,
+            title_language="nl",
             title_nl="Privacybeleid",
             title_en="Privacy Policy",
             title_fr="Politique de Confidentialité",
-            required_locales=required_locales,
         )
     )
     await db_session.commit()
@@ -110,6 +110,7 @@ async def test_create_edit_and_publish_draft_from_scratch(client, db_session):
     updated = await client.put(
         "/api/policies/privacy/draft",
         json={
+            "content_language": "nl",
             "content_nl": "## Titel\n\nInhoud.",
             "content_en": "## Title\n\nContent.",
             "content_fr": "## Titre\n\nContenu.",
@@ -136,9 +137,10 @@ async def test_create_edit_and_publish_draft_from_scratch(client, db_session):
 
 
 @pytest.mark.anyio
-async def test_publish_refused_when_required_locale_missing(client, db_session):
-    await _seed_policy(db_session, required_locales="nl,en,fr")
-    await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
+async def test_publish_refused_without_content_in_the_original_language(client, db_session):
+    await _seed_policy(db_session)
+    created = await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
+    assert created.json()["content_language"] == "en"  # English is the default original language
     await client.put(
         "/api/policies/privacy/draft",
         json={"content_nl": "Alleen NL."},
@@ -146,7 +148,10 @@ async def test_publish_refused_when_required_locale_missing(client, db_session):
     )
     response = await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)
     assert response.status_code == 400
-    assert "en" in response.json()["detail"] and "fr" in response.json()["detail"]
+    assert "original language 'en'" in response.json()["detail"]
+
+    await client.put("/api/policies/privacy/draft", json={"content_language": "nl"}, headers=ADMIN_HEADERS)
+    assert (await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)).status_code == 200
 
 
 @pytest.mark.anyio
@@ -160,20 +165,24 @@ async def test_only_one_open_draft_at_a_time(client, db_session):
 
 @pytest.mark.anyio
 async def test_published_versions_are_immutable_and_historical_versions_remain_inspectable(client, db_session):
-    await _seed_policy(db_session, required_locales="nl")
+    await _seed_policy(db_session)
     await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
-    await client.put("/api/policies/privacy/draft", json={"content_nl": "V1"}, headers=ADMIN_HEADERS)
+    await client.put(
+        "/api/policies/privacy/draft", json={"content_language": "nl", "content_nl": "V1"}, headers=ADMIN_HEADERS
+    )
     v1 = (await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)).json()
 
     # No draft remains open after publishing — editing "the draft" now 404s,
     # which is what keeps a published version immutable.
     edit_after_publish = await client.put(
-        "/api/policies/privacy/draft", json={"content_nl": "tampered"}, headers=ADMIN_HEADERS
+        "/api/policies/privacy/draft", json={"content_language": "nl", "content_nl": "tampered"}, headers=ADMIN_HEADERS
     )
     assert edit_after_publish.status_code == 404
 
     await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
-    await client.put("/api/policies/privacy/draft", json={"content_nl": "V2"}, headers=ADMIN_HEADERS)
+    await client.put(
+        "/api/policies/privacy/draft", json={"content_language": "nl", "content_nl": "V2"}, headers=ADMIN_HEADERS
+    )
     v2 = (await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)).json()
     assert v2["version_number"] == v1["version_number"] + 1
 
@@ -191,13 +200,17 @@ async def test_published_versions_are_immutable_and_historical_versions_remain_i
 
 @pytest.mark.anyio
 async def test_rollback_seeds_a_new_draft_from_an_older_version(client, db_session):
-    await _seed_policy(db_session, required_locales="nl")
+    await _seed_policy(db_session)
     await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
-    await client.put("/api/policies/privacy/draft", json={"content_nl": "Original"}, headers=ADMIN_HEADERS)
+    await client.put(
+        "/api/policies/privacy/draft", json={"content_language": "nl", "content_nl": "Original"}, headers=ADMIN_HEADERS
+    )
     v1 = (await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)).json()
 
     await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
-    await client.put("/api/policies/privacy/draft", json={"content_nl": "Mistake"}, headers=ADMIN_HEADERS)
+    await client.put(
+        "/api/policies/privacy/draft", json={"content_language": "nl", "content_nl": "Mistake"}, headers=ADMIN_HEADERS
+    )
     await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)
 
     rollback_draft = await client.post(
@@ -229,39 +242,43 @@ async def test_discard_draft_without_publishing(client, db_session):
 
 
 @pytest.mark.anyio
-async def test_public_endpoint_never_silently_serves_another_locale(client, db_session):
-    await _seed_policy(db_session, required_locales="nl,en")
+async def test_public_endpoint_falls_back_to_the_original_language(client, db_session):
+    await _seed_policy(db_session)
     await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
     await client.put(
         "/api/policies/privacy/draft",
-        json={"content_nl": "Nederlands", "content_en": "English"},
+        json={"content_language": "nl", "content_nl": "Nederlands", "content_en": "English"},
         headers=ADMIN_HEADERS,
     )
-    publish = await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)
-    assert publish.status_code == 200
+    assert (await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)).status_code == 200
 
-    assert (await client.get("/api/policies/privacy/current", params={"locale": "nl"})).status_code == 200
-    assert (await client.get("/api/policies/privacy/current", params={"locale": "en"})).status_code == 200
-    # French was never required/provided — must 404, not silently fall back to nl/en.
-    missing = await client.get("/api/policies/privacy/current", params={"locale": "fr"})
-    assert missing.status_code == 404
+    for locale, text, language, title in (
+        ("nl", "Nederlands", "nl", "Privacybeleid"),
+        ("en", "English", "en", "Privacy Policy"),
+        # French has no content: the original (Dutch) is served and `locale` says so.
+        ("fr", "Nederlands", "nl", "Politique de Confidentialité"),
+    ):
+        response = await client.get("/api/policies/privacy/current", params={"locale": locale})
+        assert response.status_code == 200, locale
+        body = response.json()
+        assert text in body["html"]
+        assert (body["locale"], body["title"]) == (language, title)
 
 
 @pytest.mark.anyio
 async def test_public_endpoint_treats_whitespace_only_content_as_missing(client, db_session):
-    await _seed_policy(db_session, required_locales="nl")
+    await _seed_policy(db_session)
     await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
-    # fr isn't required, so a stray whitespace-only value doesn't block publish —
-    # but it must still 404 publicly rather than serve blank HTML with a 200.
     await client.put(
         "/api/policies/privacy/draft",
-        json={"content_nl": "Nederlands", "content_fr": "   "},
+        json={"content_language": "nl", "content_nl": "Nederlands", "content_fr": "   "},
         headers=ADMIN_HEADERS,
     )
     assert (await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)).status_code == 200
 
     response = await client.get("/api/policies/privacy/current", params={"locale": "fr"})
-    assert response.status_code == 404
+    assert response.status_code == 200
+    assert "Nederlands" in response.json()["html"]  # blank French is not served as an empty page
 
 
 # ---------------------------------------------------------------------------
@@ -271,14 +288,16 @@ async def test_public_endpoint_treats_whitespace_only_content_as_missing(client,
 
 @pytest.mark.anyio
 async def test_preview_endpoint_matches_public_rendering(client, db_session):
-    await _seed_policy(db_session, required_locales="nl")
+    await _seed_policy(db_session)
     markdown = "## Preview\n\n<script>bad()</script> Some *text*."
     preview = await client.post("/api/policies/render", json={"markdown": markdown}, headers=ADMIN_HEADERS)
     assert preview.status_code == 200
     assert preview.json()["html"] == render_markdown(markdown)
 
     await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
-    await client.put("/api/policies/privacy/draft", json={"content_nl": markdown}, headers=ADMIN_HEADERS)
+    await client.put(
+        "/api/policies/privacy/draft", json={"content_language": "nl", "content_nl": markdown}, headers=ADMIN_HEADERS
+    )
     await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)
     public = await client.get("/api/policies/privacy/current", params={"locale": "nl"})
     assert public.json()["html"] == preview.json()["html"]
@@ -294,13 +313,13 @@ async def test_concurrent_publish_attempts_do_not_double_publish(engine):
     sessions = async_sessionmaker(engine, expire_on_commit=False)
 
     async with sessions() as setup:
-        await _seed_policy(setup, required_locales="nl")
+        await _seed_policy(setup)
         await create_draft(setup, actor="admin-a", policy_key="privacy", body=PolicyDraftCreate(), request_id=None)
         await update_draft(
             setup,
             actor="admin-a",
             policy_key="privacy",
-            body=PolicyDraftUpdate(content_nl="Race content"),
+            body=PolicyDraftUpdate(content_language="nl", content_nl="Race content"),
             request_id=None,
         )
 

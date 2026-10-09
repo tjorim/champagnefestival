@@ -1017,7 +1017,6 @@
   "admin_error_discard_draft_request": "Le brouillon n'a pas pu être supprimé.",
   "admin_error_publish_draft_request": "Le brouillon n'a pas pu être publié.",
   "admin_error_render_preview": "L'aperçu n'a pas pu être généré.",
-  "admin_policy_required_locales_label": "— langues requises :",
   "admin_policy_currently_published": "Actuellement publiée : version {version}, dernière mise à jour {date}",
   "admin_policy_create_draft_action": "Créer un brouillon à partir de la version actuelle",
   "admin_policy_editing_draft_label": "Modification du brouillon version {version} — langues :",
@@ -1251,5 +1250,7 @@
   "admin_announcement_original_language": "Langue d'origine",
   "admin_announcement_text_help": "Le texte (et le libellé du lien s'il y a un lien) est obligatoire dans la langue d'origine. Les autres langues sont facultatives ; sinon les visiteurs voient l'original.",
   "admin_composer_original_language": "Langue d'origine",
-  "admin_composer_text_help": "Le titre et le texte sont obligatoires dans la langue d'origine. Une langue n'est utilisée que si son titre et son texte sont renseignés ; sinon l'original est envoyé."
+  "admin_composer_text_help": "Le titre et le texte sont obligatoires dans la langue d'origine. Une langue n'est utilisée que si son titre et son texte sont renseignés ; sinon l'original est envoyé.",
+  "admin_policy_original_language": "Langue d'origine",
+  "admin_policy_original_help": "La publication exige du contenu dans la langue d'origine. Les autres langues sont facultatives ; sans traduction, les visiteurs voient l'original."
 }

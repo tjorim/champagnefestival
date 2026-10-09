@@ -2183,9 +2183,10 @@ class PolicyVersionOut(BaseModel):
     policy_key: str
     version_number: int
     status: PolicyVersionStatus
+    content_language: Language
     content_nl: str | None
-    content_en: str | None
     content_fr: str | None
+    content_en: str | None
     change_summary: str | None
     created_at: datetime
     created_by: str
@@ -2200,10 +2201,10 @@ class PolicyOut(BaseModel):
     """Admin shape: the policy plus its full version history, newest first."""
 
     key: str
-    title_nl: str
-    title_en: str | None
+    title_language: Language
+    title_nl: str | None
     title_fr: str | None
-    required_locales: list[FaqLocale]
+    title_en: str | None
     versions: list[PolicyVersionOut]
 
 
@@ -2220,9 +2221,13 @@ class PolicyDraftCreate(RequestModel):
 
 
 class PolicyDraftUpdate(RequestModel):
+    """Edit the open draft. The draft may be incomplete; publishing requires text in
+    its original language (`content_language`)."""
+
+    content_language: Language | None = None
     content_nl: str | None = Field(default=None, max_length=200_000)
-    content_en: str | None = Field(default=None, max_length=200_000)
     content_fr: str | None = Field(default=None, max_length=200_000)
+    content_en: str | None = Field(default=None, max_length=200_000)
     change_summary: str | None = Field(default=None, max_length=2000)
 
 
@@ -2244,6 +2249,8 @@ class PolicyPublicOut(BaseModel):
     key: str
     title: str
     locale: FaqLocale
+    """The language `html` is written in: the requested one, or the policy's original
+    language when that locale has no content."""
     html: str
     version_number: int
     published_at: datetime

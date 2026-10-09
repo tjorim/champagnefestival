@@ -20,7 +20,7 @@ from app.schemas import (
     PolicyVersionOut,
 )
 from app.services import policies_service as service
-from app.services.errors import NotFoundError, ServiceError, to_http_exception
+from app.services.errors import ServiceError, to_http_exception
 from app.services.policy_markdown import render_markdown
 
 router = APIRouter(prefix="/api/policies", tags=["policies"])
@@ -41,17 +41,15 @@ async def get_current(
 ) -> dict:
     """Public: the latest published version, rendered for `locale`.
 
-    404s rather than falling back to another locale when this locale is not
-    (yet) required/present — see #944's locale-publication rules.
+    A locale without content gets the policy's original language instead, and
+    `locale` in the response names the language the HTML is written in.
     """
     policy, version = await _call(service.get_published(db, policy_key=policy_key))
-    content = getattr(version, f"content_{locale}")
-    if not (content or "").strip():
-        raise to_http_exception(NotFoundError(f"Policy '{policy_key}' has no published content for locale '{locale}'."))
+    title, content, language = service.resolve_published(policy, version, locale)
     return {
         "key": policy.key,
-        "title": getattr(policy, f"title_{locale}") or policy.title_nl,
-        "locale": locale,
+        "title": title,
+        "locale": language,
         "html": render_markdown(content),
         "version_number": version.version_number,
         "published_at": version.published_at,

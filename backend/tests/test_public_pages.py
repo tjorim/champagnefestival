@@ -12,9 +12,10 @@ import asyncio
 from pathlib import Path
 
 import pytest
+from sqlalchemy import select
 
 from app.config import settings
-from app.models import Policy
+from app.models import Policy, PolicyVersion
 from tests.helpers import ADMIN_HEADERS, _create_event
 
 _FIXTURE_DIST = Path(__file__).parent / "fixtures" / "frontend_dist"
@@ -29,10 +30,10 @@ async def _seed_policy(db_session, *, key: str = "privacy") -> None:
     db_session.add(
         Policy(
             key=key,
+            title_language="nl",
             title_nl="Privacybeleid",
             title_en="Privacy Policy",
             title_fr="Politique de Confidentialité",
-            required_locales="nl,en,fr",
         )
     )
     await db_session.commit()
@@ -43,7 +44,12 @@ async def _publish_policy(client, *, content_nl: str = "## Titel\n\nInhoud.") ->
     assert created.status_code == 201
     await client.put(
         "/api/policies/privacy/draft",
-        json={"content_nl": content_nl, "content_en": "## Title\n\nContent.", "content_fr": "## Titre\n\nContenu."},
+        json={
+            "content_language": "nl",
+            "content_nl": content_nl,
+            "content_en": "## Title\n\nContent.",
+            "content_fr": "## Titre\n\nContenu.",
+        },
         headers=ADMIN_HEADERS,
     )
     published = await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)
@@ -172,6 +178,22 @@ async def test_privacy_page_renders_published_markdown_content(client, db_sessio
     assert 'href="https://champagnefestival.tjor.im/privacy"' in r_privacy.text
     # Unrelated route's own render is unaffected.
     assert r.status_code == 200
+
+
+async def test_privacy_page_falls_back_to_the_original_language(client, db_session):
+    await _seed_policy(db_session)
+    await _publish_policy(client)
+    # Remove the French text of the published policy: French visitors get the Dutch original.
+    published = (
+        await db_session.execute(select(PolicyVersion).where(PolicyVersion.status == "published"))
+    ).scalar_one()
+    published.content_fr = None
+    await db_session.commit()
+
+    r = await client.get("/privacy", params={"lng": "fr"})
+    assert r.status_code == 200
+    assert "<h2>Titel</h2>" in r.text
+    assert 'html lang="nl"' in r.text  # the page says which language its content is in
 
 
 async def test_home_page_is_served_from_cache_on_a_second_request(client, monkeypatch):

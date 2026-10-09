@@ -59,7 +59,8 @@ export default function PrivacyPolicyPage() {
               // Trusted: the backend renders and sanitizes this Markdown with
               // an explicit allowlist (app.services.policy_markdown) — the
               // exact same renderer used for the admin preview.
-              <div dangerouslySetInnerHTML={{ __html: query.data.html }} />
+              // A language without content gets the original language; `lang` marks that.
+              <div lang={query.data.locale} dangerouslySetInnerHTML={{ __html: query.data.html }} />
             )}
 
             {settings.public_email && (

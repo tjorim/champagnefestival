@@ -134,13 +134,56 @@ def _downgrade_composed_messages() -> None:
     op.drop_column("composed_messages", "text_language")
 
 
+# --- Policies --------------------------------------------------------------------
+
+POLICY_TITLE_CHECK = _original("title_language", "length(trim(title_{lang})) > 0")
+POLICY_VERSION_CHECK = "status = 'draft' OR " + _original("content_language", "length(trim(content_{lang})) > 0")
+
+
+def _upgrade_policies() -> None:
+    # Titles: Dutch was required, so Dutch is the original.
+    op.add_column("policies", sa.Column("title_language", sa.String(2), nullable=True))
+    op.execute("UPDATE policies SET title_language = 'nl'")
+    op.alter_column("policies", "title_language", nullable=False)
+    op.alter_column("policies", "title_nl", nullable=True)
+    op.create_check_constraint("ck_policies_title_original", "policies", POLICY_TITLE_CHECK)
+    # `required_locales` forced every language to be filled before publishing. Publishing now only
+    # needs the original language; the other languages fall back to it.
+    op.drop_column("policies", "required_locales")
+
+    op.add_column("policy_versions", sa.Column("content_language", sa.String(2), nullable=True))
+    op.execute(
+        f"UPDATE policy_versions SET content_language = {_first_language('content_nl', 'content_fr', 'content_en')}"
+    )
+    op.execute(
+        "UPDATE policy_versions SET content_nl = '(no content)' "
+        "WHERE status <> 'draft' AND coalesce(length(trim(content_nl)), 0) = 0 AND content_language = 'nl'"
+    )
+    op.alter_column("policy_versions", "content_language", nullable=False)
+    op.create_check_constraint("ck_policy_versions_original", "policy_versions", POLICY_VERSION_CHECK)
+
+
+def _downgrade_policies() -> None:
+    op.drop_constraint("ck_policy_versions_original", "policy_versions", type_="check")
+    op.drop_column("policy_versions", "content_language")
+    op.add_column("policies", sa.Column("required_locales", sa.String(20), nullable=False, server_default="nl,en,fr"))
+    op.drop_constraint("ck_policies_title_original", "policies", type_="check")
+    op.execute(
+        "UPDATE policies SET title_nl = coalesce(title_nl, CASE title_language WHEN 'fr' THEN title_fr ELSE title_en END)"
+    )
+    op.alter_column("policies", "title_nl", nullable=False)
+    op.drop_column("policies", "title_language")
+
+
 def upgrade() -> None:
     _upgrade_faq()
     _upgrade_announcements()
     _upgrade_composed_messages()
+    _upgrade_policies()
 
 
 def downgrade() -> None:
+    _downgrade_policies()
     _downgrade_composed_messages()
     _downgrade_announcements()
     _downgrade_faq()

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import cast
 
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
@@ -23,6 +24,7 @@ from app.models import FaqItem
 from app.schemas import FaqLocale
 from app.services import editions_service, jsonld_service, policies_service
 from app.services.errors import NotFoundError
+from app.services.frontend_i18n_snippets import Locale
 from app.services.policy_markdown import render_markdown
 from app.services.public_render import (
     inject_marker,
@@ -123,10 +125,9 @@ async def _render_privacy(db: AsyncSession, *, locale: FaqLocale) -> str:
         raise NotFoundError("Frontend build not found.")
 
     policy, version = await policies_service.get_published(db, policy_key="privacy")
-    content_source = getattr(version, f"content_{locale}")
-    if not (content_source or "").strip():
-        raise NotFoundError(f"Policy 'privacy' has no published content for locale '{locale}'.")
-    title = getattr(policy, f"title_{locale}") or policy.title_nl
+    title, content_source, content_locale = policies_service.resolve_published(policy, version, locale)
+    if not content_source.strip():
+        raise NotFoundError("Policy 'privacy' has no published content.")
     html_body = render_markdown(content_source)
 
     html_out = rewrite_head_meta(
@@ -134,7 +135,7 @@ async def _render_privacy(db: AsyncSession, *, locale: FaqLocale) -> str:
         title=f"{title} — Champagnefestival",
         description=title,
         url=f"{settings.public_url}/privacy",
-        locale=locale,
+        locale=cast(Locale, content_locale),
     )
     content = render_privacy_content(title=title, html_body=html_body)
     return inject_marker(inject_marker(html_out, "ssr:head", ""), "ssr:content", content)

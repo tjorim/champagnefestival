@@ -1017,7 +1017,6 @@
   "admin_error_discard_draft_request": "Concept kon niet worden verworpen.",
   "admin_error_publish_draft_request": "Concept kon niet worden gepubliceerd.",
   "admin_error_render_preview": "Voorbeeld kon niet worden weergegeven.",
-  "admin_policy_required_locales_label": "— verplichte talen:",
   "admin_policy_currently_published": "Momenteel gepubliceerd: versie {version}, laatst bijgewerkt {date}",
   "admin_policy_create_draft_action": "Concept maken van huidige versie",
   "admin_policy_editing_draft_label": "Concept versie {version} bewerken — talen:",
@@ -1251,5 +1250,7 @@
   "admin_announcement_original_language": "Oorspronkelijke taal",
   "admin_announcement_text_help": "De tekst (en het linklabel als er een link is) is verplicht in de oorspronkelijke taal. De andere talen zijn optioneel; bezoekers krijgen anders het origineel.",
   "admin_composer_original_language": "Oorspronkelijke taal",
-  "admin_composer_text_help": "Titel en tekst zijn verplicht in de oorspronkelijke taal. Een taal wordt enkel gebruikt als zowel titel als tekst zijn ingevuld; anders wordt het origineel verstuurd."
+  "admin_composer_text_help": "Titel en tekst zijn verplicht in de oorspronkelijke taal. Een taal wordt enkel gebruikt als zowel titel als tekst zijn ingevuld; anders wordt het origineel verstuurd.",
+  "admin_policy_original_language": "Oorspronkelijke taal",
+  "admin_policy_original_help": "Publiceren vereist inhoud in de oorspronkelijke taal. Andere talen zijn optioneel; bezoekers zonder vertaling zien het origineel."
 }
