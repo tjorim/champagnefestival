@@ -15,6 +15,10 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 - `GET /api/people` and `GET /api/volunteers` now take `sort` (people: `name`, `email`, `created`, `updated`; volunteers: `name`, `created`, `updated`) and `sort_dir`, with deterministic `id` tiebreaks and an index per sortable column. An unknown `sort` or `sort_dir` is a 422 (#1176)
 
+### Changed
+
+- Replaced the placeholder sharing image, favicons, home-screen/PWA icons, `logo.svg` fallback, Android launcher icon and Play Store graphics with the festival's brand: a real 1200×630 `og-image.jpg` (also the JSON-LD event image) and a "C" with a red script "f" mark. Sources and the generator live in `docs/brand/` (#1221)
+
 ### Removed
 
 - **Breaking:** the legacy flat `required_role` key is gone from `GET /api/mcp/capabilities` and from `search_tools` results. Read `access.role` instead; `search_tools` entries now carry `access: {"role": ...}` like the manifest (tjorim/apps#229)
