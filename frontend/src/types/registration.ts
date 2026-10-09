@@ -55,8 +55,6 @@ export interface PaymentTransactionCreate {
 
 import type { Event } from "./event";
 
-export type OrderItemCategory = "champagne" | "food" | "other";
-
 export type RegistrationStatus = "pending" | "confirmed" | "cancelled";
 
 export type PaymentStatus = "unpaid" | "partial" | "paid";
@@ -68,7 +66,7 @@ export interface OrderItem {
   deliveredQuantity: number;
   remainingQuantity: number;
   price: number;
-  category: OrderItemCategory;
+  category: string;
   /** Whether back-of-house has physically delivered/brought this item */
   delivered: boolean;
   /**

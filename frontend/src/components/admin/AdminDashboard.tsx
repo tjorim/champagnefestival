@@ -15,7 +15,7 @@ import RegistrationDetail from "./RegistrationDetail";
 import LayoutEditor from "./LayoutEditor";
 import VenueManagement from "./VenueManagement";
 import { ContentSection, EditionsSection } from "./ContentManagement";
-import EventCategoryManagement from "./EventCategoryManagement";
+import CategoryManagement from "./CategoryManagement";
 import FaqManagement from "./FaqManagement";
 import AnnouncementManagement from "./AnnouncementManagement";
 import ComposerManagement from "./ComposerManagement";
@@ -651,7 +651,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <AuditLogViewer authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "event-categories" && (
-                  <EventCategoryManagement authHeaders={authHeaders} />
+                  <CategoryManagement kind="event" authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "product-categories" && (
+                  <CategoryManagement kind="product" authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "faq" && (
                   <FaqManagement authHeaders={authHeaders} />

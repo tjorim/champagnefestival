@@ -24,7 +24,7 @@ import {
   fetchEditionEvents,
   saveEditionEvent,
 } from "@/utils/adminContentApi";
-import { eventCategoryLabel, useEventCategories } from "@/hooks/useEventCategories";
+import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { queryKeys } from "@/utils/queryKeys";
 import EditionModal from "./EditionModal";
 import EditionPollOptionsModal from "./EditionPollOptionsModal";
@@ -319,7 +319,7 @@ export default function EditionCard({
                     </span>
                     <span>{event.title}</span>
                     <Badge variant="info" className="capitalize text-micro">
-                      {eventCategoryLabel(categories, event.category) ?? event.category}
+                      {categoryLabel(categories, event.category) ?? event.category}
                     </Badge>
                     {event.registrationRequired && (
                       <Badge variant="warning" className="text-micro">

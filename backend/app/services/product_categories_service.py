@@ -1,7 +1,7 @@
-"""Application-service operations for event categories (#1222).
+"""Application-service operations for product categories (#1222).
 
-Used by both ``app.routers.event_categories`` (REST) and
-``app.mcp.admin.event_categories`` (MCP); the logic is shared with product
+Used by both ``app.routers.product_categories`` (REST) and
+``app.mcp.admin.product_categories`` (MCP); the logic is shared with event
 categories in ``app.services.categories``.
 """
 
@@ -9,11 +9,19 @@ from __future__ import annotations
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Event, EventCategory
+from app.models import Product, ProductCategory
 from app.schemas import CategoryCreate, CategoryUpdate
 from app.services import categories
 
-KIND = categories.CategoryKind(noun="event", model=EventCategory, used_by=Event.category)
+CHAMPAGNE_KEY = "champagne"
+"""Delivery tracking counts bottles by this category, so it must exist."""
+
+KIND = categories.CategoryKind(
+    noun="product",
+    model=ProductCategory,
+    used_by=Product.category,
+    protected={CHAMPAGNE_KEY: "delivery tracking counts the bottles ordered in it."},
+)
 
 
 async def list_categories(db: AsyncSession, *, locale: str | None = None) -> list[dict]:

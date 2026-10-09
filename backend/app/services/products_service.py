@@ -18,7 +18,7 @@ from app.audit import write_audit_entry
 from app.models import Product
 from app.schemas import ProductCreate, ProductUpdate
 from app.services import product_inventory as inventory
-from app.services.product_changes import TEXT_FIELDS, change_product
+from app.services.product_changes import TEXT_FIELDS, change_product, ensure_category_exists
 from app.utils import get_or_404, make_id
 
 
@@ -68,6 +68,7 @@ async def create_product(
     db: AsyncSession, body: ProductCreate, *, actor: str, request_id: str | None = None
 ) -> Product:
     event = await inventory.lock_event(db, body.event_id)
+    await ensure_category_exists(db, body.category)
     if body.included_product_id is not None:
         await validate_inclusion_target(db, body.event_id, None, body.included_product_id)
     product = Product(

@@ -54,6 +54,7 @@ from app.mcp.admin import organizations as mcp_admin_organizations
 from app.mcp.admin import payments as mcp_admin_payments
 from app.mcp.admin import people as mcp_admin_people
 from app.mcp.admin import poll_options as mcp_admin_poll_options
+from app.mcp.admin import product_categories as mcp_admin_product_categories
 from app.mcp.admin import products as mcp_admin_products
 from app.mcp.admin import registrations as mcp_admin_registrations
 from app.mcp.admin import rooms as mcp_admin_rooms
@@ -276,6 +277,14 @@ class ChampagneFestivalMcpBackend:
         category's original language; every stored label is also returned.
         """
         return await mcp_admin_event_categories.list_event_categories(self.session_factory, locale)
+
+    async def list_product_categories(self, locale: Language | None = None) -> dict:
+        """List the product categories (the valid ``category`` values for products) in display order.
+
+        ``label`` is resolved for ``locale`` (``nl``, ``fr`` or ``en``) and falls back to the
+        category's original language; every stored label is also returned.
+        """
+        return await mcp_admin_product_categories.list_product_categories(self.session_factory, locale)
 
     async def get_venue_plan_summary(self, edition_id: str | None = None) -> dict:
         """Return a high-level overview of the venue plan for an edition.
@@ -1265,6 +1274,64 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_event_categories.delete_event_category(self.session_factory, self._actor(), key)
 
+    async def create_product_category(
+        self,
+        key: str,
+        label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
+        label_nl: str | None = None,
+        label_fr: str | None = None,
+        label_en: str | None = None,
+        sort_order: int = 0,
+    ) -> dict:
+        """Create a product category. Requires the ``admin`` role.
+
+        ``key`` is the stable identifier products store (lowercase letters, digits, ``-`` and
+        ``_``) and cannot be changed later. The label in ``label_language`` is required; the
+        other languages are optional and fall back to it.
+        """
+        self._require_admin()
+        return await mcp_admin_product_categories.create_product_category(
+            self.session_factory,
+            self._actor(),
+            key=key,
+            label_language=label_language,
+            label_nl=label_nl,
+            label_fr=label_fr,
+            label_en=label_en,
+            sort_order=sort_order,
+        )
+
+    async def update_product_category(
+        self,
+        key: str,
+        label_language: Language | None = None,
+        label_nl: str | None = None,
+        label_fr: str | None = None,
+        label_en: str | None = None,
+        sort_order: int | None = None,
+    ) -> dict:
+        """Partially update a product category; omitted fields are left unchanged.
+
+        An empty string clears a translation; the label in the original language cannot be
+        cleared. Requires the ``admin`` role.
+        """
+        self._require_admin()
+        return await mcp_admin_product_categories.update_product_category(
+            self.session_factory,
+            self._actor(),
+            key,
+            label_language=label_language,
+            label_nl=label_nl,
+            label_fr=label_fr,
+            label_en=label_en,
+            sort_order=sort_order,
+        )
+
+    async def delete_product_category(self, key: str) -> dict:
+        """Delete a product category. Refused while products still use it. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_product_categories.delete_product_category(self.session_factory, self._actor(), key)
+
     async def delete_event(self, event_id: str) -> dict:
         """Delete an event. Requires the ``admin`` role."""
         self._require_admin()
@@ -1295,7 +1362,8 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Create a product for an event. Requires the ``admin`` role.
 
-        The name (and optional description) is stored per language: fill
+        ``category`` is the key of an existing product category (see
+        ``list_product_categories``). The name (and optional description) is stored per language: fill
         ``name_nl``/``name_fr``/``name_en`` — the one in ``name_language`` (default
         ``en``) is required — and likewise ``description_*`` with
         ``description_language``. Visitors see their language and fall back to the original.
@@ -2283,6 +2351,7 @@ def create_mcp_server(
     register_tool(backend.list_editions)
     register_tool(backend.get_event_schedule)
     register_tool(backend.list_event_categories)
+    register_tool(backend.list_product_categories)
     register_tool(backend.get_venue_plan_summary)
     register_tool(backend.find_guest)
     register_tool(backend.get_guest_registration)
@@ -2346,6 +2415,9 @@ def create_mcp_server(
     register_tool(backend.create_event_category)
     register_tool(backend.update_event_category)
     register_tool(backend.delete_event_category)
+    register_tool(backend.create_product_category)
+    register_tool(backend.update_product_category)
+    register_tool(backend.delete_product_category)
     register_tool(backend.create_product)
     register_tool(backend.get_product)
     register_tool(backend.list_products)

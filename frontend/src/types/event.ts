@@ -1,5 +1,3 @@
-import type { OrderItemCategory } from "./registration";
-
 export interface EventEditionSummary {
   id: string;
   year: number;
@@ -61,7 +59,8 @@ export interface Product extends ProductTranslations {
   /** Short, optional blurb in the original language, or "". Visitors use `productDescription`. */
   description: string;
   price: number;
-  category: OrderItemCategory;
+  /** Key of a product category (see `useProductCategories`). */
+  category: string;
   /**
    * Whether this product can be ordered standalone and is ever named to a
    * visitor — see #1020. A `purchasable: false` ("hidden") product can still
@@ -161,10 +160,6 @@ function nullableText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
-function isOrderItemCategory(value: unknown): value is OrderItemCategory {
-  return value === "champagne" || value === "food" || value === "other";
-}
-
 export function apiToProduct(data: Record<string, unknown>): Product {
   return {
     id: String(data.id ?? ""),
@@ -182,7 +177,7 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     descriptionFr: nullableText(data.description_fr),
     descriptionEn: nullableText(data.description_en),
     price: Number(data.price ?? 0),
-    category: isOrderItemCategory(data.category) ? data.category : "other",
+    category: String(data.category ?? ""),
     purchasable: Boolean(data.purchasable),
     soldOut: Boolean(data.sold_out),
     required: Boolean(data.required),

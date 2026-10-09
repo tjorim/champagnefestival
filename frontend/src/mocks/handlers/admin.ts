@@ -8,7 +8,7 @@ import {
   type SeedProduct,
   type SeedProductInclusion,
 } from "../data/editionStore";
-import { seedEventCategories } from "../data/eventCategories";
+import { seedEventCategories, seedProductCategories, type SeedCategory } from "../data/categories";
 import { seedOrganizations } from "../data/organizations";
 import { seedPeople } from "../data/people";
 import {
@@ -29,7 +29,8 @@ import {
 /** Mutable in-memory stores — reset on page reload. */
 let people: Record<string, unknown>[] = structuredClone(seedPeople);
 let organizations: Record<string, unknown>[] = structuredClone(seedOrganizations);
-let eventCategories = structuredClone(seedEventCategories);
+const eventCategories = { items: structuredClone(seedEventCategories) };
+const productCategories = { items: structuredClone(seedProductCategories) };
 let venues: Record<string, unknown>[] = structuredClone(seedVenues);
 let rooms: Record<string, unknown>[] = structuredClone(seedRooms);
 let tableTypes: Record<string, unknown>[] = structuredClone(seedTableTypes);
@@ -165,6 +166,100 @@ function eventTextFromBody(body: Record<string, unknown>) {
     title: fields[`title_${language}`] ?? "",
     description: (descriptionLanguage && fields[`description_${descriptionLanguage}`]) || "",
   };
+}
+
+function asLanguage(value: unknown): "nl" | "fr" | "en" | null {
+  return value === "nl" || value === "fr" || value === "en" ? value : null;
+}
+
+/** The per-language product text of a create/update body, with `name`/`description` resolved to the original language. */
+function productTextFromBody(body: Record<string, unknown>) {
+  const text = (key: string) => (typeof body[key] === "string" ? (body[key] as string) : null);
+  const language = asLanguage(body.name_language) ?? "en";
+  const descriptionLanguage = asLanguage(body.description_language);
+  const fields = {
+    name_language: language,
+    name_nl: text("name_nl"),
+    name_fr: text("name_fr"),
+    name_en: text("name_en"),
+    description_language: descriptionLanguage,
+    description_nl: text("description_nl"),
+    description_fr: text("description_fr"),
+    description_en: text("description_en"),
+  };
+  return {
+    ...fields,
+    name: fields[`name_${language}`] ?? "",
+    description: (descriptionLanguage && fields[`description_${descriptionLanguage}`]) || "",
+  };
+}
+
+/** The in-memory CRUD handlers of an event or product category list. */
+function categoryHandlers(
+  noun: "event" | "product",
+  path: string,
+  store: { items: (SeedCategory & { label: string })[] },
+  inUse: (key: string) => boolean,
+) {
+  const sort = () =>
+    store.items.sort((a, b) => a.sort_order - b.sort_order || a.key.localeCompare(b.key));
+  return [
+    http.get(path, () => HttpResponse.json(store.items)),
+    http.post(path, async ({ request }) => {
+      const authError = requireAuth(request);
+      if (authError) return authError;
+      const body = (await request.json()) as Record<string, string | number | null>;
+      const key = String(body.key ?? "");
+      if (store.items.some((category) => category.key === key)) {
+        return HttpResponse.json(
+          { detail: `${noun} category '${key}' already exists.` },
+          { status: 409 },
+        );
+      }
+      const language: "nl" | "fr" | "en" =
+        body.label_language === "fr" || body.label_language === "en" ? body.label_language : "nl";
+      const created = {
+        key,
+        label_language: language,
+        label_nl: (body.label_nl as string | null) ?? null,
+        label_fr: (body.label_fr as string | null) ?? null,
+        label_en: (body.label_en as string | null) ?? null,
+        sort_order: Number(body.sort_order ?? 0),
+        created_at: now(),
+        updated_at: now(),
+      };
+      const category = { ...created, label: created[`label_${language}`] ?? key };
+      store.items.push(category);
+      sort();
+      return HttpResponse.json(category, { status: 201 });
+    }),
+    http.put(`${path}/:key`, async ({ request, params }) => {
+      const authError = requireAuth(request);
+      if (authError) return authError;
+      const index = store.items.findIndex((category) => category.key === params.key);
+      if (index === -1) return HttpResponse.json(null, { status: 404 });
+      const body = (await request.json()) as Record<string, unknown>;
+      const merged = { ...store.items[index]!, ...body, updated_at: now() };
+      store.items[index] = {
+        ...merged,
+        label: merged[`label_${merged.label_language}`] ?? merged.key,
+      };
+      return HttpResponse.json(store.items[index]);
+    }),
+    http.delete(`${path}/:key`, ({ request, params }) => {
+      const authError = requireAuth(request);
+      if (authError) return authError;
+      const key = String(params.key);
+      if (inUse(key)) {
+        return HttpResponse.json(
+          { detail: `Cannot delete ${noun} category '${key}': ${noun}s still use it.` },
+          { status: 409 },
+        );
+      }
+      store.items = store.items.filter((category) => category.key !== key);
+      return new HttpResponse(null, { status: 204 });
+    }),
+  ];
 }
 
 function uid(): string {
@@ -923,60 +1018,12 @@ export const adminHandlers = [
     );
   }),
 
-  http.get("/api/event-categories", () => HttpResponse.json(eventCategories)),
-  http.post("/api/event-categories", async ({ request }) => {
-    const authError = requireAuth(request);
-    if (authError) return authError;
-    const body = (await request.json()) as Record<string, string | number | null>;
-    const key = String(body.key ?? "");
-    if (eventCategories.some((category) => category.key === key)) {
-      return HttpResponse.json(
-        { detail: `Event category '${key}' already exists.` },
-        { status: 409 },
-      );
-    }
-    const language: "nl" | "fr" | "en" =
-      body.label_language === "fr" || body.label_language === "en" ? body.label_language : "nl";
-    const created = {
-      key,
-      label_language: language,
-      label_nl: (body.label_nl as string | null) ?? null,
-      label_fr: (body.label_fr as string | null) ?? null,
-      label_en: (body.label_en as string | null) ?? null,
-      sort_order: Number(body.sort_order ?? 0),
-      created_at: now(),
-      updated_at: now(),
-    };
-    const category = { ...created, label: created[`label_${language}`] ?? key };
-    eventCategories.push(category);
-    eventCategories.sort((a, b) => a.sort_order - b.sort_order || a.key.localeCompare(b.key));
-    return HttpResponse.json(category, { status: 201 });
-  }),
-  http.put("/api/event-categories/:key", async ({ request, params }) => {
-    const authError = requireAuth(request);
-    if (authError) return authError;
-    const index = eventCategories.findIndex((category) => category.key === params.key);
-    if (index === -1) return HttpResponse.json(null, { status: 404 });
-    const body = (await request.json()) as Record<string, unknown>;
-    const merged = { ...eventCategories[index]!, ...body, updated_at: now() };
-    eventCategories[index] = {
-      ...merged,
-      label: merged[`label_${merged.label_language}`] ?? merged.key,
-    };
-    return HttpResponse.json(eventCategories[index]);
-  }),
-  http.delete("/api/event-categories/:key", ({ request, params }) => {
-    const authError = requireAuth(request);
-    if (authError) return authError;
-    if (events.some((event) => event.category === params.key)) {
-      return HttpResponse.json(
-        { detail: `Cannot delete event category '${String(params.key)}': events still use it.` },
-        { status: 409 },
-      );
-    }
-    eventCategories = eventCategories.filter((category) => category.key !== params.key);
-    return new HttpResponse(null, { status: 204 });
-  }),
+  ...categoryHandlers("event", "/api/event-categories", eventCategories, (key) =>
+    events.some((event) => event.category === key),
+  ),
+  ...categoryHandlers("product", "/api/product-categories", productCategories, (key) =>
+    events.some((event) => event.products.some((product) => product.category === key)),
+  ),
 
   http.get("/api/events/translation", ({ request }) => {
     const error = requireAuth(request);
@@ -1066,7 +1113,7 @@ export const adminHandlers = [
     const newProduct: SeedProduct = {
       id: uid(),
       event_id: String(body.event_id ?? ""),
-      name: String(body.name ?? ""),
+      ...productTextFromBody(body),
       price: Number(body.price ?? 0),
       category: String(body.category ?? "other"),
       purchasable: body.purchasable !== false,
@@ -1095,6 +1142,7 @@ export const adminHandlers = [
         event.products[idx] = {
           ...event.products[idx]!,
           ...body,
+          ...productTextFromBody({ ...event.products[idx]!, ...body }),
           id: String(params.id),
           event_id: event.id,
           updated_at: now(),
@@ -1510,7 +1558,8 @@ export const adminHandlers = [
 
 /** Reset all admin mutable state (useful for tests). */
 export function resetAdminStore(): void {
-  eventCategories = structuredClone(seedEventCategories);
+  eventCategories.items = structuredClone(seedEventCategories);
+  productCategories.items = structuredClone(seedProductCategories);
   resetSharedStore();
   resetEditionStore();
   people = structuredClone(seedPeople);

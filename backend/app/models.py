@@ -759,23 +759,12 @@ def _original_language_text(language_column, *text_columns):
     )
 
 
-class EventCategory(Base):
-    """An admin-managed event category: a stable key (what `Event.category`
-    stores) plus its label in each language, following the organisation
-    description pattern — the original language must have text, the others are
-    optional and fall back to it. The key is immutable; a category that events
-    still use cannot be deleted."""
-
-    __tablename__ = "event_categories"
-
-    __table_args__ = (
-        CheckConstraint(
-            "((label_language = 'nl' AND length(trim(label_nl)) > 0) OR "
-            "(label_language = 'fr' AND length(trim(label_fr)) > 0) OR "
-            "(label_language = 'en' AND length(trim(label_en)) > 0)) IS TRUE",
-            name="ck_event_categories_label_original",
-        ),
-    )
+class _CategoryColumns:
+    """Columns shared by the admin-managed category tables: a stable key (what
+    the events or products store) plus its label in each language, following the
+    organisation description pattern — the original language must have text, the
+    others are optional and fall back to it. The key is immutable; a category
+    that is still in use cannot be deleted."""
 
     key: Mapped[str] = mapped_column(String(50), primary_key=True)
     label_language: Mapped[str] = mapped_column(String(2))
@@ -790,6 +779,30 @@ class EventCategory(Base):
         return resolve_text(
             {"nl": self.label_nl, "fr": self.label_fr, "en": self.label_en}, self.label_language, locale
         )
+
+
+def _category_label_check(table: str) -> CheckConstraint:
+    return CheckConstraint(
+        "((label_language = 'nl' AND length(trim(label_nl)) > 0) OR "
+        "(label_language = 'fr' AND length(trim(label_fr)) > 0) OR "
+        "(label_language = 'en' AND length(trim(label_en)) > 0)) IS TRUE",
+        name=f"ck_{table}_label_original",
+    )
+
+
+class EventCategory(_CategoryColumns, Base):
+    """A category of events, shown as a translated label on the public schedule."""
+
+    __tablename__ = "event_categories"
+    __table_args__ = (_category_label_check("event_categories"),)
+
+
+class ProductCategory(_CategoryColumns, Base):
+    """A category of products. The key is what products and the order lines
+    copied from them store; delivery tracking treats ``champagne`` specially."""
+
+    __tablename__ = "product_categories"
+    __table_args__ = (_category_label_check("product_categories"),)
 
 
 class Event(Base):
@@ -935,8 +948,10 @@ class Product(Base):
     """Short, optional blurb shown alongside the product name; per language like
     the name, with the original language required whenever there is any text."""
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
-    category: Mapped[str] = mapped_column(String(20))
-    """"champagne" | "food" | "other" — matches OrderItemCategory."""
+    category: Mapped[str] = mapped_column(
+        String(50), ForeignKey("product_categories.key", ondelete="RESTRICT"), index=True
+    )
+    """Key of a `ProductCategory`; copied onto the order lines made from this product."""
     unit: Mapped[str] = mapped_column(String(10), default="item")
     stock: Mapped[int | None] = mapped_column(Integer, nullable=True)
     inclusions: Mapped[list[dict] | None] = mapped_column(JSON, nullable=True)

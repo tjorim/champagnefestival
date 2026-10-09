@@ -1,7 +1,7 @@
 import { m } from "@/paraglide/messages";
 import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import type { CheckInData } from "@/utils/publicRegistrationApi";
-import type { OrderItemCategory, RegistrationStatus } from "@/types/registration";
+import type { RegistrationStatus } from "@/types/registration";
 
 interface VolunteerRegistrationResponse {
   id?: string;
@@ -18,10 +18,6 @@ interface VolunteerRegistrationResponse {
   checked_in?: boolean;
   checked_in_at?: string | null;
   strap_issued?: boolean;
-}
-
-function isOrderItemCategory(value: unknown): value is OrderItemCategory {
-  return value === "champagne" || value === "food" || value === "other";
 }
 
 function mapVolunteerRegistration(data: VolunteerRegistrationResponse): CheckInData {
@@ -54,7 +50,7 @@ function mapVolunteerRegistration(data: VolunteerRegistrationResponse): CheckInD
         deliveredQuantity,
         remainingQuantity,
         price: Number(item.price ?? 0),
-        category: isOrderItemCategory(item.category) ? item.category : "other",
+        category: typeof item.category === "string" ? item.category : "other",
         delivered: remainingQuantity === 0,
       };
     }),

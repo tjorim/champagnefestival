@@ -397,7 +397,8 @@ supersession use the private review workflow below (#1193).
 ### Event titles, descriptions and categories (#1222)
 
 Events keep their text per language, following the organisation pattern.
-`title_language` (`nl`, `fr`, `en`; default `nl`) names the original language and
+`title_language` (`nl`, `fr`, `en`; default `en` for API and MCP clients, the admin
+form preselects Dutch) names the original language and
 `title_nl`/`title_fr`/`title_en` hold the texts (each at most 200 characters). The
 description works the same way with `description_language` and
 `description_nl/fr/en` (each at most 10000 characters; all null means no
@@ -451,6 +452,48 @@ Admins can request editable machine drafts of a title or description with
 `GET`/`POST /api/events/translation` (same contract as the organisation drafts, text
 limited to 2000 characters and a separate rate-limit bucket); see
 [the API contract](../docs/organization-description-translation.md#event-drafts-1222).
+
+### Translated content and product categories (#1222)
+
+Everything an administrator writes for visitors follows the organisation
+description pattern: an original language (`*_language`, default `en` for API and
+MCP clients; the admin forms preselect Dutch) that must have text, optional
+translations in `_nl`/`_fr`/`_en`, and a fallback to the original language, so a
+blank translation never hides content. Updates validate the merged stored and
+requested text; an empty string clears a translation; blank text is stored as null;
+database check constraints enforce the same rule.
+
+| Content | Fields | Notes |
+| --- | --- | --- |
+| Event | `title_*`, `description_*` | see above |
+| Event / product category | `label_*` | see below |
+| FAQ item | `text_language`, `question_*`, `answer_*` | a language is used only when its question and answer are both filled |
+| Announcement | `text_language`, `text_*`, `link_label_*` | a link needs a label in the original language |
+| Composed message | `text_language`, `title_*`, `body_*` | a language is used only when title and body are both filled |
+| Policy | `title_language`, `title_*`; version `content_language`, `content_*` | publishing needs the original language only (`required_locales` is gone) |
+| Product | `name_language`, `name_*`, `description_language`, `description_*` | an order line keeps the name in every language |
+| Poll option | `label_language`, `label_*` | |
+
+Public reads (`/api/faq/active`, `/api/policies/{key}/current`, the edition
+endpoints, `/api/me/volunteer/poll-options`) take `locale` and return the text
+resolved for it plus every stored language. A policy response names the language
+actually served in `locale`. Emails (registration confirmations, composed messages)
+use the recipient's `preferred_language`.
+
+Event and product categories share one implementation
+(`app.services.categories`): a table with a stable `key`, a label per language and a
+`sort_order`; the key is immutable; deleting a category that is still used is a 409.
+`GET /api/product-categories?locale=` is public, writes are admin-only and audited
+(`product_category_created|updated|deleted`), and MCP has `list_product_categories`
+(public) plus `create_|update_|delete_product_category`. `champagne` cannot be deleted
+because delivery tracking counts bottles by it. `Product.category` references the key
+(an unknown key is a 422); order lines copy the key when the order is placed.
+
+Migration `007` moves existing FAQ items, announcements, composed messages, policies,
+products and poll options to Dutch (`nl`) as their original language, creates
+`product_categories` with `champagne`, `food` and `other` (a value products already
+use is kept as a category of its own and logged), and drops `policies.required_locales`.
+Its downgrade keeps only the original-language text.
 
 ### Organization manager self-service (#1192)
 

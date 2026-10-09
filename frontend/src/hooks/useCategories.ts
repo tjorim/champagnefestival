@@ -1,21 +1,33 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { getLocale } from "@/paraglide/runtime";
-import { apiToEventCategory, type EventCategory } from "@/types/eventCategory";
+import { apiToCategory, type Category } from "@/types/category";
 import { queryKeys } from "@/utils/queryKeys";
 
-export async function fetchEventCategories(): Promise<EventCategory[]> {
-  const response = await fetch("/api/event-categories");
-  if (!response.ok) throw new Error(`Failed to load event categories: ${response.status}`);
+async function fetchCategories(path: string): Promise<Category[]> {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Failed to load categories from ${path}: ${response.status}`);
   const data = (await response.json()) as Record<string, unknown>[];
-  return Array.isArray(data) ? data.map(apiToEventCategory) : [];
+  return Array.isArray(data) ? data.map(apiToCategory) : [];
 }
 
-export const eventCategoriesQueryOptions = queryOptions({
-  queryKey: queryKeys.eventCategories,
-  queryFn: fetchEventCategories,
-  staleTime: 5 * 60 * 1000,
-  retry: false,
-});
+function categoriesQueryOptions(queryKey: readonly string[], path: string) {
+  return queryOptions({
+    queryKey,
+    queryFn: () => fetchCategories(path),
+    staleTime: 5 * 60 * 1000,
+    retry: false,
+  });
+}
+
+export const eventCategoriesQueryOptions = categoriesQueryOptions(
+  queryKeys.eventCategories,
+  "/api/event-categories",
+);
+
+export const productCategoriesQueryOptions = categoriesQueryOptions(
+  queryKeys.productCategories,
+  "/api/product-categories",
+);
 
 /**
  * The label of a category for a visitor's language: that language when it has
@@ -23,8 +35,8 @@ export const eventCategoriesQueryOptions = queryOptions({
  * categories are loading or when the key is unknown, so callers can omit the
  * label instead of showing a raw key.
  */
-export function eventCategoryLabel(
-  categories: readonly EventCategory[] | undefined,
+export function categoryLabel(
+  categories: readonly Category[] | undefined,
   key: string,
   locale: string = getLocale(),
 ): string | null {
@@ -38,4 +50,8 @@ export function eventCategoryLabel(
 
 export function useEventCategories() {
   return useQuery(eventCategoriesQueryOptions);
+}
+
+export function useProductCategories() {
+  return useQuery(productCategoriesQueryOptions);
 }

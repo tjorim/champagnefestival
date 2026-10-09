@@ -5,7 +5,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import type { Event } from "@/types/event";
-import { eventCategoryLabel, useEventCategories } from "@/hooks/useEventCategories";
+import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { eventDescription, eventTitle } from "@/utils/eventText";
 
 interface ScheduleProps {
@@ -104,7 +104,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
               {sortedEvents.length > 0 ? (
                 <div className="events-list">
                   {sortedEvents.map((event) => {
-                    const categoryLabel = eventCategoryLabel(categories, event.category, locale);
+                    const label = categoryLabel(categories, event.category, locale);
                     return (
                       <Card key={event.id} className="event-card mb-4 border-0">
                         <CardContent>
@@ -127,9 +127,9 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                             </div>
                             <div className="grow">
                               <h5 className="event-title mb-1">{eventTitle(event, locale)}</h5>
-                              {categoryLabel && (
+                              {label && (
                                 <Badge variant={getCategoryColor(event.category)} className="mb-2">
-                                  {categoryLabel}
+                                  {label}
                                 </Badge>
                               )}
                               {event.registrationRequired ? (

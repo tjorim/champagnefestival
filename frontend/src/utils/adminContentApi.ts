@@ -9,7 +9,6 @@ import {
   type EventFormData,
   type Product,
 } from "@/types/event";
-import type { OrderItemCategory } from "@/types/registration";
 
 function datetimeLocalToIso(value: string): string {
   return new Date(value).toISOString();
@@ -367,7 +366,7 @@ export interface ProductWrite {
   descriptionLanguage: Language;
   description: LocalizedText;
   price: number;
-  category: OrderItemCategory;
+  category: string;
   purchasable: boolean;
   required: boolean;
   includedProductId?: string;

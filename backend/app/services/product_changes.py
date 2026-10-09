@@ -15,7 +15,9 @@ from app.audit import write_audit_entry
 from app.live import mapping, notify_live_event
 from app.models import Product, Registration
 from app.schemas import ProductTextFields, ProductUpdate
+from app.services import product_categories_service
 from app.services import product_inventory as inventory
+from app.services.errors import ServiceError, to_http_exception
 
 TEXT_FIELDS = (
     "name_language",
@@ -45,6 +47,13 @@ def apply_text_changes(product: Product, changes: dict) -> None:
         raise HTTPException(422, str(exc)) from exc
     for field in TEXT_FIELDS:
         setattr(product, field, getattr(validated, field))
+
+
+async def ensure_category_exists(db: AsyncSession, key: str) -> None:
+    try:
+        await product_categories_service.ensure_category_exists(db, key)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 async def change_product(
@@ -89,6 +98,8 @@ async def change_product(
         exclude_unset=True,
         exclude={"update_existing_contents", "update_existing_prices", "preview_token", "confirm_shortage"},
     )
+    if fields.get("category") is not None:
+        await ensure_category_exists(db, fields["category"])
     text_changes = {key: fields.pop(key) for key in list(fields) if key in TEXT_FIELDS}
     if text_changes:
         apply_text_changes(product, text_changes)

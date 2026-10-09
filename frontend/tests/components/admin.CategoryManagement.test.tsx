@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
-import EventCategoryManagement from "@/components/admin/EventCategoryManagement";
+import CategoryManagement from "@/components/admin/CategoryManagement";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
@@ -20,19 +20,19 @@ function category(key: string, nl: string, order: number) {
   };
 }
 
+type Kind = "event" | "product";
+
+let kind: Kind = "event";
+const path = () => `/api/${kind}-categories`;
+
 function mount() {
-  render(<EventCategoryManagement authHeaders={authHeaders} />, {
+  render(<CategoryManagement kind={kind} authHeaders={authHeaders} />, {
     wrapper: createTestQueryClientWrapper(),
   });
 }
 
 beforeEach(() => {
   setLocale("en", { reload: false });
-  server.use(
-    http.get("/api/event-categories", () =>
-      HttpResponse.json([category("tasting", "Degustatie", 10), category("gala", "Gala", 20)]),
-    ),
-  );
 });
 
 afterEach(() => {
@@ -40,7 +40,16 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-describe("EventCategoryManagement", () => {
+describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) => {
+  beforeEach(() => {
+    kind = current;
+    server.use(
+      http.get(path(), () =>
+        HttpResponse.json([category("tasting", "Degustatie", 10), category("gala", "Gala", 20)]),
+      ),
+    );
+  });
+
   it("lists the categories with their keys and labels", async () => {
     mount();
 
@@ -52,7 +61,7 @@ describe("EventCategoryManagement", () => {
   it("creates a category with a key and a label in its original language", async () => {
     let sent: unknown;
     server.use(
-      http.post("/api/event-categories", async ({ request }) => {
+      http.post(path(), async ({ request }) => {
         sent = await request.json();
         return HttpResponse.json(category("workshop", "Workshop", 30), { status: 201 });
       }),
@@ -80,7 +89,7 @@ describe("EventCategoryManagement", () => {
   it("rejects an invalid key and a missing original label before calling the API", async () => {
     const post = vi.fn();
     server.use(
-      http.post("/api/event-categories", () => {
+      http.post(path(), () => {
         post();
         return HttpResponse.json({}, { status: 201 });
       }),
@@ -102,7 +111,7 @@ describe("EventCategoryManagement", () => {
   it("edits labels but never the key", async () => {
     let sent: { url: string; body: unknown } | undefined;
     server.use(
-      http.put("/api/event-categories/:key", async ({ request, params }) => {
+      http.put(`${path()}/:key`, async ({ request, params }) => {
         sent = { url: String(params.key), body: await request.json() };
         return HttpResponse.json(category("gala", "Gala", 20));
       }),
@@ -121,11 +130,11 @@ describe("EventCategoryManagement", () => {
     expect(sent?.body).not.toHaveProperty("key");
   });
 
-  it("shows the server's refusal to delete a category that events use", async () => {
+  it("shows the server's refusal to delete a category that is in use", async () => {
     server.use(
-      http.delete("/api/event-categories/:key", () =>
+      http.delete(`${path()}/:key`, () =>
         HttpResponse.json(
-          { detail: "Cannot delete event category 'gala': 2 event(s) still use it." },
+          { detail: "Cannot delete category 'gala': 2 item(s) still use it." },
           { status: 409 },
         ),
       ),
@@ -135,6 +144,6 @@ describe("EventCategoryManagement", () => {
     fireEvent.click(await screen.findByRole("button", { name: "Delete gala" }));
     fireEvent.click(await screen.findByRole("button", { name: /^(Delete|Confirm|Yes)/ }));
 
-    expect(await screen.findByText(/2 event\(s\) still use it/)).toBeInTheDocument();
+    expect(await screen.findByText(/2 item\(s\) still use it/)).toBeInTheDocument();
   });
 });

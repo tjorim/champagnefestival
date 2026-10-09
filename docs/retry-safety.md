@@ -489,6 +489,26 @@ form has `retry: false` for events. `POST /api/events/translation` persists noth
 consumes the identity rate limit in its own bucket, and is never retried
 automatically; see [API, configuration and limits](organization-description-translation.md#event-drafts-1222).
 
+### Translated content and product categories (#1222)
+
+FAQ items, announcements, composed messages, policies, products and poll options keep
+the write contracts documented for them above; the per-language text fields (an
+original `*_language` plus `_nl`/`_fr`/`_en`) change **what** is sent, not how a repeat
+behaves. Every update validates the merged stored/requested text and treats an empty
+string as "clear this translation", so a repeated update with the same values
+converges. Creates keep their server-generated identities and stay **not retry safe**;
+policy and composed-message sends keep their natural-key/outbox protections. No client
+adds an automatic retry for any of them (`retry: false`).
+
+Product category writes (`POST`/`PUT`/`DELETE /api/product-categories`, MCP
+`create_|update_|delete_product_category`) follow the event category decisions above:
+admin-only, no client-side retry, a **natural-key insert** (a repeated create 409s), a
+label merge that converges for the same values but is not version-guarded, and a
+delete that converges on the category being gone (404 on repeat). A delete is also
+refused with a 409 while products use the category, and always for `champagne`, which
+delivery tracking depends on. Creating or moving a product to an unknown category key
+is a 422.
+
 ## Organization domain rename (#1190)
 
 Renamed endpoints/tools retain the write strategies above, without aliases.

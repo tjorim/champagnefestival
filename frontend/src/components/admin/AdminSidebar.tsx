@@ -208,7 +208,7 @@ export default function AdminSidebar({
                 groupKey="events"
                 icon={CalendarDaysIcon}
                 label={m.admin_events_group()}
-                itemKeys={["editions", "event-categories"]}
+                itemKeys={["editions", "event-categories", "product-categories"]}
                 {...groupProps}
               >
                 <SidebarItem
@@ -221,6 +221,12 @@ export default function AdminSidebar({
                   itemKey="event-categories"
                   icon={TagsIcon}
                   label={m.admin_event_categories_section()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="product-categories"
+                  icon={TagsIcon}
+                  label={m.admin_product_categories_section()}
                   {...itemProps}
                 />
               </SidebarGroup>

@@ -19,7 +19,6 @@ from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 # Shared value types
 # ---------------------------------------------------------------------------
 
-OrderItemCategory = Literal["champagne", "food", "other"]
 EditionType = Literal["festival", "bourse", "capsule_exchange"]
 RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
 PaymentStatus = Literal["unpaid", "partial", "paid"]
@@ -60,7 +59,7 @@ class OrderItemBase(BaseModel):
     name_en: str | None = None
     quantity: int = Field(ge=1)
     price: float = Field(ge=0)
-    category: OrderItemCategory
+    category: str
     delivered_quantity: int | None = Field(default=None, ge=0)
     delivered: bool = False
     included_quantity: int = Field(default=0, ge=0)
@@ -241,11 +240,11 @@ class EditionSummaryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-EVENT_CATEGORY_KEY_PATTERN = r"^[a-z][a-z0-9_-]{0,49}$"
+CATEGORY_KEY_PATTERN = r"^[a-z][a-z0-9_-]{0,49}$"
 
 
-class EventCategoryLabels(RequestModel):
-    """Per-language category label: the original language must have text."""
+class CategoryLabels(RequestModel):
+    """Per-language label of an event or product category: the original language must have text."""
 
     label_language: Language | None = None
     label_nl: str | None = Field(default=None, max_length=100)
@@ -264,10 +263,10 @@ class EventCategoryLabels(RequestModel):
         return self
 
 
-class EventCategoryCreate(EventCategoryLabels):
+class CategoryCreate(CategoryLabels):
     key: str = Field(
-        pattern=EVENT_CATEGORY_KEY_PATTERN,
-        description="Stable identifier stored on events: lowercase letters, digits, `-` and `_`. Cannot be changed.",
+        pattern=CATEGORY_KEY_PATTERN,
+        description="Stable identifier stored on the events or products using it: lowercase letters, digits, `-` and `_`. Cannot be changed.",
     )
     label_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     sort_order: int = Field(default=0, ge=0, le=100000)
@@ -277,11 +276,11 @@ class EventCategoryCreate(EventCategoryLabels):
         return self.validate_original()
 
 
-class EventCategoryUpdate(EventCategoryLabels):
+class CategoryUpdate(CategoryLabels):
     """Partial update; the key is immutable."""
 
 
-class EventCategoryOut(BaseModel):
+class CategoryOut(BaseModel):
     key: str
     label: str
     """The label resolved for the requested `locale` (the original language when none)."""
@@ -475,7 +474,8 @@ class ProductCreate(ProductTextFields):
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
-    category: OrderItemCategory
+    category: str = Field(min_length=1, max_length=50)
+    """Key of a product category (see ``/api/product-categories``)."""
     purchasable: bool = True
     required: bool = False
     included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
@@ -507,7 +507,7 @@ class ProductUpdate(ProductTextFields):
     confirm_shortage: bool = False
     preview_token: str | None = None
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
-    category: OrderItemCategory | None = None
+    category: str | None = Field(default=None, min_length=1, max_length=50)
     purchasable: bool | None = None
     required: bool | None = None
     # Nullable and independently settable, so the router (not this schema) decides
@@ -544,7 +544,7 @@ class ProductOut(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     price: Decimal
-    category: OrderItemCategory
+    category: str
     purchasable: bool
     required: bool
     included_product_id: str | None
@@ -574,7 +574,7 @@ class ProductPublicOut(BaseModel):
     description_fr: str | None = None
     description_en: str | None = None
     price: Decimal
-    category: OrderItemCategory
+    category: str
     unit: str = "item"
     required: bool
     purchasable: bool

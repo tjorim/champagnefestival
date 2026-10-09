@@ -36,6 +36,7 @@ import {
 } from "@/components/admin/LocalizedFields";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { categoryLabel, useProductCategories } from "@/hooks/useCategories";
 import {
   deleteEventProduct,
   fetchEventProducts,
@@ -46,7 +47,6 @@ import {
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
 import type { Event, Product, ProductInclusion } from "@/types/event";
-import type { OrderItemCategory } from "@/types/registration";
 
 interface EventProductsModalProps {
   show: boolean;
@@ -62,7 +62,7 @@ interface ProductFormState {
   descriptionLanguage: Language;
   description: LocalizedText;
   price: string;
-  category: OrderItemCategory;
+  category: string;
   purchasable: boolean;
   required: boolean;
   /** Empty string means "no bundle". */
@@ -76,12 +76,12 @@ interface ProductFormState {
 }
 
 const EMPTY_FORM: ProductFormState = {
-  nameLanguage: "en",
+  nameLanguage: "nl",
   name: EMPTY_LOCALIZED_TEXT,
-  descriptionLanguage: "en",
+  descriptionLanguage: "nl",
   description: EMPTY_LOCALIZED_TEXT,
   price: "",
-  category: "champagne",
+  category: "",
   purchasable: true,
   required: false,
   includedProductId: "",
@@ -93,17 +93,6 @@ const EMPTY_FORM: ProductFormState = {
   updateExistingPrices: false,
 };
 
-function categoryLabel(category: OrderItemCategory): string {
-  switch (category) {
-    case "champagne":
-      return m.admin_products_category_champagne();
-    case "food":
-      return m.admin_products_category_food();
-    default:
-      return m.admin_products_category_other();
-  }
-}
-
 export default function EventProductsModal({
   show,
   event,
@@ -112,6 +101,7 @@ export default function EventProductsModal({
   onProductsChanged,
 }: EventProductsModalProps) {
   const queryClient = useQueryClient();
+  const { data: categories = [] } = useProductCategories();
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -201,8 +191,8 @@ export default function EventProductsModal({
             updateExistingContents: false,
             updateExistingPrices: false,
           }
-        : EMPTY_FORM,
-    [editingProduct],
+        : { ...EMPTY_FORM, category: categories[0]?.key ?? "" },
+    [editingProduct, categories],
   );
 
   const form = useForm({
@@ -211,6 +201,10 @@ export default function EventProductsModal({
       setError("");
       if (!hasOriginal(value.nameLanguage, value.name)) {
         setError(m.admin_products_name_required());
+        return;
+      }
+      if (!value.category) {
+        setError(m.admin_product_category_required());
         return;
       }
       const priceText = value.price.trim();
@@ -409,14 +403,14 @@ export default function EventProductsModal({
                   size="sm"
                   className="bg-muted text-content border-input"
                   value={field.value}
-                  onValueChange={(e) => field.handleChange(e as OrderItemCategory)}
+                  onValueChange={(e) => field.handleChange(e)}
                   onBlur={field.handleBlur}
                 >
-                  <AdminOption value="champagne">
-                    {m.admin_products_category_champagne()}
-                  </AdminOption>
-                  <AdminOption value="food">{m.admin_products_category_food()}</AdminOption>
-                  <AdminOption value="other">{m.admin_products_category_other()}</AdminOption>
+                  {categories.map((category) => (
+                    <AdminOption key={category.key} value={category.key}>
+                      {categoryLabel(categories, category.key) ?? category.key}
+                    </AdminOption>
+                  ))}
                 </AdminSelect>
               )}
             </form.Field>
@@ -692,7 +686,7 @@ export default function EventProductsModal({
               </Badge>
             )}
             <Badge variant="secondary" className="text-micro capitalize">
-              {categoryLabel(product.category)}
+              {categoryLabel(categories, product.category) ?? product.category}
             </Badge>
             {product.required && (
               <Badge variant="warning" className="text-micro">

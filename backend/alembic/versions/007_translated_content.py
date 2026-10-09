@@ -4,11 +4,15 @@ FAQ items, announcements, composed messages, policies, product and poll option
 text all follow the pattern events and organisations use: an original language
 that must have text, optional translations, and a fallback to the original.
 Existing rows are Dutch (the one language they were written in), so they migrate
-as ``nl``.
+as ``nl``. Product categories become an entity with a label per language, like
+the event categories of 006.
 
 Revision ID: 007
 Revises: 006
 """
+
+import logging
+import re
 
 import sqlalchemy as sa
 
@@ -18,6 +22,8 @@ revision = "007"
 down_revision = "006"
 branch_labels = None
 depends_on = None
+
+logger = logging.getLogger("alembic.runtime.migration")
 
 
 def _original(language_column: str, template: str) -> str:
@@ -253,7 +259,101 @@ def _downgrade_products() -> None:
         op.drop_column("products", column)
 
 
+# --- Product categories -----------------------------------------------------------
+
+# Key, sort order and label per language (nl, fr, en). English is the original
+# language, like anything created through the API.
+DEFAULT_PRODUCT_CATEGORIES = (
+    ("champagne", 10, "Champagne", "Champagne", "Champagne"),
+    ("food", 20, "Eten", "Nourriture", "Food"),
+    ("other", 30, "Anders", "Autre", "Other"),
+)
+PRODUCT_CATEGORY_CHECK = _original("label_language", "length(trim(label_{lang})) > 0")
+
+
+def _slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9_-]+", "-", value.strip().lower()).strip("-_")[:50]
+    return slug if re.match(r"[a-z]", slug) else "other"
+
+
+def _upgrade_product_categories() -> None:
+    """Make the product category an entity, like event categories in 006.
+
+    A value products already use that is not a default category is kept as a
+    category of its own (the text as its Dutch label) rather than folded into
+    "other", and logged so an admin can tidy it up.
+    """
+    connection = op.get_bind()
+    op.create_table(
+        "product_categories",
+        sa.Column("key", sa.String(50), primary_key=True),
+        sa.Column("label_language", sa.String(2), nullable=False),
+        sa.Column("label_nl", sa.String(100), nullable=True),
+        sa.Column("label_fr", sa.String(100), nullable=True),
+        sa.Column("label_en", sa.String(100), nullable=True),
+        sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.CheckConstraint(PRODUCT_CATEGORY_CHECK, name="ck_product_categories_label_original"),
+    )
+    categories = sa.table(
+        "product_categories",
+        sa.column("key", sa.String),
+        sa.column("label_language", sa.String),
+        sa.column("label_nl", sa.String),
+        sa.column("label_fr", sa.String),
+        sa.column("label_en", sa.String),
+        sa.column("sort_order", sa.Integer),
+    )
+    known = {key for key, *_ in DEFAULT_PRODUCT_CATEGORIES}
+    op.bulk_insert(
+        categories,
+        [
+            {"key": key, "label_language": "en", "label_nl": nl, "label_fr": fr, "label_en": en, "sort_order": order}
+            for key, order, nl, fr, en in DEFAULT_PRODUCT_CATEGORIES
+        ],
+    )
+    created: set[str] = set()
+    sort_order = 100
+    for (value,) in connection.execute(sa.text("SELECT DISTINCT category FROM products ORDER BY category")).all():
+        key = _slug(value)
+        if key not in known and key not in created:
+            created.add(key)
+            op.bulk_insert(
+                categories,
+                [
+                    {
+                        "key": key,
+                        "label_language": "nl",
+                        "label_nl": value.strip()[:100] or key,
+                        "sort_order": sort_order,
+                    }
+                ],
+            )
+            sort_order += 10
+            logger.warning("Product category %r kept as its own category %r - review its labels.", value, key)
+        connection.execute(
+            sa.text("UPDATE products SET category = :key WHERE category = :value AND category <> :key"),
+            {"key": key, "value": value},
+        )
+    op.alter_column("products", "category", existing_type=sa.String(20), type_=sa.String(50))
+    op.create_foreign_key(
+        "fk_products_category", "products", "product_categories", ["category"], ["key"], ondelete="RESTRICT"
+    )
+    op.create_index("ix_products_category", "products", ["category"])
+
+
+def _downgrade_product_categories() -> None:
+    op.drop_index("ix_products_category", table_name="products")
+    op.drop_constraint("fk_products_category", "products", type_="foreignkey")
+    # Categories added since are folded into "other" so the old 20-character column fits them.
+    op.execute("UPDATE products SET category = 'other' WHERE category NOT IN ('champagne', 'food', 'other')")
+    op.alter_column("products", "category", existing_type=sa.String(50), type_=sa.String(20))
+    op.drop_table("product_categories")
+
+
 def upgrade() -> None:
+    _upgrade_product_categories()
     _upgrade_faq()
     _upgrade_announcements()
     _upgrade_composed_messages()
@@ -262,6 +362,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    _downgrade_product_categories()
     _downgrade_products()
     _downgrade_policies()
     _downgrade_composed_messages()

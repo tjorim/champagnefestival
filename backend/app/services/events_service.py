@@ -22,8 +22,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.models import Edition, Event, EventCategory, Layout, Registration, Room
+from app.models import Edition, Event, Layout, Registration, Room
 from app.schemas import EventCreate, EventTextFields, EventUpdate
+from app.services import event_categories_service
+from app.services.errors import ServiceError, to_http_exception
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import event_to_summary_dict, get_or_404, make_id
 
@@ -50,11 +52,10 @@ async def get_event_or_404(db: AsyncSession, event_id: str) -> Event:
 
 
 async def ensure_category_exists(db: AsyncSession, key: str) -> None:
-    if await db.get(EventCategory, key) is None:
-        raise HTTPException(
-            status.HTTP_422_UNPROCESSABLE_CONTENT,
-            f"Unknown event category '{key}'. Use an existing category key (see /api/event-categories).",
-        )
+    try:
+        await event_categories_service.ensure_category_exists(db, key)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 async def ensure_edition_exists(db: AsyncSession, edition_id: str) -> Edition:

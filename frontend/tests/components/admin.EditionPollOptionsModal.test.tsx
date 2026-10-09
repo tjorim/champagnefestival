@@ -83,7 +83,7 @@ describe("EditionPollOptionsModal", () => {
       http.post("/api/poll-options", async ({ request }) => {
         created = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(
-          { ...option("opt-new", String(created.kind), String(created.label_en), "en") },
+          { ...option("opt-new", String(created.kind), String(created.label_nl)) },
           { status: 201 },
         );
       }),
@@ -93,16 +93,16 @@ describe("EditionPollOptionsModal", () => {
     renderModal([]);
 
     expect(await screen.findAllByText("admin_poll_no_options")).toHaveLength(3);
-    await user.type(screen.getByLabelText(labelIn("en")), "Pumpkin soup");
     await user.type(screen.getByLabelText(labelIn("nl")), "Pompoensoep");
+    await user.type(screen.getByLabelText(labelIn("en")), "Pumpkin soup");
     await selectAdminOption(screen.getByLabelText("admin_poll_add_kind_label"), "soup");
     await user.click(screen.getByRole("button", { name: "admin_poll_add_button" }));
 
-    await waitFor(() => expect(screen.getByText("Pumpkin soup")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText("Pompoensoep")).toBeInTheDocument());
     expect(created).toEqual({
       edition_id: "2026-october",
       kind: "soup",
-      label_language: "en",
+      label_language: "nl",
       label_nl: "Pompoensoep",
       label_fr: null,
       label_en: "Pumpkin soup",
@@ -145,7 +145,7 @@ describe("EditionPollOptionsModal", () => {
     renderModal([]);
 
     await screen.findAllByText("admin_poll_no_options");
-    await user.type(screen.getByLabelText(labelIn("nl")), "Alleen Nederlands");
+    await user.type(screen.getByLabelText(labelIn("en")), "Only English");
     await user.click(screen.getByRole("button", { name: "admin_poll_add_button" }));
 
     expect(await screen.findByText("admin_poll_label_required")).toBeInTheDocument();

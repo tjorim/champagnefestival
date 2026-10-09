@@ -42,6 +42,29 @@ function originalText(
   };
 }
 
+/** Original-language name of a product, as the API returns it. */
+function productName(
+  language: Language,
+  name: string,
+  translations: Partial<Record<Language, string>> = {},
+) {
+  const names: Record<Language, string | null> = { nl: null, fr: null, en: null };
+  Object.assign(names, translations);
+  names[language] = name;
+  return {
+    name,
+    name_language: language,
+    name_nl: names.nl,
+    name_fr: names.fr,
+    name_en: names.en,
+    description: "",
+    description_language: null,
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
+  };
+}
+
 export const seedEvents = [
   {
     id: "event-01",
@@ -101,7 +124,7 @@ export const seedEvents = [
       {
         id: "product-01",
         event_id: "event-02",
-        name: "Champagne Bottle (Standard)",
+        ...productName("en", "Champagne Bottle (Standard)", { nl: "Champagnefles (standaard)" }),
         price: 65,
         category: "champagne",
         purchasable: true,
@@ -115,7 +138,7 @@ export const seedEvents = [
       {
         id: "product-02",
         event_id: "event-02",
-        name: "Cheese Platter",
+        ...productName("en", "Cheese Platter", { nl: "Kaasplank", fr: "Plateau de fromages" }),
         price: 25,
         category: "food",
         purchasable: true,
@@ -128,7 +151,7 @@ export const seedEvents = [
       {
         id: "product-03",
         event_id: "event-02",
-        name: "Napkin",
+        ...productName("en", "Napkin"),
         price: 0.5,
         category: "other",
         purchasable: false,

@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
 import { type Event, type EventFormData, type EventLanguage } from "@/types/event";
-import { eventCategoryLabel, useEventCategories } from "@/hooks/useEventCategories";
+import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import type { Edition } from "./editionTypes";
 
 /** Longest event text the draft endpoint translates; mirrors `EVENT_TEXT_LIMIT` in the backend. */
@@ -266,7 +266,7 @@ export default function EventModal({
                         >
                           {categories.map((category) => (
                             <AdminOption key={category.key} value={category.key}>
-                              {eventCategoryLabel(categories, category.key) ?? category.key}
+                              {categoryLabel(categories, category.key) ?? category.key}
                             </AdminOption>
                           ))}
                         </AdminSelect>

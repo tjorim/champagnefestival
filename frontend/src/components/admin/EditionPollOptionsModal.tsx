@@ -79,7 +79,7 @@ export default function EditionPollOptionsModal({
   const addForm = useForm({
     defaultValues: {
       kind: "dish" as PollOptionKind,
-      language: "en" as Language,
+      language: "nl" as Language,
       labels: EMPTY_LOCALIZED_TEXT,
     },
     onSubmit: async ({ value }) => {

@@ -1,7 +1,7 @@
-"""Admin (write) MCP tool implementations for event categories.
+"""Admin (write) MCP tool implementations for product categories.
 
-Mirrors ``app.routers.event_categories``; business logic lives in
-``app.services.event_categories_service``.
+Mirrors ``app.routers.product_categories``; business logic lives in
+``app.services.product_categories_service``.
 """
 
 from __future__ import annotations
@@ -10,17 +10,17 @@ from typing import Any
 
 from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import CategoryCreate, CategoryUpdate
-from app.services import event_categories_service
+from app.services import product_categories_service
 from app.services.errors import ServiceError
 from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 
-async def list_event_categories(session_factory: Any, locale: str | None = None) -> dict:
+async def list_product_categories(session_factory: Any, locale: str | None = None) -> dict:
     async with session_factory() as db:
-        return {"event_categories": await event_categories_service.list_categories(db, locale=locale)}
+        return {"product_categories": await product_categories_service.list_categories(db, locale=locale)}
 
 
-async def create_event_category(
+async def create_product_category(
     session_factory: Any,
     actor: str,
     *,
@@ -42,12 +42,12 @@ async def create_event_category(
     )
     async with session_factory() as db:
         try:
-            return await event_categories_service.create_category(db, actor=actor, body=body)
+            return await product_categories_service.create_category(db, actor=actor, body=body)
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
 
-async def update_event_category(
+async def update_product_category(
     session_factory: Any,
     actor: str,
     key: str,
@@ -74,14 +74,14 @@ async def update_event_category(
     body = validate_with_schema(CategoryUpdate, **provided)
     async with session_factory() as db:
         try:
-            return await event_categories_service.update_category(db, actor=actor, key=key, body=body)
+            return await product_categories_service.update_category(db, actor=actor, key=key, body=body)
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc
 
 
-async def delete_event_category(session_factory: Any, actor: str, key: str) -> dict:
+async def delete_product_category(session_factory: Any, actor: str, key: str) -> dict:
     async with session_factory() as db:
         try:
-            return await event_categories_service.delete_category(db, actor=actor, key=key)
+            return await product_categories_service.delete_category(db, actor=actor, key=key)
         except ServiceError as exc:
             raise MCPToolError(str(exc)) from exc

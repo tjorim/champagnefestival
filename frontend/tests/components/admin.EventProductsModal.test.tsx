@@ -230,8 +230,8 @@ describe("EventProductsModal", () => {
     renderModal([]);
     await screen.findByText("admin_products_empty");
     fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
-    fireEvent.change(screen.getByLabelText(nameIn("nl")), {
-      target: { value: "Alleen Nederlands" },
+    fireEvent.change(screen.getByLabelText(nameIn("en")), {
+      target: { value: "Only English" },
     });
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
 
@@ -387,9 +387,9 @@ describe("EventProductsModal", () => {
           {
             id: "prod-new",
             event_id: "event-01",
-            name: capturedBody.name_en,
+            name: capturedBody.name_nl,
             name_language: capturedBody.name_language,
-            name_en: capturedBody.name_en,
+            name_nl: capturedBody.name_nl,
             price: capturedBody.price,
             category: capturedBody.category,
             purchasable: true,
@@ -405,7 +405,7 @@ describe("EventProductsModal", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
-    fireEvent.change(screen.getByLabelText(nameIn("en")), {
+    fireEvent.change(screen.getByLabelText(nameIn("nl")), {
       target: { value: "VIP Table" },
     });
     fireEvent.change(screen.getByLabelText("admin_products_price"), {
@@ -423,10 +423,10 @@ describe("EventProductsModal", () => {
       expect(capturedBody).not.toBeNull();
     });
     expect(capturedBody).toMatchObject({
-      name_language: "en",
-      name_nl: null,
+      name_language: "nl",
+      name_nl: "VIP Table",
       name_fr: null,
-      name_en: "VIP Table",
+      name_en: null,
       description_language: null,
       price: 200,
       required: true,
@@ -528,7 +528,7 @@ describe("EventProductsModal", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
-    fireEvent.change(screen.getByLabelText(nameIn("en")), {
+    fireEvent.change(screen.getByLabelText(nameIn("nl")), {
       target: { value: "Free Sample" },
     });
     fireEvent.change(screen.getByLabelText("admin_products_price"), {

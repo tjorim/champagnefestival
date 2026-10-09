@@ -1,6 +1,6 @@
-/** Seed data for event categories (the defaults migration 006 creates). */
+/** Seed data for event and product categories (the defaults migrations 006 and 007 create). */
 
-type Category = {
+export type SeedCategory = {
   key: string;
   label: string;
   label_language: "nl" | "fr" | "en";
@@ -12,7 +12,7 @@ type Category = {
   updated_at: string;
 };
 
-function category(key: string, order: number, nl: string, fr: string, en: string): Category {
+function category(key: string, order: number, nl: string, fr: string, en: string): SeedCategory {
   return {
     key,
     label: nl,
@@ -26,7 +26,7 @@ function category(key: string, order: number, nl: string, fr: string, en: string
   };
 }
 
-export const seedEventCategories: Category[] = [
+export const seedEventCategories: SeedCategory[] = [
   category("tasting", 10, "Degustatie", "Dégustation", "Tasting"),
   category("vip", 20, "VIP Evenement", "Événement VIP", "VIP Event"),
   category("party", 30, "Feest", "Soirée", "Party"),
@@ -36,4 +36,10 @@ export const seedEventCategories: Category[] = [
   category("ceremony", 70, "Plechtigheid", "Cérémonie", "Ceremony"),
   category("social", 80, "Ontmoeting", "Rencontre", "Social"),
   category("other", 90, "Overig", "Autre", "Other"),
+];
+
+export const seedProductCategories: SeedCategory[] = [
+  category("champagne", 10, "Champagne", "Champagne", "Champagne"),
+  category("food", 20, "Eten", "Nourriture", "Food"),
+  category("other", 30, "Anders", "Autre", "Other"),
 ];

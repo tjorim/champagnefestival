@@ -1,10 +1,10 @@
 /**
- * EventCategoryManagement — CRUD for the categories events are filed under.
+ * CategoryManagement — CRUD for the categories events or products are filed under.
  *
  * Self-contained like FaqManagement. The key is chosen once and stays (events
- * store it); labels follow the organisation pattern: the original language is
- * required, the other languages are optional and fall back to it. A category
- * that events still use cannot be deleted, which the server enforces.
+ * and products store it); labels follow the organisation pattern: the original
+ * language is required, the other languages are optional and fall back to it. A
+ * category that is still in use cannot be deleted, which the server enforces.
  */
 
 import { useCallback, useState } from "react";
@@ -38,16 +38,38 @@ import {
   AdminSelect,
 } from "@/components/admin/AdminFields";
 import { Icon } from "@/components/Icon";
-import { eventCategoriesQueryOptions } from "@/hooks/useEventCategories";
+import { eventCategoriesQueryOptions, productCategoriesQueryOptions } from "@/hooks/useCategories";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
 import type { EventLanguage } from "@/types/event";
-import type { EventCategory } from "@/types/eventCategory";
+import type { Category } from "@/types/category";
 import {
   fetchJsonOrThrowWithUnauthorized,
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
+
+export type CategoryKind = "event" | "product";
+
+/** What differs between the two kinds: the endpoint, the cached list and the wording. */
+const KINDS = {
+  event: {
+    path: "/api/event-categories",
+    queryOptions: eventCategoriesQueryOptions,
+    section: () => m.admin_event_categories_section(),
+    keyHelp: () => m.admin_event_category_key_help(),
+    empty: () => m.admin_no_event_categories(),
+    deleteConfirm: (label: string) => m.admin_event_category_delete_confirm({ label }),
+  },
+  product: {
+    path: "/api/product-categories",
+    queryOptions: productCategoriesQueryOptions,
+    section: () => m.admin_product_categories_section(),
+    keyHelp: () => m.admin_product_category_key_help(),
+    empty: () => m.admin_no_product_categories(),
+    deleteConfirm: (label: string) => m.admin_product_category_delete_confirm({ label }),
+  },
+} as const;
 
 const KEY_PATTERN = /^[a-z][a-z0-9_-]{0,49}$/;
 
@@ -75,7 +97,7 @@ const EMPTY_FORM: CategoryForm = {
   sortOrder: "0",
 };
 
-function toForm(category: EventCategory): CategoryForm {
+function toForm(category: Category): CategoryForm {
   return {
     key: category.key,
     labelLanguage: category.labelLanguage,
@@ -97,13 +119,16 @@ function labelBody(form: CategoryForm) {
   };
 }
 
-export default function EventCategoryManagement({
+export default function CategoryManagement({
+  kind,
   authHeaders,
 }: {
+  kind: CategoryKind;
   authHeaders: () => Record<string, string>;
 }) {
+  const config = KINDS[kind];
   const queryClient = useQueryClient();
-  const query = useQuery(eventCategoriesQueryOptions);
+  const query = useQuery(config.queryOptions);
   const categories = query.data ?? [];
 
   const [showModal, setShowModal] = useState(false);
@@ -116,26 +141,26 @@ export default function EventCategoryManagement({
   const saveMutation = useMutation({
     mutationFn: ({ editing, data }: { editing: string | null; data: CategoryForm }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        editing ? `/api/event-categories/${encodeURIComponent(editing)}` : "/api/event-categories",
+        editing ? `${config.path}/${encodeURIComponent(editing)}` : config.path,
         {
           method: editing ? "PUT" : "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify(editing ? labelBody(data) : { key: data.key, ...labelBody(data) }),
         },
-        m.admin_error_save_event_category(),
+        m.admin_error_save_category(),
       ),
-    onSettled: () => void invalidateAdmin(queryClient, [eventCategoriesQueryOptions.queryKey]),
+    onSettled: () => void invalidateAdmin(queryClient, [config.queryOptions.queryKey]),
     retry: false,
   });
 
   const deleteMutation = useMutation({
     mutationFn: (key: string) =>
       fetchVoidOrThrowWithUnauthorized(
-        `/api/event-categories/${encodeURIComponent(key)}`,
+        `${config.path}/${encodeURIComponent(key)}`,
         { method: "DELETE", headers: authHeaders() },
-        m.admin_error_delete_event_category(),
+        m.admin_error_delete_category(),
       ),
-    onSettled: () => void invalidateAdmin(queryClient, [eventCategoriesQueryOptions.queryKey]),
+    onSettled: () => void invalidateAdmin(queryClient, [config.queryOptions.queryKey]),
     retry: false,
   });
 
@@ -146,7 +171,7 @@ export default function EventCategoryManagement({
     setShowModal(true);
   }, [categories]);
 
-  const openEdit = useCallback((category: EventCategory) => {
+  const openEdit = useCallback((category: Category) => {
     setEditingKey(category.key);
     setForm(toForm(category));
     setError(null);
@@ -156,11 +181,11 @@ export default function EventCategoryManagement({
   const handleSave = useCallback(async () => {
     const original = LANGUAGES.find(({ language }) => language === form.labelLanguage);
     if (!editingKey && !KEY_PATTERN.test(form.key)) {
-      setError(m.admin_event_category_key_invalid());
+      setError(m.admin_category_key_invalid());
       return;
     }
     if (!original || !form[original.field].trim()) {
-      setError(m.admin_event_category_label_required());
+      setError(m.admin_category_label_required());
       return;
     }
     setError(null);
@@ -168,28 +193,26 @@ export default function EventCategoryManagement({
       await saveMutation.mutateAsync({ editing: editingKey, data: form });
       setShowModal(false);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : m.admin_error_save_event_category());
+      setError(failure instanceof Error ? failure.message : m.admin_error_save_category());
     }
   }, [form, editingKey, saveMutation]);
 
   const handleDelete = useCallback(
-    async (category: EventCategory) => {
+    async (category: Category) => {
       const confirmed = await confirm({
-        title: m.admin_event_category_delete_title(),
-        body: m.admin_event_category_delete_confirm({ label: category.label }),
-        errorFallback: m.admin_error_delete_event_category(),
+        title: m.admin_category_delete_title(),
+        body: config.deleteConfirm(category.label),
+        errorFallback: m.admin_error_delete_category(),
       });
       if (!confirmed) return;
       setRowError(null);
       try {
         await deleteMutation.mutateAsync(category.key);
       } catch (failure) {
-        setRowError(
-          failure instanceof Error ? failure.message : m.admin_error_delete_event_category(),
-        );
+        setRowError(failure instanceof Error ? failure.message : m.admin_error_delete_category());
       }
     },
-    [confirm, deleteMutation],
+    [confirm, config, deleteMutation],
   );
 
   const busy = saveMutation.isPending || deleteMutation.isPending;
@@ -198,10 +221,10 @@ export default function EventCategoryManagement({
     <>
       <Card tone="secondary">
         <CardHeader className="flex items-center justify-between">
-          <span className="font-semibold">{m.admin_event_categories_section()}</span>
+          <span className="font-semibold">{config.section()}</span>
           <Button variant="outline-warning" size="sm" onClick={openAdd}>
             <Icon icon={PlusIcon} />
-            {m.admin_add_event_category()}
+            {m.admin_add_category()}
           </Button>
         </CardHeader>
         <CardContent className="p-0">
@@ -221,16 +244,16 @@ export default function EventCategoryManagement({
               </Spinner>
             </div>
           ) : categories.length === 0 ? (
-            <p className="text-subtle text-center py-6 mb-0">{m.admin_no_event_categories()}</p>
+            <p className="text-subtle text-center py-6 mb-0">{config.empty()}</p>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{m.admin_event_category_key()}</TableHead>
+                  <TableHead>{m.admin_category_key()}</TableHead>
                   {LANGUAGES.map(({ language, name }) => (
                     <TableHead key={language}>{name()}</TableHead>
                   ))}
-                  <TableHead>{m.admin_event_category_sort_order()}</TableHead>
+                  <TableHead>{m.admin_category_sort_order()}</TableHead>
                   <TableHead />
                 </TableRow>
               </TableHeader>
@@ -283,7 +306,7 @@ export default function EventCategoryManagement({
         <DialogContent admin size="lg">
           <DialogHeader>
             <DialogTitle>
-              {editingKey ? m.admin_edit_event_category() : m.admin_add_event_category()}
+              {editingKey ? m.admin_edit_category() : m.admin_add_category()}
             </DialogTitle>
           </DialogHeader>
           <DialogBody>
@@ -292,8 +315,8 @@ export default function EventCategoryManagement({
                 {error}
               </Alert>
             )}
-            <AdminField className="mb-4" controlId="event-category-key">
-              <AdminLabel>{m.admin_event_category_key()}</AdminLabel>
+            <AdminField className="mb-4" controlId={`${kind}-category-key`}>
+              <AdminLabel>{m.admin_category_key()}</AdminLabel>
               <AdminInput
                 type="text"
                 value={form.key}
@@ -302,10 +325,10 @@ export default function EventCategoryManagement({
                 onChange={(e) => setForm((previous) => ({ ...previous, key: e.target.value }))}
                 className="bg-muted text-content border-input"
               />
-              <p className="text-sm text-subtle mt-1 mb-0">{m.admin_event_category_key_help()}</p>
+              <p className="text-sm text-subtle mt-1 mb-0">{config.keyHelp()}</p>
             </AdminField>
-            <AdminField className="mb-4 max-w-60" controlId="event-category-label-language">
-              <AdminLabel>{m.admin_event_category_label_language()}</AdminLabel>
+            <AdminField className="mb-4 max-w-60" controlId={`${kind}-category-label-language`}>
+              <AdminLabel>{m.admin_category_label_language()}</AdminLabel>
               <AdminSelect
                 value={form.labelLanguage}
                 onValueChange={(value) =>
@@ -323,9 +346,9 @@ export default function EventCategoryManagement({
               <AdminField
                 key={language}
                 className="mb-4"
-                controlId={`event-category-label-${language}`}
+                controlId={`${kind}-category-label-${language}`}
               >
-                <AdminLabel>{m.admin_event_category_label({ language: name() })}</AdminLabel>
+                <AdminLabel>{m.admin_category_label({ language: name() })}</AdminLabel>
                 <AdminInput
                   type="text"
                   value={form[field]}
@@ -337,8 +360,8 @@ export default function EventCategoryManagement({
                 />
               </AdminField>
             ))}
-            <AdminField className="max-w-40" controlId="event-category-sort-order">
-              <AdminLabel>{m.admin_event_category_sort_order()}</AdminLabel>
+            <AdminField className="max-w-40" controlId={`${kind}-category-sort-order`}>
+              <AdminLabel>{m.admin_category_sort_order()}</AdminLabel>
               <AdminInput
                 type="number"
                 min={0}
