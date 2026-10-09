@@ -58,6 +58,11 @@ updates:
         patterns:
           - "@tanstack/react-db"
           - "@tanstack/query-db-collection"
+      # Group TanStack Query packages (must share one @tanstack/query-core; duplicate copies break QueryClient types)
+      tanstack-query:
+        patterns:
+          - "@tanstack/react-query"
+          - "@tanstack/query-persist-client-core"
       # Group dnd-kit packages (share internal deps; mismatched versions cause type errors)
       dnd-kit:
         patterns:
