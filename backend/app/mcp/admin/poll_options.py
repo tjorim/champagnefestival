@@ -14,20 +14,10 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.mcp.utils import as_value_error, validate_with_schema
-from app.models import EditionPollOption
 from app.schemas import PollOptionCreate, PollOptionUpdate
 from app.services import poll_options_service
-
-
-def _poll_option_dict(option: EditionPollOption) -> dict:
-    return {
-        "id": option.id,
-        "edition_id": option.edition_id,
-        "kind": option.kind,
-        "label": option.label,
-        "created_at": option.created_at,
-        "updated_at": option.updated_at,
-    }
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
+from app.utils import poll_option_to_dict
 
 
 async def create_poll_option(
@@ -36,31 +26,63 @@ async def create_poll_option(
     *,
     edition_id: str,
     kind: str,
-    label: str,
+    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
+    label_nl: str | None = None,
+    label_fr: str | None = None,
+    label_en: str | None = None,
 ) -> dict:
-    body = validate_with_schema(PollOptionCreate, edition_id=edition_id, kind=kind, label=label)
+    body = validate_with_schema(
+        PollOptionCreate,
+        edition_id=edition_id,
+        kind=kind,
+        label_language=label_language,
+        label_nl=label_nl,
+        label_fr=label_fr,
+        label_en=label_en,
+    )
     async with session_factory() as db:
         try:
             option = await poll_options_service.create_poll_option(db, body, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return _poll_option_dict(option)
+        return poll_option_to_dict(option)
 
 
 async def list_poll_options(session_factory: Any, edition_id: str | None = None) -> list[dict]:
     async with session_factory() as db:
         options = await poll_options_service.list_poll_options(db, edition_id)
-        return [_poll_option_dict(o) for o in options]
+        return [poll_option_to_dict(o) for o in options]
 
 
-async def update_poll_option(session_factory: Any, actor: str, option_id: str, *, label: str) -> dict:
-    body = validate_with_schema(PollOptionUpdate, label=label)
+async def update_poll_option(
+    session_factory: Any,
+    actor: str,
+    option_id: str,
+    *,
+    label_language: Language | None = None,
+    label_nl: str | None = None,
+    label_fr: str | None = None,
+    label_en: str | None = None,
+) -> dict:
+    """Update a label; omitted fields stay, an empty string clears a translation
+    (the original language keeps its label)."""
+    provided = {
+        k: v
+        for k, v in {
+            "label_language": label_language,
+            "label_nl": label_nl,
+            "label_fr": label_fr,
+            "label_en": label_en,
+        }.items()
+        if v is not None
+    }
+    body = validate_with_schema(PollOptionUpdate, **provided)
     async with session_factory() as db:
         try:
             option = await poll_options_service.update_poll_option(db, option_id, body, actor=actor)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return _poll_option_dict(option)
+        return poll_option_to_dict(option)
 
 
 async def delete_poll_option(session_factory: Any, actor: str, option_id: str) -> dict:

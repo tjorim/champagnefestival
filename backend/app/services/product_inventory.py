@@ -49,6 +49,10 @@ def current_snapshot(event: Event) -> dict:
         p.id: {
             "product_id": p.id,
             "name": p.name,
+            "name_language": p.name_language,
+            "name_nl": p.name_nl,
+            "name_fr": p.name_fr,
+            "name_en": p.name_en,
             "price": str(p.price),
             "category": p.category,
             "unit": p.unit or "item",
@@ -191,6 +195,10 @@ def resolve_booking(
             OrderItemBase(
                 product_id=key,
                 name=node["name"],
+                name_language=node.get("name_language"),
+                name_nl=node.get("name_nl"),
+                name_fr=node.get("name_fr"),
+                name_en=node.get("name_en"),
                 price=float(node["price"]),
                 category=node["category"],
                 quantity=quantity,

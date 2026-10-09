@@ -38,7 +38,7 @@ import { MAX_GUESTS, MIN_GUESTS } from "@/config/registration";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { RegistrationFormData, OrderItem } from "@/types/registration";
 import type { Event } from "@/types/event";
-import { eventTitle } from "@/utils/eventText";
+import { eventTitle, productDescription, productName } from "@/utils/eventText";
 import {
   RegistrationSubmitError,
   submitRegistration,
@@ -136,7 +136,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
 
         const item: OrderItem = {
           productId,
-          name: product.name,
+          name: productName(product, getLocale()),
           quantity,
           deliveredQuantity: 0,
           remainingQuantity: quantity,
@@ -257,10 +257,11 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       }
     };
     for (const order of orderItems) {
+      const ordered = products.find((p) => p.id === order.productId);
       expand(
         order.productId,
         order.quantity,
-        products.find((p) => p.id === order.productId)?.name ?? "",
+        ordered ? productName(ordered, getLocale()) : "",
         new Set(),
       );
     }
@@ -505,7 +506,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   {requiredProducts.length > 0 && !hasRequiredSelected && (
                     <p className="text-highlight text-sm mb-2">
                       {m.registration_order_required_hint({
-                        products: requiredProducts.map((p) => p.name).join(", "),
+                        products: requiredProducts
+                          .map((p) => productName(p, getLocale()))
+                          .join(", "),
                       })}
                     </p>
                   )}
@@ -513,7 +516,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                   {purchasableProducts.map((product) => {
                     const currentItem = orderItems.find((o) => o.productId === product.id);
                     const qty = currentItem?.quantity ?? 0;
-                    const label = `${product.name} - €${product.price}`;
+                    const label = `${productName(product, getLocale())} - €${product.price}`;
                     const isLockedOptional =
                       !product.required && requiredProducts.length > 0 && !hasRequiredSelected;
                     const included = includedQuantities.get(product.id);
@@ -544,9 +547,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                                 )}
                               </>
                             )}
-                            {product.description && (
+                            {productDescription(product, getLocale()) && (
                               <span className="text-subtle block text-xs">
-                                {product.description}
+                                {productDescription(product, getLocale())}
                               </span>
                             )}
                           </span>

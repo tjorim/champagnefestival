@@ -16,7 +16,7 @@ EID_B = "123456789103"
 async def _create_option(client, *, edition_id: str, kind: str, label: str) -> dict:
     r = await client.post(
         "/api/poll-options",
-        json={"edition_id": edition_id, "kind": kind, "label": label},
+        json={"edition_id": edition_id, "kind": kind, "label_en": label},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -44,7 +44,7 @@ async def test_admin_creates_lists_updates_and_deletes_poll_options(client):
     assert labels == {"Vol-au-vent met puree", "Tomatensoep met balletjes"}
 
     r = await client.put(
-        f"/api/poll-options/{dish['id']}", json={"label": "Stoofvlees met puree"}, headers=ADMIN_HEADERS
+        f"/api/poll-options/{dish['id']}", json={"label_en": "Stoofvlees met puree"}, headers=ADMIN_HEADERS
     )
     assert r.status_code == 200, r.text
     assert r.json()["label"] == "Stoofvlees met puree"
@@ -61,14 +61,14 @@ async def test_poll_option_label_is_stripped(client):
     event = await _create_event(client, edition_id="edition-poll-strip")
     r = await client.post(
         "/api/poll-options",
-        json={"edition_id": event["edition_id"], "kind": "dish", "label": "  Vol-au-vent  "},
+        json={"edition_id": event["edition_id"], "kind": "dish", "label_en": "  Vol-au-vent  "},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
     option_id = r.json()["id"]
     assert r.json()["label"] == "Vol-au-vent"
 
-    r = await client.put(f"/api/poll-options/{option_id}", json={"label": "   "}, headers=ADMIN_HEADERS)
+    r = await client.put(f"/api/poll-options/{option_id}", json={"label_en": "   "}, headers=ADMIN_HEADERS)
     assert r.status_code == 422
 
 
@@ -76,7 +76,7 @@ async def test_poll_option_label_is_stripped(client):
 async def test_create_poll_option_rejects_unknown_edition(client):
     r = await client.post(
         "/api/poll-options",
-        json={"edition_id": "no-such-edition", "kind": "dish", "label": "Whatever"},
+        json={"edition_id": "no-such-edition", "kind": "dish", "label_en": "Whatever"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 404
@@ -235,7 +235,9 @@ async def test_replacing_selections_preserves_a_past_editions_picks(client, volu
         active=True,
     )
     db_session.add(new_event)
-    new_dish = EditionPollOption(id=make_id("opt"), edition_id=new_edition.id, kind="dish", label="New Dish")
+    new_dish = EditionPollOption(
+        id=make_id("opt"), edition_id=new_edition.id, kind="dish", label_language="en", label_en="New Dish"
+    )
     db_session.add(new_dish)
     await db_session.commit()
 

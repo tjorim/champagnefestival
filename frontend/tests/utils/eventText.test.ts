@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { eventDescription, eventTitle } from "@/utils/eventText";
+import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
+import { eventDescription, eventTitle, productDescription, productName } from "@/utils/eventText";
 import { noEventTranslations } from "./eventFixtures";
 
 const event = {
@@ -40,5 +41,33 @@ describe("eventTitle / eventDescription", () => {
   it("shows only the original when nothing is translated, in every locale", () => {
     const plain = { ...noEventTranslations, title: "Brunch", titleNl: "Brunch", description: "" };
     for (const locale of ["nl", "fr", "en"]) expect(eventTitle(plain, locale)).toBe("Brunch");
+  });
+});
+
+describe("productName / productDescription", () => {
+  const product = {
+    ...NO_PRODUCT_TRANSLATIONS,
+    name: "Fles",
+    nameNl: "Fles",
+    nameEn: "Bottle",
+    description: "Goed gekoeld",
+    descriptionLanguage: "nl" as const,
+    descriptionNl: "Goed gekoeld",
+  };
+
+  it("shows the visitor's language and falls back to the original", () => {
+    expect(productName(product, "en")).toBe("Bottle");
+    expect(productName(product, "fr")).toBe("Fles");
+    expect(productName({ ...product, nameEn: " " }, "en")).toBe("Fles");
+    expect(productDescription(product, "en")).toBe("Goed gekoeld");
+  });
+
+  it("uses an empty description when there is none", () => {
+    expect(
+      productDescription(
+        { ...product, description: "", descriptionLanguage: null, descriptionNl: null },
+        "fr",
+      ),
+    ).toBe("");
   });
 });

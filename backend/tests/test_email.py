@@ -189,3 +189,36 @@ async def test_shared_link_targets_account_page(monkeypatch):
     assert "https://festival.example/me?token=manager-secret" in body
     assert "can only be used once" in body
     assert "Champagnefestival account" in sent[0]["Subject"]
+
+
+async def test_registration_confirmation_lists_order_lines_in_the_person_language(monkeypatch):
+    sent = []
+    monkeypatch.setattr(email_module.settings, "smtp_host", "smtp.example.com")
+    monkeypatch.setattr(email_module.settings, "smtp_from", "festival@example.com")
+    monkeypatch.setattr(email_module, "_send_message_sync", sent.append)
+    items = [
+        {
+            "product_id": "p1",
+            "name": "Fles",
+            "name_language": "nl",
+            "name_nl": "Fles",
+            "name_en": "Bottle",
+            "quantity": 2,
+            "price": 10,
+        },
+        {"product_id": "p2", "name": "Older order line", "quantity": 1, "price": 5},  # predates translations
+    ]
+    registration = cast(
+        Registration,
+        SimpleNamespace(
+            id="reg-items", check_in_token="token", guest_count=1, amount_due=None, order_items=items, user_id=None
+        ),
+    )
+    event = Event(title_language="nl", title_nl="Opening")
+    for language, first_line in (("en", "- Bottle × 2"), ("fr", "- Fles × 2"), (None, "- Fles × 2")):
+        sent.clear()
+        person = cast(Person, SimpleNamespace(name="Alice", email="alice@example.com", preferred_language=language))
+        assert await email_module.send_registration_confirmation(registration, person, event) is True
+        body = sent[0].get_body(preferencelist=("plain",)).get_content()
+        assert first_line in body
+        assert "- Older order line × 1" in body

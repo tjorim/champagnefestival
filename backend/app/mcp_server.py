@@ -1275,10 +1275,16 @@ class ChampagneFestivalMcpBackend:
     async def create_product(
         self,
         event_id: str,
-        name: str,
         price: float,
         category: str,
-        description: str = "",
+        name_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
+        name_nl: str | None = None,
+        name_fr: str | None = None,
+        name_en: str | None = None,
+        description_language: Language | None = None,
+        description_nl: str | None = None,
+        description_fr: str | None = None,
+        description_en: str | None = None,
         purchasable: bool = True,
         required: bool = False,
         unit: str = "item",
@@ -1288,6 +1294,11 @@ class ChampagneFestivalMcpBackend:
         included_per_guests: int | None = None,
     ) -> dict:
         """Create a product for an event. Requires the ``admin`` role.
+
+        The name (and optional description) is stored per language: fill
+        ``name_nl``/``name_fr``/``name_en`` — the one in ``name_language`` (default
+        ``en``) is required — and likewise ``description_*`` with
+        ``description_language``. Visitors see their language and fall back to the original.
 
         ``purchasable`` (default ``true``) decides both standalone order
         availability and visitor visibility: a purchasable product can be
@@ -1307,8 +1318,14 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             event_id=event_id,
-            name=name,
-            description=description,
+            name_language=name_language,
+            name_nl=name_nl,
+            name_fr=name_fr,
+            name_en=name_en,
+            description_language=description_language,
+            description_nl=description_nl,
+            description_fr=description_fr,
+            description_en=description_en,
             price=price,
             category=category,
             purchasable=purchasable,
@@ -1333,8 +1350,14 @@ class ChampagneFestivalMcpBackend:
     async def update_product(
         self,
         product_id: str,
-        name: str | None = None,
-        description: str | None = None,
+        name_language: Language | None = None,
+        name_nl: str | None = None,
+        name_fr: str | None = None,
+        name_en: str | None = None,
+        description_language: Language | None = None,
+        description_nl: str | None = None,
+        description_fr: str | None = None,
+        description_en: str | None = None,
         price: float | None = None,
         category: str | None = None,
         purchasable: bool | None = None,
@@ -1355,6 +1378,8 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update a product; omitted fields are left unchanged.
 
+        Name and description are per language: an empty string clears a
+        translation, and the original language must keep its name.
         ``stock``/``inclusions``/``included_product_id``/``included_per_guests``
         have no natural "clear" value, so pass ``clear_stock=True`` /
         ``clear_inclusions=True`` / ``clear_included_product_id=True`` /
@@ -1370,8 +1395,14 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             product_id,
-            name=name,
-            description=description,
+            name_language=name_language,
+            name_nl=name_nl,
+            name_fr=name_fr,
+            name_en=name_en,
+            description_language=description_language,
+            description_nl=description_nl,
+            description_fr=description_fr,
+            description_en=description_en,
             price=price,
             category=category,
             purchasable=purchasable,
@@ -1398,12 +1429,29 @@ class ChampagneFestivalMcpBackend:
 
     # -- Volunteer meal/dinner poll options -----------------------------
 
-    async def create_poll_option(self, edition_id: str, kind: str, label: str) -> dict:
+    async def create_poll_option(
+        self,
+        edition_id: str,
+        kind: str,
+        label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
+        label_nl: str | None = None,
+        label_fr: str | None = None,
+        label_en: str | None = None,
+    ) -> dict:
         """Add one volunteer meal/dinner poll choice to an edition. ``kind`` is
-        ``dish``, ``soup``, or ``dinner``. Requires the ``admin`` role."""
+        ``dish``, ``soup``, or ``dinner``. The label is per language: the one in
+        ``label_language`` (default ``en``) is required, the others are optional
+        translations. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll_options.create_poll_option(
-            self.session_factory, self._actor(), edition_id=edition_id, kind=kind, label=label
+            self.session_factory,
+            self._actor(),
+            edition_id=edition_id,
+            kind=kind,
+            label_language=label_language,
+            label_nl=label_nl,
+            label_fr=label_fr,
+            label_en=label_en,
         )
 
     async def list_poll_options(self, edition_id: str | None = None) -> list[dict]:
@@ -1412,11 +1460,26 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_poll_options.list_poll_options(self.session_factory, edition_id)
 
-    async def update_poll_option(self, option_id: str, label: str) -> dict:
-        """Rename a volunteer meal/dinner poll option. Requires the ``admin`` role."""
+    async def update_poll_option(
+        self,
+        option_id: str,
+        label_language: Language | None = None,
+        label_nl: str | None = None,
+        label_fr: str | None = None,
+        label_en: str | None = None,
+    ) -> dict:
+        """Rename a volunteer meal/dinner poll option, per language; an empty string
+        clears a translation and the original language keeps its label. Requires the
+        ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll_options.update_poll_option(
-            self.session_factory, self._actor(), option_id, label=label
+            self.session_factory,
+            self._actor(),
+            option_id,
+            label_language=label_language,
+            label_nl=label_nl,
+            label_fr=label_fr,
+            label_en=label_en,
         )
 
     async def delete_poll_option(self, option_id: str) -> dict:

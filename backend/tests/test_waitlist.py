@@ -13,7 +13,7 @@ SUBMISSION_ID = "1c51e9a0-2481-4a79-9895-f314449dc412"
 async def _create_sold_out_product(client, *, event_id: str, name: str = "Champagneontbijt ticket") -> str:
     r = await client.post(
         "/api/products",
-        json={"event_id": event_id, "name": name, "price": "0", "category": "other", "unit": "person", "stock": 0},
+        json={"event_id": event_id, "name_en": name, "price": "0", "category": "other", "unit": "person", "stock": 0},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
@@ -55,7 +55,7 @@ async def test_waitlist_submission_rejects_available_product(client):
         "/api/products",
         json={
             "event_id": event["id"],
-            "name": "In-stock ticket",
+            "name_en": "In-stock ticket",
             "price": "0",
             "category": "other",
             "unit": "person",

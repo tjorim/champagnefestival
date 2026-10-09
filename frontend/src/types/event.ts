@@ -21,7 +21,31 @@ export interface ProductInclusion {
   rounding: "up" | "down";
 }
 
-export interface Product {
+/** A product's stored name/description in every language (see `EventTranslations`). */
+export interface ProductTranslations {
+  nameLanguage: EventLanguage;
+  nameNl: string | null;
+  nameFr: string | null;
+  nameEn: string | null;
+  descriptionLanguage: EventLanguage | null;
+  descriptionNl: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+}
+
+/** Translation fields of a product whose text exists only in its original language. */
+export const NO_PRODUCT_TRANSLATIONS: ProductTranslations = {
+  nameLanguage: "nl",
+  nameNl: null,
+  nameFr: null,
+  nameEn: null,
+  descriptionLanguage: null,
+  descriptionNl: null,
+  descriptionFr: null,
+  descriptionEn: null,
+};
+
+export interface Product extends ProductTranslations {
   unit?: "item" | "table" | "person";
   stock?: number | null;
   reservedQuantity?: number;
@@ -32,8 +56,9 @@ export interface Product {
   inclusions?: ProductInclusion[] | null;
   id: string;
   eventId: string;
+  /** Original-language name (what the admin lists show). Visitors use `productName`. */
   name: string;
-  /** Short, optional blurb shown alongside the product name. */
+  /** Short, optional blurb in the original language, or "". Visitors use `productDescription`. */
   description: string;
   price: number;
   category: OrderItemCategory;
@@ -146,6 +171,16 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     eventId: String(data.event_id ?? ""),
     name: String(data.name ?? ""),
     description: String(data.description ?? ""),
+    nameLanguage: isEventLanguage(data.name_language) ? data.name_language : "nl",
+    nameNl: nullableText(data.name_nl),
+    nameFr: nullableText(data.name_fr),
+    nameEn: nullableText(data.name_en),
+    descriptionLanguage: isEventLanguage(data.description_language)
+      ? data.description_language
+      : null,
+    descriptionNl: nullableText(data.description_nl),
+    descriptionFr: nullableText(data.description_fr),
+    descriptionEn: nullableText(data.description_en),
     price: Number(data.price ?? 0),
     category: isOrderItemCategory(data.category) ? data.category : "other",
     purchasable: Boolean(data.purchasable),

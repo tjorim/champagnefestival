@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import Schedule from "@/components/Schedule";
 import { getLocale } from "@/paraglide/runtime";
+import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
 import { noEventTranslations } from "../utils/eventFixtures";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -155,6 +156,7 @@ describe("Schedule component", () => {
           {
             id: "product-1",
             eventId: "fri-tasting",
+            ...NO_PRODUCT_TRANSLATIONS,
             name: "VIP Package",
             description: "",
             price: 50,

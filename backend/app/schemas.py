@@ -51,6 +51,13 @@ def _validate_safe_announcement_url(value: str | None) -> str | None:
 class OrderItemBase(BaseModel):
     product_id: str
     name: str
+    """Original-language name at order time. `name_*` hold the translations so the
+    order can be shown in the booker's language; orders from before products were
+    translated carry only `name`."""
+    name_language: Language | None = None
+    name_nl: str | None = None
+    name_fr: str | None = None
+    name_en: str | None = None
     quantity: int = Field(ge=1)
     price: float = Field(ge=0)
     category: OrderItemCategory
@@ -428,19 +435,55 @@ class ProductInclusion(RequestModel):
     rounding: Literal["up", "down"] = "down"
 
 
-class ProductCreate(RequestModel):
+class ProductTextFields(RequestModel):
+    """Product name and description per language (#1222), like event titles: the
+    original language must have the name, the description is optional (but needs
+    text in its original language when present), and visitors fall back to the
+    original. A blank text is stored as `None`."""
+
+    name_language: Language | None = None
+    name_nl: str | None = Field(default=None, max_length=200)
+    name_fr: str | None = Field(default=None, max_length=200)
+    name_en: str | None = Field(default=None, max_length=200)
+    description_language: Language | None = None
+    description_nl: str | None = Field(default=None, max_length=300)
+    description_fr: str | None = Field(default=None, max_length=300)
+    description_en: str | None = Field(default=None, max_length=300)
+
+    @field_validator(
+        "name_nl", "name_fr", "name_en", "description_nl", "description_fr", "description_en", mode="before"
+    )
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        if not self.name_language or not getattr(self, f"name_{self.name_language}"):
+            raise ValueError("A product name requires non-empty text in its original language.")
+        if any((self.description_nl, self.description_fr, self.description_en)):
+            if not self.description_language or not getattr(self, f"description_{self.description_language}"):
+                raise ValueError("A description requires non-empty text in its original language.")
+        elif self.description_language:
+            raise ValueError("Clear the original language when clearing all description texts.")
+        return self
+
+
+class ProductCreate(ProductTextFields):
+    name_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     unit: Literal["item", "table", "person"] = "item"
     stock: int | None = Field(default=None, ge=0, le=2147483647)
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
-    name: str = Field(min_length=1, max_length=200)
-    description: str = Field(default="", max_length=300)
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory
     purchasable: bool = True
     required: bool = False
     included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
     included_per_guests: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def check_text(self) -> Self:
+        return self.validate_original()
 
     @model_validator(mode="after")
     def validate_inclusion_pair(self) -> Self:
@@ -455,7 +498,7 @@ class ProductCreate(RequestModel):
         return self
 
 
-class ProductUpdate(RequestModel):
+class ProductUpdate(ProductTextFields):
     unit: Literal["item", "table", "person"] | None = None
     stock: int | None = Field(default=None, ge=0, le=2147483647)
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
@@ -463,8 +506,6 @@ class ProductUpdate(RequestModel):
     update_existing_prices: bool = False
     confirm_shortage: bool = False
     preview_token: str | None = None
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=300)
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
     category: OrderItemCategory | None = None
     purchasable: bool | None = None
@@ -492,7 +533,16 @@ class ProductOut(BaseModel):
     id: str
     event_id: str
     name: str
+    """Original-language name (admin shape); the per-language fields below hold every translation."""
     description: str = ""
+    name_language: Language
+    name_nl: str | None = None
+    name_fr: str | None = None
+    name_en: str | None = None
+    description_language: Language | None = None
+    description_nl: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
     price: Decimal
     category: OrderItemCategory
     purchasable: bool
@@ -513,7 +563,16 @@ class ProductPublicOut(BaseModel):
 
     id: str
     name: str
+    """Resolved for the requested `locale` (the original language when none) — see `ProductOut`."""
     description: str = ""
+    name_language: Language
+    name_nl: str | None = None
+    name_fr: str | None = None
+    name_en: str | None = None
+    description_language: Language | None = None
+    description_nl: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
     price: Decimal
     category: OrderItemCategory
     unit: str = "item"
@@ -996,24 +1055,38 @@ class VolunteerListEnvelope(BaseModel):
 PollOptionKind = Literal["dish", "soup", "dinner"]
 
 
-class PollOptionCreate(RequestModel):
+class PollOptionLabels(RequestModel):
+    """A poll option's label per language (#1222): the original language must have
+    text, the others are optional and volunteers fall back to the original."""
+
+    label_language: Language | None = None
+    label_nl: str | None = Field(default=None, max_length=200)
+    label_fr: str | None = Field(default=None, max_length=200)
+    label_en: str | None = Field(default=None, max_length=200)
+
+    @field_validator("label_nl", "label_fr", "label_en", mode="before")
+    @classmethod
+    def strip_label(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        if not self.label_language or not getattr(self, f"label_{self.label_language}"):
+            raise ValueError("A label requires non-empty text in its original language.")
+        return self
+
+
+class PollOptionCreate(PollOptionLabels):
     edition_id: str = Field(min_length=1, max_length=100)
     kind: PollOptionKind
-    label: str = Field(min_length=1, max_length=200)
+    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE
 
-    @field_validator("label", mode="before")
-    @classmethod
-    def strip_label(cls, value: str) -> str:
-        return value.strip() if isinstance(value, str) else value
+    @model_validator(mode="after")
+    def check_label(self) -> Self:
+        return self.validate_original()
 
 
-class PollOptionUpdate(RequestModel):
-    label: str = Field(min_length=1, max_length=200)
-
-    @field_validator("label", mode="before")
-    @classmethod
-    def strip_label(cls, value: str) -> str:
-        return value.strip() if isinstance(value, str) else value
+class PollOptionUpdate(PollOptionLabels):
+    """Partial update: an empty string clears a translation; the original cannot be cleared."""
 
 
 class PollOptionOut(BaseModel):
@@ -1021,10 +1094,13 @@ class PollOptionOut(BaseModel):
     edition_id: str
     kind: str
     label: str
+    """Resolved for the requested `locale` (the original language when none)."""
+    label_language: Language
+    label_nl: str | None
+    label_fr: str | None
+    label_en: str | None
     created_at: datetime
     updated_at: datetime
-
-    model_config = {"from_attributes": True}
 
 
 class VolunteerPollSelectionsIn(RequestModel):

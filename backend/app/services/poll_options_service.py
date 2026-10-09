@@ -8,14 +8,17 @@ Raises ``HTTPException`` directly; the MCP adapter translates it into
 
 from __future__ import annotations
 
+from fastapi import HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import EditionPollOption, VolunteerPollSelection
-from app.schemas import PollOptionCreate, PollOptionUpdate
+from app.schemas import PollOptionCreate, PollOptionLabels, PollOptionUpdate
 from app.services.events_service import ensure_edition_exists
 from app.utils import get_or_404, make_id
+
+LABEL_FIELDS = ("label_language", "label_nl", "label_fr", "label_en")
 
 
 async def get_poll_option_or_404(db: AsyncSession, option_id: str) -> EditionPollOption:
@@ -37,7 +40,10 @@ async def create_poll_option(
         id=make_id("poll"),
         edition_id=body.edition_id,
         kind=body.kind,
-        label=body.label,
+        label_language=body.label_language,
+        label_nl=body.label_nl,
+        label_fr=body.label_fr,
+        label_en=body.label_en,
     )
     db.add(option)
     await write_audit_entry(
@@ -58,7 +64,15 @@ async def update_poll_option(
     db: AsyncSession, option_id: str, body: PollOptionUpdate, *, actor: str, request_id: str | None = None
 ) -> EditionPollOption:
     option = await get_poll_option_or_404(db, option_id)
-    option.label = body.label
+    # Validate the merged labels before mutating: a partial update may change a single translation.
+    labels = {field: getattr(option, field) for field in LABEL_FIELDS}
+    labels.update(body.model_dump(include=set(LABEL_FIELDS), exclude_unset=True))
+    try:
+        validated = PollOptionLabels.model_validate(labels).validate_original()
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    for field in LABEL_FIELDS:
+        setattr(option, field, getattr(validated, field))
     await write_audit_entry(
         db,
         actor=actor,

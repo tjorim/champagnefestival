@@ -18,7 +18,7 @@ from app.audit import write_audit_entry
 from app.models import Product
 from app.schemas import ProductCreate, ProductUpdate
 from app.services import product_inventory as inventory
-from app.services.product_changes import change_product
+from app.services.product_changes import TEXT_FIELDS, change_product
 from app.utils import get_or_404, make_id
 
 
@@ -73,8 +73,7 @@ async def create_product(
     product = Product(
         id=make_id("prod"),
         event_id=body.event_id,
-        name=body.name,
-        description=body.description,
+        **body.model_dump(include=set(TEXT_FIELDS)),
         price=body.price,
         category=body.category,
         purchasable=body.purchasable,

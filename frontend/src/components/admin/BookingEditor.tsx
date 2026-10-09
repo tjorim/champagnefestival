@@ -15,7 +15,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import type { FloorTable } from "@/types/admin";
-import type { Product } from "@/types/event";
+import { NO_PRODUCT_TRANSLATIONS, type Product } from "@/types/event";
 import type {
   BookingUpdate,
   PaymentTransactionCreate,
@@ -77,6 +77,7 @@ export default function BookingEditor({
       .map((item) => ({
         id: item.productId,
         eventId: registration.eventId,
+        ...NO_PRODUCT_TRANSLATIONS,
         name: item.name,
         description: "",
         price: item.price,

@@ -16,6 +16,7 @@ from fastapi import HTTPException
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import ProductCreate, ProductUpdate
 from app.services import products_service
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 from app.utils import product_to_dict
 
 
@@ -24,10 +25,16 @@ async def create_product(
     actor: str,
     *,
     event_id: str,
-    name: str,
     price: float,
     category: str,
-    description: str = "",
+    name_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
+    name_nl: str | None = None,
+    name_fr: str | None = None,
+    name_en: str | None = None,
+    description_language: Language | None = None,
+    description_nl: str | None = None,
+    description_fr: str | None = None,
+    description_en: str | None = None,
     purchasable: bool = True,
     required: bool = False,
     unit: str = "item",
@@ -39,8 +46,14 @@ async def create_product(
     body = validate_with_schema(
         ProductCreate,
         event_id=event_id,
-        name=name,
-        description=description,
+        name_language=name_language,
+        name_nl=name_nl,
+        name_fr=name_fr,
+        name_en=name_en,
+        description_language=description_language,
+        description_nl=description_nl,
+        description_fr=description_fr,
+        description_en=description_en,
         price=price,
         category=category,
         purchasable=purchasable,
@@ -79,8 +92,14 @@ async def update_product(
     actor: str,
     product_id: str,
     *,
-    name: str | None = None,
-    description: str | None = None,
+    name_language: Language | None = None,
+    name_nl: str | None = None,
+    name_fr: str | None = None,
+    name_en: str | None = None,
+    description_language: Language | None = None,
+    description_nl: str | None = None,
+    description_fr: str | None = None,
+    description_en: str | None = None,
     price: float | None = None,
     category: str | None = None,
     purchasable: bool | None = None,
@@ -112,12 +131,22 @@ async def update_product(
     ``update_existing_contents``/``update_existing_prices`` set — call this
     tool once to preview (its result includes ``preview_token``), then again
     with that token to save; see ``app.services.product_changes.change_product``.
+
+    Name and description are per language: the original language
+    (``name_language``/``description_language``) must have text, an empty string
+    clears a translation, and clearing every description text drops its language.
     """
     provided: dict[str, Any] = {
         k: v
         for k, v in {
-            "name": name,
-            "description": description,
+            "name_language": name_language,
+            "name_nl": name_nl,
+            "name_fr": name_fr,
+            "name_en": name_en,
+            "description_language": description_language,
+            "description_nl": description_nl,
+            "description_fr": description_fr,
+            "description_en": description_en,
             "price": price,
             "category": category,
             "purchasable": purchasable,

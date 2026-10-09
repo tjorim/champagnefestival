@@ -30,6 +30,26 @@ describe("apiToProduct", () => {
     ]);
   });
 
+  it("maps the name and description in every stored language", () => {
+    const mapped = apiToProduct({
+      ...product,
+      name_language: "fr",
+      name_fr: "Table",
+      name_en: "  ",
+      description_language: "fr",
+      description_fr: "Pour deux",
+    });
+
+    expect(mapped).toMatchObject({
+      nameLanguage: "fr",
+      nameFr: "Table",
+      nameEn: null,
+      descriptionLanguage: "fr",
+      descriptionFr: "Pour deux",
+      descriptionNl: null,
+    });
+  });
+
   it("keeps non-array inclusions as null", () => {
     expect(apiToProduct({ ...product, inclusions: "not-an-array" }).inclusions).toBeNull();
   });

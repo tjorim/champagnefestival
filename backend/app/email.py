@@ -20,6 +20,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.database import async_session_factory
 from app.models import ContactMessage, Event, Person, Registration
+from app.utils import order_item_name
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +119,9 @@ async def send_registration_confirmation(registration: Registration, person: Per
     # back to the event's original language when that translation is missing.
     event_title = event.localized_title(language)
     order_lines = (
-        "\n".join(f"- {item['name']} × {item['quantity']}" for item in (registration.order_items or []))
+        "\n".join(
+            f"- {order_item_name(item, language)} × {item['quantity']}" for item in (registration.order_items or [])
+        )
         or f"- {text['none']}"
     )
     calculated_due = sum(
@@ -161,7 +164,7 @@ async def send_registration_confirmation(registration: Registration, person: Per
     safe_check_in_url = escape(check_in_url, quote=True)
     html_order_lines = (
         "".join(
-            f"<li>{escape(str(item['name']))} × {int(item['quantity'])}</li>"
+            f"<li>{escape(order_item_name(item, language))} × {int(item['quantity'])}</li>"
             for item in (registration.order_items or [])
         )
         or f"<li>{text['none']}</li>"

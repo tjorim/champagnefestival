@@ -36,11 +36,19 @@ const event: Event = {
   products: [],
 };
 
+const nameIn = (language: string) =>
+  `admin_products_name_in({"language":"admin_language_${language}"})`;
+
 function renderModal(products: Record<string, unknown>[]) {
   server.use(
     http.get("/api/products", ({ request }) => {
       const eventId = new URL(request.url).searchParams.get("event_id");
-      return HttpResponse.json(products.filter((p) => p.event_id === eventId));
+      // The API always returns the name in its original language (Dutch here).
+      return HttpResponse.json(
+        products
+          .filter((p) => p.event_id === eventId)
+          .map((p) => ({ name_language: "nl", name_nl: p.name, ...p })),
+      );
     }),
   );
   const queryClient = createTestQueryClient();
@@ -165,6 +173,71 @@ describe("EventProductsModal", () => {
     expect(saved).toMatchObject({ purchasable: false, preview_token: "token-1" });
   });
 
+  it("sends the translations and clears a blank one when editing a product", async () => {
+    let saved: Record<string, unknown> | null = null;
+    renderModal([
+      {
+        id: "prod-bottle",
+        event_id: "event-01",
+        name: "Fles",
+        name_language: "nl",
+        name_nl: "Fles",
+        name_en: "Bottle",
+        price: 65,
+        category: "champagne",
+        purchasable: true,
+        required: false,
+        created_at: "",
+        updated_at: "",
+      },
+    ]);
+    await screen.findByText("Fles");
+    server.use(
+      http.post("/api/products/prod-bottle/preview", () =>
+        HttpResponse.json({
+          preview_token: "token-2",
+          bookings: [],
+          price_changed: false,
+          contents_changed: false,
+          shortages: [],
+        }),
+      ),
+      http.put("/api/products/prod-bottle", async ({ request }) => {
+        saved = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ ...saved, id: "prod-bottle", event_id: "event-01" });
+      }),
+    );
+
+    fireEvent.click(screen.getByLabelText("Edit Fles"));
+    expect((screen.getByLabelText(nameIn("en")) as HTMLInputElement).value).toBe("Bottle");
+    fireEvent.change(screen.getByLabelText(nameIn("en")), { target: { value: " " } });
+    fireEvent.change(screen.getByLabelText(nameIn("fr")), { target: { value: "Bouteille" } });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+    await screen.findByText("admin_inventory_review");
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    await waitFor(() => expect(saved).not.toBeNull());
+    expect(saved).toMatchObject({
+      name_language: "nl",
+      name_nl: "Fles",
+      name_fr: "Bouteille",
+      name_en: null,
+      description_language: null,
+    });
+  });
+
+  it("requires the name in the original language", async () => {
+    renderModal([]);
+    await screen.findByText("admin_products_empty");
+    fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
+    fireEvent.change(screen.getByLabelText(nameIn("nl")), {
+      target: { value: "Alleen Nederlands" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
+
+    expect(await screen.findByText("admin_products_name_required")).toBeInTheDocument();
+  });
+
   it("unticking purchasable forces required off and disables its checkbox", async () => {
     renderModal([
       {
@@ -233,7 +306,7 @@ describe("EventProductsModal", () => {
 
     fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
 
-    const nameField = screen.getByLabelText("admin_products_name") as HTMLInputElement;
+    const nameField = screen.getByLabelText(nameIn("nl")) as HTMLInputElement;
     expect(nameField.value).toBe("Champagne Bottle");
     // The form sits inside the same row as the product it edits — after
     // Champagne Bottle's own text, but before the next row (Cheese Platter),
@@ -314,7 +387,9 @@ describe("EventProductsModal", () => {
           {
             id: "prod-new",
             event_id: "event-01",
-            name: capturedBody.name,
+            name: capturedBody.name_en,
+            name_language: capturedBody.name_language,
+            name_en: capturedBody.name_en,
             price: capturedBody.price,
             category: capturedBody.category,
             purchasable: true,
@@ -330,7 +405,7 @@ describe("EventProductsModal", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
-    fireEvent.change(screen.getByLabelText("admin_products_name"), {
+    fireEvent.change(screen.getByLabelText(nameIn("en")), {
       target: { value: "VIP Table" },
     });
     fireEvent.change(screen.getByLabelText("admin_products_price"), {
@@ -348,7 +423,11 @@ describe("EventProductsModal", () => {
       expect(capturedBody).not.toBeNull();
     });
     expect(capturedBody).toMatchObject({
-      name: "VIP Table",
+      name_language: "en",
+      name_nl: null,
+      name_fr: null,
+      name_en: "VIP Table",
+      description_language: null,
       price: 200,
       required: true,
       inclusions: [{ product_id: "prod-bottle", quantity: 1, per_quantity: 2, rounding: "down" }],
@@ -449,7 +528,7 @@ describe("EventProductsModal", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
-    fireEvent.change(screen.getByLabelText("admin_products_name"), {
+    fireEvent.change(screen.getByLabelText(nameIn("en")), {
       target: { value: "Free Sample" },
     });
     fireEvent.change(screen.getByLabelText("admin_products_price"), {

@@ -4,6 +4,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { describe, expect, it, vi } from "vitest";
 import RegistrationDetail from "@/components/admin/RegistrationDetail";
 import type { FloorTable } from "@/types/admin";
+import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
 import type { Registration } from "@/types/registration";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 import { noEventTranslations } from "../utils/eventFixtures";
@@ -404,6 +405,7 @@ describe("RegistrationDetail", () => {
     const tableProduct = {
       id: "table-product",
       eventId: "event-1",
+      ...NO_PRODUCT_TRANSLATIONS,
       name: "Bourse table",
       description: "",
       price: 50,

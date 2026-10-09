@@ -59,7 +59,7 @@ async def _post_registration_with_order(client, *, quantity: int = 2):
         "/api/products",
         json={
             "event_id": event["id"],
-            "name": "Champagne bottle",
+            "name_en": "Champagne bottle",
             "price": "42.00",
             "category": "champagne",
         },

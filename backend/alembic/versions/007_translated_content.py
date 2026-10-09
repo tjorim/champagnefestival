@@ -175,14 +175,94 @@ def _downgrade_policies() -> None:
     op.drop_column("policies", "title_language")
 
 
+# --- Products and poll options ----------------------------------------------------
+
+PRODUCT_NAME_CHECK = "(" + _original("name_language", "length(trim(name_{lang})) > 0") + ")"
+PRODUCT_DESCRIPTION_CHECK = (
+    "(description_language IS NULL AND description_nl IS NULL AND description_fr IS NULL AND description_en IS NULL) OR "
+    "(description_language IS NOT NULL AND "
+    + _original("description_language", "length(trim(description_{lang})) > 0")
+    + ")"
+)
+POLL_LABEL_CHECK = _original("label_language", "length(trim(label_{lang})) > 0")
+
+
+def _upgrade_products() -> None:
+    for field, length in (("name", 200), ("description", 300)):
+        for lang in ("nl", "fr", "en"):
+            op.add_column("products", sa.Column(f"{field}_{lang}", sa.String(length), nullable=True))
+    op.add_column("products", sa.Column("name_language", sa.String(2), nullable=True))
+    op.add_column("products", sa.Column("description_language", sa.String(2), nullable=True))
+    op.execute(
+        "UPDATE products SET name_language = 'nl', "
+        "name_nl = CASE WHEN length(trim(name)) > 0 THEN name ELSE id END, "
+        "description_language = CASE WHEN length(trim(description)) > 0 THEN 'nl' END, "
+        "description_nl = CASE WHEN length(trim(description)) > 0 THEN description END"
+    )
+    op.alter_column("products", "name_language", nullable=False)
+    op.drop_column("products", "name")
+    op.drop_column("products", "description")
+    op.create_check_constraint("ck_products_name_original", "products", PRODUCT_NAME_CHECK)
+    op.create_check_constraint("ck_products_description_original", "products", PRODUCT_DESCRIPTION_CHECK)
+
+    op.add_column("edition_poll_options", sa.Column("label_language", sa.String(2), nullable=True))
+    for lang in ("nl", "fr", "en"):
+        op.add_column("edition_poll_options", sa.Column(f"label_{lang}", sa.String(200), nullable=True))
+    op.execute(
+        "UPDATE edition_poll_options SET label_language = 'nl', "
+        "label_nl = CASE WHEN length(trim(label)) > 0 THEN label ELSE id END"
+    )
+    op.alter_column("edition_poll_options", "label_language", nullable=False)
+    op.drop_column("edition_poll_options", "label")
+    op.create_check_constraint("ck_poll_option_label_original", "edition_poll_options", POLL_LABEL_CHECK)
+
+
+def _downgrade_products() -> None:
+    op.drop_constraint("ck_poll_option_label_original", "edition_poll_options", type_="check")
+    op.add_column("edition_poll_options", sa.Column("label", sa.String(200), nullable=True))
+    op.execute(
+        "UPDATE edition_poll_options SET label = CASE label_language "
+        "WHEN 'fr' THEN label_fr WHEN 'en' THEN label_en ELSE label_nl END"
+    )
+    op.alter_column("edition_poll_options", "label", nullable=False)
+    for column in ("label_en", "label_fr", "label_nl", "label_language"):
+        op.drop_column("edition_poll_options", column)
+
+    op.drop_constraint("ck_products_description_original", "products", type_="check")
+    op.drop_constraint("ck_products_name_original", "products", type_="check")
+    op.add_column("products", sa.Column("name", sa.String(200), nullable=True))
+    op.add_column("products", sa.Column("description", sa.String(300), nullable=True))
+    op.execute(
+        "UPDATE products SET "
+        "name = CASE name_language WHEN 'fr' THEN name_fr WHEN 'en' THEN name_en ELSE name_nl END, "
+        "description = coalesce(CASE description_language "
+        "WHEN 'fr' THEN description_fr WHEN 'en' THEN description_en ELSE description_nl END, '')"
+    )
+    op.alter_column("products", "name", nullable=False)
+    op.alter_column("products", "description", nullable=False, server_default="")
+    for column in (
+        "description_language",
+        "description_en",
+        "description_fr",
+        "description_nl",
+        "name_language",
+        "name_en",
+        "name_fr",
+        "name_nl",
+    ):
+        op.drop_column("products", column)
+
+
 def upgrade() -> None:
     _upgrade_faq()
     _upgrade_announcements()
     _upgrade_composed_messages()
     _upgrade_policies()
+    _upgrade_products()
 
 
 def downgrade() -> None:
+    _downgrade_products()
     _downgrade_policies()
     _downgrade_composed_messages()
     _downgrade_announcements()

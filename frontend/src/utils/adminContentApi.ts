@@ -1,5 +1,6 @@
 import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
 import type { ItemDraft } from "@/components/admin/itemTypes";
+import type { Language, LocalizedText } from "@/components/admin/LocalizedFields";
 import { m } from "@/paraglide/messages";
 import {
   apiToEvent,
@@ -259,6 +260,23 @@ export async function fetchEditionEvents(
  * translations are sent as `null`, which clears them on update. The description
  * language is only sent with text, so clearing every description text clears it.
  */
+/**
+ * `<field>_nl/_fr/_en` request fields for a per-language text; a blank
+ * translation is sent as `null`, which clears it on update.
+ */
+function localizedBody<Field extends string>(field: Field, text: LocalizedText) {
+  const value = (language: Language) => text[language].trim() || null;
+  return {
+    [`${field}_nl`]: value("nl"),
+    [`${field}_fr`]: value("fr"),
+    [`${field}_en`]: value("en"),
+  } as Record<`${Field}_${Language}`, string | null>;
+}
+
+function hasAnyText(text: LocalizedText): boolean {
+  return Object.values(text).some((value) => value.trim());
+}
+
 export function eventTextBody(formData: EventFormData) {
   const text = (value: string) => value.trim() || null;
   const hasDescription = [
@@ -343,8 +361,11 @@ export async function fetchEventProducts(
 export interface ProductWrite {
   id?: string;
   eventId: string;
-  name: string;
-  description?: string;
+  nameLanguage: Language;
+  /** Per-language product name; a blank translation is cleared. */
+  name: LocalizedText;
+  descriptionLanguage: Language;
+  description: LocalizedText;
   price: number;
   category: OrderItemCategory;
   purchasable: boolean;
@@ -377,8 +398,13 @@ export interface ProductChangePreview {
 function productWriteBody(payload: ProductWrite) {
   return {
     ...(!payload.id ? { event_id: payload.eventId } : {}),
-    name: payload.name,
-    ...(payload.description !== undefined ? { description: payload.description } : {}),
+    name_language: payload.nameLanguage,
+    ...localizedBody("name", payload.name),
+    // Without any description text there is no description language either.
+    ...(hasAnyText(payload.description)
+      ? { description_language: payload.descriptionLanguage }
+      : { description_language: null }),
+    ...localizedBody("description", payload.description),
     price: payload.price,
     category: payload.category,
     purchasable: payload.purchasable,
@@ -458,7 +484,15 @@ export interface PollOption {
   id: string;
   editionId: string;
   kind: PollOptionKind;
+  /** Original-language label. */
   label: string;
+  labelLanguage: Language;
+  labels: LocalizedText;
+}
+
+export interface PollOptionLabels {
+  language: Language;
+  labels: LocalizedText;
 }
 
 function apiToPollOption(data: Record<string, unknown>): PollOption {
@@ -468,7 +502,21 @@ function apiToPollOption(data: Record<string, unknown>): PollOption {
     editionId: String(data.edition_id ?? ""),
     kind: kind === "soup" || kind === "dinner" ? kind : "dish",
     label: String(data.label ?? ""),
+    labelLanguage: isLanguage(data.label_language) ? data.label_language : "nl",
+    labels: {
+      nl: String(data.label_nl ?? ""),
+      fr: String(data.label_fr ?? ""),
+      en: String(data.label_en ?? ""),
+    },
   };
+}
+
+function isLanguage(value: unknown): value is Language {
+  return value === "nl" || value === "fr" || value === "en";
+}
+
+function pollLabelBody({ language, labels }: PollOptionLabels) {
+  return { label_language: language, ...localizedBody("label", labels) };
 }
 
 export async function fetchEditionPollOptions(
@@ -485,7 +533,7 @@ export async function fetchEditionPollOptions(
 }
 
 export async function createPollOption(
-  payload: { editionId: string; kind: PollOptionKind; label: string },
+  payload: { editionId: string; kind: PollOptionKind } & PollOptionLabels,
   authHeaders: () => Record<string, string>,
 ): Promise<PollOption> {
   const response = await safeFetch(
@@ -496,7 +544,7 @@ export async function createPollOption(
       body: JSON.stringify({
         edition_id: payload.editionId,
         kind: payload.kind,
-        label: payload.label,
+        ...pollLabelBody(payload),
       }),
     },
     m.admin_content_error_save(),
@@ -506,7 +554,7 @@ export async function createPollOption(
 
 export async function updatePollOption(
   optionId: string,
-  label: string,
+  label: PollOptionLabels,
   authHeaders: () => Record<string, string>,
 ): Promise<PollOption> {
   const response = await safeFetch(
@@ -514,7 +562,7 @@ export async function updatePollOption(
     {
       method: "PUT",
       headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({ label }),
+      body: JSON.stringify(pollLabelBody(label)),
     },
     m.admin_content_error_save(),
   );

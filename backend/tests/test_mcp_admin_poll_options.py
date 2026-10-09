@@ -24,7 +24,7 @@ async def test_create_list_update_delete_poll_option(db_session):
     edition_id = await _create_edition(db_session)
 
     created = await mcp_poll_options.create_poll_option(
-        factory, "admin-1", edition_id=edition_id, kind="dish", label="Vol-au-vent met puree"
+        factory, "admin-1", edition_id=edition_id, kind="dish", label_en="Vol-au-vent met puree"
     )
     assert created["edition_id"] == edition_id
     assert created["kind"] == "dish"
@@ -33,7 +33,7 @@ async def test_create_list_update_delete_poll_option(db_session):
     listed = await mcp_poll_options.list_poll_options(factory, edition_id)
     assert [o["id"] for o in listed] == [created["id"]]
 
-    updated = await mcp_poll_options.update_poll_option(factory, "admin-1", created["id"], label="Stoofvlees")
+    updated = await mcp_poll_options.update_poll_option(factory, "admin-1", created["id"], label_en="Stoofvlees")
     assert updated["label"] == "Stoofvlees"
 
     result = await mcp_poll_options.delete_poll_option(factory, "admin-1", created["id"])
@@ -47,7 +47,7 @@ async def test_create_poll_option_rejects_missing_edition(db_session):
 
     with pytest.raises(ValueError, match="not found"):
         await mcp_poll_options.create_poll_option(
-            factory, "admin-1", edition_id="nonexistent", kind="dish", label="Whatever"
+            factory, "admin-1", edition_id="nonexistent", kind="dish", label_en="Whatever"
         )
 
 
@@ -56,8 +56,8 @@ async def test_list_poll_options_filters_by_edition(db_session):
     edition_a = await _create_edition(db_session, edition_id="edition-a")
     edition_b = await _create_edition(db_session, edition_id="edition-b")
 
-    await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id=edition_a, kind="soup", label="A Soup")
-    await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id=edition_b, kind="soup", label="B Soup")
+    await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id=edition_a, kind="soup", label_en="A Soup")
+    await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id=edition_b, kind="soup", label_en="B Soup")
 
     all_options = await mcp_poll_options.list_poll_options(factory)
     assert len(all_options) == 2
@@ -69,7 +69,7 @@ async def test_list_poll_options_filters_by_edition(db_session):
 async def test_update_poll_option_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_poll_options.update_poll_option(factory, "admin-1", "nonexistent", label="New Label")
+        await mcp_poll_options.update_poll_option(factory, "admin-1", "nonexistent", label_en="New Label")
 
 
 async def test_delete_poll_option_not_found(db_session):

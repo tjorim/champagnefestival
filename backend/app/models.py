@@ -924,9 +924,16 @@ class Product(Base):
         .scalar_subquery()
     )
 
-    name: Mapped[str] = mapped_column(String(200))
-    description: Mapped[str] = mapped_column(String(300), default="")
-    """Short, optional blurb shown alongside the product name to visitors and admins."""
+    name_language: Mapped[str] = mapped_column(String(2))
+    name_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    name_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    name_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    description_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
+    description_nl: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    description_fr: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    description_en: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    """Short, optional blurb shown alongside the product name; per language like
+    the name, with the original language required whenever there is any text."""
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     category: Mapped[str] = mapped_column(String(20))
     """"champagne" | "food" | "other" — matches OrderItemCategory."""
@@ -946,6 +953,21 @@ class Product(Base):
         CheckConstraint("stock IS NULL OR stock >= 0", name="ck_product_stock"),
         CheckConstraint("unit IN ('item', 'table', 'person')", name="ck_product_unit"),
         CheckConstraint("NOT required OR purchasable", name="ck_products_required_implies_purchasable"),
+        CheckConstraint(
+            "((name_language = 'nl' AND length(trim(name_nl)) > 0) OR "
+            "(name_language = 'fr' AND length(trim(name_fr)) > 0) OR "
+            "(name_language = 'en' AND length(trim(name_en)) > 0)) IS TRUE",
+            name="ck_products_name_original",
+        ),
+        CheckConstraint(
+            "(description_language IS NULL AND description_nl IS NULL AND description_fr IS NULL "
+            "AND description_en IS NULL) OR "
+            "(description_language IS NOT NULL AND ("
+            "(description_language = 'nl' AND length(trim(description_nl)) > 0) OR "
+            "(description_language = 'fr' AND length(trim(description_fr)) > 0) OR "
+            "(description_language = 'en' AND length(trim(description_en)) > 0)) IS TRUE)",
+            name="ck_products_description_original",
+        ),
     )
 
     purchasable: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -981,6 +1003,27 @@ class Product(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     event: Mapped[Event] = relationship(back_populates="products")
+
+    @property
+    def name(self) -> str:
+        """Original-language name: what admin lists, exports and audit entries show.
+        Visitors get ``localized_name``. Read-only: write ``name_language`` and ``name_nl/fr/en``."""
+        return self.localized_name(None)
+
+    @property
+    def description(self) -> str:
+        """Original-language description, ``""`` when there is none."""
+        return self.localized_description(None)
+
+    def localized_name(self, locale: str | None) -> str:
+        return resolve_text({"nl": self.name_nl, "fr": self.name_fr, "en": self.name_en}, self.name_language, locale)
+
+    def localized_description(self, locale: str | None) -> str:
+        return resolve_text(
+            {"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en},
+            self.description_language,
+            locale,
+        )
 
 
 class Person(Base):
@@ -1108,17 +1151,38 @@ class EditionPollOption(Base):
     """
 
     __tablename__ = "edition_poll_options"
-    __table_args__ = (CheckConstraint("kind IN ('dish', 'soup', 'dinner')", name="ck_poll_option_kind"),)
+    __table_args__ = (
+        CheckConstraint("kind IN ('dish', 'soup', 'dinner')", name="ck_poll_option_kind"),
+        CheckConstraint(
+            "((label_language = 'nl' AND length(trim(label_nl)) > 0) OR "
+            "(label_language = 'fr' AND length(trim(label_fr)) > 0) OR "
+            "(label_language = 'en' AND length(trim(label_en)) > 0)) IS TRUE",
+            name="ck_poll_option_label_original",
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
     kind: Mapped[str] = mapped_column(String(10), nullable=False)
-    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    label_language: Mapped[str] = mapped_column(String(2), nullable=False)
+    label_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    label_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    label_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    @property
+    def label(self) -> str:
+        """Original-language label (admin lists, audit entries); volunteers get ``localized_label``."""
+        return self.localized_label(None)
+
+    def localized_label(self, locale: str | None) -> str:
+        return resolve_text(
+            {"nl": self.label_nl, "fr": self.label_fr, "en": self.label_en}, self.label_language, locale
+        )
 
 
 class VolunteerPollSelection(Base):

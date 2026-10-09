@@ -18,6 +18,7 @@ from app.models import (
     AppSettings,
     Area,
     Edition,
+    EditionPollOption,
     Event,
     FaqItem,
     Layout,
@@ -30,6 +31,7 @@ from app.models import (
     TableType,
     Venue,
 )
+from app.translations import resolve_text
 
 _CSV_INJECTION_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n")
 
@@ -149,9 +151,9 @@ def event_to_summary_dict(
         # product's id/name/stock/etc. must never reach an unauthenticated
         # caller, not even indirectly as a bundle-target reference.
         "products": (
-            _public_products(event.products)
+            _public_products(event.products, locale)
             if public
-            else [product_to_dict(p) for p in event.products if p.purchasable]
+            else [product_to_dict(p, locale) for p in event.products if p.purchasable]
         ),
     }
     edition: Edition | None = getattr(event, "edition", None)
@@ -160,9 +162,54 @@ def event_to_summary_dict(
     return data
 
 
-def _public_products(products: Sequence[Product]) -> list[dict]:
+def _public_products(products: Sequence[Product], locale: str | None = None) -> list[dict]:
     purchasable_ids = {p.id for p in products if p.purchasable}
-    return [product_to_public_dict(p, purchasable_ids) for p in products if p.id in purchasable_ids]
+    return [product_to_public_dict(p, purchasable_ids, locale) for p in products if p.id in purchasable_ids]
+
+
+def product_text_dict(p: Product, locale: str | None = None) -> dict:
+    """Product name/description for *locale* (``name``/``description``, falling back
+    to the original language) plus every stored language."""
+    return {
+        "name": p.localized_name(locale),
+        "description": p.localized_description(locale),
+        "name_language": p.name_language,
+        "name_nl": p.name_nl,
+        "name_fr": p.name_fr,
+        "name_en": p.name_en,
+        "description_language": p.description_language,
+        "description_nl": p.description_nl,
+        "description_fr": p.description_fr,
+        "description_en": p.description_en,
+    }
+
+
+def order_item_name(item: dict, locale: str | None) -> str:
+    """An order line's product name in *locale*, falling back to the original-language
+    name stored with the order (older orders carry only that)."""
+    return (
+        resolve_text(
+            {code: item.get(f"name_{code}") for code in ("nl", "fr", "en")},
+            item.get("name_language"),
+            locale,
+        )
+        or item["name"]
+    )
+
+
+def poll_option_to_dict(option: EditionPollOption, locale: str | None = None) -> dict:
+    return {
+        "id": option.id,
+        "edition_id": option.edition_id,
+        "kind": option.kind,
+        "label": option.localized_label(locale),
+        "label_language": option.label_language,
+        "label_nl": option.label_nl,
+        "label_fr": option.label_fr,
+        "label_en": option.label_en,
+        "created_at": option.created_at,
+        "updated_at": option.updated_at,
+    }
 
 
 def product_available_quantity(p: Product) -> int | None:
@@ -173,13 +220,12 @@ def product_sold_out(p: Product, available_quantity: int | None) -> bool:
     return p.purchasable and available_quantity is not None and available_quantity <= 0
 
 
-def product_to_dict(p: Product) -> dict:
+def product_to_dict(p: Product, locale: str | None = None) -> dict:
     available_quantity = product_available_quantity(p)
     return {
         "id": p.id,
         "event_id": p.event_id,
-        "name": p.name,
-        "description": p.description,
+        **product_text_dict(p, locale),
         "price": p.price,
         "category": p.category,
         "purchasable": p.purchasable,
@@ -198,7 +244,7 @@ def product_to_dict(p: Product) -> dict:
     }
 
 
-def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None) -> dict:
+def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None, locale: str | None = None) -> dict:
     """The visitor-safe shape of a product — never exposes `stock`, and never
     named unless `p.purchasable`. `purchasable_ids`, when given, is the set
     of this event's purchasable product ids: any inclusion edge (or the
@@ -218,8 +264,7 @@ def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None) 
             included_per_guests = None
     return {
         "id": p.id,
-        "name": p.name,
-        "description": p.description,
+        **product_text_dict(p, locale),
         "price": p.price,
         "category": p.category,
         "unit": p.unit,

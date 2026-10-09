@@ -6,10 +6,12 @@ import pytest
 
 from tests.helpers import ADMIN_HEADERS, _create_event
 
-PRODUCT_PAYLOAD = {"name": "Bottle of Champagne", "price": "25.00", "category": "champagne"}
+PRODUCT_PAYLOAD = {"name_en": "Bottle of Champagne", "price": "25.00", "category": "champagne"}
 
 
 async def _create_product(client, event_id: str, **overrides):
+    if "name" in overrides:  # tests name products in English, the default original language
+        overrides["name_en"] = overrides.pop("name")
     payload = {**PRODUCT_PAYLOAD, "event_id": event_id, **overrides}
     r = await client.post("/api/products", json=payload, headers=ADMIN_HEADERS)
     assert r.status_code == 201, r.text
@@ -60,7 +62,12 @@ async def test_product_description_round_trips(client):
 
     r = await client.post(
         "/api/products",
-        json={**PRODUCT_PAYLOAD, "event_id": event["id"], "description": "Vintage brut, chilled on arrival."},
+        json={
+            **PRODUCT_PAYLOAD,
+            "event_id": event["id"],
+            "description_language": "en",
+            "description_en": "Vintage brut, chilled on arrival.",
+        },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
@@ -73,7 +80,9 @@ async def test_product_description_round_trips(client):
     assert r.json()["description"] == "Vintage brut, chilled on arrival."  # untouched by the partial update
 
     r = await client.put(
-        f"/api/products/{product_id}", json={"description": "Updated tasting note."}, headers=ADMIN_HEADERS
+        f"/api/products/{product_id}",
+        json={"description_language": "en", "description_en": "Updated tasting note."},
+        headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
     assert r.json()["description"] == "Updated tasting note."
@@ -697,7 +706,7 @@ async def test_product_bundle_rejects_cross_event_target(client):
         json={
             **PRODUCT_PAYLOAD,
             "event_id": event_a["id"],
-            "name": "VIP Table",
+            "name_en": "VIP Table",
             "included_product_id": bottle_on_b["id"],
             "included_per_guests": 2,
         },
@@ -719,7 +728,7 @@ async def test_product_bundle_allows_a_hidden_target(client):
         json={
             **PRODUCT_PAYLOAD,
             "event_id": event["id"],
-            "name": "VIP Table",
+            "name_en": "VIP Table",
             "included_product_id": hidden["id"],
             "included_per_guests": 2,
         },
@@ -732,7 +741,7 @@ async def test_product_bundle_allows_a_hidden_target(client):
         json={
             **PRODUCT_PAYLOAD,
             "event_id": event["id"],
-            "name": "VIP Table 2",
+            "name_en": "VIP Table 2",
             "inclusions": [{"product_id": hidden["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
         },
         headers=ADMIN_HEADERS,
@@ -759,7 +768,7 @@ async def test_product_bundle_rejects_chaining(client):
         json={
             **PRODUCT_PAYLOAD,
             "event_id": event["id"],
-            "name": "Top",
+            "name_en": "Top",
             "included_product_id": middle["id"],
             "included_per_guests": 1,
         },

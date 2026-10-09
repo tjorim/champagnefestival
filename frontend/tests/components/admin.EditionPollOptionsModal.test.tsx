@@ -32,6 +32,23 @@ const edition: Edition = {
   updatedAt: "2026-01-01T00:00:00.000Z",
 };
 
+/** A stored poll option whose label exists only in its original language. */
+function option(id: string, kind: string, label: string, language = "nl") {
+  return {
+    id,
+    edition_id: "2026-october",
+    kind,
+    label,
+    label_language: language,
+    label_nl: language === "nl" ? label : null,
+    label_fr: language === "fr" ? label : null,
+    label_en: language === "en" ? label : null,
+  };
+}
+
+const labelIn = (language: string) =>
+  `admin_poll_label_in({"language":"admin_language_${language}"})`;
+
 function renderModal(options: Record<string, unknown>[]) {
   server.use(
     http.get("/api/poll-options", ({ request }) => {
@@ -50,9 +67,9 @@ function renderModal(options: Record<string, unknown>[]) {
 describe("EditionPollOptionsModal", () => {
   it("groups existing options by kind", async () => {
     renderModal([
-      { id: "opt-1", edition_id: "2026-october", kind: "dish", label: "Vol-au-vent" },
-      { id: "opt-2", edition_id: "2026-october", kind: "soup", label: "Tomatensoep" },
-      { id: "opt-3", edition_id: "2026-october", kind: "dinner", label: "Donderdag - Cardis" },
+      option("opt-1", "dish", "Vol-au-vent"),
+      option("opt-2", "soup", "Tomatensoep"),
+      option("opt-3", "dinner", "Donderdag - Cardis"),
     ]);
 
     expect(await screen.findByText("Vol-au-vent")).toBeInTheDocument();
@@ -66,12 +83,7 @@ describe("EditionPollOptionsModal", () => {
       http.post("/api/poll-options", async ({ request }) => {
         created = (await request.json()) as Record<string, unknown>;
         return HttpResponse.json(
-          {
-            id: "opt-new",
-            edition_id: created.edition_id,
-            kind: created.kind,
-            label: created.label,
-          },
+          { ...option("opt-new", String(created.kind), String(created.label_en), "en") },
           { status: 201 },
         );
       }),
@@ -81,38 +93,62 @@ describe("EditionPollOptionsModal", () => {
     renderModal([]);
 
     expect(await screen.findAllByText("admin_poll_no_options")).toHaveLength(3);
-    await user.type(screen.getByLabelText("admin_poll_add_label_label"), "Pompoensoep");
+    await user.type(screen.getByLabelText(labelIn("en")), "Pumpkin soup");
+    await user.type(screen.getByLabelText(labelIn("nl")), "Pompoensoep");
     await selectAdminOption(screen.getByLabelText("admin_poll_add_kind_label"), "soup");
     await user.click(screen.getByRole("button", { name: "admin_poll_add_button" }));
 
-    await waitFor(() => expect(screen.getByText("Pompoensoep")).toBeInTheDocument());
-    expect(created).toEqual({ edition_id: "2026-october", kind: "soup", label: "Pompoensoep" });
+    await waitFor(() => expect(screen.getByText("Pumpkin soup")).toBeInTheDocument());
+    expect(created).toEqual({
+      edition_id: "2026-october",
+      kind: "soup",
+      label_language: "en",
+      label_nl: "Pompoensoep",
+      label_fr: null,
+      label_en: "Pumpkin soup",
+    });
   });
 
-  it("edits an option's label in place", async () => {
+  it("edits an option's label in place and adds a translation", async () => {
+    let updated: Record<string, unknown> | null = null;
     server.use(
       http.put("/api/poll-options/opt-1", async ({ request }) => {
-        const body = (await request.json()) as { label: string };
-        return HttpResponse.json({
-          id: "opt-1",
-          edition_id: "2026-october",
-          kind: "dish",
-          label: body.label,
-        });
+        const body = (await request.json()) as { label_nl: string; label_fr: string | null };
+        updated = body;
+        return HttpResponse.json(option("opt-1", "dish", body.label_nl));
       }),
     );
 
     const user = userEvent.setup();
-    renderModal([{ id: "opt-1", edition_id: "2026-october", kind: "dish", label: "Vol-au-vent" }]);
+    renderModal([option("opt-1", "dish", "Vol-au-vent")]);
 
     await screen.findByText("Vol-au-vent");
     await user.click(screen.getByRole("button", { name: "admin_edit" }));
     const input = screen.getByDisplayValue("Vol-au-vent");
     await user.clear(input);
     await user.type(input, "Stoofvlees");
+    // The row being edited comes before the add form in the DOM.
+    await user.type(screen.getAllByLabelText(labelIn("fr"))[0]!, "Carbonade");
     await user.click(screen.getByRole("button", { name: "admin_save" }));
 
     await waitFor(() => expect(screen.getByText("Stoofvlees")).toBeInTheDocument());
+    expect(updated).toEqual({
+      label_language: "nl",
+      label_nl: "Stoofvlees",
+      label_fr: "Carbonade",
+      label_en: null,
+    });
+  });
+
+  it("requires a label in the original language", async () => {
+    const user = userEvent.setup();
+    renderModal([]);
+
+    await screen.findAllByText("admin_poll_no_options");
+    await user.type(screen.getByLabelText(labelIn("nl")), "Alleen Nederlands");
+    await user.click(screen.getByRole("button", { name: "admin_poll_add_button" }));
+
+    expect(await screen.findByText("admin_poll_label_required")).toBeInTheDocument();
   });
 
   it("deletes an option after confirmation", async () => {
@@ -125,7 +161,7 @@ describe("EditionPollOptionsModal", () => {
     );
 
     const user = userEvent.setup();
-    renderModal([{ id: "opt-1", edition_id: "2026-october", kind: "dish", label: "Vol-au-vent" }]);
+    renderModal([option("opt-1", "dish", "Vol-au-vent")]);
 
     await screen.findByText("Vol-au-vent");
     await user.click(screen.getByRole("button", { name: "admin_delete" }));

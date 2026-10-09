@@ -1,10 +1,4 @@
-import {
-  AdminInput,
-  AdminField,
-  AdminLabel,
-  AdminSelect,
-  AdminOption,
-} from "@/components/admin/AdminFields";
+import { AdminField, AdminLabel, AdminSelect, AdminOption } from "@/components/admin/AdminFields";
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -20,6 +14,13 @@ import {
   DialogBody,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  EMPTY_LOCALIZED_TEXT,
+  LocalizedInputs,
+  OriginalLanguageSelect,
+  hasOriginal,
+  type Language,
+} from "@/components/admin/LocalizedFields";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
@@ -29,6 +30,7 @@ import {
   updatePollOption,
   type PollOption,
   type PollOptionKind,
+  type PollOptionLabels,
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
 import type { Edition } from "./editionTypes";
@@ -62,8 +64,7 @@ export default function EditionPollOptionsModal({
   const queryClient = useQueryClient();
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const [error, setError] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingLabel, setEditingLabel] = useState("");
+  const [editing, setEditing] = useState<({ id: string } & PollOptionLabels) | null>(null);
 
   const editionId = edition?.id ?? "";
   const queryKey = queryKeys.admin.editionPollOptions(editionId);
@@ -76,12 +77,19 @@ export default function EditionPollOptionsModal({
   });
 
   const addForm = useForm({
-    defaultValues: { label: "", kind: "dish" as PollOptionKind },
+    defaultValues: {
+      kind: "dish" as PollOptionKind,
+      language: "en" as Language,
+      labels: EMPTY_LOCALIZED_TEXT,
+    },
     onSubmit: async ({ value }) => {
       setError("");
-      if (!value.label.trim()) return;
+      if (!hasOriginal(value.language, value.labels)) {
+        setError(m.admin_poll_label_required());
+        return;
+      }
       try {
-        await createMutation.mutateAsync({ kind: value.kind, label: value.label.trim() });
+        await createMutation.mutateAsync(value);
       } catch (err) {
         setError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
@@ -89,24 +97,24 @@ export default function EditionPollOptionsModal({
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: { kind: PollOptionKind; label: string }) =>
-      createPollOption({ editionId, kind: payload.kind, label: payload.label }, authHeaders),
+    mutationFn: (payload: { kind: PollOptionKind } & PollOptionLabels) =>
+      createPollOption({ editionId, ...payload }, authHeaders),
     retry: false,
     onSuccess: (created) => {
       queryClient.setQueryData<PollOption[]>(queryKey, (prev = []) => [...prev, created]);
-      addForm.setFieldValue("label", "");
+      addForm.setFieldValue("labels", EMPTY_LOCALIZED_TEXT);
     },
   });
 
   const updateMutation = useMutation({
-    mutationFn: (payload: { id: string; label: string }) =>
-      updatePollOption(payload.id, payload.label, authHeaders),
+    mutationFn: (payload: { id: string } & PollOptionLabels) =>
+      updatePollOption(payload.id, payload, authHeaders),
     retry: false,
     onSuccess: (updated) => {
       queryClient.setQueryData<PollOption[]>(queryKey, (prev = []) =>
         prev.map((o) => (o.id === updated.id ? updated : o)),
       );
-      setEditingId(null);
+      setEditing(null);
     },
   });
 
@@ -117,11 +125,15 @@ export default function EditionPollOptionsModal({
 
   const options = optionsQuery.data ?? [];
 
-  async function handleSaveEdit(id: string) {
+  async function handleSaveEdit() {
+    if (!editing) return;
     setError("");
-    if (!editingLabel.trim()) return;
+    if (!hasOriginal(editing.language, editing.labels)) {
+      setError(m.admin_poll_label_required());
+      return;
+    }
     try {
-      await updateMutation.mutateAsync({ id, label: editingLabel.trim() });
+      await updateMutation.mutateAsync(editing);
     } catch (err) {
       setError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
@@ -178,32 +190,49 @@ export default function EditionPollOptionsModal({
                     <PresentationList className="mb-2">
                       {kindOptions.map((option) => (
                         <PresentationListItem key={option.id} className="flex items-center gap-2">
-                          {editingId === option.id ? (
-                            <>
-                              <AdminInput
-                                size="sm"
-                                className="bg-muted text-content border-input"
-                                value={editingLabel}
-                                onChange={(e) => setEditingLabel(e.target.value)}
-                                maxLength={200}
-                                autoFocus
+                          {editing?.id === option.id ? (
+                            <div className="grow">
+                              <OriginalLanguageSelect
+                                controlId={`poll-option-edit-language-${option.id}`}
+                                label={m.admin_poll_original_language()}
+                                value={editing.language}
+                                onChange={(language) =>
+                                  setEditing((previous) => previous && { ...previous, language })
+                                }
                               />
-                              <Button
-                                size="sm"
-                                variant="outline-primary"
-                                disabled={updateMutation.isPending}
-                                onClick={() => handleSaveEdit(option.id)}
-                              >
-                                {m.admin_save()}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingId(null)}
-                              >
-                                {m.admin_action_cancel()}
-                              </Button>
-                            </>
+                              <LocalizedInputs
+                                idPrefix={`poll-option-edit-${option.id}`}
+                                label={(language) => m.admin_poll_label_in({ language })}
+                                values={editing.labels}
+                                maxLength={200}
+                                onChange={(language, text) =>
+                                  setEditing(
+                                    (previous) =>
+                                      previous && {
+                                        ...previous,
+                                        labels: { ...previous.labels, [language]: text },
+                                      },
+                                  )
+                                }
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline-primary"
+                                  disabled={updateMutation.isPending}
+                                  onClick={() => handleSaveEdit()}
+                                >
+                                  {m.admin_save()}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setEditing(null)}
+                                >
+                                  {m.admin_action_cancel()}
+                                </Button>
+                              </div>
+                            </div>
                           ) : (
                             <>
                               <span className="grow">{option.label}</span>
@@ -211,8 +240,11 @@ export default function EditionPollOptionsModal({
                                 size="sm"
                                 variant="outline"
                                 onClick={() => {
-                                  setEditingId(option.id);
-                                  setEditingLabel(option.label);
+                                  setEditing({
+                                    id: option.id,
+                                    language: option.labelLanguage,
+                                    labels: option.labels,
+                                  });
                                 }}
                               >
                                 {m.admin_edit()}
@@ -263,22 +295,32 @@ export default function EditionPollOptionsModal({
                 )}
               </addForm.Field>
             </AdminField>
-            <AdminField controlId="poll-option-add-label" className="grow">
-              <AdminLabel className="text-sm text-subtle mb-1">
-                {m.admin_poll_add_label_label()}
-              </AdminLabel>
-              <addForm.Field name="label">
-                {(field) => (
-                  <AdminInput
-                    size="sm"
-                    className="bg-muted text-content border-input"
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
+            <addForm.Field name="language">
+              {(field) => (
+                <OriginalLanguageSelect
+                  controlId="poll-option-add-language"
+                  label={m.admin_poll_original_language()}
+                  value={field.value}
+                  onChange={(language) => field.handleChange(language)}
+                />
+              )}
+            </addForm.Field>
+            <p className="text-sm text-subtle w-full">{m.admin_poll_text_help()}</p>
+            <addForm.Field name="labels">
+              {(field) => (
+                <div className="w-full">
+                  <LocalizedInputs
+                    idPrefix="poll-option-add-label"
+                    label={(language) => m.admin_poll_label_in({ language })}
+                    values={field.value}
                     maxLength={200}
+                    onChange={(language, text) =>
+                      field.handleChange({ ...field.value, [language]: text })
+                    }
                   />
-                )}
-              </addForm.Field>
-            </AdminField>
+                </div>
+              )}
+            </addForm.Field>
             <Button
               type="submit"
               size="sm"

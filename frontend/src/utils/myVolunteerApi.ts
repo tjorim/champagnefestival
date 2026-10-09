@@ -1,4 +1,5 @@
 import { m } from "@/paraglide/messages";
+import { getLocale } from "@/paraglide/runtime";
 
 export interface MyVolunteerIdentity {
   linked: boolean;
@@ -138,7 +139,7 @@ function parsePollOptions(data: unknown): MyPollOptions {
 
 /** Fetch the active edition's meal/dinner poll options and this volunteer's own picks. */
 export async function getMyPollOptions(accessToken: string): Promise<MyPollOptions> {
-  const response = await fetch("/api/me/volunteer/poll-options", {
+  const response = await fetch(`/api/me/volunteer/poll-options?locale=${getLocale()}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) throw new Error(m.my_poll_load_error());
@@ -150,7 +151,7 @@ export async function replaceMyPollSelections(
   accessToken: string,
   selections: MyPollSelections,
 ): Promise<MyPollOptions> {
-  const response = await fetch("/api/me/volunteer/poll-selections", {
+  const response = await fetch(`/api/me/volunteer/poll-selections?locale=${getLocale()}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({

@@ -40,7 +40,7 @@ async def test_create_reservation_checkout_summary_hides_admin_product_data(clie
     purchasable = (
         await client.post(
             "/api/products",
-            json={"event_id": event["id"], "name": "Bottle", "price": "25.00", "category": "champagne"},
+            json={"event_id": event["id"], "name_en": "Bottle", "price": "25.00", "category": "champagne"},
             headers=ADMIN_HEADERS,
         )
     ).json()
@@ -49,7 +49,7 @@ async def test_create_reservation_checkout_summary_hides_admin_product_data(clie
             "/api/products",
             json={
                 "event_id": event["id"],
-                "name": "Kitchen Supply",
+                "name_en": "Kitchen Supply",
                 "price": "1.00",
                 "category": "other",
                 "purchasable": False,

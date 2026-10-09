@@ -9,7 +9,7 @@ docs/decisions/1006-volunteer-identity-self-service.md for the full design.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -25,6 +25,8 @@ from app.schemas import (
     VolunteerPollSelectionsOut,
 )
 from app.services import volunteer_self_service
+from app.translations import Language
+from app.utils import poll_option_to_dict
 
 router = APIRouter(prefix="/api/me/volunteer", tags=["me", "volunteers"], dependencies=[Depends(require_volunteer)])
 
@@ -115,13 +117,15 @@ async def update_my_eid_document_number(
 @router.get("/poll-options", response_model=VolunteerPollOptionsOut)
 async def get_my_poll_options(
     response: Response,
+    locale: Language | None = Query(default=None),
     subject: str = Depends(get_actor_id),
     db: AsyncSession = Depends(get_db),
 ) -> VolunteerPollOptionsOut:
     """The active festival edition's meal/soup/dinner poll options, plus this
     volunteer's own current picks. Selections come back empty if the caller
     isn't linked to a volunteer record yet, rather than 404ing — there's
-    nothing wrong with browsing the options before registering."""
+    nothing wrong with browsing the options before registering. Labels are
+    resolved for `locale` (the original language when it has no label)."""
     response.headers["Cache-Control"] = "no-store"
     edition_id, options = await volunteer_self_service.get_active_edition_poll_options(db)
     person = await volunteer_self_service.get_linked_volunteer(db, subject)
@@ -132,7 +136,7 @@ async def get_my_poll_options(
     )
     return VolunteerPollOptionsOut(
         edition_id=edition_id,
-        options=[PollOptionOut.model_validate(o) for o in options],
+        options=[PollOptionOut.model_validate(poll_option_to_dict(o, locale)) for o in options],
         selections=selections,
     )
 
@@ -140,6 +144,7 @@ async def get_my_poll_options(
 @router.put("/poll-selections", response_model=VolunteerPollOptionsOut)
 async def replace_my_poll_selections(
     body: VolunteerPollSelectionsIn,
+    locale: Language | None = Query(default=None),
     subject: str = Depends(get_actor_id),
     db: AsyncSession = Depends(get_db),
     request_id: str | None = Depends(get_request_id),
@@ -156,6 +161,6 @@ async def replace_my_poll_selections(
     edition_id, options = await volunteer_self_service.get_active_edition_poll_options(db)
     return VolunteerPollOptionsOut(
         edition_id=edition_id,
-        options=[PollOptionOut.model_validate(o) for o in options],
+        options=[PollOptionOut.model_validate(poll_option_to_dict(o, locale)) for o in options],
         selections=selections,
     )

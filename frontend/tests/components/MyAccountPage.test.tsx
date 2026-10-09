@@ -411,6 +411,7 @@ describe("MyAccountPage", () => {
       logout: vi.fn(),
       renewSession: vi.fn().mockResolvedValue(false),
     });
+    const pollLocales: (string | null)[] = [];
     server.use(
       http.get("/api/me/volunteer", () =>
         HttpResponse.json({
@@ -420,16 +421,17 @@ describe("MyAccountPage", () => {
           eid_document_number: "123456789002",
         }),
       ),
-      http.get("/api/me/volunteer/poll-options", () =>
-        HttpResponse.json({
+      http.get("/api/me/volunteer/poll-options", ({ request }) => {
+        pollLocales.push(new URL(request.url).searchParams.get("locale"));
+        return HttpResponse.json({
           edition_id: "2026-october",
           options: [
             { id: "poll-dish-1", kind: "dish", label: "Vol-au-vent" },
             { id: "poll-soup-1", kind: "soup", label: "Tomatensoep" },
           ],
           selections: { dish_option_id: null, soup_option_id: null, dinner_option_ids: [] },
-        }),
-      ),
+        });
+      }),
       http.put("/api/me/volunteer/poll-selections", async ({ request }) => {
         const body = (await request.json()) as { dish_option_id: string | null };
         return HttpResponse.json({
@@ -455,6 +457,8 @@ describe("MyAccountPage", () => {
     await user.click(dishOption);
 
     await waitFor(() => expect(dishOption).toBeChecked());
+    // Option labels are resolved on the server for the page's language.
+    expect(pollLocales[0]).toMatch(/^(nl|fr|en)$/);
   });
 
   it("signs out an OIDC account through one button that also ends the emailed session", async () => {

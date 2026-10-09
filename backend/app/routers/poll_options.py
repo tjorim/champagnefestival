@@ -10,9 +10,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import EditionPollOption
 from app.schemas import PollOptionCreate, PollOptionOut, PollOptionUpdate
 from app.services import poll_options_service
+from app.utils import poll_option_to_dict
 
 router = APIRouter(
     prefix="/api/poll-options",
@@ -27,18 +27,19 @@ async def create_poll_option(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> EditionPollOption:
-    return await poll_options_service.create_poll_option(
+) -> dict:
+    option = await poll_options_service.create_poll_option(
         db, body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
+    return poll_option_to_dict(option)
 
 
 @router.get("", response_model=list[PollOptionOut])
 async def list_poll_options(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None),
-) -> list[EditionPollOption]:
-    return await poll_options_service.list_poll_options(db, edition_id)
+) -> list[dict]:
+    return [poll_option_to_dict(o) for o in await poll_options_service.list_poll_options(db, edition_id)]
 
 
 @router.put("/{option_id}", response_model=PollOptionOut)
@@ -48,10 +49,11 @@ async def update_poll_option(
     request: Request,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
-) -> EditionPollOption:
-    return await poll_options_service.update_poll_option(
+) -> dict:
+    option = await poll_options_service.update_poll_option(
         db, option_id, body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
+    return poll_option_to_dict(option)
 
 
 @router.delete("/{option_id}", status_code=status.HTTP_204_NO_CONTENT)

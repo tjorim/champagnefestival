@@ -33,7 +33,9 @@ async def _seed_event(db_session, *, with_product: bool = True) -> tuple[Person,
     db_session.add(event)
     await db_session.flush()
     if with_product:
-        product = Product(id="prod-1", event_id="evt-1", name="Champagne", price=15.0, category="champagne")
+        product = Product(
+            id="prod-1", event_id="evt-1", name_language="en", name_en="Champagne", price=15.0, category="champagne"
+        )
         db_session.add(product)
     await db_session.commit()
     return person, event
