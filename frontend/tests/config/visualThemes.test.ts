@@ -38,6 +38,12 @@ const EXPECTED_THEMES = [
     colorMode: "light",
     themeColors: { dark: "#edf1f5", light: "#edf1f5" },
   },
+  {
+    value: "millesime",
+    label: "Millésime",
+    colorMode: "system",
+    themeColors: { dark: "#14110e", light: "#f6f1e7" },
+  },
 ] as const;
 
 describe("visual theme registry", () => {

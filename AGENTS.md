@@ -117,7 +117,7 @@ Tailwind v4 and Base UI are the frontend stack; Bootstrap was removed in #1111
   with unprefixed Tailwind utilities (for example `flex gap-2 hover:bg-primary`).
   Tailwind preflight is the reset. Utilities are not `!important`.
 - Cascade layers are declared in `frontend/src/styles/tailwind.css`, lowest to
-  highest: `theme`, `base`, `vendor`, `components`, `utilities`. Leaflet/Swiper
+  highest: `theme`, `base`, `vendor`, `components`, `utilities`. Leaflet
   CSS goes in `vendor`; runtime themes (`frontend/public/themes/*.css`),
   `admin.css`, other component stylesheets and the `data-slot` rules in
   `tailwind.css` go in `components`. A utility on an element therefore beats all

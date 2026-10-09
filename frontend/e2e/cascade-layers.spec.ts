@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 
-const themes = ["refresh", "classic", "riviera", "cuvee", "remuage"];
+const themes = ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"];
 
 async function waitForTheme(page: Page) {
   await expect

@@ -2,26 +2,31 @@ import { test, expect } from "@playwright/test";
 
 test.describe("Guest registration", () => {
   test("registration section is visible on the landing page", async ({ page }) => {
+    await page.clock.setFixedTime(new Date("2027-02-01T12:00:00Z"));
     await page.goto("/");
 
     const section = page.locator("#registrations");
     await expect(section).toBeVisible();
 
-    // CTA button should be rendered
+    // CTA button should be rendered, and repeated in the at-a-glance strip below the hero
     const regButton = section.getByRole("button", { name: /register now|registreer nu/i });
     await expect(regButton).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: /festival at a glance|het festival in een oogopslag/i })
+        .getByRole("button", { name: /register now|registreer nu/i }),
+    ).toBeVisible();
   });
 
-  test("registration CTA button is disabled when no registrable events", async ({ page }) => {
-    // The MSW mock edition has events with registrations_open_from in the future,
-    // so the button is correctly disabled in the pre-festival period.
+  test("announces when registrations open instead of a disabled CTA", async ({ page }) => {
+    // The MSW mock edition has events with registrations_open_from in the future
+    // (2027-01-01), so the pre-festival period shows the opening date, not a dead button.
+    await page.clock.setFixedTime(new Date("2026-10-08T12:00:00Z"));
     await page.goto("/");
 
-    const regButton = page
-      .locator("#registrations")
-      .getByRole("button", { name: /register now|registreer nu/i });
-    await expect(regButton).toBeVisible();
-    await expect(regButton).toBeDisabled();
+    const section = page.locator("#registrations");
+    await expect(section).toContainText(/1 January 2027|1 januari 2027/);
+    await expect(section.getByRole("button")).toHaveCount(0);
   });
 
   test("registration form can be submitted when registrations are open", async ({ page }) => {

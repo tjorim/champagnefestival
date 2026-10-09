@@ -195,6 +195,12 @@
       padding-left: 18rem;
     }
 
+    /* The sidebar takes 18rem of the viewport, so the standard breakpoint widths
+       would push section cards past the right edge. */
+    html[data-visual-theme="riviera"] .site-container {
+      max-width: min(1240px, calc(100% - 4rem));
+    }
+
     html[data-visual-theme="riviera"] .site-header {
       top: 1rem;
       right: auto;
@@ -546,8 +552,12 @@
 
   .countdown-units {
     display: grid;
-    grid-template-columns: repeat(5, minmax(6rem, 1fr));
+    /* The countdown shows a variable number of units; centre whatever is rendered
+       instead of reserving five fixed tracks. */
+    grid-template-columns: repeat(auto-fit, minmax(6rem, 8rem));
+    justify-content: center;
     gap: 0.65rem;
+    margin-bottom: 1.5rem;
   }
 
   .countdown-unit {
@@ -662,8 +672,7 @@
   }
 
   [data-slot="accordion-item"],
-  [data-slot="card"],
-  .marquee-card {
+  [data-slot="card"] {
     color: var(--ink);
     background: #fffaf0;
     border: 2px solid rgba(18, 50, 59, 0.13);
@@ -678,17 +687,6 @@
   [data-slot="accordion-trigger"][aria-expanded="true"] {
     color: #fffaf0;
     background: var(--primary-color);
-  }
-
-  .marquee-slider {
-    max-width: none;
-    padding: 0.6rem 0;
-  }
-
-  .marquee-logo-frame {
-    background: linear-gradient(135deg, #fffaf0, #fff2cf);
-    border: 2px dashed rgba(18, 50, 59, 0.22);
-    border-radius: 1.25rem;
   }
 
   .leaflet-container,
@@ -759,9 +757,13 @@
     }
 
     .section-header,
-    .riviera-feature-grid,
-    .countdown-units {
+    .riviera-feature-grid {
       grid-template-columns: 1fr;
+    }
+
+    /* Keep the countdown on one row on phones instead of three full-width tiles. */
+    .countdown-units {
+      grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr));
     }
 
     .riviera-feature-card:nth-child(2) {
@@ -786,5 +788,11 @@
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
     }
+  }
+
+  /* Wordmark: deep teal "CHAMPAGNE", red "festival". */
+  .site-wordmark {
+    --wordmark-champagne: var(--ink);
+    --wordmark-festival: #d62839;
   }
 }

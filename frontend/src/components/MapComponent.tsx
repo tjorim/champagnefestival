@@ -6,31 +6,7 @@ import L from "leaflet";
 import markerIcon from "leaflet/dist/images/marker-icon.png";
 import markerIcon2x from "leaflet/dist/images/marker-icon-2x.png";
 import markerShadow from "leaflet/dist/images/marker-shadow.png";
-
-/**
- * Generates a Google Maps URL for the given location data
- * @param location - Venue name
- * @param address - Street address
- * @param postalCode - Postal code
- * @param city - City name
- * @returns Google Maps search URL or null if no valid location data
- */
-const generateGoogleMapsUrl = (
-  location: string,
-  address: string,
-  postalCode: string,
-  city: string,
-  country: string,
-): string | null => {
-  const locationParts = [location, address, postalCode, city, country].filter(Boolean);
-
-  if (locationParts.length === 0) {
-    return null;
-  }
-
-  const query = locationParts.join(", ");
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-};
+import { generateGoogleMapsUrl } from "@/utils/maps";
 
 // A dedicated icon avoids Leaflet prepending its auto-detected image path to
 // the asset URLs emitted by Vite.

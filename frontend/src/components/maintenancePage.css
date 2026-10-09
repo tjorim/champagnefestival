@@ -206,10 +206,42 @@
     border-radius: 9px;
   }
 
-  .maintenance-page .maintenance-page__logo {
-    width: 6rem;
-    height: 6rem;
+  /* millésime: paper-and-ink rectangle, oxblood on hover, no shadows */
+  html[data-visual-theme="millesime"] .maintenance-page__scrim {
+    background-color: rgba(14, 12, 9, 0.62);
+  }
+  html[data-visual-theme="millesime"] .maintenance-page__cta {
+    border-radius: 0;
+    background: #f6f1e7;
+    color: #16130f;
+    border: 1px solid #f6f1e7;
+    box-shadow: none;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    font-size: 0.85rem;
+  }
+  html[data-visual-theme="millesime"] .maintenance-page__cta:hover,
+  html[data-visual-theme="millesime"] .maintenance-page__cta:focus-visible {
+    background: #9b2335;
+    border-color: #f6f1e7;
+    color: #fff;
+    transform: none;
+  }
+  html[data-visual-theme="millesime"] .maintenance-page__flyer-card {
+    border-radius: 0;
+    border: 1px solid rgba(246, 241, 231, 0.7);
+  }
+
+  /* The wordmark sits on the darkened photo in every theme: white "CHAMPAGNE",
+     a lifted red "festival" for contrast. */
+  .maintenance-page .maintenance-page__wordmark {
+    display: inline-block;
     margin-bottom: 1.5rem;
+    font-size: 1.9rem;
+  }
+  .maintenance-page .maintenance-page__wordmark .site-wordmark {
+    --wordmark-champagne: #fff8ec;
+    --wordmark-festival: #ff6b6b;
   }
   .maintenance-page .maintenance-page__title {
     margin-bottom: 1rem;

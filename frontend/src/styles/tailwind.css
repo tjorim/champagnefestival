@@ -1,5 +1,5 @@
 /* Cascade layers, lowest to highest precedence. Preflight is the reset; vendor
-   (Leaflet, Swiper) and every owned stylesheet (runtime themes, admin, component
+   (Leaflet) and every owned stylesheet (runtime themes, admin, component
    CSS and the rules below) sit in layers beneath the utilities, so a utility on
    an element always overrides them without `!important` or specificity tricks.
    Runtime theme stylesheets are plain <link> files that declare their rules in
@@ -331,6 +331,61 @@
     border: 0;
   }
 
+  /* Festival wordmark (BrandWordmark). The letterforms are fixed brand identity;
+     themes only set the two colour variables. Selectors are scoped under
+     .site-wordmark so theme rules such as `.site-brand span { text-overflow }`
+     never truncate or restyle the letters. */
+  .site-wordmark {
+    --wordmark-champagne: currentColor;
+    --wordmark-festival: #c8102e;
+    display: inline-grid;
+    flex: none;
+    line-height: 1;
+    text-transform: none;
+    letter-spacing: normal;
+  }
+  .site-wordmark .site-wordmark-champagne {
+    overflow: visible;
+    color: var(--wordmark-champagne);
+    font-family:
+      "Arial Rounded MT Bold", "Nunito Black", "Helvetica Neue", Arial, ui-sans-serif, sans-serif;
+    font-size: 1.45em;
+    font-style: normal;
+    font-weight: 900;
+    letter-spacing: 0.01em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .site-wordmark .site-wordmark-festival {
+    justify-self: end;
+    margin-top: -0.3em;
+    margin-right: 0.5em;
+    overflow: visible;
+    color: var(--wordmark-festival);
+    font-family:
+      "Snell Roundhand", "Segoe Script", "Brush Script MT", "URW Chancery L", "Z003",
+      "Apple Chancery", cursive;
+    font-size: 1.3em;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    white-space: nowrap;
+  }
+
+  /* Leaflet's attribution box is always light; its links follow the box text
+     instead of the browser-default blue. */
+  .leaflet-control-attribution a {
+    color: inherit;
+    text-decoration: underline;
+  }
+
+  /* The registration call to action is a pill by default; themes reshape it by
+     overriding the radius token (Button's rounded-md reads --radius-md). */
+  [data-slot="registration-cta"] {
+    --radius-md: 9999px;
+  }
+
   /* Default navbar geometry. Runtime themes may override it, including
      Riviera's desktop sidebar and Remuage's wide header. */
   .site-header {
@@ -373,7 +428,21 @@
     }
   }
 
+  /* Neutral defaults for the slide-in menu links; themes restyle them. */
+  .site-mobile-link {
+    display: block;
+    padding: 0.6rem 0;
+    color: inherit;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .site-mobile-link:hover,
+  .site-mobile-link:focus-visible {
+    color: var(--surface-primary);
+  }
+
   .site-mobile-menu-panel {
+    color: var(--surface-foreground);
     background: var(--surface-muted);
     padding: 0.75rem;
     border: 1px solid var(--surface-border);

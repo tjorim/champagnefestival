@@ -80,9 +80,6 @@ importers:
       react-oidc-context:
         specifier: ^3.2.0
         version: 3.3.1(oidc-client-ts@3.5.0)(react@19.3.0)
-      swiper:
-        specifier: ^14.3.0
-        version: 14.3.0
     devDependencies:
       '@inlang/paraglide-js':
         specifier: ^2.25.4
@@ -2468,10 +2465,6 @@ packages:
     resolution: {integrity: sha512-qpCAvRl9stuOHveKsn7HncJRvv501qIacKzQlO/+Lwxc9+0q2wLyv4Dfvt80/DPn2pqOBsJdDiogXGR9+OvwRw==}
     engines: {node: '>=8'}
 
-  swiper@14.3.0:
-    resolution: {integrity: sha512-qw0Xv1+sylM8KCQxWxV2iYAK2G6XjFGPZ/8F1baEsY8DK4A3sTnLx6jUJ0G71rDbVQ05JHMWkcWmJ5NvlxZO0w==}
-    engines: {node: '>= 4.7.0'}
-
   tagged-tag@1.0.0:
     resolution: {integrity: sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng==}
     engines: {node: '>=20'}
@@ -4526,8 +4519,6 @@ snapshots:
   supports-color@7.2.0:
     dependencies:
       has-flag: 4.0.0
-
-  swiper@14.3.0: {}
 
   tagged-tag@1.0.0: {}
 

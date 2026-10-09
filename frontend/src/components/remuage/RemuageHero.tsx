@@ -24,7 +24,7 @@ const RemuageHero = ({
         <h1 className="remuage-hero__title">{title}</h1>
         <p className="remuage-hero__subtitle">{subtitle}</p>
         <div className="remuage-hero__actions">
-          <a href="#next-festival" className="remuage-button remuage-button--primary">
+          <a href="#what-we-do" className="remuage-button remuage-button--primary">
             {learnMoreLabel}
             <Icon icon={CircleArrowDownIcon} />
           </a>

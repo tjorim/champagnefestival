@@ -8,7 +8,7 @@ async function tabSurface(tab: Locator) {
   });
 }
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage"]) {
+for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
   for (const width of [1440, 390]) {
     test(`${theme} public widgets at ${width}px`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width, height: 900 });

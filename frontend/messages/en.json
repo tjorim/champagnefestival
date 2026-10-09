@@ -1,7 +1,7 @@
 {
   "welcome_title": "Welcome to Champagnefestival",
   "welcome_subtitle": "A celebration of fine champagne and community",
-  "welcome_learn_more": "Learn More",
+  "welcome_learn_more": "Discover the festival",
   "maintenance_title": "We'll be back soon",
   "maintenance_message": "Our website is currently being refreshed. Follow us on Facebook for the latest Champagnefestival news.",
   "maintenance_facebook_cta": "Follow us on Facebook",
@@ -1218,5 +1218,17 @@
   "translation_help": "An editable draft from our self-hosted service. Review it before saving. Clear an existing translation to request a new draft.",
   "translation_error": "Translation is unavailable or timed out. Try again later or write the translation yourself.",
   "translation_rate_limit": "Too many translation requests. Please wait ten minutes before trying again.",
-  "translation_changed": "The text changed while translating. The draft was discarded to preserve your edits."
+  "translation_changed": "The text changed while translating. The draft was discarded to preserve your edits.",
+  "festival_facts_label": "Festival at a glance",
+  "festival_facts_when": "When",
+  "festival_facts_where": "Where",
+  "registration_opens_on": "Registrations open on {date}",
+  "nav_location": "Location",
+  "footer_navigation_label": "Footer navigation",
+  "logo_wall_show_all_producers": "Show all {count} producers",
+  "logo_wall_show_all_vendors": "Show all {count} vendors",
+  "logo_wall_show_all_sponsors": "Show all {count} sponsors",
+  "logo_wall_show_fewer": "Show fewer",
+  "push_opt_in_consent_required": "Tick the box above to give your consent first.",
+  "hero_edition_kicker": "{month} {year} edition"
 }

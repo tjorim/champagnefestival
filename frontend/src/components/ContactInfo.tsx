@@ -7,6 +7,8 @@ import { usePublicSettings } from "@/hooks/useMaintenanceMode";
  */
 const ContactInfo: React.FC = () => {
   const settings = usePublicSettings();
+  if (!settings.public_email && !settings.public_phone) return null;
+
   return (
     <div>
       <p className="mb-4">{m.contact_alternative_contact()}</p>
@@ -16,8 +18,8 @@ const ContactInfo: React.FC = () => {
           <strong>{m.contact_email_label()}</strong>{" "}
           <a
             href={`mailto:${settings.public_email}`}
-            className="no-underline"
-            aria-label={m.contact_email_label()}
+            className="text-primary underline-offset-4 hover:underline"
+            aria-label={`${m.contact_email_label()} ${settings.public_email}`}
           >
             {settings.public_email}
           </a>
@@ -29,8 +31,8 @@ const ContactInfo: React.FC = () => {
           <strong>{m.contact_phone_label()}</strong>{" "}
           <a
             href={`tel:${settings.public_phone.replace(/\s/g, "")}`}
-            className="no-underline"
-            aria-label={m.contact_phone_label()}
+            className="text-primary underline-offset-4 hover:underline"
+            aria-label={`${m.contact_phone_label()} ${settings.public_phone}`}
           >
             {settings.public_phone}
           </a>

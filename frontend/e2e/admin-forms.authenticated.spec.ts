@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage"]) {
+for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
   for (const colorScheme of ["light", "dark"] as const) {
     for (const width of [1440, 390]) {
       test(`${theme} admin forms at ${width}px (${colorScheme})`, async ({ page }, testInfo) => {
