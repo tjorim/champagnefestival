@@ -1,12 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
-import { eventCategoryLabel, eventDescription, eventTitle } from "@/utils/eventText";
+import { describe, expect, it } from "vitest";
+import { eventDescription, eventTitle } from "@/utils/eventText";
 import { noEventTranslations } from "./eventFixtures";
-
-vi.mock("@/paraglide/messages", () => ({
-  m: new Proxy({} as Record<string, () => string>, {
-    get: (_target, key: string) => () => key,
-  }),
-}));
 
 const event = {
   ...noEventTranslations,
@@ -46,24 +40,5 @@ describe("eventTitle / eventDescription", () => {
   it("shows only the original when nothing is translated, in every locale", () => {
     const plain = { ...noEventTranslations, title: "Brunch", titleNl: "Brunch", description: "" };
     for (const locale of ["nl", "fr", "en"]) expect(eventTitle(plain, locale)).toBe("Brunch");
-  });
-});
-
-describe("eventCategoryLabel", () => {
-  it("labels every category in the fixed list and keeps an unknown value as stored", () => {
-    for (const category of [
-      "tasting",
-      "vip",
-      "party",
-      "breakfast",
-      "exchange",
-      "general",
-      "ceremony",
-      "social",
-      "other",
-    ]) {
-      expect(eventCategoryLabel(category)).toBe(`schedule_categories_${category}`);
-    }
-    expect(eventCategoryLabel("legacy")).toBe("legacy");
   });
 });

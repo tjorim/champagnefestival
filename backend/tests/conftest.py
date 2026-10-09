@@ -16,6 +16,7 @@ import app.routers.public_pages as public_pages_module
 from app.auth import get_actor_id, get_current_claims, require_admin, require_volunteer
 from app.database import Base, get_db
 from app.main import app
+from app.models import EventCategory
 from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
 from app.payment_ledger_schema import PAYMENT_LEDGER_SCHEMA_STATEMENTS
 from app.services.public_render_cache import public_render_cache
@@ -136,10 +137,20 @@ async def pg_render_cache_listener(engine):
     await listener.stop()
 
 
+DEFAULT_TEST_CATEGORIES = {
+    key: key.capitalize()
+    for key in ("tasting", "vip", "party", "breakfast", "exchange", "general", "ceremony", "social", "other")
+}
+
+
 @pytest.fixture()
 async def db_session(engine):
     factory = async_sessionmaker(engine, expire_on_commit=False)
     async with factory() as session:
+        # The categories every installation starts with (migration 006 seeds the same keys).
+        for key, label in DEFAULT_TEST_CATEGORIES.items():
+            await session.merge(EventCategory(key=key, label_language="nl", label_nl=label))
+        await session.commit()
         yield session
     async with engine.begin() as conn:
         # Opt this transaction out of the payment_transactions append-only

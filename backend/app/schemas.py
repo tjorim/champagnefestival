@@ -13,7 +13,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
-from app.event_content import EventCategory, Language
+from app.event_content import Language
 
 # ---------------------------------------------------------------------------
 # Shared value types
@@ -234,6 +234,61 @@ class EditionSummaryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+EVENT_CATEGORY_KEY_PATTERN = r"^[a-z][a-z0-9_-]{0,49}$"
+
+
+class EventCategoryLabels(RequestModel):
+    """Per-language category label: the original language must have text."""
+
+    label_language: Language | None = None
+    label_nl: str | None = Field(default=None, max_length=100)
+    label_fr: str | None = Field(default=None, max_length=100)
+    label_en: str | None = Field(default=None, max_length=100)
+    sort_order: int | None = Field(default=None, ge=0, le=100000)
+
+    @field_validator("label_nl", "label_fr", "label_en", mode="before")
+    @classmethod
+    def normalize_label(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        if not self.label_language or not getattr(self, f"label_{self.label_language}"):
+            raise ValueError("A category label requires non-empty text in its original language.")
+        return self
+
+
+class EventCategoryCreate(EventCategoryLabels):
+    key: str = Field(
+        pattern=EVENT_CATEGORY_KEY_PATTERN,
+        description="Stable identifier stored on events: lowercase letters, digits, `-` and `_`. Cannot be changed.",
+    )
+    label_language: Language = "nl"
+    sort_order: int = Field(default=0, ge=0, le=100000)
+
+    @model_validator(mode="after")
+    def check_label(self) -> Self:
+        return self.validate_original()
+
+
+class EventCategoryUpdate(EventCategoryLabels):
+    """Partial update; the key is immutable."""
+
+
+class EventCategoryOut(BaseModel):
+    key: str
+    label: str
+    """The label resolved for the requested `locale` (the original language when none)."""
+    label_language: Language
+    label_nl: str | None
+    label_fr: str | None
+    label_en: str | None
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class EventTextFields(RequestModel):
     """Per-language event title and description (#1222).
 
@@ -282,7 +337,7 @@ class EventCreate(EventTextFields):
     date: dt_date
     start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    category: EventCategory
+    category: str = Field(min_length=1, max_length=50)
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
@@ -298,7 +353,7 @@ class EventUpdate(EventTextFields):
     date: dt_date | None = None
     start_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    category: EventCategory | None = None
+    category: str | None = Field(default=None, min_length=1, max_length=50)
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None

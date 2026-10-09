@@ -419,15 +419,33 @@ the event in the person's `preferred_language`. Admin lists, exports, audit
 entries and event-day screens keep showing the original-language title
 (`Event.title`).
 
-`category` is one of `tasting`, `vip`, `party`, `breakfast`, `exchange`, `general`,
-`ceremony`, `social`, `other` (`app/event_content.py`), enforced by the API, MCP,
-the `category` filter of `GET /api/events` and a database check constraint. Labels
-are `schedule_categories_*` in `frontend/messages/`. The list is code, not admin data,
-because every value needs a translated label and a deploy to add one is cheap.
-Migration `006` maps case/whitespace variants of a known value, maps unknown
-categories to `other` and logs each affected event id for review, and moves
-existing `title`/`description` into the `nl` columns. Its downgrade keeps only the
-original-language text.
+### Event categories
+
+`Event.category` is the key of an admin-managed category (`event_categories`:
+`key`, `label_language`, `label_nl/fr/en`, `sort_order`). The labels follow the same
+pattern as event titles: the original language must have text, the others are
+optional and fall back to it. The key (lowercase letters, digits, `-`, `_`; at most
+50 characters) is chosen on creation and cannot change, because events store it.
+Creating or moving an event to an unknown key is a 422; deleting a category that
+events still use is a 409.
+
+- `GET /api/event-categories?locale=` is public and returns every category in
+  display order (`sort_order`, then `key`) with `label` resolved for `locale` plus all
+  stored labels; the frontend resolves labels client-side from them.
+- `POST`, `PUT /api/event-categories/{key}` and `DELETE` are admin-only and audited
+  (`event_category_created|updated|deleted`). A `PUT` merges labels like an event
+  update: an empty string clears a translation, the original cannot be cleared.
+- MCP: public `list_event_categories(locale)`; admin `create_event_category`,
+  `update_event_category`, `delete_event_category`. `create_event` and
+  `update_event` take a category key.
+
+Migration `006` creates the table with nine default categories (`tasting`, `vip`,
+`party`, `breakfast`, `exchange`, `general`, `ceremony`, `social`, `other`; labels in
+all three languages), normalises case/whitespace of existing values, and turns any
+other value events already use into a category of its own (key derived from the
+text, the text as Dutch label), logging each so its labels can be reviewed. It also
+moves existing `title`/`description` into the `nl` columns. Its downgrade keeps only
+the original-language text and drops the table.
 
 Admins can request editable machine drafts of a title or description with
 `GET`/`POST /api/events/translation` (same contract as the organisation drafts, text

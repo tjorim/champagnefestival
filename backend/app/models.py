@@ -31,7 +31,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
-from app.event_content import EVENT_CATEGORIES, resolve_text
+from app.event_content import resolve_text
 
 
 def _utcnow() -> datetime:
@@ -759,6 +759,39 @@ def _original_language_text(language_column, *text_columns):
     )
 
 
+class EventCategory(Base):
+    """An admin-managed event category: a stable key (what `Event.category`
+    stores) plus its label in each language, following the organisation
+    description pattern — the original language must have text, the others are
+    optional and fall back to it. The key is immutable; a category that events
+    still use cannot be deleted."""
+
+    __tablename__ = "event_categories"
+
+    __table_args__ = (
+        CheckConstraint(
+            "((label_language = 'nl' AND length(trim(label_nl)) > 0) OR "
+            "(label_language = 'fr' AND length(trim(label_fr)) > 0) OR "
+            "(label_language = 'en' AND length(trim(label_en)) > 0)) IS TRUE",
+            name="ck_event_categories_label_original",
+        ),
+    )
+
+    key: Mapped[str] = mapped_column(String(50), primary_key=True)
+    label_language: Mapped[str] = mapped_column(String(2))
+    label_nl: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    label_fr: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    label_en: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    def localized_label(self, locale: str | None) -> str:
+        return resolve_text(
+            {"nl": self.label_nl, "fr": self.label_fr, "en": self.label_en}, self.label_language, locale
+        )
+
+
 class Event(Base):
     __tablename__ = "events"
 
@@ -777,10 +810,6 @@ class Event(Base):
             "(description_language = 'fr' AND length(trim(description_fr)) > 0) OR "
             "(description_language = 'en' AND length(trim(description_en)) > 0)) IS TRUE)",
             name="ck_events_description_original",
-        ),
-        CheckConstraint(
-            "category IN (" + ", ".join(f"'{value}'" for value in EVENT_CATEGORIES) + ")",
-            name="ck_events_category",
         ),
     )
 
@@ -843,11 +872,13 @@ class Event(Base):
     date: Mapped[dt_date] = mapped_column(Date, index=True)
     start_time: Mapped[str] = mapped_column(String(10))
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)
-    category: Mapped[str] = mapped_column(String(50))
-    """Display label for the public schedule, one of ``EVENT_CATEGORIES`` — purely
-    cosmetic, does not affect what guests can order. Whether this event sells
-    anything is answered by whether it *has* products (see `Product`), not by a
-    separate flag on the event."""
+    category: Mapped[str] = mapped_column(
+        String(50), ForeignKey("event_categories.key", ondelete="RESTRICT"), index=True
+    )
+    """Key of an `EventCategory`, shown as a translated label on the public
+    schedule — purely cosmetic, does not affect what guests can order. Whether
+    this event sells anything is answered by whether it *has* products (see
+    `Product`), not by a separate flag on the event."""
 
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

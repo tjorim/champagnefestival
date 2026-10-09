@@ -18,7 +18,6 @@ from sqlalchemy.orm import selectinload
 
 from app.auth import get_actor_id, require_admin, require_volunteer
 from app.database import get_db
-from app.event_content import EventCategory
 from app.models import Event, Registration
 from app.schemas import EventCheckInStats, EventCreate, EventOut, EventUpdate
 from app.services import events_service
@@ -34,7 +33,7 @@ async def list_events(
     edition_id: str | None = Query(default=None),
     date_from: date | None = Query(default=None),
     date_to: date | None = Query(default=None),
-    category: EventCategory | None = Query(default=None),
+    category: str | None = Query(default=None),
     registration_required: bool | None = Query(default=None),
     active: bool | None = Query(default=None),
 ) -> list[dict]:

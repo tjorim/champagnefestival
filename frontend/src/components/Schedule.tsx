@@ -5,7 +5,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import type { Event } from "@/types/event";
-import { eventCategoryLabel, eventDescription, eventTitle } from "@/utils/eventText";
+import { eventCategoryLabel, useEventCategories } from "@/hooks/useEventCategories";
+import { eventDescription, eventTitle } from "@/utils/eventText";
 
 interface ScheduleProps {
   events: Event[];
@@ -13,6 +14,7 @@ interface ScheduleProps {
 
 const Schedule: React.FC<ScheduleProps> = ({ events }) => {
   const locale = getLocale();
+  const { data: categories } = useEventCategories();
   const days = useMemo(() => {
     return [...new Set(events.map((event) => event.date))]
       .filter(Boolean)
@@ -102,6 +104,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
               {sortedEvents.length > 0 ? (
                 <div className="events-list">
                   {sortedEvents.map((event) => {
+                    const categoryLabel = eventCategoryLabel(categories, event.category, locale);
                     return (
                       <Card key={event.id} className="event-card mb-4 border-0">
                         <CardContent>
@@ -124,9 +127,11 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                             </div>
                             <div className="grow">
                               <h5 className="event-title mb-1">{eventTitle(event, locale)}</h5>
-                              <Badge variant={getCategoryColor(event.category)} className="mb-2">
-                                {eventCategoryLabel(event.category)}
-                              </Badge>
+                              {categoryLabel && (
+                                <Badge variant={getCategoryColor(event.category)} className="mb-2">
+                                  {categoryLabel}
+                                </Badge>
+                              )}
                               {event.registrationRequired ? (
                                 <Badge variant="warning" className="mb-2 ms-2">
                                   {m.schedule_registration()}

@@ -36,7 +36,7 @@ from fastmcp.tools.base import Tool
 from pydantic import Field
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.event_content import EventCategory, Language
+from app.event_content import Language
 from app.mcp import check_in as mcp_check_in
 from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
@@ -45,6 +45,7 @@ from app.mcp import seating as mcp_seating
 from app.mcp.admin import areas as mcp_admin_areas
 from app.mcp.admin import audit as mcp_admin_audit
 from app.mcp.admin import editions as mcp_admin_editions
+from app.mcp.admin import event_categories as mcp_admin_event_categories
 from app.mcp.admin import events as mcp_admin_events
 from app.mcp.admin import faq as mcp_admin_faq
 from app.mcp.admin import integration_clients as mcp_admin_integration_clients
@@ -267,6 +268,14 @@ class ChampagneFestivalMcpBackend:
         No PII is included.
         """
         return await mcp_public.get_event_schedule(self.session_factory, edition_id, locale)
+
+    async def list_event_categories(self, locale: Language | None = None) -> dict:
+        """List the event categories (the valid ``category`` values for events) in display order.
+
+        ``label`` is resolved for ``locale`` (``nl``, ``fr`` or ``en``) and falls back to the
+        category's original language; every stored label is also returned.
+        """
+        return await mcp_admin_event_categories.list_event_categories(self.session_factory, locale)
 
     async def get_venue_plan_summary(self, edition_id: str | None = None) -> dict:
         """Return a high-level overview of the venue plan for an edition.
@@ -1081,7 +1090,7 @@ class ChampagneFestivalMcpBackend:
         edition_id: str,
         date: dt_date,
         start_time: str,
-        category: EventCategory,
+        category: str,
         title_language: Language = "nl",
         title_nl: str | None = None,
         title_fr: str | None = None,
@@ -1098,8 +1107,8 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Create an event within an edition. Requires the ``admin`` role.
 
-        ``category`` is one of tasting, vip, party, breakfast, exchange, general,
-        ceremony, social or other. The title (and optional description) is stored per
+        ``category`` is the key of an existing event category (see
+        ``list_event_categories``). The title (and optional description) is stored per
         language: fill ``title_nl``/``title_fr``/``title_en`` (and optionally
         ``description_*``); the text in ``title_language`` (default ``nl``) is required.
         Visitors see their language and fall back to the original.
@@ -1151,7 +1160,7 @@ class ChampagneFestivalMcpBackend:
         date: dt_date | None = None,
         start_time: str | None = None,
         end_time: str | None = None,
-        category: EventCategory | None = None,
+        category: str | None = None,
         registration_required: bool | None = None,
         registrations_open_from: datetime | None = None,
         registrations_close_at: datetime | None = None,
@@ -1197,6 +1206,64 @@ class ChampagneFestivalMcpBackend:
             clear_registrations_open_from=clear_registrations_open_from,
             clear_registrations_close_at=clear_registrations_close_at,
         )
+
+    async def create_event_category(
+        self,
+        key: str,
+        label_language: Language = "nl",
+        label_nl: str | None = None,
+        label_fr: str | None = None,
+        label_en: str | None = None,
+        sort_order: int = 0,
+    ) -> dict:
+        """Create an event category. Requires the ``admin`` role.
+
+        ``key`` is the stable identifier events store (lowercase letters, digits, ``-`` and
+        ``_``) and cannot be changed later. The label in ``label_language`` is required; the
+        other languages are optional and fall back to it.
+        """
+        self._require_admin()
+        return await mcp_admin_event_categories.create_event_category(
+            self.session_factory,
+            self._actor(),
+            key=key,
+            label_language=label_language,
+            label_nl=label_nl,
+            label_fr=label_fr,
+            label_en=label_en,
+            sort_order=sort_order,
+        )
+
+    async def update_event_category(
+        self,
+        key: str,
+        label_language: Language | None = None,
+        label_nl: str | None = None,
+        label_fr: str | None = None,
+        label_en: str | None = None,
+        sort_order: int | None = None,
+    ) -> dict:
+        """Partially update an event category; omitted fields are left unchanged.
+
+        An empty string clears a translation; the label in the original language cannot be
+        cleared. Requires the ``admin`` role.
+        """
+        self._require_admin()
+        return await mcp_admin_event_categories.update_event_category(
+            self.session_factory,
+            self._actor(),
+            key,
+            label_language=label_language,
+            label_nl=label_nl,
+            label_fr=label_fr,
+            label_en=label_en,
+            sort_order=sort_order,
+        )
+
+    async def delete_event_category(self, key: str) -> dict:
+        """Delete an event category. Refused while events still use it. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_event_categories.delete_event_category(self.session_factory, self._actor(), key)
 
     async def delete_event(self, event_id: str) -> dict:
         """Delete an event. Requires the ``admin`` role."""
@@ -2146,6 +2213,7 @@ def create_mcp_server(
     register_tool(backend.get_active_edition)
     register_tool(backend.list_editions)
     register_tool(backend.get_event_schedule)
+    register_tool(backend.list_event_categories)
     register_tool(backend.get_venue_plan_summary)
     register_tool(backend.find_guest)
     register_tool(backend.get_guest_registration)
@@ -2206,6 +2274,9 @@ def create_mcp_server(
     register_tool(backend.get_event)
     register_tool(backend.update_event)
     register_tool(backend.delete_event)
+    register_tool(backend.create_event_category)
+    register_tool(backend.update_event_category)
+    register_tool(backend.delete_event_category)
     register_tool(backend.create_product)
     register_tool(backend.get_product)
     register_tool(backend.list_products)

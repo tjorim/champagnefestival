@@ -19,7 +19,7 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from app.event_content import EventCategory, Language
+from app.event_content import Language
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import EventCreate, EventUpdate
 from app.services import events_service
@@ -33,7 +33,7 @@ async def create_event(
     edition_id: str,
     date: dt_date,
     start_time: str,
-    category: EventCategory,
+    category: str,
     title_language: Language = "nl",
     title_nl: str | None = None,
     title_fr: str | None = None,
@@ -101,7 +101,7 @@ async def update_event(
     date: dt_date | None = None,
     start_time: str | None = None,
     end_time: str | None = None,
-    category: EventCategory | None = None,
+    category: str | None = None,
     registration_required: bool | None = None,
     registrations_open_from: datetime | None = None,
     registrations_close_at: datetime | None = None,

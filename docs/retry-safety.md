@@ -469,6 +469,15 @@ See [API, configuration and limits](organization-description-translation.md).
 
 ### Event translations and categories (#1222)
 
+Event category writes (`POST`/`PUT`/`DELETE /api/event-categories`, MCP
+`create_|update_|delete_event_category`) are admin-only and have no client-side
+retry (`retry: false`). A create is a **natural-key insert**: the key is chosen by the
+caller, so a repeat returns a 409 for the existing key and changes nothing. An update
+merges the requested labels into the stored ones, so repeating the same values
+converges; it is not guarded by a version precondition, so a concurrent edit by another
+administrator can be overwritten. A delete converges on the category being gone (a
+repeat returns 404) and is refused with a 409 while events use it.
+
 Event writes keep their current decisions: `POST /api/events` (and MCP
 `create_event`) is **not retry safe** (server-generated identity) and non-optimistic;
 `PUT /api/events/{id}` (and `update_event`) is **not retry safe** (no version

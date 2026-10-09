@@ -204,7 +204,7 @@ async def event_for_room(client, room_id: str, number: int = 1, edition_id: str 
 async def seed_layout_event(db, room_id: str = "room-1", number: int = 1) -> str:
     from datetime import date
 
-    from app.models import Edition, Event, Room
+    from app.models import Edition, Event, EventCategory, Room
 
     room = await db.get(Room, room_id)
     if room is None:
@@ -215,6 +215,9 @@ async def seed_layout_event(db, room_id: str = "room-1", number: int = 1) -> str
     edition_id = f"ed-{room.venue_id}"
     if await db.get(Edition, edition_id) is None:
         db.add(Edition(id=edition_id, year=2099, month="march", venue_id=room.venue_id, active=False))
+        await db.flush()
+    if await db.get(EventCategory, "other") is None:
+        db.add(EventCategory(key="other", label_language="nl", label_nl="Overig"))
         await db.flush()
     db.add(
         Event(

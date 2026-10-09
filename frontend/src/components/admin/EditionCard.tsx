@@ -24,7 +24,7 @@ import {
   fetchEditionEvents,
   saveEditionEvent,
 } from "@/utils/adminContentApi";
-import { eventCategoryLabel } from "@/utils/eventText";
+import { eventCategoryLabel, useEventCategories } from "@/hooks/useEventCategories";
 import { queryKeys } from "@/utils/queryKeys";
 import EditionModal from "./EditionModal";
 import EditionPollOptionsModal from "./EditionPollOptionsModal";
@@ -75,6 +75,7 @@ export default function EditionCard({
   const [productsEvent, setProductsEvent] = useState<Event | null>(null);
   const [pollOptionsModalOpen, setPollOptionsModalOpen] = useState(false);
   const editionEventsQueryKey = queryKeys.admin.editionEvents(edition.id);
+  const { data: categories } = useEventCategories();
 
   const eventsQuery = useQuery({
     queryKey: editionEventsQueryKey,
@@ -318,7 +319,7 @@ export default function EditionCard({
                     </span>
                     <span>{event.title}</span>
                     <Badge variant="info" className="capitalize text-micro">
-                      {eventCategoryLabel(event.category)}
+                      {eventCategoryLabel(categories, event.category) ?? event.category}
                     </Badge>
                     {event.registrationRequired && (
                       <Badge variant="warning" className="text-micro">

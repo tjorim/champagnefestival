@@ -67,25 +67,6 @@ export type EventLanguage = "nl" | "fr" | "en";
 
 export const EVENT_LANGUAGES: readonly EventLanguage[] = ["nl", "fr", "en"];
 
-/** Fixed list validated by the API; labels are `schedule_categories_*` in `messages/`. */
-export const EVENT_CATEGORIES = [
-  "tasting",
-  "vip",
-  "party",
-  "breakfast",
-  "exchange",
-  "general",
-  "ceremony",
-  "social",
-  "other",
-] as const;
-
-export type EventCategory = (typeof EVENT_CATEGORIES)[number];
-
-export function isEventCategory(value: unknown): value is EventCategory {
-  return EVENT_CATEGORIES.some((category) => category === value);
-}
-
 /** Stored text in every language; mirrors the organisation description fields. */
 export interface EventTranslations {
   titleLanguage: EventLanguage;

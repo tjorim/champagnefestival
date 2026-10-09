@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { apiToEvent, apiToProduct, isEventCategory } from "./event";
+import { apiToEvent, apiToProduct } from "./event";
 
 const product = {
   id: "prod-1",
@@ -71,7 +71,5 @@ describe("apiToEvent", () => {
   it("defaults a payload without translations to a Dutch original with no translations", () => {
     const mapped = apiToEvent({ id: "e", title: "Brunch" });
     expect(mapped).toMatchObject({ title: "Brunch", titleLanguage: "nl", titleNl: null });
-    expect(isEventCategory("ceremony")).toBe(true);
-    expect(isEventCategory("masterclass")).toBe(false);
   });
 });

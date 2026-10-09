@@ -1,4 +1,3 @@
-import { m } from "@/paraglide/messages";
 import type { EventLanguage, EventTranslations } from "@/types/event";
 
 type EventText = Pick<EventTranslations, "titleLanguage" | "descriptionLanguage"> &
@@ -37,30 +36,4 @@ export function eventDescription(event: EventText, locale: string): string {
       : null) ||
     event.description
   );
-}
-
-/** Translated label for an event category; an unknown value is shown as stored. */
-export function eventCategoryLabel(category: string): string {
-  switch (category) {
-    case "tasting":
-      return m.schedule_categories_tasting();
-    case "vip":
-      return m.schedule_categories_vip();
-    case "party":
-      return m.schedule_categories_party();
-    case "breakfast":
-      return m.schedule_categories_breakfast();
-    case "exchange":
-      return m.schedule_categories_exchange();
-    case "general":
-      return m.schedule_categories_general();
-    case "ceremony":
-      return m.schedule_categories_ceremony();
-    case "social":
-      return m.schedule_categories_social();
-    case "other":
-      return m.schedule_categories_other();
-    default:
-      return category;
-  }
 }

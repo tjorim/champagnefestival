@@ -323,7 +323,7 @@ async def test_create_event_rejects_an_unknown_category(db_session):
             title_nl="Gala",
             date=date(2099, 3, 21),
             start_time="18:00",
-            category="gala",  # ty: ignore[invalid-argument-type]
+            category="gala",
         )
 
 

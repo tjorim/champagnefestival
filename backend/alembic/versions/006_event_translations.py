@@ -3,13 +3,16 @@
 ``title``/``description`` become the original-language columns of a per-language
 set (``title_nl/fr/en``, ``description_nl/fr/en``) and move to ``nl``, the owner's
 default original language for events that predate translations. Categories become
-a fixed list; unknown values are mapped to ``other`` and logged for review.
+an entity (``event_categories``) with labels per language; ``events.category``
+references its key. Values events already use that are not default categories become
+categories of their own and are logged for review.
 
 Revision ID: 006
 Revises: 005
 """
 
 import logging
+import re
 
 import sqlalchemy as sa
 
@@ -22,13 +25,29 @@ depends_on = None
 
 logger = logging.getLogger("alembic.runtime.migration")
 
-CATEGORIES = ("tasting", "vip", "party", "breakfast", "exchange", "general", "ceremony", "social", "other")
-_CATEGORY_LIST = ", ".join(f"'{value}'" for value in CATEGORIES)
+# Key, sort order and label per language (nl, fr, en) of the categories every
+# installation starts with: the ones the schedule always knew plus a few more.
+DEFAULT_CATEGORIES = (
+    ("tasting", 10, "Degustatie", "Dégustation", "Tasting"),
+    ("vip", 20, "VIP Evenement", "Événement VIP", "VIP Event"),
+    ("party", 30, "Feest", "Soirée", "Party"),
+    ("breakfast", 40, "Ontbijt", "Petit-déjeuner", "Breakfast"),
+    ("exchange", 50, "Ruilbeurs", "Échange", "Exchange"),
+    ("general", 60, "Algemeen", "Général", "General"),
+    ("ceremony", 70, "Plechtigheid", "Cérémonie", "Ceremony"),
+    ("social", 80, "Ontmoeting", "Rencontre", "Social"),
+    ("other", 90, "Overig", "Autre", "Other"),
+)
 
 TITLE_CHECK = (
     "((title_language = 'nl' AND length(trim(title_nl)) > 0) OR "
     "(title_language = 'fr' AND length(trim(title_fr)) > 0) OR "
     "(title_language = 'en' AND length(trim(title_en)) > 0)) IS TRUE"
+)
+LABEL_CHECK = (
+    "((label_language = 'nl' AND length(trim(label_nl)) > 0) OR "
+    "(label_language = 'fr' AND length(trim(label_fr)) > 0) OR "
+    "(label_language = 'en' AND length(trim(label_en)) > 0)) IS TRUE"
 )
 DESCRIPTION_CHECK = (
     "(description_language IS NULL AND description_nl IS NULL AND description_fr IS NULL "
@@ -40,17 +59,65 @@ DESCRIPTION_CHECK = (
 )
 
 
-def _map_categories(connection) -> None:
-    # Tolerate case and surrounding whitespace ("Tasting ") before judging a value unknown.
-    connection.execute(
-        sa.text("UPDATE events SET category = lower(trim(category)) WHERE category <> lower(trim(category))")
+def _slug(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9_-]+", "-", value.strip().lower()).strip("-_")[:50]
+    return slug if re.match(r"[a-z]", slug) else "other"
+
+
+def _create_categories(connection) -> None:
+    """Create the category table and one category per value events already use.
+
+    A value that is not a default category is kept as a category of its own
+    (key derived from the text, the text itself as Dutch label) instead of
+    being folded into "other", so no event loses its category. Those are logged
+    so an admin can tidy them up.
+    """
+    op.create_table(
+        "event_categories",
+        sa.Column("key", sa.String(50), primary_key=True),
+        sa.Column("label_language", sa.String(2), nullable=False),
+        sa.Column("label_nl", sa.String(100), nullable=True),
+        sa.Column("label_fr", sa.String(100), nullable=True),
+        sa.Column("label_en", sa.String(100), nullable=True),
+        sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.CheckConstraint(LABEL_CHECK, name="ck_event_categories_label_original"),
     )
-    unknown = connection.execute(
-        sa.text(f"SELECT id, category FROM events WHERE category NOT IN ({_CATEGORY_LIST}) ORDER BY id")
-    ).all()
-    for event_id, category in unknown:
-        logger.warning("Event %s: unknown category %r mapped to 'other' - review it.", event_id, category)
-    connection.execute(sa.text(f"UPDATE events SET category = 'other' WHERE category NOT IN ({_CATEGORY_LIST})"))
+    categories = sa.table(
+        "event_categories",
+        sa.column("key", sa.String),
+        sa.column("label_language", sa.String),
+        sa.column("label_nl", sa.String),
+        sa.column("label_fr", sa.String),
+        sa.column("label_en", sa.String),
+        sa.column("sort_order", sa.Integer),
+    )
+    known = {key for key, *_ in DEFAULT_CATEGORIES}
+    op.bulk_insert(
+        categories,
+        [
+            {"key": key, "label_language": "nl", "label_nl": nl, "label_fr": fr, "label_en": en, "sort_order": order}
+            for key, order, nl, fr, en in DEFAULT_CATEGORIES
+        ],
+    )
+
+    created: dict[str, str] = {}
+    sort_order = 100
+    for (value,) in connection.execute(sa.text("SELECT DISTINCT category FROM events ORDER BY category")).all():
+        key = _slug(value)
+        if key not in known and key not in created:
+            created[key] = value.strip()[:100] or key
+            op.bulk_insert(
+                categories,
+                [{"key": key, "label_language": "nl", "label_nl": created[key], "sort_order": sort_order}],
+            )
+            sort_order += 10
+            logger.warning("Event category %r kept as its own category %r - review its labels.", value, key)
+        connection.execute(
+            sa.text("UPDATE events SET category = :key WHERE category = :value AND category <> :key"),
+            {"key": key, "value": value},
+        )
 
 
 def upgrade() -> None:
@@ -76,17 +143,21 @@ def upgrade() -> None:
     op.drop_column("events", "title")
     op.drop_column("events", "description")
 
-    _map_categories(connection)
+    _create_categories(connection)
 
     op.create_check_constraint("ck_events_title_original", "events", TITLE_CHECK)
     op.create_check_constraint("ck_events_description_original", "events", DESCRIPTION_CHECK)
-    op.create_check_constraint("ck_events_category", "events", f"category IN ({_CATEGORY_LIST})")
+    op.create_foreign_key(
+        "fk_events_category", "events", "event_categories", ["category"], ["key"], ondelete="RESTRICT"
+    )
+    op.create_index("ix_events_category", "events", ["category"])
 
 
 def downgrade() -> None:
     connection = op.get_bind()
 
-    op.drop_constraint("ck_events_category", "events", type_="check")
+    op.drop_index("ix_events_category", table_name="events")
+    op.drop_constraint("fk_events_category", "events", type_="foreignkey")
     op.drop_constraint("ck_events_description_original", "events", type_="check")
     op.drop_constraint("ck_events_title_original", "events", type_="check")
 
@@ -115,3 +186,4 @@ def downgrade() -> None:
         "title_language",
     ):
         op.drop_column("events", column)
+    op.drop_table("event_categories")

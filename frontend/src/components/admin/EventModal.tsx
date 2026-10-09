@@ -24,13 +24,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
-import {
-  EVENT_CATEGORIES,
-  type Event,
-  type EventFormData,
-  type EventLanguage,
-} from "@/types/event";
-import { eventCategoryLabel } from "@/utils/eventText";
+import { type Event, type EventFormData, type EventLanguage } from "@/types/event";
+import { eventCategoryLabel, useEventCategories } from "@/hooks/useEventCategories";
 import type { Edition } from "./editionTypes";
 
 /** Longest event text the draft endpoint translates; mirrors `EVENT_TEXT_LIMIT` in the backend. */
@@ -79,7 +74,7 @@ const EMPTY_FORM: EventFormData = {
   date: "",
   startTime: "",
   endTime: "",
-  category: "tasting",
+  category: "",
   registrationRequired: false,
   registrationsOpenFrom: "",
   registrationsCloseAt: "",
@@ -138,6 +133,7 @@ export default function EventModal({
     [derivedStandaloneDate, edition.id, edition.dates, initial, isFestival],
   );
 
+  const { data: categories = [] } = useEventCategories();
   const [textError, setTextError] = useState<"title" | "description" | null>(null);
 
   const form = useForm({
@@ -188,6 +184,13 @@ export default function EventModal({
 
   const dateValue = useSelector(form.atom, (s) => s.values.date);
   const registrationRequired = useSelector(form.atom, (s) => s.values.registrationRequired);
+  const categoryValue = useSelector(form.atom, (s) => s.values.category);
+
+  // A new event starts in the first category once they have loaded.
+  const firstCategory = categories[0]?.key;
+  useEffect(() => {
+    if (show && !categoryValue && firstCategory) form.setFieldValue("category", firstCategory);
+  }, [show, categoryValue, firstCategory, form]);
 
   const effectiveDate = isFestival ? dateValue : dateValue || derivedStandaloneDate;
 
@@ -241,21 +244,36 @@ export default function EventModal({
                 <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_content_event_category()}
                 </AdminLabel>
-                <form.Field name="category">
-                  {(field) => (
-                    <AdminSelect
-                      size="sm"
-                      className="bg-muted text-content border-input"
-                      value={field.value}
-                      onValueChange={(value) => field.handleChange(value)}
-                    >
-                      {EVENT_CATEGORIES.map((category) => (
-                        <AdminOption key={category} value={category}>
-                          {eventCategoryLabel(category)}
-                        </AdminOption>
-                      ))}
-                    </AdminSelect>
-                  )}
+                <form.Field
+                  name="category"
+                  validators={[
+                    {
+                      run: ({ value }) => (!value ? m.admin_event_category_required() : undefined),
+                      triggers: ["change"],
+                    },
+                  ]}
+                >
+                  {(field) => {
+                    const showErr = field.meta.isTouched && field.errors.length > 0;
+                    return (
+                      <>
+                        <AdminSelect
+                          size="sm"
+                          className="bg-muted text-content border-input"
+                          aria-invalid={showErr}
+                          value={field.value}
+                          onValueChange={(value) => field.handleChange(value)}
+                        >
+                          {categories.map((category) => (
+                            <AdminOption key={category.key} value={category.key}>
+                              {eventCategoryLabel(categories, category.key) ?? category.key}
+                            </AdminOption>
+                          ))}
+                        </AdminSelect>
+                        {showErr && <AdminError>{field.errors[0]?.message}</AdminError>}
+                      </>
+                    );
+                  }}
                 </form.Field>
               </AdminField>
             </div>

@@ -12,12 +12,6 @@ from typing import Literal, get_args
 Language = Literal["nl", "fr", "en"]
 LANGUAGES: tuple[Language, ...] = get_args(Language)
 
-EventCategory = Literal["tasting", "vip", "party", "breakfast", "exchange", "general", "ceremony", "social", "other"]
-EVENT_CATEGORIES: tuple[str, ...] = get_args(EventCategory)
-"""Fixed list, validated by the API and a database check constraint. The labels
-live in ``frontend/messages/`` (``event_category_*``). Adding a category means
-extending this list, a migration for the check constraint, and the messages."""
-
 
 def resolve_text(
     values: Mapping[str, str | None],

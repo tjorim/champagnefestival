@@ -27,6 +27,7 @@ from app.routers import (
     composer,
     contact,
     editions,
+    event_categories,
     events,
     faq,
     health,
@@ -185,6 +186,7 @@ app.include_router(announcements.router)
 app.include_router(auth.router)
 app.include_router(audit.router)
 app.include_router(members.router)
+app.include_router(event_categories.router)
 app.include_router(events.router)
 app.include_router(check_in.router)
 app.include_router(composer.router)

@@ -18,7 +18,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Changed
 
-- Event categories are a fixed list (`tasting`, `vip`, `party`, `breakfast`, `exchange`, `general`, `ceremony`, `social`, `other`) validated by the API, MCP and a database check constraint, and shown translated in every language. Migration `006` maps unknown existing categories to `other` and logs each affected event id for review; existing event text moves to Dutch (`nl`) as its original language (#1222)
+- Event categories are admin-managed data instead of free text: an `event_categories` table with a stable key and a label per language (same original-language fallback as event titles), public `GET /api/event-categories`, admin `POST`/`PUT`/`DELETE`, MCP tools, and an "Event categories" screen in the admin. `Event.category` references the key; an unknown key is rejected and a category events still use cannot be deleted. Migration `006` seeds nine default categories (`tasting`, `vip`, `party`, `breakfast`, `exchange`, `general`, `ceremony`, `social`, `other`), keeps any other value events already use as a category of its own (logged for review), and moves existing event text to Dutch (`nl`) as its original language (#1222)
 - Replaced the placeholder sharing image, favicons, home-screen/PWA icons, `logo.svg` fallback, Android launcher icon and Play Store graphics with the festival's brand: a real 1200×630 `og-image.jpg` (also the JSON-LD event image) and a "C" with a red script "f" mark. Sources and the generator live in `docs/brand/` (#1221)
 
 ### Removed

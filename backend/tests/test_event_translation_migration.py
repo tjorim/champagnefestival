@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import pytest
 from alembic.config import Config
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
 
@@ -50,12 +50,14 @@ def test_event_text_and_categories_survive_the_upgrade_and_downgrade(monkeypatch
         with caplog.at_level(logging.WARNING, logger="alembic.runtime.migration"):
             command.upgrade(config, "006")
 
-        # Unknown categories are mapped to "other" and listed for review; case and
-        # whitespace variants of a known value are normalised silently.
-        warnings = [record.getMessage() for record in caplog.records if "unknown category" in record.getMessage()]
+        # A value that is not a default category becomes a category of its own, logged
+        # for review; case and whitespace variants of a default are normalised silently.
+        warnings = [
+            record.getMessage() for record in caplog.records if "kept as its own category" in record.getMessage()
+        ]
         assert len(warnings) == 2
-        assert any("blank-title" in message and "festival" in message for message in warnings)
-        assert any("unknown" in message and "community" in message for message in warnings)
+        assert any("'festival'" in message for message in warnings)
+        assert any("'community'" in message for message in warnings)
 
         with database.begin() as connection:
             rows = {
@@ -79,9 +81,27 @@ def test_event_text_and_categories_survive_the_upgrade_and_downgrade(monkeypatch
         # A blank legacy title falls back to the event id instead of breaking the constraint.
         assert rows["blank-title"].title_nl == "blank-title"
         assert rows["blank-title"].description_language is None
-        assert {rows["blank-title"].category, rows["unknown"].category} == {"other"}
+        assert (rows["blank-title"].category, rows["unknown"].category) == ("festival", "community")
+        with database.begin() as connection:
+            categories = {
+                row.key: row
+                for row in connection.execute(
+                    text("SELECT key, label_language, label_nl, label_fr, label_en, sort_order FROM event_categories")
+                )
+            }
+        assert set(categories) == {
+            "tasting", "vip", "party", "breakfast", "exchange", "general", "ceremony", "social", "other",
+            "festival", "community",
+        }  # fmt: skip
+        assert (categories["tasting"].label_nl, categories["tasting"].label_fr, categories["tasting"].label_en) == (
+            "Degustatie",
+            "Dégustation",
+            "Tasting",
+        )
+        assert (categories["community"].label_language, categories["community"].label_nl) == ("nl", "community")
+        assert categories["community"].label_fr is None
 
-        with pytest.raises(IntegrityError, match="ck_events_category"), database.begin() as connection:
+        with pytest.raises(IntegrityError, match="fk_events_category"), database.begin() as connection:
             connection.execute(text("UPDATE events SET category = 'gala' WHERE id = 'tasting'"))
         with pytest.raises(IntegrityError, match="ck_events_title_original"), database.begin() as connection:
             connection.execute(text("UPDATE events SET title_language = 'fr' WHERE id = 'tasting'"))
@@ -103,6 +123,8 @@ def test_event_text_and_categories_survive_the_upgrade_and_downgrade(monkeypatch
         # Only the original language survives a downgrade.
         assert restored["tasting"] == ("Dégustation", "Een avond met champagne")
         assert restored["no-description"] == ("Brunch", "")
+        with database.begin() as connection:
+            assert "event_categories" not in inspect(connection).get_table_names(schema=schema)
     finally:
         database.dispose()
         with admin.begin() as connection:

@@ -12,9 +12,10 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
-from app.event_content import EVENT_CATEGORIES, resolve_text
+from app.event_content import resolve_text
 from app.models import AuditEntry, Event
 from app.services import organization_translation as translation
+from tests.conftest import DEFAULT_TEST_CATEGORIES
 from tests.helpers import ADMIN_HEADERS, _create_event
 
 _FIXTURE_DIST = Path(__file__).parent / "fixtures" / "frontend_dist"
@@ -58,13 +59,6 @@ def test_resolve_text_prefers_the_locale_then_the_original_and_ignores_blanks():
     assert resolve_text(values, "nl", None) == "Titel"
     assert resolve_text(values, "nl", "de") == "Titel"
     assert resolve_text({"nl": None, "fr": None, "en": None}, None, "en") == ""
-
-
-def test_every_category_has_a_label_in_every_language():
-    for locale in ("nl", "fr", "en"):
-        messages = json.loads((_MESSAGES_DIR / f"{locale}.json").read_text(encoding="utf-8"))
-        for category in EVENT_CATEGORIES:
-            assert messages.get(f"schedule_categories_{category}"), f"{locale} lacks schedule_categories_{category}"
 
 
 async def test_create_accepts_translations_with_a_chosen_original_language(client):
@@ -111,19 +105,27 @@ async def test_create_rejects_a_missing_or_inconsistent_original(client, overrid
     assert response.status_code == 422, response.text
 
 
-async def test_the_category_must_be_one_of_the_fixed_list(client):
+async def test_the_category_must_be_an_existing_category(client):
     created = await _create_event(client, edition_id="edition-category")
-    for category in EVENT_CATEGORIES:
+    for category in DEFAULT_TEST_CATEGORIES:
         response = await _post_event(client, created["edition_id"], title_nl="Event", category=category)
         assert response.status_code == 201, (category, response.text)
 
-    rejected = await _post_event(client, created["edition_id"], title_nl="Event", category="Gala")
+    rejected = await _post_event(client, created["edition_id"], title_nl="Event", category="gala")
     assert rejected.status_code == 422
+    assert "Unknown event category 'gala'" in rejected.text
     update = await client.put(f"/api/events/{created['id']}", json={"category": "gala"}, headers=ADMIN_HEADERS)
     assert update.status_code == 422
-    assert (await client.get("/api/events", params={"category": "gala"}, headers=ADMIN_HEADERS)).status_code == 422
     listed = await client.get("/api/events", params={"category": "ceremony"}, headers=ADMIN_HEADERS)
     assert [event["category"] for event in listed.json()] == ["ceremony"]
+
+    category = await client.post(
+        "/api/event-categories", json={"key": "gala", "label_nl": "Gala"}, headers=ADMIN_HEADERS
+    )
+    assert category.status_code == 201
+    accepted = await client.put(f"/api/events/{created['id']}", json={"category": "gala"}, headers=ADMIN_HEADERS)
+    assert accepted.status_code == 200
+    assert accepted.json()["category"] == "gala"
 
 
 async def test_update_changes_one_language_and_clears_translations(client):
@@ -256,7 +258,7 @@ async def test_the_database_enforces_the_original_language_and_category(db_sessi
         {"title_nl": "  "},
         {"description_language": "nl"},  # a language but no description
         {"description_fr": "Texte"},  # text but no language
-        {"category": "gala"},
+        {"category": "gala"},  # no such category
     ):
         with pytest.raises(IntegrityError):
             async with db_session.begin_nested():

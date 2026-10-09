@@ -86,6 +86,7 @@ describe("EventModal translations", () => {
     const onSave = mount(null);
 
     fillRequiredScheduleFields();
+    await screen.findByText("Tasting"); // the first category is preselected once they load
     fireEvent.change(screen.getByLabelText("Title (English)"), { target: { value: "Opening" } });
     save();
 
@@ -98,6 +99,7 @@ describe("EventModal translations", () => {
     const onSave = mount(null);
 
     fillRequiredScheduleFields();
+    await screen.findByText("Tasting");
     fireEvent.change(screen.getByLabelText("Title (Dutch)"), { target: { value: "Opening" } });
     fireEvent.change(screen.getByLabelText("Description (English)"), {
       target: { value: "An evening" },
@@ -133,6 +135,28 @@ describe("EventModal translations", () => {
       descriptionNl: "Een glas om te starten",
       category: "ceremony",
     });
+  });
+
+  it("starts a new event in the first category and saves its key", async () => {
+    const onSave = mount(null);
+
+    fillRequiredScheduleFields();
+    await screen.findByText("Tasting");
+    fireEvent.change(screen.getByLabelText("Title (Dutch)"), { target: { value: "Opening" } });
+    save();
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
+    expect(onSave.mock.calls[0]?.[0]).toMatchObject({ category: "tasting" });
+  });
+
+  it("keeps an existing event's category and does not save without one", async () => {
+    server.use(http.get("/api/event-categories", () => HttpResponse.json([])));
+    const onSave = mount({ ...existingEvent, category: "" });
+
+    save();
+
+    expect(await screen.findByText("Choose a category")).toBeInTheDocument();
+    expect(onSave).not.toHaveBeenCalled();
   });
 
   it("offers a draft translation that fills only the empty target and stays editable", async () => {

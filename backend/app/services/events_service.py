@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.models import Edition, Event, Layout, Registration, Room
+from app.models import Edition, Event, EventCategory, Layout, Registration, Room
 from app.schemas import EventCreate, EventTextFields, EventUpdate
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import event_to_summary_dict, get_or_404, make_id
@@ -47,6 +47,14 @@ async def get_event_or_404(db: AsyncSession, event_id: str) -> Event:
         "Event not found.",
         options=[selectinload(Event.edition), selectinload(Event.products)],
     )
+
+
+async def ensure_category_exists(db: AsyncSession, key: str) -> None:
+    if await db.get(EventCategory, key) is None:
+        raise HTTPException(
+            status.HTTP_422_UNPROCESSABLE_CONTENT,
+            f"Unknown event category '{key}'. Use an existing category key (see /api/event-categories).",
+        )
 
 
 async def ensure_edition_exists(db: AsyncSession, edition_id: str) -> Edition:
@@ -142,6 +150,7 @@ async def reject_if_registrations_exist(db: AsyncSession, event_id: str) -> None
 
 async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, request_id: str | None = None) -> dict:
     edition = await ensure_edition_exists(db, body.edition_id)
+    await ensure_category_exists(db, body.category)
     await validate_standalone_event_date(db, edition, body.date)
     validate_registration_settings(
         registration_required=body.registration_required,
@@ -211,6 +220,8 @@ async def apply_event_update(
         event.edition_id = body.edition_id
 
     fields_set = body.model_fields_set
+    if "category" in fields_set and body.category is not None:
+        await ensure_category_exists(db, body.category)
     candidate_date = body.date if "date" in fields_set and body.date is not None else event.date
     candidate_registration_required = (
         body.registration_required

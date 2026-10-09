@@ -24,6 +24,7 @@ import {
   ShieldIcon,
   SlidersHorizontalIcon,
   StoreIcon,
+  TagsIcon,
   ThumbsUpIcon,
   UserIcon,
   UsersIcon,
@@ -207,13 +208,19 @@ export default function AdminSidebar({
                 groupKey="events"
                 icon={CalendarDaysIcon}
                 label={m.admin_events_group()}
-                itemKeys={["editions"]}
+                itemKeys={["editions", "event-categories"]}
                 {...groupProps}
               >
                 <SidebarItem
                   itemKey="editions"
                   icon={CalendarIcon}
                   label={m.admin_content_editions_section()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="event-categories"
+                  icon={TagsIcon}
+                  label={m.admin_event_categories_section()}
                   {...itemProps}
                 />
               </SidebarGroup>

@@ -2,6 +2,7 @@ import type { PeopleCountParams, PeopleListParams } from "@/utils/adminPeopleQue
 
 export const queryKeys = {
   activeEdition: ["active-edition"] as const,
+  eventCategories: ["event-categories"] as const,
   faq: (locale: string) => ["faq", locale] as const,
   announcements: (locale: string) => ["announcements", locale] as const,
   policy: (policyKey: string, locale: string) => ["policy", policyKey, locale] as const,
