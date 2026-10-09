@@ -893,11 +893,12 @@
   }
 
   /* The contact card keeps its utility padding; widen it so the fields align
-     with the text column above. */
+     with the text column above. It grows by the container gutter (0.75rem on
+     phones), so it never reaches past the viewport edge. */
   #contact [data-slot="card"] {
-    width: calc(100% + 2rem);
+    width: calc(100% + 1.5rem);
     max-width: none;
-    translate: -1rem 0;
+    translate: -0.75rem 0;
   }
 
   /* Flush with the contact column: no side padding, so the hairline and the text align. */

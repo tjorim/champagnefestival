@@ -671,14 +671,16 @@ function App() {
             <SectionHeading id="map-heading" title={m.location_title()} />
             <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter justify-center riviera:justify-start">
               <div className="site-content-column site-md:w-content-md site-lg:w-content-lg">
-                {venueLines.length > 0 && (
+                {(venueName || venueLines.length > 0) && (
                   <div
                     data-slot="venue-details"
                     className="mb-4 flex flex-wrap items-center justify-between gap-3"
                   >
                     <div>
-                      <p className="mb-0 text-lg font-semibold">{venueName}</p>
-                      <p className="mb-0 text-muted-foreground">{venueLines.join(", ")}</p>
+                      {venueName && <p className="mb-0 text-lg font-semibold">{venueName}</p>}
+                      {venueLines.length > 0 && (
+                        <p className="mb-0 text-muted-foreground">{venueLines.join(", ")}</p>
+                      )}
                     </div>
                     {venueMapsUrl && (
                       <ButtonLink
