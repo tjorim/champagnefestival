@@ -47,9 +47,9 @@
     "react-oidc-context": "^3.2.0"
   },
   "devDependencies": {
-    "@inlang/paraglide-js": "^2.25.4",
-    "@inlang/plugin-m-function-matcher": "^2.2.16",
-    "@inlang/plugin-message-format": "^4.4.4",
+    "@inlang/paraglide-js": "^2.26.0",
+    "@inlang/plugin-m-function-matcher": "^2.2.17",
+    "@inlang/plugin-message-format": "^4.4.5",
     "@playwright/test": "^1.63.0",
     "@shadcn/lint": "^0.2.0",
     "@tailwindcss/vite": "^4.3.3",
