@@ -4,8 +4,10 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { describe, expect, it, vi } from "vitest";
 import RegistrationDetail from "@/components/admin/RegistrationDetail";
 import type { FloorTable } from "@/types/admin";
+import { NO_PRODUCT_TRANSLATIONS } from "@/types/event";
 import type { Registration } from "@/types/registration";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
+import { noEventTranslations } from "../utils/eventFixtures";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
@@ -60,6 +62,7 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
     event: {
       id: "event-1",
       editionId: "edition-1",
+      ...noEventTranslations,
       title: "Grand Tasting",
       description: "",
       date: "2026-05-01",
@@ -402,6 +405,7 @@ describe("RegistrationDetail", () => {
     const tableProduct = {
       id: "table-product",
       eventId: "event-1",
+      ...NO_PRODUCT_TRANSLATIONS,
       name: "Bourse table",
       description: "",
       price: 50,
@@ -496,6 +500,7 @@ describe("RegistrationDetail", () => {
         event: {
           id: "event-2",
           editionId: "edition-2",
+          ...noEventTranslations,
           title: "Bourse Meetup",
           description: "",
           date: "2026-05-01",
@@ -528,6 +533,7 @@ describe("RegistrationDetail", () => {
         event: {
           id: "event-2",
           editionId: "edition-2",
+          ...noEventTranslations,
           title: "Bourse Meetup",
           description: "",
           date: "2026-05-01",

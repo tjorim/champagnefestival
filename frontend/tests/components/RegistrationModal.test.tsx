@@ -3,9 +3,10 @@ import { beforeEach, describe, it, expect, vi } from "vitest";
 import { http, HttpResponse } from "msw";
 import RegistrationModal from "@/components/RegistrationModal";
 import { server } from "@/mocks/server";
-import type { Event, Product } from "@/types/event";
+import { NO_PRODUCT_TRANSLATIONS, type Event, type Product } from "@/types/event";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 import { selectAdminOption } from "../helpers/adminSelect";
+import { noEventTranslations } from "../utils/eventFixtures";
 
 const authState = vi.hoisted(() => ({ accessToken: null as string | null }));
 
@@ -68,6 +69,7 @@ vi.mock("@/paraglide/runtime", () => ({
 const champagneProduct: Product = {
   id: "champagne-standard",
   eventId: "fri-vip",
+  ...NO_PRODUCT_TRANSLATIONS,
   name: "Champagne Bottle (Standard)",
   description: "",
   price: 65,
@@ -81,6 +83,7 @@ const champagneProduct: Product = {
 const vipEvent: Event = {
   id: "fri-vip",
   editionId: "ed-1",
+  ...noEventTranslations,
   title: "VIP Reception",
   startTime: "19:30",
   description: "VIP event",
@@ -430,6 +433,7 @@ describe("RegistrationModal component", () => {
     const vipEntry: Product = {
       id: "vip-entry",
       eventId: "fri-vip",
+      ...NO_PRODUCT_TRANSLATIONS,
       name: "VIP Entry",
       description: "",
       price: 50,
@@ -484,6 +488,7 @@ describe("RegistrationModal component", () => {
     const bottle: Product = {
       id: "bottle",
       eventId: "fri-vip",
+      ...NO_PRODUCT_TRANSLATIONS,
       name: "Champagne Bottle",
       description: "",
       price: 65,
@@ -496,6 +501,7 @@ describe("RegistrationModal component", () => {
     const vipTable: Product = {
       id: "vip-table",
       eventId: "fri-vip",
+      ...NO_PRODUCT_TRANSLATIONS,
       name: "VIP Table",
       description: "",
       price: 200,

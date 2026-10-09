@@ -28,7 +28,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import EditionPollOption, Person, VolunteerPollSelection
-from app.schemas import VolunteerPollSelectionsIn, VolunteerPollSelectionsOut
+from app.schemas import VolunteerPollSelectionsIn
 from app.services.editions_service import find_active_edition
 from app.services.identity_checksum import validate_eid_checksum, validate_niss_checksum
 from app.services.people_service import normalise_optional_identity
@@ -220,7 +220,7 @@ async def get_active_edition_poll_options(db: AsyncSession) -> tuple[str | None,
             await db.execute(
                 select(EditionPollOption)
                 .where(EditionPollOption.edition_id == edition.id)
-                .order_by(EditionPollOption.kind, EditionPollOption.created_at)
+                .order_by(EditionPollOption.created_at, EditionPollOption.id)
             )
         )
         .scalars()
@@ -229,29 +229,25 @@ async def get_active_edition_poll_options(db: AsyncSession) -> tuple[str | None,
     return edition.id, list(options)
 
 
-async def get_poll_selections(
-    db: AsyncSession, volunteer_id: str, edition_id: str | None
-) -> VolunteerPollSelectionsOut:
+async def get_poll_selections(db: AsyncSession, volunteer_id: str, edition_id: str | None) -> list[dict]:
     """Only this ``edition_id``'s selections — a volunteer who helped a past
     edition keeps whatever they picked then, but it must never surface (or,
     in ``replace_poll_selections``, be deleted) as if it were this edition's
     picks."""
     if edition_id is None:
-        return VolunteerPollSelectionsOut(dish_option_id=None, soup_option_id=None, dinner_option_ids=[])
-    option_ids = (
+        return []
+    rows = (
         await db.execute(
-            select(VolunteerPollSelection.option_id, EditionPollOption.kind)
+            select(VolunteerPollSelection.option_id, VolunteerPollSelection.quantity)
             .join(EditionPollOption, EditionPollOption.id == VolunteerPollSelection.option_id)
             .where(
                 VolunteerPollSelection.volunteer_id == volunteer_id,
                 EditionPollOption.edition_id == edition_id,
             )
+            .order_by(EditionPollOption.created_at, EditionPollOption.id)
         )
     ).all()
-    dish = next((oid for oid, kind in option_ids if kind == "dish"), None)
-    soup = next((oid for oid, kind in option_ids if kind == "soup"), None)
-    dinners = [oid for oid, kind in option_ids if kind == "dinner"]
-    return VolunteerPollSelectionsOut(dish_option_id=dish, soup_option_id=soup, dinner_option_ids=dinners)
+    return [{"option_id": option_id, "quantity": quantity} for option_id, quantity in rows]
 
 
 async def replace_poll_selections(
@@ -261,8 +257,8 @@ async def replace_poll_selections(
     body: VolunteerPollSelectionsIn,
     actor: str,
     request_id: str | None = None,
-) -> VolunteerPollSelectionsOut:
-    """Replace this volunteer's own picks. Safe to wholesale-replace: every
+) -> list[dict]:
+    """Replace this volunteer's own quantities. Safe to wholesale-replace: every
     row touched is keyed by `volunteer_id`, so this can never affect another
     volunteer's selections or the options themselves (see
     `VolunteerPollSelectionsIn`'s docstring). Only ever replaces the *active
@@ -273,30 +269,14 @@ async def replace_poll_selections(
     `register_volunteer_identity`'s use of the same pattern) so two
     concurrent replacements for the same volunteer (a double-submit, or a
     retry racing the original) serialize instead of interleaving their
-    delete-then-insert and potentially leaving two `dish`/`soup` rows behind.
+    delete-then-insert.
     """
     await db.execute(select(Person.id).where(Person.id == volunteer_id).with_for_update())
-    active_edition_id, _ = await get_active_edition_poll_options(db)
-    requested_ids = [oid for oid in (body.dish_option_id, body.soup_option_id, *body.dinner_option_ids) if oid]
-    options_by_id: dict[str, EditionPollOption] = {}
-    if requested_ids:
-        rows = (
-            (await db.execute(select(EditionPollOption).where(EditionPollOption.id.in_(requested_ids)))).scalars().all()
-        )
-        options_by_id = {o.id: o for o in rows}
-        missing = set(requested_ids) - options_by_id.keys()
-        if missing or any(o.edition_id != active_edition_id for o in options_by_id.values()):
-            raise HTTPException(status_code=404, detail="One or more poll options are not part of the active edition.")
-
-    def _check_kind(option_id: str | None, expected_kind: str) -> None:
-        if option_id is not None and options_by_id[option_id].kind != expected_kind:
-            raise HTTPException(status_code=400, detail=f"That option isn't a {expected_kind} choice.")
-
-    _check_kind(body.dish_option_id, "dish")
-    _check_kind(body.soup_option_id, "soup")
-    for dinner_id in body.dinner_option_ids:
-        if options_by_id[dinner_id].kind != "dinner":
-            raise HTTPException(status_code=400, detail="That option isn't a dinner choice.")
+    active_edition_id, options = await get_active_edition_poll_options(db)
+    valid_ids = {option.id for option in options}
+    requested_ids = {selection.option_id for selection in body.selections}
+    if not requested_ids <= valid_ids:
+        raise HTTPException(status_code=404, detail="One or more poll options are not part of the active edition.")
 
     if active_edition_id is not None:
         current_edition_option_ids = select(EditionPollOption.id).where(
@@ -308,8 +288,12 @@ async def replace_poll_selections(
                 VolunteerPollSelection.option_id.in_(current_edition_option_ids),
             )
         )
-    for option_id in dict.fromkeys(requested_ids):  # de-duplicate, preserve order
-        db.add(VolunteerPollSelection(volunteer_id=volunteer_id, option_id=option_id))
+    for selection in body.selections:
+        db.add(
+            VolunteerPollSelection(
+                volunteer_id=volunteer_id, option_id=selection.option_id, quantity=selection.quantity
+            )
+        )
 
     await write_audit_entry(
         db,
@@ -318,7 +302,7 @@ async def replace_poll_selections(
         resource_type="person",
         resource_id=volunteer_id,
         request_id=request_id,
-        details={"option_count": len(set(requested_ids))},
+        details={"option_count": len(body.selections), "total_quantity": sum(s.quantity for s in body.selections)},
     )
     await db.commit()
     return await get_poll_selections(db, volunteer_id, active_edition_id)

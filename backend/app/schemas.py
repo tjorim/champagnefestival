@@ -13,12 +13,13 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
+from app.models import MAX_POLL_QUANTITY
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 # ---------------------------------------------------------------------------
 # Shared value types
 # ---------------------------------------------------------------------------
 
-OrderItemCategory = Literal["champagne", "food", "other"]
 EditionType = Literal["festival", "bourse", "capsule_exchange"]
 RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
 PaymentStatus = Literal["unpaid", "partial", "paid"]
@@ -50,9 +51,16 @@ def _validate_safe_announcement_url(value: str | None) -> str | None:
 class OrderItemBase(BaseModel):
     product_id: str
     name: str
+    """Original-language name at order time. `name_*` hold the translations so the
+    order can be shown in the booker's language; orders from before products were
+    translated carry only `name`."""
+    name_language: Language | None = None
+    name_nl: str | None = None
+    name_fr: str | None = None
+    name_en: str | None = None
     quantity: int = Field(ge=1)
     price: float = Field(ge=0)
-    category: OrderItemCategory
+    category: str
     delivered_quantity: int | None = Field(default=None, ge=0)
     delivered: bool = False
     included_quantity: int = Field(default=0, ge=0)
@@ -233,10 +241,106 @@ class EditionSummaryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class EventCreate(RequestModel):
+CATEGORY_KEY_PATTERN = r"^[a-z][a-z0-9_-]{0,49}$"
+
+
+class CategoryLabels(RequestModel):
+    """Per-language label of an event or product category: the original language must have text."""
+
+    label_language: Language | None = None
+    label_nl: str | None = Field(default=None, max_length=100)
+    label_fr: str | None = Field(default=None, max_length=100)
+    label_en: str | None = Field(default=None, max_length=100)
+    sort_order: int | None = Field(default=None, ge=0, le=100000)
+
+    @field_validator("label_nl", "label_fr", "label_en", mode="before")
+    @classmethod
+    def normalize_label(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        if not self.label_language or not getattr(self, f"label_{self.label_language}"):
+            raise ValueError("A category label requires non-empty text in its original language.")
+        return self
+
+
+class CategoryCreate(CategoryLabels):
+    key: str = Field(
+        pattern=CATEGORY_KEY_PATTERN,
+        description="Stable identifier stored on the events or products using it: lowercase letters, digits, `-` and `_`. Cannot be changed.",
+    )
+    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    sort_order: int = Field(default=0, ge=0, le=100000)
+
+    @model_validator(mode="after")
+    def check_label(self) -> Self:
+        return self.validate_original()
+
+
+class CategoryUpdate(CategoryLabels):
+    """Partial update; the key is immutable."""
+
+
+class CategoryOut(BaseModel):
+    key: str
+    label: str
+    """The label resolved for the requested `locale` (the original language when none)."""
+    label_language: Language
+    label_nl: str | None
+    label_fr: str | None
+    label_en: str | None
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class EventTextFields(RequestModel):
+    """Per-language event title and description (#1222).
+
+    Same contract as ``OrganizationDescription``: the original language must be
+    filled, the others are optional, and public reads fall back to the original.
+    A blank text is stored as ``None``. Unlike an organisation, an event always
+    has a title.
+    """
+
+    title_language: Language | None = None
+    title_nl: str | None = Field(default=None, max_length=200)
+    title_fr: str | None = Field(default=None, max_length=200)
+    title_en: str | None = Field(default=None, max_length=200)
+    description_language: Language | None = None
+    description_nl: str | None = Field(default=None, max_length=10000)
+    description_fr: str | None = Field(default=None, max_length=10000)
+    description_en: str | None = Field(default=None, max_length=10000)
+
+    @field_validator(
+        "title_nl",
+        "title_fr",
+        "title_en",
+        "description_nl",
+        "description_fr",
+        "description_en",
+        mode="before",
+    )
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        if not self.title_language or not getattr(self, f"title_{self.title_language}"):
+            raise ValueError("A title requires non-empty text in its original language.")
+        if any((self.description_nl, self.description_fr, self.description_en)):
+            if not self.description_language or not getattr(self, f"description_{self.description_language}"):
+                raise ValueError("A description requires non-empty text in its original language.")
+        elif self.description_language:
+            raise ValueError("Clear the original language when clearing all description texts.")
+        return self
+
+
+class EventCreate(EventTextFields):
     edition_id: str = Field(min_length=1, max_length=100)
-    title: str = Field(min_length=1, max_length=200)
-    description: str = Field(default="", max_length=10000)
+    title_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     date: dt_date
     start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -246,11 +350,13 @@ class EventCreate(RequestModel):
     registrations_close_at: datetime | None = None
     active: bool = True
 
+    @model_validator(mode="after")
+    def check_text(self) -> Self:
+        return self.validate_original()
 
-class EventUpdate(RequestModel):
+
+class EventUpdate(EventTextFields):
     edition_id: str | None = Field(default=None, min_length=1, max_length=100)
-    title: str | None = Field(default=None, min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=10000)
     date: dt_date | None = None
     start_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -261,11 +367,29 @@ class EventUpdate(RequestModel):
     active: bool | None = None
 
 
-class EventOut(BaseModel):
-    id: str
-    edition_id: str
+class EventTextOut(BaseModel):
+    """The stored text of an event in every language, plus its original language.
+
+    ``title``/``description`` on the enclosing model are the text resolved for
+    the request locale (the original language when none is requested), so
+    clients that predate translations keep working.
+    """
+
     title: str
     description: str
+    title_language: Language
+    title_nl: str | None = None
+    title_fr: str | None = None
+    title_en: str | None = None
+    description_language: Language | None = None
+    description_nl: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
+
+
+class EventOut(EventTextOut):
+    id: str
+    edition_id: str
     date: dt_date
     start_time: str
     end_time: str | None
@@ -283,14 +407,12 @@ class EventOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class EventPublicOut(BaseModel):
+class EventPublicOut(EventTextOut):
     """Visitor-facing event shape — see ProductPublicOut for why `products`
     differs from `EventOut.products`."""
 
     id: str
     edition_id: str
-    title: str
-    description: str
     date: dt_date
     start_time: str
     end_time: str | None
@@ -313,19 +435,56 @@ class ProductInclusion(RequestModel):
     rounding: Literal["up", "down"] = "down"
 
 
-class ProductCreate(RequestModel):
+class ProductTextFields(RequestModel):
+    """Product name and description per language (#1222), like event titles: the
+    original language must have the name, the description is optional (but needs
+    text in its original language when present), and visitors fall back to the
+    original. A blank text is stored as `None`."""
+
+    name_language: Language | None = None
+    name_nl: str | None = Field(default=None, max_length=200)
+    name_fr: str | None = Field(default=None, max_length=200)
+    name_en: str | None = Field(default=None, max_length=200)
+    description_language: Language | None = None
+    description_nl: str | None = Field(default=None, max_length=300)
+    description_fr: str | None = Field(default=None, max_length=300)
+    description_en: str | None = Field(default=None, max_length=300)
+
+    @field_validator(
+        "name_nl", "name_fr", "name_en", "description_nl", "description_fr", "description_en", mode="before"
+    )
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        if not self.name_language or not getattr(self, f"name_{self.name_language}"):
+            raise ValueError("A product name requires non-empty text in its original language.")
+        if any((self.description_nl, self.description_fr, self.description_en)):
+            if not self.description_language or not getattr(self, f"description_{self.description_language}"):
+                raise ValueError("A description requires non-empty text in its original language.")
+        elif self.description_language:
+            raise ValueError("Clear the original language when clearing all description texts.")
+        return self
+
+
+class ProductCreate(ProductTextFields):
+    name_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     unit: Literal["item", "table", "person"] = "item"
     stock: int | None = Field(default=None, ge=0, le=2147483647)
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
     event_id: str = Field(min_length=1, max_length=64)
-    name: str = Field(min_length=1, max_length=200)
-    description: str = Field(default="", max_length=300)
     price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
-    category: OrderItemCategory
+    category: str = Field(min_length=1, max_length=50)
+    """Key of a product category (see ``/api/product-categories``)."""
     purchasable: bool = True
     required: bool = False
     included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
     included_per_guests: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def check_text(self) -> Self:
+        return self.validate_original()
 
     @model_validator(mode="after")
     def validate_inclusion_pair(self) -> Self:
@@ -340,7 +499,7 @@ class ProductCreate(RequestModel):
         return self
 
 
-class ProductUpdate(RequestModel):
+class ProductUpdate(ProductTextFields):
     unit: Literal["item", "table", "person"] | None = None
     stock: int | None = Field(default=None, ge=0, le=2147483647)
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
@@ -348,10 +507,8 @@ class ProductUpdate(RequestModel):
     update_existing_prices: bool = False
     confirm_shortage: bool = False
     preview_token: str | None = None
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    description: str | None = Field(default=None, max_length=300)
     price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
-    category: OrderItemCategory | None = None
+    category: str | None = Field(default=None, min_length=1, max_length=50)
     purchasable: bool | None = None
     required: bool | None = None
     # Nullable and independently settable, so the router (not this schema) decides
@@ -377,9 +534,18 @@ class ProductOut(BaseModel):
     id: str
     event_id: str
     name: str
+    """Original-language name (admin shape); the per-language fields below hold every translation."""
     description: str = ""
+    name_language: Language
+    name_nl: str | None = None
+    name_fr: str | None = None
+    name_en: str | None = None
+    description_language: Language | None = None
+    description_nl: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
     price: Decimal
-    category: OrderItemCategory
+    category: str
     purchasable: bool
     required: bool
     included_product_id: str | None
@@ -398,9 +564,18 @@ class ProductPublicOut(BaseModel):
 
     id: str
     name: str
+    """Resolved for the requested `locale` (the original language when none) — see `ProductOut`."""
     description: str = ""
+    name_language: Language
+    name_nl: str | None = None
+    name_fr: str | None = None
+    name_en: str | None = None
+    description_language: Language | None = None
+    description_nl: str | None = None
+    description_fr: str | None = None
+    description_en: str | None = None
     price: Decimal
-    category: OrderItemCategory
+    category: str
     unit: str = "item"
     required: bool
     purchasable: bool
@@ -878,38 +1053,51 @@ class VolunteerListEnvelope(BaseModel):
 # Volunteer meal/dinner poll
 # ---------------------------------------------------------------------------
 
-PollOptionKind = Literal["dish", "soup", "dinner"]
-
 
 class PollOptionCreate(RequestModel):
     edition_id: str = Field(min_length=1, max_length=100)
-    kind: PollOptionKind
     label: str = Field(min_length=1, max_length=200)
 
-    @field_validator("label", mode="before")
+    @field_validator("label", mode="after")
     @classmethod
     def strip_label(cls, value: str) -> str:
-        return value.strip() if isinstance(value, str) else value
+        if not value.strip():
+            raise ValueError("Label must not be blank.")
+        return value.strip()
 
 
 class PollOptionUpdate(RequestModel):
     label: str = Field(min_length=1, max_length=200)
 
-    @field_validator("label", mode="before")
+    @field_validator("label", mode="after")
     @classmethod
     def strip_label(cls, value: str) -> str:
-        return value.strip() if isinstance(value, str) else value
+        if not value.strip():
+            raise ValueError("Label must not be blank.")
+        return value.strip()
 
 
 class PollOptionOut(BaseModel):
+    """An option as the admin sees it, with how much volunteers asked for in total."""
+
     id: str
     edition_id: str
-    kind: str
     label: str
+    total_quantity: int = 0
+    """Sum of every volunteer's quantity — what to order from the caterer."""
+    volunteer_count: int = 0
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+
+class VolunteerPollOptionOut(BaseModel):
+    id: str
+    label: str
+
+
+class PollSelectionItem(RequestModel):
+    option_id: str = Field(min_length=1, max_length=64)
+    quantity: int = Field(ge=1, le=MAX_POLL_QUANTITY)
 
 
 class VolunteerPollSelectionsIn(RequestModel):
@@ -917,41 +1105,27 @@ class VolunteerPollSelectionsIn(RequestModel):
 
     Safe to wholesale-replace (unlike `EditionPollOption` itself): every row
     touched is keyed by this one volunteer's own id, so replacing never
-    affects another volunteer's picks or the options themselves.
+    affects another volunteer's picks or the options themselves. An option left
+    out means none of it; listing one twice is rejected.
     """
 
-    dish_option_id: str | None = None
-    soup_option_id: str | None = None
-    dinner_option_ids: list[str] = Field(default_factory=list, max_length=50)
+    selections: list[PollSelectionItem] = Field(default_factory=list, max_length=100)
 
-    @field_validator("dish_option_id", "soup_option_id", mode="after")
-    @classmethod
-    def reject_blank_option_id(cls, value: str | None) -> str | None:
-        if value is not None and not value.strip():
-            raise ValueError("Option id must not be blank.")
-        return value
-
-    @field_validator("dinner_option_ids", mode="after")
-    @classmethod
-    def reject_blank_dinner_option_ids(cls, value: list[str]) -> list[str]:
-        if any(not v.strip() for v in value):
-            raise ValueError("Dinner option ids must not be blank.")
-        return value
-
-
-class VolunteerPollSelectionsOut(BaseModel):
-    dish_option_id: str | None
-    soup_option_id: str | None
-    dinner_option_ids: list[str]
+    @model_validator(mode="after")
+    def reject_duplicate_options(self) -> Self:
+        ids = [selection.option_id for selection in self.selections]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Each option can be listed only once.")
+        return self
 
 
 class VolunteerPollOptionsOut(BaseModel):
     """What a volunteer sees: the active festival edition's options (empty if
-    none), grouped by kind, plus their own current selections."""
+    none) plus their own current quantities."""
 
     edition_id: str | None
-    options: list[PollOptionOut]
-    selections: VolunteerPollSelectionsOut
+    options: list[VolunteerPollOptionOut]
+    selections: list[PollSelectionItem]
 
 
 # ---------------------------------------------------------------------------
@@ -1883,27 +2057,43 @@ class AppSettingsOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class FaqItemCreate(RequestModel):
-    question_nl: str = Field(min_length=1, max_length=500)
-    answer_nl: str = Field(min_length=1, max_length=10000)
-    question_en: str | None = Field(default=None, max_length=500)
-    answer_en: str | None = Field(default=None, max_length=10000)
+class FaqTextFields(RequestModel):
+    """A question and its answer per language (#1222): the original language must
+    have both, the others are optional, and a language is shown only when both
+    its question and answer have text. A blank text is stored as `None`."""
+
+    text_language: Language | None = None
+    question_nl: str | None = Field(default=None, max_length=500)
     question_fr: str | None = Field(default=None, max_length=500)
+    question_en: str | None = Field(default=None, max_length=500)
+    answer_nl: str | None = Field(default=None, max_length=10000)
     answer_fr: str | None = Field(default=None, max_length=10000)
+    answer_en: str | None = Field(default=None, max_length=10000)
+
+    @field_validator("question_nl", "question_fr", "question_en", "answer_nl", "answer_fr", "answer_en", mode="before")
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        language = self.text_language
+        if not language or not getattr(self, f"question_{language}") or not getattr(self, f"answer_{language}"):
+            raise ValueError("A FAQ item requires a question and an answer in its original language.")
+        return self
+
+
+class FaqItemCreate(FaqTextFields):
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     active: bool = True
 
+    @model_validator(mode="after")
+    def check_text(self) -> Self:
+        return self.validate_original()
 
-class FaqItemUpdate(RequestModel):
-    question_nl: str | None = Field(default=None, min_length=1, max_length=500)
-    answer_nl: str | None = Field(default=None, min_length=1, max_length=10000)
-    # Optional locales use presence (model_fields_set), not None-ness, to tell
-    # "omitted, leave unchanged" apart from "included as '', clear it" — see
-    # update_faq_item in routers/faq.py. An empty string clears the
-    # translation (stored as NULL), hiding that item on that locale's FAQ.
-    question_en: str | None = Field(default=None, max_length=500)
-    answer_en: str | None = Field(default=None, max_length=10000)
-    question_fr: str | None = Field(default=None, max_length=500)
-    answer_fr: str | None = Field(default=None, max_length=10000)
+
+class FaqItemUpdate(FaqTextFields):
+    """Partial update: an empty string clears a translation, the original cannot be cleared."""
+
     active: bool | None = None
 
 
@@ -1919,15 +2109,16 @@ class FaqItemReorder(RequestModel):
 
 
 class FaqItemOut(BaseModel):
-    """Admin shape: every locale's content, for the FAQ editor."""
+    """Admin shape: every language's content, for the FAQ editor."""
 
     id: str
-    question_nl: str
-    answer_nl: str
-    question_en: str | None
-    answer_en: str | None
+    text_language: Language
+    question_nl: str | None
     question_fr: str | None
+    question_en: str | None
+    answer_nl: str | None
     answer_fr: str | None
+    answer_en: str | None
     sort_order: int
     active: bool
     created_at: datetime
@@ -1937,61 +2128,41 @@ class FaqItemOut(BaseModel):
 
 
 class FaqItemPublicOut(BaseModel):
-    """Public shape: one locale's question/answer, already resolved server-side."""
+    """Public shape: one locale's question/answer, already resolved server-side
+    (the original language when that locale is not fully translated)."""
 
     id: str
     question: str
     answer: str
 
 
-class AnnouncementWrite(RequestModel):
+_BLANK_TO_NONE = ("text_nl", "text_fr", "text_en", "link_label_nl", "link_label_fr", "link_label_en")
+
+
+class AnnouncementFields(RequestModel):
+    """Announcement text and link label per language (#1222): the original language
+    must have the text (and the link label when there is a link), the others are
+    optional translations, and visitors fall back to the original."""
+
+    text_language: Language | None = None
     text_nl: str | None = Field(default=None, max_length=500)
-    text_en: str | None = Field(default=None, max_length=500)
     text_fr: str | None = Field(default=None, max_length=500)
-    level: AnnouncementLevel = "info"
-    active: bool = False
-    starts_at: datetime | None = None
-    ends_at: datetime | None = None
-    link_url: str | None = Field(default=None, max_length=1000)
-    link_label_nl: str | None = Field(default=None, max_length=120)
-    link_label_en: str | None = Field(default=None, max_length=120)
-    link_label_fr: str | None = Field(default=None, max_length=120)
-
-    _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
-
-    @model_validator(mode="after")
-    def validate_announcement(self):
-        if self.active and not any((self.text_nl, self.text_en, self.text_fr)):
-            raise ValueError("an active announcement needs at least one translation")
-        if self.starts_at and self.starts_at.utcoffset() is None:
-            raise ValueError("starts_at must include a timezone")
-        if self.ends_at and self.ends_at.utcoffset() is None:
-            raise ValueError("ends_at must include a timezone")
-        if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
-            raise ValueError("ends_at must be later than starts_at")
-        if self.link_url and not any((self.link_label_nl, self.link_label_en, self.link_label_fr)):
-            raise ValueError("a link URL requires at least one translated link label")
-        return self
-
-
-class AnnouncementCreate(AnnouncementWrite):
-    pass
-
-
-class AnnouncementUpdate(RequestModel):
-    text_nl: str | None = Field(default=None, max_length=500)
     text_en: str | None = Field(default=None, max_length=500)
-    text_fr: str | None = Field(default=None, max_length=500)
     level: AnnouncementLevel | None = None
     active: bool | None = None
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     link_url: str | None = Field(default=None, max_length=1000)
     link_label_nl: str | None = Field(default=None, max_length=120)
-    link_label_en: str | None = Field(default=None, max_length=120)
     link_label_fr: str | None = Field(default=None, max_length=120)
+    link_label_en: str | None = Field(default=None, max_length=120)
 
     _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
+
+    @field_validator(*_BLANK_TO_NONE, mode="before")
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
 
     @field_validator("starts_at", "ends_at")
     @classmethod
@@ -2001,15 +2172,43 @@ class AnnouncementUpdate(RequestModel):
         return value
 
 
+class AnnouncementWrite(AnnouncementFields):
+    """The complete, validated state of an announcement (create body, and what an update merges into)."""
+
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    level: AnnouncementLevel = "info"
+    active: bool = False
+
+    @model_validator(mode="after")
+    def validate_announcement(self):
+        language = self.text_language
+        if not getattr(self, f"text_{language}"):
+            raise ValueError("an announcement needs text in its original language")
+        if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
+            raise ValueError("ends_at must be later than starts_at")
+        if self.link_url and not getattr(self, f"link_label_{language}"):
+            raise ValueError("a link URL requires a link label in the announcement's original language")
+        return self
+
+
+class AnnouncementCreate(AnnouncementWrite):
+    pass
+
+
+class AnnouncementUpdate(AnnouncementFields):
+    """Partial update: an empty string clears a translation; the merged result is validated."""
+
+
 class AnnouncementReorder(RequestModel):
     ordered_ids: list[str] = Field(min_length=1)
 
 
 class AnnouncementOut(BaseModel):
     id: str
+    text_language: Language
     text_nl: str | None
-    text_en: str | None
     text_fr: str | None
+    text_en: str | None
     level: AnnouncementLevel
     active: bool
     sort_order: int
@@ -2043,9 +2242,10 @@ class PolicyVersionOut(BaseModel):
     policy_key: str
     version_number: int
     status: PolicyVersionStatus
+    content_language: Language
     content_nl: str | None
-    content_en: str | None
     content_fr: str | None
+    content_en: str | None
     change_summary: str | None
     created_at: datetime
     created_by: str
@@ -2060,10 +2260,10 @@ class PolicyOut(BaseModel):
     """Admin shape: the policy plus its full version history, newest first."""
 
     key: str
-    title_nl: str
-    title_en: str | None
+    title_language: Language
+    title_nl: str | None
     title_fr: str | None
-    required_locales: list[FaqLocale]
+    title_en: str | None
     versions: list[PolicyVersionOut]
 
 
@@ -2080,9 +2280,13 @@ class PolicyDraftCreate(RequestModel):
 
 
 class PolicyDraftUpdate(RequestModel):
+    """Edit the open draft. The draft may be incomplete; publishing requires text in
+    its original language (`content_language`)."""
+
+    content_language: Language | None = None
     content_nl: str | None = Field(default=None, max_length=200_000)
-    content_en: str | None = Field(default=None, max_length=200_000)
     content_fr: str | None = Field(default=None, max_length=200_000)
+    content_en: str | None = Field(default=None, max_length=200_000)
     change_summary: str | None = Field(default=None, max_length=2000)
 
 
@@ -2104,6 +2308,8 @@ class PolicyPublicOut(BaseModel):
     key: str
     title: str
     locale: FaqLocale
+    """The language `html` is written in: the requested one, or the policy's original
+    language when that locale has no content."""
     html: str
     version_number: int
     published_at: datetime
@@ -2192,52 +2398,28 @@ ComposedMessageChannel = Literal["announcement", "push"]
 ComposedMessageState = Literal["draft", "scheduled", "sent"]
 
 
-class ComposedMessageWrite(RequestModel):
+class ComposedMessageFields(RequestModel):
+    """Title and body per language (#1222): the original language must have both,
+    the others are optional, and a language is used only when both its title and
+    body have text (otherwise the original is delivered)."""
+
+    text_language: Language | None = None
     title_nl: str | None = Field(default=None, max_length=500)
-    title_en: str | None = Field(default=None, max_length=500)
     title_fr: str | None = Field(default=None, max_length=500)
-    body_nl: str | None = Field(default=None, max_length=500)
-    body_en: str | None = Field(default=None, max_length=500)
-    body_fr: str | None = Field(default=None, max_length=500)
-    level: AnnouncementLevel = "info"
-    channels: list[ComposedMessageChannel] = Field(min_length=1)
-    link_url: str | None = Field(default=None, max_length=1000)
-
-    _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
-
-    @model_validator(mode="after")
-    def validate_composed_message(self):
-        if pick_locale_text(self, "nl") is None:
-            raise ValueError("a composed message needs at least one complete translated title/body pair")
-        if "push" in self.channels:
-            for locale in LOCALES:
-                text = pick_locale_text(self, locale)
-                if text is not None:
-                    build_composer_payload(*text)
-        if len(set(self.channels)) != len(self.channels):
-            raise ValueError("channels must not contain duplicates")
-        return self
-
-
-class ComposedMessageCreate(ComposedMessageWrite):
-    pass
-
-
-class ComposedMessageUpdate(RequestModel):
-    """Only valid while the message is still ``draft`` — see
-    ``app.services.composer_service.update_draft``."""
-
-    title_nl: str | None = Field(default=None, max_length=500)
     title_en: str | None = Field(default=None, max_length=500)
-    title_fr: str | None = Field(default=None, max_length=500)
     body_nl: str | None = Field(default=None, max_length=500)
-    body_en: str | None = Field(default=None, max_length=500)
     body_fr: str | None = Field(default=None, max_length=500)
+    body_en: str | None = Field(default=None, max_length=500)
     level: AnnouncementLevel | None = None
     channels: list[ComposedMessageChannel] | None = Field(default=None, min_length=1)
     link_url: str | None = Field(default=None, max_length=1000)
 
     _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
+
+    @field_validator("title_nl", "title_fr", "title_en", "body_nl", "body_fr", "body_en", mode="before")
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
 
     @field_validator("channels")
     @classmethod
@@ -2247,14 +2429,44 @@ class ComposedMessageUpdate(RequestModel):
         return value
 
 
+class ComposedMessageWrite(ComposedMessageFields):
+    """The complete, validated state of a composed message (create body, and what an update merges into)."""
+
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    level: AnnouncementLevel = "info"
+    channels: list[ComposedMessageChannel] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_composed_message(self):
+        language = self.text_language
+        if not getattr(self, f"title_{language}") or not getattr(self, f"body_{language}"):
+            raise ValueError("a composed message needs a title and a body in its original language")
+        if "push" in self.channels:
+            for locale in LOCALES:
+                text = pick_locale_text(self, locale)
+                if text is not None:
+                    build_composer_payload(*text)
+        return self
+
+
+class ComposedMessageCreate(ComposedMessageWrite):
+    pass
+
+
+class ComposedMessageUpdate(ComposedMessageFields):
+    """Only valid while the message is still ``draft`` — see
+    ``app.services.composer_service.update_draft``."""
+
+
 class ComposedMessageOut(BaseModel):
     id: str
+    text_language: Language
     title_nl: str | None
-    title_en: str | None
     title_fr: str | None
+    title_en: str | None
     body_nl: str | None
-    body_en: str | None
     body_fr: str | None
+    body_en: str | None
     level: AnnouncementLevel
     channels: list[str]
     link_url: str | None

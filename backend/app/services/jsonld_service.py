@@ -23,6 +23,7 @@ from datetime import UTC, date, datetime, time
 from zoneinfo import ZoneInfo
 
 from app.services.frontend_i18n_snippets import FESTIVAL_NAME, WELCOME_SUBTITLE, Locale
+from app.translations import resolve_text
 
 _BRUSSELS = ZoneInfo("Europe/Brussels")
 _FESTIVAL_START_HOUR = 17
@@ -45,6 +46,38 @@ def _festival_date_range(dates: list[date]) -> tuple[datetime, datetime]:
     return start, end
 
 
+def _sub_events(events: list[dict], locale: Locale) -> list[dict]:
+    """The edition's events as schema.org ``subEvent`` entries, titled in *locale*
+    (original language when that translation is missing)."""
+    entries = []
+    for event in events:
+        event_date = date.fromisoformat(event["date"]) if isinstance(event["date"], str) else event["date"]
+
+        def starting(clock: str, event_date: date = event_date) -> str:
+            return _to_js_iso_string(datetime.combine(event_date, time.fromisoformat(clock), tzinfo=_BRUSSELS))
+
+        entry = {
+            "@type": "Event",
+            "name": resolve_text(
+                {language: event.get(f"title_{language}") for language in ("nl", "fr", "en")},
+                event["title_language"],
+                locale,
+            ),
+            "startDate": starting(event["start_time"]),
+        }
+        if event.get("end_time"):
+            entry["endDate"] = starting(event["end_time"])
+        description = resolve_text(
+            {language: event.get(f"description_{language}") for language in ("nl", "fr", "en")},
+            event.get("description_language"),
+            locale,
+        )
+        if description:
+            entry["description"] = description
+        entries.append(entry)
+    return entries
+
+
 def build_event_json_ld(edition: dict, *, base_url: str, locale: Locale) -> dict:
     """Build the same schema.org Event structure ``JsonLd.tsx`` renders client-side.
 
@@ -54,7 +87,7 @@ def build_event_json_ld(edition: dict, *, base_url: str, locale: Locale) -> dict
     """
     start, end = _festival_date_range(edition["dates"])
     venue = edition["venue"]
-    return {
+    structured_data = {
         "@context": "https://schema.org",
         "@type": "Event",
         "name": f"{FESTIVAL_NAME} {edition['year']}",
@@ -93,3 +126,6 @@ def build_event_json_ld(edition: dict, *, base_url: str, locale: Locale) -> dict
             "url": base_url,
         },
     }
+    if edition.get("events"):
+        structured_data["subEvent"] = _sub_events(edition["events"], locale)
+    return structured_data

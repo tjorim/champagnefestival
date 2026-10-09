@@ -3,11 +3,34 @@ import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { getFestivalDateRange, useActiveEdition } from "@/hooks/useActiveEdition";
 import { baseUrl } from "@/config/site";
+import type { Event } from "@/types/event";
+import { eventDescription, eventTitle } from "@/utils/eventText";
 
 /** Marks the JSON-LD <script> the backend renders into <head> for GET /.
  * Kept in sync with
  * backend/app/services/public_render.py's json_ld_script. */
 const SSR_JSON_LD_SELECTOR = 'script[data-ssr-jsonld="true"]';
+
+/** Local date + "HH:MM" as an instant, like the backend's Europe/Brussels one in the contract test. */
+function localInstant(date: string, clock: string): string {
+  const [year = 0, month = 1, day = 1] = date.split("-").map(Number);
+  const [hours = 0, minutes = 0] = clock.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes).toISOString();
+}
+
+/** The edition's events as schema.org `subEvent` entries, titled in the visitor's language. */
+function subEvents(events: Event[], locale: string) {
+  return events.map((event) => {
+    const description = eventDescription(event, locale);
+    return {
+      "@type": "Event",
+      name: eventTitle(event, locale),
+      startDate: localInstant(event.date, event.startTime),
+      ...(event.endTime ? { endDate: localInstant(event.date, event.endTime) } : {}),
+      ...(description ? { description } : {}),
+    };
+  });
+}
 
 /**
  * Renders JSON-LD structured data for the active festival edition. Renders nothing
@@ -77,18 +100,18 @@ const EventStructuredData: React.FC = () => {
       name: festivalName,
       url: baseUrl,
     },
+    ...(edition.events.length > 0 ? { subEvent: subEvents(edition.events, getLocale()) } : {}),
   };
 
   // Use React.createElement instead of JSX to avoid potential issues with SSR
-  // SECURITY NOTE: dangerouslySetInnerHTML is used here to render JSON-LD.
-  // This is considered safe because the 'structuredData' object is constructed
-  // entirely from trusted, developer-controlled sources (config files, translations)
-  // and does not include any raw user input. Ensure this remains true if modifying
-  // the data sources in the future.
+  // SECURITY NOTE: dangerouslySetInnerHTML is used here to render JSON-LD. The
+  // object holds translations and admin-authored event text, so "<" is escaped
+  // in the serialized JSON (as the backend does) and a "</script>" in a title
+  // cannot end the element. Keep escaping if the data sources change.
   return React.createElement("script", {
     type: "application/ld+json",
     dangerouslySetInnerHTML: {
-      __html: JSON.stringify(structuredData),
+      __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
     },
   });
 };

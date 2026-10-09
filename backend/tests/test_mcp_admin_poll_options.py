@@ -1,4 +1,4 @@
-"""Tests for the admin (write) volunteer meal/dinner poll option MCP tools."""
+"""Tests for the admin (write) volunteer meal poll option MCP tools."""
 
 from __future__ import annotations
 
@@ -24,10 +24,10 @@ async def test_create_list_update_delete_poll_option(db_session):
     edition_id = await _create_edition(db_session)
 
     created = await mcp_poll_options.create_poll_option(
-        factory, "admin-1", edition_id=edition_id, kind="dish", label="Vol-au-vent met puree"
+        factory, "admin-1", edition_id=edition_id, label="Vol-au-vent met puree"
     )
     assert created["edition_id"] == edition_id
-    assert created["kind"] == "dish"
+    assert (created["total_quantity"], created["volunteer_count"]) == (0, 0)
     assert created["label"] == "Vol-au-vent met puree"
 
     listed = await mcp_poll_options.list_poll_options(factory, edition_id)
@@ -46,9 +46,7 @@ async def test_create_poll_option_rejects_missing_edition(db_session):
     factory = mcp_session_factory(db_session)
 
     with pytest.raises(ValueError, match="not found"):
-        await mcp_poll_options.create_poll_option(
-            factory, "admin-1", edition_id="nonexistent", kind="dish", label="Whatever"
-        )
+        await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id="nonexistent", label="Whatever")
 
 
 async def test_list_poll_options_filters_by_edition(db_session):
@@ -56,8 +54,8 @@ async def test_list_poll_options_filters_by_edition(db_session):
     edition_a = await _create_edition(db_session, edition_id="edition-a")
     edition_b = await _create_edition(db_session, edition_id="edition-b")
 
-    await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id=edition_a, kind="soup", label="A Soup")
-    await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id=edition_b, kind="soup", label="B Soup")
+    await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id=edition_a, label="A Soup")
+    await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id=edition_b, label="B Soup")
 
     all_options = await mcp_poll_options.list_poll_options(factory)
     assert len(all_options) == 2
@@ -76,3 +74,11 @@ async def test_delete_poll_option_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
         await mcp_poll_options.delete_poll_option(factory, "admin-1", "nonexistent")
+
+
+async def test_labels_must_not_be_blank(db_session):
+    factory = mcp_session_factory(db_session)
+    edition_id = await _create_edition(db_session)
+
+    with pytest.raises(ValueError, match="Label"):
+        await mcp_poll_options.create_poll_option(factory, "admin-1", edition_id=edition_id, label="   ")

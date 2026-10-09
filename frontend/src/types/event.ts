@@ -1,5 +1,3 @@
-import type { OrderItemCategory } from "./registration";
-
 export interface EventEditionSummary {
   id: string;
   year: number;
@@ -21,7 +19,31 @@ export interface ProductInclusion {
   rounding: "up" | "down";
 }
 
-export interface Product {
+/** A product's stored name/description in every language (see `EventTranslations`). */
+export interface ProductTranslations {
+  nameLanguage: EventLanguage;
+  nameNl: string | null;
+  nameFr: string | null;
+  nameEn: string | null;
+  descriptionLanguage: EventLanguage | null;
+  descriptionNl: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+}
+
+/** Translation fields of a product whose text exists only in its original language. */
+export const NO_PRODUCT_TRANSLATIONS: ProductTranslations = {
+  nameLanguage: "nl",
+  nameNl: null,
+  nameFr: null,
+  nameEn: null,
+  descriptionLanguage: null,
+  descriptionNl: null,
+  descriptionFr: null,
+  descriptionEn: null,
+};
+
+export interface Product extends ProductTranslations {
   unit?: "item" | "table" | "person";
   stock?: number | null;
   reservedQuantity?: number;
@@ -32,11 +54,13 @@ export interface Product {
   inclusions?: ProductInclusion[] | null;
   id: string;
   eventId: string;
+  /** Original-language name (what the admin lists show). Visitors use `productName`. */
   name: string;
-  /** Short, optional blurb shown alongside the product name. */
+  /** Short, optional blurb in the original language, or "". Visitors use `productDescription`. */
   description: string;
   price: number;
-  category: OrderItemCategory;
+  /** Key of a product category (see `useProductCategories`). */
+  category: string;
   /**
    * Whether this product can be ordered standalone and is ever named to a
    * visitor — see #1020. A `purchasable: false` ("hidden") product can still
@@ -63,10 +87,28 @@ export interface Product {
   updatedAt: string;
 }
 
-export interface Event {
+export type EventLanguage = "nl" | "fr" | "en";
+
+export const EVENT_LANGUAGES: readonly EventLanguage[] = ["nl", "fr", "en"];
+
+/** Stored text in every language; mirrors the organisation description fields. */
+export interface EventTranslations {
+  titleLanguage: EventLanguage;
+  titleNl: string | null;
+  titleFr: string | null;
+  titleEn: string | null;
+  descriptionLanguage: EventLanguage | null;
+  descriptionNl: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+}
+
+export interface Event extends EventTranslations {
   id: string;
   editionId: string;
+  /** Original-language title (what the admin lists show). Visitors use `eventTitle`. */
   title: string;
+  /** Original-language description, or "". Visitors use `eventDescription`. */
   description: string;
   date: string;
   startTime: string;
@@ -91,8 +133,14 @@ export interface Event {
 
 export interface EventFormData {
   editionId: string;
-  title: string;
-  description: string;
+  titleLanguage: EventLanguage;
+  titleNl: string;
+  titleFr: string;
+  titleEn: string;
+  descriptionLanguage: EventLanguage;
+  descriptionNl: string;
+  descriptionFr: string;
+  descriptionEn: string;
   date: string;
   startTime: string;
   endTime: string;
@@ -104,8 +152,12 @@ export interface EventFormData {
   active: boolean;
 }
 
-function isOrderItemCategory(value: unknown): value is OrderItemCategory {
-  return value === "champagne" || value === "food" || value === "other";
+function isEventLanguage(value: unknown): value is EventLanguage {
+  return value === "nl" || value === "fr" || value === "en";
+}
+
+function nullableText(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
 }
 
 export function apiToProduct(data: Record<string, unknown>): Product {
@@ -114,8 +166,18 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     eventId: String(data.event_id ?? ""),
     name: String(data.name ?? ""),
     description: String(data.description ?? ""),
+    nameLanguage: isEventLanguage(data.name_language) ? data.name_language : "nl",
+    nameNl: nullableText(data.name_nl),
+    nameFr: nullableText(data.name_fr),
+    nameEn: nullableText(data.name_en),
+    descriptionLanguage: isEventLanguage(data.description_language)
+      ? data.description_language
+      : null,
+    descriptionNl: nullableText(data.description_nl),
+    descriptionFr: nullableText(data.description_fr),
+    descriptionEn: nullableText(data.description_en),
     price: Number(data.price ?? 0),
-    category: isOrderItemCategory(data.category) ? data.category : "other",
+    category: String(data.category ?? ""),
     purchasable: Boolean(data.purchasable),
     soldOut: Boolean(data.sold_out),
     required: Boolean(data.required),
@@ -146,6 +208,17 @@ export function apiToEvent(data: Record<string, unknown>): Event {
     editionId: String(data.edition_id ?? ""),
     title: String(data.title ?? ""),
     description: String(data.description ?? ""),
+    // Responses always carry the stored languages; `title` is the resolved text.
+    titleLanguage: isEventLanguage(data.title_language) ? data.title_language : "nl",
+    titleNl: nullableText(data.title_nl),
+    titleFr: nullableText(data.title_fr),
+    titleEn: nullableText(data.title_en),
+    descriptionLanguage: isEventLanguage(data.description_language)
+      ? data.description_language
+      : null,
+    descriptionNl: nullableText(data.description_nl),
+    descriptionFr: nullableText(data.description_fr),
+    descriptionEn: nullableText(data.description_en),
     date: String(data.date ?? ""),
     startTime: String(data.start_time ?? ""),
     endTime: typeof data.end_time === "string" ? data.end_time : undefined,

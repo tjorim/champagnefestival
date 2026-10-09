@@ -1,0 +1,319 @@
+"""Migration 006: translated content keeps its text in the original language, categories become data and the
+meal poll records quantities."""
+
+import logging
+import os
+from pathlib import Path
+from uuid import uuid4
+
+import pytest
+from alembic.config import Config
+from sqlalchemy import create_engine, inspect, text
+from sqlalchemy.engine import make_url
+from sqlalchemy.exc import IntegrityError
+
+from alembic import command
+
+NOW = "2026-01-01T00:00:00+00"
+
+
+def _insert(connection, table: str, **values) -> None:
+    columns = ", ".join(values)
+    placeholders = ", ".join(f":{name}" for name in values)
+    connection.execute(text(f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"), values)
+
+
+def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkeypatch, caplog):
+    url = make_url(
+        os.environ.get("TEST_DATABASE_URL", "postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne")
+    ).set(drivername="postgresql+psycopg")
+    admin = create_engine(url)
+    schema = f"test_translated_content_migration_{uuid4().hex}"
+    with admin.begin() as connection:
+        connection.execute(text(f'CREATE SCHEMA "{schema}"'))
+        connection.execute(text(f'CREATE TABLE "{schema}".alembic_version (version_num varchar(32) PRIMARY KEY)'))
+    migration_url = url.update_query_dict({"options": f"-csearch_path={schema},public"})
+    monkeypatch.setenv("DATABASE_URL", migration_url.render_as_string(hide_password=False))
+    config = Config()
+    config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "alembic"))
+    database = create_engine(migration_url)
+    try:
+        command.upgrade(config, "005")
+        with database.begin() as connection:
+            _insert(connection, "venues", id="venue", name="Venue")
+            _insert(connection, "editions", id="edition", year=2026, month="October", venue_id="venue")
+            for event_id, title, description, category in (
+                ("tasting", "Proeverij", "Een avond met champagne", "tasting"),
+                ("no-description", "Brunch", "", " Breakfast "),
+                ("blank-title", "   ", "   ", "festival"),
+                ("unknown", "Bourse", "Ruil", "community"),
+            ):
+                _insert(
+                    connection, "events", id=event_id, edition_id="edition", title=title, description=description,
+                    date="2026-10-01", start_time="10:00", category=category,
+                )  # fmt: skip
+            _insert(
+                connection, "faq_items", id="faq", question_nl="Vraag?", answer_nl="Antwoord.", sort_order=0,
+                active=True, created_at=NOW, updated_at=NOW,
+            )  # fmt: skip
+            for order, (announcement_id, nl, en, link) in enumerate(
+                (
+                    ("announcement", "Nieuws", "News", None),
+                    ("english-only", None, "Only English", None),
+                    ("empty", None, None, None),
+                    ("linked", "Lees meer", None, "https://example.com"),
+                ),
+                start=100,
+            ):
+                _insert(
+                    connection, "announcements", id=announcement_id, text_nl=nl, text_en=en, level="info",
+                    active=False, sort_order=order, link_url=link, link_label_nl=nl if link else None,
+                    created_at=NOW, updated_at=NOW,
+                )  # fmt: skip
+            _insert(
+                connection, "composed_messages", id="message", title_nl="Titel", body_nl="Tekst", level="info",
+                channels="[]", state="draft", created_at=NOW, updated_at=NOW,
+            )  # fmt: skip
+            _insert(
+                connection,
+                "policies",
+                key="house-rules",
+                title_nl="Huisregels",
+                required_locales="nl,en,fr",
+                created_at=NOW,
+            )
+            _insert(
+                connection, "policy_versions", id="version", policy_key="house-rules", version_number=1,
+                status="published", content_nl="Inhoud", created_at=NOW, created_by="admin", updated_at=NOW,
+            )  # fmt: skip
+            for product_id, name, description, category in (
+                ("champagne", "Fles", "Gekoeld", "champagne"),
+                ("blank", "   ", "", "food"),
+                ("custom", "Bon", "", "voucher"),
+            ):
+                _insert(
+                    connection, "products", id=product_id, event_id="tasting", name=name, description=description,
+                    price=10, category=category, unit="item", purchasable=True, required=False,
+                    created_at=NOW, updated_at=NOW,
+                )  # fmt: skip
+            for option_id, kind, label in (("option", "dish", "Stoofvlees"), ("soup", "soup", "Tomatensoep")):
+                _insert(
+                    connection, "edition_poll_options", id=option_id, edition_id="edition", kind=kind, label=label,
+                    created_at=NOW, updated_at=NOW,
+                )  # fmt: skip
+            _insert(connection, "people", id="volunteer", name="Sofie", created_at=NOW, updated_at=NOW)
+            for option_id in ("option", "soup"):
+                _insert(
+                    connection,
+                    "volunteer_poll_selections",
+                    volunteer_id="volunteer",
+                    option_id=option_id,
+                    created_at=NOW,
+                )
+
+        with caplog.at_level(logging.WARNING, logger="alembic.runtime.migration"):
+            command.upgrade(config, "006")
+
+        # A value that is not a default category becomes a category of its own, logged for
+        # review; case and whitespace variants of a default are normalised silently.
+        warnings = [r.getMessage() for r in caplog.records if "kept as its own category" in r.getMessage()]
+        assert sorted(w.split(" ")[0] for w in warnings) == ["Event", "Event", "Product"]
+        assert any("'festival'" in w for w in warnings)
+        assert any("'community'" in w for w in warnings)
+        assert any("'voucher'" in w for w in warnings)
+
+        with database.begin() as connection:
+
+            def one(sql: str):
+                return connection.execute(text(sql)).one()
+
+            events = {
+                row.id: row
+                for row in connection.execute(
+                    text("""SELECT id, title_language, title_nl, title_fr, title_en, description_language,
+                        description_nl, description_fr, description_en, category FROM events""")
+                )
+            }
+            tasting = events["tasting"]
+            assert (tasting.title_language, tasting.title_nl, tasting.title_fr, tasting.title_en) == (
+                "nl",
+                "Proeverij",
+                None,
+                None,
+            )
+            assert (tasting.description_language, tasting.description_nl) == ("nl", "Een avond met champagne")
+            assert tasting.category == "tasting"
+            assert (events["no-description"].description_language, events["no-description"].description_nl) == (
+                None,
+                None,
+            )
+            assert events["no-description"].category == "breakfast"
+            # A blank legacy title falls back to the event id instead of breaking the constraint.
+            assert events["blank-title"].title_nl == "blank-title"
+            assert events["blank-title"].description_language is None
+            assert (events["blank-title"].category, events["unknown"].category) == ("festival", "community")
+            event_categories = {
+                row.key: row
+                for row in connection.execute(
+                    text("SELECT key, label_language, label_nl, label_fr, label_en FROM event_categories")
+                )
+            }
+            assert set(event_categories) == {
+                "tasting", "vip", "party", "breakfast", "exchange", "general", "ceremony", "social", "other",
+                "festival", "community",
+            }  # fmt: skip
+            assert (
+                event_categories["tasting"].label_nl,
+                event_categories["tasting"].label_fr,
+                event_categories["tasting"].label_en,
+            ) == ("Degustatie", "Dégustation", "Tasting")
+            assert (event_categories["community"].label_language, event_categories["community"].label_nl) == (
+                "nl",
+                "community",
+            )
+
+            faq = one("SELECT text_language, question_nl, answer_nl, question_en FROM faq_items")
+            assert tuple(faq) == ("nl", "Vraag?", "Antwoord.", None)
+
+            announcements = {
+                row.id: row
+                for row in connection.execute(
+                    text("SELECT id, text_language, text_nl, text_en, link_url FROM announcements")
+                )
+            }
+            assert (announcements["announcement"].text_language, announcements["announcement"].text_nl) == (
+                "nl",
+                "Nieuws",
+            )
+            # The first language with text is the original; an announcement without any gets a placeholder.
+            assert (announcements["english-only"].text_language, announcements["english-only"].text_en) == (
+                "en",
+                "Only English",
+            )
+            assert (announcements["empty"].text_language, announcements["empty"].text_nl) == ("nl", "(no text)")
+            # A link keeps working because its label in the original language exists.
+            assert announcements["linked"].link_url == "https://example.com"
+
+            assert tuple(one("SELECT text_language, title_nl, body_nl FROM composed_messages")) == (
+                "nl",
+                "Titel",
+                "Tekst",
+            )
+            assert tuple(one("SELECT title_language, title_nl FROM policies WHERE key = 'house-rules'")) == (
+                "nl",
+                "Huisregels",
+            )
+            assert "required_locales" not in {c["name"] for c in inspect(connection).get_columns("policies")}
+            assert tuple(one("SELECT content_language, content_nl FROM policy_versions WHERE id = 'version'")) == (
+                "nl",
+                "Inhoud",
+            )
+
+            products = {
+                row.id: row
+                for row in connection.execute(
+                    text("""SELECT id, name_language, name_nl, description_language, description_nl, category
+                        FROM products""")
+                )
+            }
+            assert tuple(products["champagne"])[1:] == ("nl", "Fles", "nl", "Gekoeld", "champagne")
+            # A blank legacy name falls back to the id; a blank description stays absent.
+            assert tuple(products["blank"])[1:] == ("nl", "blank", None, None, "food")
+            assert products["custom"].category == "voucher"
+            # The poll keeps its labels, loses the kind, and existing picks become a quantity of one.
+            assert [
+                tuple(row) for row in connection.execute(text("SELECT label FROM edition_poll_options ORDER BY id"))
+            ] == [
+                ("Stoofvlees",),
+                ("Tomatensoep",),
+            ]
+            assert "kind" not in {c["name"] for c in inspect(connection).get_columns("edition_poll_options")}
+            assert [
+                tuple(row)
+                for row in connection.execute(
+                    text("SELECT option_id, quantity FROM volunteer_poll_selections ORDER BY option_id")
+                )
+            ] == [("option", 1), ("soup", 1)]
+
+            categories = {
+                row.key: row
+                for row in connection.execute(
+                    text("SELECT key, label_language, label_nl, label_fr, label_en, sort_order FROM product_categories")
+                )
+            }
+        assert set(categories) == {"champagne", "food", "other", "voucher"}
+        assert (categories["food"].label_nl, categories["food"].label_fr, categories["food"].label_en) == (
+            "Eten",
+            "Nourriture",
+            "Food",
+        )
+        assert (categories["voucher"].label_language, categories["voucher"].label_nl) == ("nl", "voucher")
+
+        with pytest.raises(IntegrityError, match="fk_events_category"), database.begin() as connection:
+            connection.execute(text("UPDATE events SET category = 'gala' WHERE id = 'tasting'"))
+        with pytest.raises(IntegrityError, match="ck_events_title_original"), database.begin() as connection:
+            connection.execute(text("UPDATE events SET title_language = 'fr' WHERE id = 'tasting'"))
+        with pytest.raises(IntegrityError, match="ck_events_description_original"), database.begin() as connection:
+            connection.execute(text("UPDATE events SET description_language = 'en' WHERE id = 'tasting'"))
+        with pytest.raises(IntegrityError, match="fk_products_category"), database.begin() as connection:
+            connection.execute(text("UPDATE products SET category = 'nope' WHERE id = 'champagne'"))
+        with pytest.raises(IntegrityError, match="ck_products_name_original"), database.begin() as connection:
+            connection.execute(text("UPDATE products SET name_language = 'fr' WHERE id = 'champagne'"))
+        with (
+            pytest.raises(IntegrityError, match="ck_volunteer_poll_selections_quantity"),
+            database.begin() as connection,
+        ):
+            connection.execute(text("UPDATE volunteer_poll_selections SET quantity = 21"))
+        with (
+            pytest.raises(IntegrityError, match="ck_volunteer_poll_selections_quantity"),
+            database.begin() as connection,
+        ):
+            connection.execute(text("UPDATE volunteer_poll_selections SET quantity = 0"))
+        with pytest.raises(IntegrityError, match="ck_faq_items_original"), database.begin() as connection:
+            connection.execute(text("UPDATE faq_items SET text_language = 'fr'"))
+        with (
+            pytest.raises(IntegrityError, match="ck_product_categories_label_original"),
+            database.begin() as connection,
+        ):
+            connection.execute(
+                text("UPDATE product_categories SET label_language = 'fr', label_fr = ' ' WHERE key = 'food'")
+            )
+
+        # The original language can change, and a downgrade keeps exactly that language.
+        with database.begin() as connection:
+            connection.execute(
+                text("UPDATE products SET name_language = 'en', name_en = 'Bottle' WHERE id = 'champagne'")
+            )
+            connection.execute(text("UPDATE faq_items SET question_en = 'Question?', answer_en = 'Answer.'"))
+            connection.execute(
+                text(
+                    "UPDATE events SET title_language = 'fr', title_fr = 'Dégustation', title_en = 'Tasting' WHERE id = 'tasting'"
+                )
+            )
+
+        command.downgrade(config, "005")
+        with database.begin() as connection:
+            names = dict(connection.execute(text("SELECT id, name FROM products")).all())
+            categories = dict(connection.execute(text("SELECT id, category FROM products")).all())
+            kinds = dict(connection.execute(text("SELECT id, kind FROM edition_poll_options")).all())
+            restored = {
+                row.id: (row.title, row.description)
+                for row in connection.execute(text("SELECT id, title, description FROM events"))
+            }
+            tables = inspect(connection).get_table_names(schema=schema)
+        assert names["champagne"] == "Bottle"
+        assert names["blank"] == "blank"
+        # A category added since folds into "other" because the old column was narrower and a fixed list.
+        assert (categories["champagne"], categories["custom"]) == ("champagne", "other")
+        # The kind is lost; "dinner" allows any number of picks, so every restored selection stays valid.
+        assert kinds == {"option": "dinner", "soup": "dinner"}
+        assert "product_categories" not in tables
+        assert "event_categories" not in tables
+        # Only the original language survives a downgrade.
+        assert restored["tasting"] == ("Dégustation", "Een avond met champagne")
+        assert restored["no-description"] == ("Brunch", "")
+    finally:
+        database.dispose()
+        with admin.begin() as connection:
+            connection.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
+        admin.dispose()

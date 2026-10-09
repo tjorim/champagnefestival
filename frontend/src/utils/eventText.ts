@@ -1,0 +1,68 @@
+import type { EventLanguage, EventTranslations, Product, ProductTranslations } from "@/types/event";
+
+type EventText = Pick<EventTranslations, "titleLanguage" | "descriptionLanguage"> &
+  Partial<EventTranslations> & { title: string; description: string };
+
+function isLanguage(locale: string): locale is EventLanguage {
+  return locale === "nl" || locale === "fr" || locale === "en";
+}
+
+const TITLE_KEYS = { nl: "titleNl", fr: "titleFr", en: "titleEn" } as const;
+const DESCRIPTION_KEYS = {
+  nl: "descriptionNl",
+  fr: "descriptionFr",
+  en: "descriptionEn",
+} as const;
+
+/**
+ * The event title for a visitor's locale: that language when it has text, else
+ * the original language (the same fallback as `organizationDescription`, and as
+ * the backend's `resolve_text`), so a blank translation never hides the title.
+ */
+export function eventTitle(event: EventText, locale: string): string {
+  return (
+    (isLanguage(locale) ? event[TITLE_KEYS[locale]]?.trim() : null) ||
+    event[TITLE_KEYS[event.titleLanguage]]?.trim() ||
+    event.title
+  );
+}
+
+/** The event description for a visitor's locale; see `eventTitle`. */
+export function eventDescription(event: EventText, locale: string): string {
+  return (
+    (isLanguage(locale) ? event[DESCRIPTION_KEYS[locale]]?.trim() : null) ||
+    (event.descriptionLanguage
+      ? event[DESCRIPTION_KEYS[event.descriptionLanguage]]?.trim()
+      : null) ||
+    event.description
+  );
+}
+
+const NAME_KEYS = { nl: "nameNl", fr: "nameFr", en: "nameEn" } as const;
+const PRODUCT_DESCRIPTION_KEYS = {
+  nl: "descriptionNl",
+  fr: "descriptionFr",
+  en: "descriptionEn",
+} as const;
+
+type ProductText = Pick<Product, "name" | "description"> & ProductTranslations;
+
+/** The product name for a visitor's locale; falls back to the original language. */
+export function productName(product: ProductText, locale: string): string {
+  return (
+    (isLanguage(locale) ? product[NAME_KEYS[locale]]?.trim() : null) ||
+    product[NAME_KEYS[product.nameLanguage]]?.trim() ||
+    product.name
+  );
+}
+
+/** The product description for a visitor's locale; see `productName`. */
+export function productDescription(product: ProductText, locale: string): string {
+  return (
+    (isLanguage(locale) ? product[PRODUCT_DESCRIPTION_KEYS[locale]]?.trim() : null) ||
+    (product.descriptionLanguage
+      ? product[PRODUCT_DESCRIPTION_KEYS[product.descriptionLanguage]]?.trim()
+      : null) ||
+    product.description
+  );
+}

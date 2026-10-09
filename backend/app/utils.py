@@ -18,6 +18,7 @@ from app.models import (
     AppSettings,
     Area,
     Edition,
+    EditionPollOption,
     Event,
     FaqItem,
     Layout,
@@ -30,6 +31,7 @@ from app.models import (
     TableType,
     Venue,
 )
+from app.translations import resolve_text
 
 _CSV_INJECTION_PREFIXES = ("=", "+", "-", "@", "\t", "\r", "\n")
 
@@ -103,12 +105,32 @@ def make_id(prefix: str) -> str:
     return f"{prefix}_{ts}_{rand}"
 
 
-def event_to_summary_dict(event: Event, include_edition: bool = False, *, public: bool = False) -> dict:
+def event_text_dict(event: Event, locale: str | None = None) -> dict:
+    """Event title/description for *locale* (``title``/``description``, falling
+    back to the original language) plus every stored language."""
+    return {
+        "title": event.localized_title(locale),
+        "description": event.localized_description(locale),
+        "title_language": event.title_language,
+        "title_nl": event.title_nl,
+        "title_fr": event.title_fr,
+        "title_en": event.title_en,
+        "description_language": event.description_language,
+        "description_nl": event.description_nl,
+        "description_fr": event.description_fr,
+        "description_en": event.description_en,
+    }
+
+
+def event_to_summary_dict(
+    event: Event, include_edition: bool = False, *, public: bool = False, locale: str | None = None
+) -> dict:
+    """``locale`` resolves ``title``/``description`` for that language (original
+    language when ``None``); the per-language fields are always included."""
     data = {
         "id": event.id,
         "edition_id": event.edition_id,
-        "title": event.title,
-        "description": event.description,
+        **event_text_dict(event, locale),
         "date": event.date,
         "start_time": event.start_time,
         "end_time": event.end_time,
@@ -129,9 +151,9 @@ def event_to_summary_dict(event: Event, include_edition: bool = False, *, public
         # product's id/name/stock/etc. must never reach an unauthenticated
         # caller, not even indirectly as a bundle-target reference.
         "products": (
-            _public_products(event.products)
+            _public_products(event.products, locale)
             if public
-            else [product_to_dict(p) for p in event.products if p.purchasable]
+            else [product_to_dict(p, locale) for p in event.products if p.purchasable]
         ),
     }
     edition: Edition | None = getattr(event, "edition", None)
@@ -140,9 +162,51 @@ def event_to_summary_dict(event: Event, include_edition: bool = False, *, public
     return data
 
 
-def _public_products(products: Sequence[Product]) -> list[dict]:
+def _public_products(products: Sequence[Product], locale: str | None = None) -> list[dict]:
     purchasable_ids = {p.id for p in products if p.purchasable}
-    return [product_to_public_dict(p, purchasable_ids) for p in products if p.id in purchasable_ids]
+    return [product_to_public_dict(p, purchasable_ids, locale) for p in products if p.id in purchasable_ids]
+
+
+def product_text_dict(p: Product, locale: str | None = None) -> dict:
+    """Product name/description for *locale* (``name``/``description``, falling back
+    to the original language) plus every stored language."""
+    return {
+        "name": p.localized_name(locale),
+        "description": p.localized_description(locale),
+        "name_language": p.name_language,
+        "name_nl": p.name_nl,
+        "name_fr": p.name_fr,
+        "name_en": p.name_en,
+        "description_language": p.description_language,
+        "description_nl": p.description_nl,
+        "description_fr": p.description_fr,
+        "description_en": p.description_en,
+    }
+
+
+def order_item_name(item: dict, locale: str | None) -> str:
+    """An order line's product name in *locale*, falling back to the original-language
+    name stored with the order (older orders carry only that)."""
+    return (
+        resolve_text(
+            {code: item.get(f"name_{code}") for code in ("nl", "fr", "en")},
+            item.get("name_language"),
+            locale,
+        )
+        or item["name"]
+    )
+
+
+def poll_option_to_dict(option: EditionPollOption, *, total_quantity: int = 0, volunteer_count: int = 0) -> dict:
+    return {
+        "id": option.id,
+        "edition_id": option.edition_id,
+        "label": option.label,
+        "total_quantity": total_quantity,
+        "volunteer_count": volunteer_count,
+        "created_at": option.created_at,
+        "updated_at": option.updated_at,
+    }
 
 
 def product_available_quantity(p: Product) -> int | None:
@@ -153,13 +217,12 @@ def product_sold_out(p: Product, available_quantity: int | None) -> bool:
     return p.purchasable and available_quantity is not None and available_quantity <= 0
 
 
-def product_to_dict(p: Product) -> dict:
+def product_to_dict(p: Product, locale: str | None = None) -> dict:
     available_quantity = product_available_quantity(p)
     return {
         "id": p.id,
         "event_id": p.event_id,
-        "name": p.name,
-        "description": p.description,
+        **product_text_dict(p, locale),
         "price": p.price,
         "category": p.category,
         "purchasable": p.purchasable,
@@ -178,7 +241,7 @@ def product_to_dict(p: Product) -> dict:
     }
 
 
-def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None) -> dict:
+def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None, locale: str | None = None) -> dict:
     """The visitor-safe shape of a product — never exposes `stock`, and never
     named unless `p.purchasable`. `purchasable_ids`, when given, is the set
     of this event's purchasable product ids: any inclusion edge (or the
@@ -198,8 +261,7 @@ def product_to_public_dict(p: Product, purchasable_ids: set[str] | None = None) 
             included_per_guests = None
     return {
         "id": p.id,
-        "name": p.name,
-        "description": p.description,
+        **product_text_dict(p, locale),
         "price": p.price,
         "category": p.category,
         "unit": p.unit,
@@ -504,15 +566,16 @@ def app_settings_to_dict(s: AppSettings) -> dict:
 
 
 def faq_item_to_dict(f: FaqItem) -> dict:
-    """Admin shape: every locale's content, for the FAQ editor."""
+    """Admin shape: every language's content, for the FAQ editor."""
     return {
         "id": f.id,
+        "text_language": f.text_language,
         "question_nl": f.question_nl,
-        "answer_nl": f.answer_nl,
-        "question_en": f.question_en,
-        "answer_en": f.answer_en,
         "question_fr": f.question_fr,
+        "question_en": f.question_en,
+        "answer_nl": f.answer_nl,
         "answer_fr": f.answer_fr,
+        "answer_en": f.answer_en,
         "sort_order": f.sort_order,
         "active": f.active,
         "created_at": f.created_at,
@@ -520,16 +583,10 @@ def faq_item_to_dict(f: FaqItem) -> dict:
     }
 
 
-def faq_item_to_public_dict(f: FaqItem, locale: str) -> dict | None:
-    """Public shape: one locale's question/answer, or None if that locale is blank.
-
-    A blank translation hides the item on that locale's FAQ rather than
-    falling back to another language's text.
-    """
-    question = getattr(f, f"question_{locale}", None)
-    answer = getattr(f, f"answer_{locale}", None)
-    if not question or not answer:
-        return None
+def faq_item_to_public_dict(f: FaqItem, locale: str) -> dict:
+    """Public shape: the question/answer for *locale*, or the original language
+    when that locale is not fully translated."""
+    question, answer = f.localized(locale)
     return {"id": f.id, "question": question, "answer": answer}
 
 

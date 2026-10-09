@@ -1,15 +1,9 @@
-import {
-  AdminInput,
-  AdminField,
-  AdminLabel,
-  AdminSelect,
-  AdminOption,
-} from "@/components/admin/AdminFields";
+import { AdminField, AdminInput, AdminLabel } from "@/components/admin/AdminFields";
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
-
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import {
@@ -28,7 +22,6 @@ import {
   fetchEditionPollOptions,
   updatePollOption,
   type PollOption,
-  type PollOptionKind,
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
 import type { Edition } from "./editionTypes";
@@ -40,19 +33,6 @@ interface EditionPollOptionsModalProps {
   onHide: () => void;
 }
 
-const KINDS: PollOptionKind[] = ["dish", "soup", "dinner"];
-
-function kindLabel(kind: PollOptionKind): string {
-  switch (kind) {
-    case "dish":
-      return m.admin_poll_kind_dish();
-    case "soup":
-      return m.admin_poll_kind_soup();
-    default:
-      return m.admin_poll_kind_dinner();
-  }
-}
-
 export default function EditionPollOptionsModal({
   show,
   edition,
@@ -62,8 +42,7 @@ export default function EditionPollOptionsModal({
   const queryClient = useQueryClient();
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const [error, setError] = useState("");
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingLabel, setEditingLabel] = useState("");
+  const [editing, setEditing] = useState<{ id: string; label: string } | null>(null);
 
   const editionId = edition?.id ?? "";
   const queryKey = queryKeys.admin.editionPollOptions(editionId);
@@ -76,12 +55,15 @@ export default function EditionPollOptionsModal({
   });
 
   const addForm = useForm({
-    defaultValues: { label: "", kind: "dish" as PollOptionKind },
+    defaultValues: { label: "" },
     onSubmit: async ({ value }) => {
       setError("");
-      if (!value.label.trim()) return;
+      if (!value.label.trim()) {
+        setError(m.admin_poll_label_required());
+        return;
+      }
       try {
-        await createMutation.mutateAsync({ kind: value.kind, label: value.label.trim() });
+        await createMutation.mutateAsync(value.label.trim());
       } catch (err) {
         setError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
@@ -89,8 +71,7 @@ export default function EditionPollOptionsModal({
   });
 
   const createMutation = useMutation({
-    mutationFn: (payload: { kind: PollOptionKind; label: string }) =>
-      createPollOption({ editionId, kind: payload.kind, label: payload.label }, authHeaders),
+    mutationFn: (label: string) => createPollOption({ editionId, label }, authHeaders),
     retry: false,
     onSuccess: (created) => {
       queryClient.setQueryData<PollOption[]>(queryKey, (prev = []) => [...prev, created]);
@@ -106,7 +87,7 @@ export default function EditionPollOptionsModal({
       queryClient.setQueryData<PollOption[]>(queryKey, (prev = []) =>
         prev.map((o) => (o.id === updated.id ? updated : o)),
       );
-      setEditingId(null);
+      setEditing(null);
     },
   });
 
@@ -117,11 +98,15 @@ export default function EditionPollOptionsModal({
 
   const options = optionsQuery.data ?? [];
 
-  async function handleSaveEdit(id: string) {
+  async function handleSaveEdit() {
+    if (!editing) return;
     setError("");
-    if (!editingLabel.trim()) return;
+    if (!editing.label.trim()) {
+      setError(m.admin_poll_label_required());
+      return;
+    }
     try {
-      await updateMutation.mutateAsync({ id, label: editingLabel.trim() });
+      await updateMutation.mutateAsync({ id: editing.id, label: editing.label.trim() });
     } catch (err) {
       setError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
@@ -146,6 +131,8 @@ export default function EditionPollOptionsModal({
     }
   }
 
+  const totalQuantity = options.reduce((sum, option) => sum + option.totalQuantity, 0);
+
   return (
     <Dialog
       open={show}
@@ -166,74 +153,73 @@ export default function EditionPollOptionsModal({
             </div>
           ) : optionsQuery.isError ? (
             <Alert variant="danger">{m.admin_content_error_load()}</Alert>
+          ) : options.length === 0 ? (
+            <p className="text-sm text-subtle">{m.admin_poll_no_options()}</p>
           ) : (
-            KINDS.map((kind) => {
-              const kindOptions = options.filter((o) => o.kind === kind);
-              return (
-                <div key={kind} className="mb-6">
-                  <h3 className="text-base font-medium leading-tight">{kindLabel(kind)}</h3>
-                  {kindOptions.length === 0 ? (
-                    <p className="text-sm text-subtle">{m.admin_poll_no_options()}</p>
-                  ) : (
-                    <PresentationList className="mb-2">
-                      {kindOptions.map((option) => (
-                        <PresentationListItem key={option.id} className="flex items-center gap-2">
-                          {editingId === option.id ? (
-                            <>
-                              <AdminInput
-                                size="sm"
-                                className="bg-muted text-content border-input"
-                                value={editingLabel}
-                                onChange={(e) => setEditingLabel(e.target.value)}
-                                maxLength={200}
-                                autoFocus
-                              />
-                              <Button
-                                size="sm"
-                                variant="outline-primary"
-                                disabled={updateMutation.isPending}
-                                onClick={() => handleSaveEdit(option.id)}
-                              >
-                                {m.admin_save()}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => setEditingId(null)}
-                              >
-                                {m.admin_action_cancel()}
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <span className="grow">{option.label}</span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  setEditingId(option.id);
-                                  setEditingLabel(option.label);
-                                }}
-                              >
-                                {m.admin_edit()}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline-danger"
-                                disabled={deleteMutation.isPending}
-                                onClick={() => handleDelete(option)}
-                              >
-                                {m.admin_delete()}
-                              </Button>
-                            </>
-                          )}
-                        </PresentationListItem>
-                      ))}
-                    </PresentationList>
-                  )}
-                </div>
-              );
-            })
+            <>
+              <PresentationList className="mb-2">
+                {options.map((option) => (
+                  <PresentationListItem key={option.id} className="flex items-center gap-2">
+                    {editing?.id === option.id ? (
+                      <>
+                        <AdminInput
+                          size="sm"
+                          className="bg-muted text-content border-input"
+                          aria-label={m.admin_poll_label_label()}
+                          value={editing.label}
+                          onChange={(e) =>
+                            setEditing(
+                              (previous) => previous && { ...previous, label: e.target.value },
+                            )
+                          }
+                          maxLength={200}
+                          autoFocus
+                        />
+                        <Button
+                          size="sm"
+                          variant="outline-primary"
+                          disabled={updateMutation.isPending}
+                          onClick={() => handleSaveEdit()}
+                        >
+                          {m.admin_save()}
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setEditing(null)}>
+                          {m.admin_action_cancel()}
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className="grow">{option.label}</span>
+                        <Badge variant="secondary">
+                          {m.admin_poll_ordered({
+                            quantity: option.totalQuantity,
+                            volunteers: option.volunteerCount,
+                          })}
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setEditing({ id: option.id, label: option.label })}
+                        >
+                          {m.admin_edit()}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline-danger"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => handleDelete(option)}
+                        >
+                          {m.admin_delete()}
+                        </Button>
+                      </>
+                    )}
+                  </PresentationListItem>
+                ))}
+              </PresentationList>
+              <p className="text-sm text-subtle">
+                {m.admin_poll_total({ quantity: totalQuantity })}
+              </p>
+            </>
           )}
           <form
             onSubmit={(e) => {
@@ -242,30 +228,9 @@ export default function EditionPollOptionsModal({
             }}
             className="flex gap-2 items-end flex-wrap border-t border-input pt-4"
           >
-            <AdminField controlId="poll-option-add-kind">
-              <AdminLabel className="text-sm text-subtle mb-1">
-                {m.admin_poll_add_kind_label()}
-              </AdminLabel>
-              <addForm.Field name="kind">
-                {(field) => (
-                  <AdminSelect
-                    size="sm"
-                    className="bg-muted text-content border-input"
-                    value={field.value}
-                    onValueChange={(e) => field.handleChange(e as PollOptionKind)}
-                  >
-                    {KINDS.map((kind) => (
-                      <AdminOption key={kind} value={kind}>
-                        {kindLabel(kind)}
-                      </AdminOption>
-                    ))}
-                  </AdminSelect>
-                )}
-              </addForm.Field>
-            </AdminField>
             <AdminField controlId="poll-option-add-label" className="grow">
               <AdminLabel className="text-sm text-subtle mb-1">
-                {m.admin_poll_add_label_label()}
+                {m.admin_poll_label_label()}
               </AdminLabel>
               <addForm.Field name="label">
                 {(field) => (

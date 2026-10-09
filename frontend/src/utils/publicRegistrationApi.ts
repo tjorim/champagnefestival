@@ -1,10 +1,5 @@
 import { m } from "@/paraglide/messages";
-import type {
-  OrderItemCategory,
-  PaymentStatus,
-  RegistrationFormData,
-  RegistrationStatus,
-} from "@/types/registration";
+import type { PaymentStatus, RegistrationFormData, RegistrationStatus } from "@/types/registration";
 
 export interface CheckInData {
   id: string;
@@ -22,7 +17,7 @@ export interface CheckInData {
     deliveredQuantity: number;
     remainingQuantity: number;
     price: number;
-    category: OrderItemCategory;
+    category: string;
     delivered: boolean;
   }[];
   notes: string;
@@ -63,10 +58,6 @@ export class CheckInError extends Error {
   }
 }
 
-function isOrderItemCategory(value: unknown): value is OrderItemCategory {
-  return value === "champagne" || value === "food" || value === "other";
-}
-
 function normalizeDeliveredQuantities(item: {
   quantity: number;
   delivered: boolean;
@@ -103,7 +94,7 @@ function mapCheckInData(data: CheckInResponseRegistration): CheckInData {
       name: item.name,
       quantity: item.quantity,
       price: item.price,
-      category: isOrderItemCategory(item.category) ? item.category : "other",
+      category: typeof item.category === "string" ? item.category : "other",
     })),
     notes: data.notes ?? "",
     status: data.status ?? "pending",

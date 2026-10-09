@@ -87,14 +87,16 @@ export function apiVenueToVenue(d: Record<string, unknown>): Venue {
 
 /** Map FastAPI snake_case FAQ item response to frontend camelCase FaqItem type */
 export function apiFaqItemToFaqItem(d: Record<string, unknown>): FaqItem {
+  const text = (value: unknown) => (typeof value === "string" && value.trim() ? value : null);
   return {
     id: d.id as string,
-    questionNl: d.question_nl as string,
-    answerNl: d.answer_nl as string,
-    questionEn: (d.question_en ?? null) as string | null,
-    answerEn: (d.answer_en ?? null) as string | null,
-    questionFr: (d.question_fr ?? null) as string | null,
-    answerFr: (d.answer_fr ?? null) as string | null,
+    textLanguage: d.text_language === "fr" || d.text_language === "en" ? d.text_language : "nl",
+    questionNl: text(d.question_nl),
+    questionFr: text(d.question_fr),
+    questionEn: text(d.question_en),
+    answerNl: text(d.answer_nl),
+    answerFr: text(d.answer_fr),
+    answerEn: text(d.answer_en),
     sortOrder: (d.sort_order ?? 0) as number,
     active: (d.active ?? true) as boolean,
   };

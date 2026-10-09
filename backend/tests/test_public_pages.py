@@ -12,9 +12,10 @@ import asyncio
 from pathlib import Path
 
 import pytest
+from sqlalchemy import select
 
 from app.config import settings
-from app.models import Policy
+from app.models import Policy, PolicyVersion
 from tests.helpers import ADMIN_HEADERS, _create_event
 
 _FIXTURE_DIST = Path(__file__).parent / "fixtures" / "frontend_dist"
@@ -29,10 +30,10 @@ async def _seed_policy(db_session, *, key: str = "privacy") -> None:
     db_session.add(
         Policy(
             key=key,
+            title_language="nl",
             title_nl="Privacybeleid",
             title_en="Privacy Policy",
             title_fr="Politique de Confidentialité",
-            required_locales="nl,en,fr",
         )
     )
     await db_session.commit()
@@ -43,7 +44,12 @@ async def _publish_policy(client, *, content_nl: str = "## Titel\n\nInhoud.") ->
     assert created.status_code == 201
     await client.put(
         "/api/policies/privacy/draft",
-        json={"content_nl": content_nl, "content_en": "## Title\n\nContent.", "content_fr": "## Titre\n\nContenu."},
+        json={
+            "content_language": "nl",
+            "content_nl": content_nl,
+            "content_en": "## Title\n\nContent.",
+            "content_fr": "## Titre\n\nContenu.",
+        },
         headers=ADMIN_HEADERS,
     )
     published = await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)
@@ -77,7 +83,12 @@ async def test_home_page_renders_faq_and_schedule_and_json_ld(client):
     await _create_event(client, title="Vrijdagavond", date="2099-03-21")
     faq = await client.post(
         "/api/faq",
-        json={"question_nl": "Wat is dit?", "answer_nl": "Een champagnefestival.", "active": True},
+        json={
+            "text_language": "nl",
+            "question_nl": "Wat is dit?",
+            "answer_nl": "Een champagnefestival.",
+            "active": True,
+        },
         headers=ADMIN_HEADERS,
     )
     assert faq.status_code == 201
@@ -95,6 +106,7 @@ async def test_home_page_escapes_admin_authored_faq_content(client):
     r = await client.post(
         "/api/faq",
         json={
+            "text_language": "nl",
             "question_nl": "<script>alert('xss')</script>",
             "answer_nl": "Safe? <img src=x onerror=alert(1)>",
             "active": True,
@@ -114,6 +126,7 @@ async def test_home_page_respects_locale_query_param(client):
     faq = await client.post(
         "/api/faq",
         json={
+            "text_language": "nl",
             "question_nl": "NL vraag",
             "answer_nl": "NL antwoord",
             "question_en": "EN question",
@@ -167,6 +180,22 @@ async def test_privacy_page_renders_published_markdown_content(client, db_sessio
     assert r.status_code == 200
 
 
+async def test_privacy_page_falls_back_to_the_original_language(client, db_session):
+    await _seed_policy(db_session)
+    await _publish_policy(client)
+    # Remove the French text of the published policy: French visitors get the Dutch original.
+    published = (
+        await db_session.execute(select(PolicyVersion).where(PolicyVersion.status == "published"))
+    ).scalar_one()
+    published.content_fr = None
+    await db_session.commit()
+
+    r = await client.get("/privacy", params={"lng": "fr"})
+    assert r.status_code == 200
+    assert "<h2>Titel</h2>" in r.text
+    assert 'html lang="nl"' in r.text  # the page says which language its content is in
+
+
 async def test_home_page_is_served_from_cache_on_a_second_request(client, monkeypatch):
     import app.routers.public_pages as public_pages_module
 
@@ -196,7 +225,7 @@ async def test_faq_mutation_invalidates_the_cache_within_the_ttl(client):
 
     created = await client.post(
         "/api/faq",
-        json={"question_nl": "Nieuwe FAQ vraag", "answer_nl": "Nieuw antwoord.", "active": True},
+        json={"text_language": "nl", "question_nl": "Nieuwe FAQ vraag", "answer_nl": "Nieuw antwoord.", "active": True},
         headers=ADMIN_HEADERS,
     )
     assert created.status_code == 201

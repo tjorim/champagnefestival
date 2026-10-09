@@ -46,6 +46,19 @@ function renderPage(policyResponse: object | null) {
 }
 
 describe("PrivacyPolicyPage component", () => {
+  it("marks the policy with the language it is written in", async () => {
+    renderPage({
+      key: "privacy",
+      title: "Privacybeleid",
+      locale: "nl",
+      html: "<p>Tekst in het Nederlands.</p>",
+      version_number: 1,
+      published_at: "2026-01-15T00:00:00Z",
+    });
+    const paragraph = await screen.findByText("Tekst in het Nederlands.");
+    expect(paragraph.parentElement).toHaveAttribute("lang", "nl");
+  });
+
   it("renders the title and the fetched, sanitized policy content", async () => {
     renderPage({
       key: "privacy",

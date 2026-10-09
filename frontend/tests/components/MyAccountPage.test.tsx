@@ -58,12 +58,11 @@ vi.mock("@/paraglide/messages", () => ({
     my_eid_correction_success: () => "Your eID document number has been updated.",
     my_eid_correction_error: () => "Could not update your eID document number.",
     my_eid_submitting: () => "Submitting…",
-    my_poll_heading: () => "Meal and dinner choices",
-    my_poll_description: () => "Pick your main dish and soup.",
-    my_poll_dish_label: () => "Main dish",
-    my_poll_soup_label: () => "Soup",
-    my_poll_dinner_label: () => "Group dinners",
-    my_poll_load_error: () => "Could not load the meal and dinner choices. Please try again.",
+    my_poll_heading: () => "Meal choices",
+    my_poll_description: () => "Choose how many of each you'd like.",
+    my_poll_quantity_decrease: ({ label }: { label: string }) => `Fewer ${label}`,
+    my_poll_quantity_increase: ({ label }: { label: string }) => `More ${label}`,
+    my_poll_load_error: () => "Could not load the meal choices. Please try again.",
     my_poll_save_error: () => "Could not save your choice. Please try again.",
   },
 }));
@@ -395,7 +394,7 @@ describe("MyAccountPage", () => {
     expect(registrationsTab).toHaveAttribute("aria-selected", "false");
   });
 
-  it("lets a linked volunteer pick a meal/dinner poll option and saves it", async () => {
+  it("lets a linked volunteer pick meal quantities and saves them", async () => {
     vi.mocked(useAuth).mockReturnValue({
       isAuthenticated: true,
       isLoading: false,
@@ -411,6 +410,11 @@ describe("MyAccountPage", () => {
       logout: vi.fn(),
       renewSession: vi.fn().mockResolvedValue(false),
     });
+    const saved: unknown[] = [];
+    const options = [
+      { id: "poll-dish-1", label: "Vol-au-vent" },
+      { id: "poll-soup-1", label: "Tomatensoep" },
+    ];
     server.use(
       http.get("/api/me/volunteer", () =>
         HttpResponse.json({
@@ -421,28 +425,15 @@ describe("MyAccountPage", () => {
         }),
       ),
       http.get("/api/me/volunteer/poll-options", () =>
-        HttpResponse.json({
-          edition_id: "2026-october",
-          options: [
-            { id: "poll-dish-1", kind: "dish", label: "Vol-au-vent" },
-            { id: "poll-soup-1", kind: "soup", label: "Tomatensoep" },
-          ],
-          selections: { dish_option_id: null, soup_option_id: null, dinner_option_ids: [] },
-        }),
+        HttpResponse.json({ edition_id: "2026-october", options, selections: [] }),
       ),
       http.put("/api/me/volunteer/poll-selections", async ({ request }) => {
-        const body = (await request.json()) as { dish_option_id: string | null };
+        const body = (await request.json()) as { selections: unknown[] };
+        saved.push(body);
         return HttpResponse.json({
           edition_id: "2026-october",
-          options: [
-            { id: "poll-dish-1", kind: "dish", label: "Vol-au-vent" },
-            { id: "poll-soup-1", kind: "soup", label: "Tomatensoep" },
-          ],
-          selections: {
-            dish_option_id: body.dish_option_id,
-            soup_option_id: null,
-            dinner_option_ids: [],
-          },
+          options,
+          selections: body.selections,
         });
       }),
     );
@@ -451,10 +442,31 @@ describe("MyAccountPage", () => {
     render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
 
     await user.click(screen.getByRole("tab", { name: "My eID" }));
-    const dishOption = await screen.findByRole("radio", { name: "Vol-au-vent" });
-    await user.click(dishOption);
+    const moreSoup = await screen.findByRole("button", { name: "More Tomatensoep" });
+    expect(screen.getByRole("button", { name: "Fewer Tomatensoep" })).toBeDisabled();
 
-    await waitFor(() => expect(dishOption).toBeChecked());
+    // Two soups and a vol-au-vent: each click saves the whole set of quantities.
+    await user.click(moreSoup);
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Fewer Tomatensoep" })).toBeEnabled(),
+    );
+    await user.click(screen.getByRole("button", { name: "More Tomatensoep" }));
+    await waitFor(() => expect(saved).toHaveLength(2));
+    await user.click(await screen.findByRole("button", { name: "More Vol-au-vent" }));
+    await waitFor(() => expect(saved).toHaveLength(3));
+
+    expect(saved[1]).toEqual({ selections: [{ option_id: "poll-soup-1", quantity: 2 }] });
+    expect(saved[2]).toEqual({
+      selections: [
+        { option_id: "poll-soup-1", quantity: 2 },
+        { option_id: "poll-dish-1", quantity: 1 },
+      ],
+    });
+
+    // Going back down to none drops the option from the saved set.
+    await user.click(screen.getByRole("button", { name: "Fewer Vol-au-vent" }));
+    await waitFor(() => expect(saved).toHaveLength(4));
+    expect(saved[3]).toEqual({ selections: [{ option_id: "poll-soup-1", quantity: 2 }] });
   });
 
   it("signs out an OIDC account through one button that also ends the emailed session", async () => {

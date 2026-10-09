@@ -1,5 +1,5 @@
-"""Integration tests for edition-scoped volunteer meal/dinner poll options
-and the /api/me/volunteer/poll-* self-service endpoints."""
+"""Integration tests for edition-scoped volunteer meal poll options and the
+/api/me/volunteer/poll-* self-service endpoints (quantity per option)."""
 
 from __future__ import annotations
 
@@ -13,12 +13,8 @@ NISS_B = "91010112418"
 EID_B = "123456789103"
 
 
-async def _create_option(client, *, edition_id: str, kind: str, label: str) -> dict:
-    r = await client.post(
-        "/api/poll-options",
-        json={"edition_id": edition_id, "kind": kind, "label": label},
-        headers=ADMIN_HEADERS,
-    )
+async def _create_option(client, *, edition_id: str, label: str) -> dict:
+    r = await client.post("/api/poll-options", json={"edition_id": edition_id, "label": label}, headers=ADMIN_HEADERS)
     assert r.status_code == 201, r.text
     return r.json()
 
@@ -30,18 +26,21 @@ async def _register(vclient, *, name="Sofie De Smet", niss=NISS_A, eid=EID_A):
     )
 
 
+def _picks(*pairs: tuple[dict, int]) -> dict:
+    return {"selections": [{"option_id": option["id"], "quantity": quantity} for option, quantity in pairs]}
+
+
 @pytest.mark.anyio
 async def test_admin_creates_lists_updates_and_deletes_poll_options(client):
     event = await _create_event(client, edition_id="edition-poll-crud")
     edition_id = event["edition_id"]
 
-    dish = await _create_option(client, edition_id=edition_id, kind="dish", label="Vol-au-vent met puree")
-    soup = await _create_option(client, edition_id=edition_id, kind="soup", label="Tomatensoep met balletjes")
+    dish = await _create_option(client, edition_id=edition_id, label="Vol-au-vent met puree")
+    soup = await _create_option(client, edition_id=edition_id, label="Tomatensoep met balletjes")
 
     r = await client.get("/api/poll-options", params={"edition_id": edition_id}, headers=ADMIN_HEADERS)
     assert r.status_code == 200, r.text
-    labels = {o["label"] for o in r.json()}
-    assert labels == {"Vol-au-vent met puree", "Tomatensoep met balletjes"}
+    assert [o["label"] for o in r.json()] == ["Vol-au-vent met puree", "Tomatensoep met balletjes"]
 
     r = await client.put(
         f"/api/poll-options/{dish['id']}", json={"label": "Stoofvlees met puree"}, headers=ADMIN_HEADERS
@@ -57,27 +56,32 @@ async def test_admin_creates_lists_updates_and_deletes_poll_options(client):
 
 
 @pytest.mark.anyio
-async def test_poll_option_label_is_stripped(client):
+async def test_poll_option_label_is_stripped_and_required(client):
     event = await _create_event(client, edition_id="edition-poll-strip")
     r = await client.post(
         "/api/poll-options",
-        json={"edition_id": event["edition_id"], "kind": "dish", "label": "  Vol-au-vent  "},
+        json={"edition_id": event["edition_id"], "label": "  Vol-au-vent  "},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201, r.text
     option_id = r.json()["id"]
     assert r.json()["label"] == "Vol-au-vent"
 
-    r = await client.put(f"/api/poll-options/{option_id}", json={"label": "   "}, headers=ADMIN_HEADERS)
-    assert r.status_code == 422
+    for body in ({"label": "   "}, {"label": ""}, {"label_en": "Old shape"}, {}):
+        r = await client.put(f"/api/poll-options/{option_id}", json=body, headers=ADMIN_HEADERS)
+        assert r.status_code == 422, body
+    r = await client.post(
+        "/api/poll-options",
+        json={"edition_id": event["edition_id"], "kind": "dish", "label": "Old shape"},
+        headers=ADMIN_HEADERS,
+    )
+    assert r.status_code == 422  # the kind is gone
 
 
 @pytest.mark.anyio
 async def test_create_poll_option_rejects_unknown_edition(client):
     r = await client.post(
-        "/api/poll-options",
-        json={"edition_id": "no-such-edition", "kind": "dish", "label": "Whatever"},
-        headers=ADMIN_HEADERS,
+        "/api/poll-options", json={"edition_id": "no-such-edition", "label": "Whatever"}, headers=ADMIN_HEADERS
     )
     assert r.status_code == 404
 
@@ -99,74 +103,69 @@ async def test_volunteer_poll_options_empty_without_active_edition(volunteer_cli
     async with volunteer_client_as() as vclient:
         r = await vclient.get("/api/me/volunteer/poll-options")
         assert r.status_code == 200, r.text
-        assert r.json() == {
-            "edition_id": None,
-            "options": [],
-            "selections": {"dish_option_id": None, "soup_option_id": None, "dinner_option_ids": []},
-        }
+        assert r.json() == {"edition_id": None, "options": [], "selections": []}
 
 
 @pytest.mark.anyio
-async def test_volunteer_replaces_own_poll_selections(client, volunteer_client_as):
+async def test_volunteer_replaces_own_quantities(client, volunteer_client_as):
     event = await _create_event(client, edition_id="edition-poll-self")
     edition_id = event["edition_id"]
-    dish = await _create_option(client, edition_id=edition_id, kind="dish", label="Vispannetje")
-    soup = await _create_option(client, edition_id=edition_id, kind="soup", label="Pompoensoep")
-    thursday = await _create_option(client, edition_id=edition_id, kind="dinner", label="Donderdag - Cardis")
-    sunday = await _create_option(client, edition_id=edition_id, kind="dinner", label="Zondag - Hippo")
+    stew = await _create_option(client, edition_id=edition_id, label="Stoofvlees")
+    vol_au_vent = await _create_option(client, edition_id=edition_id, label="Vol-au-vent")
+    soup = await _create_option(client, edition_id=edition_id, label="Tomatensoep")
 
     async with volunteer_client_as("subject-poll-a") as vclient:
-        r = await _register(vclient)
-        assert r.status_code == 200, r.text
+        assert (await _register(vclient)).status_code == 200
 
         r = await vclient.get("/api/me/volunteer/poll-options")
         assert r.status_code == 200, r.text
         body = r.json()
         assert body["edition_id"] == edition_id
-        assert {o["id"] for o in body["options"]} == {dish["id"], soup["id"], thursday["id"], sunday["id"]}
-        assert body["selections"] == {"dish_option_id": None, "soup_option_id": None, "dinner_option_ids": []}
+        assert [(o["id"], o["label"]) for o in body["options"]] == [
+            (stew["id"], "Stoofvlees"),
+            (vol_au_vent["id"], "Vol-au-vent"),
+            (soup["id"], "Tomatensoep"),
+        ]
+        assert body["selections"] == []
 
-        r = await vclient.put(
-            "/api/me/volunteer/poll-selections",
-            json={
-                "dish_option_id": dish["id"],
-                "soup_option_id": soup["id"],
-                "dinner_option_ids": [thursday["id"], sunday["id"]],
-            },
-        )
+        # Several options at once, with quantities (two soups, a stew and a vol-au-vent).
+        r = await vclient.put("/api/me/volunteer/poll-selections", json=_picks((stew, 1), (vol_au_vent, 1), (soup, 2)))
         assert r.status_code == 200, r.text
-        selections = r.json()["selections"]
-        assert selections["dish_option_id"] == dish["id"]
-        assert selections["soup_option_id"] == soup["id"]
-        assert sorted(selections["dinner_option_ids"]) == sorted([thursday["id"], sunday["id"]])
+        assert r.json()["selections"] == [
+            {"option_id": stew["id"], "quantity": 1},
+            {"option_id": vol_au_vent["id"], "quantity": 1},
+            {"option_id": soup["id"], "quantity": 2},
+        ]
 
-        # A second replace fully supersedes the first, including dropping a dinner.
-        r = await vclient.put(
-            "/api/me/volunteer/poll-selections",
-            json={"dish_option_id": dish["id"], "soup_option_id": None, "dinner_option_ids": [thursday["id"]]},
-        )
+        # A second replace fully supersedes the first: an option left out means none of it.
+        r = await vclient.put("/api/me/volunteer/poll-selections", json=_picks((soup, 3)))
         assert r.status_code == 200, r.text
-        selections = r.json()["selections"]
-        assert selections["dish_option_id"] == dish["id"]
-        assert selections["soup_option_id"] is None
-        assert selections["dinner_option_ids"] == [thursday["id"]]
+        assert r.json()["selections"] == [{"option_id": soup["id"], "quantity": 3}]
 
-        r = await vclient.get("/api/me/volunteer/poll-options")
-        assert r.json()["selections"] == selections
+        r = await vclient.put("/api/me/volunteer/poll-selections", json={"selections": []})
+        assert r.json()["selections"] == []
+        assert (await vclient.get("/api/me/volunteer/poll-options")).json()["selections"] == []
 
 
 @pytest.mark.anyio
-async def test_volunteer_poll_selection_rejects_mismatched_kind(client, volunteer_client_as):
-    event = await _create_event(client, edition_id="edition-poll-kind")
-    edition_id = event["edition_id"]
-    soup = await _create_option(client, edition_id=edition_id, kind="soup", label="Kippensoep met vermicelli")
+async def test_volunteer_quantities_are_validated(client, volunteer_client_as):
+    event = await _create_event(client, edition_id="edition-poll-quantity")
+    soup = await _create_option(client, edition_id=event["edition_id"], label="Tomatensoep")
 
-    async with volunteer_client_as("subject-poll-kind") as vclient:
+    async with volunteer_client_as("subject-poll-quantity") as vclient:
         assert (await _register(vclient)).status_code == 200
 
-        r = await vclient.put("/api/me/volunteer/poll-selections", json={"dish_option_id": soup["id"]})
-        assert r.status_code == 400
-        assert "dish" in r.json()["detail"]
+        for quantity in (0, -1, 21):
+            r = await vclient.put("/api/me/volunteer/poll-selections", json=_picks((soup, quantity)))
+            assert r.status_code == 422, quantity
+        assert (await vclient.put("/api/me/volunteer/poll-selections", json=_picks((soup, 20)))).status_code == 200
+
+        twice = {"selections": [{"option_id": soup["id"], "quantity": 1}, {"option_id": soup["id"], "quantity": 2}]}
+        assert (await vclient.put("/api/me/volunteer/poll-selections", json=twice)).status_code == 422
+        blank = {"selections": [{"option_id": " ", "quantity": 1}]}
+        assert (await vclient.put("/api/me/volunteer/poll-selections", json=blank)).status_code == 404
+        old_shape = {"dish_option_id": soup["id"]}
+        assert (await vclient.put("/api/me/volunteer/poll-selections", json=old_shape)).status_code == 422
 
 
 @pytest.mark.anyio
@@ -174,12 +173,12 @@ async def test_volunteer_poll_selection_rejects_option_not_in_active_edition(cli
     stale_event = await _create_event(
         client, edition_id="edition-poll-stale", edition_active=False, title="Old Edition Event"
     )
-    stale_dish = await _create_option(client, edition_id=stale_event["edition_id"], kind="dish", label="Old Dish")
+    stale_dish = await _create_option(client, edition_id=stale_event["edition_id"], label="Old Dish")
 
     async with volunteer_client_as("subject-poll-stale") as vclient:
         assert (await _register(vclient)).status_code == 200
 
-        r = await vclient.put("/api/me/volunteer/poll-selections", json={"dish_option_id": stale_dish["id"]})
+        r = await vclient.put("/api/me/volunteer/poll-selections", json=_picks((stale_dish, 1)))
         assert r.status_code == 404
 
 
@@ -197,20 +196,18 @@ async def test_replacing_selections_preserves_a_past_editions_picks(client, volu
     from app.utils import make_id
 
     old_event = await _create_event(client, edition_id="edition-poll-old", title="Old Edition Event")
-    old_dish = await _create_option(client, edition_id=old_event["edition_id"], kind="dish", label="Old Dish")
+    old_dish = await _create_option(client, edition_id=old_event["edition_id"], label="Old Dish")
 
     async with volunteer_client_as("subject-poll-cross-edition") as vclient:
         assert (await _register(vclient)).status_code == 200
-        r = await vclient.put("/api/me/volunteer/poll-selections", json={"dish_option_id": old_dish["id"]})
+        r = await vclient.put("/api/me/volunteer/poll-selections", json=_picks((old_dish, 2)))
         assert r.status_code == 200, r.text
 
     # A new active festival edition supersedes the old one, built directly
     # against the shared session rather than via the `client` fixture: a used
     # volunteer_client_as context clears the app's *entire*
     # dependency_overrides dict on exit, including `client`'s own — the two
-    # fixtures can't be interleaved within one test (see
-    # test_volunteer_poll_selections_do_not_leak_between_volunteers, which
-    # only ever does its `client`-based setup once, up front).
+    # fixtures can't be interleaved within one test.
     old_edition = await db_session.get(Edition, old_event["edition_id"])
     await db_session.execute(sa_update(Edition).where(Edition.id == old_edition.id).values(active=False))
     new_edition = Edition(
@@ -225,67 +222,69 @@ async def test_replacing_selections_preserves_a_past_editions_picks(client, volu
     new_event = Event(
         id=make_id("evt"),
         edition_id=new_edition.id,
-        title="New Edition Event",
+        title_language="nl",
+        title_nl="New Edition Event",
         date=dt_date(2099, 3, 22),
         start_time="18:00",
         end_time="22:00",
-        category="festival",
+        category="general",
         registration_required=True,
         active=True,
     )
     db_session.add(new_event)
-    new_dish = EditionPollOption(id=make_id("opt"), edition_id=new_edition.id, kind="dish", label="New Dish")
+    new_dish = EditionPollOption(id=make_id("opt"), edition_id=new_edition.id, label="New Dish")
     db_session.add(new_dish)
     await db_session.commit()
 
     async with volunteer_client_as("subject-poll-cross-edition") as vclient:
-        r = await vclient.put("/api/me/volunteer/poll-selections", json={"dish_option_id": new_dish.id})
+        r = await vclient.put(
+            "/api/me/volunteer/poll-selections",
+            json={"selections": [{"option_id": new_dish.id, "quantity": 1}]},
+        )
         assert r.status_code == 200, r.text
         assert r.json()["edition_id"] == new_edition.id
-        assert r.json()["selections"]["dish_option_id"] == new_dish.id
+        assert r.json()["selections"] == [{"option_id": new_dish.id, "quantity": 1}]
 
         r = await vclient.get("/api/me/volunteer/poll-options")
-        assert r.json()["selections"]["dish_option_id"] == new_dish.id
+        assert r.json()["selections"] == [{"option_id": new_dish.id, "quantity": 1}]
 
     rows = (await db_session.execute(sa_select(VolunteerPollSelection.option_id))).scalars().all()
     assert set(rows) == {old_dish["id"], new_dish.id}
 
 
 @pytest.mark.anyio
-async def test_volunteer_poll_selection_rejects_blank_option_id(client, volunteer_client_as):
-    event = await _create_event(client, edition_id="edition-poll-blank")
-    dish = await _create_option(client, edition_id=event["edition_id"], kind="dish", label="Vol-au-vent")
-
-    async with volunteer_client_as("subject-poll-blank") as vclient:
-        assert (await _register(vclient)).status_code == 200
-
-        r = await vclient.put("/api/me/volunteer/poll-selections", json={"dish_option_id": "  "})
-        assert r.status_code == 422
-
-        r = await vclient.put(
-            "/api/me/volunteer/poll-selections",
-            json={"dish_option_id": dish["id"], "dinner_option_ids": [""]},
-        )
-        assert r.status_code == 422
-
-
-@pytest.mark.anyio
-async def test_volunteer_poll_selections_do_not_leak_between_volunteers(client, volunteer_client_as):
+async def test_volunteer_poll_selections_do_not_leak_between_volunteers_and_add_up_for_the_admin(
+    client, volunteer_client_as, db_session
+):
     event = await _create_event(client, edition_id="edition-poll-isolation")
     edition_id = event["edition_id"]
-    dish_a = await _create_option(client, edition_id=edition_id, kind="dish", label="Escalope Milanese")
-    dish_b = await _create_option(client, edition_id=edition_id, kind="dish", label="Hachis Parmentier")
+    dish_a = await _create_option(client, edition_id=edition_id, label="Escalope Milanese")
+    dish_b = await _create_option(client, edition_id=edition_id, label="Hachis Parmentier")
 
     async with volunteer_client_as("subject-poll-x") as vclient_a:
         assert (await _register(vclient_a, niss=NISS_A, eid=EID_A)).status_code == 200
-        r = await vclient_a.put("/api/me/volunteer/poll-selections", json={"dish_option_id": dish_a["id"]})
+        r = await vclient_a.put("/api/me/volunteer/poll-selections", json=_picks((dish_a, 2), (dish_b, 1)))
         assert r.status_code == 200, r.text
 
     async with volunteer_client_as("subject-poll-y") as vclient_b:
         assert (await _register(vclient_b, name="Rik Cooleman", niss=NISS_B, eid=EID_B)).status_code == 200
-        r = await vclient_b.put("/api/me/volunteer/poll-selections", json={"dish_option_id": dish_b["id"]})
+        r = await vclient_b.put("/api/me/volunteer/poll-selections", json=_picks((dish_b, 3)))
         assert r.status_code == 200, r.text
+        assert r.json()["selections"] == [{"option_id": dish_b["id"], "quantity": 3}]
 
     async with volunteer_client_as("subject-poll-x") as vclient_a:
         r = await vclient_a.get("/api/me/volunteer/poll-options")
-        assert r.json()["selections"]["dish_option_id"] == dish_a["id"]
+        assert r.json()["selections"] == [
+            {"option_id": dish_a["id"], "quantity": 2},
+            {"option_id": dish_b["id"], "quantity": 1},
+        ]
+
+    # What to order from the caterer: the totals per option and how many people asked for it.
+    from app.mcp.admin import poll_options as mcp_poll_options
+    from tests.helpers import mcp_session_factory
+
+    totals = {
+        o["label"]: (o["total_quantity"], o["volunteer_count"])
+        for o in await mcp_poll_options.list_poll_options(mcp_session_factory(db_session), edition_id)
+    }
+    assert totals == {"Escalope Milanese": (2, 1), "Hachis Parmentier": (4, 2)}

@@ -5,12 +5,16 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import type { Event } from "@/types/event";
+import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
+import { eventDescription, eventTitle } from "@/utils/eventText";
 
 interface ScheduleProps {
   events: Event[];
 }
 
 const Schedule: React.FC<ScheduleProps> = ({ events }) => {
+  const locale = getLocale();
+  const { data: categories } = useEventCategories();
   const days = useMemo(() => {
     return [...new Set(events.map((event) => event.date))]
       .filter(Boolean)
@@ -34,6 +38,10 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
         return "secondary";
       case "general":
         return "primary";
+      case "ceremony":
+        return "warning";
+      case "social":
+        return "success";
       default:
         return "secondary";
     }
@@ -55,25 +63,6 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
       }
     } catch {
       return dayDate;
-    }
-  };
-
-  const getCategoryLabel = (category: Event["category"]) => {
-    switch (category) {
-      case "tasting":
-        return m.schedule_categories_tasting();
-      case "vip":
-        return m.schedule_categories_vip();
-      case "party":
-        return m.schedule_categories_party();
-      case "breakfast":
-        return m.schedule_categories_breakfast();
-      case "exchange":
-        return m.schedule_categories_exchange();
-      case "general":
-        return m.schedule_categories_general();
-      default:
-        return category;
     }
   };
 
@@ -115,6 +104,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
               {sortedEvents.length > 0 ? (
                 <div className="events-list">
                   {sortedEvents.map((event) => {
+                    const label = categoryLabel(categories, event.category, locale);
                     return (
                       <Card key={event.id} className="event-card mb-4 border-0">
                         <CardContent>
@@ -136,10 +126,12 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                               )}
                             </div>
                             <div className="grow">
-                              <h5 className="event-title mb-1">{event.title}</h5>
-                              <Badge variant={getCategoryColor(event.category)} className="mb-2">
-                                {getCategoryLabel(event.category)}
-                              </Badge>
+                              <h5 className="event-title mb-1">{eventTitle(event, locale)}</h5>
+                              {label && (
+                                <Badge variant={getCategoryColor(event.category)} className="mb-2">
+                                  {label}
+                                </Badge>
+                              )}
                               {event.registrationRequired ? (
                                 <Badge variant="warning" className="mb-2 ms-2">
                                   {m.schedule_registration()}
@@ -151,7 +143,9 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                                   </Badge>
                                 )
                               )}
-                              <p className="event-description mb-1">{event.description}</p>
+                              <p className="event-description mb-1">
+                                {eventDescription(event, locale)}
+                              </p>
                             </div>
                           </div>
                         </CardContent>

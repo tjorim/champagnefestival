@@ -9,6 +9,8 @@ import RegistrationModal from "@/components/RegistrationModal";
 import type { Event } from "@/types/event";
 import { type ApiUpcomingEdition, useOtherEventItems } from "@/hooks/useOtherEvents";
 import { m } from "@/paraglide/messages";
+import { getLocale } from "@/paraglide/runtime";
+import { eventDescription, eventTitle } from "@/utils/eventText";
 
 function getEditionTitle(editionType: ApiUpcomingEdition["edition_type"]) {
   switch (editionType) {
@@ -43,6 +45,7 @@ function useLegacyAnchorRedirect() {
 
 export default function OtherEvents() {
   useLegacyAnchorRedirect();
+  const locale = getLocale();
 
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -94,7 +97,7 @@ export default function OtherEvents() {
                     <div className="flex justify-between items-start gap-4 flex-wrap">
                       <div>
                         <h5 className="mb-1">{getEditionTitle(item.editionType)}</h5>
-                        <p className="mb-1 font-semibold">{item.event.title}</p>
+                        <p className="mb-1 font-semibold">{eventTitle(item.event, locale)}</p>
                         <p className="mb-1 text-subtle">
                           <Icon icon={CalendarDaysIcon} className="me-2" />
                           {formatDate(item.event.date)} • {item.event.startTime}
@@ -120,7 +123,7 @@ export default function OtherEvents() {
                             )}
                           </p>
                         )}
-                        <p className="mb-2">{item.event.description}</p>
+                        <p className="mb-2">{eventDescription(item.event, locale)}</p>
                       </div>
 
                       {(item.event.registrationRequired || item.event.products.length > 0) && (

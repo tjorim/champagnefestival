@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import cast
 
 from fastapi import APIRouter, Depends, Query, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
@@ -23,6 +24,7 @@ from app.models import FaqItem
 from app.schemas import FaqLocale
 from app.services import editions_service, jsonld_service, policies_service
 from app.services.errors import NotFoundError
+from app.services.frontend_i18n_snippets import Locale
 from app.services.policy_markdown import render_markdown
 from app.services.public_render import (
     inject_marker,
@@ -32,7 +34,7 @@ from app.services.public_render import (
     rewrite_head_meta,
 )
 from app.services.public_render_cache import public_render_cache
-from app.utils import event_to_summary_dict, faq_item_to_public_dict
+from app.utils import faq_item_to_public_dict
 
 logger = logging.getLogger(__name__)
 
@@ -81,16 +83,8 @@ def _resolve_locale(raw: str | None) -> FaqLocale:
 
 
 async def _load_active_faq_items(db: AsyncSession, *, locale: FaqLocale) -> list[dict]:
-    question_column = getattr(FaqItem, f"question_{locale}")
-    answer_column = getattr(FaqItem, f"answer_{locale}")
-    stmt = (
-        select(FaqItem)
-        .where(FaqItem.active.is_(True), question_column.isnot(None), answer_column.isnot(None))
-        .order_by(FaqItem.sort_order)
-    )
-    result = await db.execute(stmt)
-    items = [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]
-    return [item for item in items if item is not None]
+    result = await db.execute(select(FaqItem).where(FaqItem.active.is_(True)).order_by(FaqItem.sort_order))
+    return [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]
 
 
 async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
@@ -108,8 +102,8 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
     # editions never regresses to a bare site name.
     description = jsonld_service.WELCOME_SUBTITLE[locale]
     if edition is not None:
-        payload = await editions_service.edition_payload(db, edition, active_only=True, public=True)
-        events = [event_to_summary_dict(e, public=True) for e in editions_service.active_events(edition)]
+        payload = await editions_service.edition_payload(db, edition, active_only=True, public=True, locale=locale)
+        events = payload["events"]
         json_ld = jsonld_service.build_event_json_ld(payload, base_url=settings.public_url, locale=locale)
 
     html_out = rewrite_head_meta(
@@ -131,10 +125,9 @@ async def _render_privacy(db: AsyncSession, *, locale: FaqLocale) -> str:
         raise NotFoundError("Frontend build not found.")
 
     policy, version = await policies_service.get_published(db, policy_key="privacy")
-    content_source = getattr(version, f"content_{locale}")
-    if not (content_source or "").strip():
-        raise NotFoundError(f"Policy 'privacy' has no published content for locale '{locale}'.")
-    title = getattr(policy, f"title_{locale}") or policy.title_nl
+    title, content_source, content_locale = policies_service.resolve_published(policy, version, locale)
+    if not content_source.strip():
+        raise NotFoundError("Policy 'privacy' has no published content.")
     html_body = render_markdown(content_source)
 
     html_out = rewrite_head_meta(
@@ -142,7 +135,7 @@ async def _render_privacy(db: AsyncSession, *, locale: FaqLocale) -> str:
         title=f"{title} — Champagnefestival",
         description=title,
         url=f"{settings.public_url}/privacy",
-        locale=locale,
+        locale=cast(Locale, content_locale),
     )
     content = render_privacy_content(title=title, html_body=html_body)
     return inject_marker(inject_marker(html_out, "ssr:head", ""), "ssr:content", content)

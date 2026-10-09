@@ -14,12 +14,70 @@ const BASE_VENUE = {
   updated_at: "2024-01-01T00:00:00Z",
 };
 
+type Language = "nl" | "fr" | "en";
+
+/** Original-language text for an event, as the API returns it (`title`/`description` resolved to the original). */
+function originalText(
+  language: Language,
+  title: string,
+  description: string,
+  translations: Partial<Record<Language, string>> = {},
+) {
+  const titles: Record<Language, string | null> = { nl: null, fr: null, en: null };
+  Object.assign(titles, translations);
+  titles[language] = title;
+  const descriptions: Record<Language, string | null> = { nl: null, fr: null, en: null };
+  if (description) descriptions[language] = description;
+  return {
+    title,
+    description,
+    title_language: language,
+    title_nl: titles.nl,
+    title_fr: titles.fr,
+    title_en: titles.en,
+    description_language: description ? language : null,
+    description_nl: descriptions.nl,
+    description_fr: descriptions.fr,
+    description_en: descriptions.en,
+  };
+}
+
+/** Original-language name of a product, as the API returns it. */
+function productName(
+  language: Language,
+  name: string,
+  translations: Partial<Record<Language, string>> = {},
+) {
+  const names: Record<Language, string | null> = { nl: null, fr: null, en: null };
+  Object.assign(names, translations);
+  names[language] = name;
+  return {
+    name,
+    name_language: language,
+    name_nl: names.nl,
+    name_fr: names.fr,
+    name_en: names.en,
+    description: "",
+    description_language: null,
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
+  };
+}
+
 export const seedEvents = [
   {
     id: "event-01",
     edition_id: "march-2027",
-    title: "Grand Opening",
-    description: "Join us for the grand opening of the Champagnefestival 2027!",
+    ...originalText(
+      "en",
+      "Grand Opening",
+      "Join us for the grand opening of the Champagnefestival 2027!",
+      {
+        nl: "Grote opening",
+        fr: "Grande ouverture",
+      },
+    ),
     date: "2027-03-06",
     start_time: "18:00",
     end_time: "22:00",
@@ -42,8 +100,11 @@ export const seedEvents = [
   {
     id: "event-02",
     edition_id: "march-2027",
-    title: "Tasting Day 1",
-    description: "Explore over 80 champagne houses in Hall 5 and Hall 6.",
+    ...originalText(
+      "en",
+      "Tasting Day 1",
+      "Explore over 80 champagne houses in Hall 5 and Hall 6.",
+    ),
     date: "2027-03-07",
     start_time: "10:00",
     end_time: "20:00",
@@ -63,7 +124,7 @@ export const seedEvents = [
       {
         id: "product-01",
         event_id: "event-02",
-        name: "Champagne Bottle (Standard)",
+        ...productName("en", "Champagne Bottle (Standard)", { nl: "Champagnefles (standaard)" }),
         price: 65,
         category: "champagne",
         purchasable: true,
@@ -77,7 +138,7 @@ export const seedEvents = [
       {
         id: "product-02",
         event_id: "event-02",
-        name: "Cheese Platter",
+        ...productName("en", "Cheese Platter", { nl: "Kaasplank", fr: "Plateau de fromages" }),
         price: 25,
         category: "food",
         purchasable: true,
@@ -90,7 +151,7 @@ export const seedEvents = [
       {
         id: "product-03",
         event_id: "event-02",
-        name: "Napkin",
+        ...productName("en", "Napkin"),
         price: 0.5,
         category: "other",
         purchasable: false,
@@ -107,8 +168,7 @@ export const seedEvents = [
   {
     id: "event-03",
     edition_id: "march-2027",
-    title: "Tasting Day 2",
-    description: "Second day of tastings. New masterclasses available.",
+    ...originalText("en", "Tasting Day 2", "Second day of tastings. New masterclasses available."),
     date: "2027-03-08",
     start_time: "10:00",
     end_time: "20:00",
@@ -131,12 +191,15 @@ export const seedEvents = [
   {
     id: "event-04",
     edition_id: "march-2027",
-    title: "Masterclass: Blanc de Blancs",
-    description: "An in-depth masterclass exploring Blanc de Blancs champagnes.",
+    ...originalText(
+      "en",
+      "Masterclass: Blanc de Blancs",
+      "An in-depth masterclass exploring Blanc de Blancs champagnes.",
+    ),
     date: "2027-03-07",
     start_time: "14:00",
     end_time: "15:30",
-    category: "masterclass",
+    category: "general",
     registration_required: true,
     registrations_open_from: "2027-01-15T00:00:00Z",
     sort_order: 4,
@@ -155,8 +218,11 @@ export const seedEvents = [
   {
     id: "event-05",
     edition_id: "march-2027",
-    title: "Community Drinks",
-    description: "Informal gathering for festival volunteers and organisers.",
+    ...originalText(
+      "en",
+      "Community Drinks",
+      "Informal gathering for festival volunteers and organisers.",
+    ),
     date: "2027-03-06",
     start_time: "17:00",
     end_time: "18:00",

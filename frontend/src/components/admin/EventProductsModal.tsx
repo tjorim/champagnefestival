@@ -26,8 +26,17 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  EMPTY_LOCALIZED_TEXT,
+  LocalizedInputs,
+  OriginalLanguageSelect,
+  hasOriginal,
+  type Language,
+  type LocalizedText,
+} from "@/components/admin/LocalizedFields";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
+import { categoryLabel, useProductCategories } from "@/hooks/useCategories";
 import {
   deleteEventProduct,
   fetchEventProducts,
@@ -38,7 +47,6 @@ import {
 } from "@/utils/adminContentApi";
 import { queryKeys } from "@/utils/queryKeys";
 import type { Event, Product, ProductInclusion } from "@/types/event";
-import type { OrderItemCategory } from "@/types/registration";
 
 interface EventProductsModalProps {
   show: boolean;
@@ -49,10 +57,12 @@ interface EventProductsModalProps {
 }
 
 interface ProductFormState {
-  name: string;
-  description: string;
+  nameLanguage: Language;
+  name: LocalizedText;
+  descriptionLanguage: Language;
+  description: LocalizedText;
   price: string;
-  category: OrderItemCategory;
+  category: string;
   purchasable: boolean;
   required: boolean;
   /** Empty string means "no bundle". */
@@ -66,10 +76,12 @@ interface ProductFormState {
 }
 
 const EMPTY_FORM: ProductFormState = {
-  name: "",
-  description: "",
+  nameLanguage: "nl",
+  name: EMPTY_LOCALIZED_TEXT,
+  descriptionLanguage: "nl",
+  description: EMPTY_LOCALIZED_TEXT,
   price: "",
-  category: "champagne",
+  category: "",
   purchasable: true,
   required: false,
   includedProductId: "",
@@ -81,17 +93,6 @@ const EMPTY_FORM: ProductFormState = {
   updateExistingPrices: false,
 };
 
-function categoryLabel(category: OrderItemCategory): string {
-  switch (category) {
-    case "champagne":
-      return m.admin_products_category_champagne();
-    case "food":
-      return m.admin_products_category_food();
-    default:
-      return m.admin_products_category_other();
-  }
-}
-
 export default function EventProductsModal({
   show,
   event,
@@ -100,6 +101,7 @@ export default function EventProductsModal({
   onProductsChanged,
 }: EventProductsModalProps) {
   const queryClient = useQueryClient();
+  const { data: categories = [] } = useProductCategories();
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
   const [error, setError] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -151,8 +153,18 @@ export default function EventProductsModal({
     (): ProductFormState =>
       editingProduct
         ? {
-            name: editingProduct.name,
-            description: editingProduct.description,
+            nameLanguage: editingProduct.nameLanguage,
+            name: {
+              nl: editingProduct.nameNl ?? "",
+              fr: editingProduct.nameFr ?? "",
+              en: editingProduct.nameEn ?? "",
+            },
+            descriptionLanguage: editingProduct.descriptionLanguage ?? editingProduct.nameLanguage,
+            description: {
+              nl: editingProduct.descriptionNl ?? "",
+              fr: editingProduct.descriptionFr ?? "",
+              en: editingProduct.descriptionEn ?? "",
+            },
             price: String(editingProduct.price),
             category: editingProduct.category,
             purchasable: editingProduct.purchasable,
@@ -179,16 +191,20 @@ export default function EventProductsModal({
             updateExistingContents: false,
             updateExistingPrices: false,
           }
-        : EMPTY_FORM,
-    [editingProduct],
+        : { ...EMPTY_FORM, category: categories[0]?.key ?? "" },
+    [editingProduct, categories],
   );
 
   const form = useForm({
     defaultValues: formDefaultValues,
     onSubmit: async ({ value }) => {
       setError("");
-      if (!value.name.trim()) {
+      if (!hasOriginal(value.nameLanguage, value.name)) {
         setError(m.admin_products_name_required());
+        return;
+      }
+      if (!value.category) {
+        setError(m.admin_product_category_required());
         return;
       }
       const priceText = value.price.trim();
@@ -206,8 +222,10 @@ export default function EventProductsModal({
         const payload: ProductWrite = {
           eventId,
           id: editingId ?? undefined,
-          name: value.name.trim(),
-          description: value.description.trim(),
+          nameLanguage: value.nameLanguage,
+          name: value.name,
+          descriptionLanguage: value.descriptionLanguage,
+          description: value.description,
           price,
           category: value.category,
           purchasable: value.purchasable,
@@ -311,39 +329,53 @@ export default function EventProductsModal({
         noValidate
         className="border-t border-input pt-4 mt-2"
       >
+        <form.Field name="nameLanguage">
+          {(field) => (
+            <OriginalLanguageSelect
+              controlId="product-name-language"
+              label={m.admin_products_name_language()}
+              value={field.value}
+              onChange={(language) => field.handleChange(language)}
+            />
+          )}
+        </form.Field>
+        <p className="text-sm text-subtle mb-4">{m.admin_products_text_help()}</p>
+        <form.Field name="name">
+          {(field) => (
+            <LocalizedInputs
+              idPrefix="product-name"
+              label={(language) => m.admin_products_name_in({ language })}
+              values={field.value}
+              onChange={(language, text) =>
+                field.handleChange({ ...field.value, [language]: text })
+              }
+            />
+          )}
+        </form.Field>
+        <form.Field name="descriptionLanguage">
+          {(field) => (
+            <OriginalLanguageSelect
+              controlId="product-description-language"
+              label={m.admin_products_description_language()}
+              value={field.value}
+              onChange={(language) => field.handleChange(language)}
+            />
+          )}
+        </form.Field>
+        <form.Field name="description">
+          {(field) => (
+            <LocalizedInputs
+              idPrefix="product-description"
+              label={(language) => m.admin_products_description_in({ language })}
+              values={field.value}
+              maxLength={300}
+              onChange={(language, text) =>
+                field.handleChange({ ...field.value, [language]: text })
+              }
+            />
+          )}
+        </form.Field>
         <div className="flex gap-2 flex-wrap mb-2">
-          <AdminField className="min-w-50 grow-2 shrink-1 basis-50" controlId="product-name">
-            <AdminLabel className="text-subtle text-sm mb-1">{m.admin_products_name()}</AdminLabel>
-            <form.Field name="name">
-              {(field) => (
-                <AdminInput
-                  size="sm"
-                  className="bg-muted text-content border-input"
-                  autoFocus
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              )}
-            </form.Field>
-          </AdminField>
-          <AdminField className="min-w-50 grow-2 shrink-1 basis-50" controlId="product-description">
-            <AdminLabel className="text-subtle text-sm mb-1">
-              {m.admin_products_description()}
-            </AdminLabel>
-            <form.Field name="description">
-              {(field) => (
-                <AdminInput
-                  size="sm"
-                  className="bg-muted text-content border-input"
-                  maxLength={300}
-                  value={field.value}
-                  onChange={(e) => field.handleChange(e.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              )}
-            </form.Field>
-          </AdminField>
           <AdminField className="max-w-30" controlId="product-price">
             <AdminLabel className="text-subtle text-sm mb-1">{m.admin_products_price()}</AdminLabel>
             <form.Field name="price">
@@ -371,14 +403,14 @@ export default function EventProductsModal({
                   size="sm"
                   className="bg-muted text-content border-input"
                   value={field.value}
-                  onValueChange={(e) => field.handleChange(e as OrderItemCategory)}
+                  onValueChange={(e) => field.handleChange(e)}
                   onBlur={field.handleBlur}
                 >
-                  <AdminOption value="champagne">
-                    {m.admin_products_category_champagne()}
-                  </AdminOption>
-                  <AdminOption value="food">{m.admin_products_category_food()}</AdminOption>
-                  <AdminOption value="other">{m.admin_products_category_other()}</AdminOption>
+                  {categories.map((category) => (
+                    <AdminOption key={category.key} value={category.key}>
+                      {categoryLabel(categories, category.key) ?? category.key}
+                    </AdminOption>
+                  ))}
                 </AdminSelect>
               )}
             </form.Field>
@@ -654,7 +686,7 @@ export default function EventProductsModal({
               </Badge>
             )}
             <Badge variant="secondary" className="text-micro capitalize">
-              {categoryLabel(product.category)}
+              {categoryLabel(categories, product.category) ?? product.category}
             </Badge>
             {product.required && (
               <Badge variant="warning" className="text-micro">
@@ -719,8 +751,8 @@ export default function EventProductsModal({
                   {m.admin_inventory_review()}
                 </h3>
                 <p>
-                  {preview.payload.name}: €{preview.payload.price.toFixed(2)};{" "}
-                  {m.admin_inventory_stock()}:{" "}
+                  {preview.payload.name[preview.payload.nameLanguage]}: €
+                  {preview.payload.price.toFixed(2)}; {m.admin_inventory_stock()}:{" "}
                   {preview.payload.stock ?? m.admin_inventory_unlimited()}
                 </p>
                 {preview.result.bookings.map((b) => (

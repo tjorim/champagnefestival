@@ -102,6 +102,7 @@ Future workflow additions should follow these conventions:
 ## Conventions
 
 - Use American English in code, comments, and identifiers; use British English in user-facing UI text and translations (`frontend/messages/`)
+- Content written for visitors (events, FAQ, announcements, policies, products, categories, ...) stores an original language plus optional `_nl`/`_fr`/`_en` translations and falls back to the original; follow the pattern in `backend/README.md` ("Translated content and product categories") instead of adding single-language text columns
 - Prefer targeted tests first, then broader checks before handoff
 - For every new or changed write operation, document its retry-safety decision in `docs/retry-safety.md`; do not advertise or automatically retry a write unless its documented strategy is implemented and tested
 - When a change implements, closes, splits, supersedes, or materially changes an issue tracked in `docs/product-audit-2026-08.md`, update that document in the same change. For completed or superseded items, remove the row from the active phase, renumber the remaining preferred order, and add a row to **Completed or superseded work** with the date, issue/PR or commit, outcome, and a concise implementation note. Update affected dependencies, index/specification text, and acceptance-criteria checkboxes. Partial work stays in the active phase with revised notes; do not record completion until the documented acceptance criteria are satisfied. Preserve the original finding/specification as historical context.

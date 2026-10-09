@@ -21,10 +21,11 @@ async def _create_event(db_session, *, event_id: str = "evt-1") -> str:
     event = Event(
         id=event_id,
         edition_id=edition.id,
-        title="Vrijdagavond",
+        title_language="nl",
+        title_nl="Vrijdagavond",
         date=date(2099, 3, 21),
         start_time="18:00",
-        category="festival",
+        category="general",
         registration_required=True,
     )
     db_session.add(event)
@@ -40,7 +41,7 @@ async def test_create_get_product(db_session):
         factory,
         "admin-1",
         event_id=event_id,
-        name="Champagne Bottle",
+        name_en="Champagne Bottle",
         price=25.0,
         category="champagne",
     )
@@ -62,7 +63,7 @@ async def test_create_product_with_explicit_purchasable_false(db_session):
         factory,
         "admin-1",
         event_id=event_id,
-        name="Kitchen Supply",
+        name_en="Kitchen Supply",
         price=1.0,
         category="other",
         purchasable=False,
@@ -83,7 +84,7 @@ async def test_create_product_rejects_malformed_inclusion_with_a_translated_erro
             factory,
             "admin-1",
             event_id=event_id,
-            name="Bad Bundle",
+            name_en="Bad Bundle",
             price=1.0,
             category="other",
             inclusions=[{"product_id": "target", "rounding": "sideways"}],
@@ -94,7 +95,7 @@ async def test_update_product_rejects_malformed_inclusion_with_a_translated_erro
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
     created = await mcp_products.create_product(
-        factory, "admin-1", event_id=event_id, name="Champagne Bottle", price=25.0, category="champagne"
+        factory, "admin-1", event_id=event_id, name_en="Champagne Bottle", price=25.0, category="champagne"
     )
 
     with pytest.raises(ValueError, match="inclusions"):
@@ -115,7 +116,7 @@ async def test_create_product_rejects_required_product_that_is_not_purchasable(d
             factory,
             "admin-1",
             event_id=event_id,
-            name="Bad Product",
+            name_en="Bad Product",
             price=1.0,
             category="other",
             purchasable=False,
@@ -131,7 +132,7 @@ async def test_create_product_rejects_missing_event(db_session):
             factory,
             "admin-1",
             event_id="nonexistent",
-            name="Champagne Bottle",
+            name_en="Champagne Bottle",
             price=25.0,
             category="champagne",
         )
@@ -149,10 +150,10 @@ async def test_list_products_filters_by_event(db_session):
     event_b = await _create_event(db_session, event_id="evt-b")
 
     await mcp_products.create_product(
-        factory, "admin-1", event_id=event_a, name="A Product", price=1.0, category="other"
+        factory, "admin-1", event_id=event_a, name_en="A Product", price=1.0, category="other"
     )
     await mcp_products.create_product(
-        factory, "admin-1", event_id=event_b, name="B Product", price=1.0, category="other"
+        factory, "admin-1", event_id=event_b, name_en="B Product", price=1.0, category="other"
     )
 
     all_products = await mcp_products.list_products(factory)
@@ -166,7 +167,7 @@ async def test_update_product_partial(db_session):
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
     created = await mcp_products.create_product(
-        factory, "admin-1", event_id=event_id, name="Champagne Bottle", price=25.0, category="champagne"
+        factory, "admin-1", event_id=event_id, name_en="Champagne Bottle", price=25.0, category="champagne"
     )
 
     updated = await mcp_products.update_product(factory, "admin-1", created["id"], purchasable=False)
@@ -184,7 +185,7 @@ async def test_update_product_stock_and_clear_stock(db_session):
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
     created = await mcp_products.create_product(
-        factory, "admin-1", event_id=event_id, name="Champagne Bottle", price=25.0, category="champagne"
+        factory, "admin-1", event_id=event_id, name_en="Champagne Bottle", price=25.0, category="champagne"
     )
 
     limited = await mcp_products.update_product(factory, "admin-1", created["id"], stock=0)
@@ -200,10 +201,16 @@ async def test_update_product_allows_bundling_a_hidden_target(db_session):
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
     hidden = await mcp_products.create_product(
-        factory, "admin-1", event_id=event_id, name="Hidden Bottle", price=25.0, category="champagne", purchasable=False
+        factory,
+        "admin-1",
+        event_id=event_id,
+        name_en="Hidden Bottle",
+        price=25.0,
+        category="champagne",
+        purchasable=False,
     )
     table = await mcp_products.create_product(
-        factory, "admin-1", event_id=event_id, name="VIP Table", price=200.0, category="other"
+        factory, "admin-1", event_id=event_id, name_en="VIP Table", price=200.0, category="other"
     )
 
     updated = await mcp_products.update_product(
@@ -219,7 +226,13 @@ async def test_update_product_rejects_making_a_required_product_hidden(db_sessio
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
     created = await mcp_products.create_product(
-        factory, "admin-1", event_id=event_id, name="Champagne Bottle", price=25.0, category="champagne", required=True
+        factory,
+        "admin-1",
+        event_id=event_id,
+        name_en="Champagne Bottle",
+        price=25.0,
+        category="champagne",
+        required=True,
     )
 
     with pytest.raises(ValueError, match="purchasable"):
@@ -230,13 +243,13 @@ async def test_update_product_clears_inclusions(db_session):
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
     bottle = await mcp_products.create_product(
-        factory, "admin-1", event_id=event_id, name="Bottle", price=25.0, category="champagne"
+        factory, "admin-1", event_id=event_id, name_en="Bottle", price=25.0, category="champagne"
     )
     table = await mcp_products.create_product(
         factory,
         "admin-1",
         event_id=event_id,
-        name="VIP Table",
+        name_en="VIP Table",
         price=200.0,
         category="other",
         inclusions=[{"product_id": bottle["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
@@ -251,7 +264,7 @@ async def test_delete_product(db_session):
     factory = mcp_session_factory(db_session)
     event_id = await _create_event(db_session)
     created = await mcp_products.create_product(
-        factory, "admin-1", event_id=event_id, name="Champagne Bottle", price=25.0, category="champagne"
+        factory, "admin-1", event_id=event_id, name_en="Champagne Bottle", price=25.0, category="champagne"
     )
 
     result = await mcp_products.delete_product(factory, "admin-1", created["id"])

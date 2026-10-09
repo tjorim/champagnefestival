@@ -21,10 +21,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import FaqItem
-from app.schemas import FaqItemCreate, FaqItemUpdate
+from app.schemas import FaqItemCreate, FaqItemUpdate, FaqTextFields
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import faq_item_to_dict, make_id
+
+TEXT_FIELDS = (
+    "text_language",
+    "question_nl",
+    "question_fr",
+    "question_en",
+    "answer_nl",
+    "answer_fr",
+    "answer_en",
+)
 
 # A concurrent create can race this one for the same next `sort_order`; the
 # unique constraint (checked at commit) catches that, and this bounds how
@@ -43,12 +53,7 @@ async def create_faq_item(db: AsyncSession, *, actor: str, body: FaqItemCreate, 
         current_max = (await db.execute(select(func.max(FaqItem.sort_order)))).scalar_one()
         f = FaqItem(
             id=make_id("faq"),
-            question_nl=body.question_nl,
-            answer_nl=body.answer_nl,
-            question_en=body.question_en or None,
-            answer_en=body.answer_en or None,
-            question_fr=body.question_fr or None,
-            answer_fr=body.answer_fr or None,
+            **body.model_dump(include=set(TEXT_FIELDS)),
             sort_order=0 if current_max is None else current_max + 1,
             active=body.active,
         )
@@ -60,7 +65,7 @@ async def create_faq_item(db: AsyncSession, *, actor: str, body: FaqItemCreate, 
             resource_type="faq_item",
             resource_id=f.id,
             request_id=request_id,
-            details={"question_nl": f.question_nl},
+            details={"question": f.localized(f.text_language)[0], "text_language": f.text_language},
         )
         try:
             await notify_render_cache_invalidate(db)
@@ -79,22 +84,16 @@ async def update_faq_item(
     f = await db.get(FaqItem, faq_item_id)
     if f is None:
         raise NotFoundError(f"FAQ item '{faq_item_id}' not found.")
-    if body.question_nl is not None:
-        f.question_nl = body.question_nl
-    if body.answer_nl is not None:
-        f.answer_nl = body.answer_nl
-    # Optional locales: presence, not None-ness, distinguishes "omitted" from
-    # "sent as '', clear it" — an empty string normalizes to NULL, hiding the
-    # item on that locale's FAQ.
+    # Validate the merged text before mutating: a partial update may change a single translation.
     fields_set = body.model_fields_set
-    if "question_en" in fields_set:
-        f.question_en = body.question_en or None
-    if "answer_en" in fields_set:
-        f.answer_en = body.answer_en or None
-    if "question_fr" in fields_set:
-        f.question_fr = body.question_fr or None
-    if "answer_fr" in fields_set:
-        f.answer_fr = body.answer_fr or None
+    texts = {field: getattr(f, field) for field in TEXT_FIELDS}
+    texts.update(body.model_dump(include=set(TEXT_FIELDS), exclude_unset=True))
+    try:
+        validated = FaqTextFields.model_validate(texts).validate_original()
+    except ValueError as exc:
+        raise ValidationFailedError(str(exc)) from exc
+    for field in TEXT_FIELDS:
+        setattr(f, field, getattr(validated, field))
     if body.active is not None:
         f.active = body.active
     await write_audit_entry(

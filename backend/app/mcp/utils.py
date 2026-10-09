@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Edition, Person, Registration
 from app.services.errors import ServiceError
+from app.utils import event_text_dict
 
 ROLE_ADMIN = "admin"
 ROLE_VOLUNTEER = "volunteer"
@@ -143,12 +144,13 @@ def edition_discovery_dict(edition: Edition, dates: list[date] | None = None) ->
     }
 
 
-def event_dict(event: Any) -> dict:
+def event_dict(event: Any, locale: str | None = None) -> dict:
+    """``title``/``description`` resolve for *locale* (the original language when
+    omitted); every stored language is included for admin-style consumers."""
     return {
         "id": event.id,
         "edition_id": event.edition_id,
-        "title": event.title,
-        "description": event.description,
+        **event_text_dict(event, locale),
         "date": str(event.date),
         "start_time": event.start_time,
         "end_time": event.end_time,

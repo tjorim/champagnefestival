@@ -42,7 +42,7 @@ deliberate decision, not an implicit idempotency guarantee.
 | Waitlist submission (`POST /api/waitlist`) | Public browser | **Client-generated resource ID**, same shape as contact submission above — one UUID per attempt, `ON CONFLICT DO NOTHING` on `id` so a retry after an ambiguous result never creates a second queue entry. |
 | Mark waitlist entry handled (`PUT /api/waitlist/{id}/handled`) | Admin browser | **Natural-key upsert.** Same shape as marking a contact message handled — the first call records `handled_at`, repeats preserve it. |
 | Delete a waitlist entry (`DELETE /api/waitlist/{id}`) | Admin browser | **Natural resource key, convergent state only.** Repeating reaches the same absent state; a retry after the entry is already gone 404s rather than erroring. |
-| Replace a volunteer's own meal/dinner poll picks (`PUT /api/me/volunteer/poll-selections`) | Volunteer browser (self-service) | **Convergent replace, safe to retry.** The write deletes then re-inserts only rows keyed by the caller's own `volunteer_id`, so repeating the same body after an ambiguous result always lands on the identical selection set — it can never touch another volunteer's picks or duplicate a selection, the same full-list-replace pattern as `replace_help_periods` and registration `allocations` (see below). |
+| Replace a volunteer's own meal quantities (`PUT /api/me/volunteer/poll-selections`) | Volunteer browser (self-service) | **Convergent replace, safe to retry.** The write deletes then re-inserts only rows keyed by the caller's own `volunteer_id`, so repeating the same body after an ambiguous result always lands on the identical selection set — it can never touch another volunteer's picks or duplicate a selection (each option appears once with an absolute quantity, so a repeat never adds up), the same full-list-replace pattern as `replace_help_periods` and registration `allocations` (see below). |
 | Claim by verified OIDC email (`POST /api/me/registrations/claim-verified-email`) | Signed-in browser | **Convergent, safe to blindly retry.** Every booking always collects an email regardless of sign-in state, so an unowned registration under an OIDC account's own `email_verified: true` claim is almost always the same person, not a separate identity to prove — but never linked without the caller explicitly confirming first (`GET /api/me/registrations/claimable` previews the match; nothing is written until the caller clicks confirm). Reuses the same existing-owner-protected `claim_unowned_registrations_for_email` the manual claim uses: a repeated call with the same email links nothing new once already claimed. No dedup needed. |
 | Admin assigns a registration to a volunteer (`POST /api/registrations/{id}/assign-volunteer`) | Admin browser | **Convergent, safe to blindly retry.** Same existing-owner-protected `claim_unowned_registrations_for_email`-style write, admin-triggered instead of self-service: 409s if the registration is already linked to anyone, no-ops on a repeated call once linked. The ownership check and the write itself happen under a `SELECT ... FOR UPDATE` lock on the registration row (`populate_existing=True` so the already-loaded router object is refreshed rather than read stale from the identity map) — closes a race where two concurrent assignments to different volunteers could both observe `user_id IS NULL` and the later commit would silently win; now exactly one of two concurrent callers gets 409. |
 | Visitor magic-link request (`POST /api/visitor-sessions/request`) | Public browser | **Not retry safe with the same requested email.** Same shape as the guest-access-token request above: a new request for the same email overwrites (not appends to) the one outstanding link — a deliberate replace, not append-only replay storage — and the response is generic regardless of match, so a caller cannot distinguish "already had a link" from "sent a new one." A deliberate repeat is harmless (the visitor just gets a fresh link and the old one stops working), but that is a product property of this specific write, not a general idempotency guarantee. |
@@ -466,6 +466,48 @@ never automatically retries; the user can explicitly request another draft.
 A process-wide single-flight limit rejects bursts instead of queuing them. Saving
 or submitting the resulting text retains the existing organization write contracts.
 See [API, configuration and limits](organization-description-translation.md).
+
+### Event translations and categories (#1222)
+
+Event category writes (`POST`/`PUT`/`DELETE /api/event-categories`, MCP
+`create_|update_|delete_event_category`) are admin-only and have no client-side
+retry (`retry: false`). A create is a **natural-key insert**: the key is chosen by the
+caller, so a repeat returns a 409 for the existing key and changes nothing. An update
+merges the requested labels into the stored ones, so repeating the same values
+converges; it is not guarded by a version precondition, so a concurrent edit by another
+administrator can be overwritten. A delete converges on the category being gone (a
+repeat returns 404) and is refused with a 409 while events use it.
+
+Event writes keep their current decisions: `POST /api/events` (and MCP
+`create_event`) is **not retry safe** (server-generated identity) and non-optimistic;
+`PUT /api/events/{id}` (and `update_event`) is **not retry safe** (no version
+precondition); deletes keep their current behaviour. The new per-language title and
+description fields and the fixed category do not change that. An update replays
+harmlessly only when it sends the same values, because it merges requested fields into
+the stored text and validates the result; a repeated clear (`""`) converges. The admin
+form has `retry: false` for events. `POST /api/events/translation` persists nothing,
+consumes the identity rate limit in its own bucket, and is never retried
+automatically; see [API, configuration and limits](organization-description-translation.md#event-drafts-1222).
+
+### Translated content and product categories (#1222)
+
+FAQ items, announcements, composed messages, policies and products keep
+the write contracts documented for them above; the per-language text fields (an
+original `*_language` plus `_nl`/`_fr`/`_en`) change **what** is sent, not how a repeat
+behaves. Every update validates the merged stored/requested text and treats an empty
+string as "clear this translation", so a repeated update with the same values
+converges. Creates keep their server-generated identities and stay **not retry safe**;
+policy and composed-message sends keep their natural-key/outbox protections. No client
+adds an automatic retry for any of them (`retry: false`).
+
+Product category writes (`POST`/`PUT`/`DELETE /api/product-categories`, MCP
+`create_|update_|delete_product_category`) follow the event category decisions above:
+admin-only, no client-side retry, a **natural-key insert** (a repeated create 409s), a
+label merge that converges for the same values but is not version-guarded, and a
+delete that converges on the category being gone (404 on repeat). A delete is also
+refused with a 409 while products use the category, and always for `champagne`, which
+delivery tracking depends on. Creating or moving a product to an unknown category key
+is a 422.
 
 ## Organization domain rename (#1190)
 

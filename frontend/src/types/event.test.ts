@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { apiToProduct } from "./event";
+import { apiToEvent, apiToProduct } from "./event";
 
 const product = {
   id: "prod-1",
@@ -30,7 +30,66 @@ describe("apiToProduct", () => {
     ]);
   });
 
+  it("maps the name and description in every stored language", () => {
+    const mapped = apiToProduct({
+      ...product,
+      name_language: "fr",
+      name_fr: "Table",
+      name_en: "  ",
+      description_language: "fr",
+      description_fr: "Pour deux",
+    });
+
+    expect(mapped).toMatchObject({
+      nameLanguage: "fr",
+      nameFr: "Table",
+      nameEn: null,
+      descriptionLanguage: "fr",
+      descriptionFr: "Pour deux",
+      descriptionNl: null,
+    });
+  });
+
   it("keeps non-array inclusions as null", () => {
     expect(apiToProduct({ ...product, inclusions: "not-an-array" }).inclusions).toBeNull();
+  });
+});
+
+describe("apiToEvent", () => {
+  const event = {
+    id: "event-1",
+    edition_id: "edition-1",
+    title: "Opening night",
+    description: "",
+    title_language: "fr",
+    title_nl: null,
+    title_fr: "Soirée d'ouverture",
+    title_en: "Opening night",
+    description_language: null,
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
+    date: "2026-03-20",
+    start_time: "18:00",
+    category: "ceremony",
+    created_at: "",
+    updated_at: "",
+  };
+
+  it("maps the stored languages next to the resolved text", () => {
+    expect(apiToEvent(event)).toMatchObject({
+      title: "Opening night",
+      titleLanguage: "fr",
+      titleNl: null,
+      titleFr: "Soirée d'ouverture",
+      titleEn: "Opening night",
+      descriptionLanguage: null,
+      descriptionEn: null,
+    });
+  });
+
+  it("defaults a payload without translations to a Dutch original with no translations", () => {
+    const mapped = apiToEvent({ id: "e", title: "Brunch" });
+    expect(mapped).toMatchObject({ title: "Brunch", titleLanguage: "nl", titleNl: null });
   });
 });

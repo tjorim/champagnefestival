@@ -20,6 +20,7 @@ from sqlalchemy.orm import selectinload
 from app.config import settings
 from app.database import async_session_factory
 from app.models import ContactMessage, Event, Person, Registration
+from app.utils import order_item_name
 
 logger = logging.getLogger(__name__)
 
@@ -112,9 +113,15 @@ async def send_registration_confirmation(registration: Registration, person: Per
     qr_buffer = BytesIO()
     qr_image.save(qr_buffer, format="PNG")
 
-    text = _CONFIRMATION_COPY.get(person.preferred_language or "nl", _CONFIRMATION_COPY["nl"])
+    language = person.preferred_language if person.preferred_language in _CONFIRMATION_COPY else "nl"
+    text = _CONFIRMATION_COPY[language]
+    # The event title is in the same language as the rest of the email; it falls
+    # back to the event's original language when that translation is missing.
+    event_title = event.localized_title(language)
     order_lines = (
-        "\n".join(f"- {item['name']} × {item['quantity']}" for item in (registration.order_items or []))
+        "\n".join(
+            f"- {order_item_name(item, language)} × {item['quantity']}" for item in (registration.order_items or [])
+        )
         or f"- {text['none']}"
     )
     calculated_due = sum(
@@ -148,16 +155,16 @@ async def send_registration_confirmation(registration: Registration, person: Per
     message["To"] = person.email
     message.set_content(
         f"{text['hello']} {person.name},\n\n{text['received']}\n\n"
-        f"{text['reference']}: {registration.id}\n{text['event']}: {event.title}\n{text['date']}: {event_date}\n"
+        f"{text['reference']}: {registration.id}\n{text['event']}: {event_title}\n{text['date']}: {event_date}\n"
         f"{text['guests']}: {registration.guest_count}\n{text['due']}: {amount_due}\n{text['order']}:\n{order_lines}\n\n"
         f"{text['pass']}:\n{check_in_url}\n\n{text['keep']}\n{account_link_text}"
     )
     safe_name = escape(person.name)
-    safe_event_title = escape(event.title)
+    safe_event_title = escape(event_title)
     safe_check_in_url = escape(check_in_url, quote=True)
     html_order_lines = (
         "".join(
-            f"<li>{escape(str(item['name']))} × {int(item['quantity'])}</li>"
+            f"<li>{escape(order_item_name(item, language))} × {int(item['quantity'])}</li>"
             for item in (registration.order_items or [])
         )
         or f"<li>{text['none']}</li>"

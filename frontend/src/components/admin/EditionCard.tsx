@@ -24,6 +24,7 @@ import {
   fetchEditionEvents,
   saveEditionEvent,
 } from "@/utils/adminContentApi";
+import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { queryKeys } from "@/utils/queryKeys";
 import EditionModal from "./EditionModal";
 import EditionPollOptionsModal from "./EditionPollOptionsModal";
@@ -74,6 +75,7 @@ export default function EditionCard({
   const [productsEvent, setProductsEvent] = useState<Event | null>(null);
   const [pollOptionsModalOpen, setPollOptionsModalOpen] = useState(false);
   const editionEventsQueryKey = queryKeys.admin.editionEvents(edition.id);
+  const { data: categories } = useEventCategories();
 
   const eventsQuery = useQuery({
     queryKey: editionEventsQueryKey,
@@ -242,7 +244,7 @@ export default function EditionCard({
               size="sm"
               variant="outline"
               onClick={() => setPollOptionsModalOpen(true)}
-              aria-label={`${m.admin_poll_kind_dish()} / ${m.admin_poll_kind_soup()} / ${m.admin_poll_kind_dinner()} — ${edition.id}`}
+              aria-label={m.admin_poll_modal_title({ edition: edition.id })}
               title={m.admin_poll_modal_title({ edition: edition.id })}
             >
               <Icon icon={CoffeeIcon} />
@@ -317,7 +319,7 @@ export default function EditionCard({
                     </span>
                     <span>{event.title}</span>
                     <Badge variant="info" className="capitalize text-micro">
-                      {event.category}
+                      {categoryLabel(categories, event.category) ?? event.category}
                     </Badge>
                     {event.registrationRequired && (
                       <Badge variant="warning" className="text-micro">
@@ -374,6 +376,7 @@ export default function EditionCard({
         show={eventModalOpen}
         edition={edition}
         initial={editingEvent}
+        authHeaders={authHeaders}
         onSave={handleEventSaved}
         onHide={() => setEventModalOpen(false)}
       />

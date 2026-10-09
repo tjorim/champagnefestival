@@ -3,18 +3,21 @@
 import json
 
 from app.push import _MAX_PAYLOAD_BYTES
+from app.translations import resolve_pair
 
 LOCALES = ("nl", "en", "fr")
 
 
 def pick_locale_text(message: object, locale: str) -> tuple[str, str] | None:
-    """Prefer the requested complete pair, then Dutch, English, and French."""
-    for candidate in dict.fromkeys((locale, *LOCALES)):
-        title = getattr(message, f"title_{candidate}", None)
-        body = getattr(message, f"body_{candidate}", None)
-        if title and body:
-            return title, body
-    return None
+    """The (title, body) for *locale*: that language when its title and body are
+    both filled, otherwise the message's original language."""
+    title, body = resolve_pair(
+        {code: getattr(message, f"title_{code}", None) for code in LOCALES},
+        {code: getattr(message, f"body_{code}", None) for code in LOCALES},
+        getattr(message, "text_language", None),
+        locale,
+    )
+    return (title, body) if title and body else None
 
 
 def build_composer_payload(title: str, body: str) -> str:

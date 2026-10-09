@@ -1,5 +1,6 @@
 import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
 import type { ItemDraft } from "@/components/admin/itemTypes";
+import type { Language, LocalizedText } from "@/components/admin/LocalizedFields";
 import { m } from "@/paraglide/messages";
 import {
   apiToEvent,
@@ -8,7 +9,6 @@ import {
   type EventFormData,
   type Product,
 } from "@/types/event";
-import type { OrderItemCategory } from "@/types/registration";
 
 function datetimeLocalToIso(value: string): string {
   return new Date(value).toISOString();
@@ -254,6 +254,47 @@ export async function fetchEditionEvents(
   return Array.isArray(data) ? data.map(apiToEvent) : [];
 }
 
+/**
+ * Per-language title and description, as sent on both create and update. Blank
+ * translations are sent as `null`, which clears them on update. The description
+ * language is only sent with text, so clearing every description text clears it.
+ */
+/**
+ * `<field>_nl/_fr/_en` request fields for a per-language text; a blank
+ * translation is sent as `null`, which clears it on update.
+ */
+function localizedBody<Field extends string>(field: Field, text: LocalizedText) {
+  const value = (language: Language) => text[language].trim() || null;
+  return {
+    [`${field}_nl`]: value("nl"),
+    [`${field}_fr`]: value("fr"),
+    [`${field}_en`]: value("en"),
+  } as Record<`${Field}_${Language}`, string | null>;
+}
+
+function hasAnyText(text: LocalizedText): boolean {
+  return Object.values(text).some((value) => value.trim());
+}
+
+export function eventTextBody(formData: EventFormData) {
+  const text = (value: string) => value.trim() || null;
+  const hasDescription = [
+    formData.descriptionNl,
+    formData.descriptionFr,
+    formData.descriptionEn,
+  ].some((value) => value.trim());
+  return {
+    title_language: formData.titleLanguage,
+    title_nl: text(formData.titleNl),
+    title_fr: text(formData.titleFr),
+    title_en: text(formData.titleEn),
+    description_language: hasDescription ? formData.descriptionLanguage : null,
+    description_nl: text(formData.descriptionNl),
+    description_fr: text(formData.descriptionFr),
+    description_en: text(formData.descriptionEn),
+  };
+}
+
 export async function saveEditionEvent(
   payload: {
     editionId: string;
@@ -269,12 +310,11 @@ export async function saveEditionEvent(
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({
         edition_id: payload.editionId,
-        title: payload.formData.title.trim(),
-        description: payload.formData.description.trim(),
+        ...eventTextBody(payload.formData),
         date: payload.formData.date,
         start_time: payload.formData.startTime,
         end_time: payload.formData.endTime || null,
-        category: payload.formData.category.trim(),
+        category: payload.formData.category,
         registration_required: payload.formData.registrationRequired,
         registrations_open_from:
           payload.formData.registrationRequired && payload.formData.registrationsOpenFrom
@@ -320,10 +360,13 @@ export async function fetchEventProducts(
 export interface ProductWrite {
   id?: string;
   eventId: string;
-  name: string;
-  description?: string;
+  nameLanguage: Language;
+  /** Per-language product name; a blank translation is cleared. */
+  name: LocalizedText;
+  descriptionLanguage: Language;
+  description: LocalizedText;
   price: number;
-  category: OrderItemCategory;
+  category: string;
   purchasable: boolean;
   required: boolean;
   includedProductId?: string;
@@ -354,8 +397,13 @@ export interface ProductChangePreview {
 function productWriteBody(payload: ProductWrite) {
   return {
     ...(!payload.id ? { event_id: payload.eventId } : {}),
-    name: payload.name,
-    ...(payload.description !== undefined ? { description: payload.description } : {}),
+    name_language: payload.nameLanguage,
+    ...localizedBody("name", payload.name),
+    // Without any description text there is no description language either.
+    ...(hasAnyText(payload.description)
+      ? { description_language: payload.descriptionLanguage }
+      : { description_language: null }),
+    ...localizedBody("description", payload.description),
     price: payload.price,
     category: payload.category,
     purchasable: payload.purchasable,
@@ -429,22 +477,23 @@ export async function deleteEditionById(
   return editionId;
 }
 
-export type PollOptionKind = "dish" | "soup" | "dinner";
-
 export interface PollOption {
   id: string;
   editionId: string;
-  kind: PollOptionKind;
   label: string;
+  /** Sum of every volunteer's quantity: what to order from the caterer. */
+  totalQuantity: number;
+  /** How many volunteers picked it. */
+  volunteerCount: number;
 }
 
 function apiToPollOption(data: Record<string, unknown>): PollOption {
-  const kind = data.kind;
   return {
     id: String(data.id ?? ""),
     editionId: String(data.edition_id ?? ""),
-    kind: kind === "soup" || kind === "dinner" ? kind : "dish",
     label: String(data.label ?? ""),
+    totalQuantity: Number(data.total_quantity ?? 0),
+    volunteerCount: Number(data.volunteer_count ?? 0),
   };
 }
 
@@ -462,7 +511,7 @@ export async function fetchEditionPollOptions(
 }
 
 export async function createPollOption(
-  payload: { editionId: string; kind: PollOptionKind; label: string },
+  payload: { editionId: string; label: string },
   authHeaders: () => Record<string, string>,
 ): Promise<PollOption> {
   const response = await safeFetch(
@@ -470,11 +519,7 @@ export async function createPollOption(
     {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({
-        edition_id: payload.editionId,
-        kind: payload.kind,
-        label: payload.label,
-      }),
+      body: JSON.stringify({ edition_id: payload.editionId, label: payload.label }),
     },
     m.admin_content_error_save(),
   );

@@ -35,6 +35,11 @@ vi.mock("@/paraglide/messages", () => ({
 
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
+// The mocked messages echo their key and arguments.
+const TITLE_NL = 'admin_event_title_label({"language":"admin_language_nl"})';
+const TITLE_FR = 'admin_event_title_label({"language":"admin_language_fr"})';
+const TITLE_EN = 'admin_event_title_label({"language":"admin_language_en"})';
+
 const venues = [
   { id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true },
 ] as unknown as Venue[];
@@ -57,6 +62,14 @@ const existingEvent = {
   id: "event-01",
   editionId: "march-2027",
   title: "Grand Opening",
+  titleLanguage: "en",
+  titleNl: "Grote opening",
+  titleFr: null,
+  titleEn: "Grand Opening",
+  descriptionLanguage: "en",
+  descriptionNl: null,
+  descriptionFr: null,
+  descriptionEn: "Join us for the grand opening.",
   description: "Join us for the grand opening.",
   date: "2027-03-07",
   startTime: "18:00",
@@ -100,6 +113,14 @@ function withQuery(ui: React.ReactElement) {
   return <QueryClientProvider client={createTestQueryClient()}>{ui}</QueryClientProvider>;
 }
 
+/** A stable client for a test's rerenders; the translation drafts query the capabilities endpoint. */
+function queryWrapper() {
+  const client = createTestQueryClient();
+  return function Wrapper({ children }: { children: React.ReactNode }) {
+    return <QueryClientProvider client={client}>{children}</QueryClientProvider>;
+  };
+}
+
 /** The modals render through a portal, so query the document rather than the container. */
 function modalInputValues(): string[] {
   return Array.from(
@@ -116,14 +137,18 @@ describe("admin edit modals prefill from the record being edited", () => {
         show
         edition={edition}
         initial={existingEvent}
+        authHeaders={authHeaders}
         onSave={vi.fn()}
         onHide={vi.fn()}
       />,
+      { wrapper: queryWrapper() },
     );
 
     await waitFor(() => {
-      expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("Grand Opening");
+      expect(screen.getByLabelText(TITLE_EN)).toHaveValue("Grand Opening");
     });
+    expect(screen.getByLabelText(TITLE_NL)).toHaveValue("Grote opening");
+    expect(screen.getByLabelText(TITLE_FR)).toHaveValue("");
     expect(screen.getByLabelText("admin_content_event_start_time")).toHaveValue("18:00");
     expect(screen.getByLabelText("admin_content_event_end_time")).toHaveValue("22:00");
     expect(screen.getByLabelText("admin_event_date")).toHaveValue("2027-03-07");
@@ -136,11 +161,12 @@ describe("admin edit modals prefill from the record being edited", () => {
         show: true,
         edition,
         initial: existingEvent,
+        authHeaders,
         onSave: vi.fn(),
         onHide: vi.fn(),
       };
-      const { rerender } = render(<EventModal {...props} />);
-      const title = screen.getByLabelText("admin_content_event_title");
+      const { rerender } = render(<EventModal {...props} />, { wrapper: queryWrapper() });
+      const title = screen.getByLabelText(TITLE_EN);
       fireEvent.change(title, { target: { value: "Unsaved title" } });
       rerender(
         <EventModal
@@ -158,26 +184,33 @@ describe("admin edit modals prefill from the record being edited", () => {
   );
 
   it("EventModal resets on reopening and switching records while open", () => {
-    const props = { show: true, edition, initial: existingEvent, onSave: vi.fn(), onHide: vi.fn() };
-    const { rerender } = render(<EventModal {...props} />);
-    fireEvent.change(screen.getByLabelText("admin_content_event_title"), {
+    const props = {
+      show: true,
+      edition,
+      initial: existingEvent,
+      authHeaders,
+      onSave: vi.fn(),
+      onHide: vi.fn(),
+    };
+    const { rerender } = render(<EventModal {...props} />, { wrapper: queryWrapper() });
+    fireEvent.change(screen.getByLabelText(TITLE_EN), {
       target: { value: "Abandoned" },
     });
     rerender(<EventModal {...props} show={false} />);
     rerender(<EventModal {...props} />);
-    expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("Grand Opening");
-    fireEvent.change(screen.getByLabelText("admin_content_event_title"), {
+    expect(screen.getByLabelText(TITLE_EN)).toHaveValue("Grand Opening");
+    fireEvent.change(screen.getByLabelText(TITLE_EN), {
       target: { value: "Another draft" },
     });
     rerender(
       <EventModal
         {...props}
-        initial={{ ...existingEvent, id: "event-02", title: "Second event" }}
+        initial={{ ...existingEvent, id: "event-02", titleEn: "Second event" }}
       />,
     );
-    expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("Second event");
+    expect(screen.getByLabelText(TITLE_EN)).toHaveValue("Second event");
     rerender(<EventModal {...props} initial={null} />);
-    expect(screen.getByLabelText("admin_content_event_title")).toHaveValue("");
+    expect(screen.getByLabelText(TITLE_EN)).toHaveValue("");
   });
 
   it("EditionModal keeps the edition's values after the organizations query settles", async () => {

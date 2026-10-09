@@ -29,8 +29,7 @@ async def _registration(client) -> str:
         "/api/events",
         json={
             "edition_id": "bourse-2026",
-            "title": "Bourse De la Comtesse",
-            "description": "",
+            "title_en": "Bourse De la Comtesse",
             "date": "2026-11-21",
             "start_time": "09:00",
             "end_time": "15:30",

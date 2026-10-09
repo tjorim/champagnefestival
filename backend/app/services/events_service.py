@@ -23,9 +23,22 @@ from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.models import Edition, Event, Layout, Registration, Room
-from app.schemas import EventCreate, EventUpdate
+from app.schemas import EventCreate, EventTextFields, EventUpdate
+from app.services import event_categories_service
+from app.services.errors import ServiceError, to_http_exception
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import event_to_summary_dict, get_or_404, make_id
+
+TEXT_FIELDS = (
+    "title_language",
+    "title_nl",
+    "title_fr",
+    "title_en",
+    "description_language",
+    "description_nl",
+    "description_fr",
+    "description_en",
+)
 
 
 async def get_event_or_404(db: AsyncSession, event_id: str) -> Event:
@@ -36,6 +49,13 @@ async def get_event_or_404(db: AsyncSession, event_id: str) -> Event:
         "Event not found.",
         options=[selectinload(Event.edition), selectinload(Event.products)],
     )
+
+
+async def ensure_category_exists(db: AsyncSession, key: str) -> None:
+    try:
+        await event_categories_service.ensure_category_exists(db, key)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
 
 
 async def ensure_edition_exists(db: AsyncSession, edition_id: str) -> Edition:
@@ -131,6 +151,7 @@ async def reject_if_registrations_exist(db: AsyncSession, event_id: str) -> None
 
 async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, request_id: str | None = None) -> dict:
     edition = await ensure_edition_exists(db, body.edition_id)
+    await ensure_category_exists(db, body.category)
     await validate_standalone_event_date(db, edition, body.date)
     validate_registration_settings(
         registration_required=body.registration_required,
@@ -140,8 +161,7 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
     event = Event(
         id=make_id("evt"),
         edition_id=body.edition_id,
-        title=body.title,
-        description=body.description,
+        **body.model_dump(include=set(TEXT_FIELDS)),
         date=body.date,
         start_time=body.start_time,
         end_time=body.end_time,
@@ -159,7 +179,7 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
         resource_type="event",
         resource_id=event.id,
         request_id=request_id,
-        details={"title": event.title, "edition_id": event.edition_id},
+        details={"title": event.title, "title_language": event.title_language, "edition_id": event.edition_id},
     )
     await notify_render_cache_invalidate(db)
     await db.commit()
@@ -201,6 +221,8 @@ async def apply_event_update(
         event.edition_id = body.edition_id
 
     fields_set = body.model_fields_set
+    if "category" in fields_set and body.category is not None:
+        await ensure_category_exists(db, body.category)
     candidate_date = body.date if "date" in fields_set and body.date is not None else event.date
     candidate_registration_required = (
         body.registration_required
@@ -220,9 +242,26 @@ async def apply_event_update(
         registrations_close_at=candidate_registrations_close_at,
     )
 
+    # Validate the merged text before mutating: a partial update may change a single translation.
+    texts = {field: getattr(event, field) for field in TEXT_FIELDS}
+    texts.update(body.model_dump(include=set(TEXT_FIELDS), exclude_unset=True))
+    if not any(texts[f"description_{language}"] for language in ("nl", "fr", "en")) and (
+        "description_language" not in fields_set
+    ):
+        # Clearing every description text drops the language with it, so a caller
+        # that can only send texts (MCP) does not need to send an explicit null.
+        texts["description_language"] = None
+    try:
+        validated = EventTextFields.model_validate(texts).validate_original()
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
+    text_fields_changed = set(TEXT_FIELDS) & fields_set
+    if validated.description_language != event.description_language:
+        text_fields_changed.add("description_language")
+    for field in TEXT_FIELDS:
+        setattr(event, field, getattr(validated, field))
+
     for field in (
-        "title",
-        "description",
         "date",
         "start_time",
         "end_time",
@@ -242,7 +281,7 @@ async def apply_event_update(
         resource_type="event",
         resource_id=event.id,
         request_id=request_id,
-        details={"fields_changed": sorted(body.model_fields_set)},
+        details={"fields_changed": sorted(fields_set | text_fields_changed)},
     )
     await notify_render_cache_invalidate(db)
     await db.commit()

@@ -22,6 +22,7 @@ from fastapi import HTTPException
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import EventCreate, EventUpdate
 from app.services import events_service
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 from app.utils import event_to_summary_dict
 
 
@@ -30,11 +31,17 @@ async def create_event(
     actor: str,
     *,
     edition_id: str,
-    title: str,
     date: dt_date,
     start_time: str,
     category: str,
-    description: str = "",
+    title_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
+    title_nl: str | None = None,
+    title_fr: str | None = None,
+    title_en: str | None = None,
+    description_language: Language | None = None,
+    description_nl: str | None = None,
+    description_fr: str | None = None,
+    description_en: str | None = None,
     end_time: str | None = None,
     registration_required: bool = False,
     registrations_open_from: datetime | None = None,
@@ -44,8 +51,14 @@ async def create_event(
     body = validate_with_schema(
         EventCreate,
         edition_id=edition_id,
-        title=title,
-        description=description,
+        title_language=title_language,
+        title_nl=title_nl,
+        title_fr=title_fr,
+        title_en=title_en,
+        description_language=description_language,
+        description_nl=description_nl,
+        description_fr=description_fr,
+        description_en=description_en,
         date=date,
         start_time=start_time,
         end_time=end_time,
@@ -77,8 +90,14 @@ async def update_event(
     event_id: str,
     *,
     edition_id: str | None = None,
-    title: str | None = None,
-    description: str | None = None,
+    title_language: Language | None = None,
+    title_nl: str | None = None,
+    title_fr: str | None = None,
+    title_en: str | None = None,
+    description_language: Language | None = None,
+    description_nl: str | None = None,
+    description_fr: str | None = None,
+    description_en: str | None = None,
     date: dt_date | None = None,
     start_time: str | None = None,
     end_time: str | None = None,
@@ -99,13 +118,25 @@ async def update_event(
     "unset it" through a bare ``None`` default) — pass ``clear_end_time=True``
     / ``clear_registrations_open_from=True`` / ``clear_registrations_close_at=True``
     to null them out instead of providing a value.
+
+    Titles and descriptions follow the organisation pattern: the original
+    language (``title_language``/``description_language``) must have text and the
+    other languages are optional. An empty string clears a translation; clearing
+    every description text also drops ``description_language``. The original
+    title cannot be cleared.
     """
     provided: dict[str, Any] = {
         k: v
         for k, v in {
             "edition_id": edition_id,
-            "title": title,
-            "description": description,
+            "title_language": title_language,
+            "title_nl": title_nl,
+            "title_fr": title_fr,
+            "title_en": title_en,
+            "description_language": description_language,
+            "description_nl": description_nl,
+            "description_fr": description_fr,
+            "description_en": description_en,
             "date": date,
             "start_time": start_time,
             "end_time": end_time,

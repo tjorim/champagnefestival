@@ -32,7 +32,17 @@ export interface SeedProductInclusion {
 export interface SeedProduct {
   id: string;
   event_id: string;
+  /** Original-language name and description; `name_*`/`description_*` hold every stored language. */
   name: string;
+  name_language: "nl" | "fr" | "en";
+  name_nl: string | null;
+  name_fr: string | null;
+  name_en: string | null;
+  description: string;
+  description_language: "nl" | "fr" | "en" | null;
+  description_nl: string | null;
+  description_fr: string | null;
+  description_en: string | null;
   price: number;
   category: string;
   purchasable: boolean;

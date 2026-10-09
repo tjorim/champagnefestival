@@ -8,8 +8,9 @@ Publication rules (see #944):
   a row lock on the parent ``Policy`` so two concurrent publish requests for
   the same policy serialize rather than racing (the loser sees a clean
   `ConflictError`/`NotFoundError` instead of a corrupted double-publish).
-- A policy's ``required_locales`` is the explicit locale contract: publish is
-  refused unless every required locale has non-blank content.
+- A version has an original language (``content_language``): publish is refused
+  unless it has non-blank content there. Other languages are optional and
+  visitors get the original when their language has no content.
 - Rollback is not a separate code path — it creates a new draft seeded from an
   older version's content, which is then published like any other draft. That
   gives the restored content a new version number, actor, and timestamp
@@ -28,9 +29,15 @@ from app.models import Policy, PolicyVersion
 from app.schemas import PolicyDraftCreate, PolicyDraftUpdate
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.public_render_cache import notify_render_cache_invalidate
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE
 from app.utils import make_id
 
-_LOCALE_FIELDS = ("content_nl", "content_en", "content_fr")
+
+def resolve_published(policy: Policy, version: PolicyVersion, locale: str | None) -> tuple[str, str, str]:
+    """(title, content, language the content is written in) for *locale*, falling
+    back to the policy's original language."""
+    content, language = version.localized_content(locale)
+    return policy.localized_title(locale), content, language
 
 
 def _version_to_dict(item: PolicyVersion) -> dict:
@@ -39,9 +46,10 @@ def _version_to_dict(item: PolicyVersion) -> dict:
         "policy_key": item.policy_key,
         "version_number": item.version_number,
         "status": item.status,
+        "content_language": item.content_language,
         "content_nl": item.content_nl,
-        "content_en": item.content_en,
         "content_fr": item.content_fr,
+        "content_en": item.content_en,
         "change_summary": item.change_summary,
         "created_at": item.created_at,
         "created_by": item.created_by,
@@ -54,10 +62,10 @@ def _version_to_dict(item: PolicyVersion) -> dict:
 def _policy_to_dict(policy: Policy, versions: list[PolicyVersion]) -> dict:
     return {
         "key": policy.key,
+        "title_language": policy.title_language,
         "title_nl": policy.title_nl,
-        "title_en": policy.title_en,
         "title_fr": policy.title_fr,
-        "required_locales": policy.required_locales.split(","),
+        "title_en": policy.title_en,
         "versions": [_version_to_dict(v) for v in sorted(versions, key=lambda v: v.version_number, reverse=True)],
     }
 
@@ -149,9 +157,10 @@ async def create_draft(
         policy_key=policy.key,
         version_number=1 if highest is None else highest + 1,
         status="draft",
+        content_language=source.content_language if source else DEFAULT_ORIGINAL_LANGUAGE,
         content_nl=source.content_nl if source else None,
-        content_en=source.content_en if source else None,
         content_fr=source.content_fr if source else None,
+        content_en=source.content_en if source else None,
         change_summary=change_summary,
         created_by=actor,
     )
@@ -224,14 +233,13 @@ async def publish_draft(db: AsyncSession, *, actor: str, policy_key: str, reques
     # the same policy: the second request blocks here until the first commits
     # (or rolls back), so it always re-reads a consistent draft/published pair
     # rather than racing to supersede the same published row twice.
-    policy = await _get_policy_locked(db, policy_key)
+    await _get_policy_locked(db, policy_key)
     draft = await _get_draft_locked(db, policy_key)
 
-    required = policy.required_locales.split(",")
-    missing = [locale for locale in required if not (getattr(draft, f"content_{locale}") or "").strip()]
-    if missing:
+    if not (getattr(draft, f"content_{draft.content_language}") or "").strip():
         raise ValidationFailedError(
-            f"Policy '{policy_key}' cannot be published: missing required locale(s) {', '.join(missing)}."
+            f"Policy '{policy_key}' cannot be published: it has no content in its original language "
+            f"'{draft.content_language}'."
         )
 
     current_published = (

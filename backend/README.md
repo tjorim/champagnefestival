@@ -394,6 +394,115 @@ original-language selector. Clearing all text requires clearing that selector
 in the same update. Admin edits are immediately live. Manager proposals and
 supersession use the private review workflow below (#1193).
 
+### Event titles, descriptions and categories (#1222)
+
+Events keep their text per language, following the organisation pattern.
+`title_language` (`nl`, `fr`, `en`; default `en` for API and MCP clients, the admin
+form preselects Dutch) names the original language and
+`title_nl`/`title_fr`/`title_en` hold the texts (each at most 200 characters). The
+description works the same way with `description_language` and
+`description_nl/fr/en` (each at most 10000 characters; all null means no
+description). Whitespace is trimmed and blank text becomes null. The original
+language must have text; the others are optional. Updates validate the merged
+stored/requested values, so one translation can be edited alone, an empty string
+clears a translation, and clearing every description text also drops
+`description_language`. Create and update take these fields only; there is no
+single-language `title`/`description` input.
+
+Every event response carries all stored languages plus `title`/`description`
+resolved for the `locale` query parameter (`nl`, `fr`, `en`) of the public
+`GET /api/editions/active` and `/upcoming` (MCP `get_event_schedule` takes the
+same `locale`). A missing translation falls back to the original language; with no
+`locale` the original is returned, so clients that predate translations keep
+working. The server-rendered home page (`/?lng=`) and its JSON-LD (`subEvent`
+entries) use the same resolved text, and registration confirmation emails title
+the event in the person's `preferred_language`. Admin lists, exports, audit
+entries and event-day screens keep showing the original-language title
+(`Event.title`).
+
+### Event categories
+
+`Event.category` is the key of an admin-managed category (`event_categories`:
+`key`, `label_language`, `label_nl/fr/en`, `sort_order`). The labels follow the same
+pattern as event titles: the original language must have text, the others are
+optional and fall back to it. The key (lowercase letters, digits, `-`, `_`; at most
+50 characters) is chosen on creation and cannot change, because events store it.
+Creating or moving an event to an unknown key is a 422; deleting a category that
+events still use is a 409.
+
+- `GET /api/event-categories?locale=` is public and returns every category in
+  display order (`sort_order`, then `key`) with `label` resolved for `locale` plus all
+  stored labels; the frontend resolves labels client-side from them.
+- `POST`, `PUT /api/event-categories/{key}` and `DELETE` are admin-only and audited
+  (`event_category_created|updated|deleted`). A `PUT` merges labels like an event
+  update: an empty string clears a translation, the original cannot be cleared.
+- MCP: public `list_event_categories(locale)`; admin `create_event_category`,
+  `update_event_category`, `delete_event_category`. `create_event` and
+  `update_event` take a category key.
+
+Migration `006` creates the table with nine default categories (`tasting`, `vip`,
+`party`, `breakfast`, `exchange`, `general`, `ceremony`, `social`, `other`; labels in
+all three languages), normalises case/whitespace of existing values, and turns any
+other value events already use into a category of its own (key derived from the
+text, the text as Dutch label), logging each so its labels can be reviewed. It also
+moves existing `title`/`description` into the `nl` columns. Its downgrade keeps only
+the original-language text and drops the table.
+
+Admins can request editable machine drafts of a title or description with
+`GET`/`POST /api/events/translation` (same contract as the organisation drafts, text
+limited to 2000 characters and a separate rate-limit bucket); see
+[the API contract](../docs/organization-description-translation.md#event-drafts-1222).
+
+### Translated content and product categories (#1222)
+
+Everything an administrator writes for visitors follows the organisation
+description pattern: an original language (`*_language`, default `en` for API and
+MCP clients; the admin forms preselect Dutch) that must have text, optional
+translations in `_nl`/`_fr`/`_en`, and a fallback to the original language, so a
+blank translation never hides content. Updates validate the merged stored and
+requested text; an empty string clears a translation; blank text is stored as null;
+database check constraints enforce the same rule.
+
+| Content | Fields | Notes |
+| --- | --- | --- |
+| Event | `title_*`, `description_*` | see above |
+| Event / product category | `label_*` | see below |
+| FAQ item | `text_language`, `question_*`, `answer_*` | a language is used only when its question and answer are both filled |
+| Announcement | `text_language`, `text_*`, `link_label_*` | a link needs a label in the original language |
+| Composed message | `text_language`, `title_*`, `body_*` | a language is used only when title and body are both filled |
+| Policy | `title_language`, `title_*`; version `content_language`, `content_*` | publishing needs the original language only (`required_locales` is gone) |
+| Product | `name_language`, `name_*`, `description_language`, `description_*` | an order line keeps the name in every language |
+
+Public reads (`/api/faq/active`, `/api/policies/{key}/current`, the edition
+endpoints) take `locale` and return the text
+resolved for it plus every stored language. A policy response names the language
+actually served in `locale`. Emails (registration confirmations, composed messages)
+use the recipient's `preferred_language`.
+
+Event and product categories share one implementation
+(`app.services.categories`): a table with a stable `key`, a label per language and a
+`sort_order`; the key is immutable; deleting a category that is still used is a 409.
+`GET /api/product-categories?locale=` is public, writes are admin-only and audited
+(`product_category_created|updated|deleted`), and MCP has `list_product_categories`
+(public) plus `create_|update_|delete_product_category`. `champagne` cannot be deleted
+because delivery tracking counts bottles by it. `Product.category` references the key
+(an unknown key is a 422); order lines copy the key when the order is placed.
+
+The same migration (`006`) moves existing FAQ items, announcements, composed messages, policies
+and products to Dutch (`nl`) as their original language, creates
+`product_categories` with `champagne`, `food` and `other` (a value products already
+use is kept as a category of its own and logged), and drops `policies.required_locales`.
+Its downgrade keeps only the original-language text.
+
+Volunteer-only text is not translated. The meal poll (`edition_poll_options`) has a plain
+`label` per option and no kind: everything is delivered on the same day, so a volunteer
+just asks for a quantity of each option (`PUT /api/me/volunteer/poll-selections` with
+`{"selections": [{"option_id", "quantity"}]}`, quantity 1 to 20, an option left out means
+none, a full replace). The admin list (`GET /api/poll-options`, MCP `list_poll_options`) also
+returns each option's `total_quantity` and `volunteer_count`, the numbers to order from the
+caterer. It also turns an existing pick into a quantity of one and drops the kind;
+its downgrade makes every option a `dinner` (the kind that allows any number of picks).
+
 ### Organization manager self-service (#1192)
 
 Visitors and organization contacts share one emailed login at `/me`, using the

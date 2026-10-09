@@ -23,16 +23,19 @@ async def _seed_event(db_session, *, with_product: bool = True) -> tuple[Person,
     event = Event(
         id="evt-1",
         edition_id="edition-1",
-        title="Vrijdagavond",
+        title_language="nl",
+        title_nl="Vrijdagavond",
         date=date(2099, 3, 21),
         start_time="18:00",
-        category="festival",
+        category="general",
         registration_required=True,
     )
     db_session.add(event)
     await db_session.flush()
     if with_product:
-        product = Product(id="prod-1", event_id="evt-1", name="Champagne", price=15.0, category="champagne")
+        product = Product(
+            id="prod-1", event_id="evt-1", name_language="en", name_en="Champagne", price=15.0, category="champagne"
+        )
         db_session.add(product)
     await db_session.commit()
     return person, event
@@ -106,10 +109,11 @@ async def test_list_registrations_filters_by_edition_and_event(db_session):
     other_event = Event(
         id="evt-2",
         edition_id="edition-1",
-        title="Zaterdagmiddag",
+        title_language="nl",
+        title_nl="Zaterdagmiddag",
         date=date(2099, 3, 22),
         start_time="14:00",
-        category="festival",
+        category="general",
         registration_required=True,
     )
     db_session.add(other_event)

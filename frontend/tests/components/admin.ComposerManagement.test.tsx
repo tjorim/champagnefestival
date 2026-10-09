@@ -8,6 +8,7 @@ import { createTestQueryClientWrapper } from "../utils/queryClient";
 
 const draftMessage = {
   id: "cmp_1",
+  text_language: "nl",
   title_nl: "Festivalupdate",
   title_en: "Festival update",
   title_fr: "Mise à jour du festival",
@@ -79,6 +80,7 @@ describe("ComposerManagement", () => {
     await waitFor(() =>
       expect(submitted).toEqual(
         expect.objectContaining({
+          text_language: "nl",
           title_nl: "Nieuwe titel",
           body_nl: "Nieuwe inhoud",
           channels: ["announcement"],

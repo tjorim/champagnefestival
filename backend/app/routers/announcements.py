@@ -25,33 +25,28 @@ router = APIRouter(prefix="/api/announcements", tags=["announcements"])
 
 @router.get("/active", response_model=list[AnnouncementPublicOut])
 async def active(locale: FaqLocale = Query(default="nl"), db: AsyncSession = Depends(get_db)) -> list[dict]:
+    """Active, in-window announcements in display order, in `locale` (the original
+    language when that locale has no text)."""
     now = datetime.now(UTC)
-    text_column = getattr(Announcement, f"text_{locale}")
     result = await db.execute(
         select(Announcement)
         .where(
             Announcement.active.is_(True),
-            text_column.isnot(None),
             or_(Announcement.starts_at.is_(None), Announcement.starts_at <= now),
             or_(Announcement.ends_at.is_(None), Announcement.ends_at > now),
         )
         .order_by(Announcement.sort_order)
     )
-    output = []
-    for item in result.scalars():
-        text = getattr(item, f"text_{locale}")
-        if not text:
-            continue
-        output.append(
-            {
-                "id": item.id,
-                "text": text,
-                "level": item.level,
-                "link_url": item.link_url,
-                "link_label": getattr(item, f"link_label_{locale}") if item.link_url else None,
-            }
-        )
-    return output
+    return [
+        {
+            "id": item.id,
+            "text": item.localized_text(locale),
+            "level": item.level,
+            "link_url": item.link_url,
+            "link_label": item.localized_link_label(locale),
+        }
+        for item in result.scalars()
+    ]
 
 
 @router.get("", response_model=list[AnnouncementOut], dependencies=[Depends(require_admin)])

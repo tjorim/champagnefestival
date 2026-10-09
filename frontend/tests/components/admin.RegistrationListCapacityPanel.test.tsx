@@ -13,6 +13,7 @@ import type { ActiveEdition } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";
+import { noEventTranslations } from "../utils/eventFixtures";
 
 vi.mock("@/paraglide/messages", () => ({
   m: new Proxy({} as Record<string, (...args: unknown[]) => string>, {
@@ -55,6 +56,7 @@ function buildRegistration(overrides: Partial<Registration> = {}): Registration 
     event: {
       id: "event-1",
       editionId: "edition-1",
+      ...noEventTranslations,
       title: "Collectors Bourse",
       description: "",
       date: "2026-11-21",

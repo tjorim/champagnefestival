@@ -1,7 +1,6 @@
 import { apiToEvent } from "./event";
 import type {
   LedgerTransaction,
-  OrderItemCategory,
   PaymentStatus,
   PaymentTransaction,
   Registration,
@@ -83,7 +82,7 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
         deliveredQuantity: deliveredQuantitySafe,
         remainingQuantity: quantitySafe - deliveredQuantitySafe,
         price: (item.price ?? 0) as number,
-        category: (item.category ?? "other") as OrderItemCategory,
+        category: (item.category ?? "other") as string,
         delivered: deliveredQuantitySafe === quantitySafe,
         includedQuantity,
         visible: item.visible !== false,
