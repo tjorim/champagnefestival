@@ -1,5 +1,5 @@
-"""Migration 007: the remaining content keeps its text in the original language, product categories become
-data and the meal poll records quantities."""
+"""Migration 006: translated content keeps its text in the original language, categories become data and the
+meal poll records quantities."""
 
 import logging
 import os
@@ -38,21 +38,20 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
     config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "alembic"))
     database = create_engine(migration_url)
     try:
-        command.upgrade(config, "006")
+        command.upgrade(config, "005")
         with database.begin() as connection:
             _insert(connection, "venues", id="venue", name="Venue")
             _insert(connection, "editions", id="edition", year=2026, month="October", venue_id="venue")
-            _insert(
-                connection,
-                "events",
-                id="event",
-                edition_id="edition",
-                title_language="nl",
-                title_nl="Proeverij",
-                date="2026-10-01",
-                start_time="10:00",
-                category="tasting",
-            )
+            for event_id, title, description, category in (
+                ("tasting", "Proeverij", "Een avond met champagne", "tasting"),
+                ("no-description", "Brunch", "", " Breakfast "),
+                ("blank-title", "   ", "   ", "festival"),
+                ("unknown", "Bourse", "Ruil", "community"),
+            ):
+                _insert(
+                    connection, "events", id=event_id, edition_id="edition", title=title, description=description,
+                    date="2026-10-01", start_time="10:00", category=category,
+                )  # fmt: skip
             _insert(
                 connection, "faq_items", id="faq", question_nl="Vraag?", answer_nl="Antwoord.", sort_order=0,
                 active=True, created_at=NOW, updated_at=NOW,
@@ -93,7 +92,7 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
                 ("custom", "Bon", "", "voucher"),
             ):
                 _insert(
-                    connection, "products", id=product_id, event_id="event", name=name, description=description,
+                    connection, "products", id=product_id, event_id="tasting", name=name, description=description,
                     price=10, category=category, unit="item", purchasable=True, required=False,
                     created_at=NOW, updated_at=NOW,
                 )  # fmt: skip
@@ -113,15 +112,65 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
                 )
 
         with caplog.at_level(logging.WARNING, logger="alembic.runtime.migration"):
-            command.upgrade(config, "007")
-        warnings = [r.getMessage() for r in caplog.records if "Product category" in r.getMessage()]
-        assert len(warnings) == 1
-        assert "'voucher'" in warnings[0]
+            command.upgrade(config, "006")
+
+        # A value that is not a default category becomes a category of its own, logged for
+        # review; case and whitespace variants of a default are normalised silently.
+        warnings = [r.getMessage() for r in caplog.records if "kept as its own category" in r.getMessage()]
+        assert sorted(w.split(" ")[0] for w in warnings) == ["Event", "Event", "Product"]
+        assert any("'festival'" in w for w in warnings)
+        assert any("'community'" in w for w in warnings)
+        assert any("'voucher'" in w for w in warnings)
 
         with database.begin() as connection:
 
             def one(sql: str):
                 return connection.execute(text(sql)).one()
+
+            events = {
+                row.id: row
+                for row in connection.execute(
+                    text("""SELECT id, title_language, title_nl, title_fr, title_en, description_language,
+                        description_nl, description_fr, description_en, category FROM events""")
+                )
+            }
+            tasting = events["tasting"]
+            assert (tasting.title_language, tasting.title_nl, tasting.title_fr, tasting.title_en) == (
+                "nl",
+                "Proeverij",
+                None,
+                None,
+            )
+            assert (tasting.description_language, tasting.description_nl) == ("nl", "Een avond met champagne")
+            assert tasting.category == "tasting"
+            assert (events["no-description"].description_language, events["no-description"].description_nl) == (
+                None,
+                None,
+            )
+            assert events["no-description"].category == "breakfast"
+            # A blank legacy title falls back to the event id instead of breaking the constraint.
+            assert events["blank-title"].title_nl == "blank-title"
+            assert events["blank-title"].description_language is None
+            assert (events["blank-title"].category, events["unknown"].category) == ("festival", "community")
+            event_categories = {
+                row.key: row
+                for row in connection.execute(
+                    text("SELECT key, label_language, label_nl, label_fr, label_en FROM event_categories")
+                )
+            }
+            assert set(event_categories) == {
+                "tasting", "vip", "party", "breakfast", "exchange", "general", "ceremony", "social", "other",
+                "festival", "community",
+            }  # fmt: skip
+            assert (
+                event_categories["tasting"].label_nl,
+                event_categories["tasting"].label_fr,
+                event_categories["tasting"].label_en,
+            ) == ("Degustatie", "Dégustation", "Tasting")
+            assert (event_categories["community"].label_language, event_categories["community"].label_nl) == (
+                "nl",
+                "community",
+            )
 
             faq = one("SELECT text_language, question_nl, answer_nl, question_en FROM faq_items")
             assert tuple(faq) == ("nl", "Vraag?", "Antwoord.", None)
@@ -200,6 +249,12 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
         )
         assert (categories["voucher"].label_language, categories["voucher"].label_nl) == ("nl", "voucher")
 
+        with pytest.raises(IntegrityError, match="fk_events_category"), database.begin() as connection:
+            connection.execute(text("UPDATE events SET category = 'gala' WHERE id = 'tasting'"))
+        with pytest.raises(IntegrityError, match="ck_events_title_original"), database.begin() as connection:
+            connection.execute(text("UPDATE events SET title_language = 'fr' WHERE id = 'tasting'"))
+        with pytest.raises(IntegrityError, match="ck_events_description_original"), database.begin() as connection:
+            connection.execute(text("UPDATE events SET description_language = 'en' WHERE id = 'tasting'"))
         with pytest.raises(IntegrityError, match="fk_products_category"), database.begin() as connection:
             connection.execute(text("UPDATE products SET category = 'nope' WHERE id = 'champagne'"))
         with pytest.raises(IntegrityError, match="ck_products_name_original"), database.begin() as connection:
@@ -230,12 +285,21 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
                 text("UPDATE products SET name_language = 'en', name_en = 'Bottle' WHERE id = 'champagne'")
             )
             connection.execute(text("UPDATE faq_items SET question_en = 'Question?', answer_en = 'Answer.'"))
+            connection.execute(
+                text(
+                    "UPDATE events SET title_language = 'fr', title_fr = 'Dégustation', title_en = 'Tasting' WHERE id = 'tasting'"
+                )
+            )
 
-        command.downgrade(config, "006")
+        command.downgrade(config, "005")
         with database.begin() as connection:
             names = dict(connection.execute(text("SELECT id, name FROM products")).all())
             categories = dict(connection.execute(text("SELECT id, category FROM products")).all())
             kinds = dict(connection.execute(text("SELECT id, kind FROM edition_poll_options")).all())
+            restored = {
+                row.id: (row.title, row.description)
+                for row in connection.execute(text("SELECT id, title, description FROM events"))
+            }
             tables = inspect(connection).get_table_names(schema=schema)
         assert names["champagne"] == "Bottle"
         assert names["blank"] == "blank"
@@ -244,6 +308,10 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
         # The kind is lost; "dinner" allows any number of picks, so every restored selection stays valid.
         assert kinds == {"option": "dinner", "soup": "dinner"}
         assert "product_categories" not in tables
+        assert "event_categories" not in tables
+        # Only the original language survives a downgrade.
+        assert restored["tasting"] == ("Dégustation", "Een avond met champagne")
+        assert restored["no-description"] == ("Brunch", "")
     finally:
         database.dispose()
         with admin.begin() as connection:

@@ -488,7 +488,7 @@ Event and product categories share one implementation
 because delivery tracking counts bottles by it. `Product.category` references the key
 (an unknown key is a 422); order lines copy the key when the order is placed.
 
-Migration `007` moves existing FAQ items, announcements, composed messages, policies,
+The same migration (`006`) moves existing FAQ items, announcements, composed messages, policies
 and products to Dutch (`nl`) as their original language, creates
 `product_categories` with `champagne`, `food` and `other` (a value products already
 use is kept as a category of its own and logged), and drops `policies.required_locales`.
@@ -500,7 +500,7 @@ just asks for a quantity of each option (`PUT /api/me/volunteer/poll-selections`
 `{"selections": [{"option_id", "quantity"}]}`, quantity 1 to 20, an option left out means
 none, a full replace). The admin list (`GET /api/poll-options`, MCP `list_poll_options`) also
 returns each option's `total_quantity` and `volunteer_count`, the numbers to order from the
-caterer. Migration `007` turns an existing pick into a quantity of one and drops the kind;
+caterer. It also turns an existing pick into a quantity of one and drops the kind;
 its downgrade makes every option a `dinner` (the kind that allows any number of picks).
 
 ### Organization manager self-service (#1192)

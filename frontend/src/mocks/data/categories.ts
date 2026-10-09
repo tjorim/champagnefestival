@@ -1,4 +1,4 @@
-/** Seed data for event and product categories (the defaults migrations 006 and 007 create). */
+/** Seed data for event and product categories (the defaults migration 006 creates). */
 
 export type SeedCategory = {
   key: string;
