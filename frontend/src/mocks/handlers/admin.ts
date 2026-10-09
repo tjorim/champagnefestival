@@ -160,7 +160,7 @@ function eventTextFromBody(body: Record<string, unknown>) {
   };
   return {
     ...fields,
-    title: fields[`title_${language}`] ?? text("title") ?? "",
+    title: fields[`title_${language}`] ?? "",
     description: (descriptionLanguage && fields[`description_${descriptionLanguage}`]) || "",
   };
 }

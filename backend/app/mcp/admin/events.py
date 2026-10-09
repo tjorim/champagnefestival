@@ -34,8 +34,6 @@ async def create_event(
     date: dt_date,
     start_time: str,
     category: EventCategory,
-    title: str | None = None,
-    description: str | None = None,
     title_language: Language = "nl",
     title_nl: str | None = None,
     title_fr: str | None = None,
@@ -53,8 +51,6 @@ async def create_event(
     body = validate_with_schema(
         EventCreate,
         edition_id=edition_id,
-        title=title,
-        description=description,
         title_language=title_language,
         title_nl=title_nl,
         title_fr=title_fr,

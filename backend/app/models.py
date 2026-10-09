@@ -31,7 +31,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
-from app.event_content import DEFAULT_ORIGINAL_LANGUAGE, EVENT_CATEGORIES, resolve_text
+from app.event_content import EVENT_CATEGORIES, resolve_text
 
 
 def _utcnow() -> datetime:
@@ -788,7 +788,7 @@ class Event(Base):
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    title_language: Mapped[str] = mapped_column(String(2), default=DEFAULT_ORIGINAL_LANGUAGE)
+    title_language: Mapped[str] = mapped_column(String(2))
     title_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -800,15 +800,9 @@ class Event(Base):
     @hybrid_property
     def title(self) -> str:
         """Original-language title: what admin lists, audit entries and
-        exports show. Visitors get ``localized_title`` instead. Assigning
-        writes the original-language column (``nl`` when none is set yet), so
-        set ``title_language`` first when it should not be Dutch."""
+        exports show. Visitors get ``localized_title`` instead. Read-only: write
+        ``title_language`` and ``title_nl/fr/en``."""
         return resolve_text({"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, self.title_language, None)
-
-    @title.inplace.setter
-    def _title_setter(self, value: str) -> None:
-        self.title_language = self.title_language or DEFAULT_ORIGINAL_LANGUAGE
-        setattr(self, f"title_{self.title_language}", value)
 
     @title.inplace.expression
     @classmethod
@@ -823,14 +817,6 @@ class Event(Base):
             self.description_language,
             None,
         )
-
-    @description.inplace.setter
-    def _description_setter(self, value: str) -> None:
-        if not value.strip():
-            self.description_language = self.description_nl = self.description_fr = self.description_en = None
-            return
-        self.description_language = self.description_language or DEFAULT_ORIGINAL_LANGUAGE
-        setattr(self, f"description_{self.description_language}", value)
 
     @description.inplace.expression
     @classmethod

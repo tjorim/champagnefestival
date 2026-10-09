@@ -91,31 +91,12 @@ async def test_create_accepts_translations_with_a_chosen_original_language(clien
     assert (body["description"], body["description_language"]) == ("An evening", "en")
 
 
-async def test_create_keeps_accepting_title_and_description_as_original_language_text(client):
-    created = await _create_event(client, edition_id="edition-create-shorthand")
-    shorthand = await _post_event(client, created["edition_id"], title="Vrijdag", description="Een avond")
-    assert shorthand.status_code == 201, shorthand.text
-    body = shorthand.json()
-    assert (body["title_language"], body["title_nl"], body["description_language"], body["description_nl"]) == (
-        "nl",
-        "Vrijdag",
-        "nl",
-        "Een avond",
-    )
-
-    english = await _post_event(client, created["edition_id"], title="Friday", title_language="en", description="")
-    assert english.status_code == 201, english.text
-    assert (english.json()["title_en"], english.json()["description_language"]) == ("Friday", None)
-
-    both = await _post_event(client, created["edition_id"], title="Friday", title_nl="Vrijdag")
-    assert both.status_code == 422
-    assert "not both" in both.text
-
-
 @pytest.mark.parametrize(
     "overrides",
     [
         {},  # no title at all
+        {"title": "Vrijdag"},  # a single-language title is not accepted any more
+        {"title_nl": "Titel", "description": "Een avond"},
         {"title_language": "fr", "title_nl": "Alleen Nederlands"},  # original language has no text
         {"title_nl": "   "},
         {"title_nl": "Titel", "description_language": "fr", "description_nl": "Tekst"},
@@ -133,10 +114,10 @@ async def test_create_rejects_a_missing_or_inconsistent_original(client, overrid
 async def test_the_category_must_be_one_of_the_fixed_list(client):
     created = await _create_event(client, edition_id="edition-category")
     for category in EVENT_CATEGORIES:
-        response = await _post_event(client, created["edition_id"], title="Event", category=category)
+        response = await _post_event(client, created["edition_id"], title_nl="Event", category=category)
         assert response.status_code == 201, (category, response.text)
 
-    rejected = await _post_event(client, created["edition_id"], title="Event", category="Gala")
+    rejected = await _post_event(client, created["edition_id"], title_nl="Event", category="Gala")
     assert rejected.status_code == 422
     update = await client.put(f"/api/events/{created['id']}", json={"category": "gala"}, headers=ADMIN_HEADERS)
     assert update.status_code == 422
@@ -164,7 +145,7 @@ async def test_update_changes_one_language_and_clears_translations(client):
     assert "original language" in original.text
 
     unknown = await client.put(f"/api/events/{event['id']}", json={"title": "Legacy"}, headers=ADMIN_HEADERS)
-    assert unknown.status_code == 422  # update takes the per-language fields only
+    assert unknown.status_code == 422  # only the per-language fields are accepted
 
 
 async def test_update_can_switch_the_original_language_and_drop_the_description(client):
@@ -198,7 +179,7 @@ async def test_audit_entry_names_the_changed_text_fields(client, db_session):
 
 async def test_public_edition_resolves_text_for_the_requested_locale(client):
     event = await _translated_event(client, "edition-public-locale")
-    plain = (await _post_event(client, event["edition_id"], title="Alleen Nederlands")).json()
+    plain = (await _post_event(client, event["edition_id"], title_nl="Alleen Nederlands")).json()
     assert plain["title_language"] == "nl"
 
     for locale, title, description in (
@@ -232,7 +213,7 @@ async def test_public_active_edition_accepts_the_locale(client):
 async def test_server_rendered_home_and_json_ld_use_the_locale_text(client, monkeypatch):
     monkeypatch.setattr(settings, "frontend_dist_path", str(_FIXTURE_DIST))
     event = await _translated_event(client, "edition-render")
-    plain = await _post_event(client, event["edition_id"], title="Brunch")
+    plain = await _post_event(client, event["edition_id"], title_nl="Brunch")
     assert plain.status_code == 201
 
     for locale, title in (("nl", "Openingsavond"), ("fr", "Soirée d'ouverture"), ("en", "Opening night")):
@@ -284,23 +265,6 @@ async def test_the_database_enforces_the_original_language_and_category(db_sessi
 
     db_session.add(event(description_language="fr", description_fr="Texte"))
     await db_session.flush()
-
-
-async def test_event_text_assignment_writes_the_original_language(db_session):
-    event = Event(id="evt-setter", edition_id="edition", start_time="10:00", category="other")
-    event.title = "Titel"
-    event.description = "Tekst"
-    assert (event.title_language, event.title_nl, event.description_language, event.description_nl) == (
-        "nl",
-        "Titel",
-        "nl",
-        "Tekst",
-    )
-    event.title_language = "en"
-    event.title = "Title"
-    assert (event.title_nl, event.title_en, event.title) == ("Titel", "Title", "Title")
-    event.description = " "
-    assert (event.description_language, event.description_nl, event.description) == (None, None, "")
 
 
 async def test_original_language_title_is_usable_in_sql(client, db_session):

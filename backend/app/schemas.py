@@ -13,7 +13,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
-from app.event_content import DEFAULT_ORIGINAL_LANGUAGE, EventCategory, Language
+from app.event_content import EventCategory, Language
 
 # ---------------------------------------------------------------------------
 # Shared value types
@@ -279,16 +279,6 @@ class EventTextFields(RequestModel):
 class EventCreate(EventTextFields):
     edition_id: str = Field(min_length=1, max_length=100)
     title_language: Language = "nl"
-    title: str | None = Field(
-        default=None,
-        max_length=200,
-        description="Shorthand for the title in `title_language` (default `nl`), for clients that predate translations.",
-    )
-    description: str | None = Field(
-        default=None,
-        max_length=10000,
-        description="Shorthand for the description in `description_language` (default `nl`); blank means none.",
-    )
     date: dt_date
     start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -300,18 +290,7 @@ class EventCreate(EventTextFields):
 
     @model_validator(mode="after")
     def check_text(self) -> Self:
-        if self.title is not None:
-            self._fold_shorthand("title", self.title_language)
-        if self.description is not None and self.description.strip():
-            self.description_language = self.description_language or DEFAULT_ORIGINAL_LANGUAGE
-            self._fold_shorthand("description", self.description_language)
-        self.title = self.description = None
         return self.validate_original()
-
-    def _fold_shorthand(self, field: str, language: str) -> None:
-        if getattr(self, f"{field}_{language}") is not None:
-            raise ValueError(f"Send either {field} or {field}_{language}, not both.")
-        setattr(self, f"{field}_{language}", (getattr(self, field) or "").strip() or None)
 
 
 class EventUpdate(EventTextFields):

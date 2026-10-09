@@ -249,13 +249,7 @@ export default function EventModal({
                       value={field.value}
                       onValueChange={(value) => field.handleChange(value)}
                     >
-                      {/* A category outside the fixed list can only come from stale data; keep it selectable. */}
-                      {[
-                        ...EVENT_CATEGORIES,
-                        ...(EVENT_CATEGORIES.some((category) => category === field.value)
-                          ? []
-                          : [field.value]),
-                      ].map((category) => (
+                      {EVENT_CATEGORIES.map((category) => (
                         <AdminOption key={category} value={category}>
                           {eventCategoryLabel(category)}
                         </AdminOption>

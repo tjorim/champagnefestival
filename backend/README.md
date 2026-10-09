@@ -405,9 +405,8 @@ description). Whitespace is trimmed and blank text becomes null. The original
 language must have text; the others are optional. Updates validate the merged
 stored/requested values, so one translation can be edited alone, an empty string
 clears a translation, and clearing every description text also drops
-`description_language`. `POST /api/events` and MCP `create_event` still accept
-`title`/`description` as shorthand for the original-language text; updates take
-the per-language fields only.
+`description_language`. Create and update take these fields only; there is no
+single-language `title`/`description` input.
 
 Every event response carries all stored languages plus `title`/`description`
 resolved for the `locale` query parameter (`nl`, `fr`, `en`) of the public

@@ -18,9 +18,6 @@ EVENT_CATEGORIES: tuple[str, ...] = get_args(EventCategory)
 live in ``frontend/messages/`` (``event_category_*``). Adding a category means
 extending this list, a migration for the check constraint, and the messages."""
 
-DEFAULT_ORIGINAL_LANGUAGE: Language = "nl"
-"""Original language assumed for event text that predates translations."""
-
 
 def resolve_text(
     values: Mapping[str, str | None],

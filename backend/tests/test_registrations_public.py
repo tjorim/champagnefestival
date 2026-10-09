@@ -142,8 +142,7 @@ async def test_event_rejects_registration_window_without_registration_required(c
         "/api/events",
         json={
             "edition_id": "edition-event-validation",
-            "title": "Walk-in Only Event",
-            "description": "",
+            "title_nl": "Walk-in Only Event",
             "date": "2099-03-21",
             "start_time": "18:00",
             "end_time": "22:00",

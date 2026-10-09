@@ -1082,8 +1082,6 @@ class ChampagneFestivalMcpBackend:
         date: dt_date,
         start_time: str,
         category: EventCategory,
-        title: str | None = None,
-        description: str | None = None,
         title_language: Language = "nl",
         title_nl: str | None = None,
         title_fr: str | None = None,
@@ -1102,10 +1100,9 @@ class ChampagneFestivalMcpBackend:
 
         ``category`` is one of tasting, vip, party, breakfast, exchange, general,
         ceremony, social or other. The title (and optional description) is stored per
-        language: ``title``/``description`` is shorthand for the text in
-        ``title_language``/``description_language`` (default ``nl``), or fill
-        ``title_nl``/``title_fr``/``title_en`` directly. Visitors see their language and
-        fall back to the original.
+        language: fill ``title_nl``/``title_fr``/``title_en`` (and optionally
+        ``description_*``); the text in ``title_language`` (default ``nl``) is required.
+        Visitors see their language and fall back to the original.
 
         Off-festival (bourse/capsule-exchange) editions may only contain events on
         a single date. ``registrations_open_from`` may only be set when
@@ -1119,8 +1116,6 @@ class ChampagneFestivalMcpBackend:
             date=date,
             start_time=start_time,
             category=category,
-            title=title,
-            description=description,
             title_language=title_language,
             title_nl=title_nl,
             title_fr=title_fr,
