@@ -67,7 +67,7 @@ test.describe("Remuage visual theme", () => {
     await expect(welcome).toBeVisible();
     await expect(welcome.getByRole("heading", { level: 1 })).toHaveCount(1);
     await expect(welcome.locator(".remuage-hero__rack")).toBeVisible();
-    await expect(welcome.locator('a[href="#next-festival"]')).toBeVisible();
+    await expect(welcome.locator('a[href="#what-we-do"]')).toBeVisible();
     await expect(welcome.locator('a[href="#schedule"]')).toBeVisible();
 
     const contentBox = await welcome.locator(".remuage-hero__content").boundingBox();
@@ -82,7 +82,6 @@ test.describe("Remuage visual theme", () => {
       "what-we-do",
       "next-festival",
       "schedule",
-      "other-events",
       "producers",
       "faq",
       "map",
@@ -92,6 +91,8 @@ test.describe("Remuage visual theme", () => {
     ]) {
       await expect(page.locator(`#${id}`)).toBeAttached();
     }
+    // The mock data has no upcoming bourses or capsule exchanges, so that section is left out.
+    await expect(page.locator("#other-events")).toHaveCount(0);
 
     const layout = await page.locator("main#main-content").evaluate((element) => {
       const styles = window.getComputedStyle(element);
@@ -174,10 +175,16 @@ test.describe("Remuage visual theme", () => {
     await menuButton.click();
     await expect(menuButton).toHaveAttribute("aria-expanded", "true");
     await expect(menu).toBeVisible();
-    const firstMobileLinkBox = await menu.locator(".site-mobile-link").first().boundingBox();
-    expect(firstMobileLinkBox).not.toBeNull();
+    // The menu slides in from the right; measure once the sheet has settled.
+    const firstMobileLink = menu.locator(".site-mobile-link").first();
+    await expect
+      .poll(async () => {
+        const box = await firstMobileLink.boundingBox();
+        return box ? box.x + box.width : Number.POSITIVE_INFINITY;
+      })
+      .toBeLessThanOrEqual(390);
+    const firstMobileLinkBox = await firstMobileLink.boundingBox();
     expect(firstMobileLinkBox!.x).toBeGreaterThanOrEqual(0);
-    expect(firstMobileLinkBox!.x + firstMobileLinkBox!.width).toBeLessThanOrEqual(390);
     await page.keyboard.press("Escape");
     await expect(menuButton).toHaveAttribute("aria-expanded", "false");
     await expect(menu).not.toBeVisible();
@@ -235,15 +242,8 @@ test.describe("Remuage visual theme", () => {
     await page.locator(".remuage-button--primary").focus();
     await expect(page.locator(".remuage-hero__disc").first()).toHaveCSS("transform", "none");
 
-    const carouselState = await page.locator("#producers .swiper").evaluate((element) => {
-      const swiperElement = element as HTMLElement & {
-        swiper?: { autoplay?: { running?: boolean }; params?: { speed?: number } };
-      };
-      return {
-        autoplayRunning: swiperElement.swiper?.autoplay?.running,
-        speed: swiperElement.swiper?.params?.speed,
-      };
-    });
-    expect(carouselState).toEqual({ autoplayRunning: false, speed: 0 });
+    // The producers logo wall is static: no autoplay, so nothing should be animating.
+    await expect(page.locator('#producers [data-slot="logo-wall"]')).toBeVisible();
+    await expect(page.locator("#producers .swiper")).toHaveCount(0);
   });
 });

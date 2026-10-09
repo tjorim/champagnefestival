@@ -477,4 +477,31 @@
     outline: 2px solid var(--focus-ring-color);
     outline-offset: 2px;
   }
+
+  /* Wordmark on the dark classic chrome: white "CHAMPAGNE", a lighter red "festival". */
+  .site-wordmark {
+    --wordmark-champagne: #f5f5f5;
+    --wordmark-festival: #ff5c6c;
+  }
+
+  /* Public labels: soft tints of the classic blue/violet palette instead of stock colours. */
+  [data-slot="badge"]:not([data-theme-scope="admin"] *) {
+    --badge-tone: var(--text-muted);
+    color: color-mix(in srgb, var(--badge-tone) 70%, var(--text-color));
+    background: color-mix(in srgb, var(--badge-tone) 16%, transparent);
+    border-color: color-mix(in srgb, var(--badge-tone) 35%, transparent);
+    border-radius: 999px;
+  }
+
+  [data-slot="badge"]:is([data-variant="primary"], [data-variant="info"]):not(
+      [data-theme-scope="admin"] *
+    ) {
+    --badge-tone: var(--primary-color);
+  }
+
+  [data-slot="badge"]:is([data-variant="warning"], [data-variant="danger"]):not(
+      [data-theme-scope="admin"] *
+    ) {
+    --badge-tone: var(--secondary-color);
+  }
 }

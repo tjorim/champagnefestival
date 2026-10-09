@@ -563,6 +563,31 @@
     font-weight: 750;
   }
 
+  /* Public labels take soft tints from the house palette instead of stock status
+     colours; the text mixes towards the body colour so it stays legible in both modes. */
+  [data-slot="badge"]:not([data-theme-scope="admin"] *) {
+    --badge-tone: var(--text-muted);
+    color: color-mix(in srgb, var(--badge-tone) 60%, var(--text-color));
+    background: color-mix(in srgb, var(--badge-tone) 14%, transparent);
+    border-color: color-mix(in srgb, var(--badge-tone) 32%, transparent);
+  }
+
+  [data-slot="badge"]:is([data-variant="primary"], [data-variant="warning"]):not(
+      [data-theme-scope="admin"] *
+    ) {
+    --badge-tone: var(--champagne-deep);
+  }
+
+  [data-slot="badge"][data-variant="danger"]:not([data-theme-scope="admin"] *) {
+    --badge-tone: var(--wine);
+  }
+
+  [data-slot="badge"]:is([data-variant="success"], [data-variant="info"]):not(
+      [data-theme-scope="admin"] *
+    ) {
+    --badge-tone: var(--olive);
+  }
+
   [data-slot="accordion"] {
     margin-top: 2rem;
     overflow: hidden;
@@ -596,55 +621,6 @@
     width: 100%;
     min-height: 18rem;
     border-radius: 8px;
-  }
-
-  .marquee-slider {
-    position: relative;
-    z-index: 2;
-  }
-
-  .marquee-slider .swiper {
-    position: relative;
-    z-index: 1;
-  }
-
-  .marquee-card {
-    position: relative;
-    z-index: 1;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .marquee-logo-frame {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    aspect-ratio: 4 / 3;
-    padding: clamp(0.85rem, 2vw, 1.25rem);
-    background: var(--surface-color-strong);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: var(--shadow);
-  }
-
-  .marquee-logo-image {
-    position: relative;
-    z-index: 1;
-    filter: drop-shadow(0 4px 10px rgb(0 0 0 / 0.12));
-  }
-
-  .marquee-logo-title {
-    position: relative;
-    z-index: 1;
-    min-height: 2.4em;
-    color: var(--text-color);
-    font-weight: 750;
-  }
-
-  .marquee-slider .swiper-button-prev,
-  .marquee-slider .swiper-button-next,
-  .marquee-slider .swiper-pagination {
-    z-index: 3;
   }
 
   .site-footer {
@@ -1101,6 +1077,18 @@
       transition-duration: 0.01ms !important;
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
+    }
+  }
+
+  /* Wordmark: "CHAMPAGNE" in the house champagne tone, "festival" always red. */
+  .site-wordmark {
+    --wordmark-champagne: var(--champagne);
+    --wordmark-festival: #f05a64;
+  }
+
+  @media (prefers-color-scheme: light) {
+    .site-wordmark {
+      --wordmark-festival: #c41e2e;
     }
   }
 }

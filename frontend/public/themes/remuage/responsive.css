@@ -84,7 +84,10 @@ html[data-visual-theme="remuage"] .bubble {
   }
 
   html[data-visual-theme="remuage"] .remuage-hero__title {
-    font-size: clamp(3.1rem, 15vw, 5.8rem);
+    /* The desktop 12ch cap is shorter than "Champagnefestival"; size the title so the
+       longest word fits on one line instead of breaking mid-word. */
+    max-width: none;
+    font-size: clamp(2rem, 8.5vw, 5.8rem);
     overflow-wrap: break-word;
   }
 
@@ -229,9 +232,7 @@ html[data-visual-theme="remuage"] .bubble {
 @media print {
   html[data-visual-theme="remuage"] .site-header,
   html[data-visual-theme="remuage"] .site-footer,
-  html[data-visual-theme="remuage"] .remuage-hero__rack,
-  html[data-visual-theme="remuage"] .swiper-button-prev,
-  html[data-visual-theme="remuage"] .swiper-button-next {
+  html[data-visual-theme="remuage"] .remuage-hero__rack {
     display: none !important;
   }
 

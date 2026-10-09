@@ -1,7 +1,7 @@
 {
   "welcome_title": "Bienvenue au Champagnefestival",
   "welcome_subtitle": "Une célébration du champagne fin et de la communauté",
-  "welcome_learn_more": "En savoir plus",
+  "welcome_learn_more": "Découvrir le festival",
   "maintenance_title": "De retour bientôt",
   "maintenance_message": "Notre site web est actuellement en cours de rafraîchissement. Suivez-nous sur Facebook pour les dernières nouvelles du Champagnefestival.",
   "maintenance_facebook_cta": "Suivez-nous sur Facebook",
@@ -1218,5 +1218,17 @@
   "translation_help": "Un brouillon modifiable de notre service de traduction auto-hébergé. Vérifiez-le avant de l’enregistrer. Effacez une traduction existante pour demander un nouveau brouillon.",
   "translation_error": "La traduction est indisponible ou a pris trop de temps. Réessayez plus tard ou rédigez la traduction vous-même.",
   "translation_rate_limit": "Trop de demandes de traduction. Veuillez patienter dix minutes avant de réessayer.",
-  "translation_changed": "Le texte a changé pendant la traduction. Le brouillon a été écarté pour conserver vos modifications."
+  "translation_changed": "Le texte a changé pendant la traduction. Le brouillon a été écarté pour conserver vos modifications.",
+  "festival_facts_label": "Le festival en un coup d'œil",
+  "festival_facts_when": "Quand",
+  "festival_facts_where": "Où",
+  "registration_opens_on": "Les inscriptions ouvrent le {date}",
+  "nav_location": "Lieu",
+  "footer_navigation_label": "Navigation du pied de page",
+  "logo_wall_show_all_producers": "Afficher les {count} producteurs",
+  "logo_wall_show_all_vendors": "Afficher les {count} vendeurs",
+  "logo_wall_show_all_sponsors": "Afficher les {count} sponsors",
+  "logo_wall_show_fewer": "Afficher moins",
+  "push_opt_in_consent_required": "Cochez d'abord la case ci-dessus pour donner votre consentement.",
+  "hero_edition_kicker": "Édition de {month} {year}"
 }

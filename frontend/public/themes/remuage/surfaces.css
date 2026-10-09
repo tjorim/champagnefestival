@@ -84,79 +84,34 @@ html[data-visual-theme="remuage"] [data-slot="badge"] {
   border-radius: 6px;
 }
 
-html[data-visual-theme="remuage"] [data-slot="badge"][data-variant="warning"] {
-  color: #4e3000;
-  background: #ffe2a1;
-  border: 1px solid #d39724;
+/* Public labels take tints from the rack palette instead of stock status colours. */
+html[data-visual-theme="remuage"] [data-slot="badge"]:not([data-theme-scope="admin"] *) {
+  --badge-tone: var(--rem-muted);
+  color: var(--badge-tone);
+  background: color-mix(in srgb, var(--badge-tone) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--badge-tone) 35%, transparent);
 }
 
-/* ------------------------------------------------------------------ carousels, FAQ, map */
-
-html[data-visual-theme="remuage"] .marquee-slider,
-html[data-visual-theme="remuage"] .marquee-slider .swiper {
-  width: 100%;
-  max-width: 1300px;
-  overflow: clip;
-  contain: paint;
+html[data-visual-theme="remuage"]
+  [data-slot="badge"]:is([data-variant="primary"], [data-variant="info"]):not(
+    [data-theme-scope="admin"] *
+  ) {
+  --badge-tone: var(--rem-blue);
 }
 
-html[data-visual-theme="remuage"] .marquee-card {
-  padding: 0.5rem;
-  background: transparent;
+html[data-visual-theme="remuage"]
+  [data-slot="badge"][data-variant="warning"]:not([data-theme-scope="admin"] *) {
+  --badge-tone: var(--rem-warning);
 }
 
-html[data-visual-theme="remuage"] .marquee-logo-frame {
-  display: grid;
-  aspect-ratio: 1;
-  place-items: center;
-  padding: 1rem;
-  overflow: hidden;
-  background: var(--rem-paper);
-  border: 10px solid var(--rem-rack);
-  border-radius: 50%;
-  box-shadow:
-    inset 0 0 0 2px var(--rem-nickel),
-    0 8px 20px rgba(23, 32, 51, 0.08);
+html[data-visual-theme="remuage"]
+  [data-slot="badge"][data-variant="danger"]:not([data-theme-scope="admin"] *) {
+  --badge-tone: var(--rem-rose);
 }
 
-html[data-visual-theme="remuage"] .marquee-logo-image {
-  padding: 0.25rem;
-}
-
-html[data-visual-theme="remuage"] .marquee-logo-title {
-  color: var(--rem-grape);
-  font-family: var(--rem-display);
-  font-weight: 800;
-  text-transform: uppercase;
-}
-
-html[data-visual-theme="remuage"] .swiper-button-prev,
-html[data-visual-theme="remuage"] .swiper-button-next {
-  width: 42px;
-  height: 42px;
-  color: #fff;
-  background: var(--rem-blue);
-  border-radius: 50%;
-}
-
-html[data-visual-theme="remuage"] .swiper-button-prev::after,
-html[data-visual-theme="remuage"] .swiper-button-next::after {
-  font-size: 1rem;
-  font-weight: 900;
-}
-
-html[data-visual-theme="remuage"] .swiper-pagination-bullet {
-  width: 10px;
-  height: 10px;
-  background: var(--rem-nickel);
-  opacity: 1;
-}
-
-html[data-visual-theme="remuage"] .swiper-pagination-bullet-active {
-  background: var(--rem-rose);
-  box-shadow:
-    0 0 0 3px var(--rem-rack),
-    0 0 0 5px var(--rem-rose);
+html[data-visual-theme="remuage"]
+  [data-slot="badge"][data-variant="success"]:not([data-theme-scope="admin"] *) {
+  --badge-tone: var(--rem-success);
 }
 
 html[data-visual-theme="remuage"] [data-slot="accordion"] {

@@ -454,6 +454,12 @@ html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content 
   box-shadow: none;
 }
 
+/* Sections without an explicit bento slot below span the full row instead of
+   auto-placing into a single 1/12 track; :where() keeps the slot IDs winning. */
+html[data-visual-theme="remuage"] :where(.App:not(.standalone-app) > main#main-content > section) {
+  grid-column: 1 / -1;
+}
+
 html[data-visual-theme="remuage"] #what-we-do {
   grid-column: 1 / 8;
 }
@@ -463,8 +469,12 @@ html[data-visual-theme="remuage"] #next-festival {
 html[data-visual-theme="remuage"] #schedule {
   grid-column: 1 / 9;
 }
-html[data-visual-theme="remuage"] #community-events {
+html[data-visual-theme="remuage"] #other-events {
   grid-column: 9 / -1;
+}
+/* Without upcoming other events the section is not rendered; the schedule takes the row. */
+html[data-visual-theme="remuage"] main#main-content:not(:has(> #other-events)) > #schedule {
+  grid-column: 1 / -1;
 }
 html[data-visual-theme="remuage"] #producers {
   grid-column: 1 / -1;
@@ -483,6 +493,10 @@ html[data-visual-theme="remuage"] #contact {
 }
 html[data-visual-theme="remuage"] #registrations {
   grid-column: 8 / -1;
+}
+/* Registration is hidden when nothing is registrable; contact then takes the row. */
+html[data-visual-theme="remuage"] main#main-content:not(:has(> #registrations)) > #contact {
+  grid-column: 1 / -1;
 }
 
 html[data-visual-theme="remuage"] .App:not(.standalone-app) > main#main-content > #next-festival,
@@ -534,7 +548,7 @@ html[data-visual-theme="remuage"] .section-header {
   text-wrap: balance;
 }
 
-html[data-visual-theme="remuage"] #community-events .section-header {
+html[data-visual-theme="remuage"] #other-events .section-header {
   font-size: clamp(1.9rem, 3.2vw, 3rem);
 }
 
@@ -670,4 +684,10 @@ html[data-visual-theme="remuage"] .countdown-loading {
   color: var(--rem-ink);
   background: var(--rem-rack);
   border-radius: var(--rem-radius-small);
+}
+
+/* Wordmark: rack-blue "CHAMPAGNE", as on the printed logo; red "festival". */
+html[data-visual-theme="remuage"] .site-wordmark {
+  --wordmark-champagne: var(--rem-blue);
+  --wordmark-festival: #c8102e;
 }

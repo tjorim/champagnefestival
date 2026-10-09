@@ -20,6 +20,9 @@ interface PushOptInProps {
 export default function PushOptIn({ authHeaders }: PushOptInProps) {
   const { state, isSubscribed, isBusy, error, subscribe, unsubscribe } = usePushSubscription();
   const [consentChecked, setConsentChecked] = useState(false);
+  // The button stays enabled so it never looks broken; pressing it without consent
+  // explains what's missing instead, and still never reaches the browser prompt.
+  const [consentMissing, setConsentMissing] = useState(false);
   const [testStatus, setTestStatus] = useState<"" | "sending" | "sent" | "error">("");
 
   if (state === "unsupported" || state === "disabled") {
@@ -76,13 +79,34 @@ export default function PushOptIn({ authHeaders }: PushOptInProps) {
               className="text-sm mb-2"
               label={m.push_opt_in_consent_label()}
               checked={consentChecked}
-              onCheckedChange={setConsentChecked}
+              onCheckedChange={(checked) => {
+                setConsentChecked(checked);
+                if (checked) setConsentMissing(false);
+              }}
+              aria-invalid={consentMissing || undefined}
+              aria-describedby={consentMissing ? "push-opt-in-consent-error" : undefined}
             />
+            {consentMissing && (
+              <p
+                id="push-opt-in-consent-error"
+                className="text-sm text-destructive mb-2"
+                role="alert"
+              >
+                {m.push_opt_in_consent_required()}
+              </p>
+            )}
             <Button
               variant="warning"
               size="sm"
-              disabled={!consentChecked || isBusy}
-              onClick={() => void subscribe()}
+              disabled={isBusy}
+              onClick={() => {
+                if (!consentChecked) {
+                  setConsentMissing(true);
+                  document.getElementById("push-opt-in-consent")?.focus();
+                  return;
+                }
+                void subscribe();
+              }}
             >
               {isBusy && (
                 <Spinner

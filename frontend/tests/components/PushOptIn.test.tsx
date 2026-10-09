@@ -38,17 +38,22 @@ describe("PushOptIn", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
-  it("requires the consent checkbox before the subscribe button is enabled", async () => {
+  it("requires the consent checkbox before subscribing, explaining what is missing", async () => {
     const subscribe = vi.fn();
     vi.mocked(usePushSubscription).mockReturnValue({ ...baseHookState, state: "ready", subscribe });
     const user = userEvent.setup();
     render(<PushOptIn />);
 
     const subscribeButton = screen.getByRole("button", { name: /enable notifications/i });
-    expect(subscribeButton).toBeDisabled();
+    expect(subscribeButton).toBeEnabled();
+
+    await user.click(subscribeButton);
+    expect(subscribe).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent(/consent/i);
+    expect(screen.getByRole("checkbox")).toHaveAttribute("aria-invalid", "true");
 
     await user.click(screen.getByRole("checkbox"));
-    expect(subscribeButton).toBeEnabled();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 
     await user.click(subscribeButton);
     expect(subscribe).toHaveBeenCalledTimes(1);

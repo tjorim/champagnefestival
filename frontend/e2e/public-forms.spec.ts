@@ -9,7 +9,7 @@ async function expectNoOverflow(page: Page, width: number) {
   );
 }
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage"]) {
+for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
   for (const colorScheme of ["light", "dark"] as const) {
     for (const width of [1440, 390]) {
       test(`${theme} public forms at ${width}px (${colorScheme})`, async ({ page }, testInfo) => {

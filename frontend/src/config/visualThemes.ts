@@ -1,6 +1,12 @@
 import definitions from "./visualThemes.json";
 
-export type VisualThemeVariant = "refresh" | "classic" | "riviera" | "cuvee" | "remuage";
+export type VisualThemeVariant =
+  | "refresh"
+  | "classic"
+  | "riviera"
+  | "cuvee"
+  | "remuage"
+  | "millesime";
 
 export type ThemeColorMode = "system" | "light" | "dark";
 

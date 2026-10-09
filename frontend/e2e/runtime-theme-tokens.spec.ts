@@ -109,6 +109,24 @@ const palettes = {
     "rgb(251, 252, 254)",
     "rgb(88, 101, 119)",
   ],
+  millesime: {
+    light: [
+      "rgb(246, 241, 231)",
+      "rgb(22, 19, 15)",
+      "rgb(155, 35, 53)",
+      "rgb(106, 93, 74)",
+      "rgb(251, 248, 241)",
+      "rgb(92, 83, 70)",
+    ],
+    dark: [
+      "rgb(20, 17, 14)",
+      "rgb(241, 235, 221)",
+      "rgb(224, 112, 127)",
+      "rgb(201, 185, 159)",
+      "rgb(28, 24, 20)",
+      "rgb(184, 173, 154)",
+    ],
+  },
 } as const;
 
 async function addColorProbes(page: import("@playwright/test").Page) {
@@ -150,7 +168,14 @@ async function expectPalette(
 }
 
 for (const preference of ["light", "dark"] as const) {
-  for (const variant of ["refresh", "classic", "riviera", "cuvee", "remuage"] as const) {
+  for (const variant of [
+    "refresh",
+    "classic",
+    "riviera",
+    "cuvee",
+    "remuage",
+    "millesime",
+  ] as const) {
     test(`${variant} resolves concrete utility colors and dark variant (${preference})`, async ({
       page,
     }) => {
@@ -177,11 +202,15 @@ for (const preference of ["light", "dark"] as const) {
         ].filter((token) => !style.getPropertyValue(`--surface-${token}`).trim());
       });
       expect(unresolved).toEqual([]);
-      const colors = variant === "refresh" ? palettes.refresh[preference] : palettes[variant];
+      const colors =
+        variant === "refresh" || variant === "millesime"
+          ? palettes[variant][preference]
+          : palettes[variant];
       await expectPalette(
         page,
         colors,
-        variant === "classic" || (variant === "refresh" && preference === "dark"),
+        variant === "classic" ||
+          ((variant === "refresh" || variant === "millesime") && preference === "dark"),
       );
     });
   }

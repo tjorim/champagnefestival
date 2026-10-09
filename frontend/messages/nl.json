@@ -1,7 +1,7 @@
 {
   "welcome_title": "Welkom bij Champagnefestival",
   "welcome_subtitle": "Een viering van fijne champagne en gemeenschap",
-  "welcome_learn_more": "Meer Informatie",
+  "welcome_learn_more": "Ontdek het festival",
   "maintenance_title": "We zijn binnenkort terug",
   "maintenance_message": "Onze website wordt momenteel vernieuwd. Volg ons op Facebook voor het laatste nieuws over het Champagnefestival.",
   "maintenance_facebook_cta": "Volg ons op Facebook",
@@ -1218,5 +1218,17 @@
   "translation_help": "Een bewerkbaar concept van onze eigen vertaaldienst. Controleer het voor je opslaat. Wis een bestaande vertaling om een nieuw concept aan te vragen.",
   "translation_error": "Vertalen is niet beschikbaar of duurde te lang. Probeer later opnieuw of schrijf de vertaling zelf.",
   "translation_rate_limit": "Te veel vertaalverzoeken. Wacht tien minuten voor je opnieuw probeert.",
-  "translation_changed": "De tekst is gewijzigd tijdens het vertalen. Het concept is verwijderd om je wijzigingen te behouden."
+  "translation_changed": "De tekst is gewijzigd tijdens het vertalen. Het concept is verwijderd om je wijzigingen te behouden.",
+  "festival_facts_label": "Het festival in een oogopslag",
+  "festival_facts_when": "Wanneer",
+  "festival_facts_where": "Waar",
+  "registration_opens_on": "Inschrijvingen openen op {date}",
+  "nav_location": "Locatie",
+  "footer_navigation_label": "Navigatie in de voettekst",
+  "logo_wall_show_all_producers": "Toon alle {count} producenten",
+  "logo_wall_show_all_vendors": "Toon alle {count} verkopers",
+  "logo_wall_show_all_sponsors": "Toon alle {count} sponsors",
+  "logo_wall_show_fewer": "Toon minder",
+  "push_opt_in_consent_required": "Vink eerst het vakje hierboven aan om je toestemming te geven.",
+  "hero_edition_kicker": "Editie {month} {year}"
 }

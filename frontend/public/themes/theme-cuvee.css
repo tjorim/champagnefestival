@@ -241,6 +241,7 @@
     gap: 0;
     margin-top: 0.5rem;
     padding: 0.5rem 1rem;
+    color: #f3edda;
     background: #0f2a22;
     border: 1px solid var(--gold-hairline);
     border-radius: 3px;
@@ -500,6 +501,15 @@
 
   [data-slot="button"][data-variant="light"]:not([data-theme-scope="admin"] *) {
     --layout-inverse: var(--ink);
+  }
+
+  /* Sections are cream cards on the green page, so outline buttons inside them
+     must not paint the page background behind ink text. */
+  .content-section [data-slot="button"][data-variant="outline"]:not([data-theme-scope="admin"] *) {
+    --surface-background: transparent;
+    --surface-border: var(--hairline-strong);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
   }
 
   [data-slot="button"][data-variant="light"]:hover:not(:disabled):not(
@@ -812,8 +822,7 @@
 
   /* -------------------------------------------------------- cards & modals */
 
-  [data-slot="card"],
-  .marquee-card {
+  [data-slot="card"] {
     color: var(--ink);
     background: var(--label-bright);
     border: 1px solid var(--hairline-strong);
@@ -838,19 +847,6 @@
 
   [data-public-form][data-slot="field-label"] {
     color: var(--ink);
-  }
-
-  /* --------------------------------------------------------- marquee & map */
-
-  .marquee-slider {
-    max-width: none;
-    padding: 0.5rem 0;
-  }
-
-  .marquee-logo-frame {
-    background: #fffdf4;
-    border: 1px solid var(--hairline);
-    border-radius: 3px;
   }
 
   .carousel-loading,
@@ -1186,5 +1182,11 @@
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
     }
+  }
+
+  /* Wordmark on the green chrome: gold-foil "CHAMPAGNE", a lifted red "festival". */
+  .site-wordmark {
+    --wordmark-champagne: var(--foil-bright);
+    --wordmark-festival: #ff6b6b;
   }
 }

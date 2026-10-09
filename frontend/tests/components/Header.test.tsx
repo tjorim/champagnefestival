@@ -15,6 +15,7 @@ vi.mock("@/paraglide/messages", () => ({
     nav_schedule: () => "Schedule",
     nav_other_events: () => "Other events",
     nav_faq: () => "FAQ",
+    nav_location: () => "Location",
     nav_contact: () => "Contact",
   },
 }));
@@ -35,6 +36,12 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+const otherEventsState = vi.hoisted(() => ({ items: [] as unknown[] }));
+
+vi.mock("@/hooks/useOtherEvents", () => ({
+  useOtherEventItems: () => ({ items: otherEventsState.items, isLoading: false, isError: false }),
+}));
+
 describe("Header component", () => {
   it("opens an accessible mobile dialog, closes with Escape and returns focus", async () => {
     const user = userEvent.setup();
@@ -53,19 +60,23 @@ describe("Header component", () => {
     expect(screen.getByText("Champagnefestival")).toBeInTheDocument();
   });
 
-  it("renders the logo image", () => {
+  it("renders the wordmark, with the full festival name for assistive tech", () => {
     render(<Header />);
-    const logo = screen.getByAltText("Champagnefestival logo");
-    expect(logo).toBeInTheDocument();
-    expect(logo).toHaveAttribute("src", "/images/logo.svg");
+    const brand = screen.getByText("Champagnefestival").closest("a");
+    expect(brand).toHaveTextContent(/Champagne\s*festival/);
+    expect(brand?.querySelectorAll('[aria-hidden="true"]')).toHaveLength(2);
   });
 
-  it("accepts a custom logoSrc prop", () => {
-    render(<Header logoSrc="/images/custom-logo.png" />);
-    expect(screen.getByAltText("Champagnefestival logo")).toHaveAttribute(
-      "src",
-      "/images/custom-logo.png",
-    );
+  it("only links to other events once there are upcoming ones", () => {
+    otherEventsState.items = [];
+    const { unmount } = render(<Header />);
+    expect(screen.queryByRole("link", { name: "Other events" })).not.toBeInTheDocument();
+    unmount();
+
+    otherEventsState.items = [{ id: "event-1" }];
+    render(<Header />);
+    expect(screen.getAllByRole("link", { name: "Other events" }).length).toBeGreaterThan(0);
+    otherEventsState.items = [];
   });
 
   it("renders the language switcher", () => {

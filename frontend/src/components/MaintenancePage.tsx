@@ -1,4 +1,5 @@
 import { ExternalLinkIcon, ImageIcon, XIcon, ZoomInIcon } from "lucide-react";
+import BrandWordmark from "./BrandWordmark";
 import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { m } from "@/paraglide/messages";
@@ -91,7 +92,9 @@ export default function MaintenancePage() {
     <div className="maintenance-page">
       <div className="maintenance-page__scrim" aria-hidden="true" />
       <div className="maintenance-page__content">
-        <img src="/images/logo.svg" alt={m.festival_name()} className="maintenance-page__logo" />
+        <span className="maintenance-page__wordmark">
+          <BrandWordmark />
+        </span>
         <h1 className="maintenance-page__title">{m.maintenance_title()}</h1>
         <p className="maintenance-page__message">{m.maintenance_message()}</p>
         {facebookUrl && (

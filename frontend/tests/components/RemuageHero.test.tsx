@@ -21,7 +21,7 @@ describe("RemuageHero", () => {
     expect(screen.getByText("Meet producers and plan your visit.")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /plan my visit/i })).toHaveAttribute(
       "href",
-      "#next-festival",
+      "#what-we-do",
     );
     expect(screen.getByRole("link", { name: /view schedule/i })).toHaveAttribute(
       "href",

@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage"]) {
+for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
   test(`admin layout keeps all CSS in layers under ${theme}`, async ({ page }) => {
     await page.addInitScript((variant) => {
       localStorage.setItem("champagnefestival:visualTheme", variant);

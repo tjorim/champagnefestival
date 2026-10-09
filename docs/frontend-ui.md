@@ -15,7 +15,7 @@ dialog, public-widget, icon and Bootstrap-removal work (#1105, #1107, #1108,
 - `base` contains preflight, the fixed `--base-*` palette, semantic `--surface-*`
   tokens and document defaults. The defaults restore the heading, paragraph,
   list, link and policy-markdown styling the app needs above preflight.
-- `vendor` contains Leaflet and Swiper CSS. Swiper stays lazy with its carousel.
+- `vendor` contains Leaflet CSS.
 - `components` contains owned stylesheets, `data-slot` rules and runtime themes.
 - `utilities` contains unprefixed Tailwind utilities, without `!important`.
 
@@ -46,10 +46,13 @@ synchronous pre-paint code and React imports the typed registry. Storage failure
 falls back to Refresh; pre-paint code also sets browser chrome colours.
 `data-visual-theme` selects the public stylesheet. Refresh, Classic, Riviera and
 Cuvée map theme variables through semantic surface tokens; Remuage maps its
-`--rem-*` palette to those tokens directly.
+`--rem-*` palette to those tokens directly. Millésime (an editorial paper-and-ink
+theme with a numbered two-column section layout from 992px) maps its `--mil-*`
+palette to the same shared tokens and uses only system fonts.
 
-`data-theme-mode` drives the dark variant: Refresh follows the system, Classic
-is dark, and Riviera, Cuvée and Remuage are light. The admin scope uses
+`data-theme-mode` drives the dark variant: Refresh and Millésime follow the
+system (Millésime's dark "ink" variant is keyed on `html[data-theme-mode="dark"]`),
+Classic is dark, and Riviera, Cuvée and Remuage are light. The admin scope uses
 `data-theme-scope="admin"` and `data-theme-mode="dark"` with its own fixed
 semantic palette; entering admin does not change the public document mode.
 
@@ -94,8 +97,35 @@ if no newer edits arrived while that save was pending.
 
 ## Public interactions and accessibility
 
-- Header navigation uses native links and Base UI Dialog for mobile navigation;
-  HeaderClassic retains its existing mobile layout.
+- `FestivalFacts` sits below every hero variant with the dates, the venue and the
+  registration action. Before registrations open it states the opening date
+  rather than showing a disabled button, and the registration section is hidden
+  when nothing is or will become registrable. It and the venue details above the
+  map use semantic colours only; themes may refine them through
+  `data-slot="festival-facts"`, `"venue-details"` and `"registration-opens"`.
+  The footer repeats the navigation.
+- `BrandWordmark` renders the festival name after the printed logo: "CHAMPAGNE"
+  over a red script "festival", stacked so the full name fits narrow headers.
+  The letterforms are fixed; themes only set `--wordmark-champagne` and
+  `--wordmark-festival` ("festival" stays red, tuned for contrast per theme).
+- `FestivalMascot` is the painted hostess from the association's artwork, cut
+  out to a transparent WebP (`public/images/mascot-360.webp`, `mascot-720.webp`)
+  so she sits on every theme. She is decorative (empty alt) and stands beside
+  the countdown in Next Festival. A container query stacks her above it in
+  narrow columns, where the half-length crop (`mascot-half-*.webp`, fading out
+  below the table) keeps the section short; lazy loading means only the crop
+  the layout shows is downloaded. Sources and the script that builds these files live in
+  [`docs/brand/`](brand/README.md). The maintenance page uses `BrandWordmark` instead of the old
+  placeholder logo.
+- Header and HeaderClassic share `MobileMenu`, a Base UI Dialog sheet that slides
+  in from the right below the large breakpoint and holds the section links and
+  the staff-only admin entry. The language switcher stays in the header.
+- Navigation comes from `useNavigationItems`, which drops links to sections that
+  are not rendered: Other events is omitted while there are no upcoming bourses
+  or capsule exchanges (`useOtherEventItems`).
+- Web Push opt-in sits inside the contact section (`#notifications`). Its button
+  stays enabled; pressing it without consent shows an inline error and focuses
+  the checkbox, and never reaches the browser permission prompt.
 - Public LanguageSwitcher menus use `admin={false}`. Admin consumers keep the
   fixed-dark portal scope.
 - Schedule and MyAccountPage use Base UI Tabs with arrow-key activation and
@@ -125,7 +155,7 @@ icon. Persisted floor-plan `bi-*` values remain API identifiers:
 
 ## Specialised renderers and verification
 
-Floor plans, scanners, QR output, Leaflet, Swiper, charts and theme artwork keep
+Floor plans, scanners, QR output, Leaflet, charts and theme artwork keep
 their specialised renderers. Public `/` and `/privacy` shell injection is
 covered by the [public rendering contract](decisions/992-live-public-render.md);
 crawler fragments use their own inline layout rather than framework classes.

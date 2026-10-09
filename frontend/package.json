@@ -44,8 +44,7 @@
     "react-dom": "^19.3.0",
     "react-error-boundary": "^6.1.6",
     "react-leaflet": "^5.0.0",
-    "react-oidc-context": "^3.2.0",
-    "swiper": "^14.3.0"
+    "react-oidc-context": "^3.2.0"
   },
   "devDependencies": {
     "@inlang/paraglide-js": "^2.25.4",

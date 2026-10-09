@@ -29,7 +29,7 @@ describe("ContactInfo component", () => {
 
   it("renders the email address as a mailto link", () => {
     render(<ContactInfo />);
-    const emailLink = screen.getByRole("link", { name: /email/i });
+    const emailLink = screen.getByRole("link", { name: "Email: info@example.com" });
     expect(emailLink).toBeInTheDocument();
     expect(emailLink).toHaveAttribute("href", expect.stringContaining("mailto:"));
   });
@@ -50,8 +50,10 @@ describe("ContactInfo component", () => {
   it("hides empty public contact actions", () => {
     publicSettings.public_email = "";
     publicSettings.public_phone = "";
-    render(<ContactInfo />);
+    const { container } = render(<ContactInfo />);
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+    // Without any contact detail the "you can also reach us" intro would be a dead end.
+    expect(container).toBeEmptyDOMElement();
     publicSettings.public_email = "info@example.com";
     publicSettings.public_phone = "+32 59 12 34 56";
   });
