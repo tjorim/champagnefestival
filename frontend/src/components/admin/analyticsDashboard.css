@@ -10,6 +10,9 @@
  */
 
   .viz-root {
+    /* Categorical palette slots read by TanStack Charts: guests, checked in. */
+    --ts-chart-1: #3987e5;
+    --ts-chart-2: #199e70;
     --viz-text-secondary: #c3c2b7;
     --viz-text-muted: #898781;
     --viz-gridline: #2c2c2a;
@@ -23,5 +26,14 @@
     --ts-chart-tooltip-border: 1px solid var(--viz-axis);
 
     min-width: 0;
+  }
+
+  /* Off-screen host used to rasterize the legend-bearing export copy. */
+  .viz-export-host {
+    position: fixed;
+    top: 0;
+    left: -10000px;
+    width: 1200px;
+    pointer-events: none;
   }
 }

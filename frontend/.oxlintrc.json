@@ -50,6 +50,7 @@
           "standalone-*",
           "theme-switcher",
           "theme-switcher__*",
+          "viz-export-host",
           "viz-root",
           "brand-title",
           "content-section",
