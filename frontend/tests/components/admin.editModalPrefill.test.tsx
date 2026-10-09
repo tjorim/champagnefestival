@@ -36,9 +36,9 @@ vi.mock("@/paraglide/messages", () => ({
 const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
 // The mocked messages echo their key and arguments.
-const TITLE_NL = 'admin_event_title_label({"language":"admin_event_language_nl"})';
-const TITLE_FR = 'admin_event_title_label({"language":"admin_event_language_fr"})';
-const TITLE_EN = 'admin_event_title_label({"language":"admin_event_language_en"})';
+const TITLE_NL = 'admin_event_title_label({"language":"admin_language_nl"})';
+const TITLE_FR = 'admin_event_title_label({"language":"admin_language_fr"})';
+const TITLE_EN = 'admin_event_title_label({"language":"admin_language_en"})';
 
 const venues = [
   { id: "venue-01", name: "Brussels Expo", city: "Brussels", active: true },

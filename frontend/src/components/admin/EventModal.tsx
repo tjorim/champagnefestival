@@ -36,19 +36,19 @@ const TEXT_LANGUAGES = [
     language: "nl",
     title: "titleNl",
     description: "descriptionNl",
-    label: m.admin_event_language_nl,
+    label: m.admin_language_nl,
   },
   {
     language: "fr",
     title: "titleFr",
     description: "descriptionFr",
-    label: m.admin_event_language_fr,
+    label: m.admin_language_fr,
   },
   {
     language: "en",
     title: "titleEn",
     description: "descriptionEn",
-    label: m.admin_event_language_en,
+    label: m.admin_language_en,
   },
 ] as const;
 

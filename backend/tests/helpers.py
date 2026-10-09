@@ -103,7 +103,7 @@ async def _create_event(
 
     event_payload: dict[str, object] = {
         "edition_id": edition_id,
-        "title_nl": title,
+        "title_en": title,
         "date": date,
         "start_time": "18:00",
         "end_time": "22:00",
@@ -190,7 +190,7 @@ async def event_for_room(client, room_id: str, number: int = 1, edition_id: str 
         "/api/events",
         json={
             "edition_id": edition_id,
-            "title_nl": title,
+            "title_en": title,
             "date": f"2099-03-{20 + number:02d}",
             "start_time": "10:00",
             "category": "other",

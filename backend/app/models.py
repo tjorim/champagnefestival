@@ -31,7 +31,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
-from app.event_content import resolve_text
+from app.translations import resolve_pair, resolve_text
 
 
 def _utcnow() -> datetime:
@@ -1269,8 +1269,9 @@ class AppSettings(Base):
 class FaqItem(Base):
     """A single question/answer pair shown on the public FAQ section.
 
-    Dutch is required; English/French are optional per item — a blank
-    translation hides that item on that locale's public FAQ.
+    The original language (`text_language`) must have both; other languages are
+    optional translations. A language is shown only when its question *and*
+    answer both have text, otherwise the original is shown.
     """
 
     __tablename__ = "faq_items"
@@ -1279,20 +1280,37 @@ class FaqItem(Base):
         # without a transient duplicate mid-transaction tripping the check —
         # only the state at commit has to be unique (#836).
         UniqueConstraint("sort_order", name="uq_faq_items_sort_order", deferrable=True, initially="DEFERRED"),
+        CheckConstraint(
+            "((text_language = 'nl' AND length(trim(question_nl)) > 0 AND length(trim(answer_nl)) > 0) OR "
+            "(text_language = 'fr' AND length(trim(question_fr)) > 0 AND length(trim(answer_fr)) > 0) OR "
+            "(text_language = 'en' AND length(trim(question_en)) > 0 AND length(trim(answer_en)) > 0)) IS TRUE",
+            name="ck_faq_items_original",
+        ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    question_nl: Mapped[str] = mapped_column(String(500))
-    answer_nl: Mapped[str] = mapped_column(Text)
-    question_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    answer_en: Mapped[str | None] = mapped_column(Text, nullable=True)
+    text_language: Mapped[str] = mapped_column(String(2))
+    """Original language of the question and its answer: both must have text there."""
+    question_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
     question_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    question_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    answer_nl: Mapped[str | None] = mapped_column(Text, nullable=True)
     answer_fr: Mapped[str | None] = mapped_column(Text, nullable=True)
+    answer_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, default=0)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    def localized(self, locale: str | None) -> tuple[str, str]:
+        """The (question, answer) for *locale*, falling back to the original language."""
+        return resolve_pair(
+            {"nl": self.question_nl, "fr": self.question_fr, "en": self.question_en},
+            {"nl": self.answer_nl, "fr": self.answer_fr, "en": self.answer_en},
+            self.text_language,
+            locale,
+        )
 
 
 class Announcement(Base):

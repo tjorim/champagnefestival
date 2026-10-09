@@ -41,7 +41,7 @@ async def test_event_can_use_multiple_rooms_and_same_room_can_have_same_day_even
         "/api/events",
         json={
             "edition_id": morning["edition_id"],
-            "title_nl": "Evening",
+            "title_en": "Evening",
             "date": morning["date"],
             "start_time": "20:00",
             "category": "other",
@@ -144,7 +144,7 @@ async def test_wrong_event_rejected_and_copy_does_not_copy_allocations(client):
             "/api/events",
             json={
                 "edition_id": event["edition_id"],
-                "title_nl": "Evening",
+                "title_en": "Evening",
                 "date": event["date"],
                 "start_time": "20:00",
                 "category": "other",

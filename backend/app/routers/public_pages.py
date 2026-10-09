@@ -81,16 +81,8 @@ def _resolve_locale(raw: str | None) -> FaqLocale:
 
 
 async def _load_active_faq_items(db: AsyncSession, *, locale: FaqLocale) -> list[dict]:
-    question_column = getattr(FaqItem, f"question_{locale}")
-    answer_column = getattr(FaqItem, f"answer_{locale}")
-    stmt = (
-        select(FaqItem)
-        .where(FaqItem.active.is_(True), question_column.isnot(None), answer_column.isnot(None))
-        .order_by(FaqItem.sort_order)
-    )
-    result = await db.execute(stmt)
-    items = [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]
-    return [item for item in items if item is not None]
+    result = await db.execute(select(FaqItem).where(FaqItem.active.is_(True)).order_by(FaqItem.sort_order))
+    return [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]
 
 
 async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:

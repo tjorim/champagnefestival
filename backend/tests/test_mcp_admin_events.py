@@ -31,7 +31,7 @@ async def test_create_get_event(db_session):
         factory,
         "admin-1",
         edition_id=edition_id,
-        title_nl="Friday Tasting",
+        title_en="Friday Tasting",
         date=date(2099, 3, 21),
         start_time="18:00",
         category="general",
@@ -54,7 +54,7 @@ async def test_create_event_rejects_invalid_input(db_session):
             factory,
             "admin-1",
             edition_id=edition_id,
-            title_nl="Bad Event",
+            title_en="Bad Event",
             date=date(2099, 3, 21),
             start_time="99:99",  # invalid HH:MM pattern
             category="general",
@@ -74,13 +74,13 @@ async def test_update_event_partial(db_session):
         factory,
         "admin-1",
         edition_id=edition_id,
-        title_nl="Friday Tasting",
+        title_en="Friday Tasting",
         date=date(2099, 3, 21),
         start_time="18:00",
         category="general",
     )
 
-    updated = await mcp_events.update_event(factory, "admin-1", created["id"], title_nl="Friday Tasting Updated")
+    updated = await mcp_events.update_event(factory, "admin-1", created["id"], title_en="Friday Tasting Updated")
     assert updated["title"] == "Friday Tasting Updated"
     assert updated["category"] == "general"  # untouched fields survive a partial update
     assert str(updated["date"]) == "2099-03-21"
@@ -89,7 +89,7 @@ async def test_update_event_partial(db_session):
 async def test_update_event_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_events.update_event(factory, "admin-1", "nonexistent", title_nl="New Title")
+        await mcp_events.update_event(factory, "admin-1", "nonexistent", title_en="New Title")
 
 
 async def test_delete_event(db_session):
@@ -99,7 +99,7 @@ async def test_delete_event(db_session):
         factory,
         "admin-1",
         edition_id=edition_id,
-        title_nl="Friday Tasting",
+        title_en="Friday Tasting",
         date=date(2099, 3, 21),
         start_time="18:00",
         category="general",
@@ -126,7 +126,7 @@ async def test_delete_event_rejects_when_registrations_exist(db_session):
         factory,
         "admin-1",
         edition_id=edition_id,
-        title_nl="Friday Tasting",
+        title_en="Friday Tasting",
         date=date(2099, 3, 21),
         start_time="18:00",
         category="general",
@@ -171,7 +171,7 @@ async def test_standalone_edition_rejects_a_second_date(db_session):
         factory,
         "admin-1",
         edition_id=edition_id,
-        title_nl="Bourse Opening",
+        title_en="Bourse Opening",
         date=date(2099, 3, 21),
         start_time="10:00",
         category="exchange",
@@ -182,7 +182,7 @@ async def test_standalone_edition_rejects_a_second_date(db_session):
             factory,
             "admin-1",
             edition_id=edition_id,
-            title_nl="Bourse Auction",
+            title_en="Bourse Auction",
             date=date(2099, 3, 22),
             start_time="10:00",
             category="exchange",
@@ -197,14 +197,14 @@ async def test_standalone_edition_allows_moving_within_same_single_day(db_sessio
         factory,
         "admin-1",
         edition_id=edition_id,
-        title_nl="Bourse Opening",
+        title_en="Bourse Opening",
         date=date(2099, 3, 21),
         start_time="10:00",
         category="exchange",
     )
 
     updated = await mcp_events.update_event(
-        factory, "admin-1", created["id"], date=date(2099, 3, 21), title_nl="Updated"
+        factory, "admin-1", created["id"], date=date(2099, 3, 21), title_en="Updated"
     )
     assert str(updated["date"]) == "2099-03-21"
 
@@ -218,7 +218,7 @@ async def test_create_event_rejects_registration_settings_without_registration_r
             factory,
             "admin-1",
             edition_id=edition_id,
-            title_nl="Walk-in Only Event",
+            title_en="Walk-in Only Event",
             date=date(2099, 3, 21),
             start_time="18:00",
             category="general",
@@ -234,7 +234,7 @@ async def test_update_event_rejects_registration_settings_without_registration_r
         factory,
         "admin-1",
         edition_id=edition_id,
-        title_nl="Walk-in Only Event",
+        title_en="Walk-in Only Event",
         date=date(2099, 3, 21),
         start_time="18:00",
         category="general",
@@ -254,7 +254,7 @@ async def test_update_event_clears_nullable_fields(db_session):
         factory,
         "admin-1",
         edition_id=edition_id,
-        title_nl="Friday Tasting",
+        title_en="Friday Tasting",
         date=date(2099, 3, 21),
         start_time="18:00",
         end_time="22:00",
@@ -320,7 +320,7 @@ async def test_create_event_rejects_an_unknown_category(db_session):
             factory,
             "admin-1",
             edition_id=edition_id,
-            title_nl="Gala",
+            title_en="Gala",
             date=date(2099, 3, 21),
             start_time="18:00",
             category="gala",
@@ -334,6 +334,7 @@ async def test_update_event_edits_one_translation_and_clears_it_with_an_empty_st
         factory,
         "admin-1",
         edition_id=edition_id,
+        title_language="nl",
         title_nl="Proeverij",
         description_language="nl",
         description_nl="Een avond",

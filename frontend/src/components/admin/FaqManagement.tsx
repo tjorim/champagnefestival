@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { AdminField, AdminLabel, AdminInput, AdminTextarea } from "@/components/admin/AdminFields";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -10,6 +9,14 @@ import {
   TrashIcon,
 } from "lucide-react";
 import { Icon } from "@/components/Icon";
+import {
+  EMPTY_LOCALIZED_TEXT,
+  LocalizedInputs,
+  OriginalLanguageSelect,
+  hasOriginal,
+  type Language,
+  type LocalizedText,
+} from "@/components/admin/LocalizedFields";
 /**
  * FaqManagement — CRUD for the public FAQ section's question/answer pairs.
  *
@@ -17,10 +24,10 @@ import { Icon } from "@/components/Icon";
  * rather than wired through the central useAdminQueries/useAdminVenueActions
  * stack, since it's a single flat resource with no cross-entity dependencies.
  *
- * Each item carries three locales: Dutch is required (the primary content),
- * English/French are optional per item — leaving a language's fields empty
- * hides that item from that locale's public FAQ rather than falling back to
- * Dutch text.
+ * Each item has an original language whose question and answer are required;
+ * the other languages are optional translations. A language is shown to visitors
+ * only when both its question and answer are filled, otherwise they see the
+ * original (same rule as event titles).
  */
 
 import { useCallback, useMemo, useState } from "react";
@@ -56,39 +63,50 @@ interface FaqManagementProps {
 }
 
 interface FaqFormState {
-  questionNl: string;
-  answerNl: string;
-  questionEn: string;
-  answerEn: string;
-  questionFr: string;
-  answerFr: string;
+  textLanguage: Language;
+  question: LocalizedText;
+  answer: LocalizedText;
 }
 
 const emptyForm: FaqFormState = {
-  questionNl: "",
-  answerNl: "",
-  questionEn: "",
-  answerEn: "",
-  questionFr: "",
-  answerFr: "",
+  textLanguage: "nl",
+  question: EMPTY_LOCALIZED_TEXT,
+  answer: EMPTY_LOCALIZED_TEXT,
 };
-
-interface FaqLocaleData {
-  question: string;
-  answer: string;
-}
 
 const columnHelper = createAppColumnHelper<FaqItem>();
 
-function faqPayload(data: FaqLocaleData & Omit<FaqFormState, "questionNl" | "answerNl">) {
+/** Blank translations are sent as `null`, which clears them on update. */
+function faqPayload(form: FaqFormState) {
+  const text = (value: string) => value.trim() || null;
   return {
-    question_nl: data.question,
-    answer_nl: data.answer,
-    question_en: data.questionEn,
-    answer_en: data.answerEn,
-    question_fr: data.questionFr,
-    answer_fr: data.answerFr,
+    text_language: form.textLanguage,
+    question_nl: text(form.question.nl),
+    question_fr: text(form.question.fr),
+    question_en: text(form.question.en),
+    answer_nl: text(form.answer.nl),
+    answer_fr: text(form.answer.fr),
+    answer_en: text(form.answer.en),
   };
+}
+
+function toForm(item: FaqItem): FaqFormState {
+  return {
+    textLanguage: item.textLanguage,
+    question: { nl: item.questionNl ?? "", fr: item.questionFr ?? "", en: item.questionEn ?? "" },
+    answer: { nl: item.answerNl ?? "", fr: item.answerFr ?? "", en: item.answerEn ?? "" },
+  };
+}
+
+/** The item's text in its original language, for the list. */
+function originalText(item: FaqItem) {
+  const byLanguage = {
+    nl: [item.questionNl, item.answerNl],
+    fr: [item.questionFr, item.answerFr],
+    en: [item.questionEn, item.answerEn],
+  } as const;
+  const [question, answer] = byLanguage[item.textLanguage];
+  return { question: question ?? "", answer: answer ?? "" };
 }
 
 export default function FaqManagement({ authHeaders }: FaqManagementProps) {
@@ -108,39 +126,16 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   const [rowError, setRowError] = useState<string | null>(null);
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
 
-  const createMutation = useMutation({
-    mutationFn: (data: FaqLocaleData & Omit<FaqFormState, "questionNl" | "answerNl">) =>
+  const saveMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string | null; data: Record<string, unknown> }) =>
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        "/api/faq",
+        id ? `/api/faq/${id}` : "/api/faq",
         {
-          method: "POST",
+          method: id ? "PUT" : "POST",
           headers: authHeaders(),
-          body: JSON.stringify(faqPayload(data)),
+          body: JSON.stringify(data),
         },
-        m.admin_error_add_faq_item(),
-      ),
-    onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
-    retry: false,
-  });
-
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<Omit<FaqItem, "id">> }) =>
-      fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
-        `/api/faq/${id}`,
-        {
-          method: "PUT",
-          headers: authHeaders(),
-          body: JSON.stringify({
-            ...(data.questionNl !== undefined && { question_nl: data.questionNl }),
-            ...(data.answerNl !== undefined && { answer_nl: data.answerNl }),
-            ...(data.questionEn !== undefined && { question_en: data.questionEn ?? "" }),
-            ...(data.answerEn !== undefined && { answer_en: data.answerEn ?? "" }),
-            ...(data.questionFr !== undefined && { question_fr: data.questionFr ?? "" }),
-            ...(data.answerFr !== undefined && { answer_fr: data.answerFr ?? "" }),
-            ...(data.active !== undefined && { active: data.active }),
-          }),
-        },
-        m.admin_error_update_faq_item(),
+        id ? m.admin_error_update_faq_item() : m.admin_error_add_faq_item(),
       ),
     onSettled: () => void invalidateAdmin(queryClient, [faqItemsQueryKey, ["faq"]]),
     retry: false,
@@ -181,70 +176,39 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
 
   const openEdit = useCallback((item: FaqItem) => {
     setEditingId(item.id);
-    setForm({
-      questionNl: item.questionNl,
-      answerNl: item.answerNl,
-      questionEn: item.questionEn ?? "",
-      answerEn: item.answerEn ?? "",
-      questionFr: item.questionFr ?? "",
-      answerFr: item.answerFr ?? "",
-    });
+    setForm(toForm(item));
     setError(null);
     setShowModal(true);
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!form.questionNl.trim()) {
+    if (!hasOriginal(form.textLanguage, form.question)) {
       setError(m.admin_faq_question_required());
       return;
     }
-    if (!form.answerNl.trim()) {
+    if (!hasOriginal(form.textLanguage, form.answer)) {
       setError(m.admin_faq_answer_required());
       return;
     }
     setError(null);
-    const locales = {
-      questionEn: form.questionEn.trim(),
-      answerEn: form.answerEn.trim(),
-      questionFr: form.questionFr.trim(),
-      answerFr: form.answerFr.trim(),
-    };
     try {
-      if (editingId) {
-        await updateMutation.mutateAsync({
-          id: editingId,
-          data: {
-            questionNl: form.questionNl.trim(),
-            answerNl: form.answerNl.trim(),
-            questionEn: locales.questionEn,
-            answerEn: locales.answerEn,
-            questionFr: locales.questionFr,
-            answerFr: locales.answerFr,
-          },
-        });
-      } else {
-        await createMutation.mutateAsync({
-          question: form.questionNl.trim(),
-          answer: form.answerNl.trim(),
-          ...locales,
-        });
-      }
+      await saveMutation.mutateAsync({ id: editingId, data: faqPayload(form) });
       setShowModal(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : m.admin_content_error_save());
     }
-  }, [form, editingId, createMutation, updateMutation]);
+  }, [form, editingId, saveMutation]);
 
   const handleToggleActive = useCallback(
     async (item: FaqItem) => {
       setRowError(null);
       try {
-        await updateMutation.mutateAsync({ id: item.id, data: { active: !item.active } });
+        await saveMutation.mutateAsync({ id: item.id, data: { active: !item.active } });
       } catch (err) {
         setRowError(err instanceof Error ? err.message : m.admin_content_error_save());
       }
     },
-    [updateMutation],
+    [saveMutation],
   );
 
   const handleDelete = useCallback(
@@ -295,9 +259,9 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   );
 
   const isMutating =
-    updateMutation.isPending || deleteMutation.isPending || reorderMutation.isPending;
+    saveMutation.isPending || deleteMutation.isPending || reorderMutation.isPending;
 
-  const localeBadge = (label: string, translated: boolean) => (
+  const languageBadge = (label: string, translated: boolean) => (
     <Badge
       key={label}
       variant={translated ? "success" : "secondary"}
@@ -348,19 +312,21 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           enableSorting: false,
           cell: ({ row }) => {
             const item = row.original;
+            const original = originalText(item);
             return (
               <>
                 <div className="font-semibold">
-                  {item.questionNl}
+                  {original.question}
                   {!item.active && (
                     <Badge variant="secondary" className="ms-2 text-tiny">
                       {m.admin_venue_archived_badge()}
                     </Badge>
                   )}
-                  {localeBadge("EN", Boolean(item.questionEn && item.answerEn))}
-                  {localeBadge("FR", Boolean(item.questionFr && item.answerFr))}
+                  {languageBadge("NL", Boolean(item.questionNl && item.answerNl))}
+                  {languageBadge("FR", Boolean(item.questionFr && item.answerFr))}
+                  {languageBadge("EN", Boolean(item.questionEn && item.answerEn))}
                 </div>
-                <div className="text-subtle text-sm">{item.answerNl}</div>
+                <div className="text-subtle text-sm">{original.answer}</div>
               </>
             );
           },
@@ -490,94 +456,44 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               </Alert>
             )}
 
-            <div className="mb-6">
-              <div className="text-highlight text-sm font-semibold mb-2">
-                {m.admin_faq_locale_nl_label()}
-              </div>
-              <AdminField className="mb-4" controlId="faq-question-nl">
-                <AdminLabel>{m.admin_faq_question_label()}</AdminLabel>
-                <AdminInput
-                  type="text"
-                  value={form.questionNl}
-                  onChange={(e) => setForm((p) => ({ ...p, questionNl: e.target.value }))}
-                  className="bg-muted text-content border-input"
-                />
-              </AdminField>
-              <AdminField controlId="faq-answer-nl">
-                <AdminLabel>{m.admin_faq_answer_label()}</AdminLabel>
-                <AdminTextarea
-                  rows={3}
-                  value={form.answerNl}
-                  onChange={(e) => setForm((p) => ({ ...p, answerNl: e.target.value }))}
-                  className="bg-muted text-content border-input"
-                />
-              </AdminField>
-            </div>
-
-            <div className="mb-6">
-              <div className="text-subtle text-sm font-semibold mb-1">
-                {m.admin_faq_locale_en_label()}
-              </div>
-              <div className="text-subtle text-sm mb-2">{m.admin_faq_locale_optional_hint()}</div>
-              <AdminField className="mb-4" controlId="faq-question-en">
-                <AdminLabel>{m.admin_faq_question_label()}</AdminLabel>
-                <AdminInput
-                  type="text"
-                  value={form.questionEn}
-                  onChange={(e) => setForm((p) => ({ ...p, questionEn: e.target.value }))}
-                  className="bg-muted text-content border-input"
-                />
-              </AdminField>
-              <AdminField controlId="faq-answer-en">
-                <AdminLabel>{m.admin_faq_answer_label()}</AdminLabel>
-                <AdminTextarea
-                  rows={3}
-                  value={form.answerEn}
-                  onChange={(e) => setForm((p) => ({ ...p, answerEn: e.target.value }))}
-                  className="bg-muted text-content border-input"
-                />
-              </AdminField>
-            </div>
-
-            <div>
-              <div className="text-subtle text-sm font-semibold mb-1">
-                {m.admin_faq_locale_fr_label()}
-              </div>
-              <div className="text-subtle text-sm mb-2">{m.admin_faq_locale_optional_hint()}</div>
-              <AdminField className="mb-4" controlId="faq-question-fr">
-                <AdminLabel>{m.admin_faq_question_label()}</AdminLabel>
-                <AdminInput
-                  type="text"
-                  value={form.questionFr}
-                  onChange={(e) => setForm((p) => ({ ...p, questionFr: e.target.value }))}
-                  className="bg-muted text-content border-input"
-                />
-              </AdminField>
-              <AdminField controlId="faq-answer-fr">
-                <AdminLabel>{m.admin_faq_answer_label()}</AdminLabel>
-                <AdminTextarea
-                  rows={3}
-                  value={form.answerFr}
-                  onChange={(e) => setForm((p) => ({ ...p, answerFr: e.target.value }))}
-                  className="bg-muted text-content border-input"
-                />
-              </AdminField>
-            </div>
+            <OriginalLanguageSelect
+              controlId="faq-text-language"
+              label={m.admin_faq_original_language()}
+              value={form.textLanguage}
+              onChange={(textLanguage) => setForm((previous) => ({ ...previous, textLanguage }))}
+            />
+            <p className="text-sm text-subtle mb-4">{m.admin_faq_text_help()}</p>
+            <LocalizedInputs
+              idPrefix="faq-question"
+              label={(language) => m.admin_faq_question_label_in({ language })}
+              values={form.question}
+              maxLength={500}
+              onChange={(language, text) =>
+                setForm((previous) => ({
+                  ...previous,
+                  question: { ...previous.question, [language]: text },
+                }))
+              }
+            />
+            <LocalizedInputs
+              idPrefix="faq-answer"
+              label={(language) => m.admin_faq_answer_label_in({ language })}
+              values={form.answer}
+              multiline
+              maxLength={10000}
+              onChange={(language, text) =>
+                setForm((previous) => ({
+                  ...previous,
+                  answer: { ...previous.answer, [language]: text },
+                }))
+              }
+            />
           </DialogBody>
           <DialogFooter>
             <Button variant="secondary" onClick={() => setShowModal(false)}>
               {m.admin_action_cancel()}
             </Button>
-            <Button
-              variant="warning"
-              onClick={handleSave}
-              disabled={
-                createMutation.isPending ||
-                updateMutation.isPending ||
-                !form.questionNl.trim() ||
-                !form.answerNl.trim()
-              }
-            >
+            <Button variant="warning" onClick={handleSave} disabled={saveMutation.isPending}>
               {m.admin_save()}
             </Button>
           </DialogFooter>

@@ -30,7 +30,7 @@ async def _edition_with_table(client, edition_id: str, date: str, venue_id: str,
         "/api/events",
         json={
             "edition_id": edition_id,
-            "title_nl": "Bourse",
+            "title_en": "Bourse",
             "date": date,
             "start_time": "09:00",
             "category": "other",

@@ -19,10 +19,10 @@ from typing import Any
 
 from fastapi import HTTPException
 
-from app.event_content import Language
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import EventCreate, EventUpdate
 from app.services import events_service
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 from app.utils import event_to_summary_dict
 
 
@@ -34,7 +34,7 @@ async def create_event(
     date: dt_date,
     start_time: str,
     category: str,
-    title_language: Language = "nl",
+    title_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
     title_nl: str | None = None,
     title_fr: str | None = None,
     title_en: str | None = None,

@@ -41,7 +41,7 @@ async def test_active_edition_returns_404_when_only_past_editions_exist(client):
         "/api/events",
         json={
             "edition_id": "edition-past-only",
-            "title_nl": "Past Event",
+            "title_en": "Past Event",
             "date": "2020-03-20",
             "start_time": "18:00",
             "end_time": "22:00",
@@ -105,7 +105,7 @@ async def test_active_edition_returns_embedded_venue_and_organizations(client):
         "/api/events",
         json={
             "edition_id": "2026",
-            "title_nl": "Sunday",
+            "title_en": "Sunday",
             "date": "2099-03-22",
             "start_time": "14:00",
             "end_time": "18:00",
@@ -166,7 +166,7 @@ async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(
     for payload in [
         {
             "edition_id": "edition-multi-day",
-            "title_nl": "Friday Tasting",
+            "title_en": "Friday Tasting",
             "date": "2099-03-21",
             "start_time": "17:00",
             "end_time": "18:00",
@@ -176,7 +176,7 @@ async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(
         },
         {
             "edition_id": "edition-multi-day",
-            "title_nl": "Friday VIP",
+            "title_en": "Friday VIP",
             "date": "2099-03-21",
             "start_time": "19:00",
             "end_time": "20:00",
@@ -186,7 +186,7 @@ async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(
         },
         {
             "edition_id": "edition-multi-day",
-            "title_nl": "Saturday Party",
+            "title_en": "Saturday Party",
             "date": "2099-03-22",
             "start_time": "20:00",
             "end_time": "22:00",
@@ -243,7 +243,7 @@ async def test_active_edition_type_filter_excludes_nearer_community_editions(cli
             "/api/events",
             json={
                 "edition_id": edition_id,
-                "title_nl": f"{edition_type} event",
+                "title_en": f"{edition_type} event",
                 "date": event_date,
                 "start_time": "18:00",
                 "end_time": "22:00",
@@ -300,7 +300,7 @@ async def test_standalone_event_can_move_within_same_single_day(client):
         "/api/events",
         json={
             "edition_id": "edition-bourse-single-day",
-            "title_nl": "Bourse Opening",
+            "title_en": "Bourse Opening",
             "date": "2099-03-21",
             "start_time": "10:00",
             "end_time": "11:00",
@@ -315,7 +315,7 @@ async def test_standalone_event_can_move_within_same_single_day(client):
 
     update_response = await client.put(
         f"/api/events/{event_id}",
-        json={"date": "2099-03-21", "title_nl": "Bourse Opening Updated"},
+        json={"date": "2099-03-21", "title_en": "Bourse Opening Updated"},
         headers=ADMIN_HEADERS,
     )
 
@@ -351,7 +351,7 @@ async def test_community_edition_upcoming_lists_every_active_event_in_time_order
     for payload in [
         {
             "edition_id": "edition-bourse-multi-event",
-            "title_nl": "Bourse Auction",
+            "title_en": "Bourse Auction",
             "date": "2099-03-21",
             "start_time": "15:00",
             "category": "exchange",
@@ -360,7 +360,7 @@ async def test_community_edition_upcoming_lists_every_active_event_in_time_order
         },
         {
             "edition_id": "edition-bourse-multi-event",
-            "title_nl": "Bourse Opening",
+            "title_en": "Bourse Opening",
             "date": "2099-03-21",
             "start_time": "10:00",
             "category": "exchange",
@@ -369,7 +369,7 @@ async def test_community_edition_upcoming_lists_every_active_event_in_time_order
         },
         {
             "edition_id": "edition-bourse-multi-event",
-            "title_nl": "Draft Tasting",
+            "title_en": "Draft Tasting",
             "date": "2099-03-21",
             "start_time": "12:00",
             "category": "exchange",
@@ -413,7 +413,7 @@ async def test_inactive_event_does_not_keep_finished_edition_upcoming(client):
         "/api/events",
         json={
             "edition_id": "edition-only-inactive-future",
-            "title_nl": "Draft Sunday",
+            "title_en": "Draft Sunday",
             "date": "2099-03-22",
             "start_time": "14:00",
             "category": "general",
@@ -455,7 +455,7 @@ async def test_inactive_events_excluded_from_active_edition_response(client):
     for payload in [
         {
             "edition_id": "edition-mixed-active",
-            "title_nl": "Draft Preview",
+            "title_en": "Draft Preview",
             "date": "2099-03-20",
             "start_time": "10:00",
             "category": "general",
@@ -464,7 +464,7 @@ async def test_inactive_events_excluded_from_active_edition_response(client):
         },
         {
             "edition_id": "edition-mixed-active",
-            "title_nl": "Published Gala",
+            "title_en": "Published Gala",
             "date": "2099-03-21",
             "start_time": "18:00",
             "category": "general",
@@ -584,7 +584,7 @@ async def _create_upcoming_event(
         "/api/events",
         json={
             "edition_id": edition_id,
-            "title_nl": title,
+            "title_en": title,
             "date": date,
             "start_time": start_time,
             "category": "exchange",
@@ -765,7 +765,7 @@ async def test_standalone_event_rejects_a_second_date(client):
         "/api/events",
         json={
             "edition_id": "edition-bourse-two-dates",
-            "title_nl": "Bourse Opening",
+            "title_en": "Bourse Opening",
             "date": "2099-03-21",
             "start_time": "10:00",
             "category": "exchange",
@@ -780,7 +780,7 @@ async def test_standalone_event_rejects_a_second_date(client):
         "/api/events",
         json={
             "edition_id": "edition-bourse-two-dates",
-            "title_nl": "Bourse Auction",
+            "title_en": "Bourse Auction",
             "date": "2099-03-22",
             "start_time": "10:00",
             "category": "exchange",

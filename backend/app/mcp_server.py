@@ -36,7 +36,6 @@ from fastmcp.tools.base import Tool
 from pydantic import Field
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.event_content import Language
 from app.mcp import check_in as mcp_check_in
 from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
@@ -83,6 +82,7 @@ from app.schemas import (
     TableTypeCreate,
 )
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
@@ -1091,7 +1091,7 @@ class ChampagneFestivalMcpBackend:
         date: dt_date,
         start_time: str,
         category: str,
-        title_language: Language = "nl",
+        title_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
@@ -1210,7 +1210,7 @@ class ChampagneFestivalMcpBackend:
     async def create_event_category(
         self,
         key: str,
-        label_language: Language = "nl",
+        label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         label_nl: str | None = None,
         label_fr: str | None = None,
         label_en: str | None = None,
@@ -1429,28 +1429,33 @@ class ChampagneFestivalMcpBackend:
 
     async def create_faq_item(
         self,
-        question_nl: str,
-        answer_nl: str,
-        question_en: str | None = None,
-        answer_en: str | None = None,
+        text_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
+        question_nl: str | None = None,
         question_fr: str | None = None,
+        question_en: str | None = None,
+        answer_nl: str | None = None,
         answer_fr: str | None = None,
+        answer_en: str | None = None,
         active: bool = True,
     ) -> dict:
         """Create an FAQ item, appended after the current last one. Requires the ``admin`` role.
 
+        Fill the question and the answer in ``text_language`` (default ``en``) and
+        optionally in the other languages; a language is shown only when both its
+        question and answer are filled, otherwise visitors see the original.
         Display position isn't settable here — use ``reorder_faq_items`` to change it.
         """
         self._require_admin()
         return await mcp_admin_faq.create_faq_item(
             self.session_factory,
             self._actor(),
+            text_language=text_language,
             question_nl=question_nl,
-            answer_nl=answer_nl,
-            question_en=question_en,
-            answer_en=answer_en,
             question_fr=question_fr,
+            question_en=question_en,
+            answer_nl=answer_nl,
             answer_fr=answer_fr,
+            answer_en=answer_en,
             active=active,
         )
 
@@ -1462,32 +1467,33 @@ class ChampagneFestivalMcpBackend:
     async def update_faq_item(
         self,
         faq_item_id: str,
+        text_language: Language | None = None,
         question_nl: str | None = None,
-        answer_nl: str | None = None,
-        question_en: str | None = None,
-        answer_en: str | None = None,
         question_fr: str | None = None,
+        question_en: str | None = None,
+        answer_nl: str | None = None,
         answer_fr: str | None = None,
+        answer_en: str | None = None,
         active: bool | None = None,
     ) -> dict:
         """Partially update an FAQ item; omitted fields are left unchanged.
 
-        For the optional ``en``/``fr`` locale fields, an explicit empty string
-        clears that locale's translation (hiding the item on that locale's FAQ)
-        rather than leaving it unchanged. Display position isn't settable here —
-        use ``reorder_faq_items`` to change it. Requires the ``admin`` role.
+        An explicit empty string clears a translation; the original language
+        (``text_language``) must keep its question and answer. Display position isn't
+        settable here — use ``reorder_faq_items`` to change it. Requires the ``admin`` role.
         """
         self._require_admin()
         return await mcp_admin_faq.update_faq_item(
             self.session_factory,
             self._actor(),
             faq_item_id,
+            text_language=text_language,
             question_nl=question_nl,
-            answer_nl=answer_nl,
-            question_en=question_en,
-            answer_en=answer_en,
             question_fr=question_fr,
+            question_en=question_en,
+            answer_nl=answer_nl,
             answer_fr=answer_fr,
+            answer_en=answer_en,
             active=active,
         )
 

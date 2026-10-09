@@ -28,21 +28,13 @@ async def list_active_faq_items(
     locale: FaqLocale = Query(default="nl"),
     db: AsyncSession = Depends(get_db),
 ) -> list[dict]:
-    """Public: active FAQ items with a translation for `locale`, in display order.
+    """Public: active FAQ items in display order, in `locale`.
 
-    An item with a blank translation for this locale is omitted rather than
-    falling back to another language's text.
+    An item that is not fully translated (question and answer) into `locale`
+    is shown in its original language instead of being omitted.
     """
-    question_column = getattr(FaqItem, f"question_{locale}")
-    answer_column = getattr(FaqItem, f"answer_{locale}")
-    stmt = (
-        select(FaqItem)
-        .where(FaqItem.active.is_(True), question_column.isnot(None), answer_column.isnot(None))
-        .order_by(FaqItem.sort_order)
-    )
-    result = await db.execute(stmt)
-    items = [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]
-    return [item for item in items if item is not None]
+    result = await db.execute(select(FaqItem).where(FaqItem.active.is_(True)).order_by(FaqItem.sort_order))
+    return [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]
 
 
 @router.get("", response_model=list[FaqItemOut], dependencies=[Depends(require_admin)])

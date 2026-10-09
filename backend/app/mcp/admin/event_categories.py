@@ -8,11 +8,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.event_content import Language
 from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import EventCategoryCreate, EventCategoryUpdate
 from app.services import event_categories_service
 from app.services.errors import ServiceError
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 
 async def list_event_categories(session_factory: Any, locale: str | None = None) -> dict:
@@ -25,7 +25,7 @@ async def create_event_category(
     actor: str,
     *,
     key: str,
-    label_language: Language = "nl",
+    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
     label_nl: str | None = None,
     label_fr: str | None = None,
     label_en: str | None = None,

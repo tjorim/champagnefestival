@@ -52,9 +52,9 @@ import { invalidateAdmin } from "@/utils/queryInvalidation";
 const KEY_PATTERN = /^[a-z][a-z0-9_-]{0,49}$/;
 
 const LANGUAGES = [
-  { language: "nl", field: "labelNl", name: m.admin_event_language_nl },
-  { language: "fr", field: "labelFr", name: m.admin_event_language_fr },
-  { language: "en", field: "labelEn", name: m.admin_event_language_en },
+  { language: "nl", field: "labelNl", name: m.admin_language_nl },
+  { language: "fr", field: "labelFr", name: m.admin_language_fr },
+  { language: "en", field: "labelEn", name: m.admin_language_en },
 ] as const;
 
 interface CategoryForm {

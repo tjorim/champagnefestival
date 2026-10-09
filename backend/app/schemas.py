@@ -13,7 +13,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
-from app.event_content import Language
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 # ---------------------------------------------------------------------------
 # Shared value types
@@ -262,7 +262,7 @@ class EventCategoryCreate(EventCategoryLabels):
         pattern=EVENT_CATEGORY_KEY_PATTERN,
         description="Stable identifier stored on events: lowercase letters, digits, `-` and `_`. Cannot be changed.",
     )
-    label_language: Language = "nl"
+    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     sort_order: int = Field(default=0, ge=0, le=100000)
 
     @model_validator(mode="after")
@@ -333,7 +333,7 @@ class EventTextFields(RequestModel):
 
 class EventCreate(EventTextFields):
     edition_id: str = Field(min_length=1, max_length=100)
-    title_language: Language = "nl"
+    title_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     date: dt_date
     start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -1998,27 +1998,43 @@ class AppSettingsOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class FaqItemCreate(RequestModel):
-    question_nl: str = Field(min_length=1, max_length=500)
-    answer_nl: str = Field(min_length=1, max_length=10000)
-    question_en: str | None = Field(default=None, max_length=500)
-    answer_en: str | None = Field(default=None, max_length=10000)
+class FaqTextFields(RequestModel):
+    """A question and its answer per language (#1222): the original language must
+    have both, the others are optional, and a language is shown only when both
+    its question and answer have text. A blank text is stored as `None`."""
+
+    text_language: Language | None = None
+    question_nl: str | None = Field(default=None, max_length=500)
     question_fr: str | None = Field(default=None, max_length=500)
+    question_en: str | None = Field(default=None, max_length=500)
+    answer_nl: str | None = Field(default=None, max_length=10000)
     answer_fr: str | None = Field(default=None, max_length=10000)
+    answer_en: str | None = Field(default=None, max_length=10000)
+
+    @field_validator("question_nl", "question_fr", "question_en", "answer_nl", "answer_fr", "answer_en", mode="before")
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_original(self) -> Self:
+        language = self.text_language
+        if not language or not getattr(self, f"question_{language}") or not getattr(self, f"answer_{language}"):
+            raise ValueError("A FAQ item requires a question and an answer in its original language.")
+        return self
+
+
+class FaqItemCreate(FaqTextFields):
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     active: bool = True
 
+    @model_validator(mode="after")
+    def check_text(self) -> Self:
+        return self.validate_original()
 
-class FaqItemUpdate(RequestModel):
-    question_nl: str | None = Field(default=None, min_length=1, max_length=500)
-    answer_nl: str | None = Field(default=None, min_length=1, max_length=10000)
-    # Optional locales use presence (model_fields_set), not None-ness, to tell
-    # "omitted, leave unchanged" apart from "included as '', clear it" — see
-    # update_faq_item in routers/faq.py. An empty string clears the
-    # translation (stored as NULL), hiding that item on that locale's FAQ.
-    question_en: str | None = Field(default=None, max_length=500)
-    answer_en: str | None = Field(default=None, max_length=10000)
-    question_fr: str | None = Field(default=None, max_length=500)
-    answer_fr: str | None = Field(default=None, max_length=10000)
+
+class FaqItemUpdate(FaqTextFields):
+    """Partial update: an empty string clears a translation, the original cannot be cleared."""
+
     active: bool | None = None
 
 
@@ -2034,15 +2050,16 @@ class FaqItemReorder(RequestModel):
 
 
 class FaqItemOut(BaseModel):
-    """Admin shape: every locale's content, for the FAQ editor."""
+    """Admin shape: every language's content, for the FAQ editor."""
 
     id: str
-    question_nl: str
-    answer_nl: str
-    question_en: str | None
-    answer_en: str | None
+    text_language: Language
+    question_nl: str | None
     question_fr: str | None
+    question_en: str | None
+    answer_nl: str | None
     answer_fr: str | None
+    answer_en: str | None
     sort_order: int
     active: bool
     created_at: datetime
@@ -2052,7 +2069,8 @@ class FaqItemOut(BaseModel):
 
 
 class FaqItemPublicOut(BaseModel):
-    """Public shape: one locale's question/answer, already resolved server-side."""
+    """Public shape: one locale's question/answer, already resolved server-side
+    (the original language when that locale is not fully translated)."""
 
     id: str
     question: str

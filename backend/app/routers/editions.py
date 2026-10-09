@@ -18,7 +18,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.event_content import Language
 from app.models import Event, PaymentTransaction, Registration
 from app.schemas import (
     EditionAttendanceStats,
@@ -31,6 +30,7 @@ from app.schemas import (
     EditionUpdate,
 )
 from app.services import editions_service
+from app.translations import Language
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
 logger = logging.getLogger(__name__)

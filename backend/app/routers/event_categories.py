@@ -10,10 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.event_content import Language
 from app.schemas import EventCategoryCreate, EventCategoryOut, EventCategoryUpdate
 from app.services import event_categories_service
 from app.services.errors import ServiceError, to_http_exception
+from app.translations import Language
 
 router = APIRouter(prefix="/api/event-categories", tags=["event-categories"])
 

@@ -12,28 +12,31 @@ from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import FaqItemCreate, FaqItemReorder, FaqItemUpdate
 from app.services import faq_service
 from app.services.errors import ServiceError
+from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 
 async def create_faq_item(
     session_factory: Any,
     actor: str,
     *,
-    question_nl: str,
-    answer_nl: str,
-    question_en: str | None = None,
-    answer_en: str | None = None,
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
+    question_nl: str | None = None,
     question_fr: str | None = None,
+    question_en: str | None = None,
+    answer_nl: str | None = None,
     answer_fr: str | None = None,
+    answer_en: str | None = None,
     active: bool = True,
 ) -> dict:
     body = validate_with_schema(
         FaqItemCreate,
+        text_language=text_language,
         question_nl=question_nl,
+        question_fr=question_fr,
+        question_en=question_en,
         answer_nl=answer_nl,
-        question_en=question_en or None,
-        answer_en=answer_en or None,
-        question_fr=question_fr or None,
-        answer_fr=answer_fr or None,
+        answer_fr=answer_fr,
+        answer_en=answer_en,
         active=active,
     )
     async with session_factory() as db:
@@ -54,29 +57,31 @@ async def update_faq_item(
     actor: str,
     faq_item_id: str,
     *,
+    text_language: Language | None = None,
     question_nl: str | None = None,
-    answer_nl: str | None = None,
-    question_en: str | None = None,
-    answer_en: str | None = None,
     question_fr: str | None = None,
+    question_en: str | None = None,
+    answer_nl: str | None = None,
     answer_fr: str | None = None,
+    answer_en: str | None = None,
     active: bool | None = None,
 ) -> dict:
     """Update an FAQ item.
 
-    ``question_en``/``answer_en``/``question_fr``/``answer_fr`` follow the
-    module-level convention: omitted (``None``) leaves the locale untouched;
-    an explicit empty string clears it, hiding the item on that locale's FAQ.
+    Omitted (``None``) leaves a field untouched; an explicit empty string clears a
+    translation (the original language keeps its question and answer, so it cannot
+    be cleared).
     """
     provided = {
         k: v
         for k, v in {
+            "text_language": text_language,
             "question_nl": question_nl,
-            "answer_nl": answer_nl,
-            "question_en": question_en,
-            "answer_en": answer_en,
             "question_fr": question_fr,
+            "question_en": question_en,
+            "answer_nl": answer_nl,
             "answer_fr": answer_fr,
+            "answer_en": answer_en,
             "active": active,
         }.items()
         if v is not None

@@ -117,18 +117,20 @@ export interface Room {
 }
 
 /**
- * A FAQ item's admin-facing shape: every locale's content. Dutch is
- * required; English/French are optional per item — a blank translation
- * hides that item on that locale's public FAQ.
+ * A FAQ item's admin-facing shape: every language's content. The original
+ * language must have a question and an answer; a language is shown to visitors
+ * only when both are filled there, otherwise they see the original.
  */
 export interface FaqItem {
   id: string;
-  questionNl: string;
-  answerNl: string;
-  questionEn: string | null;
-  answerEn: string | null;
+  /** Original language: the question and answer must both have text there. */
+  textLanguage: "nl" | "fr" | "en";
+  questionNl: string | null;
   questionFr: string | null;
+  questionEn: string | null;
+  answerNl: string | null;
   answerFr: string | null;
+  answerEn: string | null;
   sortOrder: number;
   active: boolean;
 }

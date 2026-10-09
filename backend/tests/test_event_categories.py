@@ -15,7 +15,7 @@ from tests.helpers import ADMIN_HEADERS, _create_event, mcp_session_factory
 
 
 async def _create(client, **body):
-    return await client.post("/api/event-categories", json=body, headers=ADMIN_HEADERS)
+    return await client.post("/api/event-categories", json={"label_language": "nl", **body}, headers=ADMIN_HEADERS)
 
 
 async def test_list_is_public_ordered_and_resolves_labels_for_the_locale(client):
@@ -130,7 +130,9 @@ async def test_mcp_tools_manage_categories_and_events_use_them(db_session):
     from app.models import Edition, Venue
 
     factory = mcp_session_factory(db_session)
-    created = await mcp_categories.create_event_category(factory, "admin-1", key="gala", label_nl="Gala")
+    created = await mcp_categories.create_event_category(
+        factory, "admin-1", key="gala", label_language="nl", label_nl="Gala"
+    )
     assert created["key"] == "gala"
     updated = await mcp_categories.update_event_category(factory, "admin-1", "gala", label_en="Gala night")
     assert updated["label_en"] == "Gala night"
@@ -138,9 +140,13 @@ async def test_mcp_tools_manage_categories_and_events_use_them(db_session):
     assert {c["key"]: c["label"] for c in english["event_categories"]}["gala"] == "Gala night"
 
     with pytest.raises(ValueError, match="already exists"):
-        await mcp_categories.create_event_category(factory, "admin-1", key="gala", label_nl="Nog eens")
+        await mcp_categories.create_event_category(
+            factory, "admin-1", key="gala", label_language="nl", label_nl="Nog eens"
+        )
     with pytest.raises(ValueError, match="key"):
-        await mcp_categories.create_event_category(factory, "admin-1", key="Not A Key", label_nl="x")
+        await mcp_categories.create_event_category(
+            factory, "admin-1", key="Not A Key", label_language="nl", label_nl="x"
+        )
 
     db_session.add(Venue(id="venue-cat", name="Venue"))
     await db_session.flush()
@@ -150,7 +156,7 @@ async def test_mcp_tools_manage_categories_and_events_use_them(db_session):
         factory,
         "admin-1",
         edition_id="edition-cat",
-        title_nl="Gala-avond",
+        title_en="Gala-avond",
         date=date(2099, 3, 21),
         start_time="19:00",
         category="gala",

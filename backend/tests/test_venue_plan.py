@@ -47,7 +47,7 @@ async def _setup_edition_with_layout(client) -> tuple[str, str, str]:
 
     event_payload = {
         "edition_id": "vp-2026",
-        "title_nl": "Friday",
+        "title_en": "Friday",
         "date": "2026-03-13",
         "start_time": "19:00",
         "end_time": "22:00",

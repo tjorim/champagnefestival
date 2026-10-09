@@ -12,9 +12,9 @@ from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 
 from app.config import settings
-from app.event_content import resolve_text
 from app.models import AuditEntry, Event
 from app.services import organization_translation as translation
+from app.translations import resolve_text
 from tests.conftest import DEFAULT_TEST_CATEGORIES
 from tests.helpers import ADMIN_HEADERS, _create_event
 
@@ -28,6 +28,7 @@ async def _post_event(client, edition_id: str, **overrides):
         "date": "2099-03-21",
         "start_time": "18:00",
         "category": "tasting",
+        "title_language": "nl",
         **overrides,
     }
     return await client.post("/api/events", json=body, headers=ADMIN_HEADERS)
@@ -39,6 +40,7 @@ async def _translated_event(client, edition_id: str = "edition-translated") -> d
     response = await client.put(
         f"/api/events/{event['id']}",
         json={
+            "title_language": "nl",
             "title_nl": "Openingsavond",
             "title_fr": "Soirée d'ouverture",
             "title_en": "Opening night",
@@ -120,7 +122,7 @@ async def test_the_category_must_be_an_existing_category(client):
     assert [event["category"] for event in listed.json()] == ["ceremony"]
 
     category = await client.post(
-        "/api/event-categories", json={"key": "gala", "label_nl": "Gala"}, headers=ADMIN_HEADERS
+        "/api/event-categories", json={"key": "gala", "label_language": "nl", "label_nl": "Gala"}, headers=ADMIN_HEADERS
     )
     assert category.status_code == 201
     accepted = await client.put(f"/api/events/{created['id']}", json={"category": "gala"}, headers=ADMIN_HEADERS)
