@@ -477,45 +477,24 @@ export async function deleteEditionById(
   return editionId;
 }
 
-export type PollOptionKind = "dish" | "soup" | "dinner";
-
 export interface PollOption {
   id: string;
   editionId: string;
-  kind: PollOptionKind;
-  /** Original-language label. */
   label: string;
-  labelLanguage: Language;
-  labels: LocalizedText;
-}
-
-export interface PollOptionLabels {
-  language: Language;
-  labels: LocalizedText;
+  /** Sum of every volunteer's quantity: what to order from the caterer. */
+  totalQuantity: number;
+  /** How many volunteers picked it. */
+  volunteerCount: number;
 }
 
 function apiToPollOption(data: Record<string, unknown>): PollOption {
-  const kind = data.kind;
   return {
     id: String(data.id ?? ""),
     editionId: String(data.edition_id ?? ""),
-    kind: kind === "soup" || kind === "dinner" ? kind : "dish",
     label: String(data.label ?? ""),
-    labelLanguage: isLanguage(data.label_language) ? data.label_language : "nl",
-    labels: {
-      nl: String(data.label_nl ?? ""),
-      fr: String(data.label_fr ?? ""),
-      en: String(data.label_en ?? ""),
-    },
+    totalQuantity: Number(data.total_quantity ?? 0),
+    volunteerCount: Number(data.volunteer_count ?? 0),
   };
-}
-
-function isLanguage(value: unknown): value is Language {
-  return value === "nl" || value === "fr" || value === "en";
-}
-
-function pollLabelBody({ language, labels }: PollOptionLabels) {
-  return { label_language: language, ...localizedBody("label", labels) };
 }
 
 export async function fetchEditionPollOptions(
@@ -532,7 +511,7 @@ export async function fetchEditionPollOptions(
 }
 
 export async function createPollOption(
-  payload: { editionId: string; kind: PollOptionKind } & PollOptionLabels,
+  payload: { editionId: string; label: string },
   authHeaders: () => Record<string, string>,
 ): Promise<PollOption> {
   const response = await safeFetch(
@@ -540,11 +519,7 @@ export async function createPollOption(
     {
       method: "POST",
       headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify({
-        edition_id: payload.editionId,
-        kind: payload.kind,
-        ...pollLabelBody(payload),
-      }),
+      body: JSON.stringify({ edition_id: payload.editionId, label: payload.label }),
     },
     m.admin_content_error_save(),
   );
@@ -553,7 +528,7 @@ export async function createPollOption(
 
 export async function updatePollOption(
   optionId: string,
-  label: PollOptionLabels,
+  label: string,
   authHeaders: () => Record<string, string>,
 ): Promise<PollOption> {
   const response = await safeFetch(
@@ -561,7 +536,7 @@ export async function updatePollOption(
     {
       method: "PUT",
       headers: { "Content-Type": "application/json", ...authHeaders() },
-      body: JSON.stringify(pollLabelBody(label)),
+      body: JSON.stringify({ label }),
     },
     m.admin_content_error_save(),
   );

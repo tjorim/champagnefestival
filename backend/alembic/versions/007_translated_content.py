@@ -1,11 +1,11 @@
 """Original language plus fallback for the remaining translated content (#1222).
 
-FAQ items, announcements, composed messages, policies, product and poll option
-text all follow the pattern events and organisations use: an original language
-that must have text, optional translations, and a fallback to the original.
-Existing rows are Dutch (the one language they were written in), so they migrate
-as ``nl``. Product categories become an entity with a label per language, like
-the event categories of 006.
+FAQ items, announcements, composed messages, policies and product text all follow
+the pattern events and organisations use: an original language that must have text,
+optional translations, and a fallback to the original. Existing rows are Dutch (the
+one language they were written in), so they migrate as ``nl``. Product categories
+become an entity with a label per language, like the event categories of 006. The
+volunteer meal poll drops its kinds and records a quantity per pick.
 
 Revision ID: 007
 Revises: 006
@@ -181,7 +181,7 @@ def _downgrade_policies() -> None:
     op.drop_column("policies", "title_language")
 
 
-# --- Products and poll options ----------------------------------------------------
+# --- Products ---------------------------------------------------------------------
 
 PRODUCT_NAME_CHECK = "(" + _original("name_language", "length(trim(name_{lang})) > 0") + ")"
 PRODUCT_DESCRIPTION_CHECK = (
@@ -190,7 +190,6 @@ PRODUCT_DESCRIPTION_CHECK = (
     + _original("description_language", "length(trim(description_{lang})) > 0")
     + ")"
 )
-POLL_LABEL_CHECK = _original("label_language", "length(trim(label_{lang})) > 0")
 
 
 def _upgrade_products() -> None:
@@ -211,29 +210,8 @@ def _upgrade_products() -> None:
     op.create_check_constraint("ck_products_name_original", "products", PRODUCT_NAME_CHECK)
     op.create_check_constraint("ck_products_description_original", "products", PRODUCT_DESCRIPTION_CHECK)
 
-    op.add_column("edition_poll_options", sa.Column("label_language", sa.String(2), nullable=True))
-    for lang in ("nl", "fr", "en"):
-        op.add_column("edition_poll_options", sa.Column(f"label_{lang}", sa.String(200), nullable=True))
-    op.execute(
-        "UPDATE edition_poll_options SET label_language = 'nl', "
-        "label_nl = CASE WHEN length(trim(label)) > 0 THEN label ELSE id END"
-    )
-    op.alter_column("edition_poll_options", "label_language", nullable=False)
-    op.drop_column("edition_poll_options", "label")
-    op.create_check_constraint("ck_poll_option_label_original", "edition_poll_options", POLL_LABEL_CHECK)
-
 
 def _downgrade_products() -> None:
-    op.drop_constraint("ck_poll_option_label_original", "edition_poll_options", type_="check")
-    op.add_column("edition_poll_options", sa.Column("label", sa.String(200), nullable=True))
-    op.execute(
-        "UPDATE edition_poll_options SET label = CASE label_language "
-        "WHEN 'fr' THEN label_fr WHEN 'en' THEN label_en ELSE label_nl END"
-    )
-    op.alter_column("edition_poll_options", "label", nullable=False)
-    for column in ("label_en", "label_fr", "label_nl", "label_language"):
-        op.drop_column("edition_poll_options", column)
-
     op.drop_constraint("ck_products_description_original", "products", type_="check")
     op.drop_constraint("ck_products_name_original", "products", type_="check")
     op.add_column("products", sa.Column("name", sa.String(200), nullable=True))
@@ -257,6 +235,36 @@ def _downgrade_products() -> None:
         "name_nl",
     ):
         op.drop_column("products", column)
+
+
+# --- Meal poll --------------------------------------------------------------------
+
+MAX_POLL_QUANTITY = 20
+
+
+def _upgrade_poll() -> None:
+    """Volunteers pick a quantity of each option instead of one dish, one soup and any
+    number of dinners. Everything is delivered on the same day, so options lose their kind
+    (existing picks become a quantity of one)."""
+    op.add_column("volunteer_poll_selections", sa.Column("quantity", sa.Integer(), nullable=False, server_default="1"))
+    op.alter_column("volunteer_poll_selections", "quantity", server_default=None)
+    op.create_check_constraint(
+        "ck_volunteer_poll_selections_quantity",
+        "volunteer_poll_selections",
+        f"quantity BETWEEN 1 AND {MAX_POLL_QUANTITY}",
+    )
+    op.drop_constraint("ck_poll_option_kind", "edition_poll_options", type_="check")
+    op.drop_column("edition_poll_options", "kind")
+
+
+def _downgrade_poll() -> None:
+    # The kind is lost; "dinner" is the one that allows any number of picks, so every
+    # restored selection stays valid. Quantities collapse to a single pick.
+    op.add_column("edition_poll_options", sa.Column("kind", sa.String(10), nullable=False, server_default="dinner"))
+    op.alter_column("edition_poll_options", "kind", server_default=None)
+    op.create_check_constraint("ck_poll_option_kind", "edition_poll_options", "kind IN ('dish', 'soup', 'dinner')")
+    op.drop_constraint("ck_volunteer_poll_selections_quantity", "volunteer_poll_selections", type_="check")
+    op.drop_column("volunteer_poll_selections", "quantity")
 
 
 # --- Product categories -----------------------------------------------------------
@@ -359,10 +367,12 @@ def upgrade() -> None:
     _upgrade_composed_messages()
     _upgrade_policies()
     _upgrade_products()
+    _upgrade_poll()
 
 
 def downgrade() -> None:
     _downgrade_product_categories()
+    _downgrade_poll()
     _downgrade_products()
     _downgrade_policies()
     _downgrade_composed_messages()

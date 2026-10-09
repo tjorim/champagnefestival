@@ -1,4 +1,4 @@
-"""Edition-scoped volunteer meal/dinner poll option management (admin only).
+"""Edition-scoped volunteer meal poll option management (admin only).
 
 Business logic lives in ``app.services.poll_options_service`` and is shared
 with ``app.mcp.admin.poll_options``, following the same convention as
@@ -12,7 +12,6 @@ from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.schemas import PollOptionCreate, PollOptionOut, PollOptionUpdate
 from app.services import poll_options_service
-from app.utils import poll_option_to_dict
 
 router = APIRouter(
     prefix="/api/poll-options",
@@ -28,10 +27,9 @@ async def create_poll_option(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    option = await poll_options_service.create_poll_option(
+    return await poll_options_service.create_poll_option(
         db, body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    return poll_option_to_dict(option)
 
 
 @router.get("", response_model=list[PollOptionOut])
@@ -39,7 +37,7 @@ async def list_poll_options(
     db: AsyncSession = Depends(get_db),
     edition_id: str | None = Query(default=None),
 ) -> list[dict]:
-    return [poll_option_to_dict(o) for o in await poll_options_service.list_poll_options(db, edition_id)]
+    return await poll_options_service.list_poll_options(db, edition_id)
 
 
 @router.put("/{option_id}", response_model=PollOptionOut)
@@ -50,10 +48,9 @@ async def update_poll_option(
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> dict:
-    option = await poll_options_service.update_poll_option(
+    return await poll_options_service.update_poll_option(
         db, option_id, body, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
-    return poll_option_to_dict(option)
 
 
 @router.delete("/{option_id}", status_code=status.HTTP_204_NO_CONTENT)

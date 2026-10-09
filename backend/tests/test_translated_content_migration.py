@@ -1,4 +1,5 @@
-"""Migration 007: the remaining content keeps its text in the original language; product categories become data."""
+"""Migration 007: the remaining content keeps its text in the original language, product categories become
+data and the meal poll records quantities."""
 
 import logging
 import os
@@ -96,10 +97,20 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
                     price=10, category=category, unit="item", purchasable=True, required=False,
                     created_at=NOW, updated_at=NOW,
                 )  # fmt: skip
-            _insert(
-                connection, "edition_poll_options", id="option", edition_id="edition", kind="dish", label="Stoofvlees",
-                created_at=NOW, updated_at=NOW,
-            )  # fmt: skip
+            for option_id, kind, label in (("option", "dish", "Stoofvlees"), ("soup", "soup", "Tomatensoep")):
+                _insert(
+                    connection, "edition_poll_options", id=option_id, edition_id="edition", kind=kind, label=label,
+                    created_at=NOW, updated_at=NOW,
+                )  # fmt: skip
+            _insert(connection, "people", id="volunteer", name="Sofie", created_at=NOW, updated_at=NOW)
+            for option_id in ("option", "soup"):
+                _insert(
+                    connection,
+                    "volunteer_poll_selections",
+                    volunteer_id="volunteer",
+                    option_id=option_id,
+                    created_at=NOW,
+                )
 
         with caplog.at_level(logging.WARNING, logger="alembic.runtime.migration"):
             command.upgrade(config, "007")
@@ -160,7 +171,20 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
             # A blank legacy name falls back to the id; a blank description stays absent.
             assert tuple(products["blank"])[1:] == ("nl", "blank", None, None, "food")
             assert products["custom"].category == "voucher"
-            assert tuple(one("SELECT label_language, label_nl FROM edition_poll_options")) == ("nl", "Stoofvlees")
+            # The poll keeps its labels, loses the kind, and existing picks become a quantity of one.
+            assert [
+                tuple(row) for row in connection.execute(text("SELECT label FROM edition_poll_options ORDER BY id"))
+            ] == [
+                ("Stoofvlees",),
+                ("Tomatensoep",),
+            ]
+            assert "kind" not in {c["name"] for c in inspect(connection).get_columns("edition_poll_options")}
+            assert [
+                tuple(row)
+                for row in connection.execute(
+                    text("SELECT option_id, quantity FROM volunteer_poll_selections ORDER BY option_id")
+                )
+            ] == [("option", 1), ("soup", 1)]
 
             categories = {
                 row.key: row
@@ -180,8 +204,16 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
             connection.execute(text("UPDATE products SET category = 'nope' WHERE id = 'champagne'"))
         with pytest.raises(IntegrityError, match="ck_products_name_original"), database.begin() as connection:
             connection.execute(text("UPDATE products SET name_language = 'fr' WHERE id = 'champagne'"))
-        with pytest.raises(IntegrityError, match="ck_poll_option_label_original"), database.begin() as connection:
-            connection.execute(text("UPDATE edition_poll_options SET label_language = 'en'"))
+        with (
+            pytest.raises(IntegrityError, match="ck_volunteer_poll_selections_quantity"),
+            database.begin() as connection,
+        ):
+            connection.execute(text("UPDATE volunteer_poll_selections SET quantity = 21"))
+        with (
+            pytest.raises(IntegrityError, match="ck_volunteer_poll_selections_quantity"),
+            database.begin() as connection,
+        ):
+            connection.execute(text("UPDATE volunteer_poll_selections SET quantity = 0"))
         with pytest.raises(IntegrityError, match="ck_faq_items_original"), database.begin() as connection:
             connection.execute(text("UPDATE faq_items SET text_language = 'fr'"))
         with (
@@ -203,11 +235,14 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
         with database.begin() as connection:
             names = dict(connection.execute(text("SELECT id, name FROM products")).all())
             categories = dict(connection.execute(text("SELECT id, category FROM products")).all())
+            kinds = dict(connection.execute(text("SELECT id, kind FROM edition_poll_options")).all())
             tables = inspect(connection).get_table_names(schema=schema)
         assert names["champagne"] == "Bottle"
         assert names["blank"] == "blank"
         # A category added since folds into "other" because the old column was narrower and a fixed list.
         assert (categories["champagne"], categories["custom"]) == ("champagne", "other")
+        # The kind is lost; "dinner" allows any number of picks, so every restored selection stays valid.
+        assert kinds == {"option": "dinner", "soup": "dinner"}
         assert "product_categories" not in tables
     finally:
         database.dispose()

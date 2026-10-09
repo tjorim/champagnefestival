@@ -1,4 +1,4 @@
-"""Shared application-service operations for volunteer meal/dinner poll options.
+"""Shared application-service operations for volunteer meal poll options.
 
 Used by both ``app.routers.poll_options`` (REST) and ``app.mcp.admin.poll_options``
 (MCP), following the same convention as ``app.services.products_service``.
@@ -8,43 +8,45 @@ Raises ``HTTPException`` directly; the MCP adapter translates it into
 
 from __future__ import annotations
 
-from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
 from app.models import EditionPollOption, VolunteerPollSelection
-from app.schemas import PollOptionCreate, PollOptionLabels, PollOptionUpdate
+from app.schemas import PollOptionCreate, PollOptionUpdate
 from app.services.events_service import ensure_edition_exists
-from app.utils import get_or_404, make_id
-
-LABEL_FIELDS = ("label_language", "label_nl", "label_fr", "label_en")
+from app.utils import get_or_404, make_id, poll_option_to_dict
 
 
 async def get_poll_option_or_404(db: AsyncSession, option_id: str) -> EditionPollOption:
     return await get_or_404(db, EditionPollOption, option_id, "Poll option not found.")
 
 
-async def list_poll_options(db: AsyncSession, edition_id: str | None = None) -> list[EditionPollOption]:
-    stmt = select(EditionPollOption).order_by(EditionPollOption.kind, EditionPollOption.created_at)
+async def list_poll_options(db: AsyncSession, edition_id: str | None = None) -> list[dict]:
+    """Options with what volunteers asked for in total (what to order from the caterer)."""
+    stmt = (
+        select(
+            EditionPollOption,
+            func.coalesce(func.sum(VolunteerPollSelection.quantity), 0),
+            func.count(VolunteerPollSelection.volunteer_id),
+        )
+        .outerjoin(VolunteerPollSelection, VolunteerPollSelection.option_id == EditionPollOption.id)
+        .group_by(EditionPollOption.id)
+        .order_by(EditionPollOption.created_at, EditionPollOption.id)
+    )
     if edition_id is not None:
         stmt = stmt.where(EditionPollOption.edition_id == edition_id)
-    return list((await db.execute(stmt)).scalars().all())
+    return [
+        poll_option_to_dict(option, total_quantity=int(total), volunteer_count=int(count))
+        for option, total, count in (await db.execute(stmt)).all()
+    ]
 
 
 async def create_poll_option(
     db: AsyncSession, body: PollOptionCreate, *, actor: str, request_id: str | None = None
-) -> EditionPollOption:
+) -> dict:
     await ensure_edition_exists(db, body.edition_id)
-    option = EditionPollOption(
-        id=make_id("poll"),
-        edition_id=body.edition_id,
-        kind=body.kind,
-        label_language=body.label_language,
-        label_nl=body.label_nl,
-        label_fr=body.label_fr,
-        label_en=body.label_en,
-    )
+    option = EditionPollOption(id=make_id("poll"), edition_id=body.edition_id, label=body.label)
     db.add(option)
     await write_audit_entry(
         db,
@@ -53,26 +55,18 @@ async def create_poll_option(
         resource_type="edition_poll_option",
         resource_id=option.id,
         request_id=request_id,
-        details={"edition_id": option.edition_id, "kind": option.kind, "label": option.label},
+        details={"edition_id": option.edition_id, "label": option.label},
     )
     await db.commit()
     await db.refresh(option)
-    return option
+    return poll_option_to_dict(option)
 
 
 async def update_poll_option(
     db: AsyncSession, option_id: str, body: PollOptionUpdate, *, actor: str, request_id: str | None = None
-) -> EditionPollOption:
+) -> dict:
     option = await get_poll_option_or_404(db, option_id)
-    # Validate the merged labels before mutating: a partial update may change a single translation.
-    labels = {field: getattr(option, field) for field in LABEL_FIELDS}
-    labels.update(body.model_dump(include=set(LABEL_FIELDS), exclude_unset=True))
-    try:
-        validated = PollOptionLabels.model_validate(labels).validate_original()
-    except ValueError as exc:
-        raise HTTPException(422, str(exc)) from exc
-    for field in LABEL_FIELDS:
-        setattr(option, field, getattr(validated, field))
+    option.label = body.label
     await write_audit_entry(
         db,
         actor=actor,
@@ -84,7 +78,8 @@ async def update_poll_option(
     )
     await db.commit()
     await db.refresh(option)
-    return option
+    totals = await list_poll_options(db, option.edition_id)
+    return next(entry for entry in totals if entry["id"] == option.id)
 
 
 async def delete_poll_option(db: AsyncSession, option_id: str, *, actor: str, request_id: str | None = None) -> None:

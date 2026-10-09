@@ -1158,62 +1158,45 @@ class VolunteerPeriod(Base):
 
 
 class EditionPollOption(Base):
-    """An admin-defined choice offered to volunteers for one edition — a main
-    dish, a soup, or a group dinner (e.g. "Donderdag - Cardis"). The actual
-    choices are catering-dependent and change every edition, so they are
-    admin-configured content rather than a fixed enum, mirroring how
-    `Product` holds one event's orderable items rather than a hardcoded list.
+    """A food choice offered to volunteers for one edition (a dish, a soup, ...).
+    The choices are catering-dependent and change every edition, so they are
+    admin-configured content rather than a fixed list, mirroring how `Product`
+    holds one event's orderable items. Everything is delivered on the same day,
+    so there is no kind or day: a volunteer simply picks how many of each they
+    want (`VolunteerPollSelection.quantity`).
     """
 
     __tablename__ = "edition_poll_options"
-    __table_args__ = (
-        CheckConstraint("kind IN ('dish', 'soup', 'dinner')", name="ck_poll_option_kind"),
-        CheckConstraint(
-            "((label_language = 'nl' AND length(trim(label_nl)) > 0) OR "
-            "(label_language = 'fr' AND length(trim(label_fr)) > 0) OR "
-            "(label_language = 'en' AND length(trim(label_en)) > 0)) IS TRUE",
-            name="ck_poll_option_label_original",
-        ),
-    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    kind: Mapped[str] = mapped_column(String(10), nullable=False)
-    label_language: Mapped[str] = mapped_column(String(2), nullable=False)
-    label_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    label_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    label_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    label: Mapped[str] = mapped_column(String(200), nullable=False)
+    """Shown to volunteers only (never public), so it is not translated."""
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
-    @property
-    def label(self) -> str:
-        """Original-language label (admin lists, audit entries); volunteers get ``localized_label``."""
-        return self.localized_label(None)
 
-    def localized_label(self, locale: str | None) -> str:
-        return resolve_text(
-            {"nl": self.label_nl, "fr": self.label_fr, "en": self.label_en}, self.label_language, locale
-        )
+MAX_POLL_QUANTITY = 20
+"""The most of one option a single volunteer can ask for."""
 
 
 class VolunteerPollSelection(Base):
-    """One volunteer's pick of one `EditionPollOption`. A row's mere presence
-    is the selection — there is nothing else to store. `dish`/`soup` are
-    enforced as at-most-one-per-volunteer by the service layer replacing only
-    that kind's row on change (see `volunteer_self_service.replace_poll_selections`);
-    `dinner` allows any number, toggled the same way a checklist would be.
-    """
+    """How many of one `EditionPollOption` a volunteer wants. A row exists only
+    for a quantity of at least one; choosing none deletes the row."""
 
     __tablename__ = "volunteer_poll_selections"
+    __table_args__ = (
+        CheckConstraint(f"quantity BETWEEN 1 AND {MAX_POLL_QUANTITY}", name="ck_volunteer_poll_selections_quantity"),
+    )
 
     volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
     option_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("edition_poll_options.id", ondelete="CASCADE"), primary_key=True
     )
+    quantity: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 

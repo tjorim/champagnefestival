@@ -1,11 +1,10 @@
-"""Translated product names/descriptions and poll option labels (#1222)."""
+"""Translated product names and descriptions (#1222)."""
 
 from __future__ import annotations
 
 import pytest
 
 from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration
-from tests.test_poll_options import NISS_A, _create_option, _register
 
 
 async def _product(client, event_id: str, **overrides) -> dict:
@@ -113,40 +112,3 @@ async def test_an_order_keeps_the_names_in_every_language(client):
         "Bottle",
         "Bouteille",
     )
-
-
-async def test_poll_option_labels_follow_the_volunteers_language(client, volunteer_client_as):
-    event = await _create_event(client, edition_id="edition-poll-text")
-    edition_id = event["edition_id"]
-    created = await client.post(
-        "/api/poll-options",
-        json={
-            "edition_id": edition_id,
-            "kind": "dish",
-            "label_language": "nl",
-            "label_nl": "Stoofvlees",
-            "label_en": "Beef stew",
-        },
-        headers=ADMIN_HEADERS,
-    )
-    assert created.status_code == 201, created.text
-    assert (created.json()["label"], created.json()["label_language"]) == ("Stoofvlees", "nl")
-    assert (await _create_option(client, edition_id=edition_id, kind="soup", label="Tomato soup"))[
-        "label_language"
-    ] == "en"
-
-    option_id = created.json()["id"]
-    cleared = await client.put(f"/api/poll-options/{option_id}", json={"label_nl": ""}, headers=ADMIN_HEADERS)
-    assert cleared.status_code == 422
-    translated = await client.put(
-        f"/api/poll-options/{option_id}", json={"label_fr": "Carbonade"}, headers=ADMIN_HEADERS
-    )
-    assert translated.json()["label_fr"] == "Carbonade"
-
-    async with volunteer_client_as("subject-poll-text") as vclient:
-        assert (await _register(vclient, niss=NISS_A)).status_code == 200
-        for locale, dish in (("en", "Beef stew"), ("nl", "Stoofvlees"), ("fr", "Carbonade")):
-            response = await vclient.get("/api/me/volunteer/poll-options", params={"locale": locale})
-            assert response.status_code == 200, response.text
-            labels = {o["kind"]: o["label"] for o in response.json()["options"]}
-            assert labels == {"dish": dish, "soup": "Tomato soup"}, locale

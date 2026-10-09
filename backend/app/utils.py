@@ -197,16 +197,13 @@ def order_item_name(item: dict, locale: str | None) -> str:
     )
 
 
-def poll_option_to_dict(option: EditionPollOption, locale: str | None = None) -> dict:
+def poll_option_to_dict(option: EditionPollOption, *, total_quantity: int = 0, volunteer_count: int = 0) -> dict:
     return {
         "id": option.id,
         "edition_id": option.edition_id,
-        "kind": option.kind,
-        "label": option.localized_label(locale),
-        "label_language": option.label_language,
-        "label_nl": option.label_nl,
-        "label_fr": option.label_fr,
-        "label_en": option.label_en,
+        "label": option.label,
+        "total_quantity": total_quantity,
+        "volunteer_count": volunteer_count,
         "created_at": option.created_at,
         "updated_at": option.updated_at,
     }

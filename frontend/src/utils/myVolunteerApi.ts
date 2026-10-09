@@ -1,5 +1,4 @@
 import { m } from "@/paraglide/messages";
-import { getLocale } from "@/paraglide/runtime";
 
 export interface MyVolunteerIdentity {
   linked: boolean;
@@ -80,15 +79,14 @@ export async function updateMyEidDocumentNumber(
 
 export interface PollOption {
   id: string;
-  kind: "dish" | "soup" | "dinner";
   label: string;
 }
 
-export interface MyPollSelections {
-  dishOptionId: string | null;
-  soupOptionId: string | null;
-  dinnerOptionIds: string[];
-}
+/** The most of one option a volunteer can ask for (the server enforces the same limit). */
+export const MAX_POLL_QUANTITY = 20;
+
+/** Quantity per option id; an option with none is absent. */
+export type MyPollSelections = Record<string, number>;
 
 export interface MyPollOptions {
   editionId: string | null;
@@ -96,68 +94,49 @@ export interface MyPollOptions {
   selections: MyPollSelections;
 }
 
-function isPollOptionKind(value: unknown): value is PollOption["kind"] {
-  return value === "dish" || value === "soup" || value === "dinner";
-}
-
 function parsePollOptions(data: unknown): MyPollOptions {
-  const record = data as {
-    edition_id?: unknown;
-    options?: unknown;
-    selections?: unknown;
-  };
+  const record = data as { edition_id?: unknown; options?: unknown; selections?: unknown };
+  const isRecord = (value: unknown): value is Record<string, unknown> =>
+    typeof value === "object" && value !== null;
   const rawOptions = Array.isArray(record.options) ? record.options : [];
-  const selectionsRecord = (record.selections ?? {}) as {
-    dish_option_id?: unknown;
-    soup_option_id?: unknown;
-    dinner_option_ids?: unknown;
-  };
+  const rawSelections = Array.isArray(record.selections) ? record.selections : [];
+  const selections: MyPollSelections = {};
+  for (const selection of rawSelections.filter(isRecord)) {
+    const quantity = Number(selection.quantity);
+    if (typeof selection.option_id === "string" && quantity > 0) {
+      selections[selection.option_id] = quantity;
+    }
+  }
   return {
     editionId: typeof record.edition_id === "string" ? record.edition_id : null,
     options: rawOptions
-      .filter((o): o is Record<string, unknown> => typeof o === "object" && o !== null)
-      .map((o) => ({
-        id: String(o.id ?? ""),
-        kind: isPollOptionKind(o.kind) ? o.kind : "dish",
-        label: String(o.label ?? ""),
-      })),
-    selections: {
-      dishOptionId:
-        typeof selectionsRecord.dish_option_id === "string"
-          ? selectionsRecord.dish_option_id
-          : null,
-      soupOptionId:
-        typeof selectionsRecord.soup_option_id === "string"
-          ? selectionsRecord.soup_option_id
-          : null,
-      dinnerOptionIds: Array.isArray(selectionsRecord.dinner_option_ids)
-        ? selectionsRecord.dinner_option_ids.filter((id): id is string => typeof id === "string")
-        : [],
-    },
+      .filter(isRecord)
+      .map((o) => ({ id: String(o.id ?? ""), label: String(o.label ?? "") })),
+    selections,
   };
 }
 
-/** Fetch the active edition's meal/dinner poll options and this volunteer's own picks. */
+/** Fetch the active edition's meal poll options and the quantities this volunteer asked for. */
 export async function getMyPollOptions(accessToken: string): Promise<MyPollOptions> {
-  const response = await fetch(`/api/me/volunteer/poll-options?locale=${getLocale()}`, {
+  const response = await fetch("/api/me/volunteer/poll-options", {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
   if (!response.ok) throw new Error(m.my_poll_load_error());
   return parsePollOptions(await response.json());
 }
 
-/** Replace the signed-in volunteer's own meal/dinner poll picks. */
+/** Replace the signed-in volunteer's own meal quantities. */
 export async function replaceMyPollSelections(
   accessToken: string,
   selections: MyPollSelections,
 ): Promise<MyPollOptions> {
-  const response = await fetch(`/api/me/volunteer/poll-selections?locale=${getLocale()}`, {
+  const response = await fetch("/api/me/volunteer/poll-selections", {
     method: "PUT",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
     body: JSON.stringify({
-      dish_option_id: selections.dishOptionId,
-      soup_option_id: selections.soupOptionId,
-      dinner_option_ids: selections.dinnerOptionIds,
+      selections: Object.entries(selections)
+        .filter(([, quantity]) => quantity > 0)
+        .map(([option_id, quantity]) => ({ option_id, quantity })),
     }),
   });
   if (!response.ok) return throwDetailOrFallback(response, m.my_poll_save_error());

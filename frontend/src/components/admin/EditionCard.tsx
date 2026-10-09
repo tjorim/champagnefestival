@@ -244,7 +244,7 @@ export default function EditionCard({
               size="sm"
               variant="outline"
               onClick={() => setPollOptionsModalOpen(true)}
-              aria-label={`${m.admin_poll_kind_dish()} / ${m.admin_poll_kind_soup()} / ${m.admin_poll_kind_dinner()} — ${edition.id}`}
+              aria-label={m.admin_poll_modal_title({ edition: edition.id })}
               title={m.admin_poll_modal_title({ edition: edition.id })}
             >
               <Icon icon={CoffeeIcon} />

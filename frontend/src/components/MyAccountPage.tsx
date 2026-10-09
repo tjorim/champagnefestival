@@ -5,13 +5,13 @@ import { signOutVisitorSession, type GuestRegistration } from "@/utils/publicReg
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { MinusIcon, PlusIcon } from "lucide-react";
+import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
-import { FieldLabel, FieldTitle } from "@/components/ui/field";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { PublicCheck, PublicField, PublicInput, PublicLabel } from "@/components/PublicFields";
+import { PublicField, PublicInput, PublicLabel } from "@/components/PublicFields";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteMyAccount } from "@/utils/meApi";
@@ -25,6 +25,7 @@ import {
 } from "@/utils/belgianIdentityNumbers";
 import {
   getMyPollOptions,
+  MAX_POLL_QUANTITY,
   getMyVolunteerIdentity,
   registerMyVolunteerIdentity,
   replaceMyPollSelections,
@@ -231,78 +232,47 @@ export default function MyAccountPage() {
             <Alert variant="secondary">
               <h3 className="text-base font-medium leading-tight">{m.my_poll_heading()}</h3>
               <p className="text-sm mb-4">{m.my_poll_description()}</p>
-              {(["dish", "soup"] as const).map((kind) => {
-                const kindOptions = poll.options.filter((o) => o.kind === kind);
-                if (kindOptions.length === 0) return null;
-                const selectedId =
-                  kind === "dish" ? poll.selections.dishOptionId : poll.selections.soupOptionId;
-                return (
-                  <PublicField key={kind} className="mb-4" controlId={`my-poll-${kind}`}>
-                    <FieldTitle id={`my-poll-${kind}-label`} className="font-semibold">
-                      {kind === "dish" ? m.my_poll_dish_label() : m.my_poll_soup_label()}
-                    </FieldTitle>
-                    <RadioGroup
-                      aria-labelledby={`my-poll-${kind}-label`}
-                      name={`my-poll-${kind}`}
-                      value={selectedId}
-                      disabled={pollSelectionsMutation.isPending}
-                      onValueChange={(optionId) =>
-                        savePollSelections({
-                          dishOptionId: kind === "dish" ? optionId : poll.selections.dishOptionId,
-                          soupOptionId: kind === "soup" ? optionId : poll.selections.soupOptionId,
-                          dinnerOptionIds: poll.selections.dinnerOptionIds,
-                        })
-                      }
-                    >
-                      {kindOptions.map((option) => (
-                        <div key={option.id} className="flex items-center gap-2">
-                          <RadioGroupItem id={`my-poll-${kind}-${option.id}`} value={option.id} />
-                          <FieldLabel
-                            htmlFor={`my-poll-${kind}-${option.id}`}
-                            className="font-normal"
-                          >
-                            {option.label}
-                          </FieldLabel>
-                        </div>
-                      ))}
-                    </RadioGroup>
-                  </PublicField>
-                );
-              })}
-              {poll.options.some((o) => o.kind === "dinner") && (
-                <PublicField
-                  className="mb-2"
-                  controlId="my-poll-dinner"
-                  aria-labelledby="my-poll-dinner-label"
-                >
-                  <FieldTitle id="my-poll-dinner-label" className="font-semibold">
-                    {m.my_poll_dinner_label()}
-                  </FieldTitle>
-                  {poll.options
-                    .filter((o) => o.kind === "dinner")
-                    .map((option) => {
-                      const checked = poll.selections.dinnerOptionIds.includes(option.id);
-                      return (
-                        <PublicCheck
-                          key={option.id}
-                          id={`my-poll-dinner-${option.id}`}
-                          label={option.label}
-                          checked={checked}
-                          disabled={pollSelectionsMutation.isPending}
-                          onCheckedChange={() =>
-                            savePollSelections({
-                              dishOptionId: poll.selections.dishOptionId,
-                              soupOptionId: poll.selections.soupOptionId,
-                              dinnerOptionIds: checked
-                                ? poll.selections.dinnerOptionIds.filter((id) => id !== option.id)
-                                : [...poll.selections.dinnerOptionIds, option.id],
-                            })
+              <ul className="list-none p-0 mb-2">
+                {poll.options.map((option) => {
+                  const quantity = poll.selections[option.id] ?? 0;
+                  const setQuantity = (next: number) =>
+                    savePollSelections({ ...poll.selections, [option.id]: next });
+                  return (
+                    <li key={option.id} className="flex items-center justify-between gap-2 mb-2">
+                      <span id={`my-poll-${option.id}-label`}>{option.label}</span>
+                      <div
+                        className="flex items-center gap-2"
+                        role="group"
+                        aria-labelledby={`my-poll-${option.id}-label`}
+                      >
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={quantity === 0 || pollSelectionsMutation.isPending}
+                          onClick={() => setQuantity(quantity - 1)}
+                          aria-label={m.my_poll_quantity_decrease({ label: option.label })}
+                        >
+                          <Icon icon={MinusIcon} />
+                        </Button>
+                        <span className="min-w-6 text-center" aria-live="polite">
+                          {quantity}
+                        </span>
+                        <Button
+                          variant="outline-warning"
+                          size="sm"
+                          disabled={
+                            quantity >= MAX_POLL_QUANTITY || pollSelectionsMutation.isPending
                           }
-                        />
-                      );
-                    })}
-                </PublicField>
-              )}
+                          onClick={() => setQuantity(quantity + 1)}
+                          aria-label={m.my_poll_quantity_increase({ label: option.label })}
+                        >
+                          <Icon icon={PlusIcon} />
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
               {pollSelectionsMutation.isError && (
                 <Alert variant="danger" className="py-2 text-sm mb-0">
                   {pollSelectionsMutation.error instanceof Error

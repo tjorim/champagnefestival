@@ -13,6 +13,7 @@ from uuid import UUID
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
+from app.models import MAX_POLL_QUANTITY
 from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 # ---------------------------------------------------------------------------
@@ -1052,55 +1053,51 @@ class VolunteerListEnvelope(BaseModel):
 # Volunteer meal/dinner poll
 # ---------------------------------------------------------------------------
 
-PollOptionKind = Literal["dish", "soup", "dinner"]
 
-
-class PollOptionLabels(RequestModel):
-    """A poll option's label per language (#1222): the original language must have
-    text, the others are optional and volunteers fall back to the original."""
-
-    label_language: Language | None = None
-    label_nl: str | None = Field(default=None, max_length=200)
-    label_fr: str | None = Field(default=None, max_length=200)
-    label_en: str | None = Field(default=None, max_length=200)
-
-    @field_validator("label_nl", "label_fr", "label_en", mode="before")
-    @classmethod
-    def strip_label(cls, value: str | None) -> str | None:
-        return value.strip() or None if isinstance(value, str) else value
-
-    def validate_original(self) -> Self:
-        if not self.label_language or not getattr(self, f"label_{self.label_language}"):
-            raise ValueError("A label requires non-empty text in its original language.")
-        return self
-
-
-class PollOptionCreate(PollOptionLabels):
+class PollOptionCreate(RequestModel):
     edition_id: str = Field(min_length=1, max_length=100)
-    kind: PollOptionKind
-    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    label: str = Field(min_length=1, max_length=200)
 
-    @model_validator(mode="after")
-    def check_label(self) -> Self:
-        return self.validate_original()
+    @field_validator("label", mode="after")
+    @classmethod
+    def strip_label(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Label must not be blank.")
+        return value.strip()
 
 
-class PollOptionUpdate(PollOptionLabels):
-    """Partial update: an empty string clears a translation; the original cannot be cleared."""
+class PollOptionUpdate(RequestModel):
+    label: str = Field(min_length=1, max_length=200)
+
+    @field_validator("label", mode="after")
+    @classmethod
+    def strip_label(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Label must not be blank.")
+        return value.strip()
 
 
 class PollOptionOut(BaseModel):
+    """An option as the admin sees it, with how much volunteers asked for in total."""
+
     id: str
     edition_id: str
-    kind: str
     label: str
-    """Resolved for the requested `locale` (the original language when none)."""
-    label_language: Language
-    label_nl: str | None
-    label_fr: str | None
-    label_en: str | None
+    total_quantity: int = 0
+    """Sum of every volunteer's quantity — what to order from the caterer."""
+    volunteer_count: int = 0
     created_at: datetime
     updated_at: datetime
+
+
+class VolunteerPollOptionOut(BaseModel):
+    id: str
+    label: str
+
+
+class PollSelectionItem(RequestModel):
+    option_id: str = Field(min_length=1, max_length=64)
+    quantity: int = Field(ge=1, le=MAX_POLL_QUANTITY)
 
 
 class VolunteerPollSelectionsIn(RequestModel):
@@ -1108,41 +1105,27 @@ class VolunteerPollSelectionsIn(RequestModel):
 
     Safe to wholesale-replace (unlike `EditionPollOption` itself): every row
     touched is keyed by this one volunteer's own id, so replacing never
-    affects another volunteer's picks or the options themselves.
+    affects another volunteer's picks or the options themselves. An option left
+    out means none of it; listing one twice is rejected.
     """
 
-    dish_option_id: str | None = None
-    soup_option_id: str | None = None
-    dinner_option_ids: list[str] = Field(default_factory=list, max_length=50)
+    selections: list[PollSelectionItem] = Field(default_factory=list, max_length=100)
 
-    @field_validator("dish_option_id", "soup_option_id", mode="after")
-    @classmethod
-    def reject_blank_option_id(cls, value: str | None) -> str | None:
-        if value is not None and not value.strip():
-            raise ValueError("Option id must not be blank.")
-        return value
-
-    @field_validator("dinner_option_ids", mode="after")
-    @classmethod
-    def reject_blank_dinner_option_ids(cls, value: list[str]) -> list[str]:
-        if any(not v.strip() for v in value):
-            raise ValueError("Dinner option ids must not be blank.")
-        return value
-
-
-class VolunteerPollSelectionsOut(BaseModel):
-    dish_option_id: str | None
-    soup_option_id: str | None
-    dinner_option_ids: list[str]
+    @model_validator(mode="after")
+    def reject_duplicate_options(self) -> Self:
+        ids = [selection.option_id for selection in self.selections]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Each option can be listed only once.")
+        return self
 
 
 class VolunteerPollOptionsOut(BaseModel):
     """What a volunteer sees: the active festival edition's options (empty if
-    none), grouped by kind, plus their own current selections."""
+    none) plus their own current quantities."""
 
     edition_id: str | None
-    options: list[PollOptionOut]
-    selections: VolunteerPollSelectionsOut
+    options: list[VolunteerPollOptionOut]
+    selections: list[PollSelectionItem]
 
 
 # ---------------------------------------------------------------------------

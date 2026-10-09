@@ -1495,63 +1495,33 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_products.delete_product(self.session_factory, self._actor(), product_id)
 
-    # -- Volunteer meal/dinner poll options -----------------------------
+    # -- Volunteer meal poll options ------------------------------------
 
-    async def create_poll_option(
-        self,
-        edition_id: str,
-        kind: str,
-        label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
-        label_nl: str | None = None,
-        label_fr: str | None = None,
-        label_en: str | None = None,
-    ) -> dict:
-        """Add one volunteer meal/dinner poll choice to an edition. ``kind`` is
-        ``dish``, ``soup``, or ``dinner``. The label is per language: the one in
-        ``label_language`` (default ``en``) is required, the others are optional
-        translations. Requires the ``admin`` role."""
+    async def create_poll_option(self, edition_id: str, label: str) -> dict:
+        """Add one meal choice (a dish, a soup, ...) volunteers can order for an edition.
+        Volunteers pick a quantity of each. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll_options.create_poll_option(
-            self.session_factory,
-            self._actor(),
-            edition_id=edition_id,
-            kind=kind,
-            label_language=label_language,
-            label_nl=label_nl,
-            label_fr=label_fr,
-            label_en=label_en,
+            self.session_factory, self._actor(), edition_id=edition_id, label=label
         )
 
     async def list_poll_options(self, edition_id: str | None = None) -> list[dict]:
-        """List volunteer meal/dinner poll options, optionally filtered by
-        edition. Requires the ``admin`` role."""
+        """List meal poll options, optionally filtered by edition, with the total
+        quantity volunteers asked for and how many volunteers picked each (what to
+        order from the caterer). Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll_options.list_poll_options(self.session_factory, edition_id)
 
-    async def update_poll_option(
-        self,
-        option_id: str,
-        label_language: Language | None = None,
-        label_nl: str | None = None,
-        label_fr: str | None = None,
-        label_en: str | None = None,
-    ) -> dict:
-        """Rename a volunteer meal/dinner poll option, per language; an empty string
-        clears a translation and the original language keeps its label. Requires the
+    async def update_poll_option(self, option_id: str, label: str) -> dict:
+        """Rename a meal poll option; volunteers keep their quantities. Requires the
         ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll_options.update_poll_option(
-            self.session_factory,
-            self._actor(),
-            option_id,
-            label_language=label_language,
-            label_nl=label_nl,
-            label_fr=label_fr,
-            label_en=label_en,
+            self.session_factory, self._actor(), option_id, label=label
         )
 
     async def delete_poll_option(self, option_id: str) -> dict:
-        """Delete a volunteer meal/dinner poll option, along with any
+        """Delete a meal poll option, along with any
         volunteer's selection of it. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll_options.delete_poll_option(self.session_factory, self._actor(), option_id)

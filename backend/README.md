@@ -472,10 +472,9 @@ database check constraints enforce the same rule.
 | Composed message | `text_language`, `title_*`, `body_*` | a language is used only when title and body are both filled |
 | Policy | `title_language`, `title_*`; version `content_language`, `content_*` | publishing needs the original language only (`required_locales` is gone) |
 | Product | `name_language`, `name_*`, `description_language`, `description_*` | an order line keeps the name in every language |
-| Poll option | `label_language`, `label_*` | |
 
 Public reads (`/api/faq/active`, `/api/policies/{key}/current`, the edition
-endpoints, `/api/me/volunteer/poll-options`) take `locale` and return the text
+endpoints) take `locale` and return the text
 resolved for it plus every stored language. A policy response names the language
 actually served in `locale`. Emails (registration confirmations, composed messages)
 use the recipient's `preferred_language`.
@@ -490,10 +489,19 @@ because delivery tracking counts bottles by it. `Product.category` references th
 (an unknown key is a 422); order lines copy the key when the order is placed.
 
 Migration `007` moves existing FAQ items, announcements, composed messages, policies,
-products and poll options to Dutch (`nl`) as their original language, creates
+and products to Dutch (`nl`) as their original language, creates
 `product_categories` with `champagne`, `food` and `other` (a value products already
 use is kept as a category of its own and logged), and drops `policies.required_locales`.
 Its downgrade keeps only the original-language text.
+
+Volunteer-only text is not translated. The meal poll (`edition_poll_options`) has a plain
+`label` per option and no kind: everything is delivered on the same day, so a volunteer
+just asks for a quantity of each option (`PUT /api/me/volunteer/poll-selections` with
+`{"selections": [{"option_id", "quantity"}]}`, quantity 1 to 20, an option left out means
+none, a full replace). The admin list (`GET /api/poll-options`, MCP `list_poll_options`) also
+returns each option's `total_quantity` and `volunteer_count`, the numbers to order from the
+caterer. Migration `007` turns an existing pick into a quantity of one and drops the kind;
+its downgrade makes every option a `dinner` (the kind that allows any number of picks).
 
 ### Organization manager self-service (#1192)
 
