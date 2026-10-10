@@ -49,6 +49,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate translation message parity
+        run: pnpm run check-message-parity
+
       - name: Typecheck (Paraglide + tsc)
         run: pnpm run typecheck
 

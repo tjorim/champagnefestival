@@ -18,7 +18,8 @@
     "test:e2e": "playwright test",
     "test:ui": "vitest --ui",
     "test:watch": "vitest",
-    "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations"
+    "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
+    "check-message-parity": "node scripts/check-message-parity.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
