@@ -40,6 +40,24 @@ updates:
       i18n:
         patterns:
           - "@inlang/*"
+      # oidc-client-ts is the engine react-oidc-context wraps
+      oidc:
+        patterns:
+          - "oidc-client-ts"
+          - "react-oidc-context"
+      # tailwindcss and its Vite plugin share one release train
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      playwright:
+        patterns:
+          - "@playwright/*"
+          - "@axe-core/playwright"
+      jest-axe:
+        patterns:
+          - "jest-axe"
+          - "@types/jest-axe"
       dayjs:
         patterns:
           - "dayjs"
@@ -92,6 +110,8 @@ updates:
         patterns:
           - "ruff"
           - "ty"
+          - "pytest"
+          - "pytest-asyncio"
 
   - package-ecosystem: "gradle"
     directory: "/android"
