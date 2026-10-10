@@ -420,6 +420,18 @@ the event in the person's `preferred_language`. Admin lists, exports, audit
 entries and event-day screens keep showing the original-language title
 (`Event.title`).
 
+### Producer stands
+
+`GET /api/editions/{edition_id}/stands` is a public, cacheable (60 s) read of where each
+lineup organization stands: an area with an `organization_id` on an event's room layout.
+The response (`EditionStandsOut`) lists, per organization, `{event_id, date, room_name,
+label}` for each stand, so a producer can be somewhere else on another day or have no
+entry at all. It is built by `app/services/stands_service.py`, which loads only
+organizations, layouts, rooms and areas — never tables, registrations or allocations
+(asserted in `tests/test_edition_stands.py`). Stands appear as soon as they are assigned;
+inactive editions, events and organizations are excluded. The public MCP tool
+`find_producer_stand` answers "where is X?" from the same service.
+
 ### Event categories
 
 `Event.category` is the key of an admin-managed category (`event_categories`:

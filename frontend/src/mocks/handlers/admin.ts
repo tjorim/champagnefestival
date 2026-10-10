@@ -1436,6 +1436,42 @@ export const adminHandlers = [
   // ──────────────────────────────────────────────────────────────
   // Layouts
   // ──────────────────────────────────────────────────────────────
+  /**
+   * GET /api/editions/:editionId/stands — public stand list: only areas that name a
+   * lineup organization, with label, room and day (no tables or registrations).
+   */
+  http.get("/api/editions/:editionId/stands", ({ params }) => {
+    const edition = editions.find((candidate) => candidate.id === params.editionId);
+    if (!edition?.active)
+      return HttpResponse.json({ detail: "Edition not found." }, { status: 404 });
+    const lineup = new Set<number>(edition.producers.map((item) => item.id));
+    const stands = new Map<number, Record<string, unknown>[]>();
+    for (const layout of layouts.filter((candidate) => candidate.edition_id === edition.id)) {
+      const room = rooms.find((candidate) => candidate.id === layout.room_id);
+      for (const area of areas.filter((candidate) => candidate.layout_id === layout.id)) {
+        const organizationId = Number(area.organization_id);
+        if (!lineup.has(organizationId)) continue;
+        stands.set(organizationId, [
+          ...(stands.get(organizationId) ?? []),
+          {
+            event_id: layout.event_id,
+            date: layout.date,
+            room_name: room?.name ?? "",
+            label: area.label,
+          },
+        ]);
+      }
+    }
+    return HttpResponse.json({
+      edition_id: edition.id,
+      organizations: [...stands.entries()].map(([organizationId, organizationStands]) => ({
+        organization_id: organizationId,
+        name: edition.producers.find((item) => item.id === organizationId)?.name ?? "",
+        stands: organizationStands,
+      })),
+    });
+  }),
+
   /** GET /api/venue-plan/:editionId — read-only plan assembled from the layout stores. */
   http.get("/api/venue-plan/:editionId", ({ request, params }) => {
     const authError = requireAuth(request);

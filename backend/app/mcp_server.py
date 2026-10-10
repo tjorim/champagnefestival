@@ -301,6 +301,24 @@ class ChampagneFestivalMcpBackend:
         """
         return await mcp_public.get_venue_plan_summary(self.session_factory, edition_id)
 
+    async def find_producer_stand(self, query: str | None = None, edition_id: str | None = None) -> dict:
+        """Find where producers stand ("where is Bollinger?").
+
+        Parameters
+        ----------
+        query:
+            Case-insensitive part of the producer name. Omit to list every lineup
+            organization that has a stand.
+        edition_id:
+            The edition ID. When omitted, the active festival edition is used.
+
+        Returns, per organization, its stands as ``{event_id, date, room_name, label}``
+        (a producer can stand somewhere else on a different day). Organizations
+        without an assigned stand are not listed. Public data only: no tables,
+        guests or capacities.
+        """
+        return await mcp_public.find_producer_stand(self.session_factory, query, edition_id)
+
     # ------------------------------------------------------------------
     # Tools — volunteer/admin only
     # ------------------------------------------------------------------
@@ -2323,6 +2341,7 @@ def create_mcp_server(
     register_tool(backend.list_event_categories)
     register_tool(backend.list_product_categories)
     register_tool(backend.get_venue_plan_summary)
+    register_tool(backend.find_producer_stand)
     register_tool(backend.find_guest)
     register_tool(backend.get_guest_registration)
     register_tool(backend.get_table_seating)

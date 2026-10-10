@@ -1826,3 +1826,51 @@ class TestGetEventScheduleLocale:
         assert french["title"] == "Proeverij"  # no French translation: falls back to the original
         assert original["title"] == "Proeverij"
         assert original["title_en"] == "Tasting"
+
+
+# ---------------------------------------------------------------------------
+# find_producer_stand (#1223)
+# ---------------------------------------------------------------------------
+
+
+class TestFindProducerStand:
+    @pytest.mark.anyio
+    async def test_returns_message_when_no_active_edition(self):
+        db = _make_db_execute([[]])
+        backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
+        result = await backend.find_producer_stand()
+        assert result["producers"] == []
+        assert "No active edition" in result["message"]
+
+    @pytest.mark.anyio
+    async def test_filters_by_name_and_returns_only_the_public_subset(self, monkeypatch):
+        stands = {
+            "edition_id": "2026-march",
+            "organizations": [
+                {
+                    "organization_id": 1,
+                    "name": "Bollinger",
+                    "stands": [
+                        {"event_id": "e1", "date": date(2099, 3, 20), "room_name": "Hall 5", "label": "Stand 12"}
+                    ],
+                },
+                {"organization_id": 2, "name": "Krug", "stands": []},
+            ],
+        }
+        edition = _make_edition(events=[_make_event(event_date=date(2099, 3, 21))])
+        db = MagicMock()
+        db.get = AsyncMock(return_value=edition)
+
+        async def _load(_db, _edition):
+            return stands
+
+        monkeypatch.setattr("app.mcp.public.load_edition_stands", _load)
+        backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
+
+        result = await backend.find_producer_stand(query="  bolli ", edition_id="2026-march")
+
+        assert result["count"] == 1
+        assert result["producers"][0]["name"] == "Bollinger"
+        assert result["producers"][0]["stands"][0]["label"] == "Stand 12"
+        everything = await backend.find_producer_stand(edition_id="2026-march")
+        assert everything["count"] == 2

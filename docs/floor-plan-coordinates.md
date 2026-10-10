@@ -69,6 +69,19 @@ type's/area's own physical width/length (via `getTableSizePx`/`getAreaSizePx`), 
 rendering-time constraint the editor enforces on the user's behalf, not part of the
 `[0, 100]` wire contract enforced by the schema.
 
+## Public stand subset
+
+`GET /api/editions/{edition_id}/stands` (unauthenticated, `Cache-Control: public,
+max-age=60`; MCP `find_producer_stand`) publishes only the *labels* of areas that carry an
+`organization_id`, never geometry or anything from the seating plan. Per organization in
+the active edition's lineup it returns `stands: [{event_id, date, room_name, label}]`:
+one entry per day/room the organization has an area, from active events only, for active
+organizations only. `x`, `y`, `rotation`, sizes, icons, layout/area ids, tables,
+registrations, guests, capacities and allocations are deliberately absent, so this
+contract does not apply to the public response; a future public plan would need its own
+privacy-reviewed payload. Stands are published as soon as they are assigned (there is no
+publish flag), and an inactive edition returns 404.
+
 ## Scope
 
 This document covers the coordinate and scoped-read contract addressed by issue #834.

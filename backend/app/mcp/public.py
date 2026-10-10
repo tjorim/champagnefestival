@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from app.mcp.utils import edition_dict, edition_discovery_dict, event_dict, get_active_edition_obj
 from app.models import Edition, Layout, Venue
+from app.services.stands_service import load_edition_stands
 
 
 async def get_active_edition(session_factory: Any) -> dict:
@@ -123,3 +124,30 @@ async def get_venue_plan_summary(session_factory: Any, edition_id: str | None = 
             "venue_name": venue.name if venue else None,
             "rooms": room_summaries,
         }
+
+
+async def find_producer_stand(session_factory: Any, query: str | None = None, edition_id: str | None = None) -> dict:
+    """Answer "where is producer X?" from the public stand list (#1223).
+
+    Same privacy-reviewed subset as ``GET /api/editions/{id}/stands``: labels,
+    room names and days of lineup organizations only.
+    """
+    async with session_factory() as db:
+        if edition_id:
+            edition: Edition | None = await db.get(Edition, edition_id)
+            if edition is None or not edition.active:
+                return {"producers": [], "message": f"Edition '{edition_id}' not found."}
+        else:
+            edition = await get_active_edition_obj(db)
+            if edition is None:
+                return {"producers": [], "message": "No active edition found."}
+
+        stands = await load_edition_stands(db, edition)
+
+    needle = (query or "").strip().casefold()
+    producers = [
+        {"organization_id": item["organization_id"], "name": item["name"], "stands": item["stands"]}
+        for item in stands["organizations"]
+        if not needle or needle in item["name"].casefold()
+    ]
+    return {"edition_id": edition.id, "producers": producers, "count": len(producers)}

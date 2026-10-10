@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -26,10 +26,11 @@ from app.schemas import (
     EditionPublicOut,
     EditionScratchpadOut,
     EditionScratchpadUpdate,
+    EditionStandsOut,
     EditionType,
     EditionUpdate,
 )
-from app.services import editions_service
+from app.services import editions_service, stands_service
 from app.translations import Language
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
@@ -81,6 +82,26 @@ async def list_upcoming_editions(
     return await editions_service.edition_payloads(
         db, editions_service.sorted_editions(upcoming, active_only=True), active_only=True, public=True, locale=locale
     )
+
+
+@router.get("/{edition_id}/stands", response_model=EditionStandsOut)
+async def get_edition_stands(
+    edition_id: str,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Public "where is producer X?" lookup for an active edition (#1223).
+
+    Unauthenticated and safe to cache: per lineup organization, the label, room
+    and day of each stand — nothing from tables, registrations or allocations
+    (see `app.services.stands_service`). Stands are published as soon as they
+    are assigned. Inactive editions 404 so a draft's plan is never exposed.
+    """
+    edition = await editions_service.get_edition_or_404(db, edition_id)
+    if not edition.active:
+        raise HTTPException(status_code=404, detail="Edition not found.")
+    response.headers["Cache-Control"] = "public, max-age=60"
+    return await stands_service.load_edition_stands(db, edition)
 
 
 @router.get("", response_model=list[EditionOut], dependencies=[Depends(require_admin)])

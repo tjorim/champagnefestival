@@ -19,7 +19,7 @@ import { Icon } from "@/components/Icon";
 import { Button, ButtonLink } from "@/components/ui/button";
 import React, { lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Link, RouterProvider } from "@tanstack/react-router";
 import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 
@@ -62,6 +62,8 @@ import { featureItems } from "./config/features";
 import { dayjs, endOfDay, formatDateRange } from "./utils/dateUtils";
 import { createAppRouter } from "./router";
 import { generateGoogleMapsUrl } from "./utils/maps";
+import { editionStandsQueryOptions, type OrganizationStands } from "./utils/standsApi";
+import type { SliderItem } from "./config/editions";
 
 const FEATURE_ICON_BY_ID: Record<number, LucideIcon> = {
   1: CupSodaIcon,
@@ -140,9 +142,11 @@ function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) 
 function SuspendedLogoWall({
   itemsType,
   items,
+  stands,
 }: {
   itemsType: "producers" | "sponsors" | "vendors";
-  items: Array<{ id: number; name: string; image: string }>;
+  items: SliderItem[];
+  stands?: OrganizationStands[];
 }) {
   // Get appropriate loading text based on itemsType
   const loadingText =
@@ -164,7 +168,7 @@ function SuspendedLogoWall({
       fallback={<div className="carousel-loading">{loadingText}</div>}
       errorFallback={<div className="carousel-error">{errorText}</div>}
     >
-      <LogoWall itemsType={itemsType} items={items} />
+      <LogoWall itemsType={itemsType} items={items} stands={stands} />
     </SuspenseWithBoundary>
   );
 }
@@ -286,6 +290,12 @@ function App() {
   // Fetch live edition data; keep an empty fallback shape on API errors.
   const { edition, hasEdition, hasLoadError } = useActiveEdition();
   const { producers, sponsors, vendors = [] } = edition;
+  // Stand labels are an enhancement: a failed or empty lookup just shows no stand lines.
+  const { data: standsData } = useQuery({
+    ...editionStandsQueryOptions(edition.id),
+    enabled: hasEdition && edition.id !== "",
+  });
+  const stands = standsData?.organizations;
 
   // Derive festival start/end dates from the active edition
   const { start: festivalDate, end: festivalEndDate } = useMemo(
@@ -644,7 +654,7 @@ function App() {
           <section id="producers" className="content-section">
             <div className="site-container mx-auto w-full text-center">
               <SectionHeading id="producers-heading" title={m.producers_title()} />
-              <SuspendedLogoWall itemsType="producers" items={producers} />
+              <SuspendedLogoWall itemsType="producers" items={producers} stands={stands} />
             </div>
           </section>
         )}
