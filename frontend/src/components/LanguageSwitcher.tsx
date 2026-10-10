@@ -20,15 +20,14 @@ const LanguageSwitcher = () => {
 
   // Language definitions
   const languages = [
-    { code: "en", label: "English", flag: "🇬🇧", nativeName: "English" },
-    { code: "nl", label: "Dutch", flag: "🇳🇱", nativeName: "Nederlands" },
-    { code: "fr", label: "French", flag: "🇫🇷", nativeName: "Français" },
+    { code: "en", flag: "🇬🇧", nativeName: "English" },
+    { code: "nl", flag: "🇳🇱", nativeName: "Nederlands" },
+    { code: "fr", flag: "🇫🇷", nativeName: "Français" },
   ] as const;
 
   // Find current language details
   const currentLanguage = languages.find((lang) => lang.code === currentLang) ?? {
     code: "nl",
-    label: "Dutch",
     flag: "🇳🇱",
     nativeName: "Nederlands",
   };
@@ -68,7 +67,9 @@ const LanguageSwitcher = () => {
               {lang.flag}
             </span>
             <div>
-              <div className="font-medium">{lang.label}</div>
+              <div className="font-medium">
+                {new Intl.DisplayNames([getLocale()], { type: "language" }).of(lang.code)}
+              </div>
               <div className="text-xs text-muted-foreground group-data-highlighted/dropdown-menu-item:text-accent-foreground">
                 {lang.nativeName}
               </div>

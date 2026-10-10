@@ -7,6 +7,7 @@ import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
 import { devError } from "@/utils/devLog";
 import { removeAuthenticatedQueries } from "@/utils/queryInvalidation";
 import { signOutVisitorSession } from "@/utils/publicRegistrationApi";
+import { m } from "@/paraglide/messages";
 
 export interface AuthContextType {
   isAuthenticated: boolean;
@@ -206,9 +207,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const hasRole = useCallback((role: string) => roles.includes(role), [roles]);
 
-  const oidcError = oidcAuth.error
-    ? formatAuthError(oidcAuth.error, "Authentication failed. Please try again.")
-    : null;
+  const oidcError = oidcAuth.error ? formatAuthError(oidcAuth.error, m.auth_failed_retry()) : null;
 
   // Clear a stale dismissal once the underlying error itself clears. Adjust
   // during render (comparing against the previous oidcError) rather than in
@@ -240,7 +239,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       signinRedirect({ state: { returnTo } }).catch((error: unknown) => {
         devError("signinRedirect failed:", error);
         setIsSigningIn(false);
-        setRedirectError(formatAuthError(error, "Could not start sign-in. Please try again."));
+        setRedirectError(formatAuthError(error, m.auth_sign_in_start_failed()));
       });
     },
     [signinRedirect],
@@ -262,7 +261,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       .catch((error: unknown) => {
         devError("sign out failed:", error);
         setIsSigningOut(false);
-        setRedirectError(formatAuthError(error, "Could not sign out. Please try again."));
+        setRedirectError(formatAuthError(error, m.auth_sign_out_failed()));
       });
   }, [cache, queryClient, signoutRedirect]);
 

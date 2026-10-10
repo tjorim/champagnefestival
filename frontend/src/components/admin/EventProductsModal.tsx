@@ -701,7 +701,7 @@ export default function EventProductsModal({
               variant="outline"
               onClick={() => openEdit(product)}
               disabled={formOpen && !isBeingEdited}
-              aria-label={`Edit ${product.name}`}
+              aria-label={m.admin_edit_item({ name: product.name })}
             >
               <Icon icon={PencilIcon} />
             </Button>

@@ -1,4 +1,5 @@
 import type { Registration } from "@/types/registration";
+import { m } from "@/paraglide/messages";
 export const MAILTO_MAX_LENGTH = 1800;
 export type EmailLanguage = "nl" | "fr" | "en";
 export interface EmailDraft {
@@ -18,74 +19,34 @@ export function buildMailto(draft: EmailDraft): string {
   const body = draft.body.replace(/\r?\n/g, "\r\n");
   return `mailto:${encodeMailtoField(draft.recipient)}?subject=${encodeMailtoField(draft.subject)}&body=${encodeMailtoField(body)}`;
 }
-const copy = {
-  en: {
-    dear: "Dear",
-    regards: "Kind regards",
-    registration: "registration",
-    contact: "We are contacting you about your registration for",
-    order: "order summary",
-    here: "Here is the order summary for",
-    none: "No products ordered",
-    payment: "outstanding payment",
-    reminder: "This is a reminder about the outstanding payment for",
-    status: "Payment status",
-    due: "Amount due",
-    eventInfo: "event information",
-    event: "Event",
-    date: "Date",
-    start: "Start time",
-    paid: "paid",
-    partial: "partially paid",
-    unpaid: "unpaid",
-  },
-  nl: {
-    dear: "Beste",
-    regards: "Met vriendelijke groeten",
-    registration: "inschrijving",
-    contact: "We nemen contact met je op over je inschrijving voor",
-    order: "besteloverzicht",
-    here: "Hier is het besteloverzicht voor",
-    none: "Geen producten besteld",
-    payment: "openstaande betaling",
-    reminder: "Dit is een herinnering aan de openstaande betaling voor",
-    status: "Betalingsstatus",
-    due: "Te betalen",
-    eventInfo: "evenementinformatie",
-    event: "Evenement",
-    date: "Datum",
-    start: "Starttijd",
-    paid: "betaald",
-    partial: "gedeeltelijk betaald",
-    unpaid: "onbetaald",
-  },
-  fr: {
-    dear: "Bonjour",
-    regards: "Cordialement",
-    registration: "inscription",
-    contact: "Nous vous contactons au sujet de votre inscription à",
-    order: "récapitulatif de commande",
-    here: "Voici le récapitulatif de la commande pour",
-    none: "Aucun produit commandé",
-    payment: "paiement en attente",
-    reminder: "Ceci est un rappel concernant le paiement en attente pour",
-    status: "Statut du paiement",
-    due: "Montant dû",
-    eventInfo: "informations sur l’événement",
-    event: "Événement",
-    date: "Date",
-    start: "Heure de début",
-    paid: "payé",
-    partial: "partiellement payé",
-    unpaid: "non payé",
-  },
-} as const;
+function emailCopy(language: EmailLanguage) {
+  return {
+    dear: m.email_dear({}, { locale: language }),
+    regards: m.email_regards({}, { locale: language }),
+    registration: m.email_registration({}, { locale: language }),
+    contact: m.email_contact({}, { locale: language }),
+    order: m.email_order({}, { locale: language }),
+    here: m.email_here({}, { locale: language }),
+    none: m.email_none({}, { locale: language }),
+    payment: m.email_payment({}, { locale: language }),
+    reminder: m.email_reminder({}, { locale: language }),
+    status: m.email_status({}, { locale: language }),
+    due: m.email_due({}, { locale: language }),
+    eventInfo: m.email_event_info({}, { locale: language }),
+    event: m.email_event({}, { locale: language }),
+    date: m.email_date({}, { locale: language }),
+    start: m.email_start({}, { locale: language }),
+    paid: m.email_paid({}, { locale: language }),
+    partial: m.email_partial({}, { locale: language }),
+    unpaid: m.email_unpaid({}, { locale: language }),
+  };
+}
 export function buildMemberEmailDraft(
   name: string,
   email: string,
   language: EmailLanguage = "nl",
 ): EmailDraft {
-  const t = copy[language];
+  const t = emailCopy(language);
   return {
     recipient: email,
     subject: "Champagnefestival",
@@ -98,7 +59,7 @@ export function buildRegistrationEmailDraft(
   template: RegistrationEmailTemplate,
   language: EmailLanguage = registration.person.preferredLanguage ?? "nl",
 ): EmailDraft {
-  const t = copy[language],
+  const t = emailCopy(language),
     eventName = registration.event?.title ?? registration.eventId,
     eventDate = registration.event?.date ?? "",
     greeting = `${t.dear} ${registration.person.name},`,

@@ -14,6 +14,7 @@ vi.mock("@/paraglide/messages", () => ({
   m: {
     privacy_title: () => "Privacy Policy Title",
     privacy_last_updated: () => "Last updated",
+    ui_loading: () => "Loading",
   },
 }));
 

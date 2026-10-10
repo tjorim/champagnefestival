@@ -58,6 +58,8 @@ vi.mock("@/paraglide/messages", () => ({
     registration_errors_guests_min: () => "Minimum 1 guest required",
     registration_errors_guests_max: () => "Maximum 20 guests per registration",
     close: () => "Close",
+    registration_increase_quantity: ({ name }: { name: string }) => `Increase quantity of ${name}`,
+    registration_decrease_quantity: ({ name }: { name: string }) => `Decrease quantity of ${name}`,
   },
 }));
 

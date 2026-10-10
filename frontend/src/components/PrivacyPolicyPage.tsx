@@ -50,7 +50,7 @@ export default function PrivacyPolicyPage() {
 
             {query.isLoading && (
               <div className="text-center py-12">
-                <Spinner role="status" aria-label="Loading" />
+                <Spinner role="status" aria-label={m.ui_loading()} />
               </div>
             )}
             {query.isError && <Alert variant="danger">{String(query.error)}</Alert>}

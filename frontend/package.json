@@ -19,7 +19,8 @@
     "test:ui": "vitest --ui",
     "test:watch": "vitest",
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
-    "check-message-parity": "node scripts/check-message-parity.mjs"
+    "check-message-parity": "node scripts/check-message-parity.mjs",
+    "locale:audit": "node scripts/locale-audit.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -69,6 +70,7 @@
     "happy-dom": "^20.14.5",
     "jest-axe": "^11.0.0",
     "msw": "^2.15.0",
+    "oxc-parser": "^0.153.0",
     "oxfmt": "^0.72.0",
     "oxlint": "^1.87.0",
     "tailwindcss": "^4.3.3",

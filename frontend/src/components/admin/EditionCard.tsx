@@ -341,7 +341,7 @@ export default function EditionCard({
                       size="sm"
                       variant="outline"
                       onClick={() => openEditEvent(event)}
-                      aria-label={`Edit event ${event.title}`}
+                      aria-label={m.admin_edit_event({ title: event.title })}
                     >
                       <Icon icon={PencilIcon} />
                     </Button>
@@ -349,7 +349,7 @@ export default function EditionCard({
                       size="sm"
                       variant="outline-danger"
                       onClick={() => handleRemoveEvent(event.id)}
-                      aria-label={`Delete event ${event.title}`}
+                      aria-label={m.admin_delete_event({ title: event.title })}
                     >
                       <Icon icon={TrashIcon} />
                     </Button>

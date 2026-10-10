@@ -301,7 +301,7 @@ function areaUpdateErrorMessage(changes: AreaUpdateChanges): string {
   if (changes.widthM !== undefined || changes.lengthM !== undefined) {
     return m.admin_error_resize_area_status({ status: 500 });
   }
-  if (changes.label !== undefined) return "Failed to persist area label.";
+  if (changes.label !== undefined) return m.admin_error_persist_area_label();
   if (changes.rotation !== undefined) return m.admin_error_persist_area_rotation();
   return m.admin_error_persist_area_position();
 }

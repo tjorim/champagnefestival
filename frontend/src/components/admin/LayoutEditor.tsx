@@ -492,7 +492,7 @@ function RoomCanvas({
   return (
     <div className="overflow-auto pb-2">
       <p className="text-subtle text-sm mb-1">
-        {room.widthM} m × {room.lengthM} m
+        {m.admin_room_size({ width: room.widthM, length: room.lengthM })}
         <span className="ms-2">
           <Icon icon={InfoIcon} className="me-1" />
           {m.admin_table_move_hint()}
@@ -570,7 +570,7 @@ function RoomCanvas({
           {roomAreas.map((area) => {
             const assignedLabel = area.organizationId
               ? (organizations.find((e) => e.id === area.organizationId)?.name ??
-                `Organization #${area.organizationId}`)
+                m.admin_organization_fallback({ id: area.organizationId }))
               : null;
             return (
               <DraggableArea

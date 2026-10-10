@@ -4,6 +4,7 @@ import {
   type VisualThemeVariant,
 } from "@/config/visualThemes";
 import "./ThemeSwitcher.css";
+import { m } from "@/paraglide/messages";
 
 interface ThemeSwitcherProps {
   variant: VisualThemeVariant;
@@ -16,10 +17,10 @@ interface ThemeSwitcherProps {
  */
 const ThemeSwitcher = ({ variant, onChange }: ThemeSwitcherProps) => {
   return (
-    <div className="theme-switcher" role="group" aria-label="Visual design preview switcher">
+    <div className="theme-switcher" role="group" aria-label={m.theme_switcher_group_label()}>
       <select
         className="theme-switcher__select"
-        aria-label="Visual design preview"
+        aria-label={m.theme_switcher_select_label()}
         value={variant}
         onChange={(event) => {
           if (isVisualThemeVariant(event.target.value)) onChange(event.target.value);
