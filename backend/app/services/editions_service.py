@@ -33,6 +33,7 @@ from app.audit import write_audit_entry
 from app.database import violated_constraint_name
 from app.models import Edition, Event, Organization, Venue
 from app.schemas import EditionCreate, EditionScratchpadUpdate, EditionType, EditionUpdate
+from app.services import edition_artwork
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
 
@@ -487,9 +488,94 @@ async def apply_edition_update(
     return await edition_payload(db, edition, active_only=False)
 
 
+async def _lock_edition(db: AsyncSession, edition_id: str) -> Edition:
+    """Re-read the edition under a row lock so concurrent artwork changes serialise."""
+    locked = (
+        await db.execute(
+            select(Edition)
+            .where(Edition.id == edition_id)
+            .options(selectinload(Edition.events).selectinload(Event.products))
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).scalar_one_or_none()
+    if locked is None:
+        raise HTTPException(status_code=404, detail="Edition not found.")
+    return locked
+
+
+async def _commit_artwork_change(
+    db: AsyncSession,
+    edition: Edition,
+    slot: edition_artwork.Slot,
+    *,
+    operation: str,
+    actor: str,
+    request_id: str | None,
+) -> dict:
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="edition_artwork_updated",
+        resource_type="edition",
+        resource_id=edition.id,
+        request_id=request_id,
+        details={"slot": slot, "operation": operation},
+    )
+    await notify_render_cache_invalidate(db)
+    await db.commit()
+    edition = await get_edition_or_404(db, edition.id)
+    return await edition_payload(db, edition, active_only=False)
+
+
+async def upload_edition_artwork(
+    db: AsyncSession,
+    edition_id: str,
+    slot: edition_artwork.Slot,
+    data: bytes,
+    *,
+    actor: str,
+    request_id: str | None = None,
+) -> dict:
+    """Publish *data* (already validated by ``edition_artwork.encode``) in one slot immediately.
+
+    The previous file is deleted after commit; the new one is removed again if the
+    transaction rolls back. Raises ``HTTPException`` for an unknown edition.
+    """
+    await edition_artwork.lock(db)
+    edition = await _lock_edition(db, edition_id)
+    column = edition_artwork.COLUMNS[slot]
+    previous = getattr(edition, column)
+    setattr(edition, column, edition_artwork.add(db, data))
+    await edition_artwork.retire(db, previous)
+    return await _commit_artwork_change(db, edition, slot, operation="upload", actor=actor, request_id=request_id)
+
+
+async def clear_edition_artwork(
+    db: AsyncSession, edition_id: str, slot: edition_artwork.Slot, *, actor: str, request_id: str | None = None
+) -> dict:
+    """Empty a slot so the site falls back to its static image. Clearing an empty slot is a no-op."""
+    await edition_artwork.lock(db)
+    edition = await _lock_edition(db, edition_id)
+    column = edition_artwork.COLUMNS[slot]
+    previous = getattr(edition, column)
+    if previous is None:
+        return await edition_payload(db, edition, active_only=False)
+    setattr(edition, column, None)
+    await edition_artwork.retire(db, previous)
+    return await _commit_artwork_change(db, edition, slot, operation="clear", actor=actor, request_id=request_id)
+
+
 async def delete_edition(db: AsyncSession, edition: Edition, *, actor: str, request_id: str | None = None) -> dict:
     edition_id = edition.id
+    await edition_artwork.lock(db)
+    # Re-read under the lock: an upload that committed after the caller loaded `edition` must have
+    # its new file retired too, not the stale URL.
+    edition = await _lock_edition(db, edition_id)
+    artwork = [getattr(edition, column) for column in edition_artwork.COLUMNS.values()]
     await db.delete(edition)
+    for url in artwork:
+        await edition_artwork.retire(db, url)
     await write_audit_entry(
         db,
         actor=actor,

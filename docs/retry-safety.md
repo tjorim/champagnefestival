@@ -489,6 +489,22 @@ form has `retry: false` for events. `POST /api/events/translation` persists noth
 consumes the identity rate limit in its own bucket, and is never retried
 automatically; see [API, configuration and limits](organization-description-translation.md#event-drafts-1222).
 
+### Edition artwork (#1224)
+
+`POST /api/editions/{id}/artwork/{slot}` publishes a new file with a fresh
+content-addressed URL and deletes the slot's previous file after commit, so it is
+**not retry safe**: a repeat after an ambiguous outcome converges on one live file
+(the last writer wins, and concurrent uploads serialise on the edition row and the
+artwork advisory lock, leaving exactly one file) but creates another URL and audit
+entry. The browser sends it with `retry: false`; after an ambiguous result reload the
+edition, which shows the live URL, before uploading again. `DELETE
+/api/editions/{id}/artwork/{slot}` **converges**: the slot ends empty and a repeat
+returns the unchanged edition with no audit entry or file change. Files are written
+before the commit and removed on rollback; leftovers from a crash are removed by
+`python -m app.services.edition_artwork` ([details](edition-artwork.md)). There is no
+optimistic version check, so a concurrent upload by another admin silently replaces
+the other's image.
+
 ### Translated content and product categories (#1222)
 
 FAQ items, announcements, composed messages, policies and products keep

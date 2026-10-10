@@ -1923,6 +1923,13 @@ class EditionOut(BaseModel):
     sponsors: list[EditionItemOut]
     vendors: list[EditionItemOut]
     co_organizer: EditionItemOut | None = None
+    flyer_image: str | None = Field(default=None, description="Uploaded flyer path, or null for the static default.")
+    hero_image: str | None = Field(
+        default=None, description="Uploaded hero photo path, or null for the static default."
+    )
+    share_image: str | None = Field(
+        default=None, description="Uploaded 1200x630 sharing image path (`og:image`), or null for the default."
+    )
     active: bool
     created_at: datetime
     updated_at: datetime
@@ -1945,6 +1952,13 @@ class EditionPublicOut(BaseModel):
     sponsors: list[EditionItemOut]
     vendors: list[EditionItemOut]
     co_organizer: EditionItemOut | None = None
+    flyer_image: str | None = Field(default=None, description="Uploaded flyer path, or null for the static default.")
+    hero_image: str | None = Field(
+        default=None, description="Uploaded hero photo path, or null for the static default."
+    )
+    share_image: str | None = Field(
+        default=None, description="Uploaded 1200x630 sharing image path (`og:image`), or null for the default."
+    )
     active: bool
     created_at: datetime
     updated_at: datetime

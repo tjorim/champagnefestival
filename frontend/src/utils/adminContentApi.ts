@@ -477,6 +477,43 @@ export async function deleteEditionById(
   return editionId;
 }
 
+export type EditionArtworkSlot = "flyer" | "hero" | "share";
+
+/**
+ * Publish a flyer, hero photo or sharing image for an edition (#1224). Multipart,
+ * so the browser sets the boundary header; live immediately. Not retried: after an
+ * ambiguous failure, reload the edition before uploading again.
+ */
+export async function uploadEditionArtwork(
+  editionId: string,
+  slot: EditionArtworkSlot,
+  file: File,
+  authHeaders: () => Record<string, string>,
+): Promise<Edition> {
+  const body = new FormData();
+  body.append("file", file);
+  const response = await safeFetch(
+    `/api/editions/${encodeURIComponent(editionId)}/artwork/${slot}`,
+    { method: "POST", headers: authHeaders(), body },
+    m.admin_edition_artwork_error(),
+  );
+  return apiToEdition((await response.json()) as Record<string, unknown>);
+}
+
+/** Empty an artwork slot so the site falls back to its static image. Clearing an empty slot is harmless. */
+export async function clearEditionArtwork(
+  editionId: string,
+  slot: EditionArtworkSlot,
+  authHeaders: () => Record<string, string>,
+): Promise<Edition> {
+  const response = await safeFetch(
+    `/api/editions/${encodeURIComponent(editionId)}/artwork/${slot}`,
+    { method: "DELETE", headers: authHeaders() },
+    m.admin_edition_artwork_error(),
+  );
+  return apiToEdition((await response.json()) as Record<string, unknown>);
+}
+
 export interface PollOption {
   id: string;
   editionId: string;

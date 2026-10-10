@@ -26,6 +26,7 @@ from app.routers import (
     check_in,
     composer,
     contact,
+    edition_artwork,
     editions,
     event_categories,
     events,
@@ -202,6 +203,7 @@ app.include_router(rooms.router)
 app.include_router(layouts.router)
 app.include_router(organizations.router)
 app.include_router(organization_logos.router)
+app.include_router(edition_artwork.router)
 app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(products.router)

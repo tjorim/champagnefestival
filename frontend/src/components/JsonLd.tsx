@@ -4,6 +4,7 @@ import { getLocale } from "@/paraglide/runtime";
 import { getFestivalDateRange, useActiveEdition } from "@/hooks/useActiveEdition";
 import { baseUrl } from "@/config/site";
 import type { Event } from "@/types/event";
+import { DEFAULT_SHARE, editionShareImage } from "@/utils/editionArtwork";
 import { eventDescription, eventTitle } from "@/utils/eventText";
 
 /** Marks the JSON-LD <script> the backend renders into <head> for GET /.
@@ -86,7 +87,7 @@ const EventStructuredData: React.FC = () => {
         longitude: coordinates.lng,
       },
     },
-    image: [`${baseUrl}/images/og-image.jpg`],
+    image: [`${baseUrl}${editionShareImage(edition) ?? DEFAULT_SHARE}`],
     description: m.welcome_subtitle(),
     offers: {
       "@type": "Offer",

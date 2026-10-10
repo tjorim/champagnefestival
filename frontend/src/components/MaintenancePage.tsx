@@ -4,17 +4,15 @@ import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
 import { m } from "@/paraglide/messages";
 import { usePublicSettings } from "@/hooks/useMaintenanceMode";
+import { DEFAULT_FLYER, managedArtwork } from "@/utils/editionArtwork";
 import "./maintenancePage.css";
 
 /**
- * Path for the current edition's flyer/poster image. Replace
- * `frontend/public/images/flyer.jpg` with next edition's flyer (same name)
- * and it picks up automatically, no code change needed. If it's ever missing,
- * the <img onError> below swaps in a placeholder instead of a broken-image icon.
- */
-const FLYER_SRC = "/images/flyer.jpg";
-
-/**
+ * The flyer is the one an admin uploaded for the active edition (the `flyerImage`
+ * prop, #1224), or the static `/images/flyer.jpg` while none is set. If the uploaded
+ * file fails to load the static one is tried next, and if that is missing too the
+ * <img onError> below swaps in a placeholder instead of a broken-image icon.
+ *
  * Shown instead of the full marketing site while the site is in maintenance
  * mode (toggled from the admin dashboard's Settings section, or automatically
  * when the backend can't be reached at all) — a picture with a link to the
@@ -53,9 +51,12 @@ const FLYER_SRC = "/images/flyer.jpg";
  * into that dark half instead, rather than fighting the image's own
  * composition.
  */
-export default function MaintenancePage() {
+export default function MaintenancePage({ flyerImage }: { flyerImage?: string | null }) {
   const { facebook_url: facebookUrl } = usePublicSettings();
-  const [flyerFailed, setFlyerFailed] = useState(false);
+  const [failedSources, setFailedSources] = useState<string[]>([]);
+  const flyerSrc = [managedArtwork(flyerImage), DEFAULT_FLYER].find(
+    (source): source is string => source !== null && !failedSources.includes(source),
+  );
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
@@ -109,7 +110,7 @@ export default function MaintenancePage() {
           </a>
         )}
 
-        {flyerFailed ? (
+        {flyerSrc === undefined ? (
           <div className="maintenance-page__flyer-card">
             <div className="maintenance-page__flyer-placeholder">
               <Icon icon={ImageIcon} className="text-3xl" />
@@ -126,9 +127,9 @@ export default function MaintenancePage() {
             className="maintenance-page__flyer-card maintenance-page__flyer-trigger"
           >
             <img
-              src={FLYER_SRC}
+              src={flyerSrc}
               alt=""
-              onError={() => setFlyerFailed(true)}
+              onError={() => setFailedSources((failed) => [...failed, flyerSrc])}
               className="maintenance-page__flyer-image"
             />
             <span className="maintenance-page__flyer-overlay" aria-hidden="true">
@@ -138,7 +139,7 @@ export default function MaintenancePage() {
         )}
       </div>
 
-      {lightboxOpen && (
+      {lightboxOpen && flyerSrc && (
         <div
           role="dialog"
           aria-modal="true"
@@ -155,7 +156,7 @@ export default function MaintenancePage() {
             <Icon icon={XIcon} />
           </button>
           <img
-            src={FLYER_SRC}
+            src={flyerSrc}
             alt={m.maintenance_flyer_alt()}
             onClick={(event) => event.stopPropagation()}
             className="maintenance-page__lightbox-image"

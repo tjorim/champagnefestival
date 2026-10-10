@@ -74,8 +74,11 @@ def defer_delete(db: AsyncSession, path: Path) -> None:
     db.sync_session.info.setdefault("logo_delete", set()).add(path)
 
 
-def store(db: AsyncSession, root: Path, data: bytes) -> str:
-    name = f"{uuid4().hex}-{hashlib.sha256(data).hexdigest()}.png"
+def store(db: AsyncSession, root: Path, data: bytes, extension: str = "png") -> str:
+    """Write *data* under a fresh unguessable name; removed again if the transaction rolls back.
+
+    Also backs edition artwork (``app.services.edition_artwork``), which stores JPEGs."""
+    name = f"{uuid4().hex}-{hashlib.sha256(data).hexdigest()}.{extension}"
     path = root / name
     db.sync_session.info.setdefault("logo_created", set()).add(path)
     with path.open("xb") as handle:

@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 from datetime import UTC, date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -30,7 +30,8 @@ from app.schemas import (
     EditionType,
     EditionUpdate,
 )
-from app.services import editions_service, stands_service
+from app.services import edition_artwork, editions_service, stands_service
+from app.services.errors import ServiceError, to_http_exception
 from app.translations import Language
 
 router = APIRouter(prefix="/api/editions", tags=["editions"])
@@ -241,6 +242,47 @@ async def update_edition(
     edition = await editions_service.get_edition_or_404(db, edition_id)
     return await editions_service.apply_edition_update(
         db, edition, body, actor=actor, request_id=getattr(request.state, "request_id", None)
+    )
+
+
+@router.post("/{edition_id}/artwork/{slot}", response_model=EditionOut, dependencies=[Depends(require_admin)])
+async def upload_edition_artwork(
+    edition_id: str,
+    slot: edition_artwork.Slot,
+    file: UploadFile,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    """Publish the edition's `flyer`, `hero` or `share` image immediately (#1224).
+
+    Multipart field `file`: PNG, JPEG or WebP, validated per slot and re-encoded as
+    a metadata-free JPEG. Replaces (and deletes) the slot's previous file; the public
+    pages and the home page's `og:image` pick it up without a deployment. 413/415/422
+    explain a rejected image. See `docs/edition-artwork.md`.
+    """
+    await editions_service.get_edition_or_404(db, edition_id)
+    try:
+        data = await edition_artwork.read_upload(file, slot)
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+    return await editions_service.upload_edition_artwork(
+        db, edition_id, slot, data, actor=actor, request_id=getattr(request.state, "request_id", None)
+    )
+
+
+@router.delete("/{edition_id}/artwork/{slot}", response_model=EditionOut, dependencies=[Depends(require_admin)])
+async def clear_edition_artwork(
+    edition_id: str,
+    slot: edition_artwork.Slot,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+) -> dict:
+    """Empty an artwork slot, deleting its file; the site falls back to its static image."""
+    await editions_service.get_edition_or_404(db, edition_id)
+    return await editions_service.clear_edition_artwork(
+        db, edition_id, slot, actor=actor, request_id=getattr(request.state, "request_id", None)
     )
 
 

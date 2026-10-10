@@ -730,6 +730,14 @@ class Edition(Base):
     single-request path, by `app.services.editions_service.deactivate_conflicting_editions`
     transactionally deactivating the previous active edition of the same type. See #832."""
 
+    flyer_image: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    hero_image: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    share_image: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    """Optional admin-uploaded artwork (#1224): the flyer shown on the maintenance
+    page, the wide hero photo and the 1200x630 sharing image (`og:image`, JSON-LD).
+    Each holds a managed `/uploads/editions/<uuid>-<sha256>.jpg` path written only
+    by `app.services.edition_artwork`; `None` falls back to the static site images."""
+
     scratchpad: Mapped[str] = mapped_column(Text, default="")
     """A free-text, deliberately unstructured planning notepad for this edition
     — reminders, ideas, anything an admin wants written down. Admin-only,

@@ -19,6 +19,7 @@ from the frontend source at runtime.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from datetime import UTC, date, datetime, time
 from zoneinfo import ZoneInfo
 
@@ -78,6 +79,13 @@ def _sub_events(events: list[dict], locale: Locale) -> list[dict]:
     return entries
 
 
+def edition_share_image(edition: Mapping, *, base_url: str) -> str | None:
+    """Absolute URL of the edition's uploaded sharing image, else its hero, else ``None``
+    (callers then keep the static default). Mirrors ``editionShareImage`` in ``JsonLd.tsx``."""
+    path = edition.get("share_image") or edition.get("hero_image")
+    return f"{base_url}{path}" if path else None
+
+
 def build_event_json_ld(edition: dict, *, base_url: str, locale: Locale) -> dict:
     """Build the same schema.org Event structure ``JsonLd.tsx`` renders client-side.
 
@@ -111,7 +119,7 @@ def build_event_json_ld(edition: dict, *, base_url: str, locale: Locale) -> dict
                 "longitude": venue["lng"],
             },
         },
-        "image": [f"{base_url}/images/og-image.jpg"],
+        "image": [edition_share_image(edition, base_url=base_url) or f"{base_url}/images/og-image.jpg"],
         "description": WELCOME_SUBTITLE[locale],
         "offers": {
             "@type": "Offer",

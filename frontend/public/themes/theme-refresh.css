@@ -230,7 +230,7 @@
         rgba(16, 15, 13, 0.34) 68%,
         rgba(16, 15, 13, 0.62) 100%
       ),
-      url("/images/champagne-hero.png") center / cover no-repeat;
+      var(--edition-hero-image, url("/images/champagne-hero.png")) center / cover no-repeat;
   }
 
   .hero::after {
@@ -786,7 +786,7 @@
           rgba(16, 15, 13, 0.88) 54%,
           rgba(16, 15, 13, 0.58) 100%
         ),
-        url("/images/champagne-hero.png") 62% center / cover no-repeat;
+        var(--edition-hero-image, url("/images/champagne-hero.png")) 62% center / cover no-repeat;
     }
 
     .features {
@@ -891,7 +891,7 @@
     .hero {
       background:
         linear-gradient(90deg, rgba(16, 15, 13, 0.98), rgba(16, 15, 13, 0.82)),
-        url("/images/champagne-hero.png") 66% center / cover no-repeat;
+        var(--edition-hero-image, url("/images/champagne-hero.png")) 66% center / cover no-repeat;
     }
 
     .hero-kicker {
@@ -986,7 +986,7 @@
           rgba(18, 15, 11, 0.26) 68%,
           rgba(18, 15, 11, 0.44) 100%
         ),
-        url("/images/champagne-hero.png") center / cover no-repeat;
+        var(--edition-hero-image, url("/images/champagne-hero.png")) center / cover no-repeat;
     }
 
     .hero::after {

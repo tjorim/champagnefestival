@@ -62,9 +62,13 @@ def _rewrite_html_lang(shell_html: str, lang: str) -> str:
     return re.sub(r'(<html\s+lang=")[^"]*(")', lambda m: m.group(1) + _attr(lang) + m.group(2), shell_html, count=1)
 
 
-def rewrite_head_meta(shell_html: str, *, title: str, description: str, url: str, locale: Locale) -> str:
+def rewrite_head_meta(
+    shell_html: str, *, title: str, description: str, url: str, locale: Locale, image: str | None = None
+) -> str:
     """Rewrite the shell's static title/description/og:*/twitter:*/canonical/lang
-    in place — see module docstring. Each substitution is `count=1` and
+    in place — see module docstring. *image* (an absolute URL, the active
+    edition's uploaded sharing image) replaces `og:image`/`twitter:image`; without
+    it the shell keeps its static default. Each substitution is `count=1` and
     matched by attribute name/value, not by the placeholder text Vite already
     replaced at build time (this process only ever sees the built output)."""
     html_out = _rewrite_title(shell_html, title)
@@ -76,6 +80,9 @@ def rewrite_head_meta(shell_html: str, *, title: str, description: str, url: str
     html_out = _rewrite_meta_content(html_out, attr="name", value="twitter:url", content=url)
     html_out = _rewrite_meta_content(html_out, attr="name", value="twitter:title", content=title)
     html_out = _rewrite_meta_content(html_out, attr="name", value="twitter:description", content=description)
+    if image is not None:
+        html_out = _rewrite_meta_content(html_out, attr="property", value="og:image", content=image)
+        html_out = _rewrite_meta_content(html_out, attr="name", value="twitter:image", content=image)
     html_out = _rewrite_link_href(html_out, rel="canonical", href=url)
     html_out = _rewrite_html_lang(html_out, locale)
     return html_out

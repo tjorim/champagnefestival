@@ -39,6 +39,10 @@ export interface ActiveEdition {
   producers: SliderItem[];
   sponsors: SliderItem[];
   vendors?: SliderItem[];
+  /** Admin-uploaded artwork paths (#1224); `null` falls back to the static images. */
+  flyerImage?: string | null;
+  heroImage?: string | null;
+  shareImage?: string | null;
 }
 
 interface ApiVenue {
@@ -62,6 +66,9 @@ interface ApiEdition {
   producers: SliderItem[];
   sponsors: SliderItem[];
   vendors?: SliderItem[];
+  flyer_image?: string | null;
+  hero_image?: string | null;
+  share_image?: string | null;
 }
 
 export interface ActiveEditionState {
@@ -174,6 +181,9 @@ function mapApiEdition(api: ApiEdition, fallbackDates: EditionDates): ActiveEdit
     producers: api.producers ?? [],
     sponsors: api.sponsors ?? [],
     vendors: api.vendors ?? [],
+    flyerImage: api.flyer_image ?? null,
+    heroImage: api.hero_image ?? null,
+    shareImage: api.share_image ?? null,
   };
 }
 
@@ -188,6 +198,9 @@ function createFallbackEdition(): ActiveEdition {
     events: [],
     producers: [],
     sponsors: [],
+    flyerImage: null,
+    heroImage: null,
+    shareImage: null,
   };
 }
 

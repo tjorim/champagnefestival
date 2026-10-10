@@ -13,6 +13,9 @@ in), so they migrate as ``nl``.
 * FAQ items, announcements, composed messages, policies and products get the same
   original-language columns (``policies.required_locales`` is dropped).
 * The volunteer meal poll drops its kinds and records a quantity per pick.
+* Editions gain three nullable admin-uploaded artwork paths (flyer, hero, sharing
+  image; #1224). They hold managed ``/uploads/editions/...`` paths written by
+  ``app.services.edition_artwork``; ``NULL`` means "use the static site image".
 
 Revision ID: 006
 Revises: 005
@@ -443,6 +446,21 @@ def _downgrade_poll() -> None:
     op.drop_column("volunteer_poll_selections", "quantity")
 
 
+# --- Edition artwork --------------------------------------------------------------
+
+ARTWORK_COLUMNS = ("flyer_image", "hero_image", "share_image")
+
+
+def _upgrade_edition_artwork() -> None:
+    for column in ARTWORK_COLUMNS:
+        op.add_column("editions", sa.Column(column, sa.String(255), nullable=True))
+
+
+def _downgrade_edition_artwork() -> None:
+    for column in reversed(ARTWORK_COLUMNS):
+        op.drop_column("editions", column)
+
+
 # --- Product categories -----------------------------------------------------------
 
 # Key, sort order and label per language (nl, fr, en). English is the original
@@ -540,9 +558,11 @@ def upgrade() -> None:
     _upgrade_policies()
     _upgrade_products()
     _upgrade_poll()
+    _upgrade_edition_artwork()
 
 
 def downgrade() -> None:
+    _downgrade_edition_artwork()
     _downgrade_poll()
     _downgrade_products()
     _downgrade_policies()
