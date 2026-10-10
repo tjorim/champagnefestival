@@ -1,7 +1,8 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import LogoWall from "@/components/LogoWall";
 import type { SliderItem } from "@/config/editions";
+import type { OrganizationStands } from "@/utils/standsApi";
 
 vi.mock("@/paraglide/runtime", () => ({ getLocale: () => "en" }));
 vi.mock("@/paraglide/messages", () => ({
@@ -10,6 +11,15 @@ vi.mock("@/paraglide/messages", () => ({
     logo_wall_show_all_vendors: ({ count }: { count: number }) => `Show all ${count} vendors`,
     logo_wall_show_all_sponsors: ({ count }: { count: number }) => `Show all ${count} sponsors`,
     logo_wall_show_fewer: () => "Show fewer",
+    logo_wall_search_label: () => "Find a producer",
+    logo_wall_search_placeholder: () => "Search by name or stand",
+    logo_wall_search_results: ({ count }: { count: number }) => `${count} producers found`,
+    logo_wall_search_no_results: ({ query }: { query: string }) => `No producers match “${query}”.`,
+    close: () => "Close",
+    organization_modal_stands: () => "Where to find them",
+    organization_modal_website: () => "Visit website",
+    logo_wall_stand: () => "Stand",
+    logo_wall_stand_on_day: ({ day, stand }: { day: string; stand: string }) => `${day}: ${stand}`,
   },
 }));
 
@@ -20,6 +30,31 @@ function makeItems(count: number): SliderItem[] {
     image: `/logo-${index}.png`,
   }));
 }
+
+const items: SliderItem[] = [
+  { id: 1, name: "Bollinger", image: "/b.png" },
+  { id: 2, name: "Krug", image: "/k.png" },
+  { id: 3, name: "Moët & Chandon", image: "/m.png" },
+];
+
+const stands: OrganizationStands[] = [
+  {
+    organization_id: 1,
+    name: "Bollinger",
+    stands: [
+      { event_id: "e1", date: "2099-03-20", room_name: "Hall 5", label: "Stand 12" },
+      { event_id: "e2", date: "2099-03-21", room_name: "Hall 5", label: "Stand 12" },
+    ],
+  },
+  {
+    organization_id: 3,
+    name: "Moët & Chandon",
+    stands: [
+      { event_id: "e1", date: "2099-03-20", room_name: "Hall 5", label: "Stand 3" },
+      { event_id: "e2", date: "2099-03-21", room_name: "Cellar", label: "Stand 9" },
+    ],
+  },
+];
 
 describe("LogoWall", () => {
   it("renders nothing for an empty list", () => {
@@ -83,7 +118,7 @@ describe("LogoWall", () => {
 
   it("has no toggle at or below the limit", () => {
     render(<LogoWall itemsType="vendors" items={makeItems(8)} />);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /show/i })).not.toBeInTheDocument();
   });
 
   it("renders sponsors as description-free tiles with a higher limit", () => {
@@ -92,7 +127,7 @@ describe("LogoWall", () => {
     const wall = document.querySelector('[data-slot="logo-wall"]') as HTMLElement;
     expect(within(wall).getAllByRole("listitem")).toHaveLength(12);
     expect(within(wall).queryByText("Hidden")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /show/i })).not.toBeInTheDocument();
   });
 
   it("falls back to the festival logo when an image fails", () => {
@@ -100,5 +135,137 @@ describe("LogoWall", () => {
     const image = screen.getByRole("img");
     fireEvent.error(image);
     expect(image).toHaveAttribute("src", "/images/logo.svg");
+  });
+
+  function card(name: string): HTMLElement {
+    return screen.getByRole("heading", { name }).closest("[data-slot='logo-card']") as HTMLElement;
+  }
+
+  it("shows the stand on assigned producers and nothing on the others", () => {
+    render(<LogoWall items={items} stands={stands} />);
+
+    // Same spot on both days: one line, with the room because the lineup spans two rooms.
+    expect(within(card("Bollinger")).getByText("Stand 12 · Hall 5")).toBeTruthy();
+    // Different spot per day: one line per day.
+    const moet = card("Moët & Chandon");
+    expect(within(moet).getByText(/Stand 3 · Hall 5/)).toBeTruthy();
+    expect(within(moet).getByText(/Stand 9 · Cellar/)).toBeTruthy();
+    expect(card("Krug").querySelector("[data-slot='logo-stand']")).toBeNull();
+  });
+
+  it("renders without stand lines when no stands are available", () => {
+    render(<LogoWall items={items} />);
+
+    expect(document.querySelector("[data-slot='logo-stand']")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Krug" })).toBeTruthy();
+  });
+
+  it("finds a producer by name, accent-insensitively, or by stand", () => {
+    render(<LogoWall items={items} stands={stands} />);
+    const search = screen.getByLabelText("Find a producer");
+
+    fireEvent.change(search, { target: { value: "moet" } });
+    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Moët & Chandon",
+    ]);
+
+    fireEvent.change(search, { target: { value: "stand 12" } });
+    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Bollinger",
+    ]);
+
+    fireEvent.change(search, { target: { value: "cellar" } });
+    expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+      "Moët & Chandon",
+    ]);
+  });
+
+  it("explains an empty search and restores the list when cleared", () => {
+    render(<LogoWall items={items} stands={stands} />);
+    const search = screen.getByLabelText("Find a producer");
+
+    fireEvent.change(search, { target: { value: "zzz" } });
+    expect(screen.getByText("No producers match “zzz”.")).toBeTruthy();
+    expect(screen.queryAllByRole("heading", { level: 3 })).toHaveLength(0);
+
+    fireEvent.change(search, { target: { value: "" } });
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(3);
+  });
+
+  it("shows every match for a search instead of the collapsed subset", () => {
+    const many: SliderItem[] = Array.from({ length: 12 }, (_, index) => ({
+      id: 100 + index,
+      name: `House ${String(index).padStart(2, "0")}`,
+      image: "/x.png",
+    }));
+    render(<LogoWall items={many} />);
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(8);
+
+    fireEvent.change(screen.getByLabelText("Find a producer"), { target: { value: "house" } });
+
+    expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(12);
+    expect(screen.queryByRole("button", { name: /show/i })).toBeNull();
+  });
+
+  it("shows stands on sponsor and vendor walls too", () => {
+    render(<LogoWall itemsType="sponsors" items={items} stands={stands} />);
+    expect(within(card("Bollinger")).getByText("Stand 12 · Hall 5")).toBeInTheDocument();
+
+    cleanup();
+    render(<LogoWall itemsType="vendors" items={items} stands={stands} />);
+    expect(within(card("Bollinger")).getByText("Stand 12 · Hall 5")).toBeInTheDocument();
+  });
+
+  it("opens the details of an organization from its card", async () => {
+    const detailed: SliderItem[] = [
+      {
+        id: 1,
+        name: "Bollinger",
+        image: "/b.png",
+        website: "https://bollinger.example/",
+        description_en: "A full description that is longer than the two lines on the card.",
+      },
+      { id: 2, name: "Krug", image: "/k.png", website: "javascript:alert(1)" },
+    ];
+    render(<LogoWall items={detailed} stands={stands} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bollinger" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "Bollinger" })).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("A full description that is longer than the two lines on the card."),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("Where to find them")).toBeInTheDocument();
+    // Every day is listed with its stand and room, even when they are all the same.
+    expect(within(dialog).getAllByText(/Stand 12 · Hall 5/)).toHaveLength(2);
+    expect(within(dialog).getByRole("link", { name: /Visit website/ })).toHaveAttribute(
+      "href",
+      "https://bollinger.example/",
+    );
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("omits stands and ignores unsafe website links in the details", () => {
+    render(
+      <LogoWall
+        items={[{ id: 2, name: "Krug", image: "/k.png", website: "javascript:alert(1)" }]}
+        stands={stands}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Krug" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByText("Where to find them")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("offers no search on sponsor walls", () => {
+    render(<LogoWall itemsType="sponsors" items={items} />);
+
+    expect(screen.queryByLabelText("Find a producer")).toBeNull();
   });
 });

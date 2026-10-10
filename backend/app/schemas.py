@@ -1952,6 +1952,36 @@ class EditionPublicOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class StandOut(BaseModel):
+    """One stand of one organization on one festival day (public subset of an ``Area``).
+
+    Deliberately carries no coordinates, size, icon or layout/area ids: the
+    public list answers "where is X?" by label, room and day only.
+    """
+
+    event_id: str
+    date: dt_date
+    room_name: str
+    label: str
+
+
+class OrganizationStandsOut(BaseModel):
+    organization_id: int
+    name: str
+    stands: list[StandOut]
+
+
+class EditionStandsOut(BaseModel):
+    """Returned by the unauthenticated ``GET /api/editions/{id}/stands``.
+
+    Only lineup organizations that have at least one stand appear; there are no
+    tables, registrations, guests, capacities or allocations in this shape.
+    """
+
+    edition_id: str
+    organizations: list[OrganizationStandsOut]
+
+
 class EditionScratchpadUpdate(RequestModel):
     content: str = Field(max_length=20000)
 

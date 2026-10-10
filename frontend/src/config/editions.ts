@@ -41,6 +41,7 @@ export interface SliderItem {
   id: number;
   name: string;
   image: string;
+  website?: string;
   active?: boolean;
 }
 
