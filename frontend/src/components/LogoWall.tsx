@@ -1,6 +1,8 @@
 import { useId, useMemo, useState } from "react";
 import { MapPinIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
+import { LogoImage } from "@/components/LogoImage";
+import OrganizationDetailModal from "@/components/OrganizationDetailModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,8 +33,6 @@ const COLLAPSED_LIMIT: Record<LogoWallType, number> = {
   vendors: 8,
   sponsors: 12,
 };
-
-const FALLBACK_IMAGE = "/images/logo.svg";
 
 function showAllLabel(itemsType: LogoWallType, count: number): string {
   if (itemsType === "producers") return m.logo_wall_show_all_producers({ count });
@@ -80,22 +80,6 @@ function StandLines({
   );
 }
 
-function LogoImage({ item, className }: { item: SliderItem; className: string }) {
-  return (
-    <img
-      src={item.image}
-      alt={item.name}
-      loading="lazy"
-      className={className}
-      onError={(event) => {
-        // Quietly fall back without console errors; clear the handler to avoid loops.
-        event.currentTarget.onerror = null;
-        event.currentTarget.src = FALLBACK_IMAGE;
-      }}
-    />
-  );
-}
-
 /**
  * Calm, scannable logo wall for producers, vendors and sponsors. Producers and
  * vendors get uniform cards with a clamped description; sponsors get a lighter
@@ -106,6 +90,7 @@ function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps
   const searchId = useId();
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
+  const [selected, setSelected] = useState<SliderItem | null>(null);
   const locale = getLocale();
   const isSponsors = itemsType === "sponsors";
 
@@ -182,7 +167,7 @@ function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps
             >
               <div
                 data-slot="logo-card"
-                className="flex w-full min-w-0 flex-col items-center gap-2 rounded-md border border-border bg-card p-3 text-center text-card-foreground"
+                className="relative flex w-full min-w-0 flex-col items-center gap-2 rounded-md border border-border bg-card p-3 text-center text-card-foreground transition-colors hover:bg-muted"
               >
                 <div
                   data-slot="logo-frame"
@@ -193,7 +178,17 @@ function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps
                 >
                   <LogoImage item={item} className="size-full object-contain" />
                 </div>
-                <h3 className="m-0 w-full text-sm font-semibold wrap-break-word">{item.name}</h3>
+                <h3 className="m-0 w-full text-sm font-semibold wrap-break-word">
+                  {/* Stretched button: the whole card opens the details dialog. */}
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    onClick={() => setSelected(item)}
+                    className="m-0 w-full cursor-pointer border-0 bg-transparent p-0 text-inherit outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
+                  >
+                    {item.name}
+                  </button>
+                </h3>
                 {itemStands && itemStands.length > 0 && (
                   <StandLines stands={itemStands} locale={locale} showRoom={showRoom} />
                 )}
@@ -223,6 +218,12 @@ function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps
           </Button>
         </div>
       )}
+      <OrganizationDetailModal
+        item={selected}
+        stands={selected ? standMap.get(selected.id) : undefined}
+        locale={locale}
+        onClose={() => setSelected(null)}
+      />
     </div>
   );
 }

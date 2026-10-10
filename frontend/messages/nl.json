@@ -1221,6 +1221,8 @@
   "logo_wall_search_no_results": "Geen producenten gevonden voor “{query}”.",
   "logo_wall_stand": "Stand",
   "logo_wall_stand_on_day": "{day}: {stand}",
+  "organization_modal_stands": "Waar je ze vindt",
+  "organization_modal_website": "Bezoek website",
   "push_opt_in_consent_required": "Vink eerst het vakje hierboven aan om je toestemming te geven.",
   "hero_edition_kicker": "Editie {month} {year}",
   "admin_event_title_language": "Titel: oorspronkelijke taal",

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import LogoWall from "@/components/LogoWall";
 import type { SliderItem } from "@/config/editions";
@@ -15,6 +15,9 @@ vi.mock("@/paraglide/messages", () => ({
     logo_wall_search_placeholder: () => "Search by name or stand",
     logo_wall_search_results: ({ count }: { count: number }) => `${count} producers found`,
     logo_wall_search_no_results: ({ query }: { query: string }) => `No producers match “${query}”.`,
+    close: () => "Close",
+    organization_modal_stands: () => "Where to find them",
+    organization_modal_website: () => "Visit website",
     logo_wall_stand: () => "Stand",
     logo_wall_stand_on_day: ({ day, stand }: { day: string; stand: string }) => `${day}: ${stand}`,
   },
@@ -115,7 +118,7 @@ describe("LogoWall", () => {
 
   it("has no toggle at or below the limit", () => {
     render(<LogoWall itemsType="vendors" items={makeItems(8)} />);
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /show/i })).not.toBeInTheDocument();
   });
 
   it("renders sponsors as description-free tiles with a higher limit", () => {
@@ -124,7 +127,7 @@ describe("LogoWall", () => {
     const wall = document.querySelector('[data-slot="logo-wall"]') as HTMLElement;
     expect(within(wall).getAllByRole("listitem")).toHaveLength(12);
     expect(within(wall).queryByText("Hidden")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /show/i })).not.toBeInTheDocument();
   });
 
   it("falls back to the festival logo when an image fails", () => {
@@ -211,6 +214,53 @@ describe("LogoWall", () => {
     cleanup();
     render(<LogoWall itemsType="vendors" items={items} stands={stands} />);
     expect(within(card("Bollinger")).getByText("Stand 12 · Hall 5")).toBeInTheDocument();
+  });
+
+  it("opens the details of an organization from its card", async () => {
+    const detailed: SliderItem[] = [
+      {
+        id: 1,
+        name: "Bollinger",
+        image: "/b.png",
+        website: "https://bollinger.example/",
+        description_en: "A full description that is longer than the two lines on the card.",
+      },
+      { id: 2, name: "Krug", image: "/k.png", website: "javascript:alert(1)" },
+    ];
+    render(<LogoWall items={detailed} stands={stands} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Bollinger" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).getByRole("heading", { name: "Bollinger" })).toBeInTheDocument();
+    expect(
+      within(dialog).getByText("A full description that is longer than the two lines on the card."),
+    ).toBeInTheDocument();
+    expect(within(dialog).getByText("Where to find them")).toBeInTheDocument();
+    // Every day is listed with its stand and room, even when they are all the same.
+    expect(within(dialog).getAllByText(/Stand 12 · Hall 5/)).toHaveLength(2);
+    expect(within(dialog).getByRole("link", { name: /Visit website/ })).toHaveAttribute(
+      "href",
+      "https://bollinger.example/",
+    );
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Close" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+  });
+
+  it("omits stands and ignores unsafe website links in the details", () => {
+    render(
+      <LogoWall
+        items={[{ id: 2, name: "Krug", image: "/k.png", website: "javascript:alert(1)" }]}
+        stands={stands}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Krug" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(within(dialog).queryByText("Where to find them")).not.toBeInTheDocument();
+    expect(within(dialog).queryByRole("link")).not.toBeInTheDocument();
   });
 
   it("offers no search on sponsor walls", () => {

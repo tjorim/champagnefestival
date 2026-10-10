@@ -1221,6 +1221,8 @@
   "logo_wall_search_no_results": "Aucun producteur ne correspond à « {query} ».",
   "logo_wall_stand": "Stand",
   "logo_wall_stand_on_day": "{day} : {stand}",
+  "organization_modal_stands": "Où les trouver",
+  "organization_modal_website": "Visiter le site web",
   "push_opt_in_consent_required": "Cochez d'abord la case ci-dessus pour donner votre consentement.",
   "hero_edition_kicker": "Édition de {month} {year}",
   "admin_event_title_language": "Titre : langue d'origine",

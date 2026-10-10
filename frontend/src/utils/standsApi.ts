@@ -53,6 +53,13 @@ function parseStandDate(value: string): Date {
   return new Date(year, month - 1, day);
 }
 
+/** Localized weekday and date for a stand's day, for example "Fri, Mar 20". */
+export function formatStandDay(date: string, locale: string, weekday: "short" | "long" = "short") {
+  return new Intl.DateTimeFormat(locale, { weekday, day: "numeric", month: "short" }).format(
+    parseStandDate(date),
+  );
+}
+
 export interface StandSummaryLine {
   /** Day label (for example "Fri 20 Mar"); `null` when the stand is the same on every day. */
   day: string | null;
@@ -77,13 +84,8 @@ export function summarizeStands(
     const first = stands[0];
     return first ? [{ day: null, stand: describe(first) }] : [];
   }
-  const dayFormat = new Intl.DateTimeFormat(locale, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
   return stands.map((stand) => ({
-    day: dayFormat.format(parseStandDate(stand.date)),
+    day: formatStandDay(stand.date, locale),
     stand: describe(stand),
   }));
 }
