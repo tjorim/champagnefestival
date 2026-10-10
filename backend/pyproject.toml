@@ -62,6 +62,3 @@ ignore = ["E501", "B008"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
-
-[tool.ty.rules]
-unresolved-attribute = "warn"
