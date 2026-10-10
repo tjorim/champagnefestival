@@ -28,7 +28,7 @@ from sqlalchemy.orm import selectinload
 from app.models import Edition, Event, Layout, Organization
 
 #: Days after the last festival day during which stands stay visible.
-STANDS_VISIBLE_DAYS_AFTER = 2
+STANDS_VISIBLE_DAYS_AFTER = 7
 
 _BRUSSELS = ZoneInfo("Europe/Brussels")
 

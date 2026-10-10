@@ -240,8 +240,8 @@ async def test_response_never_contains_table_or_registration_data(client):
         (date(2099, 3, 19), False),  # day before the first festival day
         (date(2099, 3, 20), True),  # first day
         (date(2099, 3, 21), True),  # last day
-        (date(2099, 3, 23), True),  # last day + STANDS_VISIBLE_DAYS_AFTER
-        (date(2099, 3, 24), False),  # grace period over
+        (date(2099, 3, 28), True),  # last day + STANDS_VISIBLE_DAYS_AFTER (a week)
+        (date(2099, 3, 29), False),  # grace period over
     ],
 )
 async def test_stands_only_published_during_the_festival_window(client, monkeypatch, today, published):

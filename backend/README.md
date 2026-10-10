@@ -429,7 +429,7 @@ label}` for each stand, so a producer can be somewhere else on another day or ha
 entry at all. It is built by `app/services/stands_service.py`, which loads only
 organizations, layouts, rooms and areas — never tables, registrations or allocations
 (asserted in `tests/test_edition_stands.py`). Stands are only published while the festival is on (first
-active event day through 2 days after the last, Europe/Brussels) and the list is empty
+active event day through 7 days after the last, Europe/Brussels) and the list is empty
 outside that window; inside it they appear as soon as they are assigned. Inactive
 editions, events and organizations are excluded. The public MCP tool
 `find_producer_stand` answers "where is X?" from the same service.

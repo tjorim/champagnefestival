@@ -315,7 +315,7 @@ class ChampagneFestivalMcpBackend:
         Returns, per organization, its stands as ``{event_id, date, room_name, label}``
         (a producer can stand somewhere else on a different day). Organizations
         without an assigned stand are not listed, and nothing is returned before the
-        festival starts or more than two days after it ends. Public data only: no tables,
+        festival starts or more than a week after it ends. Public data only: no tables,
         guests or capacities.
         """
         return await mcp_public.find_producer_stand(self.session_factory, query, edition_id)
