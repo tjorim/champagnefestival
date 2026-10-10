@@ -736,7 +736,7 @@ function App() {
           <section id="vendors" className="content-section">
             <div className="site-container mx-auto w-full text-center">
               <SectionHeading id="vendors-heading" title={m.vendors_title()} />
-              <SuspendedLogoWall itemsType="vendors" items={vendors} />
+              <SuspendedLogoWall itemsType="vendors" items={vendors} stands={stands} />
             </div>
           </section>
         )}
@@ -745,7 +745,7 @@ function App() {
           <section id="sponsors" className="content-section highlight-section">
             <div className="site-container mx-auto w-full text-center">
               <SectionHeading id="sponsors-heading" title={m.sponsors_title()} />
-              <SuspendedLogoWall itemsType="sponsors" items={sponsors} />
+              <SuspendedLogoWall itemsType="sponsors" items={sponsors} stands={stands} />
             </div>
           </section>
         )}

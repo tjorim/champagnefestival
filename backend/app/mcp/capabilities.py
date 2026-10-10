@@ -25,7 +25,7 @@ PUBLIC_TOOL_NAMES: frozenset[str] = frozenset(
         "list_event_categories",
         "list_product_categories",
         "get_venue_plan_summary",
-        "find_producer_stand",
+        "find_stand",
         "get_settings",
         "whoami",
     }

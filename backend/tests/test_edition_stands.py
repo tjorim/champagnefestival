@@ -139,17 +139,27 @@ async def test_stands_are_public_and_listed_per_organization_and_day(client):
 
 
 @pytest.mark.anyio
-async def test_unassigned_and_non_lineup_organizations_show_nothing(client):
+async def test_any_organization_type_with_a_stand_is_listed_even_outside_the_lineup(client):
     ctx = await _setup(client)
     layout = ctx["layouts"][("fri", "Hall 5")]
+    sponsor = await _post(client, "/api/organizations", {"name": "Acme Sponsor", "type": "sponsor"})
+    vendor = await _post(client, "/api/organizations", {"name": "Cheese Vendor", "type": "vendor"})
     await _stand(client, layout, "Stand 1", ctx["producers"]["Bollinger"])
-    await _stand(client, layout, "Stand 99", ctx["outsider"])  # not in the edition lineup
+    await _stand(client, layout, "Stand 99", ctx["outsider"])  # producer that is not in the edition lineup
+    await _stand(client, layout, "Stand 50", sponsor)
+    await _stand(client, layout, "Stand 60", vendor)  # vendors cannot join a lineup but can have a stand
     await _stand(client, layout, "DJ Stage", None)  # area without an organization
 
     data = (await _public_get(client, f"/api/editions/{EDITION_ID}/stands")).json()
 
-    assert [item["name"] for item in data["organizations"]] == ["Bollinger"]
-    assert "Stand 99" not in json.dumps(data)
+    assert [item["name"] for item in data["organizations"]] == [
+        "Acme Sponsor",
+        "Bollinger",
+        "Cheese Vendor",
+        "Not In Lineup",
+    ]
+    # Lineup members without an assigned stand (Krug, Taittinger) and unowned areas show nothing.
+    assert "Krug" not in json.dumps(data)
     assert "DJ Stage" not in json.dumps(data)
 
 

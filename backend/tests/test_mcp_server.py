@@ -1829,7 +1829,7 @@ class TestGetEventScheduleLocale:
 
 
 # ---------------------------------------------------------------------------
-# find_producer_stand (#1223)
+# find_stand (#1223)
 # ---------------------------------------------------------------------------
 
 
@@ -1838,8 +1838,8 @@ class TestFindProducerStand:
     async def test_returns_message_when_no_active_edition(self):
         db = _make_db_execute([[]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
-        result = await backend.find_producer_stand()
-        assert result["producers"] == []
+        result = await backend.find_stand()
+        assert result["organizations"] == []
         assert "No active edition" in result["message"]
 
     @pytest.mark.anyio
@@ -1867,10 +1867,10 @@ class TestFindProducerStand:
         monkeypatch.setattr("app.mcp.public.load_edition_stands", _load)
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
 
-        result = await backend.find_producer_stand(query="  bolli ", edition_id="2026-march")
+        result = await backend.find_stand(query="  bolli ", edition_id="2026-march")
 
         assert result["count"] == 1
-        assert result["producers"][0]["name"] == "Bollinger"
-        assert result["producers"][0]["stands"][0]["label"] == "Stand 12"
-        everything = await backend.find_producer_stand(edition_id="2026-march")
+        assert result["organizations"][0]["name"] == "Bollinger"
+        assert result["organizations"][0]["stands"][0]["label"] == "Stand 12"
+        everything = await backend.find_stand(edition_id="2026-march")
         assert everything["count"] == 2

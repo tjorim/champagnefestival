@@ -1,9 +1,10 @@
-"""Public producer-stand lookup (#1223).
+"""Public stand lookup (#1223).
 
 An organization's stand is an ``Area`` carrying its ``organization_id`` on a
-``Layout`` (event + room). This module exposes the *public subset* of that data:
-for each organization in the edition's lineup, the area label, room name and
-day of every stand. It never loads tables, registrations or allocations, so
+``Layout`` (event + room). Any organization type (producer, sponsor, vendor, ...)
+can have one, whether or not it is in the edition's lineup. This module exposes
+the *public subset* of that data: for each active organization with a stand in
+the edition's floor plans, the area label, room name and day of every stand. It never loads tables, registrations or allocations, so
 none of that can reach the unauthenticated response.
 
 Stands are only published while the festival is on: from the first active
@@ -46,33 +47,19 @@ def stands_window_is_open(event_days: list[date], today: date | None = None) -> 
 
 
 async def load_edition_stands(db: AsyncSession, edition: Edition) -> dict:
-    """Return ``{"edition_id", "organizations"}`` for the lineup's stands.
+    """Return ``{"edition_id", "organizations"}`` for the edition's stands.
 
-    Empty outside the publication window (see module docstring). Only active events, active organizations that are in ``edition.organizations``
-    and areas that name such an organization are included. Organizations without
-    a stand are omitted. Stands are ordered by day, then room, then label;
-    organizations by name.
+    Empty outside the publication window (see module docstring). Only areas of
+    active events that name an active organization are included; organizations
+    without a stand are omitted. Stands are ordered by day, then room, then
+    label; organizations by name.
     """
-    lineup_ids = set(edition.organizations)
-    if not lineup_ids:
-        return {"edition_id": edition.id, "organizations": []}
     event_days = list(
         (await db.execute(select(Event.date).where(Event.edition_id == edition.id, Event.active.is_(True))))
         .scalars()
         .all()
     )
     if not stands_window_is_open(event_days):
-        return {"edition_id": edition.id, "organizations": []}
-
-    organizations = {
-        organization.id: organization
-        for organization in (
-            await db.execute(select(Organization).where(Organization.id.in_(lineup_ids), Organization.active.is_(True)))
-        )
-        .scalars()
-        .all()
-    }
-    if not organizations:
         return {"edition_id": edition.id, "organizations": []}
 
     layouts = (
@@ -86,6 +73,25 @@ async def load_edition_stands(db: AsyncSession, edition: Edition) -> dict:
         .scalars()
         .all()
     )
+    stand_organization_ids = {
+        area.organization_id
+        for layout in layouts
+        if layout.event.active
+        for area in layout.areas
+        if area.organization_id is not None
+    }
+    if not stand_organization_ids:
+        return {"edition_id": edition.id, "organizations": []}
+    organizations = {
+        organization.id: organization
+        for organization in (
+            await db.execute(
+                select(Organization).where(Organization.id.in_(stand_organization_ids), Organization.active.is_(True))
+            )
+        )
+        .scalars()
+        .all()
+    }
 
     stands_by_organization: dict[int, list[dict]] = {}
     for layout in layouts:

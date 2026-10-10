@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import LogoWall from "@/components/LogoWall";
 import type { SliderItem } from "@/config/editions";
@@ -202,6 +202,15 @@ describe("LogoWall", () => {
 
     expect(screen.getAllByRole("heading", { level: 3 })).toHaveLength(12);
     expect(screen.queryByRole("button", { name: /show/i })).toBeNull();
+  });
+
+  it("shows stands on sponsor and vendor walls too", () => {
+    render(<LogoWall itemsType="sponsors" items={items} stands={stands} />);
+    expect(within(card("Bollinger")).getByText("Stand 12 · Hall 5")).toBeInTheDocument();
+
+    cleanup();
+    render(<LogoWall itemsType="vendors" items={items} stands={stands} />);
+    expect(within(card("Bollinger")).getByText("Stand 12 · Hall 5")).toBeInTheDocument();
   });
 
   it("offers no search on sponsor walls", () => {

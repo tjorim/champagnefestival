@@ -53,7 +53,7 @@ To run as a specific role (e.g., `volunteer`) in local development against a rea
 | `list_editions` | public | Past and upcoming festival editions for historical discovery |
 | `get_event_schedule` | public | Event schedule for an edition |
 | `get_venue_plan_summary` | public | Room names for a venue (no table counts or other numbers) |
-| `find_producer_stand` | public | Stand label, room and day per lineup producer ("where is Bollinger?"); no tables or guests; only during the festival (+7 days) |
+| `find_stand` | public | Stand label, room and day per organization with a stand ("where is Bollinger?"); no tables or guests; only during the festival (+7 days) |
 | `find_guest` | volunteer+ | Search guests by name or email |
 | `get_guest_registration` | volunteer+ | Registration details for a specific booking |
 | `get_table_seating` | volunteer+ | Who is seated at which table |

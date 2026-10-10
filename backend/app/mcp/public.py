@@ -126,28 +126,28 @@ async def get_venue_plan_summary(session_factory: Any, edition_id: str | None = 
         }
 
 
-async def find_producer_stand(session_factory: Any, query: str | None = None, edition_id: str | None = None) -> dict:
-    """Answer "where is producer X?" from the public stand list (#1223).
+async def find_stand(session_factory: Any, query: str | None = None, edition_id: str | None = None) -> dict:
+    """Answer "where is organization X?" from the public stand list (#1223).
 
     Same privacy-reviewed subset as ``GET /api/editions/{id}/stands``: labels,
-    room names and days of lineup organizations only.
+    room names and days of organizations with a stand only.
     """
     async with session_factory() as db:
         if edition_id:
             edition: Edition | None = await db.get(Edition, edition_id)
             if edition is None or not edition.active:
-                return {"producers": [], "message": f"Edition '{edition_id}' not found."}
+                return {"organizations": [], "message": f"Edition '{edition_id}' not found."}
         else:
             edition = await get_active_edition_obj(db)
             if edition is None:
-                return {"producers": [], "message": "No active edition found."}
+                return {"organizations": [], "message": "No active edition found."}
 
         stands = await load_edition_stands(db, edition)
 
     needle = (query or "").strip().casefold()
-    producers = [
+    organizations = [
         {"organization_id": item["organization_id"], "name": item["name"], "stands": item["stands"]}
         for item in stands["organizations"]
         if not needle or needle in item["name"].casefold()
     ]
-    return {"edition_id": edition.id, "producers": producers, "count": len(producers)}
+    return {"edition_id": edition.id, "organizations": organizations, "count": len(organizations)}
