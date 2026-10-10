@@ -246,7 +246,9 @@ export default function EditionModal({
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? `Edit ${initial!.id}` : m.admin_content_edition_add()}
+            {isEdit
+              ? m.admin_edition_edit_title({ id: initial!.id })
+              : m.admin_content_edition_add()}
           </DialogTitle>
         </DialogHeader>
         <form
@@ -265,7 +267,9 @@ export default function EditionModal({
 
             {!isEdit && (
               <AdminField className="mb-4" controlId="edition-id">
-                <AdminLabel className="text-subtle text-sm mb-1">ID</AdminLabel>
+                <AdminLabel className="text-subtle text-sm mb-1">
+                  {m.admin_edition_id_label()}
+                </AdminLabel>
                 <form.Field
                   name="id"
                   validators={[
@@ -282,7 +286,7 @@ export default function EditionModal({
                       <>
                         <AdminInput
                           className="bg-muted text-content border-input"
-                          placeholder="e.g. 2026-march"
+                          placeholder={m.admin_edition_id_placeholder()}
                           autoFocus
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
@@ -299,7 +303,9 @@ export default function EditionModal({
 
             <div className="flex gap-2 flex-wrap mb-4">
               <AdminField className="max-w-25" controlId="edition-year">
-                <AdminLabel className="text-subtle text-sm mb-1">Year</AdminLabel>
+                <AdminLabel className="text-subtle text-sm mb-1">
+                  {m.admin_edition_year_label()}
+                </AdminLabel>
                 <form.Field name="year">
                   {(field) => (
                     <AdminInput
@@ -313,7 +319,9 @@ export default function EditionModal({
                 </form.Field>
               </AdminField>
               <AdminField className="min-w-35 grow-1 shrink-1 basis-35" controlId="edition-month">
-                <AdminLabel className="text-subtle text-sm mb-1">Month</AdminLabel>
+                <AdminLabel className="text-subtle text-sm mb-1">
+                  {m.admin_edition_month_label()}
+                </AdminLabel>
                 <form.Field
                   name="month"
                   validators={[
@@ -330,7 +338,7 @@ export default function EditionModal({
                       <>
                         <AdminInput
                           className="bg-muted text-content border-input"
-                          placeholder="e.g. march"
+                          placeholder={m.admin_edition_month_placeholder()}
                           value={field.value}
                           onChange={(e) => field.handleChange(e.target.value)}
                           onBlur={field.handleBlur}
@@ -449,7 +457,9 @@ export default function EditionModal({
                 </div>
               ) : (
                 <AdminField controlId="edition-standalone-date">
-                  <AdminLabel className="text-subtle text-sm mb-1">Edition date</AdminLabel>
+                  <AdminLabel className="text-subtle text-sm mb-1">
+                    {m.admin_edition_date_label()}
+                  </AdminLabel>
                   <AdminInput
                     type="date"
                     value={previewDates[0] ?? ""}

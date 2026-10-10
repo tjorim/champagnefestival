@@ -31,9 +31,11 @@ describe("LanguageSwitcher component", () => {
     render(<LanguageSwitcher />);
     await act(async () => {});
     fireEvent.click(screen.getByRole("button", { name: /select language/i }));
-    // English appears twice: once as the language label, once as the native name
-    expect(screen.getAllByText("English")).toHaveLength(2);
-    expect(screen.getByText("Nederlands")).toBeInTheDocument();
+    // Each option shows the language name in the interface language (Dutch here) and its native name
+    expect(screen.getByText("Engels")).toBeInTheDocument();
+    expect(screen.getByText("English")).toBeInTheDocument();
+    expect(screen.getAllByText("Nederlands")).toHaveLength(2);
+    expect(screen.getByText("Frans")).toBeInTheDocument();
     expect(screen.getByText("Français")).toBeInTheDocument();
   });
 
@@ -52,7 +54,7 @@ describe("LanguageSwitcher component", () => {
     await act(async () => {});
     fireEvent.click(screen.getByRole("button", { name: /select language/i }));
     // The active language (nl) should have the highlighted class
-    const dutchItem = screen.getByText("Nederlands").closest('[role="menuitem"]');
+    const dutchItem = screen.getAllByText("Nederlands")[0]!.closest('[role="menuitem"]');
     expect(dutchItem?.querySelector("svg")).toBeInTheDocument();
   });
 });

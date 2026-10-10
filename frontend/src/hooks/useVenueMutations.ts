@@ -310,7 +310,7 @@ export function useVenueMutations({
       fetchJsonOrThrowWithUnauthorized<Record<string, unknown>>(
         `/api/areas/${areaId}`,
         { method: "PUT", headers: authHeaders(), body: JSON.stringify(body) },
-        "Failed to assign area.",
+        m.admin_error_assign_area(),
       ),
     ...refetchAfter(["areas"]),
     retry: false,

@@ -511,7 +511,7 @@ export default function RegistrationList({
                 return next;
               });
             }}
-            aria-label={`Select registration for ${row.original.person.name}`}
+            aria-label={m.admin_select_registration({ name: row.original.person.name })}
             onClick={(e) => e.stopPropagation()}
           />
         ),

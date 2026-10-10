@@ -31,7 +31,7 @@ async function safeFetch(
       // coalesce it away rather than reading `.detail` off null.
       const data = (await response.json().catch(() => null)) ?? {};
       const detail = (data as { detail?: string }).detail;
-      const errorMsg = detail ?? (operation ? `Failed to ${operation}` : "Request failed");
+      const errorMsg = detail ?? operation ?? m.admin_api_request_failed();
       throw new Error(errorMsg);
     }
 
@@ -40,7 +40,7 @@ async function safeFetch(
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error(operation ? `Failed to ${operation}` : "Network error occurred");
+    throw new Error(operation ?? "Network error occurred");
   }
 }
 
@@ -75,7 +75,7 @@ export async function fetchContentSectionItems(
   const response = await safeFetch(
     `/api/${sectionKey}`,
     { headers: authHeaders() },
-    `load ${sectionKey}`,
+    m.admin_api_load_section({ section: sectionKey }),
   );
   const data = (await response.json()) as Record<string, unknown>[];
   return Array.isArray(data) ? data.map(apiToItemDraft) : [];
@@ -108,7 +108,7 @@ export async function saveContentSectionItem(
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify(payload),
         },
-        `save ${sectionKey}`,
+        m.admin_api_save_section({ section: sectionKey }),
       )
     : await safeFetch(
         `/api/${sectionKey}/${draft.id}`,
@@ -117,7 +117,7 @@ export async function saveContentSectionItem(
           headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify(payload),
         },
-        `update ${sectionKey}`,
+        m.admin_api_update_section({ section: sectionKey }),
       );
 
   return apiToItemDraft((await response.json()) as Record<string, unknown>);
@@ -136,7 +136,7 @@ export async function updateContentSectionItemActive(
       headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify({ active }),
     },
-    `update ${sectionKey} status`,
+    m.admin_api_update_section_status({ section: sectionKey }),
   );
 
   return apiToItemDraft((await response.json()) as Record<string, unknown>);
@@ -150,7 +150,7 @@ export async function deleteContentSectionItem(
   await safeFetch(
     `/api/${sectionKey}/${id}`,
     { method: "DELETE", headers: authHeaders() },
-    `delete ${sectionKey}`,
+    m.admin_api_delete_section({ section: sectionKey }),
   );
   return id;
 }
@@ -159,7 +159,7 @@ export async function fetchEditions(authHeaders: () => Record<string, string>): 
   const response = await safeFetch(
     "/api/editions?include_inactive=true",
     { headers: authHeaders() },
-    "load editions",
+    m.admin_api_load_editions(),
   );
 
   const data = (await response.json()) as Record<string, unknown>[];
@@ -179,7 +179,7 @@ export async function fetchEditionModalOrganizations(
   const response = await safeFetch(
     "/api/organizations",
     { headers: authHeaders() },
-    "load organizations",
+    m.admin_api_load_organizations(),
   );
 
   const data = (await response.json()) as ApiOrganization[];
@@ -235,7 +235,7 @@ export async function saveEdition(
           : { co_organizer_organization_id: payload.coOrganizerOrganizationId }),
       }),
     },
-    isEdit ? "update edition" : "create edition",
+    isEdit ? m.admin_api_update_edition() : m.admin_api_create_edition(),
   );
 
   return apiToEdition((await response.json()) as Record<string, unknown>);

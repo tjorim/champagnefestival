@@ -559,7 +559,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                               size="sm"
                               onClick={() => handleQuantityChange(product.id, qty - 1)}
                               disabled={qty === 0}
-                              aria-label={`Decrease quantity of ${label}`}
+                              aria-label={m.registration_decrease_quantity({ name: label })}
                             >
                               <Icon icon={MinusIcon} />
                             </Button>
@@ -574,7 +574,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                                 (product.availableQuantity != null &&
                                   qty + (included?.quantity ?? 0) >= product.availableQuantity)
                               }
-                              aria-label={`Increase quantity of ${label}`}
+                              aria-label={m.registration_increase_quantity({ name: label })}
                             >
                               <Icon icon={PlusIcon} />
                             </Button>

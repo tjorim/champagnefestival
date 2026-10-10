@@ -373,7 +373,7 @@ export function ContentSection({
           {item.image && (
             <span className="inline-flex items-center justify-center w-8 h-8 shrink-0">
               {imageErrors.has(item.id) ? (
-                <span role="img" aria-label={`Image unavailable for ${item.name}`}>
+                <span role="img" aria-label={m.admin_image_unavailable({ name: item.name })}>
                   🖼
                 </span>
               ) : (
@@ -428,7 +428,7 @@ export function ContentSection({
               variant="outline"
               size="sm"
               onClick={() => openEdit(item)}
-              aria-label={`Edit ${item.name}`}
+              aria-label={m.admin_edit_item({ name: item.name })}
             >
               <Icon icon={PencilIcon} />
             </Button>

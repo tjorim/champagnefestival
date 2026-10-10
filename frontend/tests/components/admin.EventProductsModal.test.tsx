@@ -163,7 +163,7 @@ describe("EventProductsModal", () => {
       }),
     );
 
-    fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Champagne Bottle"})'));
     fireEvent.click(screen.getByRole("checkbox", { name: "admin_products_purchasable_label" }));
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
     await screen.findByText("admin_inventory_review");
@@ -208,7 +208,7 @@ describe("EventProductsModal", () => {
       }),
     );
 
-    fireEvent.click(screen.getByLabelText("Edit Fles"));
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Fles"})'));
     expect((screen.getByLabelText(nameIn("en")) as HTMLInputElement).value).toBe("Bottle");
     fireEvent.change(screen.getByLabelText(nameIn("en")), { target: { value: " " } });
     fireEvent.change(screen.getByLabelText(nameIn("fr")), { target: { value: "Bouteille" } });
@@ -256,7 +256,7 @@ describe("EventProductsModal", () => {
     ]);
     await screen.findByText("VIP Entry");
 
-    fireEvent.click(screen.getByLabelText("Edit VIP Entry"));
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"VIP Entry"})'));
     const requiredCheckbox = screen.getByRole("checkbox", {
       name: "admin_products_required_label",
     });
@@ -304,7 +304,7 @@ describe("EventProductsModal", () => {
     ]);
     await screen.findByText("Champagne Bottle");
 
-    fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Champagne Bottle"})'));
 
     const nameField = screen.getByLabelText(nameIn("nl")) as HTMLInputElement;
     expect(nameField.value).toBe("Champagne Bottle");
@@ -320,7 +320,7 @@ describe("EventProductsModal", () => {
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
 
-    expect(screen.getByLabelText("Edit Cheese Platter")).toBeDisabled();
+    expect(screen.getByLabelText('admin_edit_item({"name":"Cheese Platter"})')).toBeDisabled();
     expect(screen.getByLabelText("admin_delete Cheese Platter")).toBeDisabled();
     expect(screen.getByRole("button", { name: "admin_products_add" })).toBeDisabled();
   });
@@ -452,7 +452,7 @@ describe("EventProductsModal", () => {
     ]);
     await screen.findByText("Champagne Bottle");
 
-    fireEvent.click(screen.getByLabelText("Edit Champagne Bottle"));
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Champagne Bottle"})'));
     fireEvent.click(screen.getByRole("button", { name: "admin_inventory_add_inclusion" }));
     const select = screen.getByLabelText("admin_products_bundle_target") as HTMLSelectElement;
     const optionLabels = (await readAdminOptions(select)).map((o) => o.label);
@@ -496,7 +496,7 @@ describe("EventProductsModal", () => {
       }),
     );
     await screen.findByText("Tables");
-    fireEvent.click(screen.getByLabelText("Edit Tables"));
+    fireEvent.click(screen.getByLabelText('admin_edit_item({"name":"Tables"})'));
     fireEvent.change(screen.getByLabelText("admin_inventory_stock"), { target: { value: "1" } });
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
     await screen.findByText("admin_inventory_review");
