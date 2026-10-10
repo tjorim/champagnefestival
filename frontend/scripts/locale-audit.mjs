@@ -13,8 +13,8 @@ const machine = (text) =>
     text,
   ) ||
   /^\((?:prefers|min|max)-[\w-]+: [^)]+\)$/.test(text) ||
-  /^(?:[DMYHhmsZd]+[ ,:\-]*)+$/.test(text) ||
-  /^(?:[DMYHhmsZd]+[ ,:\-]*)*(?:MMMM|MMM|ddd)(?:[DMYHhmsZd ,:\-]*)*$/.test(text) ||
+  // Day.js format tokens and separators; one linear pattern, no nested quantifiers.
+  /^[DMYHhmsZd][DMYHhmsZd ,:\-]*$/.test(text) ||
   text
     .split(/\s+/)
     .every(
