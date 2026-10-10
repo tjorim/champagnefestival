@@ -21,6 +21,7 @@ from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 # ---------------------------------------------------------------------------
 
 EditionType = Literal["festival", "bourse", "capsule_exchange"]
+SponsorTier = Literal["main", "partner", "supporter"]
 RegistrationStatus = Literal["pending", "confirmed", "cancelled"]
 PaymentStatus = Literal["unpaid", "partial", "paid"]
 FaqLocale = Literal["nl", "en", "fr"]
@@ -1872,6 +1873,10 @@ class EditionCreate(RequestModel):
     venue_id: str
     edition_type: EditionType = "festival"
     organizations: list[int] = Field(default_factory=list)
+    sponsor_tiers: dict[int, SponsorTier] = Field(
+        default_factory=dict,
+        description="Sponsor level per lineup sponsor (organization id -> tier); sponsors without one are untiered.",
+    )
     co_organizer_organization_id: int | None = None
     active: bool = True
 
@@ -1882,6 +1887,13 @@ class EditionUpdate(RequestModel):
     venue_id: str | None = None
     edition_type: EditionType | None = None
     organizations: list[int] | None = None
+    sponsor_tiers: dict[int, SponsorTier] | None = Field(
+        default=None,
+        description=(
+            "Replaces the sponsor levels when given. When omitted, existing levels are kept for sponsors "
+            "that stay in the lineup."
+        ),
+    )
     co_organizer_organization_id: int | None = None
     active: bool | None = None
 
@@ -1907,6 +1919,9 @@ class EditionItemOut(BaseModel):
     image: str
     website: str
     type: str
+    sponsor_tier: SponsorTier | None = Field(
+        default=None, description="Sponsor level for this edition; null for non-sponsors and untiered sponsors."
+    )
 
     model_config = {"from_attributes": True}
 
@@ -1919,8 +1934,11 @@ class EditionOut(BaseModel):
     dates: list[dt_date] = Field(default_factory=list)
     venue: VenueOut
     events: list[EventOut]
+    organizations: list[int] = Field(
+        default_factory=list, description="The lineup organization ids in admin-defined order."
+    )
     producers: list[EditionItemOut]
-    sponsors: list[EditionItemOut]
+    sponsors: list[EditionItemOut] = Field(description="Ordered by sponsor tier (main first), then lineup order.")
     vendors: list[EditionItemOut]
     co_organizer: EditionItemOut | None = None
     flyer_image: str | None = Field(default=None, description="Uploaded flyer path, or null for the static default.")
@@ -1949,7 +1967,7 @@ class EditionPublicOut(BaseModel):
     venue: VenueOut
     events: list[EventPublicOut]
     producers: list[EditionItemOut]
-    sponsors: list[EditionItemOut]
+    sponsors: list[EditionItemOut] = Field(description="Ordered by sponsor tier (main first), then lineup order.")
     vendors: list[EditionItemOut]
     co_organizer: EditionItemOut | None = None
     flyer_image: str | None = Field(default=None, description="Uploaded flyer path, or null for the static default.")

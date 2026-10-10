@@ -82,7 +82,14 @@ export interface SeedEdition {
   venue: SeedVenue | null;
   events: SeedEvent[];
   producers: { id: number; name: string; image: string; website: string; type: string }[];
-  sponsors: { id: number; name: string; image: string; website: string; type: string }[];
+  sponsors: {
+    id: number;
+    name: string;
+    image: string;
+    website: string;
+    type: string;
+    sponsor_tier?: "main" | "partner" | "supporter" | null;
+  }[];
   vendors: { id: number; name: string; image: string; website: string; type: string }[];
   active: boolean;
   created_at: string;

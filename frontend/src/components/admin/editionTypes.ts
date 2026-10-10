@@ -1,5 +1,6 @@
 /** Shared types and helpers for the edition management UI. */
 
+import { SPONSOR_TIERS, type SponsorTier } from "@/config/editions";
 import { apiToEvent, type Event } from "@/types/event";
 
 export type EditionType = "festival" | "bourse" | "capsule_exchange";
@@ -20,7 +21,16 @@ export interface Edition {
   };
   events: Event[];
   producers?: { id: number; name: string; image: string; website: string }[];
-  sponsors?: { id: number; name: string; image: string; website: string }[];
+  sponsors?: {
+    id: number;
+    name: string;
+    image: string;
+    website: string;
+    /** Level in this edition (#1226); `null` when the sponsor has none. */
+    sponsorTier?: SponsorTier | null;
+  }[];
+  /** The lineup in the order the admin set (#1226); producers and sponsors, never vendors. */
+  organizationIds?: number[];
   vendors?: { id: number; name: string; image: string; website: string }[];
   /** The organization co-organizing this edition with the vzw, if any. */
   coOrganizer?: { id: number; name: string; image: string; website: string } | null;
@@ -31,6 +41,10 @@ export interface Edition {
   active: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+function parseSponsorTier(value: unknown): SponsorTier | null {
+  return SPONSOR_TIERS.find((tier) => tier === value) ?? null;
 }
 
 export function parseEditionDate(iso: string): Date {
@@ -92,7 +106,11 @@ export function apiToEdition(data: Record<string, unknown>): Edition {
             name: String(s.name ?? ""),
             image: String(s.image ?? ""),
             website: String(s.website ?? ""),
+            sponsorTier: parseSponsorTier(s.sponsor_tier),
           }))
+      : [],
+    organizationIds: Array.isArray(data.organizations)
+      ? data.organizations.filter((id): id is number => typeof id === "number")
       : [],
     vendors: Array.isArray(data.vendors)
       ? data.vendors

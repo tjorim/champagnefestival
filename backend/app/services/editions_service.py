@@ -21,7 +21,9 @@ boundary (see ``app.mcp.utils.as_value_error``).
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from datetime import UTC, date, datetime
+from typing import get_args
 
 from fastapi import HTTPException, status
 from sqlalchemy import select
@@ -32,7 +34,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.database import violated_constraint_name
 from app.models import Edition, Event, Organization, Venue
-from app.schemas import EditionCreate, EditionScratchpadUpdate, EditionType, EditionUpdate
+from app.schemas import EditionCreate, EditionScratchpadUpdate, EditionType, EditionUpdate, SponsorTier
 from app.services import edition_artwork
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import edition_to_dict, event_to_summary_dict, get_or_404, venue_to_dict
@@ -229,6 +231,32 @@ async def validate_co_organizer(db: AsyncSession, organization_id: int | None) -
         )
 
 
+def _tier_map(tiers: Mapping[int, str]) -> dict[str, str]:
+    """The JSON shape stored on ``Edition.sponsor_tiers``: string ids (JSON keys), sorted for stable diffs."""
+    return {str(organization_id): tier for organization_id, tier in sorted(tiers.items())}
+
+
+def pruned_sponsor_tiers(tiers: dict[str, str], organizations: list[int]) -> dict[str, str]:
+    """``tiers`` without entries for organizations that are no longer in the lineup."""
+    lineup = {str(organization_id) for organization_id in organizations}
+    return {organization_id: tier for organization_id, tier in tiers.items() if organization_id in lineup}
+
+
+async def validate_sponsor_tiers(db: AsyncSession, organizations: list[int], tiers: Mapping[int, str]) -> None:
+    """Only sponsors in the edition's lineup can have a level."""
+    if not tiers:
+        return
+    outside_lineup = sorted(set(tiers) - set(organizations))
+    if outside_lineup:
+        raise HTTPException(
+            status_code=400, detail=f"Sponsor tiers set for organizations not in the lineup: {outside_lineup}"
+        )
+    organization_map = await _load_organizations_by_ids(db, set(tiers))
+    not_sponsors = sorted(oid for oid in tiers if organization_map.get(oid, {}).get("type") != "sponsor")
+    if not_sponsors:
+        raise HTTPException(status_code=400, detail=f"Sponsor tiers can only be set for sponsors: {not_sponsors}")
+
+
 def validate_organizations_allowed(edition_type: EditionType, organizations: list[int]) -> None:
     if edition_type != "festival" and organizations:
         raise HTTPException(
@@ -286,9 +314,18 @@ def sorted_editions(editions: list[Edition], *, active_only: bool) -> list[Editi
     return sorted(editions, key=sort_key)
 
 
+SPONSOR_TIER_ORDER = {tier: rank for rank, tier in enumerate(get_args(SponsorTier))}
+
+
 def _resolve_organizations(
     edition: Edition, organization_map: dict[int, dict]
 ) -> tuple[list[dict], list[dict], list[dict]]:
+    """Split the lineup by type, keeping the admin-defined order.
+
+    Sponsors are then ordered by tier (main, partner, supporter, untiered); within a tier
+    the lineup order stands. The organization items are shared between editions, so the
+    tier goes on a copy.
+    """
     producers: list[dict] = []
     sponsors: list[dict] = []
     vendors: list[dict] = []
@@ -299,9 +336,10 @@ def _resolve_organizations(
         if item["type"] == "producer":
             producers.append(item)
         elif item["type"] == "sponsor":
-            sponsors.append(item)
+            sponsors.append({**item, "sponsor_tier": edition.sponsor_tiers.get(str(organization_id))})
         elif item["type"] == "vendor":
             vendors.append(item)
+    sponsors.sort(key=lambda sponsor: SPONSOR_TIER_ORDER.get(sponsor["sponsor_tier"], len(SPONSOR_TIER_ORDER)))
     return producers, sponsors, vendors
 
 
@@ -384,10 +422,12 @@ async def create_edition(db: AsyncSession, *, body: EditionCreate, actor: str, r
         venue_id=body.venue_id,
         edition_type=body.edition_type,
         organizations=list(body.organizations),
+        sponsor_tiers=_tier_map(body.sponsor_tiers),
         co_organizer_organization_id=body.co_organizer_organization_id,
         active=body.active,
     )
     await validate_organization_ids(db, edition.organizations)
+    await validate_sponsor_tiers(db, edition.organizations, body.sponsor_tiers)
     await validate_co_organizer(db, edition.co_organizer_organization_id)
 
     deactivated: list[str] = []
@@ -456,6 +496,13 @@ async def apply_edition_update(
         organizations_implicitly_cleared = True
 
     validate_organizations_allowed(target_edition_type, edition.organizations)
+
+    if "sponsor_tiers" in body.model_fields_set and body.sponsor_tiers is not None:
+        await validate_sponsor_tiers(db, edition.organizations, body.sponsor_tiers)
+        edition.sponsor_tiers = _tier_map(body.sponsor_tiers)
+    else:
+        # Levels follow their sponsor: dropping one from the lineup drops its level too.
+        edition.sponsor_tiers = pruned_sponsor_tiers(edition.sponsor_tiers, edition.organizations)
 
     deactivated: list[str] = []
     if target_active:

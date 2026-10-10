@@ -18,6 +18,9 @@ vi.mock("@/paraglide/messages", () => ({
     close: () => "Close",
     organization_modal_stands: () => "Where to find them",
     organization_modal_website: () => "Visit website",
+    sponsor_tier_main: () => "Main sponsors",
+    sponsor_tier_partner: () => "Partners",
+    sponsor_tier_supporter: () => "Supporters",
     logo_wall_stand: () => "Stand",
     logo_wall_stand_on_day: ({ day, stand }: { day: string; stand: string }) => `${day}: ${stand}`,
   },
@@ -267,5 +270,88 @@ describe("LogoWall", () => {
     render(<LogoWall itemsType="sponsors" items={items} />);
 
     expect(screen.queryByLabelText("Find a producer")).toBeNull();
+  });
+
+  describe("sponsor order and levels", () => {
+    const sponsors: SliderItem[] = [
+      { id: 1, name: "Zeta", image: "/z.png", sponsor_tier: "supporter" },
+      { id: 2, name: "Alpha", image: "/a.png", sponsor_tier: "main" },
+      { id: 3, name: "Mid", image: "/m.png", sponsor_tier: null },
+      { id: 4, name: "Beta", image: "/b.png", sponsor_tier: "supporter" },
+      { id: 5, name: "Omega", image: "/o.png", sponsor_tier: "partner" },
+    ];
+
+    function names(): string[] {
+      const wall = document.querySelector('[data-slot="logo-wall"]') as HTMLElement;
+      return within(wall)
+        .getAllByRole("listitem")
+        .map((item) => item.textContent ?? "");
+    }
+
+    it("keeps the lineup order instead of sorting sponsors alphabetically", () => {
+      render(
+        <LogoWall
+          itemsType="sponsors"
+          items={[
+            { id: 1, name: "Zeta", image: "/z.png" },
+            { id: 2, name: "Alpha", image: "/a.png" },
+            { id: 3, name: "Mid", image: "/m.png" },
+          ]}
+        />,
+      );
+
+      expect(names()).toEqual(["Zeta", "Alpha", "Mid"]);
+      // Without levels there are no level headings and one group.
+      expect(document.querySelectorAll("[data-slot='logo-group']")).toHaveLength(1);
+      expect(screen.queryByText("Supporters")).toBeNull();
+    });
+
+    it("groups sponsors by level under headings, untiered sponsors last, lineup order within a level", () => {
+      render(<LogoWall itemsType="sponsors" items={sponsors} />);
+
+      expect(names()).toEqual(["Alpha", "Omega", "Zeta", "Beta", "Mid"]);
+      const groups = [...document.querySelectorAll<HTMLElement>("[data-slot='logo-group']")];
+      expect(groups.map((group) => group.dataset.tier ?? "none")).toEqual([
+        "main",
+        "partner",
+        "supporter",
+        "none",
+      ]);
+      expect(screen.getAllByRole("heading", { level: 3 }).map((h) => h.textContent)).toEqual([
+        "Main sponsors",
+        "Partners",
+        "Supporters",
+      ]);
+      // Logo names sit below the level headings.
+      expect(screen.getByRole("heading", { level: 4, name: "Alpha" })).toBeInTheDocument();
+      expect(screen.getByRole("group", { name: "Main sponsors" })).toBeInTheDocument();
+    });
+
+    it("gives higher levels larger tiles", () => {
+      render(<LogoWall itemsType="sponsors" items={sponsors} />);
+
+      const tileClass = (name: string) =>
+        (screen.getByText(name).closest("li") as HTMLElement).className;
+      expect(tileClass("Alpha")).toContain("sm:w-64");
+      expect(tileClass("Omega")).toContain("sm:w-52");
+      expect(tileClass("Zeta")).toContain("sm:w-40");
+    });
+
+    it("collapses the lowest levels first", () => {
+      const many: SliderItem[] = [
+        ...Array.from({ length: 12 }, (_, index) => ({
+          id: index + 1,
+          name: `Supporter ${index}`,
+          image: "/s.png",
+          sponsor_tier: "supporter" as const,
+        })),
+        { id: 99, name: "Late main", image: "/l.png", sponsor_tier: "main" },
+      ];
+      render(<LogoWall itemsType="sponsors" items={many} />);
+
+      expect(names()[0]).toBe("Late main");
+      expect(names()).toHaveLength(12);
+      expect(screen.queryByText("Supporter 11")).toBeNull();
+    });
   });
 });

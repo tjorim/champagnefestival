@@ -1,6 +1,7 @@
 import { apiToEdition, type Edition } from "@/components/admin/editionTypes";
 import type { ItemDraft } from "@/components/admin/itemTypes";
 import type { Language, LocalizedText } from "@/components/admin/LocalizedFields";
+import type { SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";
 import {
   apiToEvent,
@@ -202,7 +203,10 @@ export async function saveEdition(
     editionType: Edition["editionType"];
     venueId: string;
     active: boolean;
+    /** The lineup, in display order. */
     organizationIds: number[];
+    /** Level per lineup sponsor (organization id); sponsors without an entry are untiered. */
+    sponsorTiers?: Record<number, SponsorTier>;
     /**
      * Omit to leave an existing co-organizer untouched; pass `null` to clear it.
      * The backend only acts on the field when it is present in the payload.
@@ -229,6 +233,7 @@ export async function saveEdition(
         // backend receives an intentional instruction rather than treating the omitted
         // field as "leave existing associations alone".
         organizations: payload.editionType === "festival" ? payload.organizationIds : [],
+        sponsor_tiers: payload.editionType === "festival" ? (payload.sponsorTiers ?? {}) : {},
         // Independent of the lineup: any edition type may name a co-organizer.
         ...(payload.coOrganizerOrganizationId === undefined
           ? {}

@@ -534,6 +534,7 @@ def edition_to_dict(
         "dates": dates if dates is not None else [],
         "venue": venue,
         "events": events if events is not None else [],
+        "organizations": list(e.organizations),
         "producers": producers if producers is not None else [],
         "sponsors": sponsors if sponsors is not None else [],
         "vendors": vendors if vendors is not None else [],

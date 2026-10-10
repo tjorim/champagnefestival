@@ -184,6 +184,7 @@ async def delete_organization(db: AsyncSession, e: Organization, *, actor: str, 
     for edition in editions_result.scalars().all():
         if organization_id in edition.organizations:
             edition.organizations = [eid for eid in edition.organizations if eid != organization_id]
+            edition.sponsor_tiers = {k: v for k, v in edition.sponsor_tiers.items() if k != str(organization_id)}
     await db.delete(e)
     await write_audit_entry(
         db,
