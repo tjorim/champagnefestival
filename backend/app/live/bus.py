@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 
 from app.live.events import LiveEvent
 
@@ -27,7 +27,7 @@ class LiveBus:
         self._subscribers: list[asyncio.Queue[LiveEvent]] = []
 
     @contextlib.asynccontextmanager
-    async def subscribe(self) -> AsyncIterator[asyncio.Queue[LiveEvent]]:
+    async def subscribe(self) -> AsyncGenerator[asyncio.Queue[LiveEvent]]:
         """Yield a per-subscriber Queue; remove it on exit."""
         queue: asyncio.Queue[LiveEvent] = asyncio.Queue(maxsize=self._max_queue_size)
         self._subscribers.append(queue)
