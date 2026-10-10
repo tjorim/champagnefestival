@@ -81,4 +81,30 @@ describe("EventStructuredData", () => {
     expect(data.location.geo.latitude).toBe(51.25);
     expect(data.location.geo.longitude).toBe(2.97);
   });
+
+  it("points the image at the edition's sharing image, then its hero, and ignores unmanaged paths", async () => {
+    const share = `/uploads/editions/${"a".repeat(32)}-${"b".repeat(64)}.jpg`;
+    const hero = `/uploads/editions/${"c".repeat(32)}-${"d".repeat(64)}.jpg`;
+    const render_ = async (extra: Record<string, unknown>) => {
+      server.use(
+        http.get("/api/editions/active", () => HttpResponse.json({ ...apiEdition, ...extra })),
+      );
+      const { container, unmount } = render(<EventStructuredData />, {
+        wrapper: createTestQueryClientWrapper(),
+      });
+      await vi.waitFor(() => {
+        expect(container.querySelector('script[type="application/ld+json"]')).not.toBeNull();
+      });
+      const image = getStructuredData(container).image as string[];
+      unmount();
+      return image;
+    };
+
+    expect((await render_({ share_image: share, hero_image: hero }))[0]).toMatch(
+      new RegExp(`${share}$`),
+    );
+    expect((await render_({ hero_image: hero }))[0]).toMatch(new RegExp(`${hero}$`));
+    expect((await render_({ share_image: "/etc/passwd" }))[0]).toMatch(/\/images\/og-image\.jpg$/);
+    expect((await render_({}))[0]).toMatch(/\/images\/og-image\.jpg$/);
+  });
 });

@@ -83,6 +83,11 @@ validated and re-encoded, and pending files stay in private storage.
 See [logo upload setup, API and recovery](docs/organization-logo-upload.md) for
 local directories, production volume requirements and cleanup operations.
 
+Administrators upload each edition's flyer, hero photo and sharing image from
+the edition card; they go live without a deployment and drive the maintenance
+page, the Refresh hero and the home page's `og:image`/JSON-LD image. See
+[edition artwork](docs/edition-artwork.md) for limits, storage and recovery.
+
 Organisation editors can request editable description drafts from the optional
 self-hosted translation service. Nothing is saved until a person saves or submits
 it. See [configuration and API contract](docs/organization-description-translation.md).

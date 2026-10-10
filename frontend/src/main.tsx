@@ -56,6 +56,7 @@ import { useMaintenanceMode } from "./hooks/useMaintenanceMode";
 import { useNoIndex } from "./hooks/useNoIndex";
 import { initializeVisualTheme, useVisualTheme } from "./hooks/useVisualTheme";
 import { getFestivalDateRange, useActiveEdition } from "./hooks/useActiveEdition";
+import { useEditionHeroImage } from "./hooks/useEditionHeroImage";
 import { m } from "./paraglide/messages";
 import { getLocale } from "./paraglide/runtime";
 import { featureItems } from "./config/features";
@@ -290,6 +291,7 @@ function App() {
   // Fetch live edition data; keep an empty fallback shape on API errors.
   const { edition, hasEdition, hasLoadError } = useActiveEdition();
   const { producers, sponsors, vendors = [] } = edition;
+  useEditionHeroImage(edition.heroImage);
   // Stand labels are an enhancement: a failed or empty lookup just shows no stand lines.
   const { data: standsData } = useQuery({
     ...editionStandsQueryOptions(edition.id),
@@ -431,7 +433,7 @@ function App() {
   if (isMaintenanceMode) {
     return (
       <>
-        <MaintenancePage />
+        <MaintenancePage flyerImage={edition.flyerImage} />
         {/* Preview-only switcher between the classic and refreshed visual designs */}
         <ThemeSwitcher variant={variant} onChange={setVariant} />
       </>

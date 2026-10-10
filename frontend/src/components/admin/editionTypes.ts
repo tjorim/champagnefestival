@@ -24,6 +24,10 @@ export interface Edition {
   vendors?: { id: number; name: string; image: string; website: string }[];
   /** The organization co-organizing this edition with the vzw, if any. */
   coOrganizer?: { id: number; name: string; image: string; website: string } | null;
+  /** Uploaded artwork paths (#1224); `null` means the static site image is used. */
+  flyerImage?: string | null;
+  heroImage?: string | null;
+  shareImage?: string | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -109,6 +113,9 @@ export function apiToEdition(data: Record<string, unknown>): Edition {
             website: String((data.co_organizer as Record<string, unknown>).website ?? ""),
           }
         : null,
+    flyerImage: typeof data.flyer_image === "string" ? data.flyer_image : null,
+    heroImage: typeof data.hero_image === "string" ? data.hero_image : null,
+    shareImage: typeof data.share_image === "string" ? data.share_image : null,
     active: data.active !== false,
     createdAt: String(data.created_at ?? ""),
     updatedAt: String(data.updated_at ?? ""),

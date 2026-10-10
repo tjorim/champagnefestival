@@ -97,6 +97,7 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
 
     events: list[dict] = []
     json_ld = None
+    share_image = None
     # The site's own tagline, not edition-dependent — matches the static
     # shell's pre-existing default description, so a quiet period between
     # editions never regresses to a bare site name.
@@ -105,6 +106,7 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
         payload = await editions_service.edition_payload(db, edition, active_only=True, public=True, locale=locale)
         events = payload["events"]
         json_ld = jsonld_service.build_event_json_ld(payload, base_url=settings.public_url, locale=locale)
+        share_image = jsonld_service.edition_share_image(payload, base_url=settings.public_url)
 
     html_out = rewrite_head_meta(
         shell,
@@ -112,6 +114,7 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
         description=description,
         url=settings.public_url,
         locale=locale,
+        image=share_image,
     )
     head_fragment = json_ld_script(json_ld) if json_ld is not None else ""
     content = render_home_content(faq_items=faq_items, events=events, locale=locale)

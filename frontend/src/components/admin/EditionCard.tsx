@@ -26,6 +26,7 @@ import {
 } from "@/utils/adminContentApi";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { queryKeys } from "@/utils/queryKeys";
+import EditionArtwork from "./EditionArtwork";
 import EditionModal from "./EditionModal";
 import EditionPollOptionsModal from "./EditionPollOptionsModal";
 import EventModal from "./EventModal";
@@ -286,6 +287,8 @@ export default function EditionCard({
               </p>
             );
           })()}
+
+          <EditionArtwork edition={edition} authHeaders={authHeaders} onUpdated={onUpdated} />
 
           <div className="flex justify-between items-center mb-1">
             <h6 className="text-highlight mb-0 text-sm">{m.admin_content_edition_schedule()}</h6>

@@ -149,6 +149,8 @@ class Settings(BaseSettings):
     organization_review_recipient: str = ""
     organization_logo_public_root: str = "./uploads/public/organizations"
     organization_logo_pending_root: str = "./uploads/pending/organizations"
+    edition_artwork_public_root: str = "./uploads/public/editions"
+    """Public root of edition flyers, heroes and sharing images (#1224); admin uploads go live immediately."""
     """Optional shared mailbox for pending organization proposals; no fallback."""
 
     # --- SMTP delivery ---
