@@ -94,8 +94,10 @@ async def get_edition_stands(
 
     Unauthenticated and safe to cache: per lineup organization, the label, room
     and day of each stand — nothing from tables, registrations or allocations
-    (see `app.services.stands_service`). Stands are published as soon as they
-    are assigned. Inactive editions 404 so a draft's plan is never exposed.
+    (see `app.services.stands_service`). Stands are only published while the
+    festival is on (first event day through a short grace period after the
+    last); outside that window `organizations` is empty. Inactive editions 404
+    so a draft's plan is never exposed.
     """
     edition = await editions_service.get_edition_or_404(db, edition_id)
     if not edition.active:

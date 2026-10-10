@@ -1439,6 +1439,8 @@ export const adminHandlers = [
   /**
    * GET /api/editions/:editionId/stands — public stand list: only areas that name a
    * lineup organization, with label, room and day (no tables or registrations).
+   * Unlike the real API it ignores the festival-time publication window so the
+   * seeded stands stay visible in development.
    */
   http.get("/api/editions/:editionId/stands", ({ params }) => {
     const edition = editions.find((candidate) => candidate.id === params.editionId);

@@ -79,8 +79,12 @@ one entry per day/room the organization has an area, from active events only, fo
 organizations only. `x`, `y`, `rotation`, sizes, icons, layout/area ids, tables,
 registrations, guests, capacities and allocations are deliberately absent, so this
 contract does not apply to the public response; a future public plan would need its own
-privacy-reviewed payload. Stands are published as soon as they are assigned (there is no
-publish flag), and an inactive edition returns 404.
+privacy-reviewed payload. Stands are only published while the festival is on: from the
+first active event day through `STANDS_VISIBLE_DAYS_AFTER` (2) days after the last one,
+by Europe/Brussels date. Outside that window `organizations` is empty (organizers may
+still be moving people around beforehand, and the list is stale afterwards). Inside it
+there is no publish flag, so stands appear as soon as they are assigned. An inactive
+edition returns 404.
 
 ## Scope
 

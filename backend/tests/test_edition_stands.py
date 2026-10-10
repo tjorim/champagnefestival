@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+from datetime import date
 
 import pytest
 
 from app.auth import require_admin, require_volunteer
 from app.main import app
+from app.services import stands_service
 from tests.helpers import ADMIN_HEADERS, _post_registration
 
 VENUE_PAYLOAD = {
@@ -21,6 +23,12 @@ VENUE_PAYLOAD = {
 }
 
 EDITION_ID = "stands-2026"
+
+
+@pytest.fixture(autouse=True)
+def during_festival(monkeypatch):
+    """Run every test on the first festival day (2099-03-20) unless it overrides this."""
+    monkeypatch.setattr(stands_service, "_today", lambda: date(2099, 3, 20))
 
 
 async def _post(client, path: str, payload: dict) -> dict:
@@ -56,14 +64,14 @@ async def _setup(client, *, active: bool = True) -> dict:
         },
     )
     events = {}
-    for day, date in (("fri", "2099-03-20"), ("sat", "2099-03-21")):
+    for day, event_date in (("fri", "2099-03-20"), ("sat", "2099-03-21")):
         events[day] = await _post(
             client,
             "/api/events",
             {
                 "edition_id": EDITION_ID,
                 "title_en": day,
-                "date": date,
+                "date": event_date,
                 "start_time": "14:00",
                 "category": "general",
                 "registration_required": True,
@@ -223,3 +231,30 @@ async def test_response_never_contains_table_or_registration_data(client):
         registration_id.lower(),
     ):
         assert forbidden not in raw
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    ("today", "published"),
+    [
+        (date(2099, 3, 19), False),  # day before the first festival day
+        (date(2099, 3, 20), True),  # first day
+        (date(2099, 3, 21), True),  # last day
+        (date(2099, 3, 23), True),  # last day + STANDS_VISIBLE_DAYS_AFTER
+        (date(2099, 3, 24), False),  # grace period over
+    ],
+)
+async def test_stands_only_published_during_the_festival_window(client, monkeypatch, today, published):
+    ctx = await _setup(client)
+    await _stand(client, ctx["layouts"][("fri", "Hall 5")], "Stand 12", ctx["producers"]["Bollinger"])
+    monkeypatch.setattr(stands_service, "_today", lambda: today)
+
+    response = await _public_get(client, f"/api/editions/{EDITION_ID}/stands")
+
+    assert response.status_code == 200
+    names = [item["name"] for item in response.json()["organizations"]]
+    assert names == (["Bollinger"] if published else [])
+
+
+def test_window_is_closed_without_event_days():
+    assert stands_service.stands_window_is_open([], date(2099, 3, 20)) is False
