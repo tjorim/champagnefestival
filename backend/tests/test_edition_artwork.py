@@ -234,6 +234,19 @@ async def test_concurrent_uploads_leave_one_file_per_slot(client, engine, editio
     assert files(storage) == [live.rsplit("/", 1)[1]]
 
 
+async def test_delete_retires_artwork_uploaded_after_the_edition_was_loaded(engine, edition, storage):
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with factory() as deleting, factory() as uploading:
+        stale = await editions_service.get_edition_or_404(deleting, edition)
+        assert stale.flyer_image is None
+        await editions_service.upload_edition_artwork(
+            uploading, edition, "flyer", edition_artwork.encode(valid("flyer"), "image/png", "flyer"), actor="test"
+        )
+        assert len(files(storage)) == 1
+        await editions_service.delete_edition(deleting, stale, actor="test")
+    assert files(storage) == []
+
+
 # --- Public render: og:image, twitter:image and JSON-LD ---------------------------------
 
 

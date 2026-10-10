@@ -569,6 +569,9 @@ async def clear_edition_artwork(
 async def delete_edition(db: AsyncSession, edition: Edition, *, actor: str, request_id: str | None = None) -> dict:
     edition_id = edition.id
     await edition_artwork.lock(db)
+    # Re-read under the lock: an upload that committed after the caller loaded `edition` must have
+    # its new file retired too, not the stale URL.
+    edition = await _lock_edition(db, edition_id)
     artwork = [getattr(edition, column) for column in edition_artwork.COLUMNS.values()]
     await db.delete(edition)
     for url in artwork:
