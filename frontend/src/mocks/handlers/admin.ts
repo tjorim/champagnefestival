@@ -1474,6 +1474,50 @@ export const adminHandlers = [
     });
   }),
 
+  /**
+   * GET /api/editions/:editionId/plan — public floor plan: per day and room only the
+   * room geometry and its areas (no tables or registrations). Like the stands handler
+   * it ignores the festival-time publication window so seeded data stays visible.
+   */
+  http.get("/api/editions/:editionId/plan", ({ params }) => {
+    const edition = editions.find((candidate) => candidate.id === params.editionId);
+    if (!edition?.active)
+      return HttpResponse.json({ detail: "Edition not found." }, { status: 404 });
+    type PlanDay = { event_id: string; date: unknown; rooms: unknown[] };
+    const days = new Map<string, PlanDay>();
+    for (const layout of layouts.filter((candidate) => candidate.edition_id === edition.id)) {
+      const room = rooms.find((candidate) => candidate.id === layout.room_id);
+      const layoutAreas = areas.filter((candidate) => candidate.layout_id === layout.id);
+      if (!room || layoutAreas.length === 0) continue;
+      const eventId = String(layout.event_id);
+      const day: PlanDay = days.get(eventId) ?? {
+        event_id: eventId,
+        date: layout.date,
+        rooms: [],
+      };
+      day.rooms.push({
+        id: room.id,
+        name: room.name,
+        width_m: room.width_m,
+        length_m: room.length_m,
+        color: room.color,
+        areas: layoutAreas.map((area) => ({
+          id: area.id,
+          label: area.label,
+          icon: area.icon,
+          x: area.x,
+          y: area.y,
+          rotation: area.rotation,
+          width_m: area.width_m,
+          length_m: area.length_m,
+          organization_id: area.organization_id ?? null,
+        })),
+      });
+      days.set(eventId, day);
+    }
+    return HttpResponse.json({ edition_id: edition.id, days: [...days.values()] });
+  }),
+
   /** GET /api/venue-plan/:editionId — read-only plan assembled from the layout stores. */
   http.get("/api/venue-plan/:editionId", ({ request, params }) => {
     const authError = requireAuth(request);

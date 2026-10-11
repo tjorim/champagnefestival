@@ -2014,6 +2014,49 @@ class EditionStandsOut(BaseModel):
     organizations: list[OrganizationStandsOut]
 
 
+class PlanAreaOut(BaseModel):
+    """One area (stand, stage, entrance, catering, ...) of the public floor plan.
+
+    Geometry follows ``docs/floor-plan-coordinates.md``. Deliberately has no layout id.
+    """
+
+    id: str
+    label: str
+    icon: str
+    x: float
+    y: float
+    rotation: int
+    width_m: float
+    length_m: float
+    organization_id: int | None
+
+
+class PlanRoomOut(BaseModel):
+    id: str
+    name: str
+    width_m: float
+    length_m: float
+    color: str
+    areas: list[PlanAreaOut]
+
+
+class PlanDayOut(BaseModel):
+    event_id: str
+    date: dt_date
+    rooms: list[PlanRoomOut]
+
+
+class EditionPlanOut(BaseModel):
+    """Returned by the unauthenticated ``GET /api/editions/{id}/plan`` (#1253).
+
+    Only rooms and areas: there are no tables, registrations, guests, capacities
+    or allocations in this shape.
+    """
+
+    edition_id: str
+    days: list[PlanDayOut]
+
+
 class EditionScratchpadUpdate(RequestModel):
     content: str = Field(max_length=20000)
 
