@@ -286,6 +286,7 @@ export const seedEditions = [
         image: "/images/belga.png",
         website: "https://www.belga-spirits.be",
         type: "sponsor",
+        sponsor_tier: "main",
       },
     ],
     vendors: [],

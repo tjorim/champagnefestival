@@ -261,3 +261,37 @@ async def test_update_edition_to_active_deactivates_conflicting_active_edition(d
 
     refetched_old = await mcp_editions.get_edition(factory, old["id"])
     assert refetched_old["active"] is False
+
+
+async def test_sponsor_tiers_through_the_mcp_tools(db_session):
+    factory = mcp_session_factory(db_session)
+    venue_id = await _create_venue(db_session)
+    first = Organization(name="Zeta", type="sponsor")
+    second = Organization(name="Alpha", type="sponsor")
+    producer = Organization(name="Krug", type="producer")
+    db_session.add_all([first, second, producer])
+    await db_session.flush()
+
+    created = await mcp_editions.create_edition(
+        factory,
+        "admin-1",
+        id="edition-tiers",
+        year=2099,
+        month="march",
+        venue_id=venue_id,
+        organizations=[first.id, producer.id, second.id],
+        sponsor_tiers={second.id: "main"},
+    )
+    assert [(s["name"], s["sponsor_tier"]) for s in created["sponsors"]] == [("Alpha", "main"), ("Zeta", None)]
+
+    # Omitted tiers are kept; an explicit mapping replaces them.
+    reordered = await mcp_editions.update_edition(
+        factory, "admin-1", created["id"], organizations=[second.id, first.id, producer.id]
+    )
+    assert reordered["organizations"] == [second.id, first.id, producer.id]
+    assert reordered["sponsors"][0]["sponsor_tier"] == "main"
+    retiered = await mcp_editions.update_edition(factory, "admin-1", created["id"], sponsor_tiers={first.id: "partner"})
+    assert [(s["name"], s["sponsor_tier"]) for s in retiered["sponsors"]] == [("Zeta", "partner"), ("Alpha", None)]
+
+    with pytest.raises(ValueError, match="only be set for sponsors"):
+        await mcp_editions.update_edition(factory, "admin-1", created["id"], sponsor_tiers={producer.id: "main"})

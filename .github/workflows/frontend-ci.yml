@@ -112,9 +112,13 @@ jobs:
           # proposal editor and admin review. Same-dependency builds before/after:
           # total 2557 -> 2568 KiB, index stays 806, admin 954 -> 956. No new
           # dependencies; retain modest headroom and the existing chunk ceilings.
+          # AdminDashboard raised 1000 -> 1050 for #1226's sortable edition
+          # lineup (@dnd-kit/react/sortable, already a dependency, plus the
+          # lineup list). Same-dependency builds before/after: admin 983 ->
+          # 1019 KiB, total 2554 KiB (unchanged budget), index 726 KiB.
           TOTAL_MAX_KB=2600
           INDEX_MAX_KB=1050
-          ADMIN_MAX_KB=1000
+          ADMIN_MAX_KB=1050
 
           total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
           index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')

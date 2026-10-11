@@ -45,6 +45,32 @@ describe("saveEdition", () => {
     expect(body.organizations).toEqual([1, 2]);
   });
 
+  it("sends the lineup order and sponsor levels, and none for off-festival editions", async () => {
+    const festivalFetch = mockFetchResponse({ id: "2026-march" });
+    vi.stubGlobal("fetch", festivalFetch);
+    await saveEdition(
+      {
+        ...basePayload,
+        editionType: "festival",
+        organizationIds: [3, 1, 2],
+        sponsorTiers: { 3: "main", 2: "supporter" },
+      },
+      authHeaders,
+      "2026-march",
+    );
+    expect(sentBody(festivalFetch).organizations).toEqual([3, 1, 2]);
+    expect(sentBody(festivalFetch).sponsor_tiers).toEqual({ 3: "main", 2: "supporter" });
+
+    const bourseFetch = mockFetchResponse({ id: "2026-march" });
+    vi.stubGlobal("fetch", bourseFetch);
+    await saveEdition(
+      { ...basePayload, editionType: "bourse", organizationIds: [3], sponsorTiers: { 3: "main" } },
+      authHeaders,
+      "2026-march",
+    );
+    expect(sentBody(bourseFetch).sponsor_tiers).toEqual({});
+  });
+
   it.each(["bourse", "capsule_exchange"] as const)(
     "explicitly sends an empty organizations list when converting to %s",
     async (editionType) => {

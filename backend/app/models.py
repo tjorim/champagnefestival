@@ -712,7 +712,17 @@ class Edition(Base):
     venue_id: Mapped[str] = mapped_column(String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False)
     edition_type: Mapped[str] = mapped_column(String(20), default="festival")
     organizations: Mapped[list[int]] = mapped_column(JSON, default=list)
-    """The festival lineup — producers and sponsors programmed for this edition."""
+    """The festival lineup — producers and sponsors programmed for this edition.
+
+    The list order is admin-defined and is kept: sponsors appear on the public site in this
+    order within their tier (#1226)."""
+
+    sponsor_tiers: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
+    """Sponsor level for this edition, ``{organization id (string): "main" | "partner" | "supporter"}``.
+
+    Sponsorship is per edition, so the level lives on the lineup rather than on the
+    organization. Only sponsors in `organizations` may have one; a sponsor without an entry
+    is untiered and listed after the tiered ones. See `app.services.editions_service`."""
 
     co_organizer_organization_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True

@@ -39,6 +39,8 @@ import {
   ComboboxValue,
   useComboboxAnchor,
 } from "@/components/ui/combobox";
+import { EditionLineupOrder } from "@/components/admin/EditionLineupOrder";
+import type { SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";
 import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
@@ -59,15 +61,44 @@ interface ItemOption {
   value: number;
   label: string;
   isArchived: boolean;
+  /** Organisation type; only sponsors can have a level. */
+  type?: string;
 }
 
 const editionModalOrganizationsQueryKey = queryKeys.admin.editionModalOrganizations;
+
+/** Moves one entry, as a new array. */
+function moved<T>(items: T[], from: number, to: number): T[] {
+  const next = [...items];
+  const [item] = next.splice(from, 1);
+  if (item !== undefined) next.splice(to, 0, item);
+  return next;
+}
+
+/** The lineup of a saved edition in its admin-defined order (producers and sponsors, never vendors). */
+function lineupOptions(initial: Edition | null | undefined): ItemOption[] {
+  const known = new Map<number, { name: string; type: string }>([
+    ...(initial?.producers ?? []).map((e) => [e.id, { name: e.name, type: "producer" }] as const),
+    ...(initial?.sponsors ?? []).map((e) => [e.id, { name: e.name, type: "sponsor" }] as const),
+  ]);
+  // Older responses carry no order; fall back to producers then sponsors.
+  const ids = initial?.organizationIds?.length ? initial.organizationIds : [...known.keys()];
+  return ids.flatMap((id) => {
+    const entry = known.get(id);
+    return entry ? [{ value: id, label: entry.name, isArchived: false, type: entry.type }] : [];
+  });
+}
 
 function toOptions(items: ItemDraft[]): { active: ItemOption[]; archived: ItemOption[] } {
   const active: ItemOption[] = [];
   const archived: ItemOption[] = [];
   for (const item of items) {
-    const opt: ItemOption = { value: item.id, label: item.name, isArchived: item.active === false };
+    const opt: ItemOption = {
+      value: item.id,
+      label: item.name,
+      isArchived: item.active === false,
+      type: item.type,
+    };
     if (item.active === false) archived.push(opt);
     else active.push(opt);
   }
@@ -116,9 +147,13 @@ export default function EditionModal({
       coOrganizerId: initial?.coOrganizer?.id ? String(initial.coOrganizer.id) : "",
       // Producers and sponsors only — the API rejects vendor ids on an edition,
       // so vendors are deliberately not selectable and not submitted.
-      selectedOrganizations: [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map(
-        (e) => ({ value: e.id, label: e.name, isArchived: false }),
-      ) as ItemOption[],
+      // In lineup order: the public site lists sponsors in this order (#1226).
+      selectedOrganizations: lineupOptions(initial),
+      sponsorTiers: Object.fromEntries(
+        (initial?.sponsors ?? []).flatMap((sponsor) =>
+          sponsor.sponsorTier ? [[sponsor.id, sponsor.sponsorTier]] : [],
+        ),
+      ) as Record<number, SponsorTier>,
     }),
     [fallbackVenueId, initial],
   );
@@ -147,6 +182,13 @@ export default function EditionModal({
             value.editionType === "festival"
               ? value.selectedOrganizations.map((option: ItemOption) => option.value)
               : [],
+          // Levels only for sponsors that are still in the lineup.
+          sponsorTiers: Object.fromEntries(
+            value.selectedOrganizations.flatMap((option: ItemOption) => {
+              const tier = value.sponsorTiers[option.value];
+              return option.type === "sponsor" && tier ? [[option.value, tier]] : [];
+            }),
+          ),
           // Any edition type may name one; it is not part of the lineup.
           coOrganizerOrganizationId: value.coOrganizerId ? Number(value.coOrganizerId) : null,
         });
@@ -196,6 +238,7 @@ export default function EditionModal({
       venueId: string;
       active: boolean;
       organizationIds: number[];
+      sponsorTiers: Record<number, SponsorTier>;
       coOrganizerOrganizationId: number | null;
     }) => saveEdition(payload, authHeaders, initial?.id),
     retry: false,
@@ -204,6 +247,10 @@ export default function EditionModal({
   const allOrganizations = useMemo(() => organizationsQuery.data ?? [], [organizationsQuery.data]);
   const isEdit = !!initial;
   const editionType = useSelector(form.atom, (s) => s.values.editionType as EditionType);
+  const sponsorTiers = useSelector(
+    form.atom,
+    (s) => s.values.sponsorTiers as Record<number, SponsorTier>,
+  );
   const isFestival = editionType === "festival";
   const programmableOrganizations = useMemo(
     () => allOrganizations.filter((organization) => organization.type !== "vendor"),
@@ -215,13 +262,12 @@ export default function EditionModal({
   // this only enriches them, so it must not run after the user starts editing.
   useEffect(() => {
     if (!show || allOrganizations.length === 0 || hydratedRef.current) return;
-    const ids = new Set(
-      [...(initial?.producers ?? []), ...(initial?.sponsors ?? [])].map((e) => e.id),
-    );
     const { active: act, archived: arch } = toOptions(programmableOrganizations);
+    const byId = new Map([...act, ...arch].map((option) => [option.value, option]));
+    // Keep the saved lineup order; only the option details (archived, type) are refreshed.
     form.setFieldValue(
       "selectedOrganizations",
-      [...act, ...arch].filter((o) => ids.has(o.value)),
+      lineupOptions(initial).flatMap((option) => byId.get(option.value) ?? []),
     );
     hydratedRef.current = true;
   }, [allOrganizations, programmableOrganizations, initial, form, show]);
@@ -515,62 +561,93 @@ export default function EditionModal({
                 ) : (
                   <form.Field name="selectedOrganizations">
                     {(field) => (
-                      <Combobox
-                        multiple
-                        items={organizationGroups}
-                        value={field.value}
-                        onValueChange={(options) => field.handleChange(options)}
-                        itemToStringLabel={(option: ItemOption) => option.label}
-                        isItemEqualToValue={(a: ItemOption, b: ItemOption) => a.value === b.value}
-                      >
-                        <ComboboxChips ref={comboboxAnchor}>
-                          <ComboboxValue>
-                            {(options: ItemOption[]) => (
-                              <>
-                                {options.map((option) => (
-                                  <ComboboxChip
-                                    key={option.value}
-                                    className={
-                                      option.isArchived ? "text-muted-foreground" : undefined
-                                    }
-                                  >
-                                    {option.label}
-                                  </ComboboxChip>
-                                ))}
-                                <ComboboxChipsInput
-                                  id="edition-organizations"
-                                  aria-label={m.admin_edition_festival_organizations()}
-                                  onBlur={field.handleBlur}
-                                  placeholder={m.admin_edition_organizations()}
-                                />
-                              </>
-                            )}
-                          </ComboboxValue>
-                        </ComboboxChips>
-                        <ComboboxContent anchor={comboboxAnchor}>
-                          <ComboboxEmpty>{m.admin_content_no_results()}</ComboboxEmpty>
-                          <ComboboxList>
-                            {(group: { label: string; items: ItemOption[] }) => (
-                              <ComboboxGroup key={group.label} items={group.items}>
-                                <ComboboxLabel>{group.label}</ComboboxLabel>
-                                <ComboboxCollection>
-                                  {(option: ItemOption) => (
-                                    <ComboboxItem
+                      <>
+                        <Combobox
+                          multiple
+                          items={organizationGroups}
+                          value={field.value}
+                          onValueChange={(options) => {
+                            // Selecting appends and deselecting removes; everyone else keeps their place.
+                            const chosen = new Set(
+                              options.map((option: ItemOption) => option.value),
+                            );
+                            const kept = field.value.filter((option: ItemOption) =>
+                              chosen.has(option.value),
+                            );
+                            const keptIds = new Set(kept.map((option: ItemOption) => option.value));
+                            field.handleChange([
+                              ...kept,
+                              ...options.filter((option: ItemOption) => !keptIds.has(option.value)),
+                            ]);
+                          }}
+                          itemToStringLabel={(option: ItemOption) => option.label}
+                          isItemEqualToValue={(a: ItemOption, b: ItemOption) => a.value === b.value}
+                        >
+                          <ComboboxChips ref={comboboxAnchor}>
+                            <ComboboxValue>
+                              {(options: ItemOption[]) => (
+                                <>
+                                  {options.map((option) => (
+                                    <ComboboxChip
                                       key={option.value}
-                                      value={option}
                                       className={
                                         option.isArchived ? "text-muted-foreground" : undefined
                                       }
                                     >
                                       {option.label}
-                                    </ComboboxItem>
-                                  )}
-                                </ComboboxCollection>
-                              </ComboboxGroup>
-                            )}
-                          </ComboboxList>
-                        </ComboboxContent>
-                      </Combobox>
+                                    </ComboboxChip>
+                                  ))}
+                                  <ComboboxChipsInput
+                                    id="edition-organizations"
+                                    aria-label={m.admin_edition_festival_organizations()}
+                                    onBlur={field.handleBlur}
+                                    placeholder={m.admin_edition_organizations()}
+                                  />
+                                </>
+                              )}
+                            </ComboboxValue>
+                          </ComboboxChips>
+                          <ComboboxContent anchor={comboboxAnchor}>
+                            <ComboboxEmpty>{m.admin_content_no_results()}</ComboboxEmpty>
+                            <ComboboxList>
+                              {(group: { label: string; items: ItemOption[] }) => (
+                                <ComboboxGroup key={group.label} items={group.items}>
+                                  <ComboboxLabel>{group.label}</ComboboxLabel>
+                                  <ComboboxCollection>
+                                    {(option: ItemOption) => (
+                                      <ComboboxItem
+                                        key={option.value}
+                                        value={option}
+                                        className={
+                                          option.isArchived ? "text-muted-foreground" : undefined
+                                        }
+                                      >
+                                        {option.label}
+                                      </ComboboxItem>
+                                    )}
+                                  </ComboboxCollection>
+                                </ComboboxGroup>
+                              )}
+                            </ComboboxList>
+                          </ComboboxContent>
+                        </Combobox>
+                        <EditionLineupOrder
+                          entries={field.value.map((option: ItemOption) => ({
+                            id: option.value,
+                            name: option.label,
+                            type: option.type,
+                          }))}
+                          tiers={sponsorTiers}
+                          onMove={(from, to) => field.handleChange(moved(field.value, from, to))}
+                          onTierChange={(id, tier) => {
+                            const { [id]: _previous, ...others } = sponsorTiers;
+                            form.setFieldValue(
+                              "sponsorTiers",
+                              tier ? { ...others, [id]: tier } : others,
+                            );
+                          }}
+                        />
+                      </>
                     )}
                   </form.Field>
                 )}

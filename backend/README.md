@@ -387,6 +387,16 @@ section when the edition payload contains vendors; floor plans and compact admin
 lists remain unchanged. The existing edition lineup restriction to producers
 and sponsors is unchanged (vendors cannot currently be linked to a lineup).
 
+The lineup (`Edition.organizations`) is an ordered list of organization ids whose
+order is the admin-defined display order. Sponsorship is per edition, so a sponsor's
+level lives on the edition: `Edition.sponsor_tiers` maps an organization id to
+`main`, `partner` or `supporter` (`SponsorTier`). Only lineup sponsors may have a
+level (anything else is a 400), a sponsor that leaves the lineup or is deleted loses
+its level, and a sponsor without one is untiered. Edition responses return `sponsors`
+ordered by level (main first, untiered last) and then by lineup order, each with a
+`sponsor_tier`; producers keep lineup order and the public site sorts them by name.
+`EditionOut` (admin) also returns `organizations`, the lineup ids in order.
+
 MCP `create_organization` and `update_organization` expose the same fields and validation.
 Omitted/null MCP arguments leave update fields unchanged; empty text strings
 clear individual translations, and an empty `description_language` clears the

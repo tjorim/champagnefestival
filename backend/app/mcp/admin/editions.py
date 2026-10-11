@@ -20,7 +20,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from app.mcp.utils import MCPToolError, as_value_error, validate_with_schema
-from app.schemas import EditionCreate, EditionType, EditionUpdate
+from app.schemas import EditionCreate, EditionType, EditionUpdate, SponsorTier
 from app.services import editions_service
 
 
@@ -34,11 +34,12 @@ async def create_edition(
     venue_id: str,
     edition_type: EditionType = "festival",
     organizations: list[int] | None = None,
+    sponsor_tiers: dict[int, SponsorTier] | None = None,
     co_organizer_organization_id: int | None = None,
     active: bool = True,
 ) -> dict:
-    """Create an edition. ``organizations=None`` is treated as an empty lineup (``[]``),
-    matching the REST ``EditionCreate`` schema's default."""
+    """Create an edition. ``organizations=None`` is treated as an empty lineup (``[]``) and
+    ``sponsor_tiers=None`` as no tiers, matching the REST ``EditionCreate`` schema's defaults."""
     body = validate_with_schema(
         EditionCreate,
         id=id,
@@ -47,6 +48,7 @@ async def create_edition(
         venue_id=venue_id,
         edition_type=edition_type,
         organizations=organizations if organizations is not None else [],
+        sponsor_tiers=sponsor_tiers if sponsor_tiers is not None else {},
         co_organizer_organization_id=co_organizer_organization_id,
         active=active,
     )
@@ -76,6 +78,7 @@ async def update_edition(
     venue_id: str | None = None,
     edition_type: EditionType | None = None,
     organizations: list[int] | None = None,
+    sponsor_tiers: dict[int, SponsorTier] | None = None,
     co_organizer_organization_id: int | None = None,
     clear_co_organizer: bool = False,
     active: bool | None = None,
@@ -86,6 +89,11 @@ async def update_edition(
     (including ``[]``) to replace it. Changing ``edition_type`` away from
     ``"festival"`` without an explicit ``organizations`` payload silently clears the
     now-invalid lineup, matching ``app.services.editions_service.apply_edition_update``.
+
+    The lineup order is the order sponsors (and producers) are listed in. ``sponsor_tiers``
+    maps a lineup sponsor's organization id to ``"main"``, ``"partner"`` or ``"supporter"``;
+    ``None`` keeps the existing levels (dropping those of sponsors that left the lineup),
+    while an explicit mapping (including ``{}``) replaces them.
 
     ``co_organizer_organization_id`` has no natural "clear" sentinel (an unset kwarg
     already means "leave unchanged"), so pass ``clear_co_organizer=True`` to unset
@@ -99,6 +107,7 @@ async def update_edition(
             "venue_id": venue_id,
             "edition_type": edition_type,
             "organizations": organizations,
+            "sponsor_tiers": sponsor_tiers,
             "co_organizer_organization_id": co_organizer_organization_id,
             "active": active,
         }.items()

@@ -6,11 +6,12 @@ import OrganizationDetailModal from "@/components/OrganizationDetailModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import type { SliderItem } from "@/config/editions";
+import type { SliderItem, SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { cn } from "@/lib/utils";
 import { organizationDescription } from "@/utils/organizationDescription";
+import { groupSponsorsByTier, sponsorTierLabel, type SponsorGroup } from "@/utils/sponsorTiers";
 import {
   hasMultipleRooms,
   standsByOrganization,
@@ -39,6 +40,14 @@ function showAllLabel(itemsType: LogoWallType, count: number): string {
   if (itemsType === "vendors") return m.logo_wall_show_all_vendors({ count });
   return m.logo_wall_show_all_sponsors({ count });
 }
+
+/** Logo tile width per sponsor level: the higher the level, the larger the logo. */
+const SPONSOR_TILE_WIDTH: Record<SponsorTier | "none", string> = {
+  main: "w-48 sm:w-64",
+  partner: "w-40 sm:w-52",
+  supporter: "w-36 sm:w-40",
+  none: "w-36 sm:w-40",
+};
 
 /** Lower-cased and accent-folded so "moet" finds "Moët". */
 function normalizeForSearch(value: string): string {
@@ -80,10 +89,114 @@ function StandLines({
   );
 }
 
+interface LogoGroupProps {
+  group: SponsorGroup;
+  /** Id of the logo list, so the show-all button can control it. */
+  listId: string;
+  /** Whether level headings are shown; the logo names then sit one heading level lower. */
+  tiered: boolean;
+  itemsType: LogoWallType;
+  locale: string;
+  standMap: Map<number, Stand[]>;
+  showRoom: boolean;
+  onSelect: (item: SliderItem) => void;
+}
+
+/** One row of logo tiles: every producer/vendor, or the sponsors of one level. */
+function LogoGroup({
+  group,
+  listId,
+  tiered,
+  itemsType,
+  locale,
+  standMap,
+  showRoom,
+  onSelect,
+}: LogoGroupProps) {
+  const headingId = useId();
+  const isSponsors = itemsType === "sponsors";
+  const NameHeading = tiered ? "h4" : "h3";
+  const tileWidth = SPONSOR_TILE_WIDTH[group.tier ?? "none"];
+  return (
+    <div
+      data-slot="logo-group"
+      data-tier={group.tier ?? undefined}
+      role={group.tier ? "group" : undefined}
+      aria-labelledby={group.tier ? headingId : undefined}
+      className={cn(tiered && "mb-6 last:mb-0")}
+    >
+      {group.tier && (
+        <h3 id={headingId} className="mx-0 mt-0 mb-3 text-base font-semibold text-muted-foreground">
+          {sponsorTierLabel(group.tier)}
+        </h3>
+      )}
+      <ul
+        id={listId}
+        className={cn(
+          "m-0 flex list-none flex-wrap justify-center p-0",
+          isSponsors ? "items-start gap-4" : "items-stretch",
+        )}
+      >
+        {group.items.map((item) => {
+          const description = isSponsors ? null : organizationDescription(item, locale);
+          const itemStands = standMap.get(item.id);
+          return (
+            <li
+              key={item.id}
+              className={cn(
+                "flex min-w-0",
+                isSponsors ? tileWidth : "basis-1/2 p-1.5 md:basis-1/3 md:p-2 lg:basis-1/4",
+              )}
+            >
+              <div
+                data-slot="logo-card"
+                className="relative flex w-full min-w-0 flex-col items-center gap-2 rounded-md border border-border bg-card p-3 text-center text-card-foreground transition-colors hover:bg-muted"
+              >
+                <div
+                  data-slot="logo-frame"
+                  className={cn(
+                    "flex w-full items-center justify-center overflow-hidden rounded-sm bg-white p-2",
+                    isSponsors ? "aspect-3/2" : "aspect-4/3",
+                  )}
+                >
+                  <LogoImage item={item} className="size-full object-contain" />
+                </div>
+                <NameHeading className="m-0 w-full text-sm font-semibold wrap-break-word">
+                  {/* Stretched button: the whole card opens the details dialog. */}
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    onClick={() => onSelect(item)}
+                    className="m-0 w-full cursor-pointer border-0 bg-transparent p-0 text-inherit outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
+                  >
+                    {item.name}
+                  </button>
+                </NameHeading>
+                {itemStands && itemStands.length > 0 && (
+                  <StandLines stands={itemStands} locale={locale} showRoom={showRoom} />
+                )}
+                {description && (
+                  <p
+                    title={description}
+                    className="m-0 line-clamp-2 w-full text-xs text-muted-foreground wrap-break-word"
+                  >
+                    {description}
+                  </p>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 /**
  * Calm, scannable logo wall for producers, vendors and sponsors. Producers and
- * vendors get uniform cards with a clamped description; sponsors get a lighter
- * centred row of logo tiles.
+ * vendors get uniform cards with a clamped description, sorted by name; sponsors
+ * get lighter centred rows of logo tiles in the order the organisers set (by level,
+ * larger logos for higher levels, then lineup order).
  */
 function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps) {
   const gridId = useId();
@@ -95,8 +208,11 @@ function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps
   const isSponsors = itemsType === "sponsors";
 
   const sorted = useMemo(
-    () => [...items].sort((a, b) => a.name.localeCompare(b.name, locale, { sensitivity: "base" })),
-    [items, locale],
+    () =>
+      isSponsors
+        ? groupSponsorsByTier(items).flatMap((group) => group.items)
+        : [...items].sort((a, b) => a.name.localeCompare(b.name, locale, { sensitivity: "base" })),
+    [isSponsors, items, locale],
   );
 
   const standMap = useMemo(() => standsByOrganization(stands), [stands]);
@@ -118,6 +234,12 @@ function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps
   // A search shows every match: hiding results behind "show all" would defeat it.
   const collapsible = !needle && sorted.length > limit;
   const visible = collapsible && !expanded ? sorted.slice(0, limit) : matches;
+  const sponsorGroups: SponsorGroup[] = isSponsors
+    ? groupSponsorsByTier(visible)
+    : [{ tier: null, items: visible }];
+  // Level headings only appear once the organisers use levels at all.
+  const tiered = sponsorGroups.some((group) => group.tier !== null);
+  const listId = (group: SponsorGroup) => `${gridId}-${group.tier ?? "all"}`;
 
   return (
     <div data-slot="logo-wall" data-items-type={itemsType} className="mx-auto my-6 w-full">
@@ -147,71 +269,28 @@ function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps
           {m.logo_wall_search_no_results({ query: query.trim() })}
         </p>
       )}
-      <ul
-        id={gridId}
-        className={cn(
-          "m-0 flex list-none flex-wrap justify-center p-0",
-          isSponsors ? "items-start gap-4" : "items-stretch",
-        )}
-      >
-        {visible.map((item) => {
-          const description = isSponsors ? null : organizationDescription(item, locale);
-          const itemStands = standMap.get(item.id);
-          return (
-            <li
-              key={item.id}
-              className={cn(
-                "flex min-w-0",
-                isSponsors ? "w-36 sm:w-40" : "basis-1/2 p-1.5 md:basis-1/3 md:p-2 lg:basis-1/4",
-              )}
-            >
-              <div
-                data-slot="logo-card"
-                className="relative flex w-full min-w-0 flex-col items-center gap-2 rounded-md border border-border bg-card p-3 text-center text-card-foreground transition-colors hover:bg-muted"
-              >
-                <div
-                  data-slot="logo-frame"
-                  className={cn(
-                    "flex w-full items-center justify-center overflow-hidden rounded-sm bg-white p-2",
-                    isSponsors ? "aspect-3/2" : "aspect-4/3",
-                  )}
-                >
-                  <LogoImage item={item} className="size-full object-contain" />
-                </div>
-                <h3 className="m-0 w-full text-sm font-semibold wrap-break-word">
-                  {/* Stretched button: the whole card opens the details dialog. */}
-                  <button
-                    type="button"
-                    aria-haspopup="dialog"
-                    onClick={() => setSelected(item)}
-                    className="m-0 w-full cursor-pointer border-0 bg-transparent p-0 text-inherit outline-none after:absolute after:inset-0 after:rounded-md focus-visible:after:ring-3 focus-visible:after:ring-ring/50"
-                  >
-                    {item.name}
-                  </button>
-                </h3>
-                {itemStands && itemStands.length > 0 && (
-                  <StandLines stands={itemStands} locale={locale} showRoom={showRoom} />
-                )}
-                {description && (
-                  <p
-                    title={description}
-                    className="m-0 line-clamp-2 w-full text-xs text-muted-foreground wrap-break-word"
-                  >
-                    {description}
-                  </p>
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+      <div>
+        {sponsorGroups.map((group) => (
+          <LogoGroup
+            key={group.tier ?? "none"}
+            group={group}
+            listId={listId(group)}
+            tiered={tiered}
+            itemsType={itemsType}
+            locale={locale}
+            standMap={standMap}
+            showRoom={showRoom}
+            onSelect={setSelected}
+          />
+        ))}
+      </div>
       {collapsible && (
         <div className="mt-4 flex justify-center">
           <Button
             type="button"
             variant="outline"
             aria-expanded={expanded}
-            aria-controls={gridId}
+            aria-controls={sponsorGroups.map(listId).join(" ")}
             onClick={() => setExpanded((value) => !value)}
           >
             {expanded ? m.logo_wall_show_fewer() : showAllLabel(itemsType, sorted.length)}

@@ -79,6 +79,7 @@ from app.schemas import (
     EditionType,
     LayoutCreate,
     RoomCreate,
+    SponsorTier,
     TableCreate,
     TableTypeCreate,
 )
@@ -1045,13 +1046,16 @@ class ChampagneFestivalMcpBackend:
         venue_id: str,
         edition_type: EditionType = "festival",
         organizations: list[int] | None = None,
+        sponsor_tiers: dict[int, SponsorTier] | None = None,
         co_organizer_organization_id: int | None = None,
         active: bool = True,
     ) -> dict:
         """Create a festival/bourse/capsule-exchange edition. Requires the ``admin`` role.
 
-        Only festival editions may carry an ``organizations`` lineup. See ``list_editions``
-        for public discovery of existing edition ids.
+        Only festival editions may carry an ``organizations`` lineup, whose order is the
+        order they are listed in on the public site. ``sponsor_tiers`` maps a lineup
+        sponsor's organization id to ``"main"``, ``"partner"`` or ``"supporter"``. See
+        ``list_editions`` for public discovery of existing edition ids.
         """
         self._require_admin()
         return await mcp_admin_editions.create_edition(
@@ -1063,6 +1067,7 @@ class ChampagneFestivalMcpBackend:
             venue_id=venue_id,
             edition_type=edition_type,
             organizations=organizations,
+            sponsor_tiers=sponsor_tiers,
             co_organizer_organization_id=co_organizer_organization_id,
             active=active,
         )
@@ -1080,6 +1085,7 @@ class ChampagneFestivalMcpBackend:
         venue_id: str | None = None,
         edition_type: EditionType | None = None,
         organizations: list[int] | None = None,
+        sponsor_tiers: dict[int, SponsorTier] | None = None,
         co_organizer_organization_id: int | None = None,
         clear_co_organizer: bool = False,
         active: bool | None = None,
@@ -1087,7 +1093,10 @@ class ChampagneFestivalMcpBackend:
         """Partially update an edition; omitted fields are left unchanged.
 
         ``organizations=None`` leaves the lineup unchanged — pass an explicit list
-        (including an empty one) to replace it. ``co_organizer_organization_id`` has
+        (including an empty one) to replace it; its order is the public listing order.
+        ``sponsor_tiers=None`` keeps the sponsor levels (``"main"``, ``"partner"``,
+        ``"supporter"`` per lineup sponsor id); pass a mapping (including an empty one)
+        to replace them. ``co_organizer_organization_id`` has
         no natural "clear" value, so pass ``clear_co_organizer=True`` to unset it.
         Requires the ``admin`` role.
         """
@@ -1101,6 +1110,7 @@ class ChampagneFestivalMcpBackend:
             venue_id=venue_id,
             edition_type=edition_type,
             organizations=organizations,
+            sponsor_tiers=sponsor_tiers,
             co_organizer_organization_id=co_organizer_organization_id,
             clear_co_organizer=clear_co_organizer,
             active=active,

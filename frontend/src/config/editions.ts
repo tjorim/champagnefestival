@@ -32,6 +32,10 @@ export interface Event {
   registrationsOpenFrom?: Date;
 }
 
+/** Sponsor level within one edition, highest first; the order is the display order. */
+export const SPONSOR_TIERS = ["main", "partner", "supporter"] as const;
+export type SponsorTier = (typeof SPONSOR_TIERS)[number];
+
 export interface SliderItem {
   description_language?: "nl" | "fr" | "en" | null;
   description_nl?: string | null;
@@ -43,6 +47,8 @@ export interface SliderItem {
   image: string;
   website?: string;
   active?: boolean;
+  /** Level of a sponsor in this edition (#1226); `null`/absent for untiered sponsors and other organisations. */
+  sponsor_tier?: SponsorTier | null;
 }
 
 export interface Edition {
