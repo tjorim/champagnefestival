@@ -28,7 +28,7 @@ const buttonVariants = cva(
         "outline-primary":
           "border-primary text-primary hover:bg-primary hover:text-primary-foreground",
         "outline-warning":
-          "border-warning text-warning hover:bg-warning hover:text-warning-foreground focus-visible:ring-warning/30",
+          "border-warning text-foreground hover:bg-warning hover:text-warning-foreground focus-visible:ring-warning/30",
         "outline-danger":
           "border-destructive text-destructive hover:bg-destructive hover:text-inverse focus-visible:ring-destructive/30",
         "outline-success":

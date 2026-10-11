@@ -932,6 +932,15 @@
       color-scheme: light;
     }
 
+    /* The admin scope is always dark, so it keeps the dark palette whatever the
+       visitor's color scheme is. */
+    [data-theme-scope="admin"] {
+      --primary-color: #d8ad56;
+      --text-color: #fbf6ec;
+      --text-muted: #cfc3b0;
+      --champagne: #f2d894;
+    }
+
     body {
       background:
         radial-gradient(circle at 12% 10%, rgba(141, 47, 61, 0.08), transparent 24rem),

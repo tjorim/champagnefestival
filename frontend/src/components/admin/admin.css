@@ -259,7 +259,7 @@
 
   .admin-nav-item.is-active {
     background: rgba(90, 127, 240, 0.1);
-    color: #5a7ff0;
+    color: #6b8bf5;
     border-left-color: #5a7ff0;
     font-weight: 500;
   }
@@ -282,7 +282,7 @@
 
   .admin-nav-item.is-active .admin-nav-count {
     background: rgba(90, 127, 240, 0.15);
-    color: #5a7ff0;
+    color: #6b8bf5;
   }
 
   /* Group headers */
@@ -296,7 +296,7 @@
     font-weight: 700;
     letter-spacing: 0.09em;
     text-transform: uppercase;
-    color: #5a5a5a;
+    color: #9a9a9a;
   }
 
   .admin-nav-group-header:hover {
@@ -340,7 +340,7 @@
     align-items: center;
     gap: 0.4rem;
     font-size: 0.75rem;
-    color: #6b6b6b;
+    color: #9a9a9a;
   }
 
   .admin-auth-status .lucide-circle-check {
