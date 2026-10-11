@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 
@@ -108,9 +109,7 @@ export default function ScratchpadManagement({
             {query.isError && <Alert variant="danger">{m.admin_error_load_scratchpad()}</Alert>}
             {saveMutation.isError && (
               <Alert variant="danger">
-                {saveMutation.error instanceof Error
-                  ? saveMutation.error.message
-                  : m.admin_error_save_scratchpad()}
+                {apiErrorMessage(saveMutation.error, m.admin_error_save_scratchpad())}
               </Alert>
             )}
             {saved && !saveMutation.isError && (

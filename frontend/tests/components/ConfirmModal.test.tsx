@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import ConfirmModal from "@/components/ConfirmModal";
+import { ApiError } from "@/utils/apiErrors";
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
@@ -110,11 +111,17 @@ describe("ConfirmModal", () => {
   );
 
   it("keeps errors visible and clears them before reopening", async () => {
-    const onConfirm = vi.fn().mockRejectedValue(new Error("Server refused"));
+    const onConfirm = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError("Server refused", { status: 409, code: "not_yet_translated" }),
+      );
     render(<Harness onConfirm={onConfirm} />);
     await userEvent.click(screen.getByRole("button", { name: "Delete booking" }));
     await userEvent.click(screen.getByRole("button", { name: "Confirm" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Server refused");
+    // An unknown code shows the translated fallback, never the English detail.
+    expect(await screen.findByRole("alert")).toHaveTextContent("Failed");
+    expect(screen.getByRole("alert")).not.toHaveTextContent("Server refused");
     expect(screen.getByRole("button", { name: "Confirm" })).toBeEnabled();
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument());

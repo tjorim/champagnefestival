@@ -13,6 +13,7 @@ import MembersManagement from "@/components/admin/MembersManagement";
 import VolunteersManagement from "@/components/admin/VolunteersManagement";
 import PeopleManagement from "@/components/admin/PeopleManagement";
 import { server } from "@/mocks/server";
+import { ApiError } from "@/utils/apiErrors";
 import { createTestQueryClient } from "../utils/queryClient";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -29,6 +30,11 @@ vi.mock("@/utils/adminApi", async (original) => ({
   ...(await original<typeof import("@/utils/adminApi")>()),
   downloadFileOrThrow: download,
 }));
+const deleteFallback = {
+  members: "admin_members_error_delete",
+  volunteers: "admin_volunteers_error_delete",
+  people: "admin_error_delete_person",
+} as const;
 const authHeaders = () => ({
   "Content-Type": "application/json",
   Authorization: "Bearer mock-access-token",
@@ -144,7 +150,9 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
 
   it("keeps a refused delete error in its modal", async () => {
     const h = mount(kind);
-    h.onDelete.mockRejectedValue(new Error("Server refused"));
+    h.onDelete.mockRejectedValue(
+      new ApiError("Server refused", { status: 409, code: "not_yet_translated" }),
+    );
     await screen.findByRole("row", { name: "Person 00" });
     fireEvent.click(
       within(row("Person 00")).getByRole("button", { name: `admin_${kind}_delete_title` }),
@@ -155,7 +163,9 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
         name: kind === "members" ? "admin_members_delete_title" : "admin_action_confirm",
       }),
     );
-    await within(dialog).findByText("Server refused");
+    // An unknown code shows the translated operation fallback, never the English detail.
+    await within(dialog).findByText(deleteFallback[kind]);
+    expect(within(dialog).queryByText("Server refused")).not.toBeInTheDocument();
     expect(h.onDelete).toHaveBeenCalledWith("p0");
   });
 

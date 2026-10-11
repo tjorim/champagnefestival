@@ -9,6 +9,7 @@ import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
@@ -711,9 +712,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               setDetailRegistration(null);
             } catch (err) {
               devError("Failed to merge people", err);
-              setRegistrationError(
-                err instanceof Error ? err.message : m.admin_people_merge_error(),
-              );
+              setRegistrationError(apiErrorMessage(err, m.admin_people_merge_error()));
             }
           }}
         />

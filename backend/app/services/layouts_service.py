@@ -471,7 +471,7 @@ async def delete_layout(db: AsyncSession, *, actor: str, layout_id: str, request
     await db.execute(select(Layout.id).where(Layout.id == layout_id).with_for_update())
     tables_in_use = await db.execute(select(Table).where(Table.layout_id == layout_id).limit(1))
     if tables_in_use.scalars().first() is not None:
-        raise ConflictError("Cannot delete: tables are still assigned to this layout.")
+        raise ConflictError("Cannot delete: tables are still assigned to this layout.", code="layout_has_tables")
     await db.delete(lay)
     await write_audit_entry(
         db,

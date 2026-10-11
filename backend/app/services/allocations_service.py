@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Layout, Registration, RegistrationAllocation, Table
 from app.schemas import TableAllocation
+from app.services.errors import ApiHTTPException
 
 
 def allocated_registration_filter(table_ids: list[str]):
@@ -90,9 +91,15 @@ async def validate_allocations(
                 occupied += sum(a.guest_count for a in matching)
                 exclusive |= any(a.exclusive for a in matching)
         if exclusive or (entry.exclusive and claimed):
-            raise HTTPException(409, "This table is already allocated; exclusive tables cannot be shared.")
+            raise ApiHTTPException(
+                409, "table_exclusive_conflict", "This table is already allocated; exclusive tables cannot be shared."
+            )
         if not confirm_over_capacity and occupied + entry.guest_count > by_id[entry.table_id].capacity:
-            raise HTTPException(409, f"Table '{by_id[entry.table_id].name}' does not have enough remaining seats.")
+            raise ApiHTTPException(
+                409,
+                "table_over_capacity",
+                f"Table '{by_id[entry.table_id].name}' does not have enough remaining seats.",
+            )
 
 
 def replace_allocations(registration: Registration, entries: list[TableAllocation]) -> None:

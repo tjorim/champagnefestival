@@ -28,6 +28,7 @@ import { queryKeys } from "@/utils/queryKeys";
 import { transactionAmountLabel } from "@/utils/paymentTransactionLabels";
 import { toLocalDateKey } from "@/utils/dateUtils";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 
 export default function BookingEditor({
   registration,
@@ -150,7 +151,7 @@ export default function BookingEditor({
         transactionForm.setFieldValue("reference", "");
         transactionForm.setFieldValue("note", "");
       } catch (err) {
-        setTransactionError(err instanceof Error ? err.message : m.admin_error_record_payment());
+        setTransactionError(apiErrorMessage(err, m.admin_error_record_payment()));
       } finally {
         setTransactionPending(false);
       }

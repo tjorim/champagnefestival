@@ -47,6 +47,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Table, TableBody, TableRow, TableCell } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type { FaqItem } from "@/types/admin";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { fetchFaqItemsAdmin } from "@/utils/adminFetch";
@@ -195,7 +196,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
       await saveMutation.mutateAsync({ id: editingId, data: faqPayload(form) });
       setShowModal(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : m.admin_content_error_save());
+      setError(apiErrorMessage(err, m.admin_content_error_save()));
     }
   }, [form, editingId, saveMutation]);
 
@@ -205,7 +206,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
       try {
         await saveMutation.mutateAsync({ id: item.id, data: { active: !item.active } });
       } catch (err) {
-        setRowError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setRowError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
     [saveMutation],
@@ -223,7 +224,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
       try {
         await deleteMutation.mutateAsync(item.id);
       } catch (err) {
-        setRowError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setRowError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
     [confirm, deleteMutation],
@@ -247,7 +248,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
         // instead of risking an ambiguous half-applied order (#836).
         await reorderMutation.mutateAsync(reordered.map((i) => i.id));
       } catch (err) {
-        setRowError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setRowError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
     [faqItems, reorderMutation],

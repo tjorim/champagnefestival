@@ -7,12 +7,12 @@ import { createAppColumnHelper, useAppTable } from "@/hooks/useAdminTable";
 import { AdminDataTable } from "./AdminDataTable";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { AdminField, AdminLabel, AdminTextarea } from "@/components/admin/AdminFields";
 import {
   organizationChangesRequest,
-  OrganizationChangeConflictError,
   organizationFieldLabel,
   organizationTextFields,
   type OrganizationChange,
@@ -135,9 +135,7 @@ function Review({
       </AdminField>
       {mutation.isError && (
         <Alert variant="danger" role="alert">
-          {mutation.error instanceof OrganizationChangeConflictError
-            ? mutation.error.message
-            : m.manager_change_review_error()}
+          {apiErrorMessage(mutation.error, m.manager_change_review_error())}
         </Alert>
       )}
       <div className="flex gap-2">

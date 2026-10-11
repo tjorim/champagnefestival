@@ -36,6 +36,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Spinner } from "@/components/ui/spinner";
 
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import EditionCard from "./EditionCard";
 import EditionModal from "./EditionModal";
 import ItemModal from "./ItemModal";
@@ -265,7 +266,7 @@ export function ContentSection({
           void queryClient.invalidateQueries({ queryKey: ["admin", "organization-changes"] });
         setModalOpen(false);
       } catch (error) {
-        setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
+        setActionError(apiErrorMessage(error, m.admin_content_error_save()));
       }
     },
     [captureFence, onItemSaved, queryClient, saveItemMutation, sectionKey],
@@ -287,7 +288,7 @@ export function ContentSection({
         if (sectionKey === "organizations" && isCurrent())
           void queryClient.invalidateQueries({ queryKey: ["admin", "organization-changes"] });
       } catch (error) {
-        setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
+        setActionError(apiErrorMessage(error, m.admin_content_error_save()));
       }
     },
     [captureFence, onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
@@ -309,7 +310,7 @@ export function ContentSection({
         if (sectionKey === "organizations" && isCurrent())
           void queryClient.invalidateQueries({ queryKey: ["admin", "organization-changes"] });
       } catch (error) {
-        setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
+        setActionError(apiErrorMessage(error, m.admin_content_error_save()));
       }
     },
     [captureFence, onItemSaved, queryClient, sectionKey, updateItemActiveMutation],
@@ -326,7 +327,7 @@ export function ContentSection({
         );
         onItemDeleted?.(id, isCurrent);
       } catch (error) {
-        setActionError(error instanceof Error ? error.message : m.admin_content_error_save());
+        setActionError(apiErrorMessage(error, m.admin_content_error_save()));
       }
     },
     [captureFence, deleteItemMutation, onItemDeleted, queryClient, sectionKey],

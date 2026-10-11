@@ -238,7 +238,7 @@ async def delete_table_type(db: AsyncSession, *, actor: str, type_id: str, reque
     await db.execute(select(TableType.id).where(TableType.id == type_id).with_for_update())
     in_use = await db.execute(select(Table).where(Table.table_type_id == type_id).limit(1))
     if in_use.scalars().first() is not None:
-        raise ConflictError("Cannot delete: tables are still using this type.")
+        raise ConflictError("Cannot delete: tables are still using this type.", code="table_type_in_use")
     await db.delete(tt)
     await write_audit_entry(
         db,

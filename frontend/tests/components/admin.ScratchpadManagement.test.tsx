@@ -84,7 +84,9 @@ describe("ScratchpadManagement", () => {
     fireEvent.change(textarea, { target: { value: "a new note" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByText("boom")).toBeInTheDocument();
+    // The English detail is not shown; the translated operation message is.
+    expect(await screen.findByText("Failed to save the scratchpad.")).toBeInTheDocument();
+    expect(screen.queryByText("boom")).not.toBeInTheDocument();
   });
 
   it("shows a no-active-edition message and skips the fetch when editionId is empty", () => {

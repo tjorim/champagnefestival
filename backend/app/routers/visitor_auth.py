@@ -29,6 +29,7 @@ from app.schemas import (
     RegistrationLookupRequestAccepted,
     VisitorSessionStatus,
 )
+from app.services.errors import ApiHTTPException
 from app.services.users_service import claim_unowned_registrations_for_email, get_or_create_user_by_email
 from app.utils import make_id, registration_to_guest_dict
 from app.visitor_session import (
@@ -65,9 +66,10 @@ async def request_visitor_magic_link(
     """
     client_ip = get_client_ip(request)
     if not check_rate_limit(client_ip, scope="visitor-magic-link-request"):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
+        raise ApiHTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "rate_limited",
+            "Too many requests. Please try again later.",
         )
 
     email_norm = str(body.email).lower().strip()

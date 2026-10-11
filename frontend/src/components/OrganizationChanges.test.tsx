@@ -46,7 +46,13 @@ describe("organization proposals", () => {
     server.use(
       http.get("/api/me/organizations/42/changes", () => HttpResponse.json([])),
       http.post("/api/me/organizations/42/changes", () =>
-        HttpResponse.json({ detail: "Submission failed" }, { status }),
+        HttpResponse.json(
+          {
+            detail: "Submission failed",
+            ...(status === 409 ? { code: "organization_change_conflict" } : {}),
+          },
+          { status },
+        ),
       ),
     );
     mount(<MyOrganizationsSection organizations={[row]} headers={() => ({})} />);
@@ -63,6 +69,31 @@ describe("organization proposals", () => {
       expect(alert).toHaveTextContent(
         "Unable to complete this request. Please try again or request a new link.",
       );
+  });
+
+  it("falls back to the generic message for a conflict whose code is unknown", async () => {
+    server.use(
+      http.get("/api/me/organizations/42/changes", () => HttpResponse.json([])),
+      http.post("/api/me/organizations/42/changes", () =>
+        HttpResponse.json(
+          { detail: "A brand new English rule.", code: "not_yet_translated" },
+          { status: 409 },
+        ),
+      ),
+    );
+    mount(<MyOrganizationsSection organizations={[row]} headers={() => ({})} />);
+    const edit = await screen.findByRole("button", { name: "Edit website and description" });
+    await waitFor(() => expect(edit).toBeEnabled());
+    fireEvent.click(edit);
+    fireEvent.change(screen.getByLabelText("Website URL"), {
+      target: { value: "https://new.example" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Submit for review" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent(
+      "Unable to complete this request. Please try again or request a new link.",
+    );
+    expect(alert).not.toHaveTextContent("A brand new English rule.");
   });
 
   it("sends a reason only for rejection even if text was entered before acceptance", async () => {
@@ -168,7 +199,10 @@ it("explains a stale review decision and requires refreshing instead of applying
   server.use(
     http.post("/api/organizations/changes/proposal/decision", () => {
       decision();
-      return HttpResponse.json({ detail: "Already replaced" }, { status: 409 });
+      return HttpResponse.json(
+        { detail: "Already replaced", code: "organization_change_conflict" },
+        { status: 409 },
+      );
     }),
   );
   const onDecided = vi.fn();

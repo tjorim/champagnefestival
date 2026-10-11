@@ -35,6 +35,7 @@ import {
   type LocalizedText,
 } from "@/components/admin/LocalizedFields";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { categoryLabel, useProductCategories } from "@/hooks/useCategories";
 import {
@@ -250,7 +251,7 @@ export default function EventProductsModal({
         setEditingId(null);
         onProductsChanged?.();
       } catch (err) {
-        setError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setError(apiErrorMessage(err, m.admin_content_error_save()));
       } finally {
         setPreviewPending(false);
       }
@@ -315,7 +316,7 @@ export default function EventProductsModal({
       );
       onProductsChanged?.();
     } catch (err) {
-      setError(err instanceof Error ? err.message : m.admin_content_error_save());
+      setError(apiErrorMessage(err, m.admin_content_error_save()));
     }
   }
 
@@ -798,7 +799,7 @@ export default function EventProductsModal({
                       setEditingId(null);
                       onProductsChanged?.();
                     } catch (err) {
-                      setError(err instanceof Error ? err.message : m.admin_content_error_save());
+                      setError(apiErrorMessage(err, m.admin_content_error_save()));
                       setPreview(null);
                     }
                   }}

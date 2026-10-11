@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Person } from "@/types/person";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -102,7 +103,7 @@ export default function PeopleManagement({
       setMergeSuccess(true);
       setMergeState(null);
     } catch (err) {
-      setMergeError(err instanceof Error ? err.message : m.admin_people_merge_error());
+      setMergeError(apiErrorMessage(err, m.admin_people_merge_error()));
     } finally {
       setMerging(false);
     }
@@ -126,7 +127,7 @@ export default function PeopleManagement({
       setDeleteSuccess(true);
       setDeletingId(null);
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : m.admin_error_delete_person());
+      setDeleteError(apiErrorMessage(err, m.admin_error_delete_person()));
     } finally {
       setDeleting(false);
     }
@@ -205,9 +206,7 @@ export default function PeopleManagement({
       await downloadPaymentTransactionsCsv(authHeaders, { personId: viewRegistrationsPerson.id });
     } catch (err) {
       devError("Failed to export payment ledger", err);
-      setLedgerExportError(
-        err instanceof Error ? err.message : m.admin_people_export_ledger_error(),
-      );
+      setLedgerExportError(apiErrorMessage(err, m.admin_people_export_ledger_error()));
     } finally {
       setExportingLedger(false);
     }

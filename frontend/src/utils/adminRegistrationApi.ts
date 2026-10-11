@@ -1,4 +1,5 @@
 import { m } from "@/paraglide/messages";
+import { apiErrorFromResponse } from "@/utils/apiErrors";
 import { apiToEvent, type Event } from "@/types/event";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import { apiToRegistration } from "@/types/registrationMapper";
@@ -204,10 +205,7 @@ export async function createAdminRegistration(
     }),
   });
 
-  if (!res.ok) {
-    const data = await res.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.admin_error_create_registration());
-  }
+  if (!res.ok) throw await apiErrorFromResponse(res, m.admin_error_create_registration());
 
   const data = await res.json();
   return apiToRegistration(data as Record<string, unknown>);

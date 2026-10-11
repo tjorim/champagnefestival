@@ -15,6 +15,7 @@ from app.live import notify_live_event
 from app.models import Event, Person, Registration, Table
 from app.ratelimit import check_check_in_rate_limit, get_client_ip
 from app.schemas import CheckInGuestOut, CheckInLookupRequest, CheckInOut, CheckInRequest
+from app.services.errors import ApiHTTPException
 from app.services.registrations_service import ensure_registration_can_check_in
 from app.utils import registration_to_checkin_dict
 
@@ -54,9 +55,10 @@ async def lookup_check_in(
     allowed = await check_check_in_rate_limit(db, reservation_id, client_ip)
     await db.commit()
     if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
+        raise ApiHTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "rate_limited",
+            "Too many requests. Please try again later.",
         )
     r = await _get_by_token_or_401(db, reservation_id, body.token)
     ensure_registration_can_check_in(r)
@@ -94,9 +96,10 @@ async def post_check_in(
     allowed = await check_check_in_rate_limit(db, reservation_id, client_ip)
     await db.commit()
     if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
+        raise ApiHTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "rate_limited",
+            "Too many requests. Please try again later.",
         )
     r = await _get_by_token_or_401(db, reservation_id, body.token, for_update=True)
     ensure_registration_can_check_in(r)

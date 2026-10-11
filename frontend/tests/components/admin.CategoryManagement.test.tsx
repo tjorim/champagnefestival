@@ -130,11 +130,14 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     expect(sent?.body).not.toHaveProperty("key");
   });
 
-  it("shows the server's refusal to delete a category that is in use", async () => {
+  it("explains the refusal to delete a category that is in use", async () => {
     server.use(
       http.delete(`${path()}/:key`, () =>
         HttpResponse.json(
-          { detail: "Cannot delete category 'gala': 2 item(s) still use it." },
+          {
+            detail: "Cannot delete category 'gala': 2 item(s) still use it.",
+            code: "category_in_use",
+          },
           { status: 409 },
         ),
       ),
@@ -144,6 +147,8 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     fireEvent.click(await screen.findByRole("button", { name: "Delete gala" }));
     fireEvent.click(await screen.findByRole("button", { name: /^(Delete|Confirm|Yes)/ }));
 
-    expect(await screen.findByText(/2 item\(s\) still use it/)).toBeInTheDocument();
+    // The interface shows the translation of the code, never the English detail.
+    expect(await screen.findByText(/Move its items to another category first/)).toBeInTheDocument();
+    expect(screen.queryByText(/2 item\(s\) still use it/)).not.toBeInTheDocument();
   });
 });

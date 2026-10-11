@@ -42,6 +42,7 @@ import {
 import { EditionLineupOrder } from "@/components/admin/EditionLineupOrder";
 import type { SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type { ItemDraft } from "./itemTypes";
 import type { Edition, EditionType } from "./editionTypes";
 import type { Venue } from "@/types/admin";
@@ -194,9 +195,7 @@ export default function EditionModal({
         });
         onSaved(savedEdition);
       } catch (mutationError) {
-        setError(
-          mutationError instanceof Error ? mutationError.message : m.admin_content_error_save(),
-        );
+        setError(apiErrorMessage(mutationError, m.admin_content_error_save()));
       }
     },
   });

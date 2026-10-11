@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { getVapidPublicKey, subscribeToPush, unsubscribeFromPush } from "@/utils/pushApi";
+import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
+import { apiErrorMessage } from "@/utils/apiErrors";
 
 /** Convert a base64url VAPID public key into the Uint8Array `pushManager.subscribe`'s
  * `applicationServerKey` expects — standard Web Push boilerplate. */
@@ -128,7 +130,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
       });
       setIsSubscribed(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(apiErrorMessage(err, m.push_error_generic()));
     } finally {
       setIsBusy(false);
     }
@@ -154,7 +156,7 @@ export function usePushSubscription(): UsePushSubscriptionResult {
       }
       setIsSubscribed(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+      setError(apiErrorMessage(err, m.push_error_generic()));
     } finally {
       setIsBusy(false);
     }

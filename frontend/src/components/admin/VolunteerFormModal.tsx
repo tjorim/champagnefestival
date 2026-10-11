@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Person, VolunteerHelpPeriod } from "@/types/person";
 
 interface VolunteerFormModalProps {
@@ -131,11 +132,10 @@ export default function VolunteerFormModal({
         onHide();
       } catch (err) {
         setError(
-          err instanceof Error
-            ? err.message
-            : isEdit
-              ? m.admin_volunteers_error_update()
-              : m.admin_volunteers_error_create(),
+          apiErrorMessage(
+            err,
+            isEdit ? m.admin_volunteers_error_update() : m.admin_volunteers_error_create(),
+          ),
         );
       }
     },

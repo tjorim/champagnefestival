@@ -25,7 +25,7 @@ from app.audit import write_audit_entry
 from app.models import Edition, Event, Layout, Registration, Room
 from app.schemas import EventCreate, EventTextFields, EventUpdate
 from app.services import event_categories_service
-from app.services.errors import ServiceError, to_http_exception
+from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import event_to_summary_dict, get_or_404, make_id
 
@@ -141,11 +141,10 @@ async def reject_if_registrations_exist(db: AsyncSession, event_id: str) -> None
         await db.execute(select(func.count()).select_from(Registration).where(Registration.event_id == event_id))
     ).scalar_one()
     if count:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=(
-                f"Cannot delete event: {count} registration(s) are still linked to it. Delete or reassign them first."
-            ),
+        raise ApiHTTPException(
+            status.HTTP_409_CONFLICT,
+            "event_has_registrations",
+            f"Cannot delete event: {count} registration(s) are still linked to it. Delete or reassign them first.",
         )
 
 

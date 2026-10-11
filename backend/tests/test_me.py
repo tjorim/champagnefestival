@@ -378,6 +378,8 @@ async def test_pebble_token_is_scoped_and_rotates(me_client, db_session):
         headers={"Authorization": f"Bearer {first_token}"},
     )
     assert revoked.status_code == 401
+    assert revoked.json()["code"] == "pebble_token_invalid"
+    assert revoked.headers["www-authenticate"] == "Bearer"
 
     active = await me_client.get(
         "/api/pebble/registrations",

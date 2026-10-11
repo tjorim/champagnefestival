@@ -1,4 +1,5 @@
 import { m } from "@/paraglide/messages";
+import { apiErrorFromResponse } from "@/utils/apiErrors";
 
 export const organizationTextFields = [
   "website",
@@ -20,12 +21,6 @@ export interface OrganizationChange {
   reason: string | null;
 }
 
-export class OrganizationChangeConflictError extends Error {
-  constructor() {
-    super(m.manager_change_conflict());
-  }
-}
-
 export async function organizationChangesRequest<T>(
   url: string,
   headers: Record<string, string>,
@@ -37,8 +32,7 @@ export async function organizationChangesRequest<T>(
     headers: { ...headers, ...(body ? { "Content-Type": "application/json" } : {}) },
     ...(body ? { method: "POST", body: JSON.stringify(body) } : {}),
   });
-  if (response.status === 409) throw new OrganizationChangeConflictError();
-  if (!response.ok) throw new Error(m.manager_error());
+  if (!response.ok) throw await apiErrorFromResponse(response, m.manager_error());
   return response.json();
 }
 

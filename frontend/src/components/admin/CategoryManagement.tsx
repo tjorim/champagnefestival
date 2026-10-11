@@ -41,6 +41,7 @@ import { Icon } from "@/components/Icon";
 import { eventCategoriesQueryOptions, productCategoriesQueryOptions } from "@/hooks/useCategories";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type { EventLanguage } from "@/types/event";
 import type { Category } from "@/types/category";
 import {
@@ -193,7 +194,7 @@ export default function CategoryManagement({
       await saveMutation.mutateAsync({ editing: editingKey, data: form });
       setShowModal(false);
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : m.admin_error_save_category());
+      setError(apiErrorMessage(failure, m.admin_error_save_category()));
     }
   }, [form, editingKey, saveMutation]);
 
@@ -209,7 +210,7 @@ export default function CategoryManagement({
       try {
         await deleteMutation.mutateAsync(category.key);
       } catch (failure) {
-        setRowError(failure instanceof Error ? failure.message : m.admin_error_delete_category());
+        setRowError(apiErrorMessage(failure, m.admin_error_delete_category()));
       }
     },
     [confirm, config, deleteMutation],

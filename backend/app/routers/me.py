@@ -27,6 +27,7 @@ from app.schemas import (
     RegistrationGuestOut,
     RegistrationStatus,
 )
+from app.services.errors import ApiHTTPException
 from app.services.outbox_service import enqueue_contact_notification
 from app.services.pebble_access import (
     authenticate_pebble_token,
@@ -187,10 +188,12 @@ async def request_registration_change(
         )
     ).one_or_none()
     if row is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found")
+        raise ApiHTTPException(status.HTTP_404_NOT_FOUND, "registration_not_found", "Registration not found")
     registration, person, event = row
     if registration.status == "cancelled":
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Registration is already cancelled")
+        raise ApiHTTPException(
+            status.HTTP_409_CONFLICT, "registration_already_cancelled", "Registration is already cancelled"
+        )
 
     request_label = "Cancellation" if body.request_type == "cancellation" else "Change"
     details = body.details.strip() or "No additional details provided."
@@ -321,9 +324,10 @@ async def list_pebble_registrations(
     """Return registrations using a credential that cannot access other APIs."""
     user_id = await authenticate_pebble_token(db, credentials.credentials)
     if user_id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or revoked Pebble token",
+        raise ApiHTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "pebble_token_invalid",
+            "Invalid or revoked Pebble token",
             headers={"WWW-Authenticate": "Bearer"},
         )
     return await _registrations_for_user(db, user_id)

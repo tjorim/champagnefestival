@@ -49,6 +49,7 @@ from app.schemas import (
 )
 from app.services import events_service, payments_service, registrations_service
 from app.services.allocations_service import allocated_registration_filter
+from app.services.errors import ApiHTTPException
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.services.people_service import parse_phone
@@ -85,9 +86,10 @@ async def create_registration(
 ) -> dict:
     client_ip = get_client_ip(request)
     if not check_rate_limit(client_ip, scope="registration-create"):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
+        raise ApiHTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "rate_limited",
+            "Too many requests. Please try again later.",
         )
     check_honeypot(body.honeypot)
     check_form_timing(body.form_start_time)

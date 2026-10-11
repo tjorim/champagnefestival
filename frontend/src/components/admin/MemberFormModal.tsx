@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import { devError } from "@/utils/devLog";
 import { EMAIL_REGEX } from "@/config/constants";
 import type { Person } from "@/types/person";
@@ -98,16 +99,11 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
         onHide();
       } catch (err) {
         devError("Member save error:", err);
-        const backendMessage =
-          err &&
-          typeof err === "object" &&
-          "message" in err &&
-          typeof (err as { message: unknown }).message === "string"
-            ? (err as { message: string }).message.trim()
-            : "";
         setError(
-          backendMessage ||
-            (isEdit ? m.admin_members_error_update() : m.admin_members_error_create()),
+          apiErrorMessage(
+            err,
+            isEdit ? m.admin_members_error_update() : m.admin_members_error_create(),
+          ),
         );
       }
     },

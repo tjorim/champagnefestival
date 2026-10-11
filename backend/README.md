@@ -347,6 +347,41 @@ the consumer contract and synthetic sorting-scale evidence.
   (`app/services/people_listing.py`), so their `q` has the same semantics as above;
   they stay unpaged.
 
+### Error codes (#1251)
+
+`detail` is an English diagnostic for logs, tests and MCP callers; the interface
+must not render it, because Dutch and French visitors would read English. A
+failure the interface can explain carries a stable `code` next to it:
+
+```json
+{"detail": "Table 'A1' does not have enough remaining seats.", "code": "table_over_capacity"}
+```
+
+- Raise `ApiHTTPException(status, code, detail)` (`app/services/errors.py`) from a
+  router or service, or pass `code=` to `NotFoundError` / `ConflictError` /
+  `ValidationFailedError` and let `to_http_exception` carry it. MCP adapters keep
+  using the message; a `ServiceError` without a code behaves as before.
+- Codes are lowercase snake_case, named for the condition (not the endpoint), and
+  stable once published: add a new code rather than changing what one means.
+  `rate_limited` is shared by every rate-limited route.
+- The frontend maps a code to a translation in `frontend/src/utils/apiErrors.ts`
+  (`apiErrorMessage(error, fallback)`) and shows the caller's translated operation
+  message (`m.admin_error_*`) when the code is missing or not yet mapped. Adding a
+  backend code therefore never breaks a surface; map it in `API_ERROR_MESSAGES`
+  with `api_error_<code>` messages in all three locales when it should read better
+  than the generic fallback.
+- Coded today: `rate_limited`, `registration_not_found`,
+  `registration_already_cancelled`, `table_over_capacity`,
+  `table_exclusive_conflict`, `checked_in_cannot_cancel`, `payment_amount_zero`,
+  `payment_reversal_target_invalid`, `pebble_token_invalid`,
+  `organization_not_found`, `pending_logo_not_found`,
+  `organization_change_conflict`, `organization_change_not_found`,
+  `organization_change_submission_reused`, and the delete guards
+  `table_type_in_use`, `venue_has_editions`, `venue_has_rooms`, `room_has_layouts`,
+  `layout_has_tables`, `table_has_registrations`, `category_protected`,
+  `category_in_use`, `event_has_registrations`. Validation errors (422) and
+  uncoded errors still return `detail` alone.
+
 ## Frontend integration
 
 The React (Vite) frontend proxies `/api/*` to the backend during development

@@ -53,6 +53,7 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type { FloorTable } from "@/types/admin";
 import type { PaymentStatus, Registration, RegistrationStatus } from "@/types/registration";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
@@ -929,7 +930,7 @@ export default function RegistrationList({
       exportToCsv("registrations.csv", rows);
     } catch (err) {
       devError("Failed to export registrations", err);
-      setCsvExportError(err instanceof Error ? err.message : m.admin_error_load_data());
+      setCsvExportError(apiErrorMessage(err, m.admin_error_load_data()));
     } finally {
       setExportingAllCsv(false);
     }
@@ -943,9 +944,7 @@ export default function RegistrationList({
         await downloadRegistrationsCsv(authHeaders, eventId);
       } catch (err) {
         devError("Failed to export guest list", err);
-        setEventExportError(
-          err instanceof Error ? err.message : m.admin_registrations_export_event_csv_error(),
-        );
+        setEventExportError(apiErrorMessage(err, m.admin_registrations_export_event_csv_error()));
       } finally {
         setExportingEventId(null);
       }
@@ -967,7 +966,7 @@ export default function RegistrationList({
       setSelectAllMatchingActive(true);
     } catch (err) {
       devError("Failed to select all matching registrations", err);
-      setSelectAllMatchingError(err instanceof Error ? err.message : m.admin_error_load_data());
+      setSelectAllMatchingError(apiErrorMessage(err, m.admin_error_load_data()));
     } finally {
       setIsSelectingAllMatching(false);
     }

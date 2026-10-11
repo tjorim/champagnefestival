@@ -178,7 +178,11 @@ describe("MyAccountPage", () => {
     await openDeleteConfirm(user);
     await user.click(screen.getByRole("button", { name: "Confirm" }));
 
-    expect(await screen.findByText("Something went wrong")).toBeInTheDocument();
+    // The 500 body is English diagnostics; the translated message is shown.
+    expect(
+      await screen.findByText("Could not delete your account. Please try again."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Something went wrong")).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Confirm" })).not.toBeDisabled();
   });
 

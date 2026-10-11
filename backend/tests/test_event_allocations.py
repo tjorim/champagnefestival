@@ -118,13 +118,30 @@ async def test_whole_tables_are_exclusive_and_partial_allocation_keeps_stock(cli
             "/api/registrations", json={**VALID_RESERVATION, "event_id": event["id"], "email": "other@example.com"}
         )
     ).json()
-    assert (
-        await client.put(
-            f"/api/registrations/{other['id']}",
-            json={"allocations": [{"table_id": physical["id"], "guest_count": 2}], "confirm_over_capacity": True},
-        )
-    ).status_code == 409
+    exclusive_conflict = await client.put(
+        f"/api/registrations/{other['id']}",
+        json={"allocations": [{"table_id": physical["id"], "guest_count": 2}], "confirm_over_capacity": True},
+    )
+    assert exclusive_conflict.status_code == 409
+    assert exclusive_conflict.json()["code"] == "table_exclusive_conflict"
     assert (await client.delete(f"/api/tables/{physical['id']}")).status_code == 409
+
+
+@pytest.mark.anyio
+async def test_over_capacity_allocation_reports_a_stable_code(client):
+    event = await _create_event(client)
+    _, plan = await room_and_plan(client, event)
+    physical = await table(client, plan, capacity=2)
+    booking = (
+        await client.post("/api/registrations", json={**VALID_RESERVATION, "event_id": event["id"], "guest_count": 3})
+    ).json()
+    over = await client.put(
+        f"/api/registrations/{booking['id']}",
+        json={"allocations": [{"table_id": physical["id"], "guest_count": 3}]},
+    )
+    assert over.status_code == 409
+    assert over.json()["code"] == "table_over_capacity"
+    assert "remaining seats" in over.json()["detail"]
 
 
 @pytest.mark.anyio
