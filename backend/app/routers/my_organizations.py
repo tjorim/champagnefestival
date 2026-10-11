@@ -3,7 +3,7 @@
 from typing import Any
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile
+from fastapi import APIRouter, Depends, Response, UploadFile
 from fastapi.responses import Response as ImageResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,7 +13,7 @@ from app.models import Organization, OrganizationChange, Person, User
 from app.schemas import ManagedOrganizationOut, OrganizationChangeOut, OrganizationChangeSubmit
 from app.services import organization_changes, organization_logos
 from app.services import organization_translation as translation
-from app.services.errors import ServiceError, to_http_exception
+from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.visitor_session import actor_for_user, get_current_user_with_claims, get_organization_contact_email
 
 router = APIRouter(prefix="/api/me/organizations", tags=["me", "organizations"])
@@ -57,14 +57,14 @@ async def owned(db: AsyncSession, organization_id: int, email: str | None, *, lo
                 select(Organization).where(Organization.id == organization_id).execution_options(populate_existing=True)
             )
             if row is None:
-                raise HTTPException(404, "Organization not found.")
+                raise ApiHTTPException(404, "organization_not_found", "Organization not found.")
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
     contact = await db.scalar(
         select(Person).where(Person.id == row.contact_person_id).execution_options(populate_existing=True)
     )
     if email is None or contact is None or contact.email.strip().lower() != email:
-        raise HTTPException(404, "Organization not found.")
+        raise ApiHTTPException(404, "organization_not_found", "Organization not found.")
     return row
 
 
@@ -170,7 +170,7 @@ async def preview_logo(
     await owned(db, organization_id, email)
     change = await db.get(OrganizationChange, change_id)
     if change is None or change.organization_id != organization_id:
-        raise HTTPException(404, "Pending logo not found.")
+        raise ApiHTTPException(404, "pending_logo_not_found", "Pending logo not found.")
     try:
         return ImageResponse(
             organization_logos.pending_path(change).read_bytes(),

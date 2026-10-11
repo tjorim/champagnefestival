@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiError } from "./apiErrors";
 import { fetchJsonOrThrow, requestApi } from "./adminApi";
 
 beforeEach(() => {
@@ -76,5 +77,41 @@ describe("adminApi", () => {
       statusText: "Bad Request",
       detail: "Bad request",
     });
+  });
+
+  it("throws an ApiError carrying the stable code next to the English detail", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ detail: "Registration not found.", code: "registration_not_found" }),
+            {
+              status: 404,
+              headers: { "Content-Type": "application/json" },
+            },
+          ),
+        ),
+      ),
+    );
+
+    const error = await fetchJsonOrThrow("/api/registrations/x", {}, "Fallback").catch(
+      (caught: unknown) => caught,
+    );
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      message: "Registration not found.",
+      status: 404,
+      code: "registration_not_found",
+    });
+  });
+
+  it("marks a network failure with its own code so it can be translated", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+
+    const error = await requestApi("/api/x", {}).catch((caught: unknown) => caught);
+
+    expect(error).toMatchObject({ status: 0, code: "network_error" });
   });
 });

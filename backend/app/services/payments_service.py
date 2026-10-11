@@ -26,7 +26,7 @@ from datetime import date as dt_date
 from decimal import Decimal
 from typing import Any, Literal
 
-from fastapi import HTTPException, status
+from fastapi import status
 from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -35,7 +35,7 @@ from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Event, PaymentTransaction, Person, Registration
-from app.services.errors import ConflictError, to_http_exception
+from app.services.errors import ApiHTTPException, ConflictError, to_http_exception
 from app.services.idempotency import (
     check_idempotency_key,
     commit_with_idempotency_guard,
@@ -279,7 +279,7 @@ async def record_payment_transaction(
     like every other bulk/import write — see ``app.services.idempotency``.
     """
     if amount == 0:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="amount must not be zero.")
+        raise ApiHTTPException(status.HTTP_400_BAD_REQUEST, "payment_amount_zero", "amount must not be zero.")
 
     request_hash = hash_request(
         {
@@ -304,9 +304,10 @@ async def record_payment_transaction(
     if reversed_transaction_id is not None:
         reversed_row = await db.get(PaymentTransaction, reversed_transaction_id)
         if reversed_row is None or reversed_row.registration_id != registration.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="reversed_transaction_id must reference an existing transaction on the same booking.",
+            raise ApiHTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "payment_reversal_target_invalid",
+                "reversed_transaction_id must reference an existing transaction on the same booking.",
             )
 
     # Serialise concurrent appends to the same booking: without this lock, two

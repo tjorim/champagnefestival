@@ -3,6 +3,7 @@ import type { ItemDraft } from "@/components/admin/itemTypes";
 import type { Language, LocalizedText } from "@/components/admin/LocalizedFields";
 import type { SponsorTier } from "@/config/editions";
 import { m } from "@/paraglide/messages";
+import { apiErrorFromResponse } from "@/utils/apiErrors";
 import {
   apiToEvent,
   apiToProduct,
@@ -28,12 +29,7 @@ async function safeFetch(
     const response = await fetch(url, options);
 
     if (!response.ok) {
-      // A body of literal `null` parses successfully, so the catch never fires —
-      // coalesce it away rather than reading `.detail` off null.
-      const data = (await response.json().catch(() => null)) ?? {};
-      const detail = (data as { detail?: string }).detail;
-      const errorMsg = detail ?? operation ?? m.admin_api_request_failed();
-      throw new Error(errorMsg);
+      throw await apiErrorFromResponse(response, operation ?? m.admin_api_request_failed());
     }
 
     return response;

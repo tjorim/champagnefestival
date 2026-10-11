@@ -1,4 +1,5 @@
 import { m } from "@/paraglide/messages";
+import { ApiError, apiErrorFromResponse } from "@/utils/apiErrors";
 
 export const SESSION_EXPIRED_ERROR = "session_expired";
 export const UNAUTHORIZED_ERROR = "unauthorized";
@@ -17,21 +18,21 @@ export async function requestApi(url: string, options: RequestInit): Promise<Res
     return await fetch(url, options);
   } catch (error) {
     console.error("Admin API network request failed", { url, error });
-    throw new Error(m.admin_error_network());
+    throw new ApiError(m.admin_error_network(), { status: 0, code: "network_error" });
   }
 }
 
-async function extractErrorMessage(response: Response, fallbackMessage: string): Promise<string> {
+async function extractError(response: Response, fallbackMessage: string): Promise<ApiError> {
   const requestId = response.headers.get("X-Request-ID");
-  const data = await response.json().catch(() => ({}));
-  const detail = (data as { detail?: string }).detail ?? fallbackMessage;
+  const error = await apiErrorFromResponse(response, fallbackMessage);
   console.error("Admin API request failed", {
     requestId,
     status: response.status,
     statusText: response.statusText,
-    detail,
+    detail: error.message,
+    code: error.code,
   });
-  return detail;
+  return error;
 }
 
 export async function fetchJsonOrThrow<T>(
@@ -41,7 +42,7 @@ export async function fetchJsonOrThrow<T>(
 ): Promise<T> {
   const response = await requestApi(url, options);
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, fallbackMessage));
+    throw await extractError(response, fallbackMessage);
   }
 
   return (await response.json()) as T;
@@ -54,7 +55,7 @@ export async function fetchVoidOrThrow(
 ): Promise<void> {
   const response = await requestApi(url, options);
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, fallbackMessage));
+    throw await extractError(response, fallbackMessage);
   }
 }
 
@@ -67,7 +68,7 @@ export async function fetchArrayOrThrow<T>(
   const response = await requestApi(url, options);
   throwAuthError(response);
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, fallbackMessage));
+    throw await extractError(response, fallbackMessage);
   }
 
   const payload = await response.json();
@@ -84,7 +85,7 @@ export async function fetchJsonOrThrowWithUnauthorized<T>(
   const response = await requestApi(url, options);
   throwAuthError(response);
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, fallbackMessage));
+    throw await extractError(response, fallbackMessage);
   }
 
   return (await response.json()) as T;
@@ -98,7 +99,7 @@ export async function fetchVoidOrThrowWithUnauthorized(
   const response = await requestApi(url, options);
   throwAuthError(response);
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, fallbackMessage));
+    throw await extractError(response, fallbackMessage);
   }
 }
 
@@ -117,7 +118,7 @@ export async function downloadFileOrThrow(
   const response = await requestApi(url, options);
   throwAuthError(response);
   if (!response.ok) {
-    throw new Error(await extractErrorMessage(response, fallbackMessage));
+    throw await extractError(response, fallbackMessage);
   }
 
   const disposition = response.headers.get("Content-Disposition") ?? "";

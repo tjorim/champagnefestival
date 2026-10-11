@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 import { invalidateAdmin } from "@/utils/queryInvalidation";
@@ -116,9 +117,7 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
       <CardContent>
         {updateMutation.isError && (
           <Alert variant="danger" className="py-1 mb-4 text-sm">
-            {updateMutation.error instanceof Error
-              ? updateMutation.error.message
-              : m.admin_error_update_settings()}
+            {apiErrorMessage(updateMutation.error, m.admin_error_update_settings())}
           </Alert>
         )}
         {settingsQuery.isError ? (

@@ -179,6 +179,7 @@ async def test_zero_amount_is_rejected(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 400, r.text
+    assert r.json()["code"] == "payment_amount_zero"
 
 
 @pytest.mark.anyio
@@ -202,6 +203,7 @@ async def test_reversed_transaction_id_must_belong_to_same_booking(client):
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 400, r.text
+    assert r.json()["code"] == "payment_reversal_target_invalid"
 
 
 @pytest.mark.anyio

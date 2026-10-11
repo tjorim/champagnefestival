@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { axe } from "jest-axe";
 import { describe, expect, it, vi, afterEach } from "vitest";
 import VenueManagement from "@/components/admin/VenueManagement";
+import { ApiError } from "@/utils/apiErrors";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
 
 /** The active confirmation, which may be nested inside a form dialog. */
@@ -417,16 +418,19 @@ describe("VenueManagement", () => {
     // failed delete has to explain itself rather than look inert.
     const onDeleteRoom = vi
       .fn()
-      .mockRejectedValueOnce(new Error("Cannot delete: layouts are still using this room."))
+      .mockRejectedValueOnce(
+        new ApiError("Cannot delete: layouts are still using this room.", {
+          status: 409,
+          code: "room_has_layouts",
+        }),
+      )
       .mockResolvedValueOnce(undefined);
     renderVenueManagement({ onDeleteRoom });
 
     const deleteButton = screen.getByRole("button", { name: /admin_delete Room B/ });
 
     fireEvent.click(deleteButton);
-    expect(
-      await screen.findByText("Cannot delete: layouts are still using this room."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("api_error_room_has_layouts")).toBeInTheDocument();
 
     fireEvent.click(deleteButton);
     await waitFor(() => expect(onDeleteRoom).toHaveBeenCalledTimes(2));
@@ -764,9 +768,12 @@ describe("VenueManagement", () => {
   });
 
   it("surfaces the API's refusal when tables still use the table type", async () => {
-    const onDeleteTableType = vi
-      .fn()
-      .mockRejectedValue(new Error("Cannot delete: tables are still using this type."));
+    const onDeleteTableType = vi.fn().mockRejectedValue(
+      new ApiError("Cannot delete: tables are still using this type.", {
+        status: 409,
+        code: "table_type_in_use",
+      }),
+    );
     renderVenueManagement({ onDeleteTableType });
 
     fireEvent.click(
@@ -775,9 +782,7 @@ describe("VenueManagement", () => {
     const dialog = within(await screen.findByRole("alertdialog"));
     fireEvent.click(dialog.getByRole("button", { name: "admin_action_confirm" }));
 
-    expect(
-      await screen.findByText("Cannot delete: tables are still using this type."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("api_error_table_type_in_use")).toBeInTheDocument();
   });
 
   it("has no axe violations", async () => {

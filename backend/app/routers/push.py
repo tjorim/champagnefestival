@@ -6,7 +6,7 @@ requires admin auth; the rest are reachable by any visitor.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
@@ -22,7 +22,7 @@ from app.schemas import (
     VapidPublicKeyOut,
 )
 from app.services import push_service
-from app.services.errors import ServiceError, to_http_exception
+from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.services.outbox_service import enqueue_job
 from app.utils import make_id
 
@@ -53,9 +53,10 @@ async def subscribe_to_push(
     allowed = await check_push_subscription_rate_limit(db, client_ip)
     await db.commit()
     if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
+        raise ApiHTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "rate_limited",
+            "Too many requests. Please try again later.",
         )
     try:
         subscription = await push_service.subscribe(
@@ -83,9 +84,10 @@ async def unsubscribe_from_push(
     allowed = await check_push_subscription_rate_limit(db, client_ip)
     await db.commit()
     if not allowed:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
+        raise ApiHTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "rate_limited",
+            "Too many requests. Please try again later.",
         )
     await push_service.unsubscribe(db, body.endpoint)
 
@@ -110,9 +112,10 @@ async def send_test_push(
     """
     # Per-actor local limit for admin tests; production uses one API worker.
     if not check_rate_limit(actor, scope="push-test-send", max_requests=10):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
+        raise ApiHTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "rate_limited",
+            "Too many requests. Please try again later.",
         )
     # enqueue_job writes its own "delivery_queued" audit entry (see
     # app.services.outbox_service) — matching enqueue_registration_confirmation's

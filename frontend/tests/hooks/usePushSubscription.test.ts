@@ -2,6 +2,7 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { usePushSubscription } from "@/hooks/usePushSubscription";
 import * as pushApi from "@/utils/pushApi";
+import { ApiError } from "@/utils/apiErrors";
 
 vi.mock("@/utils/pushApi");
 
@@ -160,7 +161,9 @@ describe("usePushSubscription", () => {
       publicKey: VAPID_PUBLIC_KEY,
       enabled: true,
     });
-    vi.mocked(pushApi.subscribeToPush).mockRejectedValue(new Error("Something went wrong."));
+    vi.mocked(pushApi.subscribeToPush).mockRejectedValue(
+      new ApiError("Backend said no.", { status: 400, code: "not_yet_translated" }),
+    );
 
     const { result } = renderHook(() => usePushSubscription());
     await waitFor(() => expect(result.current.state).toBe("ready"));
@@ -168,7 +171,9 @@ describe("usePushSubscription", () => {
     await result.current.subscribe();
 
     expect(result.current.isSubscribed).toBe(false);
-    await waitFor(() => expect(result.current.error).toBe("Something went wrong."));
+    await waitFor(() =>
+      expect(result.current.error).toBe("Something went wrong. Please try again."),
+    );
   });
 
   it("unsubscribes both the browser subscription and the backend record", async () => {
@@ -206,7 +211,9 @@ describe("usePushSubscription", () => {
       categories: [],
       eventIds: [],
     });
-    vi.mocked(pushApi.unsubscribeFromPush).mockRejectedValueOnce(new Error("network error"));
+    vi.mocked(pushApi.unsubscribeFromPush).mockRejectedValueOnce(
+      new ApiError("Backend said no.", { status: 503 }),
+    );
 
     const { result } = renderHook(() => usePushSubscription());
     await waitFor(() => expect(result.current.isSubscribed).toBe(true));
@@ -214,7 +221,9 @@ describe("usePushSubscription", () => {
     // First attempt: browser unsubscribe succeeds, backend delete fails.
     await result.current.unsubscribe();
     expect(subscription.unsubscribe).toHaveBeenCalledTimes(1);
-    await waitFor(() => expect(result.current.error).toBe("network error"));
+    await waitFor(() =>
+      expect(result.current.error).toBe("Something went wrong. Please try again."),
+    );
 
     // Browser subscription is already gone — a second getSubscription() call
     // would return null, so the endpoint must be retained from the first

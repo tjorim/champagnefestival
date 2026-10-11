@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type {
   LayoutRevision,
   LayoutRevisionAreaChange,
@@ -205,7 +206,7 @@ export default function LayoutRevisionsModal({
       const data = await fetchLayoutRevisions(authHeaders, layoutId);
       setRevisions(data);
     } catch (error) {
-      setLoadError(error instanceof Error ? error.message : String(error));
+      setLoadError(apiErrorMessage(error, m.admin_error_load_layout_revisions()));
     } finally {
       setLoading(false);
     }
@@ -244,7 +245,7 @@ export default function LayoutRevisionsModal({
         saveForm.reset();
         await loadRevisions();
       } catch (error) {
-        setSaveError(error instanceof Error ? error.message : String(error));
+        setSaveError(apiErrorMessage(error, m.admin_error_save_layout_revision()));
       }
     },
   });
@@ -262,7 +263,7 @@ export default function LayoutRevisionsModal({
         setDiff(result);
       } catch (error) {
         if (compareRequestRef.current !== requestId) return;
-        setDiffError(error instanceof Error ? error.message : String(error));
+        setDiffError(apiErrorMessage(error, m.admin_error_compare_layout_revisions()));
         setDiff(null);
       } finally {
         if (compareRequestRef.current === requestId) setDiffLoading(false);
@@ -291,7 +292,7 @@ export default function LayoutRevisionsModal({
     try {
       setPreview(await previewLayoutRestore(authHeaders, layoutId, revisionNumber));
     } catch (error) {
-      setPreviewError(error instanceof Error ? error.message : String(error));
+      setPreviewError(apiErrorMessage(error, m.admin_error_preview_layout_restore()));
     } finally {
       setPreviewLoading(false);
     }
@@ -307,7 +308,7 @@ export default function LayoutRevisionsModal({
       setPreview(null);
       await loadRevisions();
     } catch (error) {
-      setRestoreError(error instanceof Error ? error.message : String(error));
+      setRestoreError(apiErrorMessage(error, m.admin_error_restore_layout_revision()));
       devError("Failed to restore layout revision", { error });
     } finally {
       setRestoring(false);

@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import {
   createPollOption,
@@ -65,7 +66,7 @@ export default function EditionPollOptionsModal({
       try {
         await createMutation.mutateAsync(value.label.trim());
       } catch (err) {
-        setError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
   });
@@ -108,7 +109,7 @@ export default function EditionPollOptionsModal({
     try {
       await updateMutation.mutateAsync({ id: editing.id, label: editing.label.trim() });
     } catch (err) {
-      setError(err instanceof Error ? err.message : m.admin_content_error_save());
+      setError(apiErrorMessage(err, m.admin_content_error_save()));
     }
   }
 
@@ -127,7 +128,7 @@ export default function EditionPollOptionsModal({
         prev.filter((o) => o.id !== option.id),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : m.admin_content_error_save());
+      setError(apiErrorMessage(err, m.admin_content_error_save()));
     }
   }
 

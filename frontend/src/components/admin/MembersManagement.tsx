@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Person } from "@/types/person";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
@@ -63,7 +64,7 @@ export default function MembersManagement({
       setDeleteSuccess(true);
       setDeletingId(null);
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : m.admin_members_error_delete());
+      setDeleteError(apiErrorMessage(err, m.admin_members_error_delete()));
     } finally {
       setDeleting(false);
     }

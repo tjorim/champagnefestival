@@ -6,6 +6,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import {
   PublicField,
   PublicLabel,
@@ -16,7 +17,6 @@ import {
 } from "@/components/PublicFields";
 import {
   organizationChangesRequest,
-  OrganizationChangeConflictError,
   organizationFieldLabel,
   organizationStatusLabel,
   organizationTextFields,
@@ -174,9 +174,7 @@ function ProposalForm({
       )}
       {mutation.isError && (
         <Alert variant="danger" role="alert">
-          {mutation.error instanceof OrganizationChangeConflictError
-            ? mutation.error.message
-            : m.manager_error()}
+          {apiErrorMessage(mutation.error, m.manager_error())}
         </Alert>
       )}
       <Button type="submit" disabled={mutation.isPending}>

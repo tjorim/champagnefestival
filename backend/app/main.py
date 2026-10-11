@@ -63,6 +63,7 @@ from app.routers import (
 from app.routers import (
     settings as settings_router,
 )
+from app.services.errors import ApiHTTPException
 from app.version import APP_VERSION
 
 # Configure logging before any other module uses a logger.
@@ -180,6 +181,16 @@ async def integrity_error_handler(request: Request, exc: IntegrityError) -> JSON
     return JSONResponse(
         status_code=409,
         content={"detail": _INTEGRITY_DETAILS.get(sqlstate or "", _INTEGRITY_FALLBACK)},
+    )
+
+
+@app.exception_handler(ApiHTTPException)
+async def api_http_exception_handler(request: Request, exc: ApiHTTPException) -> JSONResponse:
+    """Render ``{"detail", "code"}``: the code is what clients translate (see ApiHTTPException)."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail, "code": exc.code},
+        headers=exc.headers,
     )
 
 

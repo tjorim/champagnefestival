@@ -86,7 +86,9 @@ describe("PebblePairPage", () => {
     const user = userEvent.setup();
     render(<PebblePairPage />);
 
-    expect(await screen.findByText("Pairing failed (503)")).toBeInTheDocument();
+    // The 503 body is English diagnostics; the interface shows the translated fallback.
+    expect(await screen.findByText("Could not complete pairing.")).toBeInTheDocument();
+    expect(screen.queryByText("Unavailable")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Retry pairing" }));
 
     await waitFor(() => expect(attempts).toBe(2));

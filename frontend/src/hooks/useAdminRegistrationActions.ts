@@ -1,6 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage, hasApiErrorCode } from "@/utils/apiErrors";
 import type {
   TableAllocation,
   BookingUpdate,
@@ -32,8 +33,8 @@ interface UseAdminRegistrationActionsOptions {
 }
 
 /** Matches the backend's table-capacity rejection (see `allocations_service.validate_allocations`). */
-function isCapacityError(error: unknown): error is Error {
-  return error instanceof Error && error.message.includes("remaining seats");
+function isCapacityError(error: unknown): boolean {
+  return hasApiErrorCode(error, "table_over_capacity");
 }
 
 export function bookingUpdatePayload(update: BookingUpdate, confirmOverCapacity = false) {
@@ -98,9 +99,7 @@ export function useAdminRegistrationActions({
         );
       } catch (err) {
         devError("Failed to update registration status", err);
-        setRegistrationError(
-          err instanceof Error ? err.message : m.admin_error_update_registration(),
-        );
+        setRegistrationError(apiErrorMessage(err, m.admin_error_update_registration()));
         throw err;
       }
     },
@@ -142,9 +141,7 @@ export function useAdminRegistrationActions({
           setDetailRegistration((prev) => (prev?.id === id ? updated : prev));
           return;
         }
-        setRegistrationError(
-          err instanceof Error ? err.message : m.admin_error_update_registration(),
-        );
+        setRegistrationError(apiErrorMessage(err, m.admin_error_update_registration()));
         throw err;
       }
     },
@@ -180,7 +177,7 @@ export function useAdminRegistrationActions({
         );
       } catch (err) {
         devError("Failed to record payment transaction", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_record_payment());
+        setRegistrationError(apiErrorMessage(err, m.admin_error_record_payment()));
         throw err;
       }
 
@@ -266,7 +263,7 @@ export function useAdminRegistrationActions({
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (error) {
-        setRegistrationError(error instanceof Error ? error.message : m.admin_error_assign_table());
+        setRegistrationError(apiErrorMessage(error, m.admin_error_assign_table()));
         throw error;
       }
     },
@@ -302,9 +299,7 @@ export function useAdminRegistrationActions({
         );
         setDetailRegistration((previous) => (previous?.id === registrationId ? updated : previous));
       } catch (error) {
-        setRegistrationError(
-          error instanceof Error ? error.message : m.admin_error_update_registration(),
-        );
+        setRegistrationError(apiErrorMessage(error, m.admin_error_update_registration()));
         throw error;
       }
     },
@@ -409,7 +404,7 @@ export function useAdminRegistrationActions({
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         devError("Failed to update bottle delivery status", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_bottle_delivery());
+        setRegistrationError(apiErrorMessage(err, m.admin_error_bottle_delivery()));
       }
     },
     [
@@ -441,7 +436,7 @@ export function useAdminRegistrationActions({
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         devError("Failed to check in guest", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_check_in());
+        setRegistrationError(apiErrorMessage(err, m.admin_error_check_in()));
       }
     },
     [
@@ -473,7 +468,7 @@ export function useAdminRegistrationActions({
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
       } catch (err) {
         devError("Failed to issue strap", err);
-        setRegistrationError(err instanceof Error ? err.message : m.admin_error_issue_strap());
+        setRegistrationError(apiErrorMessage(err, m.admin_error_issue_strap()));
       }
     },
     [

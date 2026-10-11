@@ -37,6 +37,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import {
   downloadPaymentTransactionsCsv,
   fetchEditionStats,
@@ -124,9 +125,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         await downloadPaymentTransactionsCsv(authHeaders, { editionId });
       } catch (err) {
         devError("Failed to export payment ledger", err);
-        setLedgerExportError(
-          err instanceof Error ? err.message : m.admin_analytics_export_ledger_error(),
-        );
+        setLedgerExportError(apiErrorMessage(err, m.admin_analytics_export_ledger_error()));
       } finally {
         setExportingEditionId(null);
       }

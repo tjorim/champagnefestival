@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { PresentationList, PresentationListItem } from "@/components/ui/presentation-list";
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import {
   deleteEditionById,
   deleteEditionEvent,
@@ -141,7 +142,7 @@ export default function EditionCard({
       setEventModalOpen(false);
       await onEventMutation?.();
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : m.admin_content_error_save());
+      setSaveError(apiErrorMessage(error, m.admin_content_error_save()));
     }
   }
 
@@ -152,7 +153,7 @@ export default function EditionCard({
       queryClient.invalidateQueries({ queryKey: editionEventsQueryKey });
       await onEventMutation?.();
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : m.admin_content_error_save());
+      setSaveError(apiErrorMessage(error, m.admin_content_error_save()));
     }
   }
 
@@ -164,7 +165,7 @@ export default function EditionCard({
       setConfirmDelete(false);
       onDeleted(edition.id);
     } catch (error) {
-      setDeleteError(error instanceof Error ? error.message : m.admin_content_error_save());
+      setDeleteError(apiErrorMessage(error, m.admin_content_error_save()));
     } finally {
       setDeleting(false);
     }

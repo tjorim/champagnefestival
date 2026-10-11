@@ -109,9 +109,6 @@ export const exclusions = {
       "metadata constant not used by the interface",
     "Champagnefestival Team": "fixed application brand",
   },
-  "hooks/useAdminRegistrationActions.ts": {
-    "remaining seats": "matches the backend 409 text until the API returns a stable error code",
-  },
   "hooks/useMaintenanceMode.ts": {
     "Failed to load settings:": "internal diagnostic",
   },

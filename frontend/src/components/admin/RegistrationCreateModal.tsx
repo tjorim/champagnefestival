@@ -34,6 +34,7 @@ import {
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import { queryKeys } from "@/utils/queryKeys";
 import {
   createAdminRegistration,
@@ -154,9 +155,7 @@ export default function RegistrationCreateModal({
   });
 
   const error = createRegistrationMutation.isError
-    ? createRegistrationMutation.error instanceof Error
-      ? createRegistrationMutation.error.message
-      : m.admin_error_create_registration()
+    ? apiErrorMessage(createRegistrationMutation.error, m.admin_error_create_registration())
     : null;
 
   const events = eventsQuery.data ?? [];

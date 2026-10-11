@@ -44,6 +44,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type { FloorTable, Layout, Room, TableType, Venue } from "@/types/admin";
 import ConfirmModal from "@/components/ConfirmModal";
 import { safeRoomColor } from "@/utils/layoutUtils";
@@ -228,7 +229,7 @@ export default function VenueManagement({
         setEditingVenueId(null);
         setShowVenueModal(false);
       } catch (err) {
-        setAddVenueError(err instanceof Error ? err.message : m.admin_error_add_venue());
+        setAddVenueError(apiErrorMessage(err, m.admin_error_add_venue()));
       }
     },
   });
@@ -281,7 +282,7 @@ export default function VenueManagement({
       try {
         await onRestore(id);
       } catch (err) {
-        setDeleteVenueError(err instanceof Error ? err.message : m.admin_error_restore_venue());
+        setDeleteVenueError(apiErrorMessage(err, m.admin_error_restore_venue()));
       }
     },
     [onRestore],
@@ -349,7 +350,7 @@ export default function VenueManagement({
         }
         setShowRoomModal(false);
       } catch (err) {
-        setAddRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setAddRoomError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
   });
@@ -396,7 +397,7 @@ export default function VenueManagement({
       try {
         await onArchiveRoom(roomId);
       } catch (err) {
-        setDeleteRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setDeleteRoomError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
     [onArchiveRoom],
@@ -408,7 +409,7 @@ export default function VenueManagement({
       try {
         await onRestoreRoom(roomId);
       } catch (err) {
-        setDeleteRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setDeleteRoomError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
     [onRestoreRoom],
@@ -422,7 +423,7 @@ export default function VenueManagement({
       } catch (err) {
         // The API refuses while layouts still reference the room; surface that
         // rather than leaving the button looking inert.
-        setDeleteRoomError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setDeleteRoomError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
     [onDeleteRoom],
@@ -523,7 +524,7 @@ export default function VenueManagement({
       try {
         await commitSaveTableType(payload, editingTableTypeId);
       } catch (err) {
-        setAddTableTypeError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setAddTableTypeError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
   });
@@ -572,7 +573,7 @@ export default function VenueManagement({
       try {
         await onArchiveTableType(id);
       } catch (err) {
-        setDeleteTableTypeError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setDeleteTableTypeError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
     [onArchiveTableType],
@@ -584,7 +585,7 @@ export default function VenueManagement({
       try {
         await onRestoreTableType(id);
       } catch (err) {
-        setDeleteTableTypeError(err instanceof Error ? err.message : m.admin_content_error_save());
+        setDeleteTableTypeError(apiErrorMessage(err, m.admin_content_error_save()));
       }
     },
     [onRestoreTableType],

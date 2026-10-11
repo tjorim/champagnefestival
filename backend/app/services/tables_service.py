@@ -272,7 +272,9 @@ async def delete_table(db: AsyncSession, *, actor: str, table_id: str, request_i
         raise NotFoundError(f"Table '{table_id}' not found.")
     regs = await db.execute(select(Registration.id).where(allocated_registration_filter([table_id])).limit(1))
     if regs.scalars().first() is not None:
-        raise ConflictError("Cannot delete: registrations are still assigned to this table.")
+        raise ConflictError(
+            "Cannot delete: registrations are still assigned to this table.", code="table_has_registrations"
+        )
     edition_id = await _get_layout_edition_id(db, t.layout_id)
     await write_audit_entry(
         db,

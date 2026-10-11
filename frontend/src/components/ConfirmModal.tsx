@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArchiveIcon, TriangleAlertIcon, TrashIcon, LoaderCircleIcon, XIcon } from "lucide-react";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 
 interface ConfirmModalProps {
   show: boolean;
@@ -66,7 +67,7 @@ export default function ConfirmModal({
       setPending(false);
       onHide();
     } catch (err) {
-      setError(err instanceof Error ? err.message : errorFallback);
+      setError(apiErrorMessage(err, errorFallback));
       setPending(false);
     }
   };

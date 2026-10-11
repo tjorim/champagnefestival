@@ -58,6 +58,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Registration } from "@/types/registration";
 import type { TableAllocation } from "@/types/registration";
 import type { Room, FloorTable, FloorArea, TableType, Layout, LayoutRevision } from "@/types/admin";
@@ -702,7 +703,7 @@ export default function LayoutEditor({
       setShowAddLayout(false);
     } catch (err) {
       devError("Failed to add layout", err);
-      setAddLayoutError(err instanceof Error ? err.message : m.admin_error_add_layout());
+      setAddLayoutError(apiErrorMessage(err, m.admin_error_add_layout()));
     }
   }, [activeRoomId, dayOptions, newLayout, onAddLayout]);
 
@@ -768,7 +769,7 @@ export default function LayoutEditor({
       setShowAddTable(false);
     } catch (err) {
       devError("Failed to add table", err);
-      setAddTableError(err instanceof Error ? err.message : m.admin_content_error_save());
+      setAddTableError(apiErrorMessage(err, m.admin_content_error_save()));
     }
   }, [newTable, onAddTable, activeLayoutId]);
 
@@ -809,7 +810,7 @@ export default function LayoutEditor({
       setShowAddArea(false);
     } catch (err) {
       devError("Failed to add area", err);
-      setAddAreaError(err instanceof Error ? err.message : m.admin_content_error_save());
+      setAddAreaError(apiErrorMessage(err, m.admin_content_error_save()));
     }
   }, [newArea, onAddArea, activeLayoutId]);
 
@@ -862,7 +863,7 @@ export default function LayoutEditor({
     try {
       await onSaveAllocations(registration.id, allocations);
     } catch (error) {
-      setAllocationError(error instanceof Error ? error.message : m.admin_error_assign_table());
+      setAllocationError(apiErrorMessage(error, m.admin_error_assign_table()));
     } finally {
       setAllocationPending(false);
     }
@@ -1237,9 +1238,7 @@ export default function LayoutEditor({
                     try {
                       await onUpdateTable(selectedTableData.id, val);
                     } catch (err) {
-                      setUpdateTableError(
-                        err instanceof Error ? err.message : m.admin_content_error_save(),
-                      );
+                      setUpdateTableError(apiErrorMessage(err, m.admin_content_error_save()));
                     }
                   }
                 }}
@@ -1259,9 +1258,7 @@ export default function LayoutEditor({
                   try {
                     await onChangeTableType(selectedTableData.id, e);
                   } catch (err) {
-                    setUpdateTableError(
-                      err instanceof Error ? err.message : m.admin_content_error_save(),
-                    );
+                    setUpdateTableError(apiErrorMessage(err, m.admin_content_error_save()));
                   }
                 }}
                 key={`type-${selectedTableData.id}`}
@@ -1546,9 +1543,7 @@ export default function LayoutEditor({
                       try {
                         await onResizeArea(selectedAreaData.id, val, selectedAreaData.lengthM);
                       } catch (err) {
-                        setResizeAreaError(
-                          err instanceof Error ? err.message : m.admin_content_error_save(),
-                        );
+                        setResizeAreaError(apiErrorMessage(err, m.admin_content_error_save()));
                       }
                     }
                   }}
@@ -1574,9 +1569,7 @@ export default function LayoutEditor({
                       try {
                         await onResizeArea(selectedAreaData.id, selectedAreaData.widthM, val);
                       } catch (err) {
-                        setResizeAreaError(
-                          err instanceof Error ? err.message : m.admin_content_error_save(),
-                        );
+                        setResizeAreaError(apiErrorMessage(err, m.admin_content_error_save()));
                       }
                     }
                   }}
@@ -1605,9 +1598,7 @@ export default function LayoutEditor({
                         newIcon,
                       );
                     } catch (err) {
-                      setAssignAreaError(
-                        err instanceof Error ? err.message : m.admin_content_error_save(),
-                      );
+                      setAssignAreaError(apiErrorMessage(err, m.admin_content_error_save()));
                     }
                   }}
                   key={`icon-${selectedAreaData.id}`}
@@ -1640,9 +1631,7 @@ export default function LayoutEditor({
                     }
                     await onAssignAreaToItem(selectedAreaData.id, eId);
                   } catch (err) {
-                    setAssignAreaError(
-                      err instanceof Error ? err.message : m.admin_content_error_save(),
-                    );
+                    setAssignAreaError(apiErrorMessage(err, m.admin_content_error_save()));
                   }
                 }}
               >

@@ -4,6 +4,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
+import { apiErrorFromResponse, apiErrorMessage } from "@/utils/apiErrors";
 
 /**
  * Config webview opened from the Pebble phone app (Pebble.openURL, triggered by
@@ -44,7 +45,7 @@ export default function PebblePairPage() {
           method: "POST",
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        if (!response.ok) throw new Error(`Pairing failed (${response.status})`);
+        if (!response.ok) throw await apiErrorFromResponse(response, m.pebble_pair_error());
         const result = (await response.json()) as { token?: string };
         if (!result.token) throw new Error("Pairing response did not include a token");
         const payload = encodeURIComponent(JSON.stringify({ accessToken: result.token }));
@@ -52,7 +53,7 @@ export default function PebblePairPage() {
         setClosed(true);
       } catch (error) {
         pairRequested.current = false;
-        setPairingError(error instanceof Error ? error.message : String(error));
+        setPairingError(apiErrorMessage(error, m.pebble_pair_error()));
       }
     };
     void pair();

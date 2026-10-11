@@ -39,7 +39,7 @@ async def lock_organization(db: AsyncSession, organization_id: int) -> Organizat
         .execution_options(populate_existing=True)
     )
     if row is None:
-        raise NotFoundError("Organization not found.")
+        raise NotFoundError("Organization not found.", code="organization_not_found")
     return row
 
 
@@ -95,7 +95,9 @@ async def submit(
             or existing.submitted_by != actor
             or existing.submitted_values != values
         ):
-            raise ConflictError("Submission ID already used for a different proposal.")
+            raise ConflictError(
+                "Submission ID already used for a different proposal.", code="organization_change_submission_reused"
+            )
         return payload(existing, organization)
     descriptions = {field: values.get(field, getattr(organization, field)) for field in DESCRIPTION_FIELDS}
     try:
@@ -177,15 +179,18 @@ async def decide(db: AsyncSession, change_id: str, decision: str, reason: str | 
         select(OrganizationChange.organization_id).where(OrganizationChange.id == change_id)
     )
     if organization_id is None:
-        raise NotFoundError("Proposal not found.")
+        raise NotFoundError("Proposal not found.", code="organization_change_not_found")
     organization = await lock_organization(db, organization_id)
     change = await db.get(OrganizationChange, change_id, populate_existing=True)
     if change is None:
-        raise NotFoundError("Proposal not found.")
+        raise NotFoundError("Proposal not found.", code="organization_change_not_found")
     if change.status == decision:
         return payload(change, organization)
     if change.status != "pending":
-        raise ConflictError("Proposal was already decided, superseded or replaced. Refresh the review list.")
+        raise ConflictError(
+            "Proposal was already decided, superseded or replaced. Refresh the review list.",
+            code="organization_change_conflict",
+        )
     old_image = organization.image
     if decision == "accepted":
         for field, value in change.proposed.items():

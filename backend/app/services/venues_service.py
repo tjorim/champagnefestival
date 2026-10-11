@@ -92,10 +92,10 @@ async def delete_venue(db: AsyncSession, *, actor: str, venue_id: str, request_i
     await db.execute(select(Venue.id).where(Venue.id == venue_id).with_for_update())
     in_use = await db.execute(select(Edition).where(Edition.venue_id == venue_id).limit(1))
     if in_use.scalars().first() is not None:
-        raise ConflictError("Cannot delete: editions are still using this venue.")
+        raise ConflictError("Cannot delete: editions are still using this venue.", code="venue_has_editions")
     rooms_in_use = await db.execute(select(Room).where(Room.venue_id == venue_id).limit(1))
     if rooms_in_use.scalars().first() is not None:
-        raise ConflictError("Cannot delete: rooms are still using this venue.")
+        raise ConflictError("Cannot delete: rooms are still using this venue.", code="venue_has_rooms")
     await db.delete(v)
     await write_audit_entry(
         db,

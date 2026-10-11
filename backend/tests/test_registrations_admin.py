@@ -175,6 +175,7 @@ async def test_admin_must_uncheck_registration_before_canceling(client):
         headers=ADMIN_HEADERS,
     )
     assert cancelled.status_code == 409
+    assert cancelled.json()["code"] == "checked_in_cannot_cancel"
 
     cancelled_and_unchecked = await client.put(
         f"/api/registrations/{registration_id}",

@@ -189,6 +189,8 @@ async def test_subscribe_is_rate_limited(client):
         "/api/push/subscriptions", json=_subscription_body(endpoint="https://push.example.com/rl-final")
     )
     assert limited.status_code == 429
+    # The English detail is a diagnostic; clients translate the stable code.
+    assert limited.json()["code"] == "rate_limited"
 
 
 async def test_unsubscribe_deletes_subscription(client, db_session):

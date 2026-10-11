@@ -137,14 +137,17 @@ async def delete_category(
 ) -> dict:
     category = await _get_locked(db, kind, key)
     if key in kind.protected:
-        raise ConflictError(f"Cannot delete {kind.noun} category '{key}': {kind.protected[key]}")
+        raise ConflictError(
+            f"Cannot delete {kind.noun} category '{key}': {kind.protected[key]}", code="category_protected"
+        )
     in_use = (
         await db.execute(select(func.count()).select_from(kind.used_by.class_).where(kind.used_by == key))
     ).scalar_one()
     if in_use:
         raise ConflictError(
             f"Cannot delete {kind.noun} category '{key}': {in_use} {kind.noun}(s) still use it. "
-            "Move them to another category first."
+            "Move them to another category first.",
+            code="category_in_use",
         )
     await db.delete(category)
     await write_audit_entry(

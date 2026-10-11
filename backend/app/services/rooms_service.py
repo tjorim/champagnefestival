@@ -180,7 +180,7 @@ async def delete_room(db: AsyncSession, *, actor: str, room_id: str, request_id:
     await db.execute(select(Room.id).where(Room.id == room_id).with_for_update())
     layouts_in_use = await db.execute(select(Layout).where(Layout.room_id == room_id).limit(1))
     if layouts_in_use.scalars().first() is not None:
-        raise ConflictError("Cannot delete: layouts are still using this room.")
+        raise ConflictError("Cannot delete: layouts are still using this room.", code="room_has_layouts")
     await db.delete(r)
     await write_audit_entry(
         db,

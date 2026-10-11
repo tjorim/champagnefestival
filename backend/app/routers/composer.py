@@ -7,7 +7,7 @@ public surface here.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
@@ -15,7 +15,7 @@ from app.database import get_db
 from app.ratelimit import check_rate_limit
 from app.schemas import ComposedMessageCreate, ComposedMessageOut, ComposedMessageScheduleRequest, ComposedMessageUpdate
 from app.services import composer_service as service
-from app.services.errors import ServiceError, to_http_exception
+from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 
 router = APIRouter(prefix="/api/composer", tags=["composer"], dependencies=[Depends(require_admin)])
 
@@ -84,9 +84,10 @@ async def schedule_send(
     # narrower scope #932/#941 already give this category (see
     # app.ratelimit's module docstring).
     if not check_rate_limit(actor, scope="composer-schedule", max_requests=10):
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail="Too many requests. Please try again later.",
+        raise ApiHTTPException(
+            status.HTTP_429_TOO_MANY_REQUESTS,
+            "rate_limited",
+            "Too many requests. Please try again later.",
         )
     try:
         return await service.schedule_send(

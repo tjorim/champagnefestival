@@ -1,4 +1,5 @@
 import { m } from "@/paraglide/messages";
+import { apiErrorFromResponse } from "@/utils/apiErrors";
 
 export type CommunicationLanguage = "nl" | "fr" | "en";
 
@@ -36,8 +37,5 @@ export async function deleteMyAccount(accessToken: string): Promise<void> {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error((data as { detail?: string }).detail ?? m.my_account_delete_error());
-  }
+  if (!response.ok) throw await apiErrorFromResponse(response, m.my_account_delete_error());
 }

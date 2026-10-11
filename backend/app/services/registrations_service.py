@@ -42,6 +42,7 @@ from app.schemas import (
 )
 from app.services import allocations_service, payments_service, people_service
 from app.services import product_inventory as inventory
+from app.services.errors import ApiHTTPException
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.utils import make_id, registration_to_dict
 
@@ -59,7 +60,7 @@ async def get_registration_or_404(db: AsyncSession, registration_id: str) -> Reg
     )
     registration = result.scalar_one_or_none()
     if registration is None:
-        raise HTTPException(status_code=404, detail="Registration not found.")
+        raise ApiHTTPException(404, "registration_not_found", "Registration not found.")
     return registration
 
 
@@ -109,7 +110,7 @@ async def assign_registration_to_volunteer(
         )
     ).scalar_one_or_none()
     if locked is None:
-        raise HTTPException(status_code=404, detail="Registration not found.")
+        raise ApiHTTPException(404, "registration_not_found", "Registration not found.")
     registration = locked
     if registration.user_id == user.id:
         person = (await db.execute(select(Person).where(Person.id == registration.person_id))).scalar_one()
@@ -284,9 +285,10 @@ async def apply_registration_update(
 
     target_checked_in = body.checked_in if body.checked_in is not None else registration.checked_in
     if target_status == "cancelled" and target_checked_in:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="A checked-in registration must be unchecked before it can be cancelled.",
+        raise ApiHTTPException(
+            status.HTTP_409_CONFLICT,
+            "checked_in_cannot_cancel",
+            "A checked-in registration must be unchecked before it can be cancelled.",
         )
 
     if body.status is not None:
