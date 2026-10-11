@@ -52,7 +52,7 @@ test("Classic utilities and portalled admin scope consume separate tokens", asyn
   });
   expect(colors).toEqual({
     background: "rgb(18, 18, 18)",
-    primary: "rgb(90, 127, 240)",
+    primary: "rgb(107, 139, 245)",
     weight: "700",
     classic: { background: "rgb(18, 18, 18)", primary: "rgb(90, 127, 240)" },
   });

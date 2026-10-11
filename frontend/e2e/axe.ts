@@ -32,31 +32,7 @@ export const AXE_SCENARIOS: readonly AxeScenario[] = [
  * Every entry must say why it is tolerated; fix the cause and delete the entry
  * rather than extending this list. Anything not listed fails the suite.
  */
-export const ALLOWED_VIOLATIONS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  // `outline-warning` buttons set `text-warning` (#ffc107 amber) on the page
-  // background, which fails 4.5:1 wherever that background is light. Dark mode and the
-  // fixed-dark admin scope pass. Needs a theme-aware warning text token, not a
-  // per-button override.
-  // The admin shell fails color-contrast in every scenario (muted `text-subtle` text,
-  // amber warning badges and the `text-highlight` lines, the sidebar group labels and
-  // the signed-in account name). Only that one rule fails there; the structural rules
-  // pass. Needs a semantic-color contrast pass over the admin theme scope.
-  "/admin|light": {
-    "color-contrast": "admin theme muted/warning/highlight colors",
-  },
-  "/admin|dark": {
-    "color-contrast": "admin theme muted/warning/highlight colors",
-  },
-  "/admin|narrow": {
-    "color-contrast": "admin theme muted/warning/highlight colors",
-  },
-  "/check-in|light": {
-    "color-contrast": "outline-warning button text is amber on a light background",
-  },
-  "/check-in|narrow": {
-    "color-contrast": "outline-warning button text is amber on a light background",
-  },
-};
+export const ALLOWED_VIOLATIONS: Readonly<Record<string, Readonly<Record<string, string>>>> = {};
 
 export async function expectNoAxeViolations(
   page: Page,

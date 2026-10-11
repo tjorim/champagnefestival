@@ -57,7 +57,7 @@ project.
 viewport. Shared helpers live in `axe.ts`. To cover a new route, add it to the
 route list in the matching spec.
 
-Violations that predate the suite are recorded in `ALLOWED_VIOLATIONS` in `axe.ts`,
+A violation that cannot be fixed yet is recorded in `ALLOWED_VIOLATIONS` in `axe.ts`,
 keyed by `route|scenario`, each with a reason. Fix the cause and delete the entry
 instead of adding more; anything not listed fails the run. Contrast beyond what axe can
 compute and screen-reader behavior still need manual review.
