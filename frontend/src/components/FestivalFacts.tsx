@@ -39,29 +39,25 @@ const FestivalFacts = ({
       <div className="site-container mx-auto flex w-full flex-wrap items-center justify-between gap-x-10 gap-y-5 py-5">
         <dl className="m-0 flex flex-wrap gap-x-10 gap-y-4">
           {dateRange && (
-            <div className="flex items-center gap-3">
-              <Icon icon={CalendarDaysIcon} className="text-2xl text-primary" />
-              <div>
-                <dt className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-                  {m.festival_facts_when()}
-                </dt>
-                <dd className="m-0 text-lg font-semibold">{dateRange}</dd>
-              </div>
+            <div className="grid grid-flow-col grid-rows-2 items-center justify-start gap-x-3">
+              <Icon icon={CalendarDaysIcon} className="row-span-2 text-2xl text-primary" />
+              <dt className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+                {m.festival_facts_when()}
+              </dt>
+              <dd className="m-0 text-lg font-semibold">{dateRange}</dd>
             </div>
           )}
           {venue && (
-            <div className="flex items-center gap-3">
-              <Icon icon={MapPinIcon} className="text-2xl text-primary" />
-              <div>
-                <dt className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
-                  {m.festival_facts_where()}
-                </dt>
-                <dd className="m-0 text-lg font-semibold">
-                  <a href="#map" className="text-inherit underline-offset-4 hover:underline">
-                    {venue}
-                  </a>
-                </dd>
-              </div>
+            <div className="grid grid-flow-col grid-rows-2 items-center justify-start gap-x-3">
+              <Icon icon={MapPinIcon} className="row-span-2 text-2xl text-primary" />
+              <dt className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+                {m.festival_facts_where()}
+              </dt>
+              <dd className="m-0 text-lg font-semibold">
+                <a href="#map" className="text-inherit underline-offset-4 hover:underline">
+                  {venue}
+                </a>
+              </dd>
             </div>
           )}
         </dl>

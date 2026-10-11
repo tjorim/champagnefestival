@@ -49,6 +49,19 @@ This is test/dev tooling only — `frontend/src/config/oidc.ts` and
 flow works exactly as before for anyone not opting into the authenticated
 project.
 
+## Accessibility scans
+
+`accessibility.spec.ts` (public routes) and `accessibility.authenticated.spec.ts`
+(admin shell) run `@axe-core/playwright` with the `wcag2a`, `wcag2aa`, `wcag21a` and
+`wcag21aa` tags in three scenarios: light, dark (via `emulateMedia`) and a 375px-wide
+viewport. Shared helpers live in `axe.ts`. To cover a new route, add it to the
+route list in the matching spec.
+
+Violations that predate the suite are recorded in `ALLOWED_VIOLATIONS` in `axe.ts`,
+keyed by `route|scenario`, each with a reason. Fix the cause and delete the entry
+instead of adding more; anything not listed fails the run. Contrast beyond what axe can
+compute and screen-reader behavior still need manual review.
+
 ## Concurrent development servers
 
 If another app occupies port 5173, run `PLAYWRIGHT_PORT=5174 pnpm test:e2e`.
