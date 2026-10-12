@@ -77,8 +77,8 @@ max-age=60`; MCP `find_stand`) publishes only the *labels* of areas that carry a
 organization (any type, lineup or not) with a stand in the edition's plans it returns `stands: [{event_id, date, room_name, label}]`:
 one entry per day/room the organization has an area, from active events only, for active
 organizations only. `x`, `y`, `rotation`, sizes, icons, layout/area ids, tables,
-registrations, guests, capacities and allocations are deliberately absent, so this
-contract does not apply to the stand list; the floor plan below is its own
+registrations, guests, capacities and allocations are deliberately absent, so the
+coordinate contract above does not apply to the stand list; the floor plan below is its own
 privacy-reviewed payload. Stands are only published while the festival is on: from the
 first active event day through `STANDS_VISIBLE_DAYS_AFTER` (7) days after the last one,
 by Europe/Brussels date. Outside that window `organizations` is empty (organizers may
