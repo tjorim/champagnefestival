@@ -417,7 +417,7 @@ function ServerAdminDataTable<T extends RowData>({
             </Button>
           ))}
       </div>
-      <ul className="space-y-2 md:hidden">
+      <ul className="list-none space-y-2 p-0 md:hidden">
         {table.getRowModel().rows.map((row) => (
           <li key={row.id} className="space-y-2 rounded-md border border-border p-3 break-words">
             {renderCard(row.original)}

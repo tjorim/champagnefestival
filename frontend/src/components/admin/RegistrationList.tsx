@@ -1010,7 +1010,7 @@ export default function RegistrationList({
       <Card tone="secondary">
         <CardHeader className="pb-2">
           {/* Row 1: title + stats + add */}
-          <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold">{m.admin_registrations_tab_header()}</span>
               <span className="text-subtle text-sm">
@@ -1027,7 +1027,7 @@ export default function RegistrationList({
                 </span>
               </span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <ColumnVisibilityDropdown table={table} tableId="registrations" />
               <Button
                 variant="outline"

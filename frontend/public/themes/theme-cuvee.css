@@ -1134,7 +1134,8 @@
     /* Guard against long locale strings (nl/de compounds) crowding the frame */
     .cuvee-hero__title {
       font-size: clamp(2rem, 8.5vw, 3.4rem);
-      overflow-wrap: break-word;
+      /* "anywhere" also lowers the min-content width, so a long word cannot widen the hero grid track. */
+      overflow-wrap: anywhere;
     }
 
     .features {
