@@ -142,6 +142,12 @@
     padding: 0 !important;
   }
 
+  /* Some themes pad the standalone page below the fixed header; the sidebar layout must sit
+     flush against it. */
+  .standalone-main:has(> #admin.admin-authenticated) {
+    padding-top: 0;
+  }
+
   /* Two-column flex layout */
   .admin-layout {
     display: flex;

@@ -289,6 +289,12 @@
 @custom-variant riviera (&:where(html[data-visual-theme="riviera"] *));
 
 @layer components {
+  /* The fixed standalone navbar fills the body inset (--header-height), so no strip of page
+     background shows between it and the content below. Themes may override this. */
+  .standalone-navbar {
+    min-height: var(--header-height, 4rem);
+  }
+
   /* Runtime themes retint the language control through theme variables, which
      remain the source of truth. */
   .site-lang-toggle {

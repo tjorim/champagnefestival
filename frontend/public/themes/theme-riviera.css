@@ -63,7 +63,7 @@
 
   .App {
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .skip-link {
@@ -189,6 +189,12 @@
     html[data-visual-theme="riviera"] body {
       padding-top: 0;
       padding-left: 18rem;
+    }
+
+    /* Standalone pages have no side rail: keep the body inset for the fixed top navbar instead. */
+    html[data-visual-theme="riviera"] body:has(.standalone-app) {
+      padding-top: var(--header-height);
+      padding-left: 0;
     }
 
     /* The sidebar takes 18rem of the viewport, so the standard breakpoint widths

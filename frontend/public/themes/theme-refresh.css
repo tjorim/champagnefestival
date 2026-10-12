@@ -43,7 +43,7 @@
 
   .App {
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .skip-link {
@@ -854,7 +854,7 @@
     }
 
     .standalone-navbar {
-      min-height: auto;
+      min-height: var(--header-height);
     }
 
     .standalone-navbar .site-fluid-container {
