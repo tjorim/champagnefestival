@@ -365,26 +365,6 @@
     color: var(--layout-subtle);
   }
 
-  /* In-section tabs (Announcements | Compose & send). */
-  .admin-section-tabs {
-    gap: 0.5rem;
-  }
-
-  .admin-section-tabs [data-slot="tabs-trigger"] {
-    padding: 0.35rem 0.85rem;
-    color: var(--surface-foreground);
-    font-weight: 500;
-    background: var(--surface-muted);
-    border: 1px solid var(--surface-border);
-    border-radius: 0.375rem;
-  }
-
-  .admin-section-tabs [data-slot="tabs-trigger"][data-active] {
-    color: var(--surface-primary-foreground);
-    background: var(--surface-primary);
-    border-color: transparent;
-  }
-
   .admin-auth-status .lucide-circle-check {
     color: #4caf82 !important;
     font-size: 0.7rem;

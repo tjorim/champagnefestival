@@ -18,7 +18,7 @@ export default function AnnouncementsSection({ authHeaders }: AnnouncementsSecti
   const [tab, setTab] = useState<AnnouncementsTab>("announcements");
   return (
     <Tabs value={tab} onValueChange={(value) => setTab(value as AnnouncementsTab)}>
-      <TabsList className="admin-section-tabs mb-4 gap-2">
+      <TabsList variant="pills" className="mb-4">
         <TabsTrigger value="announcements">{m.admin_announcements_section()}</TabsTrigger>
         <TabsTrigger value="compose">{m.admin_composer_section()}</TabsTrigger>
       </TabsList>
