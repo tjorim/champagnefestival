@@ -68,12 +68,28 @@ export async function seedVisualTheme(page: Page, theme: string): Promise<void> 
  */
 export const ALLOWED_VIOLATIONS: Readonly<Record<string, Readonly<Record<string, string>>>> = {};
 
+/**
+ * Waits for finite CSS animations (the admin content pane fades in over 200ms) to finish, so axe
+ * never measures contrast against a half-transparent element. Infinite ones (spinners) are skipped.
+ */
+async function settleAnimations(page: Page): Promise<void> {
+  await page.evaluate(() =>
+    Promise.all(
+      document
+        .getAnimations()
+        .filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)),
+    ),
+  );
+}
+
 export async function expectNoAxeViolations(
   page: Page,
   route: string,
   scenario: AxeScenario,
   theme: string = DEFAULT_AXE_THEME,
 ): Promise<void> {
+  await settleAnimations(page);
   const results = await new AxeBuilder({ page }).withTags(WCAG_TAGS).analyze();
   const allowed = ALLOWED_VIOLATIONS[`${theme}|${route}|${scenario.name}`] ?? {};
   const violations = results.violations
