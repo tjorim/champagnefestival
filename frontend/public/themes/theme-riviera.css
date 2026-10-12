@@ -8,6 +8,8 @@
   :root {
     --primary-color: #007f83;
     --secondary-color: #ff7448;
+    /* Orange deep enough for text on cream and for cream text on orange (5:1). */
+    --accent-strong: #c2410c;
     --text-color: #12323b;
     --text-muted: #5f7680;
     --background-color: #f7ecd2;
@@ -293,7 +295,7 @@
     font-weight: 950;
     text-transform: uppercase;
     letter-spacing: 0.16em;
-    background: var(--secondary-color);
+    background: var(--accent-strong);
     border-radius: 999px;
     box-shadow: 4px 4px 0 rgba(18, 50, 59, 0.18);
   }
@@ -565,7 +567,7 @@
 
   .countdown-value {
     display: block;
-    color: var(--secondary-color);
+    color: var(--accent-strong);
     font-size: clamp(2rem, 4vw, 3.4rem);
     font-weight: 950;
     line-height: 1;
@@ -711,6 +713,22 @@
   .standalone-document-main #privacy-policy .site-content-column {
     color: var(--text-color) !important;
     background-color: var(--surface-color-strong) !important;
+  }
+
+  /* The default warning yellow disappears on the cream page. */
+  .standalone-main #check-in .text-highlight,
+  .standalone-main #my-registrations .text-highlight {
+    color: var(--primary-color) !important;
+    --layout-highlight: var(--primary-color) !important;
+  }
+
+  /* The admin scope is always dark, so it keeps a dark palette instead of Riviera's cream one. */
+  [data-theme-scope="admin"] {
+    --primary-color: #8aa4f8;
+    --secondary-color: #7c4fe0;
+    --ink: #f0f0f0;
+    --text-color: #f0f0f0;
+    --text-muted: #c5c5c5;
   }
 
   .standalone-main #check-in .text-content,

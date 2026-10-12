@@ -83,6 +83,14 @@
     color-scheme: dark;
   }
 
+  /* The admin scope is always dark, so it keeps a dark palette in both paper and ink modes. */
+  [data-theme-scope="admin"] {
+    --mil-accent: #ec8e9b;
+    --primary-color: #8aa4f8;
+    --text-color: #f0f0f0;
+    --text-muted: #c5c5c5;
+  }
+
   /* Public surfaces only: square corners, no shadows, serif display type and
      accent links. The admin scope keeps its own fixed palette and geometry. */
   :is(main, .site-header, .site-footer, .standalone-app, [data-slot]):not(

@@ -910,6 +910,17 @@
     --layout-content: var(--ink) !important;
   }
 
+  /* Check-in stays on the dark green stock, so its text keeps the light ink. */
+  .standalone-main #check-in [data-slot="button"][data-variant="outline-warning"] {
+    --surface-foreground: #efe9d8;
+  }
+
+  .standalone-main #check-in .text-content,
+  .standalone-main #check-in [data-slot="alert"] {
+    color: #efe9d8 !important;
+    --layout-content: #efe9d8 !important;
+  }
+
   /* The default warning yellow reads as foil gold on label stock */
   .standalone-main .text-highlight,
   .standalone-document-main .text-highlight,

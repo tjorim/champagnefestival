@@ -21,6 +21,11 @@
     --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   }
 
+  /* The admin scope keeps its lightened brand blue so tinted badges and highlights stay legible. */
+  [data-theme-scope="admin"] {
+    --primary-color: #8aa4f8;
+  }
+
   html {
     scroll-behavior: smooth;
   }
@@ -375,8 +380,10 @@
   }
 
   [data-visual-theme="classic"] {
-    /* Secondary palette colour behind the semantic subtle/progress tokens */
-    --base-secondary: #9a5df6;
+    /* Secondary palette colour behind the progress track and neutral badges; deep enough for
+       white text (5.2:1). Subtle text uses the muted text colour instead (7:1 on cards). */
+    --base-secondary: #7c4fe0;
+    --layout-subtle: var(--text-muted);
 
     /* Focus styles for accessibility */
     --focus-ring-color: rgba(90, 127, 240, 0.5);

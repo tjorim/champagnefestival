@@ -233,6 +233,11 @@
     --surface-muted-foreground: #c5c5c5;
     --surface-border: rgb(255 255 255 / 0.1);
     --surface-destructive: #e05a5a;
+    /* Runtime themes retint these layout tokens for their own (often light) page. The admin
+       scope is always dark, so it keeps dark-surface values whatever the active theme says. */
+    --layout-content: #f0f0f0;
+    --layout-subtle: #c5c5c5;
+    --layout-highlight: var(--base-warning);
   }
 }
 
