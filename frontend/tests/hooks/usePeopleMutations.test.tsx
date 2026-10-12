@@ -292,6 +292,29 @@ describe("optimistic people mutations", () => {
     },
   );
 
+  it("ends a membership by removing only the member role from people pages", async () => {
+    const h = harness();
+    const gate = deferred();
+    server.use(
+      http.delete("/api/members/:id", async () => {
+        await gate.promise;
+        h.rows()[0]!.roles = ["volunteer"];
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    let promise!: Promise<unknown>;
+    act(() => {
+      promise = h.result.current.deleteMemberMutation.mutateAsync("a");
+    });
+    await waitFor(() => expect(h.cached().items[0]?.roles).toEqual(["volunteer"]));
+    expect(h.cached().items[0]?.name).toBe("Original a");
+    expect(h.cached().total).toBe(2);
+    gate.resolve();
+    await act(async () => {
+      await promise;
+    });
+  });
+
   it("removes only the volunteer role and periods from people pages", async () => {
     const h = harness();
     const gate = deferred();

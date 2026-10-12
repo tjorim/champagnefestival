@@ -1942,7 +1942,7 @@ class ChampagneFestivalMcpBackend:
         )
 
     async def delete_member(self, person_id: str) -> dict:
-        """Delete a member and their registrations. Requires the ``admin`` role."""
+        """Remove the member role from a person; the person and their registrations are kept. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_members.delete_member(self.session_factory, self._actor(), person_id)
 

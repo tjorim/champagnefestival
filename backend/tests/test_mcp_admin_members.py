@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from sqlalchemy import select
 
 from app.mcp.admin import members as mcp_members
-from app.models import Edition, Event, Registration, Venue
+from app.models import AuditEntry, Edition, Event, Registration, Venue
 from tests.helpers import mcp_session_factory
 
 
@@ -135,7 +136,7 @@ async def test_update_member_eid_document_number_conflict(db_session):
         await mcp_members.update_member(factory, "admin-1", bob["id"], eid_document_number="BEI998877")
 
 
-async def test_delete_member_cascades_registrations(db_session):
+async def test_delete_member_keeps_person_and_registrations(db_session):
     factory = mcp_session_factory(db_session)
     member = await mcp_members.create_member(factory, "admin-1", name="Alice")
 
@@ -163,8 +164,10 @@ async def test_delete_member_cascades_registrations(db_session):
     result = await mcp_members.delete_member(factory, "admin-1", member["id"])
     assert result == {"deleted": True, "id": member["id"]}
 
-    remaining = await db_session.get(Registration, "reg-1")
-    assert remaining is None
+    # The registration (attendance history) survives; only the membership ends.
+    assert await db_session.get(Registration, "reg-1") is not None
+    entry = await db_session.scalar(select(AuditEntry).where(AuditEntry.action == "member_role_removed"))
+    assert entry is not None and entry.resource_id == member["id"]
 
     with pytest.raises(ValueError, match="not found"):
         await mcp_members.get_member(factory, member["id"])

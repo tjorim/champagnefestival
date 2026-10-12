@@ -26,7 +26,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.models import Person
 from app.schemas import PersonCreate, PersonUpdate
-from app.services import people_service
 from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity, normalise_roles, parse_phone
 from app.utils import get_or_404, make_id, person_to_dict
@@ -40,6 +39,10 @@ def ensure_member_role(person: Person) -> None:
 
 def has_member_role(person: Person) -> bool:
     return "member" in (person.roles or [])
+
+
+def remove_member_role(person: Person) -> None:
+    person.roles = sorted(role for role in (person.roles or []) if role != "member")
 
 
 async def ensure_unique_fields(
@@ -185,10 +188,24 @@ async def apply_member_update(
 
 
 async def delete_member(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
-    """Remove a member (and cascade-delete their registrations).
+    """Remove the member role from a person (soft archive).
 
-    Delegates the shared cascade-delete/audit/live-publish routine to
-    ``people_service.delete_person``, tagged with the ``member_deleted`` audit
-    action instead of ``person_deleted``.
+    The underlying ``Person`` is kept intact, together with their registrations,
+    check-ins and audit history: attendance is what member benefits are earned from, and
+    someone who stops being a member is still a visitor. Only the ``member`` role is removed
+    (mirroring ``volunteers_service.delete_volunteer``). Erasing a person and their
+    registrations is the separate ``people_service.delete_person``.
     """
-    return await people_service.delete_person(db, person, actor=actor, request_id=request_id, action="member_deleted")
+    person_id = person.id
+    remove_member_role(person)
+    await write_audit_entry(
+        db,
+        actor=actor,
+        action="member_role_removed",
+        resource_type="person",
+        resource_id=person_id,
+        request_id=request_id,
+        details={},
+    )
+    await db.commit()
+    return {"deleted": True, "id": person_id}

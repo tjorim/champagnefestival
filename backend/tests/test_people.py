@@ -723,11 +723,11 @@ async def test_member_duplicate_national_register_number_detected_despite_format
 
 
 @pytest.mark.anyio
-async def test_delete_member_removes_existing_registrations(client):
-    """Deleting a member with existing registrations must not hit the registrations FK RESTRICT."""
+async def test_delete_member_removes_only_the_member_role(client):
+    """ "Delete member" ends the membership: the person, their other roles and their registrations stay."""
     member = await client.post(
         "/api/members",
-        json={"name": "Delete Member", "email": "delete.member@example.com"},
+        json={"name": "Former Member", "email": "former.member@example.com", "roles": ["volunteer"]},
         headers=ADMIN_HEADERS,
     )
     assert member.status_code == 201
@@ -750,15 +750,21 @@ async def test_delete_member_removes_existing_registrations(client):
     assert registration.status_code == 201
     registration_id = registration.json()["id"]
 
-    async with live_bus.subscribe() as queue:
-        r = await client.delete(f"/api/members/{member_id}", headers=ADMIN_HEADERS)
-        live_event = await queue.get()
-
+    r = await client.delete(f"/api/members/{member_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
-    assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 404
-    assert live_event.topic == "registration"
-    assert live_event.action == "deleted"
-    assert live_event.scope.registration_id == registration_id
+
+    # No longer a member ...
+    assert (await client.get(f"/api/members/{member_id}", headers=ADMIN_HEADERS)).status_code == 404
+    members = await client.get("/api/people", params={"role": "member"}, headers=ADMIN_HEADERS)
+    assert member_id not in {item["id"] for item in members.json()["items"]}
+    # ... but still a person, with their other roles and their registration intact.
+    person = await client.get(f"/api/people/{member_id}", headers=ADMIN_HEADERS)
+    assert person.status_code == 200
+    assert person.json()["roles"] == ["volunteer"]
+    assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 200
+
+    # Removing again is a not-found, as for any non-member.
+    assert (await client.delete(f"/api/members/{member_id}", headers=ADMIN_HEADERS)).status_code == 404
 
 
 @pytest.mark.anyio

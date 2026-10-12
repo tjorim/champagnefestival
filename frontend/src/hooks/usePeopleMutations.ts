@@ -158,7 +158,15 @@ export function usePeopleMutations({
           m.admin_members_error_delete(),
         ),
       ),
-    ...optimistic((id: string) => ({ id, update: () => null })),
+    // Ending a membership only drops the role: the person (and their registrations) stay in the
+    // directory, like deleteVolunteerMutation.
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => ({
+        ...person,
+        roles: person.roles.filter((role) => role !== "member"),
+      }),
+    })),
     retry: false,
   });
 

@@ -14,9 +14,6 @@ national-register/eID checks that predated #860's module split.
 Unifying it required renormalising already-stored rows so the unique
 constraint stayed valid under the stricter rule; that repair is preserved in
 the database baseline.
-``delete_person``'s cascade is reused by ``members_service.delete_member`` via
-its ``action`` parameter.
-
 Raises ``HTTPException`` directly (matching the pre-existing shared helpers
 this consolidates, same convention as ``app/services/editions_service.py``)
 rather than the ``ServiceError`` hierarchy in ``app/services/errors.py``.
@@ -288,15 +285,8 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     return person_to_dict(person)
 
 
-async def delete_person(
-    db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None, action: str = "person_deleted"
-) -> dict:
-    """Delete a person and cascade-delete their registrations.
-
-    ``action`` lets ``app.services.members_service.delete_member`` reuse this
-    routine verbatim with its own audit action name (``"member_deleted"``)
-    instead of keeping a byte-for-byte duplicate.
-    """
+async def delete_person(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+    """Delete a person and cascade-delete their registrations (erasure, not a role change)."""
     person_id = person.id
     result = await db.execute(
         select(Registration).options(selectinload(Registration.event)).where(Registration.person_id == person_id)
@@ -316,7 +306,7 @@ async def delete_person(
     await write_audit_entry(
         db,
         actor=actor,
-        action=action,
+        action="person_deleted",
         resource_type="person",
         resource_id=person_id,
         request_id=request_id,
