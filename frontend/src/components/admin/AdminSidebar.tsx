@@ -18,6 +18,7 @@ import {
   MapPinIcon,
   MegaphoneIcon,
   MenuIcon,
+  HistoryIcon,
   NotebookTextIcon,
   RotateCwIcon,
   SendIcon,
@@ -199,6 +200,13 @@ export default function AdminSidebar({
               />
 
               <SidebarItem
+                itemKey="contact-messages"
+                icon={MailIcon}
+                label={m.admin_contact_messages_section()}
+                {...itemProps}
+              />
+
+              <SidebarItem
                 itemKey="scratchpad"
                 icon={NotebookTextIcon}
                 label={m.admin_scratchpad_section()}
@@ -235,15 +243,7 @@ export default function AdminSidebar({
                 groupKey="content"
                 icon={LayersIcon}
                 label={m.admin_content_tab()}
-                itemKeys={[
-                  "organizations",
-                  "faq",
-                  "announcements",
-                  "composer",
-                  "policies",
-                  "contact-messages",
-                  "settings",
-                ]}
+                itemKeys={["organizations", "faq", "announcements", "composer", "policies"]}
                 {...groupProps}
               >
                 <SidebarItem
@@ -274,18 +274,6 @@ export default function AdminSidebar({
                   itemKey="policies"
                   icon={ShieldIcon}
                   label={m.admin_policies_section()}
-                  {...itemProps}
-                />
-                <SidebarItem
-                  itemKey="contact-messages"
-                  icon={MailIcon}
-                  label={m.admin_contact_messages_section()}
-                  {...itemProps}
-                />
-                <SidebarItem
-                  itemKey="settings"
-                  icon={SlidersHorizontalIcon}
-                  label={m.admin_content_settings_section()}
                   {...itemProps}
                 />
               </SidebarGroup>
@@ -359,11 +347,20 @@ export default function AdminSidebar({
               />
               <SidebarItem
                 itemKey="audit-log"
-                icon={NotebookTextIcon}
+                icon={HistoryIcon}
                 label={m.admin_audit_log_tab()}
                 {...itemProps}
               />
             </SidebarGroup>
+          )}
+
+          {canManageAdminSections && (
+            <SidebarItem
+              itemKey="settings"
+              icon={SlidersHorizontalIcon}
+              label={m.admin_content_settings_section()}
+              {...itemProps}
+            />
           )}
         </nav>
 

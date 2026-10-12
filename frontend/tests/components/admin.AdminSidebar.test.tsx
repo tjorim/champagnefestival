@@ -80,6 +80,7 @@ describe("AdminSidebar", () => {
     ).toEqual([
       "Registrations2",
       "Waitlist",
+      "Contact messages",
       "Scratchpad",
       "Events",
       "Editions",
@@ -91,8 +92,6 @@ describe("AdminSidebar", () => {
       "Announcements",
       "Composer",
       "Legal Policies",
-      "Contact messages",
-      "Settings",
       "Venue",
       "Venues & Rooms",
       "Floor Plans",
@@ -101,6 +100,7 @@ describe("AdminSidebar", () => {
       "Members4",
       "Volunteers5",
       "Insights",
+      "Settings",
     ]);
   });
 
