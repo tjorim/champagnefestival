@@ -77,14 +77,42 @@ max-age=60`; MCP `find_stand`) publishes only the *labels* of areas that carry a
 organization (any type, lineup or not) with a stand in the edition's plans it returns `stands: [{event_id, date, room_name, label}]`:
 one entry per day/room the organization has an area, from active events only, for active
 organizations only. `x`, `y`, `rotation`, sizes, icons, layout/area ids, tables,
-registrations, guests, capacities and allocations are deliberately absent, so this
-contract does not apply to the public response; a future public plan would need its own
+registrations, guests, capacities and allocations are deliberately absent, so the
+coordinate contract above does not apply to the stand list; the floor plan below is its own
 privacy-reviewed payload. Stands are only published while the festival is on: from the
 first active event day through `STANDS_VISIBLE_DAYS_AFTER` (7) days after the last one,
 by Europe/Brussels date. Outside that window `organizations` is empty (organizers may
 still be moving people around beforehand, and the list is stale afterwards). Inside it
 there is no publish flag, so stands appear as soon as they are assigned. An inactive
 edition returns 404.
+
+## Public floor plan subset
+
+`GET /api/editions/{edition_id}/plan` (unauthenticated, `Cache-Control: public,
+max-age=60`; #1253) publishes the geometry of the same plans for the homepage's "Show on
+plan" view. It has its own response model (`EditionPlanOut`) and is built by
+`load_edition_plan` in `app/services/stands_service.py`, which loads only rooms and areas
+and never `Layout.tables`, so nothing from the seating plan can reach it. The shape is
+`days: [{event_id, date, rooms: [{id, name, width_m, length_m, color, areas: [{id, label,
+icon, x, y, rotation, width_m, length_m, organization_id}]}]}]`:
+
+- **Which areas:** every area of an active event, including those without an organization
+  (stage, entrance, catering, ...) so visitors can orient themselves. Areas owned by an
+  inactive organization are omitted, as in the stand list.
+- **Which rooms and days:** active event days in date order; a room appears only when it has
+  at least one published area.
+- **Tables:** never. There are no table shapes, registrations, guests, capacities,
+  allocations or layout ids; `tests/test_edition_plan.py` asserts their absence.
+- **Window:** the same as the stand list (first active event day through
+  `STANDS_VISIBLE_DAYS_AFTER` days after the last one, Europe/Brussels); `days` is empty
+  outside it and an inactive edition returns 404.
+- **Rendering:** `x`/`y`/`rotation` follow the contract above. The frontend
+  (`PublicFloorPlanDialog`) converts each area's pixel size to a percentage of the room
+  canvas (`planAreaBox` in `frontend/src/utils/planApi.ts`) so the plan scales with its
+  container, and keeps the canvas's natural size as a minimum so it scrolls sideways on a
+  phone instead of shrinking labels.
+- **Not exposed elsewhere:** the public MCP does not get the plan; `find_stand` already
+  answers "where is X?". Printing the placemats from this data stays an admin concern.
 
 ## Scope
 

@@ -3,6 +3,7 @@ import type { PeopleCountParams, PeopleListParams } from "@/utils/adminPeopleQue
 export const queryKeys = {
   activeEdition: ["active-edition"] as const,
   editionStands: (editionId: string) => ["active-edition", "stands", editionId] as const,
+  editionPlan: (editionId: string) => ["active-edition", "plan", editionId] as const,
   eventCategories: ["event-categories"] as const,
   productCategories: ["product-categories"] as const,
   faq: (locale: string) => ["faq", locale] as const,

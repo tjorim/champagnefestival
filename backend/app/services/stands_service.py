@@ -14,6 +14,9 @@ around, and afterwards the information is stale. Outside the window the list is
 empty. Inside it stands appear as soon as they are assigned (no publish flag);
 layout-editor moves show after the response cache window.
 
+``load_edition_plan`` (#1253) publishes the geometry of those same plans (rooms and
+areas, still no tables) under the same window for the public floor-plan view.
+
 Shared by ``app.routers.editions`` (REST) and ``app.mcp.public`` (MCP).
 """
 
@@ -46,13 +49,11 @@ def stands_window_is_open(event_days: list[date], today: date | None = None) -> 
     return min(event_days) <= today <= max(event_days) + timedelta(days=STANDS_VISIBLE_DAYS_AFTER)
 
 
-async def load_edition_stands(db: AsyncSession, edition: Edition) -> dict:
-    """Return ``{"edition_id", "organizations"}`` for the edition's stands.
+async def _load_published_layouts(db: AsyncSession, edition: Edition) -> list[Layout]:
+    """Layouts of the edition's active events, or ``[]`` outside the publication window.
 
-    Empty outside the publication window (see module docstring). Only areas of
-    active events that name an active organization are included; organizations
-    without a stand are omitted. Stands are ordered by day, then room, then
-    label; organizations by name.
+    Only rooms and areas are loaded (never ``Layout.tables``), so nothing from the
+    seating plan can reach a public response built on top of this.
     """
     event_days = list(
         (await db.execute(select(Event.date).where(Event.edition_id == edition.id, Event.active.is_(True))))
@@ -60,8 +61,7 @@ async def load_edition_stands(db: AsyncSession, edition: Edition) -> dict:
         .all()
     )
     if not stands_window_is_open(event_days):
-        return {"edition_id": edition.id, "organizations": []}
-
+        return []
     layouts = (
         (
             await db.execute(
@@ -73,30 +73,41 @@ async def load_edition_stands(db: AsyncSession, edition: Edition) -> dict:
         .scalars()
         .all()
     )
-    stand_organization_ids = {
-        area.organization_id
-        for layout in layouts
-        if layout.event.active
-        for area in layout.areas
-        if area.organization_id is not None
+    return [layout for layout in layouts if layout.event.active]
+
+
+async def _active_organizations(db: AsyncSession, layouts: list[Layout]) -> dict[int, Organization]:
+    """Active organizations that own at least one area of the given layouts, by id."""
+    organization_ids = {
+        area.organization_id for layout in layouts for area in layout.areas if area.organization_id is not None
     }
-    if not stand_organization_ids:
-        return {"edition_id": edition.id, "organizations": []}
-    organizations = {
+    if not organization_ids:
+        return {}
+    return {
         organization.id: organization
         for organization in (
             await db.execute(
-                select(Organization).where(Organization.id.in_(stand_organization_ids), Organization.active.is_(True))
+                select(Organization).where(Organization.id.in_(organization_ids), Organization.active.is_(True))
             )
         )
         .scalars()
         .all()
     }
 
+
+async def load_edition_stands(db: AsyncSession, edition: Edition) -> dict:
+    """Return ``{"edition_id", "organizations"}`` for the edition's stands.
+
+    Empty outside the publication window (see module docstring). Only areas of
+    active events that name an active organization are included; organizations
+    without a stand are omitted. Stands are ordered by day, then room, then
+    label; organizations by name.
+    """
+    layouts = await _load_published_layouts(db, edition)
+    organizations = await _active_organizations(db, layouts)
+
     stands_by_organization: dict[int, list[dict]] = {}
     for layout in layouts:
-        if not layout.event.active:
-            continue
         for area in layout.areas:
             if area.organization_id not in organizations or not area.label.strip():
                 continue
@@ -117,3 +128,54 @@ async def load_edition_stands(db: AsyncSession, edition: Edition) -> dict:
         )
     result.sort(key=lambda item: (str(item["name"]).casefold(), item["organization_id"]))
     return {"edition_id": edition.id, "organizations": result}
+
+
+async def load_edition_plan(db: AsyncSession, edition: Edition) -> dict:
+    """Return ``{"edition_id", "days"}``: the public floor plan of the edition (#1253).
+
+    One entry per active event day, each with the rooms that have at least one area
+    and, per room, its geometry and areas (stands, stage, entrance, catering, ...).
+    Areas whose organization is inactive are omitted, as in ``load_edition_stands``;
+    areas without an organization stay, so visitors can orient themselves. Tables are
+    never loaded. Empty outside the publication window. Days are ordered by date, rooms
+    by name, areas by label.
+    """
+    layouts = await _load_published_layouts(db, edition)
+    organizations = await _active_organizations(db, layouts)
+
+    days: dict[str, dict] = {}
+    for layout in layouts:
+        areas = [
+            {
+                "id": area.id,
+                "label": area.label,
+                "icon": area.icon,
+                "x": area.x,
+                "y": area.y,
+                "rotation": area.rotation,
+                "width_m": area.width_m,
+                "length_m": area.length_m,
+                "organization_id": area.organization_id,
+            }
+            for area in layout.areas
+            if area.organization_id is None or area.organization_id in organizations
+        ]
+        if not areas:
+            continue
+        areas.sort(key=lambda area: (str(area["label"]).casefold(), str(area["id"])))
+        day = days.setdefault(layout.event_id, {"event_id": layout.event_id, "date": layout.event.date, "rooms": []})
+        room = layout.room
+        day["rooms"].append(
+            {
+                "id": room.id,
+                "name": room.name,
+                "width_m": room.width_m,
+                "length_m": room.length_m,
+                "color": room.color,
+                "areas": areas,
+            }
+        )
+    result = sorted(days.values(), key=lambda day: (day["date"], day["event_id"]))
+    for day in result:
+        day["rooms"].sort(key=lambda room: (str(room["name"]).casefold(), str(room["id"])))
+    return {"edition_id": edition.id, "days": result}

@@ -480,6 +480,15 @@ outside that window; inside it they appear as soon as they are assigned. Inactiv
 editions, events and organizations are excluded. The public MCP tool
 `find_stand` answers "where is X?" from the same service.
 
+`GET /api/editions/{edition_id}/plan` (#1253) is the public, cacheable (60 s) floor plan
+behind the homepage's "Show on plan" button: per active event day and room, the room
+geometry (`id`, `name`, `width_m`, `length_m`, `color`) and its areas (`id`, `label`, `icon`,
+`x`, `y`, `rotation`, `width_m`, `length_m`, `organization_id`). It includes areas without an
+organization (stage, entrance, ...) but never tables, registrations, guests, capacities,
+allocations or layout ids (`EditionPlanOut`; asserted in `tests/test_edition_plan.py`), uses
+the same publication window as the stands and returns 404 for inactive editions. See the
+"Public floor plan subset" section of `docs/floor-plan-coordinates.md`.
+
 ### Event categories
 
 `Event.category` is the key of an admin-managed category (`event_categories`:

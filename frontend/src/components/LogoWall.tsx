@@ -3,6 +3,7 @@ import { MapPinIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { LogoImage } from "@/components/LogoImage";
 import OrganizationDetailModal from "@/components/OrganizationDetailModal";
+import PublicFloorPlanDialog from "@/components/PublicFloorPlanDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +12,7 @@ import { m } from "@/paraglide/messages";
 import { getLocale } from "@/paraglide/runtime";
 import { cn } from "@/lib/utils";
 import { organizationDescription } from "@/utils/organizationDescription";
+import type { PlanTarget } from "@/utils/planApi";
 import { groupSponsorsByTier, sponsorTierLabel, type SponsorGroup } from "@/utils/sponsorTiers";
 import {
   hasMultipleRooms,
@@ -27,6 +29,11 @@ interface LogoWallProps {
   items?: SliderItem[];
   /** Public stand assignments per organization; organizations without one show no stand line. */
   stands?: OrganizationStands[];
+  /**
+   * Edition whose public floor plan "Show on plan" opens. Without it the button is
+   * not offered; stands only exist while the plan is published, so the two go together.
+   */
+  editionId?: string;
 }
 
 const COLLAPSED_LIMIT: Record<LogoWallType, number> = {
@@ -198,12 +205,13 @@ function LogoGroup({
  * get lighter centred rows of logo tiles in the order the organisers set (by level,
  * larger logos for higher levels, then lineup order).
  */
-function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps) {
+function LogoWall({ itemsType = "producers", items = [], stands, editionId }: LogoWallProps) {
   const gridId = useId();
   const searchId = useId();
   const [expanded, setExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<SliderItem | null>(null);
+  const [planTarget, setPlanTarget] = useState<{ target: PlanTarget; name: string } | null>(null);
   const locale = getLocale();
   const isSponsors = itemsType === "sponsors";
 
@@ -300,9 +308,29 @@ function LogoWall({ itemsType = "producers", items = [], stands }: LogoWallProps
       <OrganizationDetailModal
         item={selected}
         stands={selected ? standMap.get(selected.id) : undefined}
+        onShowOnPlan={
+          editionId && selected
+            ? (stand) => {
+                setPlanTarget({
+                  target: { organizationId: selected.id, stand },
+                  name: selected.name,
+                });
+                setSelected(null);
+              }
+            : undefined
+        }
         locale={locale}
         onClose={() => setSelected(null)}
       />
+      {editionId && (
+        <PublicFloorPlanDialog
+          editionId={editionId}
+          target={planTarget?.target ?? null}
+          organizationName={planTarget?.name ?? ""}
+          locale={locale}
+          onClose={() => setPlanTarget(null)}
+        />
+      )}
     </div>
   );
 }

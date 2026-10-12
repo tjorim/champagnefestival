@@ -144,10 +144,12 @@ function SuspendedLogoWall({
   itemsType,
   items,
   stands,
+  editionId,
 }: {
   itemsType: "producers" | "sponsors" | "vendors";
   items: SliderItem[];
   stands?: OrganizationStands[];
+  editionId?: string;
 }) {
   // Get appropriate loading text based on itemsType
   const loadingText =
@@ -169,7 +171,7 @@ function SuspendedLogoWall({
       fallback={<div className="carousel-loading">{loadingText}</div>}
       errorFallback={<div className="carousel-error">{errorText}</div>}
     >
-      <LogoWall itemsType={itemsType} items={items} stands={stands} />
+      <LogoWall itemsType={itemsType} items={items} stands={stands} editionId={editionId} />
     </SuspenseWithBoundary>
   );
 }
@@ -656,7 +658,12 @@ function App() {
           <section id="producers" className="content-section">
             <div className="site-container mx-auto w-full text-center">
               <SectionHeading id="producers-heading" title={m.producers_title()} />
-              <SuspendedLogoWall itemsType="producers" items={producers} stands={stands} />
+              <SuspendedLogoWall
+                itemsType="producers"
+                items={producers}
+                stands={stands}
+                editionId={edition.id}
+              />
             </div>
           </section>
         )}
@@ -738,7 +745,12 @@ function App() {
           <section id="vendors" className="content-section">
             <div className="site-container mx-auto w-full text-center">
               <SectionHeading id="vendors-heading" title={m.vendors_title()} />
-              <SuspendedLogoWall itemsType="vendors" items={vendors} stands={stands} />
+              <SuspendedLogoWall
+                itemsType="vendors"
+                items={vendors}
+                stands={stands}
+                editionId={edition.id}
+              />
             </div>
           </section>
         )}
@@ -747,7 +759,12 @@ function App() {
           <section id="sponsors" className="content-section highlight-section">
             <div className="site-container mx-auto w-full text-center">
               <SectionHeading id="sponsors-heading" title={m.sponsors_title()} />
-              <SuspendedLogoWall itemsType="sponsors" items={sponsors} stands={stands} />
+              <SuspendedLogoWall
+                itemsType="sponsors"
+                items={sponsors}
+                stands={stands}
+                editionId={edition.id}
+              />
             </div>
           </section>
         )}

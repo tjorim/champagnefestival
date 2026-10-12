@@ -1,7 +1,7 @@
-import { ExternalLinkIcon, MapPinIcon } from "lucide-react";
+import { ExternalLinkIcon, MapIcon, MapPinIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { LogoImage } from "@/components/LogoImage";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import {
   Dialog,
   DialogBody,
@@ -20,6 +20,8 @@ interface OrganizationDetailModalProps {
   /** The organization to show, or `null` while the dialog is closed. */
   item: SliderItem | null;
   stands?: Stand[];
+  /** Offers "Show on plan" next to each stand; omitted while no plan is published. */
+  onShowOnPlan?: (stand: Stand) => void;
   locale: string;
   onClose: () => void;
 }
@@ -42,6 +44,7 @@ function safeWebsite(website: string | undefined): string | null {
 export default function OrganizationDetailModal({
   item,
   stands = [],
+  onShowOnPlan,
   locale,
   onClose,
 }: OrganizationDetailModalProps) {
@@ -76,12 +79,32 @@ export default function OrganizationDetailModal({
                   </h3>
                   <ul className="m-0 flex list-none flex-col gap-1 p-0 text-sm">
                     {stands.map((stand) => (
-                      <li key={`${stand.event_id}|${stand.room_name}|${stand.label}`}>
-                        <span className="font-medium">
-                          {formatStandDay(stand.date, locale, "long")}
+                      <li
+                        key={`${stand.event_id}|${stand.room_name}|${stand.label}`}
+                        className="flex flex-wrap items-center gap-x-2 gap-y-1"
+                      >
+                        <span>
+                          <span className="font-medium">
+                            {formatStandDay(stand.date, locale, "long")}
+                          </span>
+                          {": "}
+                          {stand.room_name ? `${stand.label} · ${stand.room_name}` : stand.label}
                         </span>
-                        {": "}
-                        {stand.room_name ? `${stand.label} · ${stand.room_name}` : stand.label}
+                        {onShowOnPlan && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            aria-haspopup="dialog"
+                            onClick={() => onShowOnPlan(stand)}
+                          >
+                            <Icon icon={MapIcon} />
+                            {m.organization_modal_show_on_plan()}
+                            <span className="sr-only">
+                              {`: ${formatStandDay(stand.date, locale, "long")}, ${stand.label}`}
+                            </span>
+                          </Button>
+                        )}
                       </li>
                     ))}
                   </ul>

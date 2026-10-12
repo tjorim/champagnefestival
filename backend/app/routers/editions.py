@@ -23,6 +23,7 @@ from app.schemas import (
     EditionAttendanceStats,
     EditionCreate,
     EditionOut,
+    EditionPlanOut,
     EditionPublicOut,
     EditionScratchpadOut,
     EditionScratchpadUpdate,
@@ -105,6 +106,26 @@ async def get_edition_stands(
         raise HTTPException(status_code=404, detail="Edition not found.")
     response.headers["Cache-Control"] = "public, max-age=60"
     return await stands_service.load_edition_stands(db, edition)
+
+
+@router.get("/{edition_id}/plan", response_model=EditionPlanOut)
+async def get_edition_plan(
+    edition_id: str,
+    response: Response,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Public floor plan of an active edition (#1253).
+
+    Unauthenticated and safe to cache: per active event day and room, the room
+    geometry and its areas (stands, stage, entrance, ...) — nothing from tables,
+    registrations or allocations (see `app.services.stands_service`). Published in
+    the same window as the stands and empty outside it. Inactive editions 404.
+    """
+    edition = await editions_service.get_edition_or_404(db, edition_id)
+    if not edition.active:
+        raise HTTPException(status_code=404, detail="Edition not found.")
+    response.headers["Cache-Control"] = "public, max-age=60"
+    return await stands_service.load_edition_plan(db, edition)
 
 
 @router.get("", response_model=list[EditionOut], dependencies=[Depends(require_admin)])
