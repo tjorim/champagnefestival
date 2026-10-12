@@ -20,6 +20,47 @@ html[data-visual-theme="remuage"] #admin {
   --adm-radius-lg: 14px;
 }
 
+/* The admin scope is light: dark-scope tokens become the admin palette so Tailwind utilities
+   (text-foreground, bg-card, border-border, ...) agree with the --adm-* surfaces. The grape
+   sidebar keeps the dark tokens. Dialogs carry the same scope, so they match. */
+html[data-visual-theme="remuage"] [data-theme-scope="admin"] {
+  color-scheme: light;
+  --surface-background: #edf1f5;
+  --surface-foreground: #172033;
+  --surface-primary: #2144b2;
+  --surface-primary-foreground: #fff;
+  --surface-secondary: #48224d;
+  --surface-muted: #fbfcfe;
+  --surface-muted-foreground: #586577;
+  --surface-border: rgba(23, 32, 51, 0.18);
+  --surface-destructive: #a5323b;
+  --surface-success-text: #27724c;
+  --layout-content: #172033;
+  --layout-subtle: #586577;
+  --layout-highlight: #2144b2;
+}
+
+html[data-visual-theme="remuage"] .admin-sidebar {
+  /* Lighter than the shared dark red so the logout button reads on the grape sidebar (4.5:1). */
+  color-scheme: dark;
+  --surface-background: #121212;
+  --surface-foreground: #f0f0f0;
+  --surface-primary: #6b8bf5;
+  --surface-primary-foreground: #121212;
+  --surface-muted: #1e1e1e;
+  --surface-muted-foreground: #c5c5c5;
+  --surface-border: rgb(255 255 255 / 0.1);
+  --surface-destructive: #ff8a93;
+  --surface-success-text: #4caf82;
+  --layout-content: #f0f0f0;
+  --layout-subtle: #c5c5c5;
+  --layout-highlight: #ffc107;
+}
+
+html[data-visual-theme="remuage"] .admin-auth-role {
+  color: rgba(255, 255, 255, 0.82);
+}
+
 html[data-visual-theme="remuage"] #admin,
 html[data-visual-theme="remuage"] .admin-layout,
 html[data-visual-theme="remuage"] .admin-main {
@@ -51,6 +92,7 @@ html[data-visual-theme="remuage"] .admin-sidebar-brand {
   border-bottom-color: rgba(255, 255, 255, 0.18);
 }
 
+html[data-visual-theme="remuage"] #admin.admin-authenticated .admin-sidebar-brand h2#admin-title,
 html[data-visual-theme="remuage"] .admin-sidebar-brand h2#admin-title,
 html[data-visual-theme="remuage"] .admin-sidebar-brand h2#admin-title svg {
   color: #fff !important;

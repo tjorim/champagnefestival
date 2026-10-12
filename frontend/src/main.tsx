@@ -131,7 +131,8 @@ function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) 
           <LanguageSwitcher />
           <ButtonLink render={<Link to="/" />} variant="outline" size="sm">
             <Icon icon={ArrowLeftIcon} />
-            {m.back_to_site()}
+            {/* Icon-only on phones so the title keeps its room; the text stays the accessible name. */}
+            <span className="sr-only site-sm:not-sr-only">{m.back_to_site()}</span>
           </ButtonLink>
         </div>
       </div>

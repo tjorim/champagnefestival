@@ -62,28 +62,11 @@ export async function seedVisualTheme(page: Page, theme: string): Promise<void> 
 }
 
 /**
- * The Cuvée and Remuage themes override the `--adm-*` tokens and backgrounds so the admin
- * content area is light, but the shared admin scope (`data-theme-scope="admin"`, always dark)
- * still feeds light text and dark card surfaces into the same area, so text, borders and inputs
- * end up light-on-light or dark-on-dark. Fixing it means deciding whether those themes get a
- * genuinely light admin scope or follow the dark one.
- */
-const LIGHT_ADMIN_IN_DARK_SCOPE = {
-  "color-contrast":
-    "the theme skins the admin content area light inside the always-dark admin scope, so dark-scope text and surface tokens land on light surfaces",
-};
-
-/**
  * Known violations, keyed by `${theme}|${route}|${scenario}` → rule ids → reason.
  * Every entry must say why it is tolerated; fix the cause and delete the entry
  * rather than extending this list. Anything not listed fails the suite.
  */
-export const ALLOWED_VIOLATIONS: Readonly<Record<string, Readonly<Record<string, string>>>> = {
-  "cuvee|/admin|light": LIGHT_ADMIN_IN_DARK_SCOPE,
-  "cuvee|/admin|narrow": LIGHT_ADMIN_IN_DARK_SCOPE,
-  "remuage|/admin|light": LIGHT_ADMIN_IN_DARK_SCOPE,
-  "remuage|/admin|narrow": LIGHT_ADMIN_IN_DARK_SCOPE,
-};
+export const ALLOWED_VIOLATIONS: Readonly<Record<string, Readonly<Record<string, string>>>> = {};
 
 export async function expectNoAxeViolations(
   page: Page,

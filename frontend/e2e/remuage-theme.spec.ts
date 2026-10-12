@@ -219,7 +219,7 @@ test.describe("Remuage visual theme", () => {
     }
   });
 
-  test("keeps admin portal tokens dark outside the admin root", async ({ page }) => {
+  test("gives admin portals the Remuage admin palette outside the admin root", async ({ page }) => {
     await page.goto("/admin");
     await expect(page.locator("#admin")).toBeVisible();
     await page.locator("body").evaluate((body) => {
@@ -230,9 +230,9 @@ test.describe("Remuage visual theme", () => {
     });
     await expect(page.locator("#admin-portal-probe")).toHaveCSS(
       "background-color",
-      "rgb(18, 18, 18)",
+      "rgb(237, 241, 245)",
     );
-    await expect(page.locator("#admin-portal-probe")).toHaveCSS("color", "rgb(240, 240, 240)");
+    await expect(page.locator("#admin-portal-probe")).toHaveCSS("color", "rgb(23, 32, 51)");
   });
 
   test("respects reduced motion for the signature interaction", async ({ page }) => {

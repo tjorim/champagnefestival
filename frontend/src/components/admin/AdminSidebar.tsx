@@ -20,6 +20,7 @@ import {
   MenuIcon,
   HistoryIcon,
   NotebookTextIcon,
+  PackageIcon,
   RotateCwIcon,
   SendIcon,
   ShieldIcon,
@@ -216,13 +217,19 @@ export default function AdminSidebar({
                 groupKey="events"
                 icon={CalendarDaysIcon}
                 label={m.admin_events_group()}
-                itemKeys={["editions", "event-categories", "product-categories"]}
+                itemKeys={["editions", "organizations", "event-categories", "product-categories"]}
                 {...groupProps}
               >
                 <SidebarItem
                   itemKey="editions"
                   icon={CalendarIcon}
                   label={m.admin_content_editions_section()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="organizations"
+                  icon={StoreIcon}
+                  label={m.admin_content_organizations_section()}
                   {...itemProps}
                 />
                 <SidebarItem
@@ -233,7 +240,7 @@ export default function AdminSidebar({
                 />
                 <SidebarItem
                   itemKey="product-categories"
-                  icon={TagsIcon}
+                  icon={PackageIcon}
                   label={m.admin_product_categories_section()}
                   {...itemProps}
                 />
@@ -243,15 +250,9 @@ export default function AdminSidebar({
                 groupKey="content"
                 icon={LayersIcon}
                 label={m.admin_content_tab()}
-                itemKeys={["organizations", "faq", "announcements", "composer", "policies"]}
+                itemKeys={["faq", "announcements", "composer", "policies"]}
                 {...groupProps}
               >
-                <SidebarItem
-                  itemKey="organizations"
-                  icon={StoreIcon}
-                  label={m.admin_content_organizations_section()}
-                  {...itemProps}
-                />
                 <SidebarItem
                   itemKey="faq"
                   icon={CircleHelpIcon}
