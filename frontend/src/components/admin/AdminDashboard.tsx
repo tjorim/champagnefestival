@@ -18,8 +18,7 @@ import VenueManagement from "./VenueManagement";
 import { ContentSection, EditionsSection } from "./ContentManagement";
 import CategoryManagement from "./CategoryManagement";
 import FaqManagement from "./FaqManagement";
-import AnnouncementManagement from "./AnnouncementManagement";
-import ComposerManagement from "./ComposerManagement";
+import AnnouncementsSection from "./AnnouncementsSection";
 import PolicyManagement from "./PolicyManagement";
 import PushOptIn from "@/components/PushOptIn";
 import SettingsManagement from "./SettingsManagement";
@@ -55,6 +54,16 @@ import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { devError } from "@/utils/devLog";
 import { recordSignOutReason } from "@/utils/signOutReason";
 import { Card, CardContent } from "@/components/ui/card";
+
+/** Sections that are about the running edition; the active-edition strip is shown on these only. */
+const ACTIVE_EDITION_SECTIONS: ReadonlySet<string> = new Set([
+  "registrations",
+  "waitlist",
+  "scratchpad",
+  "editions",
+  "floor-plans",
+  "analytics",
+]);
 
 function activeEditionLabel(edition: { editionType: string; year: number }): string {
   // The admin strip follows whichever edition is next, so it can't assume festival.
@@ -95,7 +104,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // Sidebar navigation state
   const [activeKey, setActiveKey] = useState("registrations");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set(["events", "content", "venue", "people", "insights"]),
+    () => new Set(["events", "content", "venue", "people", "system"]),
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -437,45 +446,50 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             accountLabel={auth.accountLabel}
             isSigningOut={auth.isSigningOut}
             canManageAdminSections={canManageAdminSections}
+            lastSynced={
+              cacheStatus.lastSynced ? new Date(cacheStatus.lastSynced).toLocaleString() : null
+            }
           />
 
           {/* Main content */}
           <div className="admin-main" id="admin-content">
             <AdminCacheStatus />
-            {activeEdition.id !== "" && activeEdition.year > 0 && (
-              <button
-                type="button"
-                className="admin-active-edition-strip text-left mb-4"
-                onClick={() => {
-                  setActiveKey("registrations");
-                  setApplyActiveEditionFilterRequest((current) => current + 1);
-                }}
-                aria-label={m.admin_active_edition_apply_filter()}
-              >
-                <span className="font-semibold">{activeEditionLabel(activeEdition)}</span>
-                {isActiveEditionDay && (
-                  <span className="text-highlight">
-                    {m.admin_active_edition_day_progress({
-                      current: activeDayIndex + 1,
-                      total: activeEditionDateKeys.length,
-                    })}
-                  </span>
-                )}
-                <span>
-                  {m.admin_active_edition_checkins({
-                    checkedIn: activeEditionStats.checkedIn,
-                    total: activeEditionStats.total,
-                  })}
-                </span>
-                {isActiveEditionDay && (
+            {activeEdition.id !== "" &&
+              activeEdition.year > 0 &&
+              ACTIVE_EDITION_SECTIONS.has(effectiveActiveKey) && (
+                <button
+                  type="button"
+                  className="admin-active-edition-strip text-left mb-4"
+                  onClick={() => {
+                    setActiveKey("registrations");
+                    setApplyActiveEditionFilterRequest((current) => current + 1);
+                  }}
+                  aria-label={m.admin_active_edition_apply_filter()}
+                >
+                  <span className="font-semibold">{activeEditionLabel(activeEdition)}</span>
+                  {isActiveEditionDay && (
+                    <span className="text-highlight">
+                      {m.admin_active_edition_day_progress({
+                        current: activeDayIndex + 1,
+                        total: activeEditionDateKeys.length,
+                      })}
+                    </span>
+                  )}
                   <span>
-                    {m.admin_active_edition_events_today({
-                      count: activeEditionStats.eventsToday,
+                    {m.admin_active_edition_checkins({
+                      checkedIn: activeEditionStats.checkedIn,
+                      total: activeEditionStats.total,
                     })}
                   </span>
-                )}
-              </button>
-            )}
+                  {isActiveEditionDay && (
+                    <span>
+                      {m.admin_active_edition_events_today({
+                        count: activeEditionStats.eventsToday,
+                      })}
+                    </span>
+                  )}
+                </button>
+              )}
             {isRenewingSession && (
               // Renewal is quick but not instant; without this the dashboard just
               // sits there, which reads as a hang rather than as recovery.
@@ -661,19 +675,19 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <FaqManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "announcements" && (
-                  <AnnouncementManagement authHeaders={authHeaders} />
-                )}
-                {canManageAdminSections && activeKey === "composer" && (
-                  <ComposerManagement authHeaders={authHeaders} />
+                  <AnnouncementsSection authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "policies" && (
                   <PolicyManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "settings" && (
                   <div className="flex flex-col gap-4">
-                    <SettingsManagement authHeaders={authHeaders} />
+                    <SettingsManagement authHeaders={authHeaders} section="maintenance" />
                     <PushOptIn authHeaders={authHeaders} />
                   </div>
+                )}
+                {canManageAdminSections && activeKey === "contact-details" && (
+                  <SettingsManagement authHeaders={authHeaders} section="contact" />
                 )}
                 {canManageAdminSections && activeKey === "contact-messages" && (
                   <ContactMessagesManagement authHeaders={authHeaders} />

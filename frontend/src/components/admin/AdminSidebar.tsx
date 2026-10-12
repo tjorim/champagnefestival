@@ -4,7 +4,6 @@ import {
   CalendarDaysIcon,
   CalendarIcon,
   ChartColumnIcon,
-  ChartNoAxesCombinedIcon,
   ChevronDownIcon,
   ChevronUpIcon,
   CircleCheckIcon,
@@ -20,9 +19,9 @@ import {
   MenuIcon,
   HistoryIcon,
   NotebookTextIcon,
+  PhoneIcon,
   PackageIcon,
   RotateCwIcon,
-  SendIcon,
   ShieldIcon,
   SlidersHorizontalIcon,
   StoreIcon,
@@ -30,6 +29,7 @@ import {
   ThumbsUpIcon,
   UserIcon,
   UsersIcon,
+  WrenchIcon,
   XIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -141,6 +141,8 @@ export interface AdminSidebarProps {
   accountLabel: string | null;
   isSigningOut: boolean;
   canManageAdminSections: boolean;
+  /** Formatted time of the last successful data sync, shown beside the refresh button. */
+  lastSynced?: string | null;
 }
 
 export default function AdminSidebar({
@@ -162,6 +164,7 @@ export default function AdminSidebar({
   accountLabel,
   isSigningOut,
   canManageAdminSections,
+  lastSynced = null,
 }: AdminSidebarProps) {
   const itemProps = { activeKey, setActiveKey, setSidebarOpen };
   const groupProps = { activeKey, expandedGroups, toggleGroup };
@@ -250,7 +253,7 @@ export default function AdminSidebar({
                 groupKey="content"
                 icon={LayersIcon}
                 label={m.admin_content_tab()}
-                itemKeys={["faq", "announcements", "composer", "policies"]}
+                itemKeys={["faq", "announcements", "policies", "contact-details"]}
                 {...groupProps}
               >
                 <SidebarItem
@@ -266,15 +269,15 @@ export default function AdminSidebar({
                   {...itemProps}
                 />
                 <SidebarItem
-                  itemKey="composer"
-                  icon={SendIcon}
-                  label={m.admin_composer_section()}
-                  {...itemProps}
-                />
-                <SidebarItem
                   itemKey="policies"
                   icon={ShieldIcon}
                   label={m.admin_policies_section()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="contact-details"
+                  icon={PhoneIcon}
+                  label={m.admin_contact_details_section()}
                   {...itemProps}
                 />
               </SidebarGroup>
@@ -333,35 +336,35 @@ export default function AdminSidebar({
           )}
 
           {canManageAdminSections && (
-            <SidebarGroup
-              groupKey="insights"
-              icon={ChartNoAxesCombinedIcon}
-              label={m.admin_insights_group()}
-              itemKeys={["analytics", "audit-log"]}
-              {...groupProps}
-            >
+            <>
               <SidebarItem
                 itemKey="analytics"
                 icon={ChartColumnIcon}
                 label={m.admin_analytics_tab()}
                 {...itemProps}
               />
-              <SidebarItem
-                itemKey="audit-log"
-                icon={HistoryIcon}
-                label={m.admin_audit_log_tab()}
-                {...itemProps}
-              />
-            </SidebarGroup>
-          )}
 
-          {canManageAdminSections && (
-            <SidebarItem
-              itemKey="settings"
-              icon={SlidersHorizontalIcon}
-              label={m.admin_content_settings_section()}
-              {...itemProps}
-            />
+              <SidebarGroup
+                groupKey="system"
+                icon={WrenchIcon}
+                label={m.admin_system_group()}
+                itemKeys={["settings", "audit-log"]}
+                {...groupProps}
+              >
+                <SidebarItem
+                  itemKey="settings"
+                  icon={SlidersHorizontalIcon}
+                  label={m.admin_content_settings_section()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="audit-log"
+                  icon={HistoryIcon}
+                  label={m.admin_audit_log_tab()}
+                  {...itemProps}
+                />
+              </SidebarGroup>
+            </>
           )}
         </nav>
 
@@ -378,6 +381,11 @@ export default function AdminSidebar({
               {canManageAdminSections ? m.admin_role_admin() : m.admin_role_volunteer()}
             </span>
           </div>
+          {lastSynced && (
+            <p className="admin-sync-status" role="status">
+              {m.admin_cache_last_synced({ time: lastSynced })}
+            </p>
+          )}
           <div className="flex gap-2">
             <Button
               variant="outline"

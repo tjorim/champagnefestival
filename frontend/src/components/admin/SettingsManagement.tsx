@@ -6,7 +6,10 @@ import {
   AdminDescription,
 } from "@/components/admin/AdminFields";
 /**
- * SettingsManagement — site-wide toggles. Currently just maintenance mode.
+ * SettingsManagement — site-wide settings: the maintenance-mode switch and the public contact
+ * details. Both live in one settings record, so they share their queries and mutation; the
+ * `section` prop renders either half on its own (the dashboard files them under Settings and
+ * Content respectively) or, by default, both together.
  */
 
 import { useMemo, useState } from "react";
@@ -25,6 +28,7 @@ import { invalidateAdmin } from "@/utils/queryInvalidation";
 
 interface SettingsManagementProps {
   authHeaders: () => Record<string, string>;
+  section?: "all" | "maintenance" | "contact";
 }
 
 interface ApiAppSettings {
@@ -34,7 +38,10 @@ interface ApiAppSettings {
   facebook_url: string;
 }
 
-export default function SettingsManagement({ authHeaders }: SettingsManagementProps) {
+export default function SettingsManagement({
+  authHeaders,
+  section = "all",
+}: SettingsManagementProps) {
   const queryClient = useQueryClient();
   const settingsQueryKey = queryKeys.admin.settings;
 
@@ -113,7 +120,11 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
 
   return (
     <Card tone="secondary">
-      <CardHeader className="font-semibold">{m.admin_content_settings_section()}</CardHeader>
+      <CardHeader className="font-semibold">
+        {section === "contact"
+          ? m.admin_contact_details_section()
+          : m.admin_content_settings_section()}
+      </CardHeader>
       <CardContent>
         {updateMutation.isError && (
           <Alert variant="danger" className="py-1 mb-4 text-sm">
@@ -128,82 +139,88 @@ export default function SettingsManagement({ authHeaders }: SettingsManagementPr
           <Spinner label={m.admin_loading()} size="sm" />
         ) : (
           <>
-            <AdminCheck
-              type="switch"
-              id="maintenance-mode-switch"
-              label={m.admin_settings_maintenance_mode_label()}
-              checked={maintenanceMode ?? false}
-              disabled={updateMutation.isPending}
-              onCheckedChange={(e) => updateMutation.mutate({ maintenance_mode: e })}
-            />
-            <div className="text-subtle text-sm mt-2">
-              {m.admin_settings_maintenance_mode_help()}
-            </div>
-            <hr className="border-subtle my-6" />
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void form.handleSubmit();
-              }}
-            >
-              <form.Field name="publicEmail">
-                {(field) => (
-                  <AdminField className="mb-4" controlId="public-email">
-                    <AdminLabel>{m.admin_settings_public_email_label()}</AdminLabel>
-                    <AdminInput
-                      type="email"
-                      value={field.value}
-                      disabled={updateMutation.isPending}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    <AdminDescription className="text-subtle">
-                      {m.admin_settings_public_email_help()}
-                    </AdminDescription>
-                  </AdminField>
-                )}
-              </form.Field>
-              <form.Field name="publicPhone">
-                {(field) => (
-                  <AdminField className="mb-4" controlId="public-phone">
-                    <AdminLabel>{m.admin_settings_public_phone_label()}</AdminLabel>
-                    <AdminInput
-                      type="tel"
-                      value={field.value}
-                      disabled={updateMutation.isPending}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    <AdminDescription className="text-subtle">
-                      {m.admin_settings_public_phone_help()}
-                    </AdminDescription>
-                  </AdminField>
-                )}
-              </form.Field>
-              <form.Field name="facebookUrl">
-                {(field) => (
-                  <AdminField className="mb-4" controlId="facebook-url">
-                    <AdminLabel>{m.admin_settings_facebook_url_label()}</AdminLabel>
-                    <AdminInput
-                      type="url"
-                      pattern="https://.*"
-                      value={field.value}
-                      disabled={updateMutation.isPending}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                    <AdminDescription className="text-subtle">
-                      {m.admin_settings_facebook_url_help()}
-                    </AdminDescription>
-                  </AdminField>
-                )}
-              </form.Field>
-              <Button type="submit" disabled={updateMutation.isPending}>
-                {updateMutation.isPending
-                  ? m.admin_settings_saving()
-                  : m.admin_settings_save_contact()}
-              </Button>
-            </form>
+            {section !== "contact" && (
+              <>
+                <AdminCheck
+                  type="switch"
+                  id="maintenance-mode-switch"
+                  label={m.admin_settings_maintenance_mode_label()}
+                  checked={maintenanceMode ?? false}
+                  disabled={updateMutation.isPending}
+                  onCheckedChange={(e) => updateMutation.mutate({ maintenance_mode: e })}
+                />
+                <div className="text-subtle text-sm mt-2">
+                  {m.admin_settings_maintenance_mode_help()}
+                </div>
+              </>
+            )}
+            {section === "all" && <hr className="border-subtle my-6" />}
+            {section !== "maintenance" && (
+              <form
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void form.handleSubmit();
+                }}
+              >
+                <form.Field name="publicEmail">
+                  {(field) => (
+                    <AdminField className="mb-4" controlId="public-email">
+                      <AdminLabel>{m.admin_settings_public_email_label()}</AdminLabel>
+                      <AdminInput
+                        type="email"
+                        value={field.value}
+                        disabled={updateMutation.isPending}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      <AdminDescription className="text-subtle">
+                        {m.admin_settings_public_email_help()}
+                      </AdminDescription>
+                    </AdminField>
+                  )}
+                </form.Field>
+                <form.Field name="publicPhone">
+                  {(field) => (
+                    <AdminField className="mb-4" controlId="public-phone">
+                      <AdminLabel>{m.admin_settings_public_phone_label()}</AdminLabel>
+                      <AdminInput
+                        type="tel"
+                        value={field.value}
+                        disabled={updateMutation.isPending}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      <AdminDescription className="text-subtle">
+                        {m.admin_settings_public_phone_help()}
+                      </AdminDescription>
+                    </AdminField>
+                  )}
+                </form.Field>
+                <form.Field name="facebookUrl">
+                  {(field) => (
+                    <AdminField className="mb-4" controlId="facebook-url">
+                      <AdminLabel>{m.admin_settings_facebook_url_label()}</AdminLabel>
+                      <AdminInput
+                        type="url"
+                        pattern="https://.*"
+                        value={field.value}
+                        disabled={updateMutation.isPending}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                      <AdminDescription className="text-subtle">
+                        {m.admin_settings_facebook_url_help()}
+                      </AdminDescription>
+                    </AdminField>
+                  )}
+                </form.Field>
+                <Button type="submit" disabled={updateMutation.isPending}>
+                  {updateMutation.isPending
+                    ? m.admin_settings_saving()
+                    : m.admin_settings_save_contact()}
+                </Button>
+              </form>
+            )}
           </>
         )}
       </CardContent>

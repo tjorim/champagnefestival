@@ -9,7 +9,7 @@ test.beforeEach(async ({ page }) => {
 for (const screen of ["Members", "Volunteers", "People"] as const) {
   test(`${screen} uses server pages and preserves filters after editing`, async ({ page }) => {
     const tab = page.getByRole("button", {
-      name: new RegExp(`^${screen === "People" ? "Directory" : screen}(?:\\s|$)`),
+      name: new RegExp(`^${screen === "People" ? "All people" : screen}(?:\\s|$)`),
     });
     await tab.click();
     const table = page.getByRole("table");

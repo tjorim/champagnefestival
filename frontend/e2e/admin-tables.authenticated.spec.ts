@@ -38,7 +38,7 @@ test("server table sorting, selection and dark column menu", async ({ page }) =>
 });
 
 test("people table visibility persists and narrow layout shows cards", async ({ page }) => {
-  await page.getByRole("button", { name: /Directory/ }).click();
+  await page.getByRole("button", { name: /All people/ }).click();
   await expect(page.getByRole("table")).toBeVisible();
   await page.getByRole("button", { name: "Columns", exact: true }).click();
   await page.getByRole("menuitemcheckbox", { name: "Email", exact: true }).click();
@@ -48,7 +48,7 @@ test("people table visibility persists and narrow layout shows cards", async ({ 
     .getByRole("button", { name: /Registrations/ })
     .first()
     .click();
-  await page.getByRole("button", { name: /Directory/ }).click();
+  await page.getByRole("button", { name: /All people/ }).click();
   await expect(page.getByRole("columnheader", { name: "Email", exact: true })).toHaveCount(0);
   const phone = page.locator("th").filter({ hasText: /^Phone Number$/ });
   await expect(phone).toHaveCount(1);

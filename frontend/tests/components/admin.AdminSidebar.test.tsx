@@ -17,7 +17,6 @@ vi.mock("@/paraglide/messages", () => ({
     admin_content_organizations_section: () => "Organisations",
     admin_content_faq_section: () => "FAQ",
     admin_announcements_section: () => "Announcements",
-    admin_composer_section: () => "Composer",
     admin_policies_section: () => "Legal Policies",
     admin_contact_messages_section: () => "Contact messages",
     admin_content_settings_section: () => "Settings",
@@ -25,10 +24,12 @@ vi.mock("@/paraglide/messages", () => ({
     admin_venues_rooms_tab: () => "Venues & Rooms",
     admin_floor_plans_tab: () => "Floor Plans",
     admin_people_tab: () => "People",
-    admin_directory_tab: () => "Directory",
+    admin_directory_tab: () => "All people",
     admin_members_tab: () => "Members",
     admin_volunteers_tab: () => "Volunteers",
-    admin_insights_group: () => "Insights",
+    admin_system_group: () => "System",
+    admin_contact_details_section: () => "Contact details",
+    admin_cache_last_synced: ({ time }: { time: string }) => `Last synced: ${time}`,
     admin_analytics_tab: () => "Analytics",
     admin_audit_log_tab: () => "Audit Log",
     admin_authenticated: () => "Authenticated",
@@ -90,18 +91,54 @@ describe("AdminSidebar", () => {
       "Content",
       "FAQ",
       "Announcements",
-      "Composer",
       "Legal Policies",
+      "Contact details",
       "Venue",
       "Venues & Rooms",
       "Floor Plans",
       "People",
-      "Directory3",
+      "All people3",
       "Members4",
       "Volunteers5",
-      "Insights",
-      "Settings",
+      "Analytics",
+      "System",
     ]);
+  });
+
+  it("lists settings and the audit log together under System", () => {
+    render(
+      <AdminSidebar
+        activeKey="registrations"
+        setActiveKey={vi.fn()}
+        expandedGroups={new Set(["system"])}
+        toggleGroup={vi.fn()}
+        sidebarOpen={false}
+        setSidebarOpen={vi.fn()}
+        navRef={createRef<HTMLElement>()}
+        handleNavKeyDown={vi.fn()}
+        registrationCount={0}
+        peopleCount={0}
+        membersCount={0}
+        volunteerCount={0}
+        isAnyFetching={false}
+        onLoadData={vi.fn()}
+        onLogout={vi.fn()}
+        accountLabel={null}
+        isSigningOut={false}
+        canManageAdminSections
+        lastSynced="12:00"
+      />,
+    );
+
+    const system = screen.getByRole("button", { name: "System" });
+    expect(system).toHaveAttribute("aria-expanded", "true");
+    const submenu = document.getElementById(system.getAttribute("aria-controls") ?? "");
+    expect(
+      within(submenu as HTMLElement)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Settings", "Audit Log"]);
+    expect(screen.getByRole("status")).toHaveTextContent("Last synced: 12:00");
   });
 
   it("shows only registrations to non-admin roles", () => {
