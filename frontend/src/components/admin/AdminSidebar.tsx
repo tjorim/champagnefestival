@@ -8,7 +8,6 @@ import {
   ChevronUpIcon,
   CircleCheckIcon,
   CircleHelpIcon,
-  ContactRoundIcon,
   Grid3X3Icon,
   HourglassIcon,
   LayersIcon,
@@ -26,8 +25,6 @@ import {
   SlidersHorizontalIcon,
   StoreIcon,
   TagsIcon,
-  ThumbsUpIcon,
-  UserIcon,
   UsersIcon,
   WrenchIcon,
   XIcon,
@@ -133,8 +130,6 @@ export interface AdminSidebarProps {
   handleNavKeyDown: (e: React.KeyboardEvent<HTMLElement>) => void;
   registrationCount: number;
   peopleCount: number;
-  membersCount: number;
-  volunteerCount: number;
   isAnyFetching: boolean;
   onLoadData: () => void;
   onLogout: () => void;
@@ -156,8 +151,6 @@ export default function AdminSidebar({
   handleNavKeyDown,
   registrationCount,
   peopleCount,
-  membersCount,
-  volunteerCount,
   isAnyFetching,
   onLoadData,
   onLogout,
@@ -303,35 +296,13 @@ export default function AdminSidebar({
                 />
               </SidebarGroup>
 
-              <SidebarGroup
-                groupKey="people"
+              <SidebarItem
+                itemKey="people"
                 icon={UsersIcon}
                 label={m.admin_people_tab()}
-                itemKeys={["directory", "members", "volunteers"]}
-                {...groupProps}
-              >
-                <SidebarItem
-                  itemKey="directory"
-                  icon={UserIcon}
-                  label={m.admin_directory_tab()}
-                  count={peopleCount}
-                  {...itemProps}
-                />
-                <SidebarItem
-                  itemKey="members"
-                  icon={ContactRoundIcon}
-                  label={m.admin_members_tab()}
-                  count={membersCount}
-                  {...itemProps}
-                />
-                <SidebarItem
-                  itemKey="volunteers"
-                  icon={ThumbsUpIcon}
-                  label={m.admin_volunteers_tab()}
-                  count={volunteerCount}
-                  {...itemProps}
-                />
-              </SidebarGroup>
+                count={peopleCount}
+                {...itemProps}
+              />
             </>
           )}
 

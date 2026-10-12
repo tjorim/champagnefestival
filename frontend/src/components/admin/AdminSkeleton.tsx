@@ -18,13 +18,7 @@ interface AdminSkeletonProps {
 }
 
 /** Sections whose content is a list; everything else gets the card layout. */
-const TABLE_SECTIONS = new Set([
-  "registrations",
-  "directory",
-  "members",
-  "volunteers",
-  "audit-log",
-]);
+const TABLE_SECTIONS = new Set(["registrations", "people", "audit-log"]);
 
 export function skeletonVariantForSection(activeKey: string): AdminSkeletonVariant {
   return TABLE_SECTIONS.has(activeKey) ? "table" : "panel";

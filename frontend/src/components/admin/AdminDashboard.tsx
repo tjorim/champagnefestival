@@ -26,9 +26,7 @@ import ContactMessagesManagement from "./ContactMessagesManagement";
 import ScratchpadManagement from "./ScratchpadManagement";
 import WaitlistManagement from "./WaitlistManagement";
 import type { ItemDraft } from "./itemTypes";
-import PeopleManagement from "./PeopleManagement";
-import MembersManagement from "./MembersManagement";
-import VolunteersManagement from "./VolunteersManagement";
+import PeopleSection from "./PeopleSection";
 import AnalyticsDashboard from "./AnalyticsDashboard";
 import AuditLogViewer from "./AuditLogViewer";
 import AdminSidebar from "./AdminSidebar";
@@ -104,7 +102,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   // Sidebar navigation state
   const [activeKey, setActiveKey] = useState("registrations");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
-    () => new Set(["events", "content", "venue", "people", "system"]),
+    () => new Set(["events", "content", "venue", "system"]),
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -438,8 +436,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             handleNavKeyDown={handleNavKeyDown}
             registrationCount={registrationCountsQuery.data?.all ?? 0}
             peopleCount={peopleCountsQuery.data?.total ?? 0}
-            membersCount={peopleCountsQuery.data?.by_role.member ?? 0}
-            volunteerCount={peopleCountsQuery.data?.by_role.volunteer ?? 0}
             isAnyFetching={isAnyFetching}
             onLoadData={loadData}
             onLogout={handleLogout}
@@ -634,29 +630,30 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     onDeleteTableType={handleDeleteTableType}
                   />
                 )}
-                {canManageAdminSections && activeKey === "directory" && (
-                  <PeopleManagement
+                {canManageAdminSections && activeKey === "people" && (
+                  <PeopleSection
                     authHeaders={authHeaders}
-                    onMerge={handleMergePeople}
-                    onCreate={handleCreatePerson}
-                    onUpdate={handleUpdatePerson}
-                    onDelete={handleDeletePerson}
-                  />
-                )}
-                {canManageAdminSections && activeKey === "members" && (
-                  <MembersManagement
-                    authHeaders={authHeaders}
-                    onCreate={handleCreateMember}
-                    onUpdate={handleUpdateMember}
-                    onDelete={handleDeleteMember}
-                  />
-                )}
-                {canManageAdminSections && activeKey === "volunteers" && (
-                  <VolunteersManagement
-                    authHeaders={authHeaders}
-                    onCreate={handleCreateVolunteer}
-                    onUpdate={handleUpdateVolunteer}
-                    onDelete={handleDeleteVolunteer}
+                    counts={{
+                      all: peopleCountsQuery.data?.total ?? 0,
+                      members: peopleCountsQuery.data?.by_role.member ?? 0,
+                      volunteers: peopleCountsQuery.data?.by_role.volunteer ?? 0,
+                    }}
+                    people={{
+                      onMerge: handleMergePeople,
+                      onCreate: handleCreatePerson,
+                      onUpdate: handleUpdatePerson,
+                      onDelete: handleDeletePerson,
+                    }}
+                    members={{
+                      onCreate: handleCreateMember,
+                      onUpdate: handleUpdateMember,
+                      onDelete: handleDeleteMember,
+                    }}
+                    volunteers={{
+                      onCreate: handleCreateVolunteer,
+                      onUpdate: handleUpdateVolunteer,
+                      onDelete: handleDeleteVolunteer,
+                    }}
                   />
                 )}
                 {canManageAdminSections && activeKey === "analytics" && (

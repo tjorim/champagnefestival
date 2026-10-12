@@ -24,9 +24,6 @@ vi.mock("@/paraglide/messages", () => ({
     admin_venues_rooms_tab: () => "Venues & Rooms",
     admin_floor_plans_tab: () => "Floor Plans",
     admin_people_tab: () => "People",
-    admin_directory_tab: () => "All people",
-    admin_members_tab: () => "Members",
-    admin_volunteers_tab: () => "Volunteers",
     admin_system_group: () => "System",
     admin_contact_details_section: () => "Contact details",
     admin_cache_last_synced: ({ time }: { time: string }) => `Last synced: ${time}`,
@@ -42,7 +39,7 @@ vi.mock("@/paraglide/messages", () => ({
   },
 }));
 
-const expandedGroups = new Set(["events", "content", "venue", "people"]);
+const expandedGroups = new Set(["events", "content", "venue"]);
 
 function renderSidebar(setActiveKey = vi.fn(), canManageAdminSections = true) {
   render(
@@ -57,8 +54,6 @@ function renderSidebar(setActiveKey = vi.fn(), canManageAdminSections = true) {
       handleNavKeyDown={vi.fn()}
       registrationCount={2}
       peopleCount={3}
-      membersCount={4}
-      volunteerCount={5}
       isAnyFetching={false}
       onLoadData={vi.fn()}
       onLogout={vi.fn()}
@@ -96,10 +91,7 @@ describe("AdminSidebar", () => {
       "Venue",
       "Venues & Rooms",
       "Floor Plans",
-      "People",
-      "All people3",
-      "Members4",
-      "Volunteers5",
+      "People3",
       "Analytics",
       "System",
     ]);
@@ -118,8 +110,6 @@ describe("AdminSidebar", () => {
         handleNavKeyDown={vi.fn()}
         registrationCount={0}
         peopleCount={0}
-        membersCount={0}
-        volunteerCount={0}
         isAnyFetching={false}
         onLoadData={vi.fn()}
         onLogout={vi.fn()}
