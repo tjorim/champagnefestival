@@ -38,7 +38,11 @@ vi.mock("@tanstack/react-router", () => ({
 const otherEventsState = vi.hoisted(() => ({ items: [] as unknown[] }));
 
 vi.mock("@/hooks/useOtherEvents", () => ({
-  useOtherEventItems: () => ({ items: otherEventsState.items, isLoading: false, isError: false }),
+  useOtherEventItems: () => ({
+    items: otherEventsState.items,
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 describe("HeaderClassic component", () => {
@@ -77,11 +81,9 @@ describe("HeaderClassic component", () => {
     expect(brand).toHaveAttribute("href", "#welcome");
   });
 
-  it("links to the administration page", () => {
+  it("keeps the administration link out of the header bar", () => {
     render(<HeaderClassic />);
-    const adminLink = screen.getByRole("link", { name: "Administration" });
-    expect(adminLink).toHaveAttribute("href", "/admin");
-    expect(adminLink.querySelector('svg[aria-hidden="true"]')).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Administration" })).not.toBeInTheDocument();
   });
 
   it("offers a mobile menu with the admin entry", async () => {

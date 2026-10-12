@@ -7,6 +7,7 @@ vi.mock("@/paraglide/messages", () => ({
     festival_name: () => "Champagnefestival",
     footer_rights: () => "All rights reserved.",
     footer_privacy: () => "Privacy Policy",
+    admin_title: () => "Administration",
     footer_navigation_label: () => "Footer navigation",
     nav_schedule: () => "Schedule",
     nav_other_events: () => "Other events",
@@ -23,7 +24,11 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@/hooks/useOtherEvents", () => ({
-  useOtherEventItems: () => ({ items: [{ id: "event-1" }], isLoading: false, isError: false }),
+  useOtherEventItems: () => ({
+    items: [{ id: "event-1" }],
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 describe("Footer component", () => {
@@ -43,6 +48,12 @@ describe("Footer component", () => {
     const privacyLink = screen.getByRole("link", { name: "Privacy Policy" });
     expect(privacyLink).toBeInTheDocument();
     expect(privacyLink).toHaveAttribute("href", "/privacy");
+  });
+
+  it("renders a small link to the administration page", () => {
+    render(<Footer />);
+
+    expect(screen.getByRole("link", { name: "Administration" })).toHaveAttribute("href", "/admin");
   });
 
   it("repeats the site navigation as in-page links", () => {

@@ -1,9 +1,5 @@
-import { m } from "@/paraglide/messages";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { ShieldCheck } from "lucide-react";
-
 import { useNavigationItems } from "@/hooks/useNavigationItems";
-import { Link } from "@tanstack/react-router";
 import BrandWordmark from "./BrandWordmark";
 import MobileMenu from "./MobileMenu";
 
@@ -27,13 +23,6 @@ const HeaderClassic = () => {
 
         <div className="flex items-center gap-3">
           <LanguageSwitcher />
-          <Link
-            to="/admin"
-            className="hidden text-foreground lg:inline"
-            aria-label={m.admin_title()}
-          >
-            <ShieldCheck className="size-4" aria-hidden="true" />
-          </Link>
           <MobileMenu triggerClassName="lg:hidden" />
         </div>
       </div>
