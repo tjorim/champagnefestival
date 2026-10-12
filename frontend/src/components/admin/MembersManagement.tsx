@@ -164,7 +164,7 @@ export default function MembersManagement({
                     setShowForm(true);
                   }}
                   title={m.admin_members_edit_title()}
-                  aria-label={m.admin_members_edit_title()}
+                  aria-label={`${m.admin_members_edit_title()}: ${member.name}`}
                 >
                   <Icon icon={PencilIcon} />
                 </Button>

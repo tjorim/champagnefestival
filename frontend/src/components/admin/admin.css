@@ -35,6 +35,11 @@
     --adm-ease: cubic-bezier(0.4, 0, 0.2, 1);
   }
 
+  /* Runtime themes centre every h2 for the public sections; admin headings are start-aligned. */
+  #admin h2 {
+    text-align: start;
+  }
+
   /* ---- Page title — matches .gradient-text from the public site ---- */
   #admin h2#admin-title {
     background: var(--adm-gradient) !important;
@@ -150,6 +155,9 @@
 
   /* Two-column flex layout */
   .admin-layout {
+    /* The admin scope is always dark; without this the page's (possibly cream) background shows
+       behind the translucent strips and bare headings and makes their light text unreadable. */
+    background: var(--adm-bg);
     display: flex;
     min-height: calc(100vh - var(--header-height, 4rem));
     position: relative;

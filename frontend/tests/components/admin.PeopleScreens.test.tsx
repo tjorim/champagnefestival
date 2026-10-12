@@ -134,7 +134,9 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
     const h = mount(kind);
     await screen.findByRole("row", { name: "Person 00" });
     fireEvent.click(
-      within(row("Person 00")).getByRole("button", { name: `admin_${kind}_edit_title` }),
+      within(row("Person 00")).getByRole("button", {
+        name: new RegExp(`^admin_${kind}_edit_title`),
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     const name = within(dialog).getByLabelText(/registration_name/);

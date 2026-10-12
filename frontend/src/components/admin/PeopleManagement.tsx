@@ -337,7 +337,7 @@ export default function PeopleManagement({
                     setShowForm(true);
                   }}
                   title={m.admin_people_edit_title()}
-                  aria-label={m.admin_people_edit_title()}
+                  aria-label={`${m.admin_people_edit_title()}: ${person.name}`}
                 >
                   <Icon icon={PencilIcon} />
                 </Button>
@@ -479,7 +479,7 @@ export default function PeopleManagement({
                 const variant = role === "canonical" ? "success" : "danger";
                 const tone =
                   role === "canonical"
-                    ? "border-success text-success"
+                    ? "border-success text-success-text"
                     : "border-destructive text-destructive";
 
                 return (

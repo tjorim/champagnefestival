@@ -32,7 +32,7 @@ const buttonVariants = cva(
         "outline-danger":
           "border-destructive text-destructive hover:bg-destructive hover:text-inverse focus-visible:ring-destructive/30",
         "outline-success":
-          "border-success text-success hover:bg-success hover:text-inverse focus-visible:ring-success/30",
+          "border-success text-success-text hover:bg-success hover:text-inverse focus-visible:ring-success/30",
         "outline-info":
           "border-info text-info hover:bg-info hover:text-contrast focus-visible:ring-info/30",
         brand: "bg-primary text-inverse border-0 hover:bg-primary/80 font-bold",

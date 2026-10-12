@@ -1144,7 +1144,7 @@ export default function RegistrationList({
               placeholder={m.admin_search_person_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="bg-muted text-content border-input max-w-55"
+              className="bg-muted text-content border-input max-w-72"
             />
           </div>
           {eventCapacityStats.length > 0 && (

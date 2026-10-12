@@ -138,7 +138,7 @@ export default function VolunteersManagement({
                     setShowForm(true);
                   }}
                   title={m.admin_volunteers_edit_title()}
-                  aria-label={m.admin_volunteers_edit_title()}
+                  aria-label={`${m.admin_volunteers_edit_title()}: ${volunteer.name}`}
                 >
                   <Icon icon={PencilIcon} />
                 </Button>

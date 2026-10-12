@@ -112,7 +112,7 @@ export default function WaitlistManagement({
               </div>
               <div className="flex items-start gap-2">
                 {entry.handledAt ? (
-                  <span className="text-success">{m.admin_waitlist_handled()}</span>
+                  <span className="text-success-text">{m.admin_waitlist_handled()}</span>
                 ) : (
                   <Button
                     size="sm"

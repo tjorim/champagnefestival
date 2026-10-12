@@ -59,7 +59,7 @@ test("people table visibility persists and narrow layout shows cards", async ({ 
   await expect(
     page
       .locator("main li")
-      .filter({ has: page.getByRole("button", { name: /^Edit:/ }) })
+      .filter({ has: page.getByRole("button", { name: /^Edit person:/ }) })
       .first(),
   ).toBeVisible();
 });

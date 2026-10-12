@@ -27,6 +27,7 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { m } from "@/paraglide/messages";
 import { fetchAuditEntries, fetchAuditResourceTypes } from "@/utils/adminFetch";
 import { queryKeys } from "@/utils/queryKeys";
@@ -131,155 +132,148 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
   }
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-2xl font-medium leading-tight mb-0">{m.admin_audit_log_title()}</h2>
-      </div>
-
-      <form className="flex flex-wrap gap-4 mb-4">
-        <AdminField controlId="audit-resource-type">
-          <AdminLabel className="text-sm text-subtle mb-1">
-            {m.admin_audit_filter_resource_type()}
-          </AdminLabel>
-          <AdminSelect
-            size="sm"
-            value={resourceType}
-            onValueChange={handleResourceTypeChange}
-            className="min-w-45"
-          >
-            <AdminOption value="">{m.admin_audit_filter_all()}</AdminOption>
-            {(resourceTypesQuery.data ?? []).map((type) => (
-              <AdminOption key={type} value={type}>
-                {type}
-              </AdminOption>
-            ))}
-          </AdminSelect>
-        </AdminField>
-        <AdminField controlId="audit-resource-id">
-          <AdminLabel className="text-sm text-subtle mb-1">
-            {m.admin_audit_filter_resource_id()}
-          </AdminLabel>
-          <AdminInput
-            size="sm"
-            type="text"
-            value={resourceId}
-            onChange={handleResourceIdChange}
-            placeholder={m.admin_audit_filter_resource_id_placeholder()}
-            className="min-w-50"
-          />
-        </AdminField>
-        <AdminField controlId="audit-actor">
-          <AdminLabel className="text-sm text-subtle mb-1">
-            {m.admin_audit_filter_actor()}
-          </AdminLabel>
-          <AdminInput
-            size="sm"
-            type="text"
-            value={actor}
-            onChange={handleActorChange}
-            placeholder={m.admin_audit_filter_actor_placeholder()}
-            className="min-w-50"
-          />
-        </AdminField>
-        <AdminField controlId="audit-action">
-          <AdminLabel className="text-sm text-subtle mb-1">
-            {m.admin_audit_filter_action()}
-          </AdminLabel>
-          <AdminInput
-            size="sm"
-            type="text"
-            value={action}
-            onChange={handleActionChange}
-            placeholder={m.admin_audit_filter_action_placeholder()}
-            className="min-w-45"
-          />
-        </AdminField>
-        <AdminField controlId="audit-since">
-          <AdminLabel className="text-sm text-subtle mb-1">
-            {m.admin_audit_filter_since()}
-          </AdminLabel>
-          <AdminInput size="sm" type="date" value={since} onChange={handleSinceChange} />
-        </AdminField>
-        <AdminField controlId="audit-until">
-          <AdminLabel className="text-sm text-subtle mb-1">
-            {m.admin_audit_filter_until()}
-          </AdminLabel>
-          <AdminInput size="sm" type="date" value={until} onChange={handleUntilChange} />
-        </AdminField>
-        {hasFilters && (
-          <AdminField className="self-end">
-            <Button variant="outline" size="sm" onClick={handleClearFilters}>
-              {m.admin_content_clear_filters()}
-            </Button>
-          </AdminField>
-        )}
-      </form>
-
-      {entriesQuery.error && (
-        <Alert variant="danger" className="mb-4">
-          {m.admin_error_load_data()}
-        </Alert>
-      )}
-
-      {entriesQuery.isPending ? (
-        <div className="text-center py-12">
-          <Spinner variant="primary" role="status">
-            <span className="sr-only">{m.admin_loading()}</span>
-          </Spinner>
-        </div>
-      ) : entries.length === 0 ? (
-        <p className="text-subtle">{m.admin_audit_no_entries()}</p>
-      ) : (
-        <>
-          <Table>
-            <caption className="sr-only">{m.admin_audit_table_caption()}</caption>
-            <TableHeader>
-              <TableRow>
-                <TableHead scope="col">{m.admin_audit_column_timestamp()}</TableHead>
-                <TableHead scope="col">{m.admin_audit_column_actor()}</TableHead>
-                <TableHead scope="col">{m.admin_audit_column_action()}</TableHead>
-                <TableHead scope="col">{m.admin_audit_column_resource()}</TableHead>
-                <TableHead scope="col">{m.admin_audit_column_details()}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {entries.map((entry) => (
-                <TableRow key={entry.id}>
-                  <TableCell>{formatTimestamp(entry.timestamp)}</TableCell>
-                  <TableCell className="break-words">{entry.actor}</TableCell>
-                  <TableCell>{entry.action}</TableCell>
-                  <TableCell className="break-words">
-                    {entry.resourceType} / {entry.resourceId}
-                  </TableCell>
-                  <TableCell className="break-words">
-                    {Object.keys(entry.details).length > 0 ? JSON.stringify(entry.details) : ""}
-                  </TableCell>
-                </TableRow>
+    <Card>
+      <CardHeader>
+        <h2 className="text-xl font-medium leading-tight mb-0">{m.admin_audit_log_title()}</h2>
+      </CardHeader>
+      <CardContent>
+        <form className="grid gap-4 mb-4 sm:grid-cols-2 lg:grid-cols-3">
+          <AdminField controlId="audit-resource-type">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_resource_type()}
+            </AdminLabel>
+            <AdminSelect size="sm" value={resourceType} onValueChange={handleResourceTypeChange}>
+              <AdminOption value="">{m.admin_audit_filter_all()}</AdminOption>
+              {(resourceTypesQuery.data ?? []).map((type) => (
+                <AdminOption key={type} value={type}>
+                  {type}
+                </AdminOption>
               ))}
-            </TableBody>
-          </Table>
+            </AdminSelect>
+          </AdminField>
+          <AdminField controlId="audit-resource-id">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_resource_id()}
+            </AdminLabel>
+            <AdminInput
+              size="sm"
+              type="text"
+              value={resourceId}
+              onChange={handleResourceIdChange}
+              placeholder={m.admin_audit_filter_resource_id_placeholder()}
+            />
+          </AdminField>
+          <AdminField controlId="audit-actor">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_actor()}
+            </AdminLabel>
+            <AdminInput
+              size="sm"
+              type="text"
+              value={actor}
+              onChange={handleActorChange}
+              placeholder={m.admin_audit_filter_actor_placeholder()}
+            />
+          </AdminField>
+          <AdminField controlId="audit-action">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_action()}
+            </AdminLabel>
+            <AdminInput
+              size="sm"
+              type="text"
+              value={action}
+              onChange={handleActionChange}
+              placeholder={m.admin_audit_filter_action_placeholder()}
+            />
+          </AdminField>
+          <AdminField controlId="audit-since">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_since()}
+            </AdminLabel>
+            <AdminInput size="sm" type="date" value={since} onChange={handleSinceChange} />
+          </AdminField>
+          <AdminField controlId="audit-until">
+            <AdminLabel className="text-sm text-subtle mb-1">
+              {m.admin_audit_filter_until()}
+            </AdminLabel>
+            <AdminInput size="sm" type="date" value={until} onChange={handleUntilChange} />
+          </AdminField>
+          {hasFilters && (
+            <AdminField className="sm:self-end">
+              <Button variant="outline" size="sm" onClick={handleClearFilters}>
+                {m.admin_content_clear_filters()}
+              </Button>
+            </AdminField>
+          )}
+        </form>
 
-          <div className="flex justify-between items-center">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-            >
-              {m.admin_audit_previous_page()}
-            </Button>
-            <span className="text-subtle text-sm">{m.admin_audit_page_label({ page })}</span>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={entries.length < PAGE_SIZE}
-              onClick={() => setPage((p) => p + 1)}
-            >
-              {m.admin_audit_next_page()}
-            </Button>
+        {entriesQuery.error && (
+          <Alert variant="danger" className="mb-4">
+            {m.admin_error_load_data()}
+          </Alert>
+        )}
+
+        {entriesQuery.isPending ? (
+          <div className="text-center py-12">
+            <Spinner variant="primary" role="status">
+              <span className="sr-only">{m.admin_loading()}</span>
+            </Spinner>
           </div>
-        </>
-      )}
-    </div>
+        ) : entries.length === 0 ? (
+          <p className="text-subtle">{m.admin_audit_no_entries()}</p>
+        ) : (
+          <>
+            <Table>
+              <caption className="sr-only">{m.admin_audit_table_caption()}</caption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">{m.admin_audit_column_timestamp()}</TableHead>
+                  <TableHead scope="col">{m.admin_audit_column_actor()}</TableHead>
+                  <TableHead scope="col">{m.admin_audit_column_action()}</TableHead>
+                  <TableHead scope="col">{m.admin_audit_column_resource()}</TableHead>
+                  <TableHead scope="col">{m.admin_audit_column_details()}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {entries.map((entry) => (
+                  <TableRow key={entry.id}>
+                    <TableCell>{formatTimestamp(entry.timestamp)}</TableCell>
+                    <TableCell className="break-words">{entry.actor}</TableCell>
+                    <TableCell>{entry.action}</TableCell>
+                    <TableCell className="break-words">
+                      {entry.resourceType} / {entry.resourceId}
+                    </TableCell>
+                    <TableCell className="break-words">
+                      {Object.keys(entry.details).length > 0 ? JSON.stringify(entry.details) : ""}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                {m.admin_audit_previous_page()}
+              </Button>
+              <span className="text-subtle text-sm">{m.admin_audit_page_label({ page })}</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={entries.length < PAGE_SIZE}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                {m.admin_audit_next_page()}
+              </Button>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }

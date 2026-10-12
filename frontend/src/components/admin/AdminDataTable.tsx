@@ -264,6 +264,9 @@ function ServerAdminDataTable<T extends RowData>({
     },
     (value) => ({ ...value }),
   );
+  // A table that supplies its own `actions` column (icon buttons incl. its own edit) must not also
+  // get the generic Open/Actions column, which would repeat the same edit button and header.
+  const hasActionsColumn = table.getVisibleLeafColumns().some((column) => column.id === "actions");
   const rowActions = (row: T) => (
     <div className="flex gap-2">
       <Button
@@ -294,7 +297,7 @@ function ServerAdminDataTable<T extends RowData>({
     </div>
   );
   return (
-    <section aria-label={labels.caption} aria-busy={result.isFetching} className="space-y-3">
+    <section aria-label={labels.caption} aria-busy={result.isFetching} className="space-y-3 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <span role="status">{labels.results(result.data?.total ?? 0)}</span>
         <Input
@@ -341,6 +344,7 @@ function ServerAdminDataTable<T extends RowData>({
         {primaryAction}
         {onSelectAllMatching && (
           <Button
+            variant="outline"
             disabled={busy || result.isPlaceholderData || !result.data?.total}
             onClick={() => void perform(() => onSelectAllMatching(state))}
           >
@@ -349,6 +353,7 @@ function ServerAdminDataTable<T extends RowData>({
         )}
         {onExport && (
           <Button
+            variant="outline"
             disabled={busy || result.isPlaceholderData || !result.data?.total}
             onClick={() => void perform(() => onExport(state))}
           >
@@ -389,7 +394,7 @@ function ServerAdminDataTable<T extends RowData>({
           table={table}
           onOpen={onOpen}
           getRowLabel={getRowLabel}
-          rowActions={rowActions}
+          rowActions={hasActionsColumn ? undefined : rowActions}
           caption={labels.caption}
           actionsLabel={labels.actions}
         />
@@ -424,7 +429,7 @@ function ServerAdminDataTable<T extends RowData>({
                   <table.FlexRender cell={cell} />
                 </div>
               ))}
-            {rowActions(row.original)}
+            {!hasActionsColumn && rowActions(row.original)}
           </li>
         ))}
       </ul>

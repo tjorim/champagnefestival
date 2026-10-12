@@ -250,7 +250,7 @@ function DraggableTable({
       : isFull
         ? "bg-warning/10 text-highlight"
         : assignedCount > 0
-          ? "bg-success/10 text-success"
+          ? "bg-success/10 text-success-text"
           : "bg-muted text-subtle";
 
   return (
