@@ -160,7 +160,7 @@ export function usePeopleMutations({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
-          `/api/members/${id}/end`,
+          `/api/members/${id}/revoke-role`,
           { method: "POST", headers: authHeaders() },
           m.admin_members_error_end(),
         ),
@@ -319,7 +319,7 @@ export function usePeopleMutations({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
-          `/api/volunteers/${id}/end`,
+          `/api/volunteers/${id}/deactivate`,
           { method: "POST", headers: authHeaders() },
           m.admin_volunteers_error_end(),
         ),

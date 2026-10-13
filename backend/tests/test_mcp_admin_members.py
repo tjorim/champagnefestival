@@ -136,7 +136,7 @@ async def test_update_member_eid_document_number_conflict(db_session):
         await mcp_members.update_member(factory, "admin-1", bob["id"], eid_document_number="BEI998877")
 
 
-async def test_end_membership_keeps_person_and_registrations(db_session):
+async def test_revoke_member_role_keeps_person_and_registrations(db_session):
     factory = mcp_session_factory(db_session)
     member = await mcp_members.create_member(factory, "admin-1", name="Alice")
 
@@ -161,7 +161,7 @@ async def test_end_membership_keeps_person_and_registrations(db_session):
     )
     await db_session.commit()
 
-    result = await mcp_members.end_membership(factory, "admin-1", member["id"])
+    result = await mcp_members.revoke_member_role(factory, "admin-1", member["id"])
     assert result == {"ended": True, "id": member["id"]}
 
     # The registration (attendance history) survives; only the membership ends.
@@ -173,15 +173,15 @@ async def test_end_membership_keeps_person_and_registrations(db_session):
         await mcp_members.get_member(factory, member["id"])
 
     # Ending again changes nothing and writes no second audit entry.
-    assert await mcp_members.end_membership(factory, "admin-1", member["id"]) == result
+    assert await mcp_members.revoke_member_role(factory, "admin-1", member["id"]) == result
     entries = (await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "member_role_removed"))).all()
     assert len(entries) == 1
 
 
-async def test_end_membership_not_found(db_session):
+async def test_revoke_member_role_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_members.end_membership(factory, "admin-1", "nonexistent")
+        await mcp_members.revoke_member_role(factory, "admin-1", "nonexistent")
 
 
 async def test_get_and_list_member_omit_identity_fields(db_session):

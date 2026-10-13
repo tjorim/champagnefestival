@@ -187,13 +187,13 @@ async def apply_member_update(
     return person_to_dict(person)
 
 
-async def end_membership(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+async def revoke_member_role(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
     """End a person's membership: remove the ``member`` role, keep everything else.
 
     The underlying ``Person`` is kept intact, together with their registrations,
     check-ins and audit history: attendance is what member benefits are earned from, and
     someone who stops being a member is still a visitor. Only the ``member`` role is removed
-    (mirroring ``volunteers_service.end_volunteering``). Erasing a person and their
+    (mirroring ``volunteers_service.deactivate_volunteer``). Erasing a person and their
     registrations is the separate ``people_service.delete_person``. Calling it again, or on a
     person who is not a member, changes nothing.
     """

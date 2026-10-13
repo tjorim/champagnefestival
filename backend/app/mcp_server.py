@@ -1941,10 +1941,10 @@ class ChampagneFestivalMcpBackend:
             roles=roles,
         )
 
-    async def end_membership(self, person_id: str) -> dict:
+    async def revoke_member_role(self, person_id: str) -> dict:
         """End a person's membership: the member role is removed; the person, their other roles and registrations are kept. Repeating it changes nothing. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_members.end_membership(self.session_factory, self._actor(), person_id)
+        return await mcp_admin_members.revoke_member_role(self.session_factory, self._actor(), person_id)
 
     # -- Volunteers ----------------------------------------------------
 
@@ -2029,10 +2029,10 @@ class ChampagneFestivalMcpBackend:
             clear_oidc_subject=clear_oidc_subject,
         )
 
-    async def end_volunteering(self, volunteer_id: str) -> dict:
+    async def deactivate_volunteer(self, volunteer_id: str) -> dict:
         """End a person's volunteering: they are marked inactive (``active`` applies to all their roles) and open help periods are closed today; the role, the person and every period are kept. Repeating it changes nothing. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_volunteers.end_volunteering(self.session_factory, self._actor(), volunteer_id)
+        return await mcp_admin_volunteers.deactivate_volunteer(self.session_factory, self._actor(), volunteer_id)
 
     # -- Registrations (admin) ------------------------------------------
 
@@ -2454,12 +2454,12 @@ def create_mcp_server(
     register_tool(backend.get_member)
     register_tool(backend.list_members)
     register_tool(backend.update_member)
-    register_tool(backend.end_membership)
+    register_tool(backend.revoke_member_role)
     register_tool(backend.create_volunteer)
     register_tool(backend.get_volunteer)
     register_tool(backend.list_volunteers)
     register_tool(backend.update_volunteer)
-    register_tool(backend.end_volunteering)
+    register_tool(backend.deactivate_volunteer)
     register_tool(backend.list_registrations)
     register_tool(backend.create_registration)
     register_tool(backend.update_registration)

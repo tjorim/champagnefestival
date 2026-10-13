@@ -214,7 +214,7 @@ async def test_update_volunteer_eid_document_number_conflict(db_session):
         await mcp_volunteers.update_volunteer(factory, "admin-1", bob["id"], eid_document_number="BEI998877")
 
 
-async def test_end_volunteering_keeps_everything(db_session):
+async def test_deactivate_volunteer_keeps_everything(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_volunteers.create_volunteer(
         factory,
@@ -226,7 +226,7 @@ async def test_end_volunteering_keeps_everything(db_session):
     )
     volunteer_id = created["id"]
 
-    result = await mcp_volunteers.end_volunteering(factory, "admin-1", volunteer_id)
+    result = await mcp_volunteers.deactivate_volunteer(factory, "admin-1", volunteer_id)
     assert result == {"ended": True, "id": volunteer_id}
 
     # Still a volunteer record, marked inactive, with the person and role intact ...
@@ -248,16 +248,16 @@ async def test_end_volunteering_keeps_everything(db_session):
     assert [(p.first_help_day.isoformat(), p.last_help_day.isoformat()) for p in periods] == [
         ("2099-03-21", "2099-03-22")
     ]
-    entry = await db_session.scalar(select(AuditEntry).where(AuditEntry.action == "volunteering_ended"))
+    entry = await db_session.scalar(select(AuditEntry).where(AuditEntry.action == "volunteer_deactivated"))
     assert entry is not None and entry.resource_id == volunteer_id
 
     # Ending again changes nothing and writes no second audit entry.
-    assert await mcp_volunteers.end_volunteering(factory, "admin-1", volunteer_id) == result
-    entries = (await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "volunteering_ended"))).all()
+    assert await mcp_volunteers.deactivate_volunteer(factory, "admin-1", volunteer_id) == result
+    entries = (await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "volunteer_deactivated"))).all()
     assert len(entries) == 1
 
 
-async def test_end_volunteering_closes_open_periods(db_session):
+async def test_deactivate_volunteer_closes_open_periods(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_volunteers.create_volunteer(
         factory,
@@ -272,7 +272,7 @@ async def test_end_volunteering_closes_open_periods(db_session):
     )
     volunteer_id = created["id"]
 
-    await mcp_volunteers.end_volunteering(factory, "admin-1", volunteer_id)
+    await mcp_volunteers.deactivate_volunteer(factory, "admin-1", volunteer_id)
 
     periods = (
         (
@@ -291,7 +291,7 @@ async def test_end_volunteering_closes_open_periods(db_session):
     assert periods[1].last_help_day == periods[1].first_help_day
 
 
-async def test_end_volunteering_not_found(db_session):
+async def test_deactivate_volunteer_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_volunteers.end_volunteering(factory, "admin-1", "nonexistent")
+        await mcp_volunteers.deactivate_volunteer(factory, "admin-1", "nonexistent")

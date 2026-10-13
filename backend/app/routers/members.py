@@ -57,8 +57,8 @@ async def update_member(
     return await members_service.apply_member_update(db, person, body, actor=actor, request_id=request_id)
 
 
-@router.post("/{person_id}/end", status_code=status.HTTP_204_NO_CONTENT)
-async def end_membership(
+@router.post("/{person_id}/revoke-role", status_code=status.HTTP_204_NO_CONTENT)
+async def revoke_member_role(
     person_id: str,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
@@ -66,7 +66,7 @@ async def end_membership(
 ) -> None:
     """End a person's membership; they stay in the directory.
 
-    See ``app.services.members_service.end_membership`` for the exact semantics.
+    See ``app.services.members_service.revoke_member_role`` for the exact semantics.
     """
     person = await people_service.get_person_or_404(db, person_id)
-    await members_service.end_membership(db, person, actor=actor, request_id=request_id)
+    await members_service.revoke_member_role(db, person, actor=actor, request_id=request_id)

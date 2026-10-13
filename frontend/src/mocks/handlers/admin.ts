@@ -808,7 +808,7 @@ export const adminHandlers = [
   }),
 
   // Ending a membership only removes the role; the person stays in the directory.
-  http.post("/api/members/:id/end", ({ request, params }) => {
+  http.post("/api/members/:id/revoke-role", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const idx = people.findIndex((p) => p.id === params.id);
@@ -879,7 +879,7 @@ export const adminHandlers = [
 
   // Ending volunteering keeps the role and every period; open periods are closed (today) and the
   // person is marked inactive.
-  http.post("/api/volunteers/:id/end", ({ request, params }) => {
+  http.post("/api/volunteers/:id/deactivate", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const idx = people.findIndex((p) => p.id === params.id);

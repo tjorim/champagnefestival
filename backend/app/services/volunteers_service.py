@@ -272,7 +272,9 @@ async def apply_volunteer_update(
     return to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
 
 
-async def end_volunteering(db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None) -> dict:
+async def deactivate_volunteer(
+    db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None
+) -> dict:
     """End a person's volunteering (they step back); everything stays on file.
 
     Whether someone is still part of the volunteer pool is the ``active`` flag, not their help
@@ -305,7 +307,7 @@ async def end_volunteering(db: AsyncSession, volunteer: Person, *, actor: str, r
         await write_audit_entry(
             db,
             actor=actor,
-            action="volunteering_ended",
+            action="volunteer_deactivated",
             resource_type="person",
             resource_id=volunteer_id,
             request_id=request_id,

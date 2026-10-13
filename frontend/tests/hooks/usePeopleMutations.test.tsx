@@ -296,7 +296,7 @@ describe("optimistic people mutations", () => {
     const h = harness();
     const gate = deferred();
     server.use(
-      http.post("/api/members/:id/end", async () => {
+      http.post("/api/members/:id/revoke-role", async () => {
         await gate.promise;
         h.rows()[0]!.roles = ["volunteer"];
         return new HttpResponse(null, { status: 204 });
@@ -319,7 +319,7 @@ describe("optimistic people mutations", () => {
     const h = harness();
     const gate = deferred();
     server.use(
-      http.post("/api/volunteers/:id/end", async () => {
+      http.post("/api/volunteers/:id/deactivate", async () => {
         await gate.promise;
         h.rows()[0]!.active = false;
         (h.rows()[0]!.help_periods[0] as { last_help_day: string | null }).last_help_day =

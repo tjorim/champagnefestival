@@ -118,10 +118,10 @@ async def update_member(
             raise as_value_error(exc) from exc
 
 
-async def end_membership(session_factory: Any, actor: str, person_id: str) -> dict:
+async def revoke_member_role(session_factory: Any, actor: str, person_id: str) -> dict:
     async with session_factory() as db:
         try:
             person = await people_service.get_person_or_404(db, person_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return await members_service.end_membership(db, person, actor=actor)
+        return await members_service.revoke_member_role(db, person, actor=actor)

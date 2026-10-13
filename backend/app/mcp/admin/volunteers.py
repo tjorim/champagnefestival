@@ -107,10 +107,10 @@ async def update_volunteer(
             raise as_value_error(exc) from exc
 
 
-async def end_volunteering(session_factory: Any, actor: str, volunteer_id: str) -> dict:
+async def deactivate_volunteer(session_factory: Any, actor: str, volunteer_id: str) -> dict:
     """End a person's volunteering (they stay listed, marked inactive).
 
-    See ``app.services.volunteers_service.end_volunteering`` for the exact
+    See ``app.services.volunteers_service.deactivate_volunteer`` for the exact
     semantics.
     """
     async with session_factory() as db:
@@ -118,4 +118,4 @@ async def end_volunteering(session_factory: Any, actor: str, volunteer_id: str) 
             volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return await volunteers_service.end_volunteering(db, volunteer, actor=actor)
+        return await volunteers_service.deactivate_volunteer(db, volunteer, actor=actor)
