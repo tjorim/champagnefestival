@@ -6,9 +6,8 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#admin.admin-authenticated")).toBeVisible();
 });
 
-// The members tab is named after the club: every member is a Champagnelovers member.
 const TAB_LABEL = {
-  Members: "Champagnelovers",
+  Members: "Members",
   Volunteers: "Volunteers",
   People: "All people",
 } as const;
