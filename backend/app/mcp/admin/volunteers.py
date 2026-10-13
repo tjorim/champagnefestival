@@ -108,7 +108,7 @@ async def update_volunteer(
 
 
 async def deactivate_volunteer(session_factory: Any, actor: str, volunteer_id: str) -> dict:
-    """End a person's volunteering (they stay listed, marked inactive).
+    """End a person's volunteering (the volunteer role is retired).
 
     See ``app.services.volunteers_service.deactivate_volunteer`` for the exact
     semantics.
@@ -119,3 +119,13 @@ async def deactivate_volunteer(session_factory: Any, actor: str, volunteer_id: s
         except HTTPException as exc:
             raise as_value_error(exc) from exc
         return await volunteers_service.deactivate_volunteer(db, volunteer, actor=actor)
+
+
+async def reactivate_volunteer(session_factory: Any, actor: str, volunteer_id: str) -> dict:
+    """Undo ``deactivate_volunteer``: the person counts as an active volunteer again."""
+    async with session_factory() as db:
+        try:
+            volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
+        except HTTPException as exc:
+            raise as_value_error(exc) from exc
+        return await volunteers_service.reactivate_volunteer(db, volunteer, actor=actor)

@@ -1114,6 +1114,10 @@ class Person(Base):
     phone: Mapped[str] = mapped_column(String(50), default="")
     address: Mapped[str] = mapped_column(String(300), default="")
     roles: Mapped[list[str]] = mapped_column(JSON, default=list)
+    retired_roles: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
+    """Roles the person has stepped back from, as ``{role: ISO retirement date}``. A retired role
+    stays in ``roles`` (with every registration and help period) but the person no longer counts
+    as an active member or volunteer; ``active`` is the separate, person-wide archive flag."""
 
     national_register_number: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
     """Belgium's National Register Number (NISS) — fixed and lifelong; this is

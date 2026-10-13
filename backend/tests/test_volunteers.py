@@ -124,11 +124,12 @@ async def test_volunteer_crud_and_constraints(client):
     assert r.status_code == 200
     periods = r.json()["help_periods"]
     assert len(periods) == 3
-    # ... the open one is now closed, and the person is inactive rather than gone.
+    # ... the open one is now closed, and the volunteer role is retired rather than removed.
     assert all(period["last_help_day"] is not None for period in periods)
     person = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
     assert "volunteer" in person.json()["roles"]
-    assert person.json()["active"] is False
+    assert list(person.json()["retired_roles"]) == ["volunteer"]
+    assert person.json()["active"] is True
     r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
     assert r.json()["items"] == []
     r = await client.get("/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS)
@@ -136,6 +137,14 @@ async def test_volunteer_crud_and_constraints(client):
 
     # Ending again is a no-op, not an error.
     r = await client.post(f"/api/volunteers/{volunteer_id}/deactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
+
+    # Reactivating brings them back (periods are not reopened); a repeat is a no-op too.
+    r = await client.post(f"/api/volunteers/{volunteer_id}/reactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
+    r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
+    assert [item["id"] for item in r.json()["items"]] == [volunteer_id]
+    r = await client.post(f"/api/volunteers/{volunteer_id}/reactivate", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
 

@@ -144,6 +144,7 @@ def to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> dic
         "national_register_number": d["national_register_number"],
         "eid_document_number": d["eid_document_number"],
         "active": d["active"],
+        "retired_roles": d["retired_roles"],
         "oidc_subject": person.oidc_subject,
         "help_periods": [
             {
@@ -277,16 +278,16 @@ async def deactivate_volunteer(
 ) -> dict:
     """End a person's volunteering (they step back); everything stays on file.
 
-    Whether someone is still part of the volunteer pool is the ``active`` flag, not their help
-    periods: a period only covers the days around one festival, so most volunteers have no
-    current period between editions, and skipping one edition does not end anything. Ending
-    volunteering therefore marks the person inactive and closes any help period that is still
-    open (``last_help_day`` becomes today, or the period's first day if it has not started yet).
-    The ``volunteer`` role, the ``Person`` record, every help period, registrations and audit
-    history are kept: the periods are what an insurance claim needs ("who was covered on which
-    day"). ``active`` is one flag on the person, so it applies to all their roles. Volunteering
-    resumes by setting them active again and adding a help period. Calling it again changes
-    nothing and writes no second audit entry.
+    Whether someone is still part of the volunteer pool is whether the ``volunteer`` role is
+    retired, not their help periods: a period only covers the days around one festival, so most
+    volunteers have no current period between editions, and skipping one edition does not end
+    anything. Ending volunteering therefore retires the role (``retired_roles["volunteer"]``
+    records the day; their other roles and the person-wide ``active`` flag are untouched) and
+    closes any help period that is still open (``last_help_day`` becomes today, or the period's
+    first day if it has not started yet). The ``volunteer`` role, the ``Person`` record, every help
+    period, registrations and audit history are kept: the periods are what an insurance claim
+    needs ("who was covered on which day"). Volunteering resumes with ``reactivate_volunteer`` and
+    a new help period. Calling it again changes nothing and writes no second audit entry.
     """
     volunteer_id = volunteer.id
     closed_ids = (
@@ -301,9 +302,10 @@ async def deactivate_volunteer(
         .scalars()
         .all()
     )
-    was_active = volunteer.active
-    if was_active or closed_ids:
-        volunteer.active = False
+    newly_retired = "volunteer" not in (volunteer.retired_roles or {})
+    if newly_retired or closed_ids:
+        if newly_retired:
+            volunteer.retired_roles = {**(volunteer.retired_roles or {}), "volunteer": dt_date.today().isoformat()}
         await write_audit_entry(
             db,
             actor=actor,
@@ -311,7 +313,30 @@ async def deactivate_volunteer(
             resource_type="person",
             resource_id=volunteer_id,
             request_id=request_id,
-            details={"was_active": was_active, "closed_open_periods": len(closed_ids)},
+            details={"newly_retired": newly_retired, "closed_open_periods": len(closed_ids)},
         )
         await db.commit()
     return {"ended": True, "id": volunteer_id}
+
+
+async def reactivate_volunteer(
+    db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None
+) -> dict:
+    """Undo ``deactivate_volunteer``: the person counts as an active volunteer again.
+
+    Help periods are not reopened; add a new period for the next stretch. A repeat is a no-op.
+    """
+    volunteer_id = volunteer.id
+    if "volunteer" in (volunteer.retired_roles or {}):
+        volunteer.retired_roles = {role: day for role, day in volunteer.retired_roles.items() if role != "volunteer"}
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="volunteer_reactivated",
+            resource_type="person",
+            resource_id=volunteer_id,
+            request_id=request_id,
+            details={},
+        )
+        await db.commit()
+    return {"reactivated": True, "id": volunteer_id}

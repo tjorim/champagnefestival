@@ -64,9 +64,21 @@ async def deactivate_member(
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
 ) -> None:
-    """End a person's membership; they stay listed, marked inactive.
+    """End a person's membership: the member role is retired, nothing else changes.
 
     See ``app.services.members_service.deactivate_member`` for the exact semantics.
     """
     person = await members_service.get_member_or_404(db, person_id)
     await members_service.deactivate_member(db, person, actor=actor, request_id=request_id)
+
+
+@router.post("/{person_id}/reactivate", status_code=status.HTTP_204_NO_CONTENT)
+async def reactivate_member(
+    person_id: str,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
+) -> None:
+    """Undo ``deactivate``: the person counts as an active member again."""
+    person = await members_service.get_member_or_404(db, person_id)
+    await members_service.reactivate_member(db, person, actor=actor, request_id=request_id)

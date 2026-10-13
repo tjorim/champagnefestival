@@ -28,7 +28,13 @@ from app.schemas import (
 )
 from app.services import payments_service, people_service
 from app.services.people_exports import stream_people_csv
-from app.services.people_listing import PersonSortKey, filtered_people_stmt, order_people_stmt, registration_count
+from app.services.people_listing import (
+    PersonSortKey,
+    filtered_people_stmt,
+    order_people_stmt,
+    registration_count,
+    role_active,
+)
 from app.utils import person_to_dict, registration_to_list_dict
 
 # The identity-field anonymisation window (docs/decisions/934-data-retention-and-erasure.md):
@@ -94,8 +100,13 @@ async def people_counts(
 ) -> dict:
     """Counts within the full intersection of q, role and active filters."""
     matching = filtered_people_stmt(q=q, role=role, active=active).subquery()
+    active_expr = (
+        role_active(role, active_column=matching.c.active, retired_column=matching.c.retired_roles)
+        if role
+        else matching.c.active.is_(True)
+    )
     total, active_count = (
-        await db.execute(select(func.count(), func.count().filter(matching.c.active.is_(True))).select_from(matching))
+        await db.execute(select(func.count(), func.count().filter(active_expr)).select_from(matching))
     ).one()
     expanded = select(
         matching.c.id, func.lower(func.json_array_elements_text(matching.c.roles)).label("role")

@@ -94,9 +94,13 @@ function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "")
     kind === "people" ? (
       <PeopleManagement {...{ authHeaders, onCreate, onUpdate, onDelete, onMerge }} />
     ) : kind === "members" ? (
-      <MembersManagement {...{ authHeaders, onCreate, onUpdate, onEnd: onDelete }} />
+      <MembersManagement
+        {...{ authHeaders, onCreate, onUpdate, onEnd: onDelete, onReactivate: onDelete }}
+      />
     ) : (
-      <VolunteersManagement {...{ authHeaders, onCreate, onUpdate, onEnd: onDelete }} />
+      <VolunteersManagement
+        {...{ authHeaders, onCreate, onUpdate, onEnd: onDelete, onReactivate: onDelete }}
+      />
     );
   const root = createRootRoute({ component, validateSearch: (search) => search });
   const router = createRouter({

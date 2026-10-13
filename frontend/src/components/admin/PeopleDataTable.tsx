@@ -14,7 +14,7 @@ import {
   type PeopleListParams,
 } from "@/utils/adminPeopleQueries";
 import { downloadFileOrThrow } from "@/utils/adminApi";
-import type { Person } from "@/types/person";
+import { isRoleActive, type Person } from "@/types/person";
 import { m } from "@/paraglide/messages";
 
 export function peopleTableParams(state: AdminTableState, role?: string): PeopleListParams {
@@ -50,7 +50,7 @@ function peopleEndpointParams(state: AdminTableState, role?: string): PeopleList
     : params;
 }
 
-export function PersonName({ person }: { person: Person }) {
+export function PersonName({ person, role }: { person: Person; role?: string }) {
   const pending = useIsMutating({
     mutationKey: ["admin", "people", "write"],
     predicate: (mutation) => {
@@ -65,7 +65,15 @@ export function PersonName({ person }: { person: Person }) {
   return (
     <span className="flex items-center gap-1" aria-busy={pending > 0}>
       {person.name}
-      {!person.active && <Badge variant="secondary">{m.admin_people_inactive_badge_label()}</Badge>}
+      {(!person.active || (role && !isRoleActive(person, role))) && (
+        <Badge variant="secondary">{m.admin_people_inactive_badge_label()}</Badge>
+      )}
+      {!role &&
+        Object.keys(person.retiredRoles).map((retired) => (
+          <Badge key={retired} variant="outline">
+            {m.admin_people_retired_role_badge({ role: retired })}
+          </Badge>
+        ))}
       {pending > 0 && <Spinner size="sm" label={m.admin_settings_saving()} />}
     </span>
   );

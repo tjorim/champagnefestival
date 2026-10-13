@@ -270,11 +270,13 @@ See `.env.example` for a template.
 | `GET`    | `/api/volunteers/export`        | admin          | Stream filtered volunteer insurance CSV (`q`, `active`, `sort`, `sort_dir`; active-only by default, `include_inactive=true` for all)                           |
 | `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
-| `POST`   | `/api/volunteers/{id}/deactivate`      | admin          | End volunteering: mark the person inactive and close open periods today; role, person and periods are kept (repeat is a no-op) |
+| `POST`   | `/api/volunteers/{id}/deactivate`      | admin          | End volunteering: retire the `volunteer` role (`retired_roles`) and close open periods today; role, person and periods are kept (repeat is a no-op) |
+| `POST`   | `/api/volunteers/{id}/reactivate`       | admin          | Undo `deactivate`: the volunteer role counts as active again (closed periods are not reopened; repeat is a no-op) |
 | `POST`   | `/api/members`                  | admin          | Create member (person with role `member`)                                  |
 | `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
-| `POST`   | `/api/members/{id}/deactivate`          | admin          | End membership: mark the person inactive (role, person and registrations are kept; repeat is a no-op) |
+| `POST`   | `/api/members/{id}/deactivate`          | admin          | End membership: retire the `member` role (`retired_roles`); role, person, other roles and registrations are kept (repeat is a no-op) |
+| `POST`   | `/api/members/{id}/reactivate`          | admin          | Undo `deactivate`: the member role counts as active again (repeat is a no-op) |
 | `POST`   | `/api/people`                   | admin          | Create person with role tags                                               |
 | `GET`    | `/api/people`                   | admin          | Paged people list on the [shared list contract](#paged-list-contract) (`?q=`, `?role=`, `?active=`, `?sort=name\|email\|created\|updated\|registration_count`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET` | `/api/people/counts` | admin | Full-set `{total, active, inactive, by_role}` for the intersection of `q`, `role`, `active`; omit a facet filter to obtain counts for its tabs. Roles are case-insensitive and overlapping (a person counts once in each role). |
@@ -308,6 +310,12 @@ follows the same shape.
 | `sort`     | One of a whitelist; any other value is a 422, never a silent default. People: `name`, `email`, `created`, `updated`, `registration_count`. Volunteers: `name`, `created`, `updated`. |
 | `sort_dir` | `asc` (default) or `desc`; used only with `sort`. |
 
+- **`active` with a `role`:** without `role` it is the person-wide archive flag
+  (`Person.active`). With `role` (and on `/api/volunteers`, which implies
+  `role=volunteer`) it means active *in that role*: not archived and not retired
+  from it (`Person.retired_roles`, set by the `deactivate` actions), so
+  `active=false` lists people who retired the role plus anyone archived as a
+  whole. `GET /api/people/counts` follows the same rule.
 - **Order without `sort`:** a search (`q`) is ordered by relevance, ending in
   `name, id`; a plain list is newest first (`created_at desc, id desc`). An
   explicit `sort` always overrides relevance.

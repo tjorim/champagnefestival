@@ -200,6 +200,9 @@ async def apply_person_update(
 
     if body.roles is not None:
         person.roles = normalise_roles(body.roles)
+        # A role the person no longer holds cannot stay retired; it would reappear retired if the
+        # role is added again later.
+        person.retired_roles = {r: d for r, d in (person.retired_roles or {}).items() if r in person.roles}
 
     if body.marketing_opt_in is not None:
         # Enforces PersonUpdate.marketing_opt_in's own contract: this path
@@ -383,6 +386,16 @@ async def merge_people(
 
     # Merge roles (union).
     canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))
+    # A merged role stays retired only if no side still held it actively.
+    canonical.retired_roles = {
+        role: day
+        for role, day in (canonical.retired_roles or {}).items()
+        if role not in duplicate.roles or role in (duplicate.retired_roles or {})
+    } | {
+        role: day
+        for role, day in (duplicate.retired_roles or {}).items()
+        if role not in canonical.roles or role in (canonical.retired_roles or {})
+    }
 
     # Adopt unique identity fields from duplicate if canonical lacks them.
     # Normalise the value from the duplicate before storing so the canonical

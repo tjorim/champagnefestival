@@ -29,6 +29,14 @@ export function lastHelpedDay(periods: VolunteerHelpPeriod[]): string | null {
   return latest;
 }
 
+/** Active in a role: not archived as a whole and not retired from that role. */
+export function isRoleActive(
+  person: Pick<Person, "active" | "retiredRoles">,
+  role: string,
+): boolean {
+  return person.active && !Object.hasOwn(person.retiredRoles, role);
+}
+
 export interface Person {
   id: string;
   registrationCount?: number;
@@ -44,6 +52,8 @@ export interface Person {
   clubName: string;
   notes: string;
   active: boolean;
+  /** Roles the person stepped back from (role to ISO day); they stay in `roles`. */
+  retiredRoles: Record<string, string>;
   helpPeriods: VolunteerHelpPeriod[];
   createdAt: string;
   updatedAt: string;
@@ -64,6 +74,7 @@ export function apiToPerson(d: Record<string, unknown>): Person {
     clubName: (d.club_name ?? "") as string,
     notes: (d.notes ?? "") as string,
     active: (d.active ?? true) as boolean,
+    retiredRoles: (d.retired_roles as Record<string, string> | undefined) ?? {},
     helpPeriods: Array.isArray(d.help_periods)
       ? d.help_periods.map((period) => {
           const p = period as Record<string, unknown>;

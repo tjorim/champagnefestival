@@ -1942,9 +1942,14 @@ class ChampagneFestivalMcpBackend:
         )
 
     async def deactivate_member(self, person_id: str) -> dict:
-        """End a person's membership: they are marked inactive (``active`` applies to all their roles); the member role, the person and their registrations are kept. Repeating it changes nothing. Requires the ``admin`` role."""
+        """End a person's membership: the member role is retired (recorded in ``retired_roles``); the role, the person, their other roles and registrations are kept. Repeating it changes nothing. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_members.deactivate_member(self.session_factory, self._actor(), person_id)
+
+    async def reactivate_member(self, person_id: str) -> dict:
+        """Undo ``deactivate_member``: the person counts as an active member again. Repeating it changes nothing. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_members.reactivate_member(self.session_factory, self._actor(), person_id)
 
     # -- Volunteers ----------------------------------------------------
 
@@ -2030,9 +2035,14 @@ class ChampagneFestivalMcpBackend:
         )
 
     async def deactivate_volunteer(self, volunteer_id: str) -> dict:
-        """End a person's volunteering: they are marked inactive (``active`` applies to all their roles) and open help periods are closed today; the role, the person and every period are kept. Repeating it changes nothing. Requires the ``admin`` role."""
+        """End a person's volunteering: the volunteer role is retired (recorded in ``retired_roles``) and open help periods are closed today; the role, the person, their other roles and every period are kept. Repeating it changes nothing. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_volunteers.deactivate_volunteer(self.session_factory, self._actor(), volunteer_id)
+
+    async def reactivate_volunteer(self, volunteer_id: str) -> dict:
+        """Undo ``deactivate_volunteer``: the person counts as an active volunteer again (add a new help period; closed ones are not reopened). Repeating it changes nothing. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_volunteers.reactivate_volunteer(self.session_factory, self._actor(), volunteer_id)
 
     # -- Registrations (admin) ------------------------------------------
 
@@ -2455,11 +2465,13 @@ def create_mcp_server(
     register_tool(backend.list_members)
     register_tool(backend.update_member)
     register_tool(backend.deactivate_member)
+    register_tool(backend.reactivate_member)
     register_tool(backend.create_volunteer)
     register_tool(backend.get_volunteer)
     register_tool(backend.list_volunteers)
     register_tool(backend.update_volunteer)
     register_tool(backend.deactivate_volunteer)
+    register_tool(backend.reactivate_volunteer)
     register_tool(backend.list_registrations)
     register_tool(backend.create_registration)
     register_tool(backend.update_registration)

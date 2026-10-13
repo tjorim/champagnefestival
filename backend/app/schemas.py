@@ -142,6 +142,7 @@ class PersonOut(BaseModel):
     preferred_language: Literal["nl", "fr", "en"] | None = None
     address: str
     roles: list[str]
+    retired_roles: dict[str, str] = {}
     national_register_number: str | None
     eid_document_number: str | None
     visits_per_month: int | None
@@ -175,6 +176,7 @@ class PersonAdminSummaryOut(BaseModel):
     preferred_language: Literal["nl", "fr", "en"] | None = None
     address: str
     roles: list[str]
+    retired_roles: dict[str, str] = {}
     visits_per_month: int | None
     club_name: str
     notes: str
@@ -1033,6 +1035,7 @@ class VolunteerOut(BaseModel):
     national_register_number: str | None
     eid_document_number: str | None
     active: bool
+    retired_roles: dict[str, str] = {}
     help_periods: list[VolunteerPeriodOut]
     oidc_subject: str | None
     created_at: datetime

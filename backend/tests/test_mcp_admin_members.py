@@ -169,9 +169,10 @@ async def test_deactivate_member_keeps_role_person_and_registrations(db_session)
     entry = await db_session.scalar(select(AuditEntry).where(AuditEntry.action == "member_deactivated"))
     assert entry is not None and entry.resource_id == member["id"]
 
-    # Still a member record, marked inactive.
+    # Still a member record with the role retired, not removed.
     still = await mcp_members.get_member(factory, member["id"])
-    assert still["active"] is False
+    assert still["active"] is True
+    assert still["retired_roles"] == {"member": date.today().isoformat()}
     assert "member" in still["roles"]
 
     # Ending again changes nothing and writes no second audit entry.
@@ -198,3 +199,19 @@ async def test_get_and_list_member_omit_identity_fields(db_session):
     listed = await mcp_members.list_members(factory)
     dana = next(m for m in listed["members"] if m["id"] == created["id"])
     assert "national_register_number" not in dana
+
+
+async def test_reactivate_member_restores_the_role_and_repeats_as_noop(db_session):
+    factory = mcp_session_factory(db_session)
+    member = await mcp_members.create_member(factory, "admin-1", name="Alice")
+    await mcp_members.deactivate_member(factory, "admin-1", member["id"])
+    assert (await mcp_members.list_members(factory, active=False))["members"][0]["id"] == member["id"]
+
+    result = await mcp_members.reactivate_member(factory, "admin-1", member["id"])
+    assert result == {"reactivated": True, "id": member["id"]}
+    assert (await mcp_members.get_member(factory, member["id"]))["retired_roles"] == {}
+    assert [m["id"] for m in (await mcp_members.list_members(factory, active=True))["members"]] == [member["id"]]
+
+    assert await mcp_members.reactivate_member(factory, "admin-1", member["id"]) == result
+    entries = (await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "member_reactivated"))).all()
+    assert len(entries) == 1

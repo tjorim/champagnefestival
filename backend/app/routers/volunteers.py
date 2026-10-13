@@ -117,10 +117,22 @@ async def deactivate_volunteer(
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
 ) -> None:
-    """End a person's volunteering; they stay listed, marked inactive.
+    """End a person's volunteering: the volunteer role is retired and open periods are closed.
 
     See ``app.services.volunteers_service.deactivate_volunteer`` for the exact
     semantics.
     """
     volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
     await volunteers_service.deactivate_volunteer(db, volunteer, actor=actor, request_id=request_id)
+
+
+@router.post("/{volunteer_id}/reactivate", status_code=status.HTTP_204_NO_CONTENT)
+async def reactivate_volunteer(
+    volunteer_id: str,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
+) -> None:
+    """Undo ``deactivate``: the person counts as an active volunteer again (add a new help period)."""
+    volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
+    await volunteers_service.reactivate_volunteer(db, volunteer, actor=actor, request_id=request_id)

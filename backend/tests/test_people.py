@@ -753,7 +753,7 @@ async def test_deactivate_member_keeps_role_person_and_registrations(client):
     r = await client.post(f"/api/members/{member_id}/deactivate", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
-    # Still a member, listed as inactive ...
+    # Still a member, listed as inactive in that role ...
     assert (await client.get(f"/api/members/{member_id}", headers=ADMIN_HEADERS)).status_code == 200
     active = await client.get("/api/people", params={"role": "member", "active": "true"}, headers=ADMIN_HEADERS)
     assert member_id not in {item["id"] for item in active.json()["items"]}
@@ -763,12 +763,68 @@ async def test_deactivate_member_keeps_role_person_and_registrations(client):
     person = await client.get(f"/api/people/{member_id}", headers=ADMIN_HEADERS)
     assert person.status_code == 200
     assert person.json()["roles"] == ["member", "volunteer"]
-    assert person.json()["active"] is False
+    assert list(person.json()["retired_roles"]) == ["member"]
+    assert person.json()["active"] is True
     assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 200
 
     # Ending again is a no-op (convergent), an unknown person is a not-found.
     assert (await client.post(f"/api/members/{member_id}/deactivate", headers=ADMIN_HEADERS)).status_code == 204
     assert (await client.post("/api/members/nonexistent/deactivate", headers=ADMIN_HEADERS)).status_code == 404
+
+
+@pytest.mark.anyio
+async def test_roles_are_retired_independently(client):
+    """Retiring one role leaves the other role (and the person) active, in lists and counts."""
+    created = await client.post(
+        "/api/members",
+        json={"name": "Both Roles", "email": "both.roles@example.com", "roles": ["volunteer"]},
+        headers=ADMIN_HEADERS,
+    )
+    assert created.status_code == 201
+    person_id = created.json()["id"]
+
+    async def ids(role: str, active: bool | None) -> set[str]:
+        params = {"role": role} | ({} if active is None else {"active": str(active).lower()})
+        listed = await client.get("/api/people", params=params, headers=ADMIN_HEADERS)
+        return {item["id"] for item in listed.json()["items"]}
+
+    async def counts(role: str) -> tuple[int, int]:
+        body = (await client.get("/api/people/counts", params={"role": role}, headers=ADMIN_HEADERS)).json()
+        return body["active"], body["inactive"]
+
+    assert (await client.post(f"/api/members/{person_id}/deactivate", headers=ADMIN_HEADERS)).status_code == 204
+
+    # Retired as a member only: inactive in the member list and counts, still an active volunteer.
+    assert person_id in await ids("member", False)
+    assert person_id not in await ids("member", True)
+    assert person_id in await ids("volunteer", True)
+    assert person_id not in await ids("volunteer", False)
+    assert await counts("member") == (0, 1)
+    assert await counts("volunteer") == (1, 0)
+    # The person-wide filter (no role) is untouched.
+    assert person_id in await ids("member", None)
+    person = (await client.get(f"/api/people/{person_id}", headers=ADMIN_HEADERS)).json()
+    assert person["active"] is True and list(person["retired_roles"]) == ["member"]
+
+    # An archived person (person-wide) is inactive in every role.
+    archived = await client.put(f"/api/people/{person_id}", json={"active": False}, headers=ADMIN_HEADERS)
+    assert archived.status_code == 200
+    assert person_id in await ids("volunteer", False)
+    assert person_id not in await ids("volunteer", True)
+    await client.put(f"/api/people/{person_id}", json={"active": True}, headers=ADMIN_HEADERS)
+
+    # Reactivating brings the member role back, and a repeat is a no-op.
+    assert (await client.post(f"/api/members/{person_id}/reactivate", headers=ADMIN_HEADERS)).status_code == 204
+    assert (await client.post(f"/api/members/{person_id}/reactivate", headers=ADMIN_HEADERS)).status_code == 204
+    assert person_id in await ids("member", True)
+    person = (await client.get(f"/api/people/{person_id}", headers=ADMIN_HEADERS)).json()
+    assert person["retired_roles"] == {}
+
+    # A retirement does not outlive the role itself.
+    await client.post(f"/api/members/{person_id}/deactivate", headers=ADMIN_HEADERS)
+    updated = await client.put(f"/api/people/{person_id}", json={"roles": ["volunteer"]}, headers=ADMIN_HEADERS)
+    assert updated.status_code == 200
+    assert updated.json()["retired_roles"] == {}
 
 
 @pytest.mark.anyio

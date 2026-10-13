@@ -36,6 +36,7 @@ function makePerson(overrides: Partial<Person> = {}): Person {
     clubName: "",
     notes: "",
     active: true,
+    retiredRoles: {},
     helpPeriods: [],
     createdAt: "2025-01-01T00:00:00Z",
     updatedAt: "2025-01-01T00:00:00Z",

@@ -292,13 +292,13 @@ describe("optimistic people mutations", () => {
     },
   );
 
-  it("ends a membership by marking the person inactive on people pages", async () => {
+  it("ends a membership by retiring the member role on people pages", async () => {
     const h = harness();
     const gate = deferred();
     server.use(
       http.post("/api/members/:id/deactivate", async () => {
         await gate.promise;
-        h.rows()[0]!.active = false;
+        Object.assign(h.rows()[0]!, { retired_roles: { member: localIsoDate() } });
         return new HttpResponse(null, { status: 204 });
       }),
     );
@@ -306,7 +306,10 @@ describe("optimistic people mutations", () => {
     act(() => {
       promise = h.result.current.endMembershipMutation.mutateAsync("a");
     });
-    await waitFor(() => expect(h.cached().items[0]?.active).toBe(false));
+    await waitFor(() =>
+      expect(h.cached().items[0]?.retiredRoles).toEqual({ member: localIsoDate() }),
+    );
+    expect(h.cached().items[0]?.active).toBe(true);
     expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
     expect(h.cached().items[0]?.name).toBe("Original a");
     expect(h.cached().total).toBe(2);
@@ -316,13 +319,13 @@ describe("optimistic people mutations", () => {
     });
   });
 
-  it("marks the volunteer inactive and closes open help periods on people pages", async () => {
+  it("retires the volunteer role and closes open help periods on people pages", async () => {
     const h = harness();
     const gate = deferred();
     server.use(
       http.post("/api/volunteers/:id/deactivate", async () => {
         await gate.promise;
-        h.rows()[0]!.active = false;
+        Object.assign(h.rows()[0]!, { retired_roles: { volunteer: localIsoDate() } });
         (h.rows()[0]!.help_periods[0] as { last_help_day: string | null }).last_help_day =
           localIsoDate();
         return new HttpResponse(null, { status: 204 });
@@ -335,10 +338,41 @@ describe("optimistic people mutations", () => {
     await waitFor(() =>
       expect(h.cached().items[0]?.helpPeriods[0]?.lastHelpDay).toBe(localIsoDate()),
     );
-    expect(h.cached().items[0]?.active).toBe(false);
+    expect(h.cached().items[0]?.retiredRoles).toEqual({ volunteer: localIsoDate() });
+    expect(h.cached().items[0]?.active).toBe(true);
     expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
     expect(h.cached().items[0]?.helpPeriods).toHaveLength(1);
     expect(h.cached().total).toBe(2);
+    gate.resolve();
+    await act(async () => {
+      await promise;
+    });
+  });
+
+  it("reactivates a retired role without touching the other one", async () => {
+    const h = harness();
+    const retired = { member: "2026-01-01", volunteer: "2026-02-01" };
+    Object.assign(h.rows()[0]!, { retired_roles: retired });
+    const seeded = h.cached();
+    h.queryClient.setQueryData(h.key, {
+      ...seeded,
+      items: [{ ...seeded.items[0]!, retiredRoles: retired }, ...seeded.items.slice(1)],
+    });
+    const gate = deferred();
+    server.use(
+      http.post("/api/members/:id/reactivate", async () => {
+        await gate.promise;
+        Object.assign(h.rows()[0]!, { retired_roles: { volunteer: "2026-02-01" } });
+        return new HttpResponse(null, { status: 204 });
+      }),
+    );
+    let promise!: Promise<unknown>;
+    act(() => {
+      promise = h.result.current.reactivateMembershipMutation.mutateAsync("a");
+    });
+    await waitFor(() =>
+      expect(h.cached().items[0]?.retiredRoles).toEqual({ volunteer: "2026-02-01" }),
+    );
     gate.resolve();
     await act(async () => {
       await promise;

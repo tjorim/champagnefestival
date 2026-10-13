@@ -603,6 +603,7 @@ def person_to_dict(p: Person) -> dict:
         "preferred_language": p.preferred_language,
         "address": p.address,
         "roles": p.roles,
+        "retired_roles": dict(p.retired_roles or {}),
         "national_register_number": p.national_register_number,
         "eid_document_number": p.eid_document_number,
         "visits_per_month": p.visits_per_month,

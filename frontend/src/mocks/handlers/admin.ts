@@ -295,13 +295,18 @@ function registrationToCheckInResponse(
 }
 
 /** Mirrors the paged people contract for authenticated UI tests. */
+// Active in a role: not archived as a whole and not retired from that role (as the backend does).
+function isActiveIn(person: Record<string, unknown>, role: string | null | undefined): boolean {
+  const retired = (person.retired_roles ?? {}) as Record<string, string>;
+  return Boolean(person.active) && !(role && Object.hasOwn(retired, role));
+}
 function filteredPeople(url: URL, role?: string) {
   const active = url.searchParams.get("active");
   const requestedRole = role ?? url.searchParams.get("role");
   const q = url.searchParams.get("q")?.toLowerCase().trim();
   return people.filter(
     (person) =>
-      (active === null || Boolean(person.active) === (active === "true")) &&
+      (active === null || isActiveIn(person, requestedRole) === (active === "true")) &&
       (!requestedRole || (person.roles as string[]).includes(requestedRole)) &&
       (!q ||
         [
@@ -320,6 +325,19 @@ function filteredPeople(url: URL, role?: string) {
         ) ||
         (person.roles as string[]).some((value) => value.includes(q))),
   );
+}
+function retireMockRole(person: Record<string, unknown>, role: string): Record<string, unknown> {
+  const retired = (person.retired_roles ?? {}) as Record<string, string>;
+  return Object.hasOwn(retired, role)
+    ? person
+    : { ...person, retired_roles: { ...retired, [role]: localIsoDate() } };
+}
+function reactivateMockRole(
+  person: Record<string, unknown>,
+  role: string,
+): Record<string, unknown> {
+  const { [role]: _removed, ...retired } = (person.retired_roles ?? {}) as Record<string, string>;
+  return { ...person, retired_roles: retired };
 }
 function peopleEnvelope(url: URL, role?: string) {
   const rows: Record<string, unknown>[] = filteredPeople(url, role).map((person) => ({
@@ -652,7 +670,9 @@ export const adminHandlers = [
     const by_role: Record<string, number> = {};
     for (const row of rows)
       for (const role of row.roles as string[]) by_role[role] = (by_role[role] ?? 0) + 1;
-    const active = rows.filter((row) => row.active).length;
+    const active = rows.filter((row) =>
+      isActiveIn(row, new URL(request.url).searchParams.get("role")),
+    ).length;
     return HttpResponse.json({
       total: rows.length,
       active,
@@ -807,16 +827,22 @@ export const adminHandlers = [
     return HttpResponse.json(people[idx]);
   }),
 
-  // Ending a membership marks the person inactive; the role and the person stay.
+  // Ending a membership retires the member role; the role and the person stay.
   http.post("/api/members/:id/deactivate", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
-    people[idx] = {
-      ...people[idx]!,
-      active: false,
-    };
+    people[idx] = retireMockRole(people[idx]!, "member");
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post("/api/members/:id/reactivate", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const idx = people.findIndex((p) => p.id === params.id);
+    if (idx === -1) return HttpResponse.json(null, { status: 404 });
+    people[idx] = reactivateMockRole(people[idx]!, "member");
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -877,8 +903,7 @@ export const adminHandlers = [
     return HttpResponse.json(people[idx]);
   }),
 
-  // Ending volunteering keeps the role and every period; open periods are closed (today) and the
-  // person is marked inactive.
+  // Ending volunteering retires the role and keeps every period; open periods are closed (today).
   http.post("/api/volunteers/:id/deactivate", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
@@ -886,8 +911,7 @@ export const adminHandlers = [
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     const today = localIsoDate();
     people[idx] = {
-      ...people[idx]!,
-      active: false,
+      ...retireMockRole(people[idx]!, "volunteer"),
       help_periods: ((people[idx]!.help_periods ?? []) as Record<string, unknown>[]).map(
         (period) =>
           period.last_help_day === null
@@ -899,6 +923,15 @@ export const adminHandlers = [
             : period,
       ),
     };
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  http.post("/api/volunteers/:id/reactivate", ({ request, params }) => {
+    const authError = requireAuth(request);
+    if (authError) return authError;
+    const idx = people.findIndex((p) => p.id === params.id);
+    if (idx === -1) return HttpResponse.json(null, { status: 404 });
+    people[idx] = reactivateMockRole(people[idx]!, "volunteer");
     return new HttpResponse(null, { status: 204 });
   }),
 

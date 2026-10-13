@@ -125,3 +125,13 @@ async def deactivate_member(session_factory: Any, actor: str, person_id: str) ->
         except HTTPException as exc:
             raise as_value_error(exc) from exc
         return await members_service.deactivate_member(db, person, actor=actor)
+
+
+async def reactivate_member(session_factory: Any, actor: str, person_id: str) -> dict:
+    """Undo ``deactivate_member``: the person counts as an active member again."""
+    async with session_factory() as db:
+        try:
+            person = await members_service.get_member_or_404(db, person_id)
+        except HTTPException as exc:
+            raise as_value_error(exc) from exc
+        return await members_service.reactivate_member(db, person, actor=actor)

@@ -6,7 +6,6 @@ import {
   AdminSelect,
   AdminOption,
   AdminTextarea,
-  AdminCheck,
 } from "@/components/admin/AdminFields";
 import { CircleCheckIcon, ContactRoundIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,7 +44,6 @@ export interface MemberFormData {
   address: string;
   clubName: string;
   notes: string;
-  active: boolean;
 }
 
 export default function MemberFormModal({ show, member, onSave, onHide }: MemberFormModalProps) {
@@ -66,7 +64,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             address: member.address ?? "",
             clubName: member.clubName ?? "",
             notes: member.notes ?? "",
-            active: member.active,
           }
         : {
             name: "",
@@ -76,7 +73,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             address: "",
             clubName: "",
             notes: "",
-            active: true,
           },
     [member],
   );
@@ -94,7 +90,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           address: value.address.trim(),
           clubName: value.clubName.trim(),
           notes: value.notes.trim(),
-          active: value.active,
         });
         onHide();
       } catch (err) {
@@ -310,19 +305,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 )}
               </form.Field>
             </AdminField>
-
-            <form.Field name="active">
-              {(field) => (
-                <AdminCheck
-                  type="switch"
-                  id="member-active"
-                  className="text-subtle"
-                  label={m.admin_people_active_label()}
-                  checked={field.value}
-                  onCheckedChange={(e) => field.handleChange(e)}
-                />
-              )}
-            </form.Field>
           </DialogBody>
 
           <DialogFooter>

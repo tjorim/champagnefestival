@@ -16,6 +16,7 @@ rows; that repair logic remains preserved in the baseline).
 
 from __future__ import annotations
 
+from datetime import date
 from typing import Any
 
 from fastapi import HTTPException
@@ -160,6 +161,7 @@ async def apply_member_update(
 
     if body.roles is not None:
         person.roles = normalise_roles(body.roles)
+        person.retired_roles = {r: d for r, d in (person.retired_roles or {}).items() if r in person.roles}
     ensure_member_role(person)
 
     await write_audit_entry(
@@ -184,19 +186,19 @@ async def apply_member_update(
 
 
 async def deactivate_member(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
-    """End a person's membership: mark them inactive, keep everything else.
+    """End a person's membership: retire the ``member`` role, keep everything else.
 
-    Like ``volunteers_service.deactivate_volunteer``, whether someone is still a member is the
-    ``active`` flag. The ``member`` role, the ``Person`` record, registrations, check-ins and
-    audit history all stay: attendance is what member benefits are earned from. ``active`` is one
-    flag on the person, so it applies to all their roles. Membership resumes by setting them
-    active again. Erasing a person and their registrations is the separate
-    ``people_service.delete_person``. Calling it again changes nothing and writes no second audit
-    entry.
+    The role is retired, not removed: it stays in ``roles`` and ``retired_roles["member"]`` records
+    the day, so the person stops counting as an active member without being archived as a whole
+    (``Person.active``) and without touching their other roles. The ``Person`` record,
+    registrations, check-ins and audit history all stay: attendance is what member benefits are
+    earned from. Membership resumes with ``reactivate_member``. Erasing a person and their
+    registrations is the separate ``people_service.delete_person``. Calling it again changes
+    nothing and writes no second audit entry.
     """
     person_id = person.id
-    if person.active:
-        person.active = False
+    if "member" not in (person.retired_roles or {}):
+        person.retired_roles = {**(person.retired_roles or {}), "member": date.today().isoformat()}
         await write_audit_entry(
             db,
             actor=actor,
@@ -208,3 +210,21 @@ async def deactivate_member(db: AsyncSession, person: Person, *, actor: str, req
         )
         await db.commit()
     return {"ended": True, "id": person_id}
+
+
+async def reactivate_member(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+    """Undo ``deactivate_member``: the person counts as an active member again. A repeat is a no-op."""
+    person_id = person.id
+    if "member" in (person.retired_roles or {}):
+        person.retired_roles = {role: day for role, day in person.retired_roles.items() if role != "member"}
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="member_reactivated",
+            resource_type="person",
+            resource_id=person_id,
+            request_id=request_id,
+            details={},
+        )
+        await db.commit()
+    return {"reactivated": True, "id": person_id}

@@ -5,7 +5,7 @@ import type { PersonFormData } from "@/components/admin/PersonFormModal";
 import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
 import { m } from "@/paraglide/messages";
 import { captureAdminPeopleFence } from "@/state/adminPeopleSession";
-import { localIsoDate } from "@/types/person";
+import { localIsoDate, type Person } from "@/types/person";
 import { peopleWrites, type PeopleWrite } from "@/utils/optimisticPeoplePages";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -18,6 +18,18 @@ interface UsePeopleMutationsOptions {
   queryClient: QueryClient;
   authHeaders: () => Record<string, string>;
   registrationsQueryKey: QueryKey;
+}
+
+/** Mirrors the server: retiring a role records today's date and leaves the role in place. */
+function retireRole(person: Person, role: string): Person {
+  return Object.hasOwn(person.retiredRoles, role)
+    ? person
+    : { ...person, retiredRoles: { ...person.retiredRoles, [role]: localIsoDate() } };
+}
+
+function reactivateRole(person: Person, role: string): Person {
+  const { [role]: _removed, ...retiredRoles } = person.retiredRoles;
+  return { ...person, retiredRoles };
 }
 
 /** Mirrors the server: an open period ends today, but never before its first day. */
@@ -115,7 +127,6 @@ export function usePeopleMutations({
             address: data.address,
             club_name: data.clubName,
             notes: data.notes,
-            active: data.active,
           }),
         },
         m.admin_members_error_create(),
@@ -140,7 +151,6 @@ export function usePeopleMutations({
               address: data.address,
               club_name: data.clubName,
               notes: data.notes,
-              active: data.active,
             }),
           },
           m.admin_members_error_update(),
@@ -165,14 +175,27 @@ export function usePeopleMutations({
           m.admin_members_error_end(),
         ),
       ),
-    // Ending a membership marks the person inactive; the role, the person and their registrations
+    // Ending a membership retires the member role; the role, the person and their registrations
     // stay on file, like endVolunteeringMutation.
     ...optimistic((id: string) => ({
       id,
-      update: (person) => ({
-        ...person,
-        active: false,
-      }),
+      update: (person) => retireRole(person, "member"),
+    })),
+    retry: false,
+  });
+
+  const reactivateMembershipMutation = useMutation({
+    mutationFn: (id: string) =>
+      writes.persist(id, takeFence(id), () =>
+        fetchVoidOrThrowWithUnauthorized(
+          `/api/members/${id}/reactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_members_error_reactivate(),
+        ),
+      ),
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => reactivateRole(person, "member"),
     })),
     retry: false,
   });
@@ -260,7 +283,6 @@ export function usePeopleMutations({
             address: data.address,
             national_register_number: data.nationalRegisterNumber,
             eid_document_number: data.eidDocumentNumber,
-            active: data.active,
             help_periods: data.helpPeriods.map((period) => ({
               first_help_day: period.firstHelpDay,
               last_help_day: period.lastHelpDay,
@@ -287,7 +309,6 @@ export function usePeopleMutations({
               address: data.address,
               national_register_number: data.nationalRegisterNumber,
               eid_document_number: data.eidDocumentNumber,
-              active: data.active,
               help_periods: data.helpPeriods.map((period) => ({
                 first_help_day: period.firstHelpDay,
                 last_help_day: period.lastHelpDay,
@@ -327,10 +348,9 @@ export function usePeopleMutations({
     ...optimistic((id: string) => ({
       id,
       update: (person) => ({
-        ...person,
-        // The role and every help period stay on file; the server marks the person inactive
-        // and only closes open periods (today, or on their first day when not started yet).
-        active: false,
+        // The role and every help period stay on file; the server retires the role and only
+        // closes open periods (today, or on their first day when not started yet).
+        ...retireRole(person, "volunteer"),
         helpPeriods: person.helpPeriods.map((period) =>
           period.lastHelpDay === null
             ? { ...period, lastHelpDay: closedOn(period.firstHelpDay) }
@@ -341,16 +361,34 @@ export function usePeopleMutations({
     retry: false,
   });
 
+  const reactivateVolunteeringMutation = useMutation({
+    mutationFn: (id: string) =>
+      writes.persist(id, takeFence(id), () =>
+        fetchVoidOrThrowWithUnauthorized(
+          `/api/volunteers/${id}/reactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_volunteers_error_reactivate(),
+        ),
+      ),
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => reactivateRole(person, "volunteer"),
+    })),
+    retry: false,
+  });
+
   return {
     mergePeopleMutation,
     createMemberMutation,
     updateMemberMutation,
     endMembershipMutation,
+    reactivateMembershipMutation,
     createPersonMutation,
     updatePersonMutation,
     deletePersonMutation,
     createVolunteerMutation,
     updateVolunteerMutation,
     endVolunteeringMutation,
+    reactivateVolunteeringMutation,
   };
 }

@@ -1,8 +1,8 @@
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { MailIcon, PencilIcon, TrashIcon } from "lucide-react";
+import { MailIcon, PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-import { useState, useMemo } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
@@ -17,7 +17,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import type { Person } from "@/types/person";
+import { isRoleActive, type Person } from "@/types/person";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
@@ -28,6 +28,7 @@ interface MembersManagementProps {
   onCreate: (data: MemberFormData) => Promise<void>;
   onUpdate: (id: string, data: MemberFormData) => Promise<void>;
   onEnd: (id: string) => Promise<void>;
+  onReactivate: (id: string) => Promise<void>;
 }
 
 const columnHelper = createAppColumnHelper<Person>();
@@ -43,6 +44,7 @@ export default function MembersManagement({
   onCreate,
   onUpdate,
   onEnd,
+  onReactivate,
   authHeaders,
 }: MembersManagementProps) {
   const [createSuccess, setCreateSuccess] = useState(false);
@@ -53,6 +55,20 @@ export default function MembersManagement({
   const [endingId, setEndingId] = useState<string | null>(null);
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState("");
+  const [reactivateSuccess, setReactivateSuccess] = useState(false);
+  const [reactivateError, setReactivateError] = useState("");
+  const handleReactivate = useCallback(
+    async (id: string) => {
+      setReactivateError("");
+      try {
+        await onReactivate(id);
+        setReactivateSuccess(true);
+      } catch (err) {
+        setReactivateError(apiErrorMessage(err, m.admin_members_error_reactivate()));
+      }
+    },
+    [onReactivate],
+  );
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
 
   const handleEndConfirm = async () => {
@@ -88,7 +104,7 @@ export default function MembersManagement({
           header: m.registration_name(),
           cell: ({ row }) => {
             const member = row.original;
-            return <PersonName person={member} />;
+            return <PersonName person={member} role="member" />;
           },
         }),
         columnHelper.accessor("email", {
@@ -168,24 +184,36 @@ export default function MembersManagement({
                 >
                   <Icon icon={PencilIcon} />
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline-danger"
-                  onClick={() => {
-                    setEndingId(member.id);
-                    setEndError("");
-                  }}
-                  title={m.admin_members_end_title()}
-                  aria-label={m.admin_members_end_title()}
-                >
-                  <Icon icon={TrashIcon} />
-                </Button>
+                {isRoleActive(member, "member") ? (
+                  <Button
+                    size="sm"
+                    variant="outline-danger"
+                    onClick={() => {
+                      setEndingId(member.id);
+                      setEndError("");
+                    }}
+                    title={m.admin_members_end_title()}
+                    aria-label={m.admin_members_end_title()}
+                  >
+                    <Icon icon={TrashIcon} />
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleReactivate(member.id)}
+                    title={m.admin_members_reactivate_title()}
+                    aria-label={`${m.admin_members_reactivate_title()}: ${member.name}`}
+                  >
+                    <Icon icon={RotateCcwIcon} />
+                  </Button>
+                )}
               </div>
             );
           },
         }),
       ]),
-    [setEditingMember, setShowForm, setEndingId, setEndError],
+    [setEditingMember, setShowForm, setEndingId, setEndError, handleReactivate],
   );
 
   return (
@@ -203,6 +231,20 @@ export default function MembersManagement({
           {updateSuccess && (
             <Alert variant="success" className="m-4 mb-0" onClose={() => setUpdateSuccess(false)}>
               {m.admin_members_update_success()}
+            </Alert>
+          )}
+          {reactivateSuccess && (
+            <Alert
+              variant="success"
+              className="m-4 mb-0"
+              onClose={() => setReactivateSuccess(false)}
+            >
+              {m.admin_members_reactivate_success()}
+            </Alert>
+          )}
+          {reactivateError && (
+            <Alert variant="danger" className="m-4 mb-0" onClose={() => setReactivateError("")}>
+              {reactivateError}
             </Alert>
           )}
           {endSuccess && (
