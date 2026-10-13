@@ -315,7 +315,7 @@ describe("optimistic people mutations", () => {
     });
   });
 
-  it("removes only the volunteer role and periods from people pages", async () => {
+  it("removes only the volunteer role and keeps the help periods on people pages", async () => {
     const h = harness();
     const gate = deferred();
     server.use(
@@ -330,7 +330,7 @@ describe("optimistic people mutations", () => {
       promise = h.result.current.deleteVolunteerMutation.mutateAsync("a");
     });
     await waitFor(() => expect(h.cached().items[0]?.roles).toEqual(["member"]));
-    expect(h.cached().items[0]?.helpPeriods).toEqual([]);
+    expect(h.cached().items[0]?.helpPeriods).toHaveLength(1);
     expect(h.cached().total).toBe(2);
     gate.resolve();
     await act(async () => {

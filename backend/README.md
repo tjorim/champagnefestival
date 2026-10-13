@@ -270,7 +270,7 @@ See `.env.example` for a template.
 | `GET`    | `/api/volunteers/export`        | admin          | Stream filtered volunteer insurance CSV (`q`, `active`, `sort`, `sort_dir`; active-only by default, `include_inactive=true` for all)                           |
 | `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
-| `DELETE` | `/api/volunteers/{id}`          | admin          | Delete volunteer profile                                                   |
+| `DELETE` | `/api/volunteers/{id}`          | admin          | Remove the volunteer role (person and help periods are kept)               |
 | `POST`   | `/api/members`                  | admin          | Create member (person with role `member`)                                  |
 | `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |

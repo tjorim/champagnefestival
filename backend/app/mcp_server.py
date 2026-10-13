@@ -2026,7 +2026,7 @@ class ChampagneFestivalMcpBackend:
         )
 
     async def delete_volunteer(self, volunteer_id: str) -> dict:
-        """Remove the volunteer role and help periods (the person record is kept). Requires the ``admin`` role."""
+        """Remove the volunteer role (the person and their help periods are kept; open periods are closed). Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_volunteers.delete_volunteer(self.session_factory, self._actor(), volunteer_id)
 

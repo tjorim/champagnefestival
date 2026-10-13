@@ -18,10 +18,11 @@ rows; that repair logic remains preserved in the baseline).
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date as dt_date
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -276,14 +277,21 @@ async def apply_volunteer_update(
 
 
 async def delete_volunteer(db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None) -> dict:
-    """Remove the volunteer role from a person (soft archive).
+    """Remove the volunteer role from a person (stepping back; soft archive).
 
-    The underlying ``Person`` record is kept intact so that reservations,
-    membership data, and audit history are preserved. Only the ``volunteer``
-    role and associated help periods are removed.
+    The ``Person`` record, their help periods, registrations and audit history are all kept:
+    the periods are what an insurance claim needs ("who was covered on which day"), so they
+    outlive the role. Any period that is still open is closed (``last_help_day`` becomes today,
+    or the period's first day if it has not started yet), so a former volunteer does not read
+    as still helping if the role is ever restored. Only the ``volunteer`` role is removed.
     """
     volunteer_id = volunteer.id
-    await db.execute(delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id))
+    today = dt_date.today()
+    closed = await db.execute(
+        update(VolunteerPeriod)
+        .where(VolunteerPeriod.volunteer_id == volunteer_id, VolunteerPeriod.last_help_day.is_(None))
+        .values(last_help_day=func.greatest(VolunteerPeriod.first_help_day, today))
+    )
     remove_volunteer_role(volunteer)
     await write_audit_entry(
         db,
@@ -292,7 +300,7 @@ async def delete_volunteer(db: AsyncSession, volunteer: Person, *, actor: str, r
         resource_type="person",
         resource_id=volunteer_id,
         request_id=request_id,
-        details={},
+        details={"closed_open_periods": closed.rowcount},
     )
     await db.commit()
     return {"deleted": True, "id": volunteer_id}

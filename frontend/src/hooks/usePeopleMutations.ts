@@ -321,8 +321,8 @@ export function usePeopleMutations({
       id,
       update: (person) => ({
         ...person,
+        // The help periods stay on file (the server only closes open ones); only the role goes.
         roles: person.roles.filter((role) => role !== "volunteer"),
-        helpPeriods: [],
       }),
     })),
     retry: false,

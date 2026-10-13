@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 from sqlalchemy import select
 
@@ -212,7 +214,7 @@ async def test_update_volunteer_eid_document_number_conflict(db_session):
         await mcp_volunteers.update_volunteer(factory, "admin-1", bob["id"], eid_document_number="BEI998877")
 
 
-async def test_delete_volunteer_removes_role_and_periods_but_keeps_person(db_session):
+async def test_delete_volunteer_removes_role_but_keeps_person_and_periods(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_volunteers.create_volunteer(
         factory,
@@ -239,7 +241,44 @@ async def test_delete_volunteer_removes_role_and_periods_but_keeps_person(db_ses
         .scalars()
         .all()
     )
-    assert periods == []
+    # The help periods are history (insurance) and survive stepping back.
+    assert [(p.first_help_day.isoformat(), p.last_help_day.isoformat()) for p in periods] == [
+        ("2099-03-21", "2099-03-22")
+    ]
+
+
+async def test_delete_volunteer_closes_open_periods(db_session):
+    factory = mcp_session_factory(db_session)
+    created = await mcp_volunteers.create_volunteer(
+        factory,
+        "admin-1",
+        name="Alice",
+        national_register_number="85010199999",
+        eid_document_number="BEI998877",
+        help_periods=[
+            {"first_help_day": "2020-03-21", "last_help_day": None},
+            {"first_help_day": "2099-03-21", "last_help_day": None},
+        ],
+    )
+    volunteer_id = created["id"]
+
+    await mcp_volunteers.delete_volunteer(factory, "admin-1", volunteer_id)
+
+    periods = (
+        (
+            await db_session.execute(
+                select(VolunteerPeriod)
+                .where(VolunteerPeriod.volunteer_id == volunteer_id)
+                .order_by(VolunteerPeriod.first_help_day)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(periods) == 2
+    # An open period ends today; one that had not started closes on its first day.
+    assert periods[0].last_help_day == date.today()
+    assert periods[1].last_help_day == periods[1].first_help_day
 
 
 async def test_delete_volunteer_not_found(db_session):
