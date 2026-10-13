@@ -204,9 +204,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleCreateMember,
     handleCreatePerson,
     handleCreateVolunteer,
-    handleDeleteMember,
+    handleEndMembership,
     handleDeletePerson,
-    handleDeleteVolunteer,
+    handleEndVolunteering,
     handleMergePeople,
     handleUpdateMember,
     handleUpdatePerson,
@@ -647,12 +647,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     members={{
                       onCreate: handleCreateMember,
                       onUpdate: handleUpdateMember,
-                      onDelete: handleDeleteMember,
+                      onEnd: handleEndMembership,
                     }}
                     volunteers={{
                       onCreate: handleCreateVolunteer,
                       onUpdate: handleUpdateVolunteer,
-                      onDelete: handleDeleteVolunteer,
+                      onEnd: handleEndVolunteering,
                     }}
                   />
                 )}

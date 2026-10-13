@@ -156,17 +156,17 @@ export function usePeopleMutations({
     retry: false,
   });
 
-  const deleteMemberMutation = useMutation({
+  const endMembershipMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
-          `/api/members/${id}`,
-          { method: "DELETE", headers: authHeaders() },
-          m.admin_members_error_delete(),
+          `/api/members/${id}/end`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_members_error_end(),
         ),
       ),
     // Ending a membership only drops the role: the person (and their registrations) stay in the
-    // directory, like deleteVolunteerMutation.
+    // directory, like endVolunteeringMutation.
     ...optimistic((id: string) => ({
       id,
       update: (person) => ({
@@ -315,13 +315,13 @@ export function usePeopleMutations({
     retry: false,
   });
 
-  const deleteVolunteerMutation = useMutation({
+  const endVolunteeringMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
-          `/api/volunteers/${id}`,
-          { method: "DELETE", headers: authHeaders() },
-          m.admin_volunteers_error_delete(),
+          `/api/volunteers/${id}/end`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_volunteers_error_end(),
         ),
       ),
     ...optimistic((id: string) => ({
@@ -344,12 +344,12 @@ export function usePeopleMutations({
     mergePeopleMutation,
     createMemberMutation,
     updateMemberMutation,
-    deleteMemberMutation,
+    endMembershipMutation,
     createPersonMutation,
     updatePersonMutation,
     deletePersonMutation,
     createVolunteerMutation,
     updateVolunteerMutation,
-    deleteVolunteerMutation,
+    endVolunteeringMutation,
   };
 }

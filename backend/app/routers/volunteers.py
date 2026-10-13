@@ -116,17 +116,17 @@ async def update_volunteer(
     return await volunteers_service.apply_volunteer_update(db, volunteer, body, actor=actor, request_id=request_id)
 
 
-@router.delete("/{volunteer_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_volunteer(
+@router.post("/{volunteer_id}/end", status_code=status.HTTP_204_NO_CONTENT)
+async def end_volunteering(
     volunteer_id: str,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
 ) -> None:
-    """Remove the volunteer role from a person (soft archive).
+    """End a person's volunteering; they stay listed as a former volunteer.
 
-    See ``app.services.volunteers_service.delete_volunteer`` for the exact
+    See ``app.services.volunteers_service.end_volunteering`` for the exact
     semantics.
     """
     volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
-    await volunteers_service.delete_volunteer(db, volunteer, actor=actor, request_id=request_id)
+    await volunteers_service.end_volunteering(db, volunteer, actor=actor, request_id=request_id)

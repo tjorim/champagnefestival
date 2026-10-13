@@ -41,13 +41,13 @@ export function useAdminPeopleActions({
     mergePeopleMutation,
     createMemberMutation,
     updateMemberMutation,
-    deleteMemberMutation,
+    endMembershipMutation,
     createPersonMutation,
     updatePersonMutation,
     deletePersonMutation,
     createVolunteerMutation,
     updateVolunteerMutation,
-    deleteVolunteerMutation,
+    endVolunteeringMutation,
   } = usePeopleMutations({
     queryClient,
     authHeaders,
@@ -120,11 +120,11 @@ export function useAdminPeopleActions({
     ],
   );
 
-  const handleDeleteMember = useCallback(
+  const handleEndMembership = useCallback(
     async (id: string) => {
-      await deleteMemberMutation.mutateAsync(id);
+      await endMembershipMutation.mutateAsync(id);
     },
-    [deleteMemberMutation],
+    [endMembershipMutation],
   );
 
   const handleCreatePerson = useCallback(
@@ -183,20 +183,20 @@ export function useAdminPeopleActions({
     [updateVolunteerMutation],
   );
 
-  const handleDeleteVolunteer = useCallback(
+  const handleEndVolunteering = useCallback(
     async (id: string) => {
-      await deleteVolunteerMutation.mutateAsync(id);
+      await endVolunteeringMutation.mutateAsync(id);
     },
-    [deleteVolunteerMutation],
+    [endVolunteeringMutation],
   );
 
   return {
     handleCreateMember,
     handleCreatePerson,
     handleCreateVolunteer,
-    handleDeleteMember,
+    handleEndMembership,
     handleDeletePerson,
-    handleDeleteVolunteer,
+    handleEndVolunteering,
     handleMergePeople,
     handleUpdateMember,
     handleUpdatePerson,

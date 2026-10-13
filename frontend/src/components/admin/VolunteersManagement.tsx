@@ -25,7 +25,7 @@ interface VolunteersManagementProps {
   authHeaders: () => Record<string, string>;
   onCreate: (data: VolunteerFormData) => Promise<void>;
   onUpdate: (id: string, data: VolunteerFormData) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onEnd: (id: string) => Promise<void>;
 }
 
 const columnHelper = createAppColumnHelper<Person>();
@@ -40,28 +40,28 @@ export default function VolunteersManagement({
   authHeaders,
   onCreate,
   onUpdate,
-  onDelete,
+  onEnd,
 }: VolunteersManagementProps) {
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [endSuccess, setEndSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingVolunteer, setEditingVolunteer] = useState<Person | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
-  const handleDeleteConfirm = async () => {
-    if (!deletingId) return;
-    setDeleting(true);
-    setDeleteError("");
+  const [endingId, setEndingId] = useState<string | null>(null);
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState("");
+  const handleEndConfirm = async () => {
+    if (!endingId) return;
+    setEnding(true);
+    setEndError("");
     try {
-      await onDelete(deletingId);
-      setDeleteSuccess(true);
-      setDeletingId(null);
+      await onEnd(endingId);
+      setEndSuccess(true);
+      setEndingId(null);
     } catch (err) {
-      setDeleteError(apiErrorMessage(err, m.admin_volunteers_error_delete()));
+      setEndError(apiErrorMessage(err, m.admin_volunteers_error_end()));
     } finally {
-      setDeleting(false);
+      setEnding(false);
     }
   };
 
@@ -146,11 +146,11 @@ export default function VolunteersManagement({
                   size="sm"
                   variant="outline-danger"
                   onClick={() => {
-                    setDeletingId(volunteer.id);
-                    setDeleteError("");
+                    setEndingId(volunteer.id);
+                    setEndError("");
                   }}
-                  title={m.admin_volunteers_delete_title()}
-                  aria-label={m.admin_volunteers_delete_title()}
+                  title={m.admin_volunteers_end_title()}
+                  aria-label={m.admin_volunteers_end_title()}
                 >
                   <Icon icon={TrashIcon} />
                 </Button>
@@ -159,7 +159,7 @@ export default function VolunteersManagement({
           },
         }),
       ]),
-    [setEditingVolunteer, setShowForm, setDeletingId, setDeleteError],
+    [setEditingVolunteer, setShowForm, setEndingId, setEndError],
   );
 
   return (
@@ -178,9 +178,9 @@ export default function VolunteersManagement({
               {m.admin_volunteers_update_success()}
             </Alert>
           )}
-          {deleteSuccess && (
-            <Alert variant="success" className="m-4 mb-0" onClose={() => setDeleteSuccess(false)}>
-              {m.admin_volunteers_delete_success()}
+          {endSuccess && (
+            <Alert variant="success" className="m-4 mb-0" onClose={() => setEndSuccess(false)}>
+              {m.admin_volunteers_end_success()}
             </Alert>
           )}
 
@@ -207,30 +207,30 @@ export default function VolunteersManagement({
         </CardContent>
       </Card>
 
-      {deletingId && (
+      {endingId && (
         <Dialog
           open={true}
           onOpenChange={(open) => {
-            if (!open) setDeletingId(null);
+            if (!open) setEndingId(null);
           }}
         >
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle className="text-destructive">
                 <Icon icon={TrashIcon} className="me-2" />
-                {m.admin_volunteers_delete_title()}
+                {m.admin_volunteers_end_title()}
               </DialogTitle>
             </DialogHeader>
             <DialogBody>
-              {deleteError && <Alert variant="danger">{deleteError}</Alert>}
-              <p>{m.admin_volunteers_delete_confirm()}</p>
+              {endError && <Alert variant="danger">{endError}</Alert>}
+              <p>{m.admin_volunteers_end_confirm()}</p>
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => setDeletingId(null)}>
+              <Button variant="outline" size="sm" onClick={() => setEndingId(null)}>
                 {m.admin_action_cancel()}
               </Button>
-              <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
-                {deleting ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
+              <Button variant="danger" size="sm" onClick={handleEndConfirm} disabled={ending}>
+                {ending ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
                 {m.admin_action_confirm()}
               </Button>
             </DialogFooter>

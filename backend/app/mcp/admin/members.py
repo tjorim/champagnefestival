@@ -16,7 +16,7 @@ from fastapi import HTTPException
 
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import PersonCreate, PersonUpdate
-from app.services import members_service
+from app.services import members_service, people_service
 from app.utils import person_summary_dict
 
 
@@ -118,10 +118,10 @@ async def update_member(
             raise as_value_error(exc) from exc
 
 
-async def delete_member(session_factory: Any, actor: str, person_id: str) -> dict:
+async def end_membership(session_factory: Any, actor: str, person_id: str) -> dict:
     async with session_factory() as db:
         try:
-            person = await members_service.get_member_or_404(db, person_id)
+            person = await people_service.get_person_or_404(db, person_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return await members_service.delete_member(db, person, actor=actor)
+        return await members_service.end_membership(db, person, actor=actor)

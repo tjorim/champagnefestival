@@ -31,8 +31,8 @@ vi.mock("@/utils/adminApi", async (original) => ({
   downloadFileOrThrow: download,
 }));
 const deleteFallback = {
-  members: "admin_members_error_delete",
-  volunteers: "admin_volunteers_error_delete",
+  members: "admin_members_error_end",
+  volunteers: "admin_volunteers_error_end",
   people: "admin_error_delete_person",
 } as const;
 const authHeaders = () => ({
@@ -94,9 +94,9 @@ function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "")
     kind === "people" ? (
       <PeopleManagement {...{ authHeaders, onCreate, onUpdate, onDelete, onMerge }} />
     ) : kind === "members" ? (
-      <MembersManagement {...{ authHeaders, onCreate, onUpdate, onDelete }} />
+      <MembersManagement {...{ authHeaders, onCreate, onUpdate, onEnd: onDelete }} />
     ) : (
-      <VolunteersManagement {...{ authHeaders, onCreate, onUpdate, onDelete }} />
+      <VolunteersManagement {...{ authHeaders, onCreate, onUpdate, onEnd: onDelete }} />
     );
   const root = createRootRoute({ component, validateSearch: (search) => search });
   const router = createRouter({
@@ -157,12 +157,14 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
     );
     await screen.findByRole("row", { name: "Person 00" });
     fireEvent.click(
-      within(row("Person 00")).getByRole("button", { name: `admin_${kind}_delete_title` }),
+      within(row("Person 00")).getByRole("button", {
+        name: kind === "people" ? "admin_people_delete_title" : `admin_${kind}_end_title`,
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(
       within(dialog).getByRole("button", {
-        name: kind === "members" ? "admin_members_delete_title" : "admin_action_confirm",
+        name: kind === "members" ? "admin_members_end_title" : "admin_action_confirm",
       }),
     );
     // An unknown code shows the translated operation fallback, never the English detail.

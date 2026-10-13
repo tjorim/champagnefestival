@@ -296,7 +296,7 @@ describe("optimistic people mutations", () => {
     const h = harness();
     const gate = deferred();
     server.use(
-      http.delete("/api/members/:id", async () => {
+      http.post("/api/members/:id/end", async () => {
         await gate.promise;
         h.rows()[0]!.roles = ["volunteer"];
         return new HttpResponse(null, { status: 204 });
@@ -304,7 +304,7 @@ describe("optimistic people mutations", () => {
     );
     let promise!: Promise<unknown>;
     act(() => {
-      promise = h.result.current.deleteMemberMutation.mutateAsync("a");
+      promise = h.result.current.endMembershipMutation.mutateAsync("a");
     });
     await waitFor(() => expect(h.cached().items[0]?.roles).toEqual(["volunteer"]));
     expect(h.cached().items[0]?.name).toBe("Original a");
@@ -319,7 +319,7 @@ describe("optimistic people mutations", () => {
     const h = harness();
     const gate = deferred();
     server.use(
-      http.delete("/api/volunteers/:id", async () => {
+      http.post("/api/volunteers/:id/end", async () => {
         await gate.promise;
         (h.rows()[0]!.help_periods[0] as { last_help_day: string | null }).last_help_day =
           localIsoDate(-1);
@@ -328,7 +328,7 @@ describe("optimistic people mutations", () => {
     );
     let promise!: Promise<unknown>;
     act(() => {
-      promise = h.result.current.deleteVolunteerMutation.mutateAsync("a");
+      promise = h.result.current.endVolunteeringMutation.mutateAsync("a");
     });
     await waitFor(() =>
       expect(h.cached().items[0]?.helpPeriods[0]?.lastHelpDay).toBe(localIsoDate(-1)),

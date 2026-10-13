@@ -27,7 +27,7 @@ interface MembersManagementProps {
   authHeaders: () => Record<string, string>;
   onCreate: (data: MemberFormData) => Promise<void>;
   onUpdate: (id: string, data: MemberFormData) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onEnd: (id: string) => Promise<void>;
 }
 
 const columnHelper = createAppColumnHelper<Person>();
@@ -42,31 +42,31 @@ function truncateText(value: string, limit = 80): string {
 export default function MembersManagement({
   onCreate,
   onUpdate,
-  onDelete,
+  onEnd,
   authHeaders,
 }: MembersManagementProps) {
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [endSuccess, setEndSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<Person | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
+  const [endingId, setEndingId] = useState<string | null>(null);
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState("");
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
 
-  const handleDeleteConfirm = async () => {
-    if (!deletingId) return;
-    setDeleting(true);
-    setDeleteError("");
+  const handleEndConfirm = async () => {
+    if (!endingId) return;
+    setEnding(true);
+    setEndError("");
     try {
-      await onDelete(deletingId);
-      setDeleteSuccess(true);
-      setDeletingId(null);
+      await onEnd(endingId);
+      setEndSuccess(true);
+      setEndingId(null);
     } catch (err) {
-      setDeleteError(apiErrorMessage(err, m.admin_members_error_delete()));
+      setEndError(apiErrorMessage(err, m.admin_members_error_end()));
     } finally {
-      setDeleting(false);
+      setEnding(false);
     }
   };
 
@@ -172,11 +172,11 @@ export default function MembersManagement({
                   size="sm"
                   variant="outline-danger"
                   onClick={() => {
-                    setDeletingId(member.id);
-                    setDeleteError("");
+                    setEndingId(member.id);
+                    setEndError("");
                   }}
-                  title={m.admin_members_delete_title()}
-                  aria-label={m.admin_members_delete_title()}
+                  title={m.admin_members_end_title()}
+                  aria-label={m.admin_members_end_title()}
                 >
                   <Icon icon={TrashIcon} />
                 </Button>
@@ -185,7 +185,7 @@ export default function MembersManagement({
           },
         }),
       ]),
-    [setEditingMember, setShowForm, setDeletingId, setDeleteError],
+    [setEditingMember, setShowForm, setEndingId, setEndError],
   );
 
   return (
@@ -205,9 +205,9 @@ export default function MembersManagement({
               {m.admin_members_update_success()}
             </Alert>
           )}
-          {deleteSuccess && (
-            <Alert variant="success" className="m-4 mb-0" onClose={() => setDeleteSuccess(false)}>
-              {m.admin_members_delete_success()}
+          {endSuccess && (
+            <Alert variant="success" className="m-4 mb-0" onClose={() => setEndSuccess(false)}>
+              {m.admin_members_end_success()}
             </Alert>
           )}
 
@@ -234,34 +234,34 @@ export default function MembersManagement({
         </CardContent>
       </Card>
 
-      {deletingId && (
+      {endingId && (
         <Dialog
           open={true}
           onOpenChange={(open) => {
             if (!open)
               (() => {
-                if (!deleting) setDeletingId(null);
+                if (!ending) setEndingId(null);
               })();
           }}
         >
           <DialogContent admin size="default">
             <DialogHeader>
-              <DialogTitle>{m.admin_members_delete_title()}</DialogTitle>
+              <DialogTitle>{m.admin_members_end_title()}</DialogTitle>
             </DialogHeader>
             <DialogBody>
-              {deleteError && (
+              {endError && (
                 <Alert variant="danger" className="py-2 text-sm">
-                  {deleteError}
+                  {endError}
                 </Alert>
               )}
-              <p>{m.admin_members_delete_confirm()}</p>
+              <p>{m.admin_members_end_confirm()}</p>
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeletingId(null)} disabled={deleting}>
+              <Button variant="outline" onClick={() => setEndingId(null)} disabled={ending}>
                 {m.admin_action_cancel()}
               </Button>
-              <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleting}>
-                {deleting ? (
+              <Button variant="danger" onClick={handleEndConfirm} disabled={ending}>
+                {ending ? (
                   <>
                     <Spinner size="sm" className="me-2" />
                     {m.admin_delete()}
@@ -269,7 +269,7 @@ export default function MembersManagement({
                 ) : (
                   <>
                     <Icon icon={TrashIcon} className="me-1" />
-                    {m.admin_members_delete_title()}
+                    {m.admin_members_end_title()}
                   </>
                 )}
               </Button>

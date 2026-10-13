@@ -10,6 +10,7 @@ import {
 } from "../data/editionStore";
 import { seedEventCategories, seedProductCategories, type SeedCategory } from "../data/categories";
 import { seedOrganizations } from "../data/organizations";
+import { localIsoDate } from "@/types/person";
 import { seedPeople } from "../data/people";
 import {
   type RegistrationScenario,
@@ -806,12 +807,16 @@ export const adminHandlers = [
     return HttpResponse.json(people[idx]);
   }),
 
-  http.delete("/api/members/:id", ({ request, params }) => {
+  // Ending a membership only removes the role; the person stays in the directory.
+  http.post("/api/members/:id/end", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
-    people.splice(idx, 1);
+    people[idx] = {
+      ...people[idx]!,
+      roles: (people[idx]!.roles as string[]).filter((role) => role !== "member"),
+    };
     return new HttpResponse(null, { status: 204 });
   }),
 
@@ -872,15 +877,25 @@ export const adminHandlers = [
     return HttpResponse.json(people[idx]);
   }),
 
-  http.delete("/api/volunteers/:id", ({ request, params }) => {
+  // Ending volunteering keeps the role and every period; open periods are closed (yesterday).
+  http.post("/api/volunteers/:id/end", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
+    const yesterday = localIsoDate(-1);
     people[idx] = {
       ...people[idx]!,
-      roles: (people[idx]!.roles as string[]).filter((role) => role !== "volunteer"),
-      help_periods: [],
+      help_periods: ((people[idx]!.help_periods ?? []) as Record<string, unknown>[]).map(
+        (period) =>
+          period.last_help_day === null
+            ? {
+                ...period,
+                last_help_day:
+                  yesterday > String(period.first_help_day) ? yesterday : period.first_help_day,
+              }
+            : period,
+      ),
     };
     return new HttpResponse(null, { status: 204 });
   }),

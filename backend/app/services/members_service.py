@@ -187,16 +187,19 @@ async def apply_member_update(
     return person_to_dict(person)
 
 
-async def delete_member(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
-    """Remove the member role from a person (soft archive).
+async def end_membership(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+    """End a person's membership: remove the ``member`` role, keep everything else.
 
     The underlying ``Person`` is kept intact, together with their registrations,
     check-ins and audit history: attendance is what member benefits are earned from, and
     someone who stops being a member is still a visitor. Only the ``member`` role is removed
-    (mirroring ``volunteers_service.delete_volunteer``). Erasing a person and their
-    registrations is the separate ``people_service.delete_person``.
+    (mirroring ``volunteers_service.end_volunteering``). Erasing a person and their
+    registrations is the separate ``people_service.delete_person``. Calling it again, or on a
+    person who is not a member, changes nothing.
     """
     person_id = person.id
+    if not has_member_role(person):
+        return {"ended": True, "id": person_id}
     remove_member_role(person)
     await write_audit_entry(
         db,
@@ -208,4 +211,4 @@ async def delete_member(db: AsyncSession, person: Person, *, actor: str, request
         details={},
     )
     await db.commit()
-    return {"deleted": True, "id": person_id}
+    return {"ended": True, "id": person_id}

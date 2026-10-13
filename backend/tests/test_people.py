@@ -667,7 +667,7 @@ async def test_members_crud(client):
     assert r.status_code == 200
     assert len(r.json()["items"]) == 1
 
-    r = await client.delete(f"/api/members/{person_id}", headers=ADMIN_HEADERS)
+    r = await client.post(f"/api/members/{person_id}/end", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
 
@@ -723,8 +723,8 @@ async def test_member_duplicate_national_register_number_detected_despite_format
 
 
 @pytest.mark.anyio
-async def test_delete_member_removes_only_the_member_role(client):
-    """ "Delete member" ends the membership: the person, their other roles and their registrations stay."""
+async def test_end_membership_removes_only_the_member_role(client):
+    """Ending a membership removes only the member role: the person, their other roles and their registrations stay."""
     member = await client.post(
         "/api/members",
         json={"name": "Former Member", "email": "former.member@example.com", "roles": ["volunteer"]},
@@ -750,7 +750,7 @@ async def test_delete_member_removes_only_the_member_role(client):
     assert registration.status_code == 201
     registration_id = registration.json()["id"]
 
-    r = await client.delete(f"/api/members/{member_id}", headers=ADMIN_HEADERS)
+    r = await client.post(f"/api/members/{member_id}/end", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
     # No longer a member ...
@@ -763,8 +763,9 @@ async def test_delete_member_removes_only_the_member_role(client):
     assert person.json()["roles"] == ["volunteer"]
     assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 200
 
-    # Removing again is a not-found, as for any non-member.
-    assert (await client.delete(f"/api/members/{member_id}", headers=ADMIN_HEADERS)).status_code == 404
+    # Ending again is a no-op (convergent), an unknown person is a not-found.
+    assert (await client.post(f"/api/members/{member_id}/end", headers=ADMIN_HEADERS)).status_code == 204
+    assert (await client.post("/api/members/nonexistent/end", headers=ADMIN_HEADERS)).status_code == 404
 
 
 @pytest.mark.anyio

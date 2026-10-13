@@ -214,7 +214,7 @@ async def test_update_volunteer_eid_document_number_conflict(db_session):
         await mcp_volunteers.update_volunteer(factory, "admin-1", bob["id"], eid_document_number="BEI998877")
 
 
-async def test_delete_volunteer_ends_volunteering_and_keeps_everything(db_session):
+async def test_end_volunteering_keeps_everything(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_volunteers.create_volunteer(
         factory,
@@ -226,8 +226,8 @@ async def test_delete_volunteer_ends_volunteering_and_keeps_everything(db_sessio
     )
     volunteer_id = created["id"]
 
-    result = await mcp_volunteers.delete_volunteer(factory, "admin-1", volunteer_id)
-    assert result == {"deleted": True, "id": volunteer_id}
+    result = await mcp_volunteers.end_volunteering(factory, "admin-1", volunteer_id)
+    assert result == {"ended": True, "id": volunteer_id}
 
     # Still a volunteer record (a former one), with the person and role intact ...
     still = await mcp_volunteers.get_volunteer(factory, volunteer_id)
@@ -286,7 +286,7 @@ async def test_list_volunteers_splits_current_from_former(db_session):
     assert await ids(None) == {current["id"], upcoming["id"], former["id"]}
 
 
-async def test_delete_volunteer_closes_open_periods(db_session):
+async def test_end_volunteering_closes_open_periods(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_volunteers.create_volunteer(
         factory,
@@ -301,7 +301,7 @@ async def test_delete_volunteer_closes_open_periods(db_session):
     )
     volunteer_id = created["id"]
 
-    await mcp_volunteers.delete_volunteer(factory, "admin-1", volunteer_id)
+    await mcp_volunteers.end_volunteering(factory, "admin-1", volunteer_id)
 
     periods = (
         (
@@ -321,7 +321,7 @@ async def test_delete_volunteer_closes_open_periods(db_session):
     assert periods[1].last_help_day == periods[1].first_help_day
 
 
-async def test_delete_volunteer_not_found(db_session):
+async def test_end_volunteering_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_volunteers.delete_volunteer(factory, "admin-1", "nonexistent")
+        await mcp_volunteers.end_volunteering(factory, "admin-1", "nonexistent")

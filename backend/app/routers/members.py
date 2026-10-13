@@ -12,7 +12,7 @@ from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import get_request_id
 from app.schemas import PersonAdminSummaryOut, PersonCreate, PersonOut, PersonUpdate
-from app.services import members_service
+from app.services import members_service, people_service
 from app.utils import person_to_dict
 
 router = APIRouter(
@@ -57,12 +57,16 @@ async def update_member(
     return await members_service.apply_member_update(db, person, body, actor=actor, request_id=request_id)
 
 
-@router.delete("/{person_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_member(
+@router.post("/{person_id}/end", status_code=status.HTTP_204_NO_CONTENT)
+async def end_membership(
     person_id: str,
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
     request_id: str | None = Depends(get_request_id),
 ) -> None:
-    person = await members_service.get_member_or_404(db, person_id)
-    await members_service.delete_member(db, person, actor=actor, request_id=request_id)
+    """End a person's membership; they stay in the directory.
+
+    See ``app.services.members_service.end_membership`` for the exact semantics.
+    """
+    person = await people_service.get_person_or_404(db, person_id)
+    await members_service.end_membership(db, person, actor=actor, request_id=request_id)

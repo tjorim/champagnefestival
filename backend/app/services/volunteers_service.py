@@ -274,7 +274,7 @@ async def apply_volunteer_update(
     return to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
 
 
-async def delete_volunteer(db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None) -> dict:
+async def end_volunteering(db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None) -> dict:
     """End a person's volunteering (they step back); everything stays on file.
 
     The ``volunteer`` role, the ``Person`` record, every help period, registrations and audit
@@ -310,4 +310,4 @@ async def delete_volunteer(db: AsyncSession, volunteer: Person, *, actor: str, r
         details={"closed_open_periods": len(closed_ids)},
     )
     await db.commit()
-    return {"deleted": True, "id": volunteer_id}
+    return {"ended": True, "id": volunteer_id}
