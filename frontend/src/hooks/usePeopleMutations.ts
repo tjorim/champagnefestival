@@ -126,6 +126,7 @@ export function usePeopleMutations({
             preferred_language: data.preferredLanguage,
             address: data.address,
             club_name: data.clubName,
+            member_since: data.memberSince || undefined,
             notes: data.notes,
           }),
         },
@@ -150,6 +151,7 @@ export function usePeopleMutations({
               preferred_language: data.preferredLanguage,
               address: data.address,
               club_name: data.clubName,
+              member_since: data.memberSince || undefined,
               notes: data.notes,
             }),
           },
@@ -157,10 +159,11 @@ export function usePeopleMutations({
         ),
       ),
     ...optimistic(
-      ({ id, data }: { id: string; data: MemberFormData }) => ({
-        id,
-        update: (person) => ({ ...person, ...data }),
-      }),
+      ({ id, data }: { id: string; data: MemberFormData }) => {
+        // `memberSince` lives in the role history, which the server returns on settlement.
+        const { memberSince: _memberSince, ...fields } = data;
+        return { id, update: (person) => ({ ...person, ...fields }) };
+      },
       [registrationsQueryKey],
     ),
     retry: false,

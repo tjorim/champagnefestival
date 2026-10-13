@@ -17,7 +17,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import { isRoleActive, type Person } from "@/types/person";
+import { isRoleActive, roleSince, type Person } from "@/types/person";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
@@ -118,6 +118,14 @@ export default function MembersManagement({
           header: m.registration_phone(),
           cell: ({ getValue }) => (
             <span className="text-sm">{String(getValue() ?? "") || "—"}</span>
+          ),
+        }),
+        columnHelper.display({
+          id: "memberSince",
+          header: m.admin_members_since_label(),
+          enableSorting: false,
+          cell: ({ row }) => (
+            <span className="text-sm">{roleSince(row.original, "member") ?? "—"}</span>
           ),
         }),
         columnHelper.accessor("clubName", {

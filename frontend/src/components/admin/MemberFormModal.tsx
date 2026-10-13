@@ -27,7 +27,7 @@ import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import { devError } from "@/utils/devLog";
 import { EMAIL_REGEX } from "@/config/constants";
-import type { Person } from "@/types/person";
+import { roleSince, type Person } from "@/types/person";
 
 interface MemberFormModalProps {
   show: boolean;
@@ -44,6 +44,8 @@ export interface MemberFormData {
   address: string;
   clubName: string;
   notes: string;
+  /** ISO day membership started; empty when unknown. */
+  memberSince: string;
 }
 
 export default function MemberFormModal({ show, member, onSave, onHide }: MemberFormModalProps) {
@@ -64,6 +66,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             address: member.address ?? "",
             clubName: member.clubName ?? "",
             notes: member.notes ?? "",
+            memberSince: roleSince(member, "member") ?? "",
           }
         : {
             name: "",
@@ -73,6 +76,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             address: "",
             clubName: "",
             notes: "",
+            memberSince: "",
           },
     [member],
   );
@@ -90,6 +94,7 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           address: value.address.trim(),
           clubName: value.clubName.trim(),
           notes: value.notes.trim(),
+          memberSince: value.memberSince,
         });
         onHide();
       } catch (err) {
@@ -264,6 +269,23 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                     type="text"
                     className="bg-muted text-content border-input border-warning"
                     maxLength={200}
+                    value={field.value}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                )}
+              </form.Field>
+            </AdminField>
+
+            <AdminField className="mb-4" controlId="member-since">
+              <AdminLabel className="text-subtle text-sm">
+                {m.admin_members_since_label()}
+              </AdminLabel>
+              <form.Field name="memberSince">
+                {(field) => (
+                  <AdminInput
+                    type="date"
+                    className="bg-muted text-content border-input"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}

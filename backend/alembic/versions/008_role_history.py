@@ -1,9 +1,11 @@
-"""Retire a person's roles one at a time.
+"""Retire a person's roles one at a time, and record when each role was held.
 
 People gain ``retired_roles``, a JSON object mapping a role to the ISO date it was retired
 (for example ``{"volunteer": "2026-10-13"}``). A retired role stays in ``roles``; the person
 simply stops counting as an active member or volunteer, without being archived as a whole
-(``people.active``). Existing people start with no retired roles.
+(``people.active``). They also gain ``role_history``, ``{role: [{"started_on", "ended_on"}]}``
+with one entry per stretch of holding a role (``retired_roles`` is derived from it). Existing
+people start with neither: every role they hold is active with an unknown start.
 
 Revision ID: 008
 Revises: 007
@@ -23,7 +25,10 @@ def upgrade() -> None:
     op.add_column("people", sa.Column("retired_roles", sa.JSON(), nullable=False, server_default=sa.text("'{}'")))
     # Like the other JSON columns, the application always supplies a value.
     op.alter_column("people", "retired_roles", server_default=None)
+    op.add_column("people", sa.Column("role_history", sa.JSON(), nullable=False, server_default=sa.text("'{}'")))
+    op.alter_column("people", "role_history", server_default=None)
 
 
 def downgrade() -> None:
+    op.drop_column("people", "role_history")
     op.drop_column("people", "retired_roles")

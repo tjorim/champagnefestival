@@ -604,6 +604,7 @@ def person_to_dict(p: Person) -> dict:
         "address": p.address,
         "roles": p.roles,
         "retired_roles": dict(p.retired_roles or {}),
+        "role_history": {role: [dict(s) for s in stretches] for role, stretches in (p.role_history or {}).items()},
         "national_register_number": p.national_register_number,
         "eid_document_number": p.eid_document_number,
         "visits_per_month": p.visits_per_month,

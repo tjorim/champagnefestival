@@ -29,13 +29,15 @@ from app.models import Person
 from app.schemas import PersonCreate, PersonUpdate
 from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity, normalise_roles, parse_phone
+from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
 from app.utils import get_or_404, make_id, person_to_dict
 
 
-def ensure_member_role(person: Person) -> None:
-    roles = set(person.roles or [])
-    roles.add("member")
-    person.roles = sorted(roles)
+def ensure_member_role(person: Person, *, started_on: date | None = None) -> None:
+    if "member" not in (person.roles or []):
+        sync_roles(person, sorted({*(person.roles or []), "member"}))
+        if started_on is not None:
+            set_role_start(person, "member", started_on)
 
 
 def has_member_role(person: Person) -> bool:
@@ -97,8 +99,10 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
         notes=body.notes,
         active=body.active,
     )
-    person.roles = normalise_roles(body.roles)
+    sync_roles(person, normalise_roles(body.roles))
     ensure_member_role(person)
+    if body.member_since is not None:
+        set_role_start(person, "member", body.member_since)
 
     db.add(person)
     await write_audit_entry(
@@ -160,9 +164,11 @@ async def apply_member_update(
         person.eid_document_number = eid
 
     if body.roles is not None:
-        person.roles = normalise_roles(body.roles)
-        person.retired_roles = {r: d for r, d in (person.retired_roles or {}).items() if r in person.roles}
+        # The member role cannot be taken away through the member endpoints.
+        sync_roles(person, sorted({*normalise_roles(body.roles), "member"}))
     ensure_member_role(person)
+    if body.member_since is not None:
+        set_role_start(person, "member", body.member_since)
 
     await write_audit_entry(
         db,
@@ -197,8 +203,7 @@ async def deactivate_member(db: AsyncSession, person: Person, *, actor: str, req
     nothing and writes no second audit entry.
     """
     person_id = person.id
-    if "member" not in (person.retired_roles or {}):
-        person.retired_roles = {**(person.retired_roles or {}), "member": date.today().isoformat()}
+    if retire_role(person, "member"):
         await write_audit_entry(
             db,
             actor=actor,
@@ -215,8 +220,7 @@ async def deactivate_member(db: AsyncSession, person: Person, *, actor: str, req
 async def reactivate_member(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
     """Undo ``deactivate_member``: the person counts as an active member again. A repeat is a no-op."""
     person_id = person.id
-    if "member" in (person.retired_roles or {}):
-        person.retired_roles = {role: day for role, day in person.retired_roles.items() if role != "member"}
+    if reactivate_role(person, "member"):
         await write_audit_entry(
             db,
             actor=actor,

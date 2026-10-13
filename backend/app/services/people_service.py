@@ -38,6 +38,7 @@ from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Organization, Person, Registration, VolunteerPeriod
 from app.schemas import PersonCreate, PersonUpdate
+from app.services.role_history import sync_roles
 from app.utils import get_or_404, make_id, person_to_dict
 
 logger = logging.getLogger(__name__)
@@ -126,7 +127,17 @@ async def get_person_or_404(db: AsyncSession, person_id: str) -> Person:
     return await get_or_404(db, Person, person_id, "Person not found.")
 
 
+def reject_member_since(body: PersonCreate | PersonUpdate) -> None:
+    """``member_since`` belongs to the member endpoints; ignoring it here would hide a mistake."""
+    if body.member_since is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="member_since can only be set through the member endpoints.",
+        )
+
+
 async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, request_id: str | None = None) -> dict:
+    reject_member_since(body)
     national_register_number = normalise_optional_identity(body.national_register_number)
     eid_document_number = normalise_optional_identity(body.eid_document_number)
     await ensure_unique_identity_fields(
@@ -149,7 +160,7 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
         notes=body.notes,
         active=body.active,
     )
-    person.roles = normalise_roles(body.roles)
+    sync_roles(person, normalise_roles(body.roles))
 
     db.add(person)
     await write_audit_entry(
@@ -173,6 +184,7 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
 async def apply_person_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
+    reject_member_since(body)
     for field in ("name", "address", "preferred_language", "visits_per_month", "club_name", "notes", "active"):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
@@ -199,10 +211,7 @@ async def apply_person_update(
         person.eid_document_number = eid
 
     if body.roles is not None:
-        person.roles = normalise_roles(body.roles)
-        # A role the person no longer holds cannot stay retired; it would reappear retired if the
-        # role is added again later.
-        person.retired_roles = {r: d for r, d in (person.retired_roles or {}).items() if r in person.roles}
+        sync_roles(person, normalise_roles(body.roles))
 
     if body.marketing_opt_in is not None:
         # Enforces PersonUpdate.marketing_opt_in's own contract: this path
@@ -385,7 +394,13 @@ async def merge_people(
         canonical.marketing_opt_in_at = duplicate.marketing_opt_in_at
 
     # Merge roles (union).
+    gained = set(duplicate.roles) - set(canonical.roles)
     canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))
+    # A role gained from the duplicate brings its history along.
+    canonical.role_history = {
+        **{role: list(stretches) for role, stretches in (duplicate.role_history or {}).items() if role in gained},
+        **(canonical.role_history or {}),
+    }
     # A merged role stays retired only if no side still held it actively.
     canonical.retired_roles = {
         role: day

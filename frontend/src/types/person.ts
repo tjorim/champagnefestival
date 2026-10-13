@@ -37,6 +37,26 @@ export function isRoleActive(
   return person.active && !Object.hasOwn(person.retiredRoles, role);
 }
 
+export interface RoleStretch {
+  startedOn: string | null;
+  endedOn: string | null;
+}
+
+/**
+ * When the person's current (or latest) stretch of a role started, if known. Volunteers fall back
+ * to their earliest help period, since most volunteers predate the role history.
+ */
+export function roleSince(person: Person, role: string): string | null {
+  const stretches = person.roleHistory[role] ?? [];
+  const recorded = stretches.at(-1)?.startedOn ?? null;
+  if (recorded || role !== "volunteer") return recorded;
+  return person.helpPeriods.reduce<string | null>(
+    (earliest, period) =>
+      earliest === null || period.firstHelpDay < earliest ? period.firstHelpDay : earliest,
+    null,
+  );
+}
+
 export interface Person {
   id: string;
   registrationCount?: number;
@@ -54,6 +74,8 @@ export interface Person {
   active: boolean;
   /** Roles the person stepped back from (role to ISO day); they stay in `roles`. */
   retiredRoles: Record<string, string>;
+  /** When each role was held: one stretch per spell, oldest first; null = unknown. */
+  roleHistory: Record<string, RoleStretch[]>;
   helpPeriods: VolunteerHelpPeriod[];
   createdAt: string;
   updatedAt: string;
@@ -75,6 +97,20 @@ export function apiToPerson(d: Record<string, unknown>): Person {
     notes: (d.notes ?? "") as string,
     active: (d.active ?? true) as boolean,
     retiredRoles: (d.retired_roles as Record<string, string> | undefined) ?? {},
+    roleHistory: Object.fromEntries(
+      Object.entries((d.role_history as Record<string, unknown[]> | undefined) ?? {}).map(
+        ([role, stretches]) => [
+          role,
+          stretches.map((stretch) => {
+            const s = stretch as Record<string, unknown>;
+            return {
+              startedOn: (s.started_on as string | null) ?? null,
+              endedOn: (s.ended_on as string | null) ?? null,
+            };
+          }),
+        ],
+      ),
+    ),
     helpPeriods: Array.isArray(d.help_periods)
       ? d.help_periods.map((period) => {
           const p = period as Record<string, unknown>;

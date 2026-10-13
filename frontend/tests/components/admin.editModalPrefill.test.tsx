@@ -90,6 +90,8 @@ const existingPerson = {
   notes: "VIP",
   clubName: "Club A",
   active: true,
+  retiredRoles: {},
+  roleHistory: { member: [{ startedOn: "2021-04-02", endedOn: null }] },
   helpPeriods: [{ id: "hp-1", firstHelpDay: "2027-03-06", lastHelpDay: "2027-03-08" }],
 } as unknown as Person;
 
@@ -309,6 +311,7 @@ describe("admin edit modals prefill from the record being edited", () => {
     });
     expect(screen.getByLabelText("registration_email")).toHaveValue("alice@example.com");
     expect(screen.getByLabelText("admin_people_address_label")).toHaveValue("1 Rue de la Paix");
+    expect(screen.getByLabelText("admin_members_since_label")).toHaveValue("2021-04-02");
   });
 
   it("PersonFormModal keeps the person's values", async () => {

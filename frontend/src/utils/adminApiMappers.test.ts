@@ -37,6 +37,7 @@ function makePerson(overrides: Partial<Person> = {}): Person {
     notes: "",
     active: true,
     retiredRoles: {},
+    roleHistory: {},
     helpPeriods: [],
     createdAt: "2025-01-01T00:00:00Z",
     updatedAt: "2025-01-01T00:00:00Z",

@@ -134,6 +134,13 @@ class PersonSummaryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RoleStretchOut(BaseModel):
+    """One stretch of holding a role; ``started_on`` is null when the start is unknown."""
+
+    started_on: dt_date | None = None
+    ended_on: dt_date | None = None
+
+
 class PersonOut(BaseModel):
     id: str
     name: str
@@ -143,6 +150,7 @@ class PersonOut(BaseModel):
     address: str
     roles: list[str]
     retired_roles: dict[str, str] = {}
+    role_history: dict[str, list[RoleStretchOut]] = {}
     national_register_number: str | None
     eid_document_number: str | None
     visits_per_month: int | None
@@ -177,6 +185,7 @@ class PersonAdminSummaryOut(BaseModel):
     address: str
     roles: list[str]
     retired_roles: dict[str, str] = {}
+    role_history: dict[str, list[RoleStretchOut]] = {}
     visits_per_month: int | None
     club_name: str
     notes: str
@@ -1036,6 +1045,7 @@ class VolunteerOut(BaseModel):
     eid_document_number: str | None
     active: bool
     retired_roles: dict[str, str] = {}
+    role_history: dict[str, list[RoleStretchOut]] = {}
     help_periods: list[VolunteerPeriodOut]
     oidc_subject: str | None
     created_at: datetime
@@ -1205,6 +1215,8 @@ class PersonCreate(RequestModel):
     club_name: str = Field(default="", max_length=200)
     notes: str = Field(default="", max_length=2000)
     active: bool = True
+    member_since: dt_date | None = None
+    """Member endpoints only: the day membership started (defaults to today for a new member)."""
 
 
 class PersonUpdate(RequestModel):
@@ -1220,6 +1232,8 @@ class PersonUpdate(RequestModel):
     club_name: str | None = Field(default=None, max_length=200)
     notes: str | None = Field(default=None, max_length=2000)
     active: bool | None = None
+    member_since: dt_date | None = None
+    """Member endpoints only: the day the current stretch of membership started."""
     marketing_opt_in: bool | None = None
     """Admin-initiated correction only (e.g. processing an opt-out request
     received through the contact form) — the registration form is the actual

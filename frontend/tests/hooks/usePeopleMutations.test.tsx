@@ -179,7 +179,7 @@ describe("optimistic people mutations", () => {
     );
     await act(async () => {
       await h.result.current.updateMemberMutation
-        .mutateAsync({ id: "a", data })
+        .mutateAsync({ id: "a", data: { ...data, memberSince: "" } })
         .catch(() => undefined);
     });
     expect(h.cached().items[0]?.name).toBe("Original a");

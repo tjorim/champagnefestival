@@ -810,6 +810,14 @@ export const adminHandlers = [
       club_name: String(body.club_name ?? ""),
       notes: String(body.notes ?? ""),
       active: body.active !== false,
+      role_history: {
+        member: [
+          {
+            started_on: typeof body.member_since === "string" ? body.member_since : localIsoDate(),
+            ended_on: null,
+          },
+        ],
+      },
       created_at: now(),
       updated_at: now(),
     };
@@ -822,8 +830,27 @@ export const adminHandlers = [
     if (authError) return authError;
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
-    const body = (await request.json()) as Record<string, unknown>;
-    people[idx] = { ...people[idx]!, ...body, id: String(params.id), updated_at: now() };
+    const { member_since: memberSince, ...body } = (await request.json()) as Record<
+      string,
+      unknown
+    >;
+    const current = people[idx]!;
+    const history = (current.role_history ?? {}) as Record<string, Record<string, unknown>[]>;
+    const stretches = history.member ?? [{ started_on: null, ended_on: null }];
+    people[idx] = {
+      ...current,
+      ...body,
+      ...(typeof memberSince === "string"
+        ? {
+            role_history: {
+              ...history,
+              member: [...stretches.slice(0, -1), { ...stretches.at(-1), started_on: memberSince }],
+            },
+          }
+        : {}),
+      id: String(params.id),
+      updated_at: now(),
+    };
     return HttpResponse.json(people[idx]);
   }),
 

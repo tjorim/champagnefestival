@@ -1117,7 +1117,12 @@ class Person(Base):
     retired_roles: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
     """Roles the person has stepped back from, as ``{role: ISO retirement date}``. A retired role
     stays in ``roles`` (with every registration and help period) but the person no longer counts
-    as an active member or volunteer; ``active`` is the separate, person-wide archive flag."""
+    as an active member or volunteer; ``active`` is the separate, person-wide archive flag.
+    Derived from ``role_history`` and written only by ``app.services.role_history``."""
+    role_history: Mapped[dict[str, list[dict[str, str | None]]]] = mapped_column(JSON, default=dict)
+    """When each role was held: ``{role: [{"started_on", "ended_on"}, ...]}`` (ISO days, oldest
+    first; no ``ended_on`` means in progress, a null ``started_on`` means unknown). See
+    ``app.services.role_history``."""
 
     national_register_number: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
     """Belgium's National Register Number (NISS) — fixed and lifelong; this is

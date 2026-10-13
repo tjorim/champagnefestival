@@ -32,13 +32,15 @@ from app.models import Person, VolunteerPeriod
 from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerUpdate
 from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
+from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
 from app.utils import get_or_404, make_id, person_to_dict
 
 
-def ensure_volunteer_role(person: Person) -> None:
-    roles = set(person.roles or [])
-    roles.add("volunteer")
-    person.roles = sorted(roles)
+def ensure_volunteer_role(person: Person, *, started_on: dt_date | None = None) -> None:
+    if "volunteer" not in (person.roles or []):
+        sync_roles(person, sorted({*(person.roles or []), "volunteer"}))
+        if started_on is not None:
+            set_role_start(person, "volunteer", started_on)
 
 
 async def ensure_unique_fields(
@@ -145,6 +147,7 @@ def to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> dic
         "eid_document_number": d["eid_document_number"],
         "active": d["active"],
         "retired_roles": d["retired_roles"],
+        "role_history": d["role_history"],
         "oidc_subject": person.oidc_subject,
         "help_periods": [
             {
@@ -190,7 +193,7 @@ async def create_volunteer(
         eid_document_number=eid,
         active=body.active,
     )
-    ensure_volunteer_role(person)
+    ensure_volunteer_role(person, started_on=min(period.first_help_day for period in body.help_periods))
 
     db.add(person)
     await db.flush()
@@ -302,10 +305,8 @@ async def deactivate_volunteer(
         .scalars()
         .all()
     )
-    newly_retired = "volunteer" not in (volunteer.retired_roles or {})
+    newly_retired = retire_role(volunteer, "volunteer")
     if newly_retired or closed_ids:
-        if newly_retired:
-            volunteer.retired_roles = {**(volunteer.retired_roles or {}), "volunteer": dt_date.today().isoformat()}
         await write_audit_entry(
             db,
             actor=actor,
@@ -327,8 +328,7 @@ async def reactivate_volunteer(
     Help periods are not reopened; add a new period for the next stretch. A repeat is a no-op.
     """
     volunteer_id = volunteer.id
-    if "volunteer" in (volunteer.retired_roles or {}):
-        volunteer.retired_roles = {role: day for role, day in volunteer.retired_roles.items() if role != "volunteer"}
+    if reactivate_role(volunteer, "volunteer"):
         await write_audit_entry(
             db,
             actor=actor,

@@ -17,7 +17,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import { lastHelpedDay, isRoleActive, type Person } from "@/types/person";
+import { isRoleActive, lastHelpedDay, roleSince, type Person } from "@/types/person";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
 
@@ -116,6 +116,16 @@ export default function VolunteersManagement({
           header: m.admin_people_eid_document_number_label(),
           enableSorting: false,
           cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
+        }),
+        columnHelper.display({
+          id: "volunteerSince",
+          header: m.admin_volunteers_since_label(),
+          enableSorting: false,
+          cell: ({ row }) => (
+            <span className="text-sm text-subtle">
+              {roleSince(row.original, "volunteer") ?? "—"}
+            </span>
+          ),
         }),
         columnHelper.display({
           id: "lastHelped",

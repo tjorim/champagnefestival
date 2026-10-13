@@ -276,7 +276,7 @@ See `.env.example` for a template.
 | `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
 | `POST`   | `/api/members/{id}/deactivate`          | admin          | End membership: retire the `member` role (`retired_roles`); role, person, other roles and registrations are kept (repeat is a no-op) |
-| `POST`   | `/api/members/{id}/reactivate`          | admin          | Undo `deactivate`: the member role counts as active again (repeat is a no-op) |
+| `POST`   | `/api/members/{id}/reactivate`          | admin          | Undo `deactivate`: the member role counts as active again, opening a new stretch today (repeat is a no-op) |
 | `POST`   | `/api/people`                   | admin          | Create person with role tags                                               |
 | `GET`    | `/api/people`                   | admin          | Paged people list on the [shared list contract](#paged-list-contract) (`?q=`, `?role=`, `?active=`, `?sort=name\|email\|created\|updated\|registration_count`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET` | `/api/people/counts` | admin | Full-set `{total, active, inactive, by_role}` for the intersection of `q`, `role`, `active`; omit a facet filter to obtain counts for its tabs. Roles are case-insensitive and overlapping (a person counts once in each role). |
@@ -310,6 +310,15 @@ follows the same shape.
 | `sort`     | One of a whitelist; any other value is a 422, never a silent default. People: `name`, `email`, `created`, `updated`, `registration_count`. Volunteers: `name`, `created`, `updated`. |
 | `sort_dir` | `asc` (default) or `desc`; used only with `sort`. |
 
+- **Role history:** `Person.role_history` records when each role was held
+  (`{role: [{started_on, ended_on}]}`, oldest first; no `ended_on` = in progress,
+  null `started_on` = unknown, as for every role that predates the history).
+  Granting a role opens a stretch, removing one closes it, `deactivate` closes it
+  and `reactivate` opens a new one; `retired_roles` is the derived index of roles
+  whose latest stretch has ended. Both come back on person, member and volunteer
+  reads. `member_since` on `POST`/`PUT /api/members` sets the start of the current
+  stretch (the generic people endpoints reject it); a new volunteer starts on
+  their earliest `first_help_day`. All of it lives in `app/services/role_history.py`.
 - **`active` with a `role`:** without `role` it is the person-wide archive flag
   (`Person.active`). With `role` (and on `/api/volunteers`, which implies
   `role=volunteer`) it means active *in that role*: not archived and not retired

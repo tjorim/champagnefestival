@@ -34,7 +34,7 @@ describe("PeopleSection", () => {
 
     expect(screen.getAllByRole("tab").map((tab) => tab.textContent)).toEqual([
       "All people (5)",
-      "Members (3)",
+      "Champagnelovers (3)",
       "Volunteers (2)",
     ]);
     expect(screen.getByText("all-people-view")).toBeInTheDocument();
@@ -43,7 +43,7 @@ describe("PeopleSection", () => {
   it("switches between the all, members and volunteers views", async () => {
     renderSection();
 
-    fireEvent.click(screen.getByRole("tab", { name: "Members (3)" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Champagnelovers (3)" }));
     expect(screen.getByText("members-view")).toBeInTheDocument();
     await waitFor(() => expect(screen.queryByText("all-people-view")).not.toBeInTheDocument());
 
