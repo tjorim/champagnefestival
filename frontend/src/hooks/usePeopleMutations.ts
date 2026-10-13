@@ -20,10 +20,10 @@ interface UsePeopleMutationsOptions {
   registrationsQueryKey: QueryKey;
 }
 
-/** Mirrors the server: an open period ends yesterday, but never before its first day. */
+/** Mirrors the server: an open period ends today, but never before its first day. */
 function closedOn(firstHelpDay: string): string {
-  const yesterday = localIsoDate(-1);
-  return yesterday > firstHelpDay ? yesterday : firstHelpDay;
+  const today = localIsoDate();
+  return today > firstHelpDay ? today : firstHelpDay;
 }
 
 export function usePeopleMutations({
@@ -328,8 +328,9 @@ export function usePeopleMutations({
       id,
       update: (person) => ({
         ...person,
-        // The role and every help period stay on file; the server only closes open periods
-        // (yesterday, or on their first day when they have not started yet).
+        // The role and every help period stay on file; the server marks the person inactive
+        // and only closes open periods (today, or on their first day when not started yet).
+        active: false,
         helpPeriods: person.helpPeriods.map((period) =>
           period.lastHelpDay === null
             ? { ...period, lastHelpDay: closedOn(period.firstHelpDay) }

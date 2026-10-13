@@ -315,14 +315,15 @@ describe("optimistic people mutations", () => {
     });
   });
 
-  it("keeps the volunteer role and closes open help periods on people pages", async () => {
+  it("marks the volunteer inactive and closes open help periods on people pages", async () => {
     const h = harness();
     const gate = deferred();
     server.use(
       http.post("/api/volunteers/:id/end", async () => {
         await gate.promise;
+        h.rows()[0]!.active = false;
         (h.rows()[0]!.help_periods[0] as { last_help_day: string | null }).last_help_day =
-          localIsoDate(-1);
+          localIsoDate();
         return new HttpResponse(null, { status: 204 });
       }),
     );
@@ -331,8 +332,9 @@ describe("optimistic people mutations", () => {
       promise = h.result.current.endVolunteeringMutation.mutateAsync("a");
     });
     await waitFor(() =>
-      expect(h.cached().items[0]?.helpPeriods[0]?.lastHelpDay).toBe(localIsoDate(-1)),
+      expect(h.cached().items[0]?.helpPeriods[0]?.lastHelpDay).toBe(localIsoDate()),
     );
+    expect(h.cached().items[0]?.active).toBe(false);
     expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
     expect(h.cached().items[0]?.helpPeriods).toHaveLength(1);
     expect(h.cached().total).toBe(2);

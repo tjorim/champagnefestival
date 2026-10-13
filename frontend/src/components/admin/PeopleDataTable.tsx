@@ -14,7 +14,7 @@ import {
   type PeopleListParams,
 } from "@/utils/adminPeopleQueries";
 import { downloadFileOrThrow } from "@/utils/adminApi";
-import { hasCurrentHelpPeriod, type Person } from "@/types/person";
+import type { Person } from "@/types/person";
 import { m } from "@/paraglide/messages";
 
 export function peopleTableParams(state: AdminTableState, role?: string): PeopleListParams {
@@ -39,11 +39,6 @@ export function peopleTableParams(state: AdminTableState, role?: string): People
         : state.filters.active === "inactive"
           ? false
           : undefined,
-    volunteering:
-      (role ?? state.filters.role) === "volunteer" &&
-      (state.filters.volunteering === "current" || state.filters.volunteering === "former")
-        ? state.filters.volunteering
-        : undefined,
   };
 }
 
@@ -71,9 +66,6 @@ export function PersonName({ person }: { person: Person }) {
     <span className="flex items-center gap-1" aria-busy={pending > 0}>
       {person.name}
       {!person.active && <Badge variant="secondary">{m.admin_people_inactive_badge_label()}</Badge>}
-      {person.roles.includes("volunteer") && !hasCurrentHelpPeriod(person.helpPeriods) && (
-        <Badge variant="outline">{m.admin_volunteers_former_badge_label()}</Badge>
-      )}
       {pending > 0 && <Spinner size="sm" label={m.admin_settings_saving()} />}
     </span>
   );
@@ -116,18 +108,6 @@ export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryActio
               },
             ],
           },
-          ...(role === "volunteer"
-            ? [
-                {
-                  id: "volunteering",
-                  label: m.admin_volunteers_volunteering_label(),
-                  options: [
-                    { value: "current", label: m.admin_volunteers_filter_current() },
-                    { value: "former", label: m.admin_volunteers_filter_former() },
-                  ],
-                },
-              ]
-            : []),
           ...(!role
             ? [
                 {

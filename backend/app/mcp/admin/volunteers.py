@@ -7,7 +7,7 @@ out of scope for MCP tools). Business logic lives in
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import HTTPException
 
@@ -57,10 +57,9 @@ async def list_volunteers(
     session_factory: Any,
     q: str | None = None,
     active: bool | None = None,
-    volunteering: Literal["current", "former"] | None = None,
 ) -> dict:
     async with session_factory() as db:
-        stmt = volunteers_service.search_volunteers_stmt(q=q, active=active, volunteering=volunteering)
+        stmt = volunteers_service.search_volunteers_stmt(q=q, active=active)
         rows = (await db.execute(stmt)).scalars().all()
         periods_map = await volunteers_service.load_periods_map(db, [row.id for row in rows])
         return {"volunteers": [volunteers_service.to_volunteer_out(v, periods_map.get(v.id, [])) for v in rows]}
@@ -109,7 +108,7 @@ async def update_volunteer(
 
 
 async def end_volunteering(session_factory: Any, actor: str, volunteer_id: str) -> dict:
-    """End a person's volunteering (they stay listed as a former volunteer).
+    """End a person's volunteering (they stay listed, marked inactive).
 
     See ``app.services.volunteers_service.end_volunteering`` for the exact
     semantics.

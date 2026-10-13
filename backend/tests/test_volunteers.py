@@ -112,8 +112,8 @@ async def test_volunteer_crud_and_constraints(client):
     )
     assert r.status_code == 422
 
-    # The volunteer is still helping (one open period).
-    r = await client.get("/api/volunteers", params={"volunteering": "current"}, headers=ADMIN_HEADERS)
+    # The volunteer is active and listed.
+    r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
     assert [item["id"] for item in r.json()["items"]] == [volunteer_id]
 
     r = await client.post(f"/api/volunteers/{volunteer_id}/end", headers=ADMIN_HEADERS)
@@ -124,13 +124,14 @@ async def test_volunteer_crud_and_constraints(client):
     assert r.status_code == 200
     periods = r.json()["help_periods"]
     assert len(periods) == 3
-    # ... but the open one is now closed, which makes them a former volunteer.
+    # ... the open one is now closed, and the person is inactive rather than gone.
     assert all(period["last_help_day"] is not None for period in periods)
     person = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
     assert "volunteer" in person.json()["roles"]
-    r = await client.get("/api/volunteers", params={"volunteering": "current"}, headers=ADMIN_HEADERS)
+    assert person.json()["active"] is False
+    r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
     assert r.json()["items"] == []
-    r = await client.get("/api/volunteers", params={"volunteering": "former"}, headers=ADMIN_HEADERS)
+    r = await client.get("/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS)
     assert [item["id"] for item in r.json()["items"]] == [volunteer_id]
 
     # Ending again is a no-op, not an error.

@@ -19,7 +19,6 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date as dt_date
-from datetime import timedelta
 from typing import Any
 
 from fastapi import HTTPException
@@ -31,7 +30,7 @@ from app.audit import write_audit_entry
 from app.dependencies import SortDirection
 from app.models import Person, VolunteerPeriod
 from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerUpdate
-from app.services.people_listing import Volunteering, filtered_people_stmt, order_people_stmt
+from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
 from app.utils import get_or_404, make_id, person_to_dict
 
@@ -164,7 +163,6 @@ def search_volunteers_stmt(
     *,
     q: str | None = None,
     active: bool | None = None,
-    volunteering: Volunteering | None = None,
     sort: str | None = None,
     sort_dir: SortDirection = "asc",
 ) -> Any:
@@ -172,7 +170,7 @@ def search_volunteers_stmt(
     on the shared people list contract (``app.services.people_listing``): the
     same ``q`` semantics as ``GET /api/people``, and a deterministic order
     ending in ``id``."""
-    stmt = filtered_people_stmt(q=q, role="volunteer", active=active, volunteering=volunteering)
+    stmt = filtered_people_stmt(q=q, role="volunteer", active=active)
     return order_people_stmt(stmt, q=q, sort=sort, sort_dir=sort_dir)
 
 
@@ -277,37 +275,41 @@ async def apply_volunteer_update(
 async def end_volunteering(db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None) -> dict:
     """End a person's volunteering (they step back); everything stays on file.
 
+    Whether someone is still part of the volunteer pool is the ``active`` flag, not their help
+    periods: a period only covers the days around one festival, so most volunteers have no
+    current period between editions, and skipping one edition does not end anything. Ending
+    volunteering therefore marks the person inactive and closes any help period that is still
+    open (``last_help_day`` becomes today, or the period's first day if it has not started yet).
     The ``volunteer`` role, the ``Person`` record, every help period, registrations and audit
     history are kept: the periods are what an insurance claim needs ("who was covered on which
-    day"), and a former volunteer stays visible as one. Any period that is still open is closed:
-    ``last_help_day`` becomes yesterday, so they count as a *former* volunteer straight away (the
-    ``volunteering`` list filter); a period that has not started yet is closed on its first day,
-    so that person stays listed as current until it passes unless the period is edited out.
-    Calling it again, or on someone with no open period, changes nothing. Volunteering resumes by
-    adding a new help period.
+    day"). ``active`` is one flag on the person, so it applies to all their roles. Volunteering
+    resumes by setting them active again and adding a help period. Calling it again changes
+    nothing and writes no second audit entry.
     """
     volunteer_id = volunteer.id
-    yesterday = dt_date.today() - timedelta(days=1)
     closed_ids = (
         (
             await db.execute(
                 update(VolunteerPeriod)
                 .where(VolunteerPeriod.volunteer_id == volunteer_id, VolunteerPeriod.last_help_day.is_(None))
-                .values(last_help_day=func.greatest(VolunteerPeriod.first_help_day, yesterday))
+                .values(last_help_day=func.greatest(VolunteerPeriod.first_help_day, dt_date.today()))
                 .returning(VolunteerPeriod.id)
             )
         )
         .scalars()
         .all()
     )
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="volunteering_ended",
-        resource_type="person",
-        resource_id=volunteer_id,
-        request_id=request_id,
-        details={"closed_open_periods": len(closed_ids)},
-    )
-    await db.commit()
+    was_active = volunteer.active
+    if was_active or closed_ids:
+        volunteer.active = False
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="volunteering_ended",
+            resource_type="person",
+            resource_id=volunteer_id,
+            request_id=request_id,
+            details={"was_active": was_active, "closed_open_periods": len(closed_ids)},
+        )
+        await db.commit()
     return {"ended": True, "id": volunteer_id}

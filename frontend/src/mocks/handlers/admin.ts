@@ -877,22 +877,24 @@ export const adminHandlers = [
     return HttpResponse.json(people[idx]);
   }),
 
-  // Ending volunteering keeps the role and every period; open periods are closed (yesterday).
+  // Ending volunteering keeps the role and every period; open periods are closed (today) and the
+  // person is marked inactive.
   http.post("/api/volunteers/:id/end", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
-    const yesterday = localIsoDate(-1);
+    const today = localIsoDate();
     people[idx] = {
       ...people[idx]!,
+      active: false,
       help_periods: ((people[idx]!.help_periods ?? []) as Record<string, unknown>[]).map(
         (period) =>
           period.last_help_day === null
             ? {
                 ...period,
                 last_help_day:
-                  yesterday > String(period.first_help_day) ? yesterday : period.first_help_day,
+                  today > String(period.first_help_day) ? today : period.first_help_day,
               }
             : period,
       ),

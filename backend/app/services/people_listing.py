@@ -10,20 +10,18 @@ btree indexes; registration counts use the indexed registration person_id.
 
 from __future__ import annotations
 
-from datetime import date
 from typing import Any, Literal
 
-from sqlalchemy import Text, cast, exists, func, or_, select
+from sqlalchemy import Text, cast, func, or_, select
 from sqlalchemy.sql import Select
 
 from app.dependencies import SortDirection
-from app.models import Person, Registration, VolunteerPeriod
+from app.models import Person, Registration
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.utils import roles_contains
 
 PersonSortKey = Literal["name", "email", "created", "updated", "registration_count"]
 VolunteerSortKey = Literal["name", "created", "updated"]
-Volunteering = Literal["current", "former"]
 
 # Name and email sort on the trigger-maintained, unaccented, lower-cased
 # `search_*` columns so "élodie" sorts with the e's and "bob" before "Chris",
@@ -66,35 +64,18 @@ def person_search_filter(q: str) -> Any:
     )
 
 
-def currently_volunteering() -> Any:
-    """True for a person with a help period that is open or has not ended yet (ends today or later)."""
-    return exists().where(
-        VolunteerPeriod.volunteer_id == Person.id,
-        or_(VolunteerPeriod.last_help_day.is_(None), VolunteerPeriod.last_help_day >= date.today()),
-    )
-
-
 def filtered_people_stmt(
     *,
     q: str | None = None,
     role: str | None = None,
     active: bool | None = None,
-    volunteering: Volunteering | None = None,
 ) -> Select[Any]:
-    """``select(Person)`` with the shared filters applied and no ordering.
-
-    ``volunteering`` splits volunteers into those who are currently helping (an open period, or
-    one that ends today or later) and former volunteers, who keep the role and their periods.
-    """
+    """``select(Person)`` with the shared filters applied and no ordering."""
     stmt = select(Person)
     if active is not None:
         stmt = stmt.where(Person.active == active)
     if role:
         stmt = stmt.where(roles_contains(role))
-    if volunteering == "current":
-        stmt = stmt.where(currently_volunteering())
-    elif volunteering == "former":
-        stmt = stmt.where(~currently_volunteering())
     if q and (q_stripped := q.strip()):
         stmt = stmt.where(person_search_filter(q_stripped))
     return stmt

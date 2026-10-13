@@ -14,10 +14,19 @@ export function localIsoDate(offsetDays = 0): string {
   return `${now.getFullYear()}-${month}-${day}`;
 }
 
-/** A volunteer is current while any help period is open or has not ended yet. */
-export function hasCurrentHelpPeriod(periods: VolunteerHelpPeriod[]): boolean {
-  const today = localIsoDate();
-  return periods.some((period) => period.lastHelpDay === null || period.lastHelpDay >= today);
+/**
+ * When a volunteer last helped: `"ongoing"` while a period is open, otherwise the latest end day,
+ * or `null` without periods. Informational only: whether someone is still a volunteer is `active`.
+ */
+export function lastHelpedDay(periods: VolunteerHelpPeriod[]): string | null {
+  if (periods.some((period) => period.lastHelpDay === null)) return "ongoing";
+  let latest: string | null = null;
+  for (const period of periods) {
+    if (period.lastHelpDay !== null && (latest === null || period.lastHelpDay > latest)) {
+      latest = period.lastHelpDay;
+    }
+  }
+  return latest;
 }
 
 export interface Person {

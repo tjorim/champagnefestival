@@ -266,11 +266,11 @@ See `.env.example` for a template.
 | `GET`    | `/api/content/{key}`            | public         | Get CMS content (producers / sponsors)                                     |
 | `PUT`    | `/api/content/{key}`            | admin          | Save CMS content                                                           |
 | `POST`   | `/api/volunteers`               | admin          | Create volunteer profile (person with role `volunteer`)                    |
-| `GET`    | `/api/volunteers`               | admin          | Paged volunteer list on the [shared list contract](#paged-list-contract) (`?q=`, `?active=`, `?volunteering=current\|former` (any help period open or ending today or later, or none), `?sort=name\|created\|updated`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
+| `GET`    | `/api/volunteers`               | admin          | Paged volunteer list on the [shared list contract](#paged-list-contract) (`?q=`, `?active=`, `?sort=name\|created\|updated`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET`    | `/api/volunteers/export`        | admin          | Stream filtered volunteer insurance CSV (`q`, `active`, `sort`, `sort_dir`; active-only by default, `include_inactive=true` for all)                           |
 | `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
-| `POST`   | `/api/volunteers/{id}/end`      | admin          | End volunteering: close open periods; role, person and periods are kept (repeat is a no-op) |
+| `POST`   | `/api/volunteers/{id}/end`      | admin          | End volunteering: mark the person inactive and close open periods today; role, person and periods are kept (repeat is a no-op) |
 | `POST`   | `/api/members`                  | admin          | Create member (person with role `member`)                                  |
 | `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |

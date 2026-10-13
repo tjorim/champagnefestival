@@ -1,7 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hasCurrentHelpPeriod, localIsoDate } from "@/types/person";
-import { peopleTableParams } from "@/components/admin/PeopleDataTable";
-import type { AdminTableState } from "@/utils/adminTableState";
+import { lastHelpedDay } from "@/types/person";
 
 const period = (lastHelpDay: string | null) => ({
   id: 1,
@@ -10,32 +8,18 @@ const period = (lastHelpDay: string | null) => ({
   notes: "",
 });
 
-describe("hasCurrentHelpPeriod", () => {
-  it("counts open periods and periods ending today or later as current", () => {
-    expect(hasCurrentHelpPeriod([period(null)])).toBe(true);
-    expect(hasCurrentHelpPeriod([period(localIsoDate())])).toBe(true);
-    expect(hasCurrentHelpPeriod([period(localIsoDate(1))])).toBe(true);
+describe("lastHelpedDay", () => {
+  it("is ongoing while any period is open", () => {
+    expect(lastHelpedDay([period("2021-03-22"), period(null)])).toBe("ongoing");
   });
 
-  it("treats only finished periods, or none, as former", () => {
-    expect(hasCurrentHelpPeriod([period(localIsoDate(-1)), period("2021-01-01")])).toBe(false);
-    expect(hasCurrentHelpPeriod([])).toBe(false);
+  it("is the latest end day otherwise", () => {
+    expect(lastHelpedDay([period("2021-03-22"), period("2024-03-24"), period("2022-03-20")])).toBe(
+      "2024-03-24",
+    );
   });
-});
 
-describe("peopleTableParams volunteering filter", () => {
-  const state = (filters: Record<string, string>) =>
-    ({ page: 0, pageSize: 20, search: "", sortDir: "asc", filters }) as unknown as AdminTableState;
-
-  it("sends the volunteering filter only for the volunteers tab", () => {
-    expect(peopleTableParams(state({ volunteering: "former" }), "volunteer").volunteering).toBe(
-      "former",
-    );
-    expect(peopleTableParams(state({ volunteering: "former" }), "member").volunteering).toBe(
-      undefined,
-    );
-    expect(peopleTableParams(state({ volunteering: "bogus" }), "volunteer").volunteering).toBe(
-      undefined,
-    );
+  it("is null without periods", () => {
+    expect(lastHelpedDay([])).toBeNull();
   });
 });
