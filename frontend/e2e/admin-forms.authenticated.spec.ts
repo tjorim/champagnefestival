@@ -27,8 +27,8 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         await expect(page.locator("#admin.admin-authenticated")).toBeVisible();
         if (width < 992) await page.getByRole("button", { name: "Toggle navigation" }).click();
         await page.getByRole("button", { name: /^People(?:\s|\d|$)/ }).click();
-        await page.getByRole("tab", { name: /^Members\s/ }).click();
-        await page.getByRole("button", { name: "Add member", exact: true }).click();
+        await page.getByRole("tab", { name: /^All people\s/ }).click();
+        await page.getByRole("button", { name: "Add person", exact: true }).click();
         const dialog = page.getByRole("dialog");
         await expect(dialog).toBeVisible();
         const name = dialog.getByRole("textbox", { name: /^Name/ });
@@ -43,6 +43,8 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         await option.click();
         await expect(language).toContainText("Français");
         await expect(language).toBeFocused();
+        // The All people form carries the person-wide Active switch (the member and volunteer forms
+        // retire their own role through row actions instead).
         const active = dialog.getByRole("switch", { name: "Active", exact: true });
         await active.focus();
         await active.press("Space");
@@ -65,7 +67,7 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         await testInfo.attach("admin form", { path: adminPath, contentType: "image/png" });
         await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
         await expect(dialog).toHaveCount(0);
-        await expect(page.getByRole("button", { name: "Add member", exact: true })).toBeFocused();
+        await expect(page.getByRole("button", { name: "Add person", exact: true })).toBeFocused();
       });
     }
   }
