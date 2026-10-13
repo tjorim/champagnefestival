@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { usePeopleMutations } from "@/hooks/usePeopleMutations";
 import { server } from "@/mocks/server";
 import { captureAdminPeopleFence, resetAdminPeopleSession } from "@/state/adminPeopleSession";
-import { apiToPerson } from "@/types/person";
+import { apiToPerson, localIsoDate } from "@/types/person";
 import { fetchPeoplePage, type PeoplePage } from "@/utils/adminPeopleQueries";
 import { queryKeys } from "@/utils/queryKeys";
 import { createTestQueryClientHarness } from "../utils/queryClient";
@@ -315,13 +315,14 @@ describe("optimistic people mutations", () => {
     });
   });
 
-  it("removes only the volunteer role and keeps the help periods on people pages", async () => {
+  it("keeps the volunteer role and closes open help periods on people pages", async () => {
     const h = harness();
     const gate = deferred();
     server.use(
       http.delete("/api/volunteers/:id", async () => {
         await gate.promise;
-        h.rows()[0]!.roles = ["member"];
+        (h.rows()[0]!.help_periods[0] as { last_help_day: string | null }).last_help_day =
+          localIsoDate(-1);
         return new HttpResponse(null, { status: 204 });
       }),
     );
@@ -329,7 +330,10 @@ describe("optimistic people mutations", () => {
     act(() => {
       promise = h.result.current.deleteVolunteerMutation.mutateAsync("a");
     });
-    await waitFor(() => expect(h.cached().items[0]?.roles).toEqual(["member"]));
+    await waitFor(() =>
+      expect(h.cached().items[0]?.helpPeriods[0]?.lastHelpDay).toBe(localIsoDate(-1)),
+    );
+    expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
     expect(h.cached().items[0]?.helpPeriods).toHaveLength(1);
     expect(h.cached().total).toBe(2);
     gate.resolve();

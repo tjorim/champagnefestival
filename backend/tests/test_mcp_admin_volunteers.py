@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from sqlalchemy import select
 
 from app.mcp.admin import volunteers as mcp_volunteers
-from app.models import Person, VolunteerPeriod
+from app.models import AuditEntry, Person, VolunteerPeriod
 from tests.helpers import mcp_session_factory
 
 HELP_PERIODS = [{"first_help_day": "2099-03-21", "last_help_day": "2099-03-22"}]
@@ -214,7 +214,7 @@ async def test_update_volunteer_eid_document_number_conflict(db_session):
         await mcp_volunteers.update_volunteer(factory, "admin-1", bob["id"], eid_document_number="BEI998877")
 
 
-async def test_delete_volunteer_removes_role_but_keeps_person_and_periods(db_session):
+async def test_delete_volunteer_ends_volunteering_and_keeps_everything(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_volunteers.create_volunteer(
         factory,
@@ -229,22 +229,61 @@ async def test_delete_volunteer_removes_role_but_keeps_person_and_periods(db_ses
     result = await mcp_volunteers.delete_volunteer(factory, "admin-1", volunteer_id)
     assert result == {"deleted": True, "id": volunteer_id}
 
-    with pytest.raises(ValueError, match="not found"):
-        await mcp_volunteers.get_volunteer(factory, volunteer_id)
-
+    # Still a volunteer record (a former one), with the person and role intact ...
+    still = await mcp_volunteers.get_volunteer(factory, volunteer_id)
+    assert still["id"] == volunteer_id
     person = await db_session.get(Person, volunteer_id)
     assert person is not None
-    assert "volunteer" not in person.roles
+    assert "volunteer" in person.roles
 
+    # ... and the help periods are history (insurance) that survives stepping back.
     periods = (
         (await db_session.execute(select(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id)))
         .scalars()
         .all()
     )
-    # The help periods are history (insurance) and survive stepping back.
     assert [(p.first_help_day.isoformat(), p.last_help_day.isoformat()) for p in periods] == [
         ("2099-03-21", "2099-03-22")
     ]
+    entry = await db_session.scalar(select(AuditEntry).where(AuditEntry.action == "volunteering_ended"))
+    assert entry is not None and entry.resource_id == volunteer_id
+
+
+async def test_list_volunteers_splits_current_from_former(db_session):
+    factory = mcp_session_factory(db_session)
+    current = await mcp_volunteers.create_volunteer(
+        factory,
+        "admin-1",
+        name="Current Carla",
+        national_register_number="85010111111",
+        eid_document_number="BEI000001",
+        help_periods=[{"first_help_day": "2020-03-21", "last_help_day": None}],
+    )
+    upcoming = await mcp_volunteers.create_volunteer(
+        factory,
+        "admin-1",
+        name="Upcoming Ugo",
+        national_register_number="85010122222",
+        eid_document_number="BEI000002",
+        help_periods=[{"first_help_day": "2099-03-21", "last_help_day": "2099-03-22"}],
+    )
+    former = await mcp_volunteers.create_volunteer(
+        factory,
+        "admin-1",
+        name="Former Fons",
+        national_register_number="85010133333",
+        eid_document_number="BEI000003",
+        help_periods=[{"first_help_day": "2020-03-21", "last_help_day": "2020-03-22"}],
+    )
+
+    async def ids(volunteering):
+        listed = await mcp_volunteers.list_volunteers(factory, volunteering=volunteering)
+        return {v["id"] for v in listed["volunteers"]}
+
+    # "Current" means an open period or one that has not ended yet; everyone else is former.
+    assert await ids("current") == {current["id"], upcoming["id"]}
+    assert await ids("former") == {former["id"]}
+    assert await ids(None) == {current["id"], upcoming["id"], former["id"]}
 
 
 async def test_delete_volunteer_closes_open_periods(db_session):
@@ -276,8 +315,9 @@ async def test_delete_volunteer_closes_open_periods(db_session):
         .all()
     )
     assert len(periods) == 2
-    # An open period ends today; one that had not started closes on its first day.
-    assert periods[0].last_help_day == date.today()
+    # An open period ends yesterday (so they are a former volunteer right away); one that had not
+    # started closes on its first day.
+    assert periods[0].last_help_day == date.today() - timedelta(days=1)
     assert periods[1].last_help_day == periods[1].first_help_day
 
 

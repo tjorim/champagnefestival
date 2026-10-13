@@ -5,6 +5,7 @@ import type { PersonFormData } from "@/components/admin/PersonFormModal";
 import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
 import { m } from "@/paraglide/messages";
 import { captureAdminPeopleFence } from "@/state/adminPeopleSession";
+import { localIsoDate } from "@/types/person";
 import { peopleWrites, type PeopleWrite } from "@/utils/optimisticPeoplePages";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -17,6 +18,12 @@ interface UsePeopleMutationsOptions {
   queryClient: QueryClient;
   authHeaders: () => Record<string, string>;
   registrationsQueryKey: QueryKey;
+}
+
+/** Mirrors the server: an open period ends yesterday, but never before its first day. */
+function closedOn(firstHelpDay: string): string {
+  const yesterday = localIsoDate(-1);
+  return yesterday > firstHelpDay ? yesterday : firstHelpDay;
 }
 
 export function usePeopleMutations({
@@ -321,8 +328,13 @@ export function usePeopleMutations({
       id,
       update: (person) => ({
         ...person,
-        // The help periods stay on file (the server only closes open ones); only the role goes.
-        roles: person.roles.filter((role) => role !== "volunteer"),
+        // The role and every help period stay on file; the server only closes open periods
+        // (yesterday, or on their first day when they have not started yet).
+        helpPeriods: person.helpPeriods.map((period) =>
+          period.lastHelpDay === null
+            ? { ...period, lastHelpDay: closedOn(period.firstHelpDay) }
+            : period,
+        ),
       }),
     })),
     retry: false,

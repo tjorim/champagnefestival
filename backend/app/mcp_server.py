@@ -1982,10 +1982,16 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_volunteers.get_volunteer(self.session_factory, volunteer_id)
 
-    async def list_volunteers(self, q: str | None = None, active: bool | None = None) -> dict:
-        """Search/list volunteers, including help periods. Requires the ``admin`` role."""
+    async def list_volunteers(
+        self,
+        q: str | None = None,
+        active: bool | None = None,
+        volunteering: Literal["current", "former"] | None = None,
+    ) -> dict:
+        """Search/list volunteers, including help periods. ``volunteering`` splits current helpers from
+        former volunteers (stepped back, periods kept). Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_volunteers.list_volunteers(self.session_factory, q, active)
+        return await mcp_admin_volunteers.list_volunteers(self.session_factory, q, active, volunteering)
 
     async def update_volunteer(
         self,
@@ -2026,7 +2032,7 @@ class ChampagneFestivalMcpBackend:
         )
 
     async def delete_volunteer(self, volunteer_id: str) -> dict:
-        """Remove the volunteer role (the person and their help periods are kept; open periods are closed). Requires the ``admin`` role."""
+        """End a person's volunteering: open help periods are closed; the role, the person and every period are kept (they show as a former volunteer). Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_volunteers.delete_volunteer(self.session_factory, self._actor(), volunteer_id)
 

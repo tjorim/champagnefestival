@@ -5,6 +5,21 @@ export interface VolunteerHelpPeriod {
   notes: string;
 }
 
+/** A local ISO date (`YYYY-MM-DD`) relative to today, comparable with help-period day strings. */
+export function localIsoDate(offsetDays = 0): string {
+  const now = new Date();
+  now.setDate(now.getDate() + offsetDays);
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+/** A volunteer is current while any help period is open or has not ended yet. */
+export function hasCurrentHelpPeriod(periods: VolunteerHelpPeriod[]): boolean {
+  const today = localIsoDate();
+  return periods.some((period) => period.lastHelpDay === null || period.lastHelpDay >= today);
+}
+
 export interface Person {
   id: string;
   registrationCount?: number;

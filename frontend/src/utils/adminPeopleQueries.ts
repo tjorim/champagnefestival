@@ -10,6 +10,8 @@ export interface PeopleListParams {
   sort_dir?: "asc" | "desc";
   role?: string;
   active?: boolean;
+  /** Volunteers endpoint only: split current volunteers from former ones. */
+  volunteering?: "current" | "former";
 }
 
 export interface PeoplePage {
@@ -21,7 +23,7 @@ export interface PeoplePage {
 
 /** Only the list contract is accepted: unsupported predicates must not be ignored. */
 export function peopleListSearchParams(params: PeopleListParams): URLSearchParams {
-  const allowed = ["page", "limit", "q", "sort", "sort_dir", "role", "active"];
+  const allowed = ["page", "limit", "q", "sort", "sort_dir", "role", "active", "volunteering"];
   for (const key of Object.keys(params)) {
     if (!allowed.includes(key)) throw new Error(`Unsupported people list parameter: ${key}`);
   }

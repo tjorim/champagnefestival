@@ -112,17 +112,30 @@ async def test_volunteer_crud_and_constraints(client):
     )
     assert r.status_code == 422
 
+    # The volunteer is still helping (one open period).
+    r = await client.get("/api/volunteers", params={"volunteering": "current"}, headers=ADMIN_HEADERS)
+    assert [item["id"] for item in r.json()["items"]] == [volunteer_id]
+
     r = await client.delete(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
-    # Volunteer role is removed — endpoint returns 404.
+    # Stepping back keeps the role, the person and all three help periods ...
     r = await client.get(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
-    assert r.status_code == 404
-
-    # But the underlying person record still exists (soft archive).
-    r = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert "volunteer" not in r.json()["roles"]
+    periods = r.json()["help_periods"]
+    assert len(periods) == 3
+    # ... but the open one is now closed, which makes them a former volunteer.
+    assert all(period["last_help_day"] is not None for period in periods)
+    person = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert "volunteer" in person.json()["roles"]
+    r = await client.get("/api/volunteers", params={"volunteering": "current"}, headers=ADMIN_HEADERS)
+    assert r.json()["items"] == []
+    r = await client.get("/api/volunteers", params={"volunteering": "former"}, headers=ADMIN_HEADERS)
+    assert [item["id"] for item in r.json()["items"]] == [volunteer_id]
+
+    # Ending again is a no-op, not an error.
+    r = await client.delete(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
 
 
 @pytest.mark.anyio

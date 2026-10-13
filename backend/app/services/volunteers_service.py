@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import date as dt_date
+from datetime import timedelta
 from typing import Any
 
 from fastapi import HTTPException
@@ -30,7 +31,7 @@ from app.audit import write_audit_entry
 from app.dependencies import SortDirection
 from app.models import Person, VolunteerPeriod
 from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerUpdate
-from app.services.people_listing import filtered_people_stmt, order_people_stmt
+from app.services.people_listing import Volunteering, filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
 from app.utils import get_or_404, make_id, person_to_dict
 
@@ -39,10 +40,6 @@ def ensure_volunteer_role(person: Person) -> None:
     roles = set(person.roles or [])
     roles.add("volunteer")
     person.roles = sorted(roles)
-
-
-def remove_volunteer_role(person: Person) -> None:
-    person.roles = sorted(role for role in (person.roles or []) if role != "volunteer")
 
 
 async def ensure_unique_fields(
@@ -167,6 +164,7 @@ def search_volunteers_stmt(
     *,
     q: str | None = None,
     active: bool | None = None,
+    volunteering: Volunteering | None = None,
     sort: str | None = None,
     sort_dir: SortDirection = "asc",
 ) -> Any:
@@ -174,7 +172,7 @@ def search_volunteers_stmt(
     on the shared people list contract (``app.services.people_listing``): the
     same ``q`` semantics as ``GET /api/people``, and a deterministic order
     ending in ``id``."""
-    stmt = filtered_people_stmt(q=q, role="volunteer", active=active)
+    stmt = filtered_people_stmt(q=q, role="volunteer", active=active, volunteering=volunteering)
     return order_people_stmt(stmt, q=q, sort=sort, sort_dir=sort_dir)
 
 
@@ -277,33 +275,35 @@ async def apply_volunteer_update(
 
 
 async def delete_volunteer(db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None) -> dict:
-    """Remove the volunteer role from a person (stepping back; soft archive).
+    """End a person's volunteering (they step back); everything stays on file.
 
-    The ``Person`` record, their help periods, registrations and audit history are all kept:
-    the periods are what an insurance claim needs ("who was covered on which day"), so they
-    outlive the role. Any period that is still open is closed (``last_help_day`` becomes today,
-    or the period's first day if it has not started yet), so a former volunteer does not read
-    as still helping if the role is ever restored. Only the ``volunteer`` role is removed.
+    The ``volunteer`` role, the ``Person`` record, every help period, registrations and audit
+    history are kept: the periods are what an insurance claim needs ("who was covered on which
+    day"), and a former volunteer stays visible as one. Any period that is still open is closed:
+    ``last_help_day`` becomes yesterday, so they count as a *former* volunteer straight away (the
+    ``volunteering`` list filter); a period that has not started yet is closed on its first day,
+    so that person stays listed as current until it passes unless the period is edited out.
+    Calling it again, or on someone with no open period, changes nothing. Volunteering resumes by
+    adding a new help period.
     """
     volunteer_id = volunteer.id
-    today = dt_date.today()
+    yesterday = dt_date.today() - timedelta(days=1)
     closed_ids = (
         (
             await db.execute(
                 update(VolunteerPeriod)
                 .where(VolunteerPeriod.volunteer_id == volunteer_id, VolunteerPeriod.last_help_day.is_(None))
-                .values(last_help_day=func.greatest(VolunteerPeriod.first_help_day, today))
+                .values(last_help_day=func.greatest(VolunteerPeriod.first_help_day, yesterday))
                 .returning(VolunteerPeriod.id)
             )
         )
         .scalars()
         .all()
     )
-    remove_volunteer_role(volunteer)
     await write_audit_entry(
         db,
         actor=actor,
-        action="volunteer_role_removed",
+        action="volunteering_ended",
         resource_type="person",
         resource_id=volunteer_id,
         request_id=request_id,

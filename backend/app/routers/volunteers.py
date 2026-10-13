@@ -18,7 +18,7 @@ from app.dependencies import ListQuery, get_request_id
 from app.schemas import VolunteerCreate, VolunteerListEnvelope, VolunteerOut, VolunteerUpdate
 from app.services import volunteers_service
 from app.services.people_exports import stream_people_csv
-from app.services.people_listing import VolunteerSortKey, filtered_people_stmt, order_people_stmt
+from app.services.people_listing import Volunteering, VolunteerSortKey, filtered_people_stmt, order_people_stmt
 
 router = APIRouter(
     prefix="/api/volunteers",
@@ -41,6 +41,11 @@ async def create_volunteer(
 async def list_volunteers(
     db: AsyncSession = Depends(get_db),
     active: bool | None = Query(default=None),
+    volunteering: Volunteering | None = Query(
+        default=None,
+        description="`current`: has an open help period or one ending today or later; "
+        "`former`: stepped back, keeping the role and their past help periods.",
+    ),
     sort: VolunteerSortKey | None = Query(
         default=None,
         description="Sort column; overrides the default relevance/newest-first order. "
@@ -54,7 +59,7 @@ async def list_volunteers(
     (restricted to people holding the volunteer role), with help periods
     included in each item.
     """
-    filtered_stmt = filtered_people_stmt(q=list_query.q, role="volunteer", active=active)
+    filtered_stmt = filtered_people_stmt(q=list_query.q, role="volunteer", active=active, volunteering=volunteering)
     total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
 
     stmt = order_people_stmt(filtered_stmt, q=list_query.q, sort=sort, sort_dir=list_query.sort_dir)
@@ -68,6 +73,7 @@ async def list_volunteers(
 async def export_volunteers_csv(
     db: AsyncSession = Depends(get_db),
     active: bool | None = Query(None),
+    volunteering: Volunteering | None = Query(None),
     sort: VolunteerSortKey | None = Query(None),
     list_query: ListQuery = Depends(),
     include_inactive: bool = Query(False),
@@ -79,7 +85,7 @@ async def export_volunteers_csv(
     """
     effective_active = active if active is not None else (None if include_inactive else True)
     stmt = order_people_stmt(
-        filtered_people_stmt(q=list_query.q, role="volunteer", active=effective_active),
+        filtered_people_stmt(q=list_query.q, role="volunteer", active=effective_active, volunteering=volunteering),
         q=list_query.q,
         sort=sort,
         sort_dir=list_query.sort_dir,
