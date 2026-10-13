@@ -1941,10 +1941,10 @@ class ChampagneFestivalMcpBackend:
             roles=roles,
         )
 
-    async def revoke_member_role(self, person_id: str) -> dict:
-        """End a person's membership: the member role is removed; the person, their other roles and registrations are kept. Repeating it changes nothing. Requires the ``admin`` role."""
+    async def deactivate_member(self, person_id: str) -> dict:
+        """End a person's membership: they are marked inactive (``active`` applies to all their roles); the member role, the person and their registrations are kept. Repeating it changes nothing. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_members.revoke_member_role(self.session_factory, self._actor(), person_id)
+        return await mcp_admin_members.deactivate_member(self.session_factory, self._actor(), person_id)
 
     # -- Volunteers ----------------------------------------------------
 
@@ -2454,7 +2454,7 @@ def create_mcp_server(
     register_tool(backend.get_member)
     register_tool(backend.list_members)
     register_tool(backend.update_member)
-    register_tool(backend.revoke_member_role)
+    register_tool(backend.deactivate_member)
     register_tool(backend.create_volunteer)
     register_tool(backend.get_volunteer)
     register_tool(backend.list_volunteers)

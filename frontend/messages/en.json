@@ -687,7 +687,7 @@
   "admin_members_create_success": "Member created.",
   "admin_members_update_success": "Member updated.",
   "admin_members_end_title": "End membership",
-  "admin_members_end_confirm": "End this person's membership? They stay in the directory, and their registrations and check-ins are kept.",
+  "admin_members_end_confirm": "End this person's membership? They are marked inactive (this applies to all their roles) but stay listed, and their registrations and check-ins are kept.",
   "admin_members_end_success": "Membership ended.",
   "admin_members_no_results": "No members found.",
   "admin_members_search_placeholder": "Search by name, contact info, club, or notes…",

@@ -687,7 +687,7 @@
   "admin_members_create_success": "Lid aangemaakt.",
   "admin_members_update_success": "Lid bijgewerkt.",
   "admin_members_end_title": "Lidmaatschap beëindigen",
-  "admin_members_end_confirm": "Het lidmaatschap van deze persoon beëindigen? De persoon blijft in het adresboek staan en alle inschrijvingen en check-ins blijven bewaard.",
+  "admin_members_end_confirm": "Het lidmaatschap van deze persoon beëindigen? Ze worden als inactief gemarkeerd (dit geldt voor al hun rollen) maar blijven vermeld, en alle inschrijvingen en check-ins blijven bewaard.",
   "admin_members_end_success": "Lidmaatschap beëindigd.",
   "admin_members_no_results": "Geen leden gevonden.",
   "admin_members_search_placeholder": "Zoek op naam, contactgegevens, club of notities…",

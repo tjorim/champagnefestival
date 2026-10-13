@@ -667,7 +667,7 @@ async def test_members_crud(client):
     assert r.status_code == 200
     assert len(r.json()["items"]) == 1
 
-    r = await client.post(f"/api/members/{person_id}/revoke-role", headers=ADMIN_HEADERS)
+    r = await client.post(f"/api/members/{person_id}/deactivate", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
 
@@ -723,8 +723,8 @@ async def test_member_duplicate_national_register_number_detected_despite_format
 
 
 @pytest.mark.anyio
-async def test_revoke_member_role_removes_only_the_member_role(client):
-    """Ending a membership removes only the member role: the person, their other roles and their registrations stay."""
+async def test_deactivate_member_keeps_role_person_and_registrations(client):
+    """Ending a membership marks the person inactive: the role, their other roles and registrations stay."""
     member = await client.post(
         "/api/members",
         json={"name": "Former Member", "email": "former.member@example.com", "roles": ["volunteer"]},
@@ -750,22 +750,25 @@ async def test_revoke_member_role_removes_only_the_member_role(client):
     assert registration.status_code == 201
     registration_id = registration.json()["id"]
 
-    r = await client.post(f"/api/members/{member_id}/revoke-role", headers=ADMIN_HEADERS)
+    r = await client.post(f"/api/members/{member_id}/deactivate", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
-    # No longer a member ...
-    assert (await client.get(f"/api/members/{member_id}", headers=ADMIN_HEADERS)).status_code == 404
-    members = await client.get("/api/people", params={"role": "member"}, headers=ADMIN_HEADERS)
-    assert member_id not in {item["id"] for item in members.json()["items"]}
-    # ... but still a person, with their other roles and their registration intact.
+    # Still a member, listed as inactive ...
+    assert (await client.get(f"/api/members/{member_id}", headers=ADMIN_HEADERS)).status_code == 200
+    active = await client.get("/api/people", params={"role": "member", "active": "true"}, headers=ADMIN_HEADERS)
+    assert member_id not in {item["id"] for item in active.json()["items"]}
+    inactive = await client.get("/api/people", params={"role": "member", "active": "false"}, headers=ADMIN_HEADERS)
+    assert member_id in {item["id"] for item in inactive.json()["items"]}
+    # ... with their other roles and their registration intact.
     person = await client.get(f"/api/people/{member_id}", headers=ADMIN_HEADERS)
     assert person.status_code == 200
-    assert person.json()["roles"] == ["volunteer"]
+    assert person.json()["roles"] == ["member", "volunteer"]
+    assert person.json()["active"] is False
     assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 200
 
     # Ending again is a no-op (convergent), an unknown person is a not-found.
-    assert (await client.post(f"/api/members/{member_id}/revoke-role", headers=ADMIN_HEADERS)).status_code == 204
-    assert (await client.post("/api/members/nonexistent/revoke-role", headers=ADMIN_HEADERS)).status_code == 404
+    assert (await client.post(f"/api/members/{member_id}/deactivate", headers=ADMIN_HEADERS)).status_code == 204
+    assert (await client.post("/api/members/nonexistent/deactivate", headers=ADMIN_HEADERS)).status_code == 404
 
 
 @pytest.mark.anyio

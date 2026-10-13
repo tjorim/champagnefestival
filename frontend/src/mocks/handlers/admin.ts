@@ -807,15 +807,15 @@ export const adminHandlers = [
     return HttpResponse.json(people[idx]);
   }),
 
-  // Ending a membership only removes the role; the person stays in the directory.
-  http.post("/api/members/:id/revoke-role", ({ request, params }) => {
+  // Ending a membership marks the person inactive; the role and the person stay.
+  http.post("/api/members/:id/deactivate", ({ request, params }) => {
     const authError = requireAuth(request);
     if (authError) return authError;
     const idx = people.findIndex((p) => p.id === params.id);
     if (idx === -1) return HttpResponse.json(null, { status: 404 });
     people[idx] = {
       ...people[idx]!,
-      roles: (people[idx]!.roles as string[]).filter((role) => role !== "member"),
+      active: false,
     };
     return new HttpResponse(null, { status: 204 });
   }),

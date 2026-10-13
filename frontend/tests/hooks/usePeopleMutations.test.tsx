@@ -292,13 +292,13 @@ describe("optimistic people mutations", () => {
     },
   );
 
-  it("ends a membership by removing only the member role from people pages", async () => {
+  it("ends a membership by marking the person inactive on people pages", async () => {
     const h = harness();
     const gate = deferred();
     server.use(
-      http.post("/api/members/:id/revoke-role", async () => {
+      http.post("/api/members/:id/deactivate", async () => {
         await gate.promise;
-        h.rows()[0]!.roles = ["volunteer"];
+        h.rows()[0]!.active = false;
         return new HttpResponse(null, { status: 204 });
       }),
     );
@@ -306,7 +306,8 @@ describe("optimistic people mutations", () => {
     act(() => {
       promise = h.result.current.endMembershipMutation.mutateAsync("a");
     });
-    await waitFor(() => expect(h.cached().items[0]?.roles).toEqual(["volunteer"]));
+    await waitFor(() => expect(h.cached().items[0]?.active).toBe(false));
+    expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
     expect(h.cached().items[0]?.name).toBe("Original a");
     expect(h.cached().total).toBe(2);
     gate.resolve();

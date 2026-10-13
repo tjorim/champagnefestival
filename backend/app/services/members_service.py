@@ -41,10 +41,6 @@ def has_member_role(person: Person) -> bool:
     return "member" in (person.roles or [])
 
 
-def remove_member_role(person: Person) -> None:
-    person.roles = sorted(role for role in (person.roles or []) if role != "member")
-
-
 async def ensure_unique_fields(
     db: AsyncSession,
     national_register_number: str | None = None,
@@ -187,28 +183,28 @@ async def apply_member_update(
     return person_to_dict(person)
 
 
-async def revoke_member_role(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
-    """End a person's membership: remove the ``member`` role, keep everything else.
+async def deactivate_member(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+    """End a person's membership: mark them inactive, keep everything else.
 
-    The underlying ``Person`` is kept intact, together with their registrations,
-    check-ins and audit history: attendance is what member benefits are earned from, and
-    someone who stops being a member is still a visitor. Only the ``member`` role is removed
-    (mirroring ``volunteers_service.deactivate_volunteer``). Erasing a person and their
-    registrations is the separate ``people_service.delete_person``. Calling it again, or on a
-    person who is not a member, changes nothing.
+    Like ``volunteers_service.deactivate_volunteer``, whether someone is still a member is the
+    ``active`` flag. The ``member`` role, the ``Person`` record, registrations, check-ins and
+    audit history all stay: attendance is what member benefits are earned from. ``active`` is one
+    flag on the person, so it applies to all their roles. Membership resumes by setting them
+    active again. Erasing a person and their registrations is the separate
+    ``people_service.delete_person``. Calling it again changes nothing and writes no second audit
+    entry.
     """
     person_id = person.id
-    if not has_member_role(person):
-        return {"ended": True, "id": person_id}
-    remove_member_role(person)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="member_role_removed",
-        resource_type="person",
-        resource_id=person_id,
-        request_id=request_id,
-        details={},
-    )
-    await db.commit()
+    if person.active:
+        person.active = False
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="member_deactivated",
+            resource_type="person",
+            resource_id=person_id,
+            request_id=request_id,
+            details={},
+        )
+        await db.commit()
     return {"ended": True, "id": person_id}

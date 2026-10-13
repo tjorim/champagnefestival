@@ -687,7 +687,7 @@
   "admin_members_create_success": "Membre créé.",
   "admin_members_update_success": "Membre mis à jour.",
   "admin_members_end_title": "Mettre fin à l'adhésion",
-  "admin_members_end_confirm": "Mettre fin à l'adhésion de cette personne ? Elle reste dans le répertoire, et ses inscriptions et enregistrements sont conservés.",
+  "admin_members_end_confirm": "Mettre fin à l'adhésion de cette personne ? Elle est marquée comme inactive (cela vaut pour tous ses rôles) mais reste listée, et ses inscriptions et enregistrements sont conservés.",
   "admin_members_end_success": "Adhésion terminée.",
   "admin_members_no_results": "Aucun membre trouvé.",
   "admin_members_search_placeholder": "Rechercher par nom, contact, club ou notes…",

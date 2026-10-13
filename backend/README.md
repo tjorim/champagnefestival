@@ -274,7 +274,7 @@ See `.env.example` for a template.
 | `POST`   | `/api/members`                  | admin          | Create member (person with role `member`)                                  |
 | `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
-| `POST`   | `/api/members/{id}/revoke-role`         | admin          | End membership: remove the member role (person and registrations are kept; repeat is a no-op) |
+| `POST`   | `/api/members/{id}/deactivate`          | admin          | End membership: mark the person inactive (role, person and registrations are kept; repeat is a no-op) |
 | `POST`   | `/api/people`                   | admin          | Create person with role tags                                               |
 | `GET`    | `/api/people`                   | admin          | Paged people list on the [shared list contract](#paged-list-contract) (`?q=`, `?role=`, `?active=`, `?sort=name\|email\|created\|updated\|registration_count`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET` | `/api/people/counts` | admin | Full-set `{total, active, inactive, by_role}` for the intersection of `q`, `role`, `active`; omit a facet filter to obtain counts for its tabs. Roles are case-insensitive and overlapping (a person counts once in each role). |

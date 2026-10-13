@@ -160,18 +160,18 @@ export function usePeopleMutations({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
-          `/api/members/${id}/revoke-role`,
+          `/api/members/${id}/deactivate`,
           { method: "POST", headers: authHeaders() },
           m.admin_members_error_end(),
         ),
       ),
-    // Ending a membership only drops the role: the person (and their registrations) stay in the
-    // directory, like endVolunteeringMutation.
+    // Ending a membership marks the person inactive; the role, the person and their registrations
+    // stay on file, like endVolunteeringMutation.
     ...optimistic((id: string) => ({
       id,
       update: (person) => ({
         ...person,
-        roles: person.roles.filter((role) => role !== "member"),
+        active: false,
       }),
     })),
     retry: false,
