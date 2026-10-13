@@ -287,10 +287,17 @@ async def delete_volunteer(db: AsyncSession, volunteer: Person, *, actor: str, r
     """
     volunteer_id = volunteer.id
     today = dt_date.today()
-    closed = await db.execute(
-        update(VolunteerPeriod)
-        .where(VolunteerPeriod.volunteer_id == volunteer_id, VolunteerPeriod.last_help_day.is_(None))
-        .values(last_help_day=func.greatest(VolunteerPeriod.first_help_day, today))
+    closed_ids = (
+        (
+            await db.execute(
+                update(VolunteerPeriod)
+                .where(VolunteerPeriod.volunteer_id == volunteer_id, VolunteerPeriod.last_help_day.is_(None))
+                .values(last_help_day=func.greatest(VolunteerPeriod.first_help_day, today))
+                .returning(VolunteerPeriod.id)
+            )
+        )
+        .scalars()
+        .all()
     )
     remove_volunteer_role(volunteer)
     await write_audit_entry(
@@ -300,7 +307,7 @@ async def delete_volunteer(db: AsyncSession, volunteer: Person, *, actor: str, r
         resource_type="person",
         resource_id=volunteer_id,
         request_id=request_id,
-        details={"closed_open_periods": closed.rowcount},
+        details={"closed_open_periods": len(closed_ids)},
     )
     await db.commit()
     return {"deleted": True, "id": volunteer_id}
