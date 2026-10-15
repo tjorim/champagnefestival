@@ -1399,5 +1399,10 @@
   "email_start": "Heure de début",
   "email_paid": "payé",
   "email_partial": "partiellement payé",
-  "email_unpaid": "non payé"
+  "email_unpaid": "non payé",
+  "signage_start": "Démarrer l’écran",
+  "signage_synced": "Connecté et synchronisé",
+  "signage_waiting": "En attente de connexion ou de synchronisation",
+  "signage_setup": "Utilisez ce lien de canal sur chaque écran. Autorisez le plein écran et désactivez la veille du système si nécessaire.",
+  "signage_sleep": "Maintien de l’écran indisponible. Désactivez la veille dans les paramètres du système."
 }

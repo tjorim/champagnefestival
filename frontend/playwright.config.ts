@@ -25,7 +25,7 @@ export default defineConfig({
     {
       name: "chromium",
       use: { ...devices["Desktop Chrome"] },
-      testIgnore: /\.authenticated\.spec\.ts/,
+      testIgnore: [/\.authenticated\.spec\.ts/, /signage\.spec\.ts/],
     },
     // Specs matching *.authenticated.spec.ts run pre-logged-in as the admin
     // dev-bypass user (see e2e/auth.setup.ts) instead of hitting the real

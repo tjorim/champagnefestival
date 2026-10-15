@@ -1,0 +1,39 @@
+@layer components {
+  .site-signage-screen {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: var(--base-dark);
+    display: grid;
+    place-items: center;
+  }
+  .site-signage-viewport {
+    width: 1920px;
+    height: 1080px;
+    position: absolute;
+  }
+  .site-signage-stage {
+    width: 1920px;
+    height: 1080px;
+    position: relative;
+    overflow: hidden;
+  }
+  .site-signage-background {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .site-signage-layer {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    text-align: center;
+    line-height: 1.2;
+  }
+}
