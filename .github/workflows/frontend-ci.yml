@@ -116,7 +116,11 @@ jobs:
           # lineup (@dnd-kit/react/sortable, already a dependency, plus the
           # lineup list). Same-dependency builds before/after: admin 983 ->
           # 1019 KiB, total 2554 KiB (unchanged budget), index 726 KiB.
-          TOTAL_MAX_KB=2600
+          # Total raised 2600 -> 2650 for #1263 / PR #1272's layered signage
+          # template editor. Same-dependency builds against 023d958 before/after:
+          # total 2587 -> 2609 KiB, admin 1025 -> 1046, index unchanged at 728.
+          # No new dependencies; retain the public and admin chunk ceilings.
+          TOTAL_MAX_KB=2650
           INDEX_MAX_KB=1050
           ADMIN_MAX_KB=1050
 
