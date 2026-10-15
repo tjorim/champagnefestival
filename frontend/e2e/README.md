@@ -73,3 +73,9 @@ compute and screen-reader behavior still need manual review.
 If another app occupies port 5173, run `PLAYWRIGHT_PORT=5174 pnpm test:e2e`.
 The same port is used for Vite and Playwright's base URL; Vite uses strict-port
 mode so a newly started server cannot silently move to a different port.
+
+## Production signage worker
+
+`pnpm exec playwright test --config playwright.signage.config.ts` builds and
+serves the production app on port 5178, testing the shared worker without MSW.
+This runs separately in CI after the standard browser suite.

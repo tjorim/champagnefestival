@@ -1399,5 +1399,10 @@
   "email_start": "Start time",
   "email_paid": "paid",
   "email_partial": "partially paid",
-  "email_unpaid": "unpaid"
+  "email_unpaid": "unpaid",
+  "signage_start": "Start screen",
+  "signage_synced": "Connected and synchronised",
+  "signage_waiting": "Waiting for connection or clock sync",
+  "signage_setup": "Use this channel link on each screen. Allow fullscreen and prevent sleep in the operating system if needed.",
+  "signage_sleep": "Wake lock unavailable. Disable sleep in system settings."
 }

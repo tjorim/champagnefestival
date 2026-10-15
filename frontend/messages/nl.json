@@ -1399,5 +1399,10 @@
   "email_start": "Starttijd",
   "email_paid": "betaald",
   "email_partial": "gedeeltelijk betaald",
-  "email_unpaid": "onbetaald"
+  "email_unpaid": "onbetaald",
+  "signage_start": "Scherm starten",
+  "signage_synced": "Verbonden en gesynchroniseerd",
+  "signage_waiting": "Wachten op verbinding of kloksynchronisatie",
+  "signage_setup": "Gebruik deze kanaallink op elk scherm. Sta volledig scherm toe en schakel indien nodig de slaapstand uit in het besturingssysteem.",
+  "signage_sleep": "Schermvergrendeling niet beschikbaar. Schakel de slaapstand uit in de systeeminstellingen."
 }

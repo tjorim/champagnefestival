@@ -141,3 +141,15 @@ repository health claim.
 The original findings, specifications and implementation history remain in
 Git at `88396baf3275ae40cdd907239a0df6a04baed137`. Consult them for historical
 context, not as a checklist of current or future obligations. Current source contracts are indexed in [docs/README.md](README.md).
+
+## Signage player follow-up (#1262)
+
+Implementation status: 2026-10-15; venue acceptance remains open.
+
+The public `/signage/{channel}` player now consumes the playlist/time API from
+#1260, with a reusable canvas renderer, monotonic corrected clock, boundary
+revision changes, translated start controls, wake lock and production-worker
+caching. Cuts and an always-visible status dot settle the proposed display
+choices. This remains partial until the multi-laptop acceptance rehearsal in
+[signage setup](signage-setup.md) is completed, including actual sleep prevention
+and offline reload on venue hardware. The editor can reuse `SlideRenderer`.

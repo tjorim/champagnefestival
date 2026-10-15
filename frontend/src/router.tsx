@@ -5,6 +5,7 @@ import {
   createRootRouteWithContext,
   createRoute,
   createRouter,
+  lazyRouteComponent,
 } from "@tanstack/react-router";
 
 import { validateAdminSearch } from "./utils/adminTableState";
@@ -151,6 +152,11 @@ export function createAppRouter({
   });
 
   const routeTree = rootRoute.addChildren([
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: "/signage/$channel",
+      component: lazyRouteComponent(() => import("./signage/SignagePage")),
+    }),
     indexRoute,
     adminLayoutRoute.addChildren([adminRoute, checkInRoute, venuePlanRoute]),
     privacyPolicyRoute,

@@ -11,7 +11,10 @@
 `vite.sw.config.ts` into `dist/sw.js` and registered from `main.tsx`.
 Feature modules add their own handlers. If a future feature needs caches,
 it owns independently versioned cache names and must not delete another
-feature's caches. The current worker does not cache pages or queue writes.
+feature's caches. #1262 adds public signage shell/image caching through
+`sw/signage.ts` (`signage-shell-v1`) and prepared playlists through the player
+(`signage-playlists-v1`). Authentication and administrative APIs remain uncached;
+no write queue is implemented. See [venue signage setup](../signage-setup.md).
 
 Issue `#936` introduced the base worker; issue `#941` added `push` and
 `notificationclick` handlers. Issue `#937` deliberately requires live
