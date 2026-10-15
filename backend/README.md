@@ -639,3 +639,14 @@ in [the API contract](../docs/organization-description-translation.md), includin
 
 The coordinated organization domain rename requires matching API clients, storage
 configuration and Caddy paths; see the [migration and deployment sequence](../docs/organization-change-review.md#terminology-and-upgrade).
+
+## Signage channels and public playlists
+
+Migration `009` adds edition-scoped signage channels, validated layered templates
+and scheduled organisation/notice/image slides. The public clock and playlist
+are `GET /api/signage/time` and `GET /api/signage/{slug}/playlist?locale=nl|fr|en`.
+Admin CRUD and reorder are under `/api/signage`; uploads reuse the artwork
+validation/storage pattern. See [the signage API contract](../docs/signage-api.md)
+for payloads, privacy, cache validators, fixed-epoch semantics, vendor membership,
+image storage/hosting and retry decisions. The player and editors remain separate
+work (#1262–#1264).
