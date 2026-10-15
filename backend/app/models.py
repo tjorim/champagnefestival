@@ -1614,3 +1614,45 @@ class PolicyVersion(Base):
             if language and (values.get(language) or "").strip():
                 return values[language] or "", language
         return "", self.content_language
+
+
+class SignageChannel(Base):
+    """An explicitly edition-scoped public screen playlist with a fixed clock origin."""
+
+    __tablename__ = "signage_channels"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    slug: Mapped[str] = mapped_column(String(100), unique=True)
+    name: Mapped[str] = mapped_column(String(200))
+    edition_id: Mapped[str] = mapped_column(ForeignKey("editions.id", ondelete="RESTRICT"))
+    active: Mapped[bool] = mapped_column(Boolean, default=False)
+    epoch: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    revision: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class SignageTemplate(Base):
+    """Validated canvas document, shared between channels."""
+
+    __tablename__ = "signage_templates"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    background: Mapped[dict] = mapped_column(JSON)
+    layers: Mapped[list] = mapped_column(JSON, default=list)
+
+
+class SignageSlide(Base):
+    __tablename__ = "signage_slides"
+    __table_args__ = (
+        CheckConstraint("duration > 0 AND duration <= 3600", name="ck_signage_duration"),
+        CheckConstraint("kind IN ('organizations', 'notice', 'image')", name="ck_signage_kind"),
+        CheckConstraint("ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at", name="ck_signage_window"),
+    )
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    channel_id: Mapped[str] = mapped_column(ForeignKey("signage_channels.id", ondelete="CASCADE"), index=True)
+    template_id: Mapped[str] = mapped_column(ForeignKey("signage_templates.id", ondelete="RESTRICT"))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    kind: Mapped[str] = mapped_column(String(20))
+    duration: Mapped[int] = mapped_column(Integer, default=10)
+    active: Mapped[bool] = mapped_column(Boolean, default=False)
+    starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    content: Mapped[dict] = mapped_column(JSON, default=dict)

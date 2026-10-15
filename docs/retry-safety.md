@@ -531,3 +531,24 @@ is a 422.
 Renamed endpoints/tools retain the write strategies above, without aliases.
 Do not blindly retry non-idempotent writes across rollout; SMTP remains
 at-least-once, including across Message-ID changes. See [upgrade guidance](organization-change-review.md#terminology-and-upgrade).
+
+## Signage (#1261)
+
+All writes require `require_admin` and create transactional audit entries with
+unchanged actor/request attribution on every execution. A PostgreSQL advisory
+transaction lock serialises signage writes. No REST or other shared surface
+advertises automatic retries; signage currently has no MCP/mobile write adapter.
+
+| Operation | Retry decision |
+| --- | --- |
+| `POST /api/signage/channels`, `/templates`, `/slides` | Do not automatically retry after an uncertain response. Generated IDs have no idempotency key; template/slide retries create duplicates. Channel slugs are unique, so duplicate create conflicts (409); read by slug/list to reconcile. |
+| `PUT /api/signage/{channels,templates,slides}/{id}` | Full replacement converges sequentially, but may overwrite another administrator's intervening changes. No automatic retry. Each execution adds an audit entry and advances channel edit metadata; the public content revision stays stable for the same cycle. Tests exercise repeated replacement. |
+| `DELETE /api/signage/{channels,templates,slides}/{id}` | State-idempotent deletion; repetition returns 404. Channel slides cascade; referenced templates return 409. No automatic retry; re-read after an uncertain response. |
+| `POST /api/signage/channels/{id}/reorder` | Complete ordered ID list, assigned under the shared transaction lock. Sequential identical calls converge; concurrent calls serialize, last writer wins. It may overwrite an intervening reorder, so no automatic retry. Tests cover repeat and invalid duplicate IDs. |
+| `POST /api/signage/assets` | Do not automatically retry: uploads use unique immutable names and each successful request retains a separate asset for reuse. Transaction rollback removes new files; a lost successful response requires a new upload. No replay cache or background cleanup is introduced. |
+
+Concurrent duplicate creates intentionally remain distinct (templates/slides/assets)
+or conflict on slug (channels); there is no deduplication promise to test. Concurrent
+replacement/reorder calls are deliberately last-writer-wins under the database
+lock, rather than safe for unattended replay. Audit rows participate in the same
+transaction as state changes, including failed reference/conflict rollbacks.

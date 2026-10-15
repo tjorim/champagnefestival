@@ -50,6 +50,7 @@ from app.routers import (
     push,
     registrations,
     rooms,
+    signage,
     table_types,
     tables,
     venue_plan,
@@ -196,6 +197,8 @@ async def api_http_exception_handler(request: Request, exc: ApiHTTPException) ->
 
 app.include_router(registrations.router)
 app.include_router(announcements.router)
+app.include_router(signage.router)
+app.include_router(signage.assets_router)
 app.include_router(auth.router)
 app.include_router(audit.router)
 app.include_router(members.router)
