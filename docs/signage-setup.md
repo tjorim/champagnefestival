@@ -45,5 +45,10 @@ of the fixed 1920×1080 stage. Rotation is clockwise about each layer's centre.
 Font sizes are stage pixels. Images fit inside their layer; background and image
 slides cover the stage. Later layers paint above earlier layers. The `sponsor`
 binding renders the translated Sponsor label only for sponsors. Lucide sticker
-names use kebab case; unknown icons render empty. Template colours are validated
+names come from the shared `frontend/src/signage/icons.ts` catalogue:
+`accessibility`, `arrow-left`, `arrow-right`, `ban`, `cigarette-off`, `circle-alert`,
+`dog`, `door-open`, `glass-water`, `info`, `map-pin`, `square-parking`,
+`triangle-alert`, `utensils`, and `wine`. The editor should use this same list.
+Unknown icons render empty; upload an image sticker for other artwork. Named
+imports keep the full Lucide catalogue out of the player bundle. Template colours are validated
 hex values from the API, covered by a scoped dynamic-style lint exception.

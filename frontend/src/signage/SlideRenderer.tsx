@@ -1,15 +1,11 @@
 import { m } from "@/paraglide/messages";
-import { icons } from "lucide-react";
+import { signageIcons } from "./icons";
 import { Icon } from "@/components/Icon";
 import type { PublicSlide } from "./types";
 import "./signage.css";
 
 function Sticker({ name }: { name: string | null }) {
-  const key = name
-    ?.split("-")
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join("");
-  const icon = key ? icons[key as keyof typeof icons] : undefined;
+  const icon = name && Object.hasOwn(signageIcons, name) ? signageIcons[name] : undefined;
   return icon ? <Icon icon={icon} className="size-full" /> : null;
 }
 

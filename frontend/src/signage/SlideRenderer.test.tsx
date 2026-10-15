@@ -61,6 +61,18 @@ describe("shared signage renderer", () => {
     rerender(<SlideRenderer slide={content} />);
     expect(screen.queryByText(m.admin_item_sponsor())).not.toBeInTheDocument();
   });
+  it("renders supported notice icons and safely ignores unknown names", () => {
+    const content = slide("icon");
+    content.icon = "cigarette-off";
+    const { container, rerender } = render(<SlideRenderer slide={content} />);
+    expect(container.querySelector("svg")).toBeInTheDocument();
+    content.icon = "unknown-icon";
+    rerender(<SlideRenderer slide={content} />);
+    expect(container.querySelector("svg")).not.toBeInTheDocument();
+    content.icon = "constructor";
+    rerender(<SlideRenderer slide={content} />);
+    expect(container.querySelector("svg")).not.toBeInTheDocument();
+  });
   it("binds a logo as an image rather than rendering the URL as text", () => {
     const { container } = render(<SlideRenderer slide={slide("logo")} />);
     expect(container.querySelector("img")).toHaveAttribute("src", "/images/logo.svg");
