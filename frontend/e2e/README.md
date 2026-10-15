@@ -57,8 +57,14 @@ project.
 viewport. Shared helpers live in `axe.ts`. To cover a new route, add it to the
 route list in the matching spec.
 
+The default `refresh` theme is scanned on every route. The other visual themes in
+`src/config/visualThemes.json` are scanned on the routes marked `allThemes` (`/`,
+`/check-in`) and on `/admin`, with the theme seeded in `localStorage` before load. Only
+themes whose `colorMode` is `system` run both light and dark; fixed-mode themes run their
+own mode plus the narrow scenario. A new theme in the JSON file is picked up automatically.
+
 A violation that cannot be fixed yet is recorded in `ALLOWED_VIOLATIONS` in `axe.ts`,
-keyed by `route|scenario`, each with a reason. Fix the cause and delete the entry
+keyed by `theme|route|scenario`, each with a reason. Fix the cause and delete the entry
 instead of adding more; anything not listed fails the run. Contrast beyond what axe can
 compute and screen-reader behavior still need manual review.
 

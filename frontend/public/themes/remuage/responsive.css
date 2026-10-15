@@ -75,6 +75,10 @@ html[data-visual-theme="remuage"] .bubble {
 }
 
 @media (max-width: 767.98px) {
+  html[data-visual-theme="remuage"] {
+    --header-height: 89px;
+  }
+
   html[data-visual-theme="remuage"] body {
     background: var(--rem-rack);
   }

@@ -78,7 +78,7 @@ export default function ContactMessagesManagement({
                 </div>
               </div>
               {message.handledAt ? (
-                <span className="text-success">{m.admin_contact_message_handled()}</span>
+                <span className="text-success-text">{m.admin_contact_message_handled()}</span>
               ) : (
                 <Button
                   size="sm"

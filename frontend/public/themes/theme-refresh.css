@@ -43,7 +43,7 @@
 
   .App {
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   .skip-link {
@@ -854,20 +854,22 @@
     }
 
     .standalone-navbar {
-      min-height: auto;
+      min-height: var(--header-height);
     }
 
     .standalone-navbar .site-fluid-container {
       align-items: flex-start;
     }
 
+    /* One row: the brand takes what the actions leave and ellipsizes, so the bar keeps its height. */
     .standalone-navbar-brand {
-      max-width: 52vw;
+      flex: 1 1 0;
+      max-width: none;
       font-size: 1rem;
     }
 
     .standalone-navbar-actions {
-      flex-wrap: wrap;
+      flex-shrink: 0;
       justify-content: flex-end;
     }
   }

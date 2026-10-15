@@ -30,7 +30,6 @@ VOLUNTEER_PAYLOAD = {
     "address": "Dorpsstraat 12, 8450 Bredene",
     "national_register_number": NISS_A,
     "eid_document_number": EID_A,
-    "active": True,
     "help_periods": [{"first_help_day": "2024-03-15", "last_help_day": "2024-03-17"}],
 }
 

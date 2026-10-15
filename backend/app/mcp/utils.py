@@ -171,7 +171,6 @@ def person_dict(person: Person, *, role: str) -> dict:
         base["phone"] = person.phone
     if role == ROLE_ADMIN:
         base["address"] = person.address
-        base["club_name"] = person.club_name
         base["roles"] = person.roles
         base["notes"] = person.notes
     return base

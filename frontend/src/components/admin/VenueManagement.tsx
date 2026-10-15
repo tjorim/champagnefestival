@@ -596,7 +596,7 @@ export default function VenueManagement({
       <CardHeader className="flex items-center justify-between">
         <span className="font-semibold">
           <Icon icon={MapPinIcon} className="me-2" />
-          {m.admin_venue_add()}
+          {m.admin_venues_rooms_tab()}
         </span>
         <Button variant="outline-warning" size="sm" onClick={openAddVenue}>
           <Icon icon={PlusIcon} />

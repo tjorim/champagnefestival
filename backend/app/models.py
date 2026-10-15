@@ -1114,6 +1114,15 @@ class Person(Base):
     phone: Mapped[str] = mapped_column(String(50), default="")
     address: Mapped[str] = mapped_column(String(300), default="")
     roles: Mapped[list[str]] = mapped_column(JSON, default=list)
+    retired_roles: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
+    """Roles the person has stepped back from, as ``{role: ISO retirement date}``. A retired role
+    stays in ``roles`` (with every registration and help period) but the person no longer counts
+    as an active member or volunteer; ``anonymised`` is the separate, person-wide marker.
+    Derived from ``role_history`` and written only by ``app.services.role_history``."""
+    role_history: Mapped[dict[str, list[dict[str, str | None]]]] = mapped_column(JSON, default=dict)
+    """When each role was held: ``{role: [{"started_on", "ended_on"}, ...]}`` (ISO days, oldest
+    first; no ``ended_on`` means in progress, a null ``started_on`` means unknown). See
+    ``app.services.role_history``."""
 
     national_register_number: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
     """Belgium's National Register Number (NISS) — fixed and lifelong; this is
@@ -1139,9 +1148,10 @@ class Person(Base):
     token belongs to, not *whether* the token may act as a volunteer. See
     docs/decisions/1006-volunteer-identity-self-service.md."""
     visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    club_name: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    anonymised: Mapped[bool] = mapped_column(Boolean, default=False)
+    """Set when the record has been anonymised (``people_service.anonymise_person``); such a person
+    counts as inactive in every role and is not offered for anonymisation again."""
 
     marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
     """Explicit, unticked-by-default consent to be contacted about future

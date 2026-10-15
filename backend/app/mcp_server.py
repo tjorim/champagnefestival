@@ -1780,9 +1780,7 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
-        club_name: str = "",
         notes: str = "",
-        active: bool = True,
     ) -> dict:
         """Create a person. Requires the ``admin`` role.
 
@@ -1800,9 +1798,7 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
-            club_name=club_name,
             notes=notes,
-            active=active,
         )
 
     async def get_person(self, person_id: str) -> dict:
@@ -1821,9 +1817,7 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
-        club_name: str | None = None,
         notes: str | None = None,
-        active: bool | None = None,
     ) -> dict:
         """Partially update a person; omitted fields are left unchanged.
 
@@ -1843,9 +1837,7 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
-            club_name=club_name,
             notes=notes,
-            active=active,
         )
 
     async def delete_person(self, person_id: str) -> dict:
@@ -1871,9 +1863,7 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
-        club_name: str = "",
         notes: str = "",
-        active: bool = True,
         roles: list[str] | None = None,
     ) -> dict:
         """Create a member (a ``Person`` with the ``member`` role, always added automatically).
@@ -1891,9 +1881,7 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
-            club_name=club_name,
             notes=notes,
-            active=active,
             roles=roles,
         )
 
@@ -1917,9 +1905,7 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
-        club_name: str | None = None,
         notes: str | None = None,
-        active: bool | None = None,
         roles: list[str] | None = None,
     ) -> dict:
         """Partially update a member; omitted fields are left unchanged. Requires the ``admin`` role."""
@@ -1935,16 +1921,19 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
-            club_name=club_name,
             notes=notes,
-            active=active,
             roles=roles,
         )
 
-    async def delete_member(self, person_id: str) -> dict:
-        """Delete a member and their registrations. Requires the ``admin`` role."""
+    async def deactivate_member(self, person_id: str) -> dict:
+        """End a person's membership: the member role is retired (recorded in ``retired_roles``); the role, the person, their other roles and registrations are kept. Repeating it changes nothing. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_members.delete_member(self.session_factory, self._actor(), person_id)
+        return await mcp_admin_members.deactivate_member(self.session_factory, self._actor(), person_id)
+
+    async def reactivate_member(self, person_id: str) -> dict:
+        """Undo ``deactivate_member``: the person counts as an active member again. Repeating it changes nothing. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_members.reactivate_member(self.session_factory, self._actor(), person_id)
 
     # -- Volunteers ----------------------------------------------------
 
@@ -1955,7 +1944,6 @@ class ChampagneFestivalMcpBackend:
         eid_document_number: str,
         help_periods: list[dict],
         address: str = "",
-        active: bool = True,
     ) -> dict:
         """Create a volunteer (a ``Person`` with the ``volunteer`` role).
 
@@ -1973,7 +1961,6 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             address=address,
-            active=active,
             help_periods=help_periods,
         )
 
@@ -1982,7 +1969,11 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_volunteers.get_volunteer(self.session_factory, volunteer_id)
 
-    async def list_volunteers(self, q: str | None = None, active: bool | None = None) -> dict:
+    async def list_volunteers(
+        self,
+        q: str | None = None,
+        active: bool | None = None,
+    ) -> dict:
         """Search/list volunteers, including help periods. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_volunteers.list_volunteers(self.session_factory, q, active)
@@ -1994,7 +1985,6 @@ class ChampagneFestivalMcpBackend:
         address: str | None = None,
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
-        active: bool | None = None,
         help_periods: list[dict] | None = None,
         oidc_subject: str | None = None,
         clear_oidc_subject: bool = False,
@@ -2019,16 +2009,20 @@ class ChampagneFestivalMcpBackend:
             address=address,
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
-            active=active,
             help_periods=help_periods,
             oidc_subject=oidc_subject,
             clear_oidc_subject=clear_oidc_subject,
         )
 
-    async def delete_volunteer(self, volunteer_id: str) -> dict:
-        """Remove the volunteer role and help periods (the person record is kept). Requires the ``admin`` role."""
+    async def deactivate_volunteer(self, volunteer_id: str) -> dict:
+        """End a person's volunteering: the volunteer role is retired (recorded in ``retired_roles``) and open help periods are closed today; the role, the person, their other roles and every period are kept. Repeating it changes nothing. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_volunteers.delete_volunteer(self.session_factory, self._actor(), volunteer_id)
+        return await mcp_admin_volunteers.deactivate_volunteer(self.session_factory, self._actor(), volunteer_id)
+
+    async def reactivate_volunteer(self, volunteer_id: str) -> dict:
+        """Undo ``deactivate_volunteer``: the person counts as an active volunteer again (add a new help period; closed ones are not reopened). Repeating it changes nothing. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_volunteers.reactivate_volunteer(self.session_factory, self._actor(), volunteer_id)
 
     # -- Registrations (admin) ------------------------------------------
 
@@ -2450,12 +2444,14 @@ def create_mcp_server(
     register_tool(backend.get_member)
     register_tool(backend.list_members)
     register_tool(backend.update_member)
-    register_tool(backend.delete_member)
+    register_tool(backend.deactivate_member)
+    register_tool(backend.reactivate_member)
     register_tool(backend.create_volunteer)
     register_tool(backend.get_volunteer)
     register_tool(backend.list_volunteers)
     register_tool(backend.update_volunteer)
-    register_tool(backend.delete_volunteer)
+    register_tool(backend.deactivate_volunteer)
+    register_tool(backend.reactivate_volunteer)
     register_tool(backend.list_registrations)
     register_tool(backend.create_registration)
     register_tool(backend.update_registration)

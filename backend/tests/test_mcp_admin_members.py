@@ -5,9 +5,10 @@ from __future__ import annotations
 from datetime import date
 
 import pytest
+from sqlalchemy import select
 
 from app.mcp.admin import members as mcp_members
-from app.models import Edition, Event, Registration, Venue
+from app.models import AuditEntry, Edition, Event, Registration, Venue
 from tests.helpers import mcp_session_factory
 
 
@@ -51,17 +52,17 @@ async def test_get_member_not_found_for_non_member_person(db_session):
 
 async def test_update_member_partial(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_members.create_member(factory, "admin-1", name="Alice", club_name="Old Club")
+    created = await mcp_members.create_member(factory, "admin-1", name="Alice", notes="Old note")
 
-    updated = await mcp_members.update_member(factory, "admin-1", created["id"], club_name="New Club")
-    assert updated["club_name"] == "New Club"
+    updated = await mcp_members.update_member(factory, "admin-1", created["id"], notes="New note")
+    assert updated["notes"] == "New note"
     assert updated["name"] == "Alice"  # untouched fields survive a partial update
 
 
 async def test_update_member_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_members.update_member(factory, "admin-1", "nonexistent", club_name="New Club")
+        await mcp_members.update_member(factory, "admin-1", "nonexistent", notes="New note")
 
 
 async def test_update_member_cannot_remove_member_role(db_session):
@@ -76,8 +77,9 @@ async def test_update_member_cannot_remove_member_role(db_session):
 
 async def test_list_members_filters_by_active(db_session):
     factory = mcp_session_factory(db_session)
-    active_member = await mcp_members.create_member(factory, "admin-1", name="Active Alice", active=True)
-    inactive_member = await mcp_members.create_member(factory, "admin-1", name="Inactive Ivan", active=False)
+    active_member = await mcp_members.create_member(factory, "admin-1", name="Active Alice")
+    inactive_member = await mcp_members.create_member(factory, "admin-1", name="Inactive Ivan")
+    await mcp_members.deactivate_member(factory, "admin-1", inactive_member["id"])
 
     active_only = await mcp_members.list_members(factory, active=True)
     ids = [m["id"] for m in active_only["members"]]
@@ -135,7 +137,7 @@ async def test_update_member_eid_document_number_conflict(db_session):
         await mcp_members.update_member(factory, "admin-1", bob["id"], eid_document_number="BEI998877")
 
 
-async def test_delete_member_cascades_registrations(db_session):
+async def test_deactivate_member_keeps_role_person_and_registrations(db_session):
     factory = mcp_session_factory(db_session)
     member = await mcp_members.create_member(factory, "admin-1", name="Alice")
 
@@ -160,20 +162,30 @@ async def test_delete_member_cascades_registrations(db_session):
     )
     await db_session.commit()
 
-    result = await mcp_members.delete_member(factory, "admin-1", member["id"])
-    assert result == {"deleted": True, "id": member["id"]}
+    result = await mcp_members.deactivate_member(factory, "admin-1", member["id"])
+    assert result == {"ended": True, "id": member["id"]}
 
-    remaining = await db_session.get(Registration, "reg-1")
-    assert remaining is None
+    # The registration (attendance history) survives; only the membership ends.
+    assert await db_session.get(Registration, "reg-1") is not None
+    entry = await db_session.scalar(select(AuditEntry).where(AuditEntry.action == "member_deactivated"))
+    assert entry is not None and entry.resource_id == member["id"]
 
-    with pytest.raises(ValueError, match="not found"):
-        await mcp_members.get_member(factory, member["id"])
+    # Still a member record with the role retired, not removed.
+    still = await mcp_members.get_member(factory, member["id"])
+    assert still["anonymised"] is False
+    assert still["retired_roles"] == {"member": date.today().isoformat()}
+    assert "member" in still["roles"]
+
+    # Ending again changes nothing and writes no second audit entry.
+    assert await mcp_members.deactivate_member(factory, "admin-1", member["id"]) == result
+    entries = (await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "member_deactivated"))).all()
+    assert len(entries) == 1
 
 
-async def test_delete_member_not_found(db_session):
+async def test_deactivate_member_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_members.delete_member(factory, "admin-1", "nonexistent")
+        await mcp_members.deactivate_member(factory, "admin-1", "nonexistent")
 
 
 async def test_get_and_list_member_omit_identity_fields(db_session):
@@ -188,3 +200,19 @@ async def test_get_and_list_member_omit_identity_fields(db_session):
     listed = await mcp_members.list_members(factory)
     dana = next(m for m in listed["members"] if m["id"] == created["id"])
     assert "national_register_number" not in dana
+
+
+async def test_reactivate_member_restores_the_role_and_repeats_as_noop(db_session):
+    factory = mcp_session_factory(db_session)
+    member = await mcp_members.create_member(factory, "admin-1", name="Alice")
+    await mcp_members.deactivate_member(factory, "admin-1", member["id"])
+    assert (await mcp_members.list_members(factory, active=False))["members"][0]["id"] == member["id"]
+
+    result = await mcp_members.reactivate_member(factory, "admin-1", member["id"])
+    assert result == {"reactivated": True, "id": member["id"]}
+    assert (await mcp_members.get_member(factory, member["id"]))["retired_roles"] == {}
+    assert [m["id"] for m in (await mcp_members.list_members(factory, active=True))["members"]] == [member["id"]]
+
+    assert await mcp_members.reactivate_member(factory, "admin-1", member["id"]) == result
+    entries = (await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "member_reactivated"))).all()
+    assert len(entries) == 1

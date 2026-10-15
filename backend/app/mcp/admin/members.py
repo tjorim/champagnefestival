@@ -31,9 +31,7 @@ async def create_member(
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
     visits_per_month: int | None = None,
-    club_name: str = "",
     notes: str = "",
-    active: bool = True,
     roles: list[str] | None = None,
 ) -> dict:
     body = validate_with_schema(
@@ -46,9 +44,7 @@ async def create_member(
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
         visits_per_month=visits_per_month,
-        club_name=club_name,
         notes=notes,
-        active=active,
     )
     async with session_factory() as db:
         try:
@@ -86,9 +82,7 @@ async def update_member(
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
     visits_per_month: int | None = None,
-    club_name: str | None = None,
     notes: str | None = None,
-    active: bool | None = None,
     roles: list[str] | None = None,
 ) -> dict:
     provided = {
@@ -101,9 +95,7 @@ async def update_member(
             "national_register_number": national_register_number,
             "eid_document_number": eid_document_number,
             "visits_per_month": visits_per_month,
-            "club_name": club_name,
             "notes": notes,
-            "active": active,
             "roles": roles,
         }.items()
         if v is not None
@@ -118,10 +110,20 @@ async def update_member(
             raise as_value_error(exc) from exc
 
 
-async def delete_member(session_factory: Any, actor: str, person_id: str) -> dict:
+async def deactivate_member(session_factory: Any, actor: str, person_id: str) -> dict:
     async with session_factory() as db:
         try:
             person = await members_service.get_member_or_404(db, person_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return await members_service.delete_member(db, person, actor=actor)
+        return await members_service.deactivate_member(db, person, actor=actor)
+
+
+async def reactivate_member(session_factory: Any, actor: str, person_id: str) -> dict:
+    """Undo ``deactivate_member``: the person counts as an active member again."""
+    async with session_factory() as db:
+        try:
+            person = await members_service.get_member_or_404(db, person_id)
+        except HTTPException as exc:
+            raise as_value_error(exc) from exc
+        return await members_service.reactivate_member(db, person, actor=actor)

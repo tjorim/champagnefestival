@@ -29,6 +29,10 @@
 }
 
 html[data-visual-theme="remuage"] {
+  /* Height of the fixed standalone navbar (it wraps taller on narrow screens, see responsive.css);
+     the admin sidebar and page offset read it. */
+  --header-height: 70px;
+
   /* Semantic palette for Tailwind and Base UI; the Remuage rules keep
      consuming --rem-* directly. */
   --surface-background: var(--rem-rack);

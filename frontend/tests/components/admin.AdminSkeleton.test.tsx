@@ -8,7 +8,7 @@ vi.mock("@/paraglide/messages", () => ({
 
 describe("skeletonVariantForSection", () => {
   it("uses the row layout for list sections", () => {
-    for (const key of ["registrations", "directory", "members", "volunteers", "audit-log"]) {
+    for (const key of ["registrations", "people", "audit-log"]) {
       expect(skeletonVariantForSection(key)).toBe("table");
     }
   });

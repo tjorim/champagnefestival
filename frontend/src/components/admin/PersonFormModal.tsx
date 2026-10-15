@@ -6,7 +6,6 @@ import {
   AdminSelect,
   AdminOption,
   AdminTextarea,
-  AdminCheck,
 } from "@/components/admin/AdminFields";
 import { SaveIcon, UserPlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -44,8 +43,6 @@ export interface PersonFormData {
   address: string;
   roles: string[];
   notes: string;
-  clubName: string;
-  active: boolean;
 }
 
 const KNOWN_ROLES = ["member", "volunteer", "visitor", "admin"] as const;
@@ -117,8 +114,6 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             address: person.address ?? "",
             rolesInput: person.roles.join(", "),
             notes: person.notes ?? "",
-            clubName: person.clubName ?? "",
-            active: person.active,
           }
         : {
             name: "",
@@ -128,8 +123,6 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             address: "",
             rolesInput: "",
             notes: "",
-            clubName: "",
-            active: true,
           },
     [person],
   );
@@ -147,8 +140,6 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
           address: value.address.trim(),
           roles: parseRoles(value.rolesInput),
           notes: value.notes.trim(),
-          clubName: value.clubName.trim(),
-          active: value.active,
         });
         onHide();
       } catch (err) {
@@ -339,24 +330,6 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 </AdminField>
               )}
             </form.Field>
-            <AdminField className="mb-4" controlId="person-club">
-              <AdminLabel className="text-subtle text-sm">
-                {m.admin_people_club_name_label()}
-              </AdminLabel>
-              <form.Field name="clubName">
-                {(field) => (
-                  <AdminInput
-                    type="text"
-                    className="bg-muted text-content border-input"
-                    maxLength={200}
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                )}
-              </form.Field>
-            </AdminField>
-
             <AdminField className="mb-4" controlId="person-roles">
               <AdminLabel className="text-subtle text-sm">
                 {m.admin_people_roles_label()}
@@ -403,19 +376,6 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
                 )}
               </form.Field>
             </AdminField>
-
-            <form.Field name="active">
-              {(field) => (
-                <AdminCheck
-                  id="person-active"
-                  type="switch"
-                  label={m.admin_people_active_label()}
-                  checked={field.value}
-                  onCheckedChange={(e) => field.handleChange(e)}
-                  className="text-subtle text-sm"
-                />
-              )}
-            </form.Field>
           </DialogBody>
 
           <DialogFooter>

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import userEvent from "@testing-library/user-event";
 import { axe } from "jest-axe";
@@ -39,7 +39,11 @@ vi.mock("@tanstack/react-router", () => ({
 const otherEventsState = vi.hoisted(() => ({ items: [] as unknown[] }));
 
 vi.mock("@/hooks/useOtherEvents", () => ({
-  useOtherEventItems: () => ({ items: otherEventsState.items, isLoading: false, isError: false }),
+  useOtherEventItems: () => ({
+    items: otherEventsState.items,
+    isLoading: false,
+    isError: false,
+  }),
 }));
 
 describe("Header component", () => {
@@ -90,13 +94,10 @@ describe("Header component", () => {
     expect(brand).toHaveAttribute("href", "#welcome");
   });
 
-  it("links to the administration page", () => {
+  it("keeps the administration link out of the header bar", () => {
     render(<Header />);
-    const adminLinks = screen.getAllByRole("link", { name: "Administration" });
-    expect(adminLinks.length).toBeGreaterThan(0);
-    adminLinks.forEach((adminLink) => {
-      expect(adminLink).toHaveAttribute("href", "/admin");
-      expect(adminLink.querySelector("svg")).toBeInTheDocument();
-    });
+    const header = screen.getByRole("banner");
+    // The only admin entry in the header is inside the mobile menu, which starts closed.
+    expect(within(header).queryByRole("link", { name: "Administration" })).not.toBeInTheDocument();
   });
 });

@@ -1,8 +1,8 @@
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { MailIcon, PencilIcon, TrashIcon } from "lucide-react";
+import { MailIcon, PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-import { useState, useMemo } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
@@ -17,7 +17,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import type { Person } from "@/types/person";
+import { isRoleActive, roleSince, type Person } from "@/types/person";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import MemberFormModal, { type MemberFormData } from "./MemberFormModal";
 import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
@@ -27,7 +27,8 @@ interface MembersManagementProps {
   authHeaders: () => Record<string, string>;
   onCreate: (data: MemberFormData) => Promise<void>;
   onUpdate: (id: string, data: MemberFormData) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onDeactivate: (id: string) => Promise<void>;
+  onReactivate: (id: string) => Promise<void>;
 }
 
 const columnHelper = createAppColumnHelper<Person>();
@@ -42,31 +43,46 @@ function truncateText(value: string, limit = 80): string {
 export default function MembersManagement({
   onCreate,
   onUpdate,
-  onDelete,
+  onDeactivate,
+  onReactivate,
   authHeaders,
 }: MembersManagementProps) {
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [deactivateSuccess, setDeactivateSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<Person | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [deactivateError, setDeactivateError] = useState("");
+  const [reactivateSuccess, setReactivateSuccess] = useState(false);
+  const [reactivateError, setReactivateError] = useState("");
+  const handleReactivate = useCallback(
+    async (id: string) => {
+      setReactivateError("");
+      try {
+        await onReactivate(id);
+        setReactivateSuccess(true);
+      } catch (err) {
+        setReactivateError(apiErrorMessage(err, m.admin_members_error_reactivate()));
+      }
+    },
+    [onReactivate],
+  );
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
 
-  const handleDeleteConfirm = async () => {
-    if (!deletingId) return;
-    setDeleting(true);
-    setDeleteError("");
+  const handleDeactivateConfirm = async () => {
+    if (!deactivatingId) return;
+    setDeactivating(true);
+    setDeactivateError("");
     try {
-      await onDelete(deletingId);
-      setDeleteSuccess(true);
-      setDeletingId(null);
+      await onDeactivate(deactivatingId);
+      setDeactivateSuccess(true);
+      setDeactivatingId(null);
     } catch (err) {
-      setDeleteError(apiErrorMessage(err, m.admin_members_error_delete()));
+      setDeactivateError(apiErrorMessage(err, m.admin_members_error_deactivate()));
     } finally {
-      setDeleting(false);
+      setDeactivating(false);
     }
   };
 
@@ -88,7 +104,7 @@ export default function MembersManagement({
           header: m.registration_name(),
           cell: ({ row }) => {
             const member = row.original;
-            return <PersonName person={member} />;
+            return <PersonName person={member} role="member" />;
           },
         }),
         columnHelper.accessor("email", {
@@ -104,11 +120,12 @@ export default function MembersManagement({
             <span className="text-sm">{String(getValue() ?? "") || "—"}</span>
           ),
         }),
-        columnHelper.accessor("clubName", {
+        columnHelper.display({
+          id: "memberSince",
+          header: m.admin_members_since_label(),
           enableSorting: false,
-          header: m.admin_people_club_name_label(),
-          cell: ({ getValue }) => (
-            <span className="text-sm">{String(getValue() ?? "") || "—"}</span>
+          cell: ({ row }) => (
+            <span className="text-sm">{roleSince(row.original, "member") ?? "—"}</span>
           ),
         }),
         columnHelper.accessor("notes", {
@@ -164,28 +181,40 @@ export default function MembersManagement({
                     setShowForm(true);
                   }}
                   title={m.admin_members_edit_title()}
-                  aria-label={m.admin_members_edit_title()}
+                  aria-label={`${m.admin_members_edit_title()}: ${member.name}`}
                 >
                   <Icon icon={PencilIcon} />
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline-danger"
-                  onClick={() => {
-                    setDeletingId(member.id);
-                    setDeleteError("");
-                  }}
-                  title={m.admin_members_delete_title()}
-                  aria-label={m.admin_members_delete_title()}
-                >
-                  <Icon icon={TrashIcon} />
-                </Button>
+                {isRoleActive(member, "member") ? (
+                  <Button
+                    size="sm"
+                    variant="outline-danger"
+                    onClick={() => {
+                      setDeactivatingId(member.id);
+                      setDeactivateError("");
+                    }}
+                    title={m.admin_members_deactivate_title()}
+                    aria-label={m.admin_members_deactivate_title()}
+                  >
+                    <Icon icon={TrashIcon} />
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleReactivate(member.id)}
+                    title={m.admin_members_reactivate_title()}
+                    aria-label={`${m.admin_members_reactivate_title()}: ${member.name}`}
+                  >
+                    <Icon icon={RotateCcwIcon} />
+                  </Button>
+                )}
               </div>
             );
           },
         }),
       ]),
-    [setEditingMember, setShowForm, setDeletingId, setDeleteError],
+    [setEditingMember, setShowForm, setDeactivatingId, setDeactivateError, handleReactivate],
   );
 
   return (
@@ -205,9 +234,27 @@ export default function MembersManagement({
               {m.admin_members_update_success()}
             </Alert>
           )}
-          {deleteSuccess && (
-            <Alert variant="success" className="m-4 mb-0" onClose={() => setDeleteSuccess(false)}>
-              {m.admin_members_delete_success()}
+          {reactivateSuccess && (
+            <Alert
+              variant="success"
+              className="m-4 mb-0"
+              onClose={() => setReactivateSuccess(false)}
+            >
+              {m.admin_members_reactivate_success()}
+            </Alert>
+          )}
+          {reactivateError && (
+            <Alert variant="danger" className="m-4 mb-0" onClose={() => setReactivateError("")}>
+              {reactivateError}
+            </Alert>
+          )}
+          {deactivateSuccess && (
+            <Alert
+              variant="success"
+              className="m-4 mb-0"
+              onClose={() => setDeactivateSuccess(false)}
+            >
+              {m.admin_members_deactivate_success()}
             </Alert>
           )}
 
@@ -234,34 +281,38 @@ export default function MembersManagement({
         </CardContent>
       </Card>
 
-      {deletingId && (
+      {deactivatingId && (
         <Dialog
           open={true}
           onOpenChange={(open) => {
             if (!open)
               (() => {
-                if (!deleting) setDeletingId(null);
+                if (!deactivating) setDeactivatingId(null);
               })();
           }}
         >
           <DialogContent admin size="default">
             <DialogHeader>
-              <DialogTitle>{m.admin_members_delete_title()}</DialogTitle>
+              <DialogTitle>{m.admin_members_deactivate_title()}</DialogTitle>
             </DialogHeader>
             <DialogBody>
-              {deleteError && (
+              {deactivateError && (
                 <Alert variant="danger" className="py-2 text-sm">
-                  {deleteError}
+                  {deactivateError}
                 </Alert>
               )}
-              <p>{m.admin_members_delete_confirm()}</p>
+              <p>{m.admin_members_deactivate_confirm()}</p>
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setDeletingId(null)} disabled={deleting}>
+              <Button
+                variant="outline"
+                onClick={() => setDeactivatingId(null)}
+                disabled={deactivating}
+              >
                 {m.admin_action_cancel()}
               </Button>
-              <Button variant="danger" onClick={handleDeleteConfirm} disabled={deleting}>
-                {deleting ? (
+              <Button variant="danger" onClick={handleDeactivateConfirm} disabled={deactivating}>
+                {deactivating ? (
                   <>
                     <Spinner size="sm" className="me-2" />
                     {m.admin_delete()}
@@ -269,7 +320,7 @@ export default function MembersManagement({
                 ) : (
                   <>
                     <Icon icon={TrashIcon} className="me-1" />
-                    {m.admin_members_delete_title()}
+                    {m.admin_members_deactivate_title()}
                   </>
                 )}
               </Button>

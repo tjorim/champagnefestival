@@ -29,7 +29,7 @@ async def stream_people_csv(db: AsyncSession, stmt: Select[Any], *, volunteer: b
     header = (
         ["Name", "National Register Number", "Address", "Period Start", "Period End"]
         if volunteer
-        else ["ID", "Name", "Email", "Phone", "Address", "Roles", "Active", "Registration Count"]
+        else ["ID", "Name", "Email", "Phone", "Address", "Roles", "Anonymised", "Registration Count"]
     )
     yield writer.writerow(map(csv_safe, header))
     result = await db.stream(stmt.add_columns(registration_count).execution_options(yield_per=EXPORT_BATCH_SIZE))
@@ -48,7 +48,7 @@ async def stream_people_csv(db: AsyncSession, stmt: Select[Any], *, volunteer: b
                                 person.phone,
                                 person.address,
                                 ";".join(person.roles),
-                                person.active,
+                                person.anonymised,
                                 count,
                             ],
                         )

@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.live import live_bus
+from app.models import Person
 from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration, _registration_body
 
 # ---------------------------------------------------------------------------
@@ -29,9 +30,7 @@ async def test_people_crud_roles_and_filters(client):
         "national_register_number": "85010199999",
         "eid_document_number": "BEI998877",
         "visits_per_month": 1,
-        "club_name": "Champagne Lovers",
         "notes": "Often helps at entrance.",
-        "active": True,
     }
 
     r = await client.post("/api/people", json=payload, headers=ADMIN_HEADERS)
@@ -51,16 +50,16 @@ async def test_people_crud_roles_and_filters(client):
 
     r = await client.put(
         f"/api/people/{person_id}",
-        json={"roles": ["Treasurer", "Festival-Visitor"], "active": False},
+        json={"roles": ["Treasurer", "Festival-Visitor"]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
     assert r.json()["roles"] == ["festival-visitor", "treasurer"]
-    assert r.json()["active"] is False
+    assert r.json()["anonymised"] is False
 
     r = await client.get(
         "/api/people",
-        params={"role": "treasurer", "active": "false"},
+        params={"role": "treasurer", "active": "true"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -635,9 +634,7 @@ async def test_members_crud(client):
         "phone": "+32475555111",
         "address": "Spuiplein 1, Bredene",
         "roles": ["festival-visitor"],
-        "club_name": "Champagne Lovers",
         "notes": "Prefers capsule exchange events.",
-        "active": True,
     }
 
     r = await client.post("/api/members", json=payload, headers=ADMIN_HEADERS)
@@ -656,18 +653,18 @@ async def test_members_crud(client):
 
     r = await client.put(
         f"/api/members/{person_id}",
-        json={"roles": ["treasurer"], "active": False},
+        json={"roles": ["treasurer"]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
     assert "member" in r.json()["roles"]
-    assert r.json()["active"] is False
+    assert r.json()["anonymised"] is False
 
-    r = await client.get("/api/people", params={"role": "member", "active": "false"}, headers=ADMIN_HEADERS)
+    r = await client.get("/api/people", params={"role": "member", "active": "true"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()["items"]) == 1
 
-    r = await client.delete(f"/api/members/{person_id}", headers=ADMIN_HEADERS)
+    r = await client.post(f"/api/members/{person_id}/deactivate", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
 
@@ -723,11 +720,11 @@ async def test_member_duplicate_national_register_number_detected_despite_format
 
 
 @pytest.mark.anyio
-async def test_delete_member_removes_existing_registrations(client):
-    """Deleting a member with existing registrations must not hit the registrations FK RESTRICT."""
+async def test_deactivate_member_keeps_role_person_and_registrations(client):
+    """Ending a membership marks the person inactive: the role, their other roles and registrations stay."""
     member = await client.post(
         "/api/members",
-        json={"name": "Delete Member", "email": "delete.member@example.com"},
+        json={"name": "Former Member", "email": "former.member@example.com", "roles": ["volunteer"]},
         headers=ADMIN_HEADERS,
     )
     assert member.status_code == 201
@@ -750,15 +747,83 @@ async def test_delete_member_removes_existing_registrations(client):
     assert registration.status_code == 201
     registration_id = registration.json()["id"]
 
-    async with live_bus.subscribe() as queue:
-        r = await client.delete(f"/api/members/{member_id}", headers=ADMIN_HEADERS)
-        live_event = await queue.get()
-
+    r = await client.post(f"/api/members/{member_id}/deactivate", headers=ADMIN_HEADERS)
     assert r.status_code == 204
-    assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 404
-    assert live_event.topic == "registration"
-    assert live_event.action == "deleted"
-    assert live_event.scope.registration_id == registration_id
+
+    # Still a member, listed as inactive in that role ...
+    assert (await client.get(f"/api/members/{member_id}", headers=ADMIN_HEADERS)).status_code == 200
+    active = await client.get("/api/people", params={"role": "member", "active": "true"}, headers=ADMIN_HEADERS)
+    assert member_id not in {item["id"] for item in active.json()["items"]}
+    inactive = await client.get("/api/people", params={"role": "member", "active": "false"}, headers=ADMIN_HEADERS)
+    assert member_id in {item["id"] for item in inactive.json()["items"]}
+    # ... with their other roles and their registration intact.
+    person = await client.get(f"/api/people/{member_id}", headers=ADMIN_HEADERS)
+    assert person.status_code == 200
+    assert person.json()["roles"] == ["member", "volunteer"]
+    assert list(person.json()["retired_roles"]) == ["member"]
+    assert person.json()["anonymised"] is False
+    assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 200
+
+    # Ending again is a no-op (convergent), an unknown person is a not-found.
+    assert (await client.post(f"/api/members/{member_id}/deactivate", headers=ADMIN_HEADERS)).status_code == 204
+    assert (await client.post("/api/members/nonexistent/deactivate", headers=ADMIN_HEADERS)).status_code == 404
+
+
+@pytest.mark.anyio
+async def test_roles_are_retired_independently(client, db_session):
+    """Retiring one role leaves the other role (and the person) active, in lists and counts."""
+    created = await client.post(
+        "/api/members",
+        json={"name": "Both Roles", "email": "both.roles@example.com", "roles": ["volunteer"]},
+        headers=ADMIN_HEADERS,
+    )
+    assert created.status_code == 201
+    person_id = created.json()["id"]
+
+    async def ids(role: str, active: bool | None) -> set[str]:
+        params = {"role": role} | ({} if active is None else {"active": str(active).lower()})
+        listed = await client.get("/api/people", params=params, headers=ADMIN_HEADERS)
+        return {item["id"] for item in listed.json()["items"]}
+
+    async def counts(role: str) -> tuple[int, int]:
+        body = (await client.get("/api/people/counts", params={"role": role}, headers=ADMIN_HEADERS)).json()
+        return body["active"], body["inactive"]
+
+    assert (await client.post(f"/api/members/{person_id}/deactivate", headers=ADMIN_HEADERS)).status_code == 204
+
+    # Retired as a member only: inactive in the member list and counts, still an active volunteer.
+    assert person_id in await ids("member", False)
+    assert person_id not in await ids("member", True)
+    assert person_id in await ids("volunteer", True)
+    assert person_id not in await ids("volunteer", False)
+    assert await counts("member") == (0, 1)
+    assert await counts("volunteer") == (1, 0)
+    # The person-wide filter (no role) is untouched.
+    assert person_id in await ids("member", None)
+    person = (await client.get(f"/api/people/{person_id}", headers=ADMIN_HEADERS)).json()
+    assert person["anonymised"] is False and list(person["retired_roles"]) == ["member"]
+
+    # An archived person (person-wide) is inactive in every role.
+    archived = await db_session.get(Person, person_id)
+    archived.anonymised = True
+    await db_session.commit()
+    assert person_id in await ids("volunteer", False)
+    assert person_id not in await ids("volunteer", True)
+    archived.anonymised = False
+    await db_session.commit()
+
+    # Reactivating brings the member role back, and a repeat is a no-op.
+    assert (await client.post(f"/api/members/{person_id}/reactivate", headers=ADMIN_HEADERS)).status_code == 204
+    assert (await client.post(f"/api/members/{person_id}/reactivate", headers=ADMIN_HEADERS)).status_code == 204
+    assert person_id in await ids("member", True)
+    person = (await client.get(f"/api/people/{person_id}", headers=ADMIN_HEADERS)).json()
+    assert person["retired_roles"] == {}
+
+    # A retirement does not outlive the role itself.
+    await client.post(f"/api/members/{person_id}/deactivate", headers=ADMIN_HEADERS)
+    updated = await client.put(f"/api/people/{person_id}", json={"roles": ["volunteer"]}, headers=ADMIN_HEADERS)
+    assert updated.status_code == 200
+    assert updated.json()["retired_roles"] == {}
 
 
 @pytest.mark.anyio
@@ -800,7 +865,6 @@ VOLUNTEER_PAYLOAD = {
     "address": "Kerkstraat 5",
     "national_register_number": "85010112399",
     "eid_document_number": "BEV445566",
-    "active": True,
     "help_periods": [{"first_help_day": "2024-03-15", "last_help_day": "2024-03-17"}],
 }
 
@@ -838,7 +902,7 @@ async def test_anonymise_person_blanks_identity_fields_and_keeps_registrations(c
     assert body["phone"] == ""
     assert body["address"] == ""
     assert body["notes"] == ""
-    assert body["active"] is False
+    assert body["anonymised"] is True
 
     # The registration itself — the operational/historical record — survives.
     r = await client.get(f"/api/registrations/{reg['id']}", headers=ADMIN_HEADERS)

@@ -20,7 +20,6 @@ async def test_volunteer_crud_and_constraints(client):
         "address": "Dorpsstraat 12, 8450 Bredene",
         "national_register_number": "91010112345",
         "eid_document_number": "BEX123456",
-        "active": True,
         "help_periods": [
             {
                 "first_help_day": "2024-03-15",
@@ -59,21 +58,18 @@ async def test_volunteer_crud_and_constraints(client):
     assert r.status_code == 200
     assert len(r.json()["items"]) == 1
 
-    r = await client.put(
-        f"/api/people/{volunteer_id}",
-        json={"active": False},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 200
+    r = await client.post(f"/api/volunteers/{volunteer_id}/deactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
 
     r = await client.get("/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()["items"]) == 1
+    r = await client.post(f"/api/volunteers/{volunteer_id}/reactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
     r = await client.put(
         f"/api/volunteers/{volunteer_id}",
         json={
             "address": "Nieuwe Steenweg 8, 8400 Oostende",
-            "active": True,
             "help_periods": [
                 {
                     "first_help_day": "2024-03-15",
@@ -94,7 +90,7 @@ async def test_volunteer_crud_and_constraints(client):
     )
     assert r.status_code == 200
     assert r.json()["address"] == "Nieuwe Steenweg 8, 8400 Oostende"
-    assert r.json()["active"] is True
+    assert r.json()["anonymised"] is False
     assert len(r.json()["help_periods"]) == 3
     assert r.json()["help_periods"][1]["notes"] == "Sun: desk"
 
@@ -112,17 +108,40 @@ async def test_volunteer_crud_and_constraints(client):
     )
     assert r.status_code == 422
 
-    r = await client.delete(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
+    # The volunteer is active and listed.
+    r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
+    assert [item["id"] for item in r.json()["items"]] == [volunteer_id]
+
+    r = await client.post(f"/api/volunteers/{volunteer_id}/deactivate", headers=ADMIN_HEADERS)
     assert r.status_code == 204
 
-    # Volunteer role is removed — endpoint returns 404.
+    # Stepping back keeps the role, the person and all three help periods ...
     r = await client.get(f"/api/volunteers/{volunteer_id}", headers=ADMIN_HEADERS)
-    assert r.status_code == 404
-
-    # But the underlying person record still exists (soft archive).
-    r = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
     assert r.status_code == 200
-    assert "volunteer" not in r.json()["roles"]
+    periods = r.json()["help_periods"]
+    assert len(periods) == 3
+    # ... the open one is now closed, and the volunteer role is retired rather than removed.
+    assert all(period["last_help_day"] is not None for period in periods)
+    person = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
+    assert "volunteer" in person.json()["roles"]
+    assert list(person.json()["retired_roles"]) == ["volunteer"]
+    assert person.json()["anonymised"] is False
+    r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
+    assert r.json()["items"] == []
+    r = await client.get("/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS)
+    assert [item["id"] for item in r.json()["items"]] == [volunteer_id]
+
+    # Ending again is a no-op, not an error.
+    r = await client.post(f"/api/volunteers/{volunteer_id}/deactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
+
+    # Reactivating brings them back (periods are not reopened); a repeat is a no-op too.
+    r = await client.post(f"/api/volunteers/{volunteer_id}/reactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
+    r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
+    assert [item["id"] for item in r.json()["items"]] == [volunteer_id]
+    r = await client.post(f"/api/volunteers/{volunteer_id}/reactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
 
 
 @pytest.mark.anyio
@@ -159,7 +178,6 @@ async def test_volunteers_support_limit_and_page(client):
                 "name": name,
                 "national_register_number": f"9101011234{i}",
                 "eid_document_number": f"BEPAG00{i}",
-                "active": True,
                 "help_periods": [{"first_help_day": "2024-03-15", "last_help_day": None}],
             },
             headers=ADMIN_HEADERS,

@@ -89,7 +89,7 @@
 
   .App {
     min-height: 100vh;
-    overflow-x: hidden;
+    overflow-x: clip;
   }
 
   ::selection {
@@ -910,6 +910,17 @@
     --layout-content: var(--ink) !important;
   }
 
+  /* Check-in stays on the dark green stock, so its text keeps the light ink. */
+  .standalone-main #check-in [data-slot="button"][data-variant="outline-warning"] {
+    --surface-foreground: #efe9d8;
+  }
+
+  .standalone-main #check-in .text-content,
+  .standalone-main #check-in [data-slot="alert"] {
+    color: #efe9d8 !important;
+    --layout-content: #efe9d8 !important;
+  }
+
   /* The default warning yellow reads as foil gold on label stock */
   .standalone-main .text-highlight,
   .standalone-document-main .text-highlight,
@@ -964,6 +975,51 @@
 
     --adm-radius: 2px;
     --adm-radius-lg: 3px;
+  }
+
+  /* The admin scope is the ledger: dark-scope tokens become ink on parchment so Tailwind utilities
+     (text-foreground, bg-card, border-border, ...) agree with the --adm-* surfaces. The sidebar is
+     dark bottle green and keeps the dark tokens. Dialogs carry the same scope, so they match. */
+  html[data-visual-theme="cuvee"] [data-theme-scope="admin"] {
+    color-scheme: light;
+    --surface-background: #efe6cd;
+    --surface-foreground: #241f14;
+    --surface-primary: #8a6414;
+    --surface-primary-foreground: #fffdf4;
+    --surface-secondary: #12322a;
+    --surface-muted: #f8f3e4;
+    --surface-muted-foreground: #57503f;
+    --surface-border: rgba(38, 33, 20, 0.22);
+    --surface-destructive: #a33d2f;
+    --surface-success-text: #2f7d4f;
+    --layout-content: #241f14;
+    --layout-subtle: #57503f;
+    --layout-highlight: #8a6414;
+  }
+
+  /* Warning badges tint the gold primary; plain gold text on that tint is only 3.9:1. */
+  html[data-visual-theme="cuvee"] #admin [data-slot="badge"][data-variant="warning"],
+  html[data-visual-theme="cuvee"]
+    [data-theme-scope="admin"]
+    [data-slot="dialog-content"]
+    [data-slot="badge"][data-variant="warning"] {
+    color: #6b4d0c;
+  }
+
+  html[data-visual-theme="cuvee"] .admin-sidebar {
+    color-scheme: dark;
+    --surface-background: #121212;
+    --surface-foreground: #f0f0f0;
+    --surface-primary: #6b8bf5;
+    --surface-primary-foreground: #121212;
+    --surface-muted: #1e1e1e;
+    --surface-muted-foreground: #c5c5c5;
+    --surface-border: rgb(255 255 255 / 0.1);
+    --surface-destructive: #e05a5a;
+    --surface-success-text: #4caf82;
+    --layout-content: #f0f0f0;
+    --layout-subtle: #c5c5c5;
+    --layout-highlight: #ffc107;
   }
 
   /* Ledger surface on the section itself so the unauthenticated login view
@@ -1123,7 +1179,8 @@
     /* Guard against long locale strings (nl/de compounds) crowding the frame */
     .cuvee-hero__title {
       font-size: clamp(2rem, 8.5vw, 3.4rem);
-      overflow-wrap: break-word;
+      /* "anywhere" also lowers the min-content width, so a long word cannot widen the hero grid track. */
+      overflow-wrap: anywhere;
     }
 
     .features {

@@ -91,6 +91,15 @@ idle/hard-cap expiry.
 - The first Keycloak login with a verified email joins the accounts, so the
   link is created by signing in once, not by a separate step or admin action.
 
+**Sign-in on `/me`.** The emailed link and the account sign-in sit side by side: "Email me a
+secure link" for any address, and "Already have an account? Sign in instead" for the IdP. The
+second button hands the address typed in the form to the IdP as `login_hint`, so the IdP's
+email link (or password form) can start from it. Whether the IdP offers an email link at all is
+realm configuration in `tjorim/apps` (SMTP, the passwordless flow), not this repository. An IdP
+email link opened in a *different* browser than the one that started the sign-in cannot complete
+the app's OIDC state, so that case ends in the inline sign-in error and the visitor retries (or
+uses the app's own emailed link, which works in any browser).
+
 **Audit provenance** follows the sign-in method, not the account:
 `actor_for_user(user, claims)` logs the OIDC subject for a bearer call and the
 opaque user id with `visitor_session` for a cookie call.

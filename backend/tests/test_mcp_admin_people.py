@@ -37,17 +37,17 @@ async def test_get_person_not_found(db_session):
 
 async def test_update_person_partial(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_people.create_person(factory, "admin-1", name="Alice", club_name="Old Club")
+    created = await mcp_people.create_person(factory, "admin-1", name="Alice", notes="Old note")
 
-    updated = await mcp_people.update_person(factory, "admin-1", created["id"], club_name="New Club")
-    assert updated["club_name"] == "New Club"
+    updated = await mcp_people.update_person(factory, "admin-1", created["id"], notes="New note")
+    assert updated["notes"] == "New note"
     assert updated["name"] == "Alice"  # untouched fields survive a partial update
 
 
 async def test_update_person_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_people.update_person(factory, "admin-1", "nonexistent", club_name="New Club")
+        await mcp_people.update_person(factory, "admin-1", "nonexistent", notes="New note")
 
 
 async def test_create_person_invalid_phone_rejected(db_session):

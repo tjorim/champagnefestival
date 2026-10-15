@@ -14,7 +14,7 @@ import {
   type PeopleListParams,
 } from "@/utils/adminPeopleQueries";
 import { downloadFileOrThrow } from "@/utils/adminApi";
-import type { Person } from "@/types/person";
+import { isRoleActive, type Person } from "@/types/person";
 import { m } from "@/paraglide/messages";
 
 export function peopleTableParams(state: AdminTableState, role?: string): PeopleListParams {
@@ -33,12 +33,11 @@ export function peopleTableParams(state: AdminTableState, role?: string): People
     sort,
     sort_dir: state.sortDir,
     role: role ?? state.filters.role,
+    // Active only means something within a role: the person-wide flag only marks anonymised people.
     active:
-      state.filters.active === "active"
-        ? true
-        : state.filters.active === "inactive"
-          ? false
-          : undefined,
+      !(role ?? state.filters.role) || !state.filters.active
+        ? undefined
+        : state.filters.active === "active",
   };
 }
 
@@ -50,7 +49,7 @@ function peopleEndpointParams(state: AdminTableState, role?: string): PeopleList
     : params;
 }
 
-export function PersonName({ person }: { person: Person }) {
+export function PersonName({ person, role }: { person: Person; role?: string }) {
   const pending = useIsMutating({
     mutationKey: ["admin", "people", "write"],
     predicate: (mutation) => {
@@ -65,7 +64,18 @@ export function PersonName({ person }: { person: Person }) {
   return (
     <span className="flex items-center gap-1" aria-busy={pending > 0}>
       {person.name}
-      {!person.active && <Badge variant="secondary">{m.admin_people_inactive_badge_label()}</Badge>}
+      {person.anonymised && (
+        <Badge variant="secondary">{m.admin_people_anonymised_badge_label()}</Badge>
+      )}
+      {!person.anonymised && role && !isRoleActive(person, role) && (
+        <Badge variant="secondary">{m.admin_people_inactive_badge_label()}</Badge>
+      )}
+      {!role &&
+        Object.keys(person.retiredRoles).map((retired) => (
+          <Badge key={retired} variant="outline">
+            {m.admin_people_retired_role_badge({ role: retired })}
+          </Badge>
+        ))}
       {pending > 0 && <Spinner size="sm" label={m.admin_settings_saving()} />}
     </span>
   );
@@ -94,20 +104,24 @@ export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryActio
       return {
         ...query,
         filters: [
-          {
-            id: "active",
-            label: m.admin_people_active_label(),
-            options: [
-              {
-                value: "active",
-                label: `${m.admin_members_filter_active()} (${activeCounts.data?.active ?? 0})`,
-              },
-              {
-                value: "inactive",
-                label: `${m.admin_members_filter_inactive()} (${activeCounts.data?.inactive ?? 0})`,
-              },
-            ],
-          },
+          ...(params.role
+            ? [
+                {
+                  id: "active",
+                  label: m.admin_people_active_label(),
+                  options: [
+                    {
+                      value: "active",
+                      label: `${m.admin_members_filter_active()} (${activeCounts.data?.active ?? 0})`,
+                    },
+                    {
+                      value: "inactive",
+                      label: `${m.admin_members_filter_inactive()} (${activeCounts.data?.inactive ?? 0})`,
+                    },
+                  ],
+                },
+              ]
+            : []),
           ...(!role
             ? [
                 {

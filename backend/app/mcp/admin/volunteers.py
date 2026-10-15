@@ -24,7 +24,6 @@ async def create_volunteer(
     national_register_number: str,
     eid_document_number: str,
     address: str = "",
-    active: bool = True,
     help_periods: list[dict],
 ) -> dict:
     body = validate_with_schema(
@@ -33,7 +32,6 @@ async def create_volunteer(
         address=address,
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
-        active=active,
         help_periods=help_periods,
     )
     async with session_factory() as db:
@@ -53,7 +51,11 @@ async def get_volunteer(session_factory: Any, volunteer_id: str) -> dict:
         return volunteers_service.to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
 
 
-async def list_volunteers(session_factory: Any, q: str | None = None, active: bool | None = None) -> dict:
+async def list_volunteers(
+    session_factory: Any,
+    q: str | None = None,
+    active: bool | None = None,
+) -> dict:
     async with session_factory() as db:
         stmt = volunteers_service.search_volunteers_stmt(q=q, active=active)
         rows = (await db.execute(stmt)).scalars().all()
@@ -70,7 +72,6 @@ async def update_volunteer(
     address: str | None = None,
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
-    active: bool | None = None,
     help_periods: list[dict] | None = None,
     oidc_subject: str | None = None,
     clear_oidc_subject: bool = False,
@@ -82,7 +83,6 @@ async def update_volunteer(
             "address": address,
             "national_register_number": national_register_number,
             "eid_document_number": eid_document_number,
-            "active": active,
             "help_periods": help_periods,
             "oidc_subject": oidc_subject,
         }.items()
@@ -103,10 +103,10 @@ async def update_volunteer(
             raise as_value_error(exc) from exc
 
 
-async def delete_volunteer(session_factory: Any, actor: str, volunteer_id: str) -> dict:
-    """Remove the volunteer role from a person (soft archive).
+async def deactivate_volunteer(session_factory: Any, actor: str, volunteer_id: str) -> dict:
+    """End a person's volunteering (the volunteer role is retired).
 
-    See ``app.services.volunteers_service.delete_volunteer`` for the exact
+    See ``app.services.volunteers_service.deactivate_volunteer`` for the exact
     semantics.
     """
     async with session_factory() as db:
@@ -114,4 +114,14 @@ async def delete_volunteer(session_factory: Any, actor: str, volunteer_id: str) 
             volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
         except HTTPException as exc:
             raise as_value_error(exc) from exc
-        return await volunteers_service.delete_volunteer(db, volunteer, actor=actor)
+        return await volunteers_service.deactivate_volunteer(db, volunteer, actor=actor)
+
+
+async def reactivate_volunteer(session_factory: Any, actor: str, volunteer_id: str) -> dict:
+    """Undo ``deactivate_volunteer``: the person counts as an active volunteer again."""
+    async with session_factory() as db:
+        try:
+            volunteer = await volunteers_service.get_volunteer_or_404(db, volunteer_id)
+        except HTTPException as exc:
+            raise as_value_error(exc) from exc
+        return await volunteers_service.reactivate_volunteer(db, volunteer, actor=actor)

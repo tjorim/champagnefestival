@@ -1,10 +1,4 @@
-import {
-  AdminField,
-  AdminLabel,
-  AdminInput,
-  AdminTextarea,
-  AdminCheck,
-} from "@/components/admin/AdminFields";
+import { AdminField, AdminLabel, AdminInput, AdminTextarea } from "@/components/admin/AdminFields";
 import { CirclePlusIcon, SaveIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
@@ -43,7 +37,6 @@ export interface VolunteerFormData {
   address: string;
   nationalRegisterNumber: string;
   eidDocumentNumber: string;
-  active: boolean;
   helpPeriods: VolunteerHelpPeriodFormData[];
 }
 
@@ -79,7 +72,6 @@ export default function VolunteerFormModal({
             address: volunteer.address ?? "",
             nationalRegisterNumber: volunteer.nationalRegisterNumber ?? "",
             eidDocumentNumber: volunteer.eidDocumentNumber ?? "",
-            active: volunteer.active,
             helpPeriods:
               volunteer.helpPeriods.length > 0
                 ? volunteer.helpPeriods.map(mapPeriod)
@@ -90,7 +82,6 @@ export default function VolunteerFormModal({
             address: "",
             nationalRegisterNumber: "",
             eidDocumentNumber: "",
-            active: true,
             helpPeriods: [emptyPeriod()],
           },
     [volunteer],
@@ -126,7 +117,6 @@ export default function VolunteerFormModal({
           address: value.address.trim(),
           nationalRegisterNumber: value.nationalRegisterNumber.trim(),
           eidDocumentNumber: value.eidDocumentNumber.trim(),
-          active: value.active,
           helpPeriods: normalized,
         });
         onHide();
@@ -367,19 +357,6 @@ export default function VolunteerFormModal({
                 </div>
               )}
             </div>
-
-            <form.Field name="active">
-              {(field) => (
-                <AdminCheck
-                  id="volunteer-active"
-                  type="switch"
-                  label={m.admin_people_active_label()}
-                  checked={field.value}
-                  onCheckedChange={(e) => field.handleChange(e)}
-                  className="text-subtle text-sm"
-                />
-              )}
-            </form.Field>
           </DialogBody>
 
           <DialogFooter>

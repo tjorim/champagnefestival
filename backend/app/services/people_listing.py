@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from sqlalchemy import Text, cast, func, or_, select
+from sqlalchemy import Text, and_, cast, func, or_, select
 from sqlalchemy.sql import Select
 
 from app.dependencies import SortDirection
@@ -58,10 +58,21 @@ def person_search_filter(q: str) -> Any:
         Person.address.ilike(like, escape="\\"),
         Person.national_register_number.ilike(like, escape="\\"),
         Person.eid_document_number.ilike(like, escape="\\"),
-        Person.club_name.ilike(like, escape="\\"),
         Person.notes.ilike(like, escape="\\"),
         cast(Person.roles, Text).ilike(like, escape="\\"),
     )
+
+
+def role_retired(role: str, column: Any = None) -> Any:
+    """True when *role* is a key of the person's ``retired_roles`` (``column`` for subqueries)."""
+    column = Person.retired_roles if column is None else column
+    return func.json_extract_path_text(column, role.strip().lower()).is_not(None)
+
+
+def role_active(role: str, *, anonymised_column: Any = None, retired_column: Any = None) -> Any:
+    """Active in *role*: the person is not anonymised and has not retired the role."""
+    anonymised_column = Person.anonymised if anonymised_column is None else anonymised_column
+    return and_(anonymised_column.is_(False), ~role_retired(role, retired_column))
 
 
 def filtered_people_stmt(
@@ -70,12 +81,20 @@ def filtered_people_stmt(
     role: str | None = None,
     active: bool | None = None,
 ) -> Select[Any]:
-    """``select(Person)`` with the shared filters applied and no ordering."""
+    """``select(Person)`` with the shared filters applied and no ordering.
+
+    ``active`` means "not anonymised" without a ``role``. With a ``role`` it means active *in that role*:
+    not anonymised and not retired from it (so ``active=false`` lists those who retired the role,
+    and everyone who is anonymised).
+    """
     stmt = select(Person)
-    if active is not None:
-        stmt = stmt.where(Person.active == active)
     if role:
         stmt = stmt.where(roles_contains(role))
+    if active is not None:
+        if role:
+            stmt = stmt.where(role_active(role) if active else ~role_active(role))
+        else:
+            stmt = stmt.where(Person.anonymised == (not active))
     if q and (q_stripped := q.strip()):
         stmt = stmt.where(person_search_filter(q_stripped))
     return stmt

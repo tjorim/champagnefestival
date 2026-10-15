@@ -40,7 +40,7 @@ async def _seed(db_session, count: int = 24) -> list[Person]:
             name=_NAMES[i % len(_NAMES)],
             email=_EMAILS[i % len(_EMAILS)],
             roles=["volunteer"] if i % 3 == 0 else ["member"],
-            active=i % 4 != 0,
+            anonymised=i % 4 == 0,
             created_at=_STAMPS[i % len(_STAMPS)],
             updated_at=_STAMPS[(i * 2) % len(_STAMPS)],
         )
@@ -132,7 +132,7 @@ async def test_people_default_order_is_newest_first_with_id_tiebreak(client, db_
 @pytest.mark.anyio
 async def test_people_filters_combine_with_sort_and_total_counts_the_filtered_set(client, db_session):
     people = await _seed(db_session)
-    matching = [p for p in people if "member" in p.roles and p.active]
+    matching = [p for p in people if "member" in p.roles and not p.anonymised]
 
     ids, total = await _read_all_pages(
         client, "/api/people", 3, role="member", active="true", sort="name", sort_dir="desc"
@@ -146,7 +146,7 @@ async def test_people_filters_combine_with_sort_and_total_counts_the_filtered_se
 @pytest.mark.anyio
 async def test_volunteers_filters_combine_with_sort_and_total_counts_the_filtered_set(client, db_session):
     people = await _seed(db_session)
-    matching = [p for p in people if "volunteer" in p.roles and not p.active]
+    matching = [p for p in people if "volunteer" in p.roles and p.anonymised]
     assert matching
 
     ids, total = await _read_all_pages(client, "/api/volunteers", 2, active="false", sort="updated")
@@ -246,14 +246,14 @@ async def test_page_past_the_end_is_empty_but_total_still_counts_every_match(cli
 
 @pytest.mark.anyio
 async def test_volunteers_and_people_share_one_q_semantics(client, db_session):
-    """`q` reaches club, notes, phone and roles on both lists, not just the
+    """`q` reaches notes, phone and roles on both lists, not just the
     name/address/NISS/eID subset volunteers used to search."""
     db_session.add_all(
         [
-            Person(id="per_a", name="Aaa", roles=["volunteer"], club_name="Zymurgy Club"),
+            Person(id="per_a", name="Aaa", roles=["volunteer"], notes="Zymurgy Club"),
             Person(id="per_b", name="Bbb", roles=["volunteer"], notes="knows the zymurgy basics"),
             Person(id="per_c", name="Ccc", roles=["volunteer"], phone="+32 400 11 22 33"),
-            Person(id="per_d", name="Ddd", roles=["member"], club_name="Zymurgy Club"),
+            Person(id="per_d", name="Ddd", roles=["member"], notes="Zymurgy Club"),
             Person(id="per_e", name="Eee", roles=["volunteer"]),
         ]
     )

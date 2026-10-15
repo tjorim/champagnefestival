@@ -24,7 +24,7 @@ The table below tracks each user story against its current implementation status
 | 11  | Volunteer | Look up guests by name or table; see remaining items      | ✅ `GET /api/registrations?q=name` and `?table_id=`; delivered items tracked per `OrderItem.delivered`                                                              |
 | 12  | Manager   | Keep volunteer attendance + insurance identity records    | ✅ Admin CRUD via `/api/volunteers` (stored as people with role `volunteer`; includes name, address, first/last help day, NISS, eID document number)               |
 | 13  | Manager   | Manage all person types using role tags + overlaps        | ✅ Admin CRUD via `/api/people` with roles such as chairwoman, treasurer, volunteer, member, festival-visitor; one person can have multiple roles                  |
-| 15  | Manager   | Quickly manage members                                    | ✅ Create/update/delete via `/api/members`; browse/search via `/api/people?role=member`                                                                            |
+| 15  | Manager   | Quickly manage members                                    | ✅ Create/update/remove-role via `/api/members`; browse/search via `/api/people?role=member`                                                                            |
 | 14  | Manager   | Group returning attendees by registration history         | ✅ `GET /api/people/{id}/registrations` groups all registrations for that person (linked by person + e-mail)                                                       |
 
 ---
@@ -270,11 +270,13 @@ See `.env.example` for a template.
 | `GET`    | `/api/volunteers/export`        | admin          | Stream filtered volunteer insurance CSV (`q`, `active`, `sort`, `sort_dir`; active-only by default, `include_inactive=true` for all)                           |
 | `GET`    | `/api/volunteers/{id}`          | admin          | Get volunteer detail                                                       |
 | `PUT`    | `/api/volunteers/{id}`          | admin          | Update volunteer profile                                                   |
-| `DELETE` | `/api/volunteers/{id}`          | admin          | Delete volunteer profile                                                   |
+| `POST`   | `/api/volunteers/{id}/deactivate`      | admin          | End volunteering: retire the `volunteer` role (`retired_roles`) and close open periods today; role, person and periods are kept (repeat is a no-op) |
+| `POST`   | `/api/volunteers/{id}/reactivate`       | admin          | Undo `deactivate`: the volunteer role counts as active again (closed periods are not reopened; repeat is a no-op) |
 | `POST`   | `/api/members`                  | admin          | Create member (person with role `member`)                                  |
 | `GET`    | `/api/members/{id}`             | admin          | Get member detail                                                          |
 | `PUT`    | `/api/members/{id}`             | admin          | Update member                                                              |
-| `DELETE` | `/api/members/{id}`             | admin          | Delete member                                                              |
+| `POST`   | `/api/members/{id}/deactivate`          | admin          | End membership: retire the `member` role (`retired_roles`); role, person, other roles and registrations are kept (repeat is a no-op) |
+| `POST`   | `/api/members/{id}/reactivate`          | admin          | Undo `deactivate`: the member role counts as active again, opening a new stretch today (repeat is a no-op) |
 | `POST`   | `/api/people`                   | admin          | Create person with role tags                                               |
 | `GET`    | `/api/people`                   | admin          | Paged people list on the [shared list contract](#paged-list-contract) (`?q=`, `?role=`, `?active=`, `?sort=name\|email\|created\|updated\|registration_count`, `?sort_dir=`, `?limit=`, `?page=`); returns `{items, total, limit, page}` |
 | `GET` | `/api/people/counts` | admin | Full-set `{total, active, inactive, by_role}` for the intersection of `q`, `role`, `active`; omit a facet filter to obtain counts for its tabs. Roles are case-insensitive and overlapping (a person counts once in each role). |
@@ -302,12 +304,28 @@ follows the same shape.
 
 | Parameter  | Meaning |
 | ---------- | ------- |
-| `q`        | Search text; whitespace-only is treated as omitted. The same case-insensitive substring search on both endpoints: name, e-mail, phone, address, NISS, eID document number, club, notes and roles, plus fuzzy name/e-mail matching. |
+| `q`        | Search text; whitespace-only is treated as omitted. The same case-insensitive substring search on both endpoints: name, e-mail, phone, address, NISS, eID document number, notes and roles, plus fuzzy name/e-mail matching. |
 | `page`     | 1-based page number (default `1`). May be used without `limit`. |
 | `limit`    | Page size: default **50**, maximum **1000**. An omitted `limit` is never unbounded, and `0` or more than 1000 is a 422. |
 | `sort`     | One of a whitelist; any other value is a 422, never a silent default. People: `name`, `email`, `created`, `updated`, `registration_count`. Volunteers: `name`, `created`, `updated`. |
 | `sort_dir` | `asc` (default) or `desc`; used only with `sort`. |
 
+- **Role history:** `Person.role_history` records when each role was held
+  (`{role: [{started_on, ended_on}]}`, oldest first; no `ended_on` = in progress,
+  null `started_on` = unknown, as for every role that predates the history).
+  Granting a role opens a stretch, removing one closes it, `deactivate` closes it
+  and `reactivate` opens a new one; `retired_roles` is the derived index of roles
+  whose latest stretch has ended. Both come back on person, member and volunteer
+  reads. `member_since` on `POST`/`PUT /api/members` sets the start of the current
+  stretch (the generic people endpoints reject it); a new volunteer starts on
+  their earliest `first_help_day`. All of it lives in `app/services/role_history.py`.
+- **`active` with a `role`:** without `role` it means "not anonymised"
+  (`Person.anonymised`, set only by the anonymise action). With `role` (and on
+  `/api/volunteers`, which implies `role=volunteer`) it means active *in that role*:
+  not anonymised and not retired from it (`Person.retired_roles`, set by the
+  `deactivate` actions), so `active=false` lists people who retired the role plus
+  anyone anonymised. `GET /api/people/counts` follows the same rule. Person reads
+  carry `anonymised` (no `active` field); the create/update endpoints accept neither.
 - **Order without `sort`:** a search (`q`) is ordered by relevance, ending in
   `name, id`; a plain list is newest first (`created_at desc, id desc`). An
   explicit `sort` always overrides relevance.

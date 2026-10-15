@@ -1010,24 +1010,12 @@ export default function RegistrationList({
       <Card tone="secondary">
         <CardHeader className="pb-2">
           {/* Row 1: title + stats + add */}
-          <div className="flex items-center justify-between gap-2 mb-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="font-semibold">{m.admin_registrations_tab_header()}</span>
-              <span className="text-subtle text-sm">
-                <Badge variant="warning" className="me-1">
-                  {statusCounts.pending}
-                </Badge>
-                {m.admin_filter_pending()}
-                <Badge variant="success" className="mx-1">
-                  {statusCounts.confirmed}
-                </Badge>
-                {m.admin_filter_confirmed()}
-                <span className="ms-2 text-subtle">
-                  · {statusCounts.all} {m.admin_filter_all()}
-                </span>
-              </span>
+              <span className="text-subtle text-sm">({statusCounts.all})</span>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <ColumnVisibilityDropdown table={table} tableId="registrations" />
               <Button
                 variant="outline"
@@ -1050,101 +1038,116 @@ export default function RegistrationList({
             </div>
           </div>
           {/* Row 2: filters + search */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <ButtonGroup aria-label={m.admin_filter_edition_aria()}>
-              <Button
-                size="sm"
-                variant={editionFilter === "all" ? "default" : "outline"}
-                aria-pressed={editionFilter === "all"}
-                onClick={() => changeEditionFilter("all")}
-              >
-                {m.admin_filter_edition_all()} ({editionCounts.all})
-              </Button>
-              <Button
-                size="sm"
-                variant={editionFilter === "festival" ? "default" : "outline"}
-                aria-pressed={editionFilter === "festival"}
-                onClick={() => changeEditionFilter("festival")}
-              >
-                {m.admin_filter_edition_festivals()} ({editionCounts.festival})
-              </Button>
-              <Button
-                size="sm"
-                variant={editionFilter === "standalone" ? "default" : "outline"}
-                aria-pressed={editionFilter === "standalone"}
-                onClick={() => changeEditionFilter("standalone")}
-              >
-                {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
-              </Button>
-              <Button
-                size="sm"
-                variant={activeEditionOnly ? "default" : "outline"}
-                aria-pressed={activeEditionOnly}
-                onClick={toggleActiveEditionOnly}
-              >
-                {m.admin_filter_active_edition()} ({editionCounts.active})
-              </Button>
-            </ButtonGroup>
-            {allocationOptions.length > 0 && (
-              <AdminSelect
-                size="sm"
-                className="bg-muted text-content border-input max-w-50"
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
+                {m.admin_filter_edition_caption()}
+              </span>
+              <ButtonGroup aria-label={m.admin_filter_edition_aria()}>
+                <Button
+                  size="sm"
+                  variant={editionFilter === "all" ? "default" : "outline"}
+                  aria-pressed={editionFilter === "all"}
+                  onClick={() => changeEditionFilter("all")}
+                >
+                  {m.admin_filter_edition_all()} ({editionCounts.all})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={editionFilter === "festival" ? "default" : "outline"}
+                  aria-pressed={editionFilter === "festival"}
+                  onClick={() => changeEditionFilter("festival")}
+                >
+                  {m.admin_filter_edition_festivals()} ({editionCounts.festival})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={editionFilter === "standalone" ? "default" : "outline"}
+                  aria-pressed={editionFilter === "standalone"}
+                  onClick={() => changeEditionFilter("standalone")}
+                >
+                  {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={activeEditionOnly ? "default" : "outline"}
+                  aria-pressed={activeEditionOnly}
+                  onClick={toggleActiveEditionOnly}
+                >
+                  {m.admin_filter_active_edition()} ({editionCounts.active})
+                </Button>
+              </ButtonGroup>
+              {allocationOptions.length > 0 && (
+                <AdminSelect
+                  size="sm"
+                  className="bg-muted text-content border-input max-w-50"
 
-                value={allocationFilter}
-                onValueChange={(e) => changeAllocationFilter(e)}
-                aria-label={m.admin_filter_allocation_aria()}
-              >
-                <AdminOption value="">{m.admin_all_allocations()}</AdminOption>
-                {allocationOptions.map((o) => (
-                  <AdminOption key={o.key} value={o.key}>
-                    {o.label}
-                  </AdminOption>
-                ))}
-              </AdminSelect>
-            )}
-            <ButtonGroup aria-label={m.admin_filter_date_aria()}>
-              <Button
-                size="sm"
-                variant={dateFilter === "today" ? "default" : "outline"}
-                aria-pressed={dateFilter === "today"}
-                onClick={toggleDateFilter}
-              >
-                {m.admin_filter_today()} ({todayCount})
-              </Button>
-            </ButtonGroup>
-            <ButtonGroup aria-label={m.admin_filter_status_aria()}>
-              <Button
-                size="sm"
-                variant={filter === "all" ? "default" : "outline"}
-                aria-pressed={filter === "all"}
-                onClick={() => changeStatusFilter("all")}
-              >
-                {m.admin_filter_all()} ({statusCounts.all})
-              </Button>
-              <Button
-                size="sm"
-                variant={filter === "pending" ? "default" : "outline"}
-                aria-pressed={filter === "pending"}
-                onClick={() => changeStatusFilter("pending")}
-              >
-                {m.admin_filter_pending()} ({statusCounts.pending})
-              </Button>
-              <Button
-                size="sm"
-                variant={filter === "confirmed" ? "default" : "outline"}
-                aria-pressed={filter === "confirmed"}
-                onClick={() => changeStatusFilter("confirmed")}
-              >
-                {m.admin_filter_confirmed()} ({statusCounts.confirmed})
-              </Button>
-            </ButtonGroup>
+                  value={allocationFilter}
+                  onValueChange={(e) => changeAllocationFilter(e)}
+                  aria-label={m.admin_filter_allocation_aria()}
+                >
+                  <AdminOption value="">{m.admin_all_allocations()}</AdminOption>
+                  {allocationOptions.map((o) => (
+                    <AdminOption key={o.key} value={o.key}>
+                      {o.label}
+                    </AdminOption>
+                  ))}
+                </AdminSelect>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
+                {m.admin_filter_date_caption()}
+              </span>
+              <ButtonGroup aria-label={m.admin_filter_date_aria()}>
+                <Button
+                  size="sm"
+                  variant={dateFilter === "today" ? "default" : "outline"}
+                  aria-pressed={dateFilter === "today"}
+                  onClick={toggleDateFilter}
+                >
+                  {m.admin_filter_today()} ({todayCount})
+                </Button>
+              </ButtonGroup>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
+                {m.admin_filter_status_caption()}
+              </span>
+              <ButtonGroup aria-label={m.admin_filter_status_aria()}>
+                <Button
+                  size="sm"
+                  variant={filter === "all" ? "default" : "outline"}
+                  aria-pressed={filter === "all"}
+                  onClick={() => changeStatusFilter("all")}
+                >
+                  {m.admin_filter_all()} ({statusCounts.all})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={filter === "pending" ? "default" : "outline"}
+                  aria-pressed={filter === "pending"}
+                  onClick={() => changeStatusFilter("pending")}
+                >
+                  {m.admin_filter_pending()} ({statusCounts.pending})
+                </Button>
+                <Button
+                  size="sm"
+                  variant={filter === "confirmed" ? "default" : "outline"}
+                  aria-pressed={filter === "confirmed"}
+                  onClick={() => changeStatusFilter("confirmed")}
+                >
+                  {m.admin_filter_confirmed()} ({statusCounts.confirmed})
+                </Button>
+              </ButtonGroup>
+            </div>
             <AdminInput
               size="sm"
               type="search"
               placeholder={m.admin_search_person_placeholder()}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              className="bg-muted text-content border-input max-w-55"
+              className="bg-muted text-content border-input max-w-72"
             />
           </div>
           {eventCapacityStats.length > 0 && (

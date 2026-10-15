@@ -14,9 +14,6 @@ national-register/eID checks that predated #860's module split.
 Unifying it required renormalising already-stored rows so the unique
 constraint stayed valid under the stricter rule; that repair is preserved in
 the database baseline.
-``delete_person``'s cascade is reused by ``members_service.delete_member`` via
-its ``action`` parameter.
-
 Raises ``HTTPException`` directly (matching the pre-existing shared helpers
 this consolidates, same convention as ``app/services/editions_service.py``)
 rather than the ``ServiceError`` hierarchy in ``app/services/errors.py``.
@@ -41,6 +38,7 @@ from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Organization, Person, Registration, VolunteerPeriod
 from app.schemas import PersonCreate, PersonUpdate
+from app.services.role_history import sync_roles
 from app.utils import get_or_404, make_id, person_to_dict
 
 logger = logging.getLogger(__name__)
@@ -129,7 +127,17 @@ async def get_person_or_404(db: AsyncSession, person_id: str) -> Person:
     return await get_or_404(db, Person, person_id, "Person not found.")
 
 
+def reject_member_since(body: PersonCreate | PersonUpdate) -> None:
+    """``member_since`` belongs to the member endpoints; ignoring it here would hide a mistake."""
+    if body.member_since is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail="member_since can only be set through the member endpoints.",
+        )
+
+
 async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, request_id: str | None = None) -> dict:
+    reject_member_since(body)
     national_register_number = normalise_optional_identity(body.national_register_number)
     eid_document_number = normalise_optional_identity(body.eid_document_number)
     await ensure_unique_identity_fields(
@@ -148,11 +156,9 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
         visits_per_month=body.visits_per_month,
-        club_name=body.club_name,
         notes=body.notes,
-        active=body.active,
     )
-    person.roles = normalise_roles(body.roles)
+    sync_roles(person, normalise_roles(body.roles))
 
     db.add(person)
     await write_audit_entry(
@@ -176,7 +182,8 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
 async def apply_person_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
-    for field in ("name", "address", "preferred_language", "visits_per_month", "club_name", "notes", "active"):
+    reject_member_since(body)
+    for field in ("name", "address", "preferred_language", "visits_per_month", "notes"):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
 
@@ -202,7 +209,7 @@ async def apply_person_update(
         person.eid_document_number = eid
 
     if body.roles is not None:
-        person.roles = normalise_roles(body.roles)
+        sync_roles(person, normalise_roles(body.roles))
 
     if body.marketing_opt_in is not None:
         # Enforces PersonUpdate.marketing_opt_in's own contract: this path
@@ -257,9 +264,8 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     pseudonym is derived from the stable person ID, so a repeat produces the
     same row rather than a second, different rewrite.
 
-    Does not touch ``registrations``, ``roles``, ``visits_per_month``, or
-    ``club_name`` — those are the operational/historical record this
-    anonymisation is deliberately scoped to leave alone.
+    Does not touch ``registrations``, ``roles`` or ``visits_per_month`` — those are the
+    operational/historical record this anonymisation is deliberately scoped to leave alone.
     """
     if person.national_register_number or person.eid_document_number:
         raise HTTPException(
@@ -273,7 +279,7 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     person.phone = ""
     person.address = ""
     person.notes = ""
-    person.active = False
+    person.anonymised = True
 
     await write_audit_entry(
         db,
@@ -288,15 +294,8 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     return person_to_dict(person)
 
 
-async def delete_person(
-    db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None, action: str = "person_deleted"
-) -> dict:
-    """Delete a person and cascade-delete their registrations.
-
-    ``action`` lets ``app.services.members_service.delete_member`` reuse this
-    routine verbatim with its own audit action name (``"member_deleted"``)
-    instead of keeping a byte-for-byte duplicate.
-    """
+async def delete_person(db: AsyncSession, person: Person, *, actor: str, request_id: str | None = None) -> dict:
+    """Delete a person and cascade-delete their registrations (erasure, not a role change)."""
     person_id = person.id
     result = await db.execute(
         select(Registration).options(selectinload(Registration.event)).where(Registration.person_id == person_id)
@@ -316,7 +315,7 @@ async def delete_person(
     await write_audit_entry(
         db,
         actor=actor,
-        action=action,
+        action="person_deleted",
         resource_type="person",
         resource_id=person_id,
         request_id=request_id,
@@ -374,7 +373,7 @@ async def merge_people(
             setattr(canonical, field, normalised or None)
 
     # Fill blank string fields on canonical from duplicate.
-    for field in ("email", "phone", "address", "club_name", "notes"):
+    for field in ("email", "phone", "address", "notes"):
         if not getattr(canonical, field) and getattr(duplicate, field):
             setattr(canonical, field, getattr(duplicate, field))
 
@@ -392,7 +391,23 @@ async def merge_people(
         canonical.marketing_opt_in_at = duplicate.marketing_opt_in_at
 
     # Merge roles (union).
+    gained = set(duplicate.roles) - set(canonical.roles)
     canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))
+    # A role gained from the duplicate brings its history along.
+    canonical.role_history = {
+        **{role: list(stretches) for role, stretches in (duplicate.role_history or {}).items() if role in gained},
+        **(canonical.role_history or {}),
+    }
+    # A merged role stays retired only if no side still held it actively.
+    canonical.retired_roles = {
+        role: day
+        for role, day in (canonical.retired_roles or {}).items()
+        if role not in duplicate.roles or role in (duplicate.retired_roles or {})
+    } | {
+        role: day
+        for role, day in (duplicate.retired_roles or {}).items()
+        if role not in canonical.roles or role in (canonical.retired_roles or {})
+    }
 
     # Adopt unique identity fields from duplicate if canonical lacks them.
     # Normalise the value from the duplicate before storing so the canonical

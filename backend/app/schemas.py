@@ -134,6 +134,13 @@ class PersonSummaryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RoleStretchOut(BaseModel):
+    """One stretch of holding a role; ``started_on`` is null when the start is unknown."""
+
+    started_on: dt_date | None = None
+    ended_on: dt_date | None = None
+
+
 class PersonOut(BaseModel):
     id: str
     name: str
@@ -142,12 +149,13 @@ class PersonOut(BaseModel):
     preferred_language: Literal["nl", "fr", "en"] | None = None
     address: str
     roles: list[str]
+    retired_roles: dict[str, str] = {}
+    role_history: dict[str, list[RoleStretchOut]] = {}
     national_register_number: str | None
     eid_document_number: str | None
     visits_per_month: int | None
-    club_name: str
     notes: str
-    active: bool
+    anonymised: bool
     marketing_opt_in: bool
     marketing_opt_in_at: datetime | None
     created_at: datetime
@@ -175,10 +183,11 @@ class PersonAdminSummaryOut(BaseModel):
     preferred_language: Literal["nl", "fr", "en"] | None = None
     address: str
     roles: list[str]
+    retired_roles: dict[str, str] = {}
+    role_history: dict[str, list[RoleStretchOut]] = {}
     visits_per_month: int | None
-    club_name: str
     notes: str
-    active: bool
+    anonymised: bool
     marketing_opt_in: bool
     marketing_opt_in_at: datetime | None
     created_at: datetime
@@ -986,7 +995,6 @@ class VolunteerCreate(RequestModel):
     address: str = Field(default="", max_length=300)
     national_register_number: str = Field(min_length=1, max_length=20)
     eid_document_number: str = Field(min_length=1, max_length=50)
-    active: bool = True
     help_periods: list[VolunteerHelpPeriodIn] = Field(min_length=1)
 
     @field_validator("name", "national_register_number", "eid_document_number", mode="before")
@@ -1000,7 +1008,6 @@ class VolunteerUpdate(RequestModel):
     address: str | None = Field(default=None, max_length=300)
     national_register_number: str | None = Field(default=None, min_length=1, max_length=20)
     eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
-    active: bool | None = None
     help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
     oidc_subject: str | None = Field(default=None, max_length=255)
     """Admin-only override for the self-service identity link (#1006) — e.g.
@@ -1032,7 +1039,9 @@ class VolunteerOut(BaseModel):
     address: str
     national_register_number: str | None
     eid_document_number: str | None
-    active: bool
+    anonymised: bool
+    retired_roles: dict[str, str] = {}
+    role_history: dict[str, list[RoleStretchOut]] = {}
     help_periods: list[VolunteerPeriodOut]
     oidc_subject: str | None
     created_at: datetime
@@ -1199,9 +1208,9 @@ class PersonCreate(RequestModel):
     national_register_number: str | None = Field(default=None, max_length=20)
     eid_document_number: str | None = Field(default=None, max_length=50)
     visits_per_month: int | None = Field(default=None, ge=1, le=31)
-    club_name: str = Field(default="", max_length=200)
     notes: str = Field(default="", max_length=2000)
-    active: bool = True
+    member_since: dt_date | None = None
+    """Member endpoints only: the day membership started (defaults to today for a new member)."""
 
 
 class PersonUpdate(RequestModel):
@@ -1214,9 +1223,9 @@ class PersonUpdate(RequestModel):
     national_register_number: str | None = Field(default=None, max_length=20)
     eid_document_number: str | None = Field(default=None, max_length=50)
     visits_per_month: int | None = Field(default=None, ge=1, le=31)
-    club_name: str | None = Field(default=None, max_length=200)
     notes: str | None = Field(default=None, max_length=2000)
-    active: bool | None = None
+    member_since: dt_date | None = None
+    """Member endpoints only: the day the current stretch of membership started."""
     marketing_opt_in: bool | None = None
     """Admin-initiated correction only (e.g. processing an opt-out request
     received through the contact form) — the registration form is the actual

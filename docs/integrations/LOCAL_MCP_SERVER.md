@@ -87,8 +87,8 @@ complete regardless of which surface made the change. All are `admin`-only excep
 | Settings | `get_settings` (public), `set_maintenance_mode` |
 | Organizations | `create_organization`, `get_organization`, `list_organizations`, `update_organization`, `delete_organization` |
 | People | `create_person`, `get_person`, `update_person`, `delete_person`, `merge_people` |
-| Members | `create_member`, `get_member`, `list_members`, `update_member`, `delete_member` |
-| Volunteers | `create_volunteer`, `get_volunteer`, `list_volunteers`, `update_volunteer`, `delete_volunteer` |
+| Members | `create_member`, `get_member`, `list_members`, `update_member`, `deactivate_member`, `reactivate_member` |
+| Volunteers | `create_volunteer`, `get_volunteer`, `list_volunteers`, `update_volunteer`, `deactivate_volunteer`, `reactivate_volunteer` |
 | Registrations | `list_registrations` (`edition_id`/`event_id`/`status`/`payment_status`/`checked_in`/`q` filters, paginated), `create_registration`, `update_registration`, `delete_registration` |
 | Audit trail | `list_audit_entries`, `list_audit_resource_types` |
 | Integration clients | `create_integration_client`, `list_integration_clients`, `revoke_integration_client`, `rotate_integration_client` |

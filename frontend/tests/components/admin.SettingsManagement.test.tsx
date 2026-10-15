@@ -14,6 +14,26 @@ const initialSettings = {
 };
 
 describe("SettingsManagement", () => {
+  it("renders the maintenance switch and the contact details as separate sections", async () => {
+    server.use(http.get("/api/settings", () => HttpResponse.json(initialSettings)));
+
+    const maintenance = render(
+      <SettingsManagement authHeaders={() => ({})} section="maintenance" />,
+      { wrapper: createTestQueryClientWrapper() },
+    );
+    expect(await screen.findByRole("switch", { name: "Maintenance mode" })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Public email address")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Save contact details" })).not.toBeInTheDocument();
+    maintenance.unmount();
+
+    render(<SettingsManagement authHeaders={() => ({})} section="contact" />, {
+      wrapper: createTestQueryClientWrapper(),
+    });
+    expect(await screen.findByLabelText("Public email address")).toBeInTheDocument();
+    expect(screen.getByText("Contact details")).toBeInTheDocument();
+    expect(screen.queryByRole("switch", { name: "Maintenance mode" })).not.toBeInTheDocument();
+  });
+
   it("loads and saves all public contact settings without retrying", async () => {
     let submitted: Record<string, unknown> | null = null;
     server.use(

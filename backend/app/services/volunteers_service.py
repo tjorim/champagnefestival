@@ -18,10 +18,11 @@ rows; that repair logic remains preserved in the baseline).
 from __future__ import annotations
 
 from collections import defaultdict
+from datetime import date as dt_date
 from typing import Any
 
 from fastapi import HTTPException
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,17 +32,15 @@ from app.models import Person, VolunteerPeriod
 from app.schemas import VolunteerCreate, VolunteerHelpPeriodIn, VolunteerUpdate
 from app.services.people_listing import filtered_people_stmt, order_people_stmt
 from app.services.people_service import normalise_optional_identity
+from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
 from app.utils import get_or_404, make_id, person_to_dict
 
 
-def ensure_volunteer_role(person: Person) -> None:
-    roles = set(person.roles or [])
-    roles.add("volunteer")
-    person.roles = sorted(roles)
-
-
-def remove_volunteer_role(person: Person) -> None:
-    person.roles = sorted(role for role in (person.roles or []) if role != "volunteer")
+def ensure_volunteer_role(person: Person, *, started_on: dt_date | None = None) -> None:
+    if "volunteer" not in (person.roles or []):
+        sync_roles(person, sorted({*(person.roles or []), "volunteer"}))
+        if started_on is not None:
+            set_role_start(person, "volunteer", started_on)
 
 
 async def ensure_unique_fields(
@@ -146,7 +145,9 @@ def to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> dic
         "address": d["address"],
         "national_register_number": d["national_register_number"],
         "eid_document_number": d["eid_document_number"],
-        "active": d["active"],
+        "anonymised": d["anonymised"],
+        "retired_roles": d["retired_roles"],
+        "role_history": d["role_history"],
         "oidc_subject": person.oidc_subject,
         "help_periods": [
             {
@@ -190,9 +191,8 @@ async def create_volunteer(
         address=body.address,
         national_register_number=nrr,
         eid_document_number=eid,
-        active=body.active,
     )
-    ensure_volunteer_role(person)
+    ensure_volunteer_role(person, started_on=min(period.first_help_day for period in body.help_periods))
 
     db.add(person)
     await db.flush()
@@ -237,7 +237,7 @@ async def apply_volunteer_update(
     if subject_in_set and body.oidc_subject is not None:
         await ensure_unique_fields(db, oidc_subject=body.oidc_subject, exclude_id=volunteer_id)
 
-    for field in ("name", "address", "active"):
+    for field in ("name", "address"):
         if field in body.model_fields_set:
             setattr(volunteer, field, getattr(body, field))
 
@@ -275,24 +275,67 @@ async def apply_volunteer_update(
     return to_volunteer_out(volunteer, periods_map.get(volunteer.id, []))
 
 
-async def delete_volunteer(db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None) -> dict:
-    """Remove the volunteer role from a person (soft archive).
+async def deactivate_volunteer(
+    db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None
+) -> dict:
+    """End a person's volunteering (they step back); everything stays on file.
 
-    The underlying ``Person`` record is kept intact so that reservations,
-    membership data, and audit history are preserved. Only the ``volunteer``
-    role and associated help periods are removed.
+    Whether someone is still part of the volunteer pool is whether the ``volunteer`` role is
+    retired, not their help periods: a period only covers the days around one festival, so most
+    volunteers have no current period between editions, and skipping one edition does not end
+    anything. Ending volunteering therefore retires the role (``retired_roles["volunteer"]``
+    records the day; their other roles and the person-wide ``active`` flag are untouched) and
+    closes any help period that is still open (``last_help_day`` becomes today, or the period's
+    first day if it has not started yet). The ``volunteer`` role, the ``Person`` record, every help
+    period, registrations and audit history are kept: the periods are what an insurance claim
+    needs ("who was covered on which day"). Volunteering resumes with ``reactivate_volunteer`` and
+    a new help period. Calling it again changes nothing and writes no second audit entry.
     """
     volunteer_id = volunteer.id
-    await db.execute(delete(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id))
-    remove_volunteer_role(volunteer)
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="volunteer_role_removed",
-        resource_type="person",
-        resource_id=volunteer_id,
-        request_id=request_id,
-        details={},
+    closed_ids = (
+        (
+            await db.execute(
+                update(VolunteerPeriod)
+                .where(VolunteerPeriod.volunteer_id == volunteer_id, VolunteerPeriod.last_help_day.is_(None))
+                .values(last_help_day=func.greatest(VolunteerPeriod.first_help_day, dt_date.today()))
+                .returning(VolunteerPeriod.id)
+            )
+        )
+        .scalars()
+        .all()
     )
-    await db.commit()
-    return {"deleted": True, "id": volunteer_id}
+    newly_retired = retire_role(volunteer, "volunteer")
+    if newly_retired or closed_ids:
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="volunteer_deactivated",
+            resource_type="person",
+            resource_id=volunteer_id,
+            request_id=request_id,
+            details={"newly_retired": newly_retired, "closed_open_periods": len(closed_ids)},
+        )
+        await db.commit()
+    return {"ended": True, "id": volunteer_id}
+
+
+async def reactivate_volunteer(
+    db: AsyncSession, volunteer: Person, *, actor: str, request_id: str | None = None
+) -> dict:
+    """Undo ``deactivate_volunteer``: the person counts as an active volunteer again.
+
+    Help periods are not reopened; add a new period for the next stretch. A repeat is a no-op.
+    """
+    volunteer_id = volunteer.id
+    if reactivate_role(volunteer, "volunteer"):
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="volunteer_reactivated",
+            resource_type="person",
+            resource_id=volunteer_id,
+            request_id=request_id,
+            details={},
+        )
+        await db.commit()
+    return {"reactivated": True, "id": volunteer_id}

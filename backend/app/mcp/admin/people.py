@@ -33,9 +33,7 @@ async def create_person(
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
     visits_per_month: int | None = None,
-    club_name: str = "",
     notes: str = "",
-    active: bool = True,
 ) -> dict:
     body = validate_with_schema(
         PersonCreate,
@@ -47,9 +45,7 @@ async def create_person(
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
         visits_per_month=visits_per_month,
-        club_name=club_name,
         notes=notes,
-        active=active,
     )
     async with session_factory() as db:
         try:
@@ -77,9 +73,7 @@ async def update_person(
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
     visits_per_month: int | None = None,
-    club_name: str | None = None,
     notes: str | None = None,
-    active: bool | None = None,
 ) -> dict:
     provided = {
         k: v
@@ -92,9 +86,7 @@ async def update_person(
             "national_register_number": national_register_number,
             "eid_document_number": eid_document_number,
             "visits_per_month": visits_per_month,
-            "club_name": club_name,
             "notes": notes,
-            "active": active,
         }.items()
         if v is not None
     }

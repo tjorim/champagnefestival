@@ -6,12 +6,16 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator("#admin.admin-authenticated")).toBeVisible();
 });
 
+const TAB_LABEL = {
+  Members: "Members",
+  Volunteers: "Volunteers",
+  People: "All people",
+} as const;
+
 for (const screen of ["Members", "Volunteers", "People"] as const) {
   test(`${screen} uses server pages and preserves filters after editing`, async ({ page }) => {
-    const tab = page.getByRole("button", {
-      name: new RegExp(`^${screen === "People" ? "Directory" : screen}(?:\\s|$)`),
-    });
-    await tab.click();
+    await page.getByRole("button", { name: /^People(?:\s|\d|$)/ }).click();
+    await page.getByRole("tab", { name: new RegExp(`^${TAB_LABEL[screen]}\\s`) }).click();
     const table = page.getByRole("table");
     await expect(table).toBeVisible();
     const firstRow = table.getByRole("row").nth(1);

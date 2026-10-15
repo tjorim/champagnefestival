@@ -7,7 +7,9 @@ import * as m from "@/paraglide/messages";
 export function AdminCacheStatus() {
   const cache = adminCachePersistence(useQueryClient());
   const status = useSyncExternalStore(cache.subscribe, cache.getSnapshot);
-  if (!status.lastSynced) return null;
+  // Only worth a banner when saved rows stand in for fresh data; otherwise the last sync time is a
+  // quiet line beside the refresh button in the sidebar.
+  if (!status.lastSynced || !status.restored) return null;
   return (
     <Alert role="status" variant="info" className="text-sm">
       {status.restored ? m.admin_cache_restored() + " " : ""}

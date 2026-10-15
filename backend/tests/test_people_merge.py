@@ -11,7 +11,6 @@ VOLUNTEER = {
     "address": "Dorpsstraat 12",
     "national_register_number": "91010112345",
     "eid_document_number": "BEX123456",
-    "active": True,
     "help_periods": [
         {"first_help_day": "2024-03-15", "last_help_day": "2024-03-17"},
         {"first_help_day": "2025-10-10", "last_help_day": None},

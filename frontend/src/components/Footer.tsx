@@ -25,9 +25,13 @@ const Footer = () => {
               &copy; {currentYear} {m.festival_name()}. {m.footer_rights()}
             </p>
           </div>
-          <div className="site-md:w-6/12 text-center site-md:text-right">
+          <div className="site-md:w-6/12 flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1 site-md:justify-end">
             <Link to="/privacy" className="text-inverse no-underline footer-link">
               {m.footer_privacy()}
+            </Link>
+            {/* Staff entry point: a plain small footer link rather than a header button. */}
+            <Link to="/admin" className="text-inverse text-sm no-underline footer-link">
+              {m.admin_title()}
             </Link>
           </div>
         </div>

@@ -41,13 +41,15 @@ export function useAdminPeopleActions({
     mergePeopleMutation,
     createMemberMutation,
     updateMemberMutation,
-    deleteMemberMutation,
+    deactivateMemberMutation,
+    reactivateMemberMutation,
     createPersonMutation,
     updatePersonMutation,
     deletePersonMutation,
     createVolunteerMutation,
     updateVolunteerMutation,
-    deleteVolunteerMutation,
+    deactivateVolunteerMutation,
+    reactivateVolunteerMutation,
   } = usePeopleMutations({
     queryClient,
     authHeaders,
@@ -120,11 +122,18 @@ export function useAdminPeopleActions({
     ],
   );
 
-  const handleDeleteMember = useCallback(
+  const handleDeactivateMember = useCallback(
     async (id: string) => {
-      await deleteMemberMutation.mutateAsync(id);
+      await deactivateMemberMutation.mutateAsync(id);
     },
-    [deleteMemberMutation],
+    [deactivateMemberMutation],
+  );
+
+  const handleReactivateMember = useCallback(
+    async (id: string) => {
+      await reactivateMemberMutation.mutateAsync(id);
+    },
+    [reactivateMemberMutation],
   );
 
   const handleCreatePerson = useCallback(
@@ -183,20 +192,29 @@ export function useAdminPeopleActions({
     [updateVolunteerMutation],
   );
 
-  const handleDeleteVolunteer = useCallback(
+  const handleDeactivateVolunteer = useCallback(
     async (id: string) => {
-      await deleteVolunteerMutation.mutateAsync(id);
+      await deactivateVolunteerMutation.mutateAsync(id);
     },
-    [deleteVolunteerMutation],
+    [deactivateVolunteerMutation],
+  );
+
+  const handleReactivateVolunteer = useCallback(
+    async (id: string) => {
+      await reactivateVolunteerMutation.mutateAsync(id);
+    },
+    [reactivateVolunteerMutation],
   );
 
   return {
     handleCreateMember,
     handleCreatePerson,
     handleCreateVolunteer,
-    handleDeleteMember,
+    handleDeactivateMember,
     handleDeletePerson,
-    handleDeleteVolunteer,
+    handleDeactivateVolunteer,
+    handleReactivateMember,
+    handleReactivateVolunteer,
     handleMergePeople,
     handleUpdateMember,
     handleUpdatePerson,

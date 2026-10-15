@@ -31,8 +31,8 @@ vi.mock("@/utils/adminApi", async (original) => ({
   downloadFileOrThrow: download,
 }));
 const deleteFallback = {
-  members: "admin_members_error_delete",
-  volunteers: "admin_volunteers_error_delete",
+  members: "admin_members_error_deactivate",
+  volunteers: "admin_volunteers_error_deactivate",
   people: "admin_error_delete_person",
 } as const;
 const authHeaders = () => ({
@@ -45,9 +45,8 @@ const person = (index: number) => ({
   email: `p${index}@example.com`,
   phone: "0470000000",
   address: "Street",
-  club_name: "Club",
   notes: "Notes",
-  active: index % 2 === 0,
+  anonymised: index % 2 !== 0,
   roles: ["member", "volunteer"],
   registration_count: 42,
   national_register_number: "123456",
@@ -70,7 +69,7 @@ function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "")
       (row) =>
         (!url.searchParams.get("q") || row.name.includes(url.searchParams.get("q")!)) &&
         (!url.searchParams.has("active") ||
-          row.active === (url.searchParams.get("active") === "true")),
+          !row.anonymised === (url.searchParams.get("active") === "true")),
     );
     if (url.searchParams.get("sort_dir") === "desc") matching = matching.slice().reverse();
     const page = Number(url.searchParams.get("page") ?? 1);
@@ -94,9 +93,13 @@ function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "")
     kind === "people" ? (
       <PeopleManagement {...{ authHeaders, onCreate, onUpdate, onDelete, onMerge }} />
     ) : kind === "members" ? (
-      <MembersManagement {...{ authHeaders, onCreate, onUpdate, onDelete }} />
+      <MembersManagement
+        {...{ authHeaders, onCreate, onUpdate, onDeactivate: onDelete, onReactivate: onDelete }}
+      />
     ) : (
-      <VolunteersManagement {...{ authHeaders, onCreate, onUpdate, onDelete }} />
+      <VolunteersManagement
+        {...{ authHeaders, onCreate, onUpdate, onDeactivate: onDelete, onReactivate: onDelete }}
+      />
     );
   const root = createRootRoute({ component, validateSearch: (search) => search });
   const router = createRouter({
@@ -134,7 +137,9 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
     const h = mount(kind);
     await screen.findByRole("row", { name: "Person 00" });
     fireEvent.click(
-      within(row("Person 00")).getByRole("button", { name: `admin_${kind}_edit_title` }),
+      within(row("Person 00")).getByRole("button", {
+        name: new RegExp(`^admin_${kind}_edit_title`),
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     const name = within(dialog).getByLabelText(/registration_name/);
@@ -155,12 +160,14 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
     );
     await screen.findByRole("row", { name: "Person 00" });
     fireEvent.click(
-      within(row("Person 00")).getByRole("button", { name: `admin_${kind}_delete_title` }),
+      within(row("Person 00")).getByRole("button", {
+        name: kind === "people" ? "admin_people_delete_title" : `admin_${kind}_deactivate_title`,
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     fireEvent.click(
       within(dialog).getByRole("button", {
-        name: kind === "members" ? "admin_members_delete_title" : "admin_action_confirm",
+        name: kind === "members" ? "admin_members_deactivate_title" : "admin_action_confirm",
       }),
     );
     // An unknown code shows the translated operation fallback, never the English detail.
@@ -174,14 +181,20 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
     await screen.findByRole("row", { name: "Person 00" });
     fireEvent.click(screen.getAllByRole("button", { name: /registration_name/ })[0]!);
     await waitFor(() => expect(h.requests.at(-1)?.searchParams.get("sort")).toBe("name"));
-    fireEvent.click(screen.getByRole("combobox", { name: "admin_people_active_label" }));
-    const inactive = await screen.findByRole("option", { name: /admin_members_filter_inactive/ });
-    fireEvent.pointerDown(inactive, { pointerType: "mouse" });
-    fireEvent.click(inactive);
-    await screen.findByRole("row", { name: "Person 01" });
-    await waitFor(() =>
-      expect(screen.queryByRole("row", { name: "Person 00" })).not.toBeInTheDocument(),
-    );
+    const activeFilter = { name: "admin_people_active_label" };
+    if (kind === "people") {
+      // Active only means something within a role, so the all-people list has no such filter.
+      expect(screen.queryByRole("combobox", activeFilter)).not.toBeInTheDocument();
+    } else {
+      fireEvent.click(screen.getByRole("combobox", activeFilter));
+      const inactive = await screen.findByRole("option", { name: /admin_members_filter_inactive/ });
+      fireEvent.pointerDown(inactive, { pointerType: "mouse" });
+      fireEvent.click(inactive);
+      await screen.findByRole("row", { name: "Person 01" });
+      await waitFor(() =>
+        expect(screen.queryByRole("row", { name: "Person 00" })).not.toBeInTheDocument(),
+      );
+    }
     fireEvent.change(screen.getByRole("textbox", { name: "admin_search_person_placeholder" }), {
       target: { value: "Person 01" },
     });
@@ -196,7 +209,7 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
       kind === "volunteers" ? "/api/volunteers/export" : "/api/people/export",
     );
     expect(url.searchParams.get("q")).toBe("Person 01");
-    expect(url.searchParams.get("active")).toBe("false");
+    expect(url.searchParams.get("active")).toBe(kind === "people" ? null : "false");
     expect(url.searchParams.has("page")).toBe(false);
     if (kind === "volunteers") expect(url.searchParams.get("include_inactive")).toBe("true");
   });

@@ -287,6 +287,11 @@ html[data-visual-theme="remuage"] .standalone-document-main {
   background: var(--rem-rack);
 }
 
+/* The signed-in admin sidebar layout sits flush under the navbar instead of the 6rem page inset. */
+html[data-visual-theme="remuage"] .standalone-main:has(> #admin.admin-authenticated) {
+  padding-top: var(--header-height) !important;
+}
+
 html[data-visual-theme="remuage"] .standalone-app h1,
 html[data-visual-theme="remuage"] .standalone-app h2,
 html[data-visual-theme="remuage"] .standalone-app h3 {

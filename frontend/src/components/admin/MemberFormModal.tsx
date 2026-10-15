@@ -6,7 +6,6 @@ import {
   AdminSelect,
   AdminOption,
   AdminTextarea,
-  AdminCheck,
 } from "@/components/admin/AdminFields";
 import { CircleCheckIcon, ContactRoundIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,7 @@ import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import { devError } from "@/utils/devLog";
 import { EMAIL_REGEX } from "@/config/constants";
-import type { Person } from "@/types/person";
+import { roleSince, type Person } from "@/types/person";
 
 interface MemberFormModalProps {
   show: boolean;
@@ -43,9 +42,9 @@ export interface MemberFormData {
   phone: string;
   preferredLanguage?: "nl" | "fr" | "en" | null;
   address: string;
-  clubName: string;
   notes: string;
-  active: boolean;
+  /** ISO day membership started; empty when unknown. */
+  memberSince: string;
 }
 
 export default function MemberFormModal({ show, member, onSave, onHide }: MemberFormModalProps) {
@@ -64,9 +63,8 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             phone: member.phone ?? "",
             preferredLanguage: member.preferredLanguage ?? null,
             address: member.address ?? "",
-            clubName: member.clubName ?? "",
             notes: member.notes ?? "",
-            active: member.active,
+            memberSince: roleSince(member, "member") ?? "",
           }
         : {
             name: "",
@@ -74,9 +72,8 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             phone: "",
             preferredLanguage: null,
             address: "",
-            clubName: "",
             notes: "",
-            active: true,
+            memberSince: "",
           },
     [member],
   );
@@ -92,9 +89,8 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           phone: value.phone.trim(),
           preferredLanguage: value.preferredLanguage,
           address: value.address.trim(),
-          clubName: value.clubName.trim(),
           notes: value.notes.trim(),
-          active: value.active,
+          memberSince: value.memberSince,
         });
         onHide();
       } catch (err) {
@@ -259,16 +255,15 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 </AdminField>
               )}
             </form.Field>
-            <AdminField className="mb-4" controlId="member-club">
-              <AdminLabel className="text-sm font-semibold text-highlight">
-                {m.admin_people_club_name_label()}
+            <AdminField className="mb-4" controlId="member-since">
+              <AdminLabel className="text-subtle text-sm">
+                {m.admin_members_since_label()}
               </AdminLabel>
-              <form.Field name="clubName">
+              <form.Field name="memberSince">
                 {(field) => (
                   <AdminInput
-                    type="text"
-                    className="bg-muted text-content border-input border-warning"
-                    maxLength={200}
+                    type="date"
+                    className="bg-muted text-content border-input"
                     value={field.value}
                     onChange={(e) => field.handleChange(e.target.value)}
                     onBlur={field.handleBlur}
@@ -310,19 +305,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 )}
               </form.Field>
             </AdminField>
-
-            <form.Field name="active">
-              {(field) => (
-                <AdminCheck
-                  type="switch"
-                  id="member-active"
-                  className="text-subtle"
-                  label={m.admin_people_active_label()}
-                  checked={field.value}
-                  onCheckedChange={(e) => field.handleChange(e)}
-                />
-              )}
-            </form.Field>
           </DialogBody>
 
           <DialogFooter>

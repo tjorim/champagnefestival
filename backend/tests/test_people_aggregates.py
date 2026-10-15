@@ -14,7 +14,7 @@ async def test_counts_and_exact_email_lookup(client, db_session):
     db_session.add_all(
         [
             Person(id="a", name="Alpha", email="Same@x.io", roles=["member", "volunteer"], notes="needle"),
-            Person(id="b", name="Beta", email="same@x.io", roles=["MEMBER", "member"], active=False, notes="needle"),
+            Person(id="b", name="Beta", email="same@x.io", roles=["MEMBER", "member"], anonymised=True, notes="needle"),
             Person(id="c", name="Gamma", email="other@x.io", roles=[], notes="unrelated"),
         ]
     )
@@ -43,7 +43,7 @@ async def test_people_export_full_filtered_set_across_batches(client, db_session
     from app.services import people_exports
 
     monkeypatch.setattr(people_exports, "EXPORT_BATCH_SIZE", 2)
-    db_session.add_all([Person(id=str(i), name="=1+1", roles=["member"], active=i != 4) for i in range(5)])
+    db_session.add_all([Person(id=str(i), name="=1+1", roles=["member"], anonymised=i == 4) for i in range(5)])
     await db_session.commit()
     response = await client.get(
         "/api/people/export",
@@ -115,10 +115,10 @@ async def test_volunteer_export_filters_across_batches(client, db_session, monke
     monkeypatch.setattr(people_exports, "EXPORT_BATCH_SIZE", 1)
     db_session.add_all(
         [
-            Person(id="v1", name="Match One", roles=["volunteer"], active=True),
-            Person(id="v2", name="Match Two", roles=["volunteer"], active=False),
-            Person(id="v3", name="Other", roles=["volunteer"], active=True),
-            Person(id="m", name="Match Member", roles=["member"], active=True),
+            Person(id="v1", name="Match One", roles=["volunteer"]),
+            Person(id="v2", name="Match Two", roles=["volunteer"], anonymised=True),
+            Person(id="v3", name="Other", roles=["volunteer"]),
+            Person(id="m", name="Match Member", roles=["member"]),
         ]
     )
     await db_session.commit()

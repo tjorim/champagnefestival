@@ -233,6 +233,12 @@
     --surface-muted-foreground: #c5c5c5;
     --surface-border: rgb(255 255 255 / 0.1);
     --surface-destructive: #e05a5a;
+    /* Runtime themes retint these layout tokens for their own (often light) page. The admin
+       scope is always dark, so it keeps dark-surface values whatever the active theme says. */
+    --surface-success-text: #4caf82;
+    --layout-content: #f0f0f0;
+    --layout-subtle: #c5c5c5;
+    --layout-highlight: var(--base-warning);
   }
 }
 
@@ -277,6 +283,7 @@
   --color-warning-foreground: var(--surface-warning-foreground, var(--base-dark));
   --color-progress-track: var(--base-secondary);
   --color-success: var(--base-success);
+  --color-success-text: var(--surface-success-text, var(--base-success));
   --color-destructive: var(--surface-destructive);
   --animate-spinner-slow: spin 1.5s linear infinite;
 }
@@ -284,6 +291,12 @@
 @custom-variant riviera (&:where(html[data-visual-theme="riviera"] *));
 
 @layer components {
+  /* The fixed standalone navbar fills the body inset (--header-height), so no strip of page
+     background shows between it and the content below. Themes may override this. */
+  .standalone-navbar {
+    min-height: var(--header-height, 4rem);
+  }
+
   /* Runtime themes retint the language control through theme variables, which
      remain the source of truth. */
   .site-lang-toggle {

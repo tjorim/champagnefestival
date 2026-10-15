@@ -5,6 +5,7 @@ import type { PersonFormData } from "@/components/admin/PersonFormModal";
 import type { VolunteerFormData } from "@/components/admin/VolunteerFormModal";
 import { m } from "@/paraglide/messages";
 import { captureAdminPeopleFence } from "@/state/adminPeopleSession";
+import { localIsoDate, type Person } from "@/types/person";
 import { peopleWrites, type PeopleWrite } from "@/utils/optimisticPeoplePages";
 import { queryKeys } from "@/utils/queryKeys";
 import {
@@ -17,6 +18,24 @@ interface UsePeopleMutationsOptions {
   queryClient: QueryClient;
   authHeaders: () => Record<string, string>;
   registrationsQueryKey: QueryKey;
+}
+
+/** Mirrors the server: retiring a role records today's date and leaves the role in place. */
+function retireRole(person: Person, role: string): Person {
+  return Object.hasOwn(person.retiredRoles, role)
+    ? person
+    : { ...person, retiredRoles: { ...person.retiredRoles, [role]: localIsoDate() } };
+}
+
+function reactivateRole(person: Person, role: string): Person {
+  const { [role]: _removed, ...retiredRoles } = person.retiredRoles;
+  return { ...person, retiredRoles };
+}
+
+/** Mirrors the server: an open period ends today, but never before its first day. */
+function closedOn(firstHelpDay: string): string {
+  const today = localIsoDate();
+  return today > firstHelpDay ? today : firstHelpDay;
 }
 
 export function usePeopleMutations({
@@ -106,9 +125,8 @@ export function usePeopleMutations({
             phone: data.phone,
             preferred_language: data.preferredLanguage,
             address: data.address,
-            club_name: data.clubName,
+            member_since: data.memberSince || undefined,
             notes: data.notes,
-            active: data.active,
           }),
         },
         m.admin_members_error_create(),
@@ -131,34 +149,55 @@ export function usePeopleMutations({
               phone: data.phone,
               preferred_language: data.preferredLanguage,
               address: data.address,
-              club_name: data.clubName,
+              member_since: data.memberSince || undefined,
               notes: data.notes,
-              active: data.active,
             }),
           },
           m.admin_members_error_update(),
         ),
       ),
     ...optimistic(
-      ({ id, data }: { id: string; data: MemberFormData }) => ({
-        id,
-        update: (person) => ({ ...person, ...data }),
-      }),
+      ({ id, data }: { id: string; data: MemberFormData }) => {
+        // `memberSince` lives in the role history, which the server returns on settlement.
+        const { memberSince: _memberSince, ...fields } = data;
+        return { id, update: (person) => ({ ...person, ...fields }) };
+      },
       [registrationsQueryKey],
     ),
     retry: false,
   });
 
-  const deleteMemberMutation = useMutation({
+  const deactivateMemberMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
-          `/api/members/${id}`,
-          { method: "DELETE", headers: authHeaders() },
-          m.admin_members_error_delete(),
+          `/api/members/${id}/deactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_members_error_deactivate(),
         ),
       ),
-    ...optimistic((id: string) => ({ id, update: () => null })),
+    // Ending a membership retires the member role; the role, the person and their registrations
+    // stay on file, like deactivateVolunteerMutation.
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => retireRole(person, "member"),
+    })),
+    retry: false,
+  });
+
+  const reactivateMemberMutation = useMutation({
+    mutationFn: (id: string) =>
+      writes.persist(id, takeFence(id), () =>
+        fetchVoidOrThrowWithUnauthorized(
+          `/api/members/${id}/reactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_members_error_reactivate(),
+        ),
+      ),
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => reactivateRole(person, "member"),
+    })),
     retry: false,
   });
 
@@ -177,8 +216,6 @@ export function usePeopleMutations({
             address: data.address,
             roles: data.roles,
             notes: data.notes,
-            club_name: data.clubName,
-            active: data.active,
           }),
         },
         m.admin_people_error_create(),
@@ -203,8 +240,6 @@ export function usePeopleMutations({
               address: data.address,
               roles: data.roles,
               notes: data.notes,
-              club_name: data.clubName,
-              active: data.active,
             }),
           },
           m.admin_people_error_update(),
@@ -245,7 +280,6 @@ export function usePeopleMutations({
             address: data.address,
             national_register_number: data.nationalRegisterNumber,
             eid_document_number: data.eidDocumentNumber,
-            active: data.active,
             help_periods: data.helpPeriods.map((period) => ({
               first_help_day: period.firstHelpDay,
               last_help_day: period.lastHelpDay,
@@ -272,7 +306,6 @@ export function usePeopleMutations({
               address: data.address,
               national_register_number: data.nationalRegisterNumber,
               eid_document_number: data.eidDocumentNumber,
-              active: data.active,
               help_periods: data.helpPeriods.map((period) => ({
                 first_help_day: period.firstHelpDay,
                 last_help_day: period.lastHelpDay,
@@ -300,22 +333,43 @@ export function usePeopleMutations({
     retry: false,
   });
 
-  const deleteVolunteerMutation = useMutation({
+  const deactivateVolunteerMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
-          `/api/volunteers/${id}`,
-          { method: "DELETE", headers: authHeaders() },
-          m.admin_volunteers_error_delete(),
+          `/api/volunteers/${id}/deactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_volunteers_error_deactivate(),
         ),
       ),
     ...optimistic((id: string) => ({
       id,
       update: (person) => ({
-        ...person,
-        roles: person.roles.filter((role) => role !== "volunteer"),
-        helpPeriods: [],
+        // The role and every help period stay on file; the server retires the role and only
+        // closes open periods (today, or on their first day when not started yet).
+        ...retireRole(person, "volunteer"),
+        helpPeriods: person.helpPeriods.map((period) =>
+          period.lastHelpDay === null
+            ? { ...period, lastHelpDay: closedOn(period.firstHelpDay) }
+            : period,
+        ),
       }),
+    })),
+    retry: false,
+  });
+
+  const reactivateVolunteerMutation = useMutation({
+    mutationFn: (id: string) =>
+      writes.persist(id, takeFence(id), () =>
+        fetchVoidOrThrowWithUnauthorized(
+          `/api/volunteers/${id}/reactivate`,
+          { method: "POST", headers: authHeaders() },
+          m.admin_volunteers_error_reactivate(),
+        ),
+      ),
+    ...optimistic((id: string) => ({
+      id,
+      update: (person) => reactivateRole(person, "volunteer"),
     })),
     retry: false,
   });
@@ -324,12 +378,14 @@ export function usePeopleMutations({
     mergePeopleMutation,
     createMemberMutation,
     updateMemberMutation,
-    deleteMemberMutation,
+    deactivateMemberMutation,
+    reactivateMemberMutation,
     createPersonMutation,
     updatePersonMutation,
     deletePersonMutation,
     createVolunteerMutation,
     updateVolunteerMutation,
-    deleteVolunteerMutation,
+    deactivateVolunteerMutation,
+    reactivateVolunteerMutation,
   };
 }

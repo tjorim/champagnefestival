@@ -1,8 +1,8 @@
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, TrashIcon } from "lucide-react";
+import { PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-import { useState, useMemo } from "react";
+import { useCallback, useState, useMemo } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
@@ -17,7 +17,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import type { Person } from "@/types/person";
+import { isRoleActive, lastHelpedDay, roleSince, type Person } from "@/types/person";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
 
@@ -25,7 +25,8 @@ interface VolunteersManagementProps {
   authHeaders: () => Record<string, string>;
   onCreate: (data: VolunteerFormData) => Promise<void>;
   onUpdate: (id: string, data: VolunteerFormData) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onDeactivate: (id: string) => Promise<void>;
+  onReactivate: (id: string) => Promise<void>;
 }
 
 const columnHelper = createAppColumnHelper<Person>();
@@ -40,28 +41,43 @@ export default function VolunteersManagement({
   authHeaders,
   onCreate,
   onUpdate,
-  onDelete,
+  onDeactivate,
+  onReactivate,
 }: VolunteersManagementProps) {
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
-  const [deleteSuccess, setDeleteSuccess] = useState(false);
+  const [deactivateSuccess, setDeactivateSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingVolunteer, setEditingVolunteer] = useState<Person | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState("");
-  const handleDeleteConfirm = async () => {
-    if (!deletingId) return;
-    setDeleting(true);
-    setDeleteError("");
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [deactivateError, setDeactivateError] = useState("");
+  const [reactivateSuccess, setReactivateSuccess] = useState(false);
+  const [reactivateError, setReactivateError] = useState("");
+  const handleReactivate = useCallback(
+    async (id: string) => {
+      setReactivateError("");
+      try {
+        await onReactivate(id);
+        setReactivateSuccess(true);
+      } catch (err) {
+        setReactivateError(apiErrorMessage(err, m.admin_volunteers_error_reactivate()));
+      }
+    },
+    [onReactivate],
+  );
+  const handleDeactivateConfirm = async () => {
+    if (!deactivatingId) return;
+    setDeactivating(true);
+    setDeactivateError("");
     try {
-      await onDelete(deletingId);
-      setDeleteSuccess(true);
-      setDeletingId(null);
+      await onDeactivate(deactivatingId);
+      setDeactivateSuccess(true);
+      setDeactivatingId(null);
     } catch (err) {
-      setDeleteError(apiErrorMessage(err, m.admin_volunteers_error_delete()));
+      setDeactivateError(apiErrorMessage(err, m.admin_volunteers_error_deactivate()));
     } finally {
-      setDeleting(false);
+      setDeactivating(false);
     }
   };
 
@@ -83,7 +99,7 @@ export default function VolunteersManagement({
           header: m.registration_name(),
           cell: ({ row }) => {
             const volunteer = row.original;
-            return <PersonName person={volunteer} />;
+            return <PersonName person={volunteer} role="volunteer" />;
           },
         }),
         columnHelper.accessor("address", {
@@ -100,6 +116,29 @@ export default function VolunteersManagement({
           header: m.admin_people_eid_document_number_label(),
           enableSorting: false,
           cell: ({ getValue }) => <span className="text-sm">{String(getValue() ?? "")}</span>,
+        }),
+        columnHelper.display({
+          id: "volunteerSince",
+          header: m.admin_volunteers_since_label(),
+          enableSorting: false,
+          cell: ({ row }) => (
+            <span className="text-sm text-subtle">
+              {roleSince(row.original, "volunteer") ?? "—"}
+            </span>
+          ),
+        }),
+        columnHelper.display({
+          id: "lastHelped",
+          header: m.admin_volunteers_last_helped_label(),
+          enableSorting: false,
+          cell: ({ row }) => {
+            const last = lastHelpedDay(row.original.helpPeriods);
+            return (
+              <span className="text-sm text-subtle">
+                {last === "ongoing" ? m.admin_volunteers_last_helped_ongoing() : (last ?? "—")}
+              </span>
+            );
+          },
         }),
         columnHelper.display({
           id: "helpPeriods",
@@ -138,28 +177,40 @@ export default function VolunteersManagement({
                     setShowForm(true);
                   }}
                   title={m.admin_volunteers_edit_title()}
-                  aria-label={m.admin_volunteers_edit_title()}
+                  aria-label={`${m.admin_volunteers_edit_title()}: ${volunteer.name}`}
                 >
                   <Icon icon={PencilIcon} />
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline-danger"
-                  onClick={() => {
-                    setDeletingId(volunteer.id);
-                    setDeleteError("");
-                  }}
-                  title={m.admin_volunteers_delete_title()}
-                  aria-label={m.admin_volunteers_delete_title()}
-                >
-                  <Icon icon={TrashIcon} />
-                </Button>
+                {isRoleActive(volunteer, "volunteer") ? (
+                  <Button
+                    size="sm"
+                    variant="outline-danger"
+                    onClick={() => {
+                      setDeactivatingId(volunteer.id);
+                      setDeactivateError("");
+                    }}
+                    title={m.admin_volunteers_deactivate_title()}
+                    aria-label={m.admin_volunteers_deactivate_title()}
+                  >
+                    <Icon icon={TrashIcon} />
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => void handleReactivate(volunteer.id)}
+                    title={m.admin_volunteers_reactivate_title()}
+                    aria-label={`${m.admin_volunteers_reactivate_title()}: ${volunteer.name}`}
+                  >
+                    <Icon icon={RotateCcwIcon} />
+                  </Button>
+                )}
               </div>
             );
           },
         }),
       ]),
-    [setEditingVolunteer, setShowForm, setDeletingId, setDeleteError],
+    [setEditingVolunteer, setShowForm, setDeactivatingId, setDeactivateError, handleReactivate],
   );
 
   return (
@@ -178,9 +229,27 @@ export default function VolunteersManagement({
               {m.admin_volunteers_update_success()}
             </Alert>
           )}
-          {deleteSuccess && (
-            <Alert variant="success" className="m-4 mb-0" onClose={() => setDeleteSuccess(false)}>
-              {m.admin_volunteers_delete_success()}
+          {reactivateSuccess && (
+            <Alert
+              variant="success"
+              className="m-4 mb-0"
+              onClose={() => setReactivateSuccess(false)}
+            >
+              {m.admin_volunteers_reactivate_success()}
+            </Alert>
+          )}
+          {reactivateError && (
+            <Alert variant="danger" className="m-4 mb-0" onClose={() => setReactivateError("")}>
+              {reactivateError}
+            </Alert>
+          )}
+          {deactivateSuccess && (
+            <Alert
+              variant="success"
+              className="m-4 mb-0"
+              onClose={() => setDeactivateSuccess(false)}
+            >
+              {m.admin_volunteers_deactivate_success()}
             </Alert>
           )}
 
@@ -207,30 +276,35 @@ export default function VolunteersManagement({
         </CardContent>
       </Card>
 
-      {deletingId && (
+      {deactivatingId && (
         <Dialog
           open={true}
           onOpenChange={(open) => {
-            if (!open) setDeletingId(null);
+            if (!open) setDeactivatingId(null);
           }}
         >
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle className="text-destructive">
                 <Icon icon={TrashIcon} className="me-2" />
-                {m.admin_volunteers_delete_title()}
+                {m.admin_volunteers_deactivate_title()}
               </DialogTitle>
             </DialogHeader>
             <DialogBody>
-              {deleteError && <Alert variant="danger">{deleteError}</Alert>}
-              <p>{m.admin_volunteers_delete_confirm()}</p>
+              {deactivateError && <Alert variant="danger">{deactivateError}</Alert>}
+              <p>{m.admin_volunteers_deactivate_confirm()}</p>
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => setDeletingId(null)}>
+              <Button variant="outline" size="sm" onClick={() => setDeactivatingId(null)}>
                 {m.admin_action_cancel()}
               </Button>
-              <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
-                {deleting ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDeactivateConfirm}
+                disabled={deactivating}
+              >
+                {deactivating ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
                 {m.admin_action_confirm()}
               </Button>
             </DialogFooter>

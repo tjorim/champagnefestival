@@ -55,7 +55,7 @@ vi.mock("@/paraglide/messages", () => ({
     my_registrations_email_label: () => "Email",
     my_registrations_email_placeholder: () => "email@example.com",
     my_registrations_request_link: () => "Email me a secure link",
-    my_registrations_sign_in_instead: () => "Already a member or volunteer? Sign in instead.",
+    my_registrations_sign_in_instead: () => "Already have an account? Sign in instead.",
     my_registrations_requesting: () => "Preparing secure link...",
     my_registrations_request_success: () =>
       "If we found registrations for that email, we prepared a secure link.",
@@ -559,11 +559,24 @@ describe("MyRegistrationsPage", () => {
     await renderPage();
 
     const signInLink = await screen.findByRole("button", {
-      name: "Already a member or volunteer? Sign in instead.",
+      name: "Already have an account? Sign in instead.",
     });
     fireEvent.click(signInLink);
 
     expect(authState.login).toHaveBeenCalledWith("/me");
+  });
+
+  it("passes a typed email address to the account sign-in as a login hint", async () => {
+    await renderPage();
+
+    fireEvent.change(await screen.findByLabelText("Email"), {
+      target: { value: "  anne@example.com " },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Already have an account? Sign in instead." }),
+    );
+
+    expect(authState.login).toHaveBeenCalledWith("/me", { loginHint: "anne@example.com" });
   });
 
   it("shows the email form directly when there is no existing session", async () => {

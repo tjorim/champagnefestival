@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
 
+// Admin dialogs follow the admin scope: dark everywhere, except Cuvée and Remuage, whose admin is
+// a light ledger (their --surface-muted).
+const DIALOG_INPUT_BACKGROUND: Record<string, string> = {
+  cuvee: "rgb(248, 243, 228)",
+  remuage: "rgb(251, 252, 254)",
+};
+
 for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "millesime"]) {
   for (const colorScheme of ["light", "dark"] as const) {
     for (const width of [1440, 390]) {
@@ -19,8 +26,9 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         await page.goto("/admin");
         await expect(page.locator("#admin.admin-authenticated")).toBeVisible();
         if (width < 992) await page.getByRole("button", { name: "Toggle navigation" }).click();
-        await page.getByRole("button", { name: /^Members/ }).click();
-        await page.getByRole("button", { name: "Add member", exact: true }).click();
+        await page.getByRole("button", { name: /^People(?:\s|\d|$)/ }).click();
+        await page.getByRole("tab", { name: /^All people\s/ }).click();
+        await page.getByRole("button", { name: "Add person", exact: true }).click();
         const dialog = page.getByRole("dialog");
         await expect(dialog).toBeVisible();
         const name = dialog.getByRole("textbox", { name: /^Name/ });
@@ -35,16 +43,15 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         await option.click();
         await expect(language).toContainText("Français");
         await expect(language).toBeFocused();
-        const active = dialog.getByRole("switch", { name: "Active", exact: true });
-        await active.focus();
-        await active.press("Space");
-        await expect(active).not.toBeChecked();
         await expect(
           dialog.locator(
             ".form-control, .form-select, .form-check, .form-label, .invalid-feedback",
           ),
         ).toHaveCount(0);
-        await expect(name).toHaveCSS("background-color", "rgb(30, 30, 30)");
+        await expect(name).toHaveCSS(
+          "background-color",
+          DIALOG_INPUT_BACKGROUND[theme] ?? "rgb(30, 30, 30)",
+        );
         expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(true);
         expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
           width,
@@ -54,7 +61,7 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         await testInfo.attach("admin form", { path: adminPath, contentType: "image/png" });
         await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
         await expect(dialog).toHaveCount(0);
-        await expect(page.getByRole("button", { name: "Add member", exact: true })).toBeFocused();
+        await expect(page.getByRole("button", { name: "Add person", exact: true })).toBeFocused();
       });
     }
   }

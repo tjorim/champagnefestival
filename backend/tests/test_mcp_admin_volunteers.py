@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 from sqlalchemy import select
 
 from app.mcp.admin import volunteers as mcp_volunteers
-from app.models import Person, VolunteerPeriod
+from app.models import AuditEntry, Person, VolunteerPeriod
 from tests.helpers import mcp_session_factory
 
 HELP_PERIODS = [{"first_help_day": "2099-03-21", "last_help_day": "2099-03-22"}]
@@ -212,7 +214,7 @@ async def test_update_volunteer_eid_document_number_conflict(db_session):
         await mcp_volunteers.update_volunteer(factory, "admin-1", bob["id"], eid_document_number="BEI998877")
 
 
-async def test_delete_volunteer_removes_role_and_periods_but_keeps_person(db_session):
+async def test_deactivate_volunteer_keeps_everything(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_volunteers.create_volunteer(
         factory,
@@ -224,25 +226,100 @@ async def test_delete_volunteer_removes_role_and_periods_but_keeps_person(db_ses
     )
     volunteer_id = created["id"]
 
-    result = await mcp_volunteers.delete_volunteer(factory, "admin-1", volunteer_id)
-    assert result == {"deleted": True, "id": volunteer_id}
+    result = await mcp_volunteers.deactivate_volunteer(factory, "admin-1", volunteer_id)
+    assert result == {"ended": True, "id": volunteer_id}
 
-    with pytest.raises(ValueError, match="not found"):
-        await mcp_volunteers.get_volunteer(factory, volunteer_id)
-
+    # Still a volunteer record, with the role retired (not removed), and the person intact ...
+    still = await mcp_volunteers.get_volunteer(factory, volunteer_id)
+    assert still["id"] == volunteer_id
+    assert still["anonymised"] is False
+    assert still["retired_roles"] == {"volunteer": date.today().isoformat()}
     person = await db_session.get(Person, volunteer_id)
     assert person is not None
-    assert "volunteer" not in person.roles
+    assert "volunteer" in person.roles
+    inactive = await mcp_volunteers.list_volunteers(factory, active=False)
+    assert [v["id"] for v in inactive["volunteers"]] == [volunteer_id]
 
+    # ... and the help periods are history (insurance) that survives stepping back.
     periods = (
         (await db_session.execute(select(VolunteerPeriod).where(VolunteerPeriod.volunteer_id == volunteer_id)))
         .scalars()
         .all()
     )
-    assert periods == []
+    assert [(p.first_help_day.isoformat(), p.last_help_day.isoformat()) for p in periods] == [
+        ("2099-03-21", "2099-03-22")
+    ]
+    entry = await db_session.scalar(select(AuditEntry).where(AuditEntry.action == "volunteer_deactivated"))
+    assert entry is not None and entry.resource_id == volunteer_id
+
+    # Ending again changes nothing and writes no second audit entry.
+    assert await mcp_volunteers.deactivate_volunteer(factory, "admin-1", volunteer_id) == result
+    entries = (await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "volunteer_deactivated"))).all()
+    assert len(entries) == 1
 
 
-async def test_delete_volunteer_not_found(db_session):
+async def test_deactivate_volunteer_closes_open_periods(db_session):
+    factory = mcp_session_factory(db_session)
+    created = await mcp_volunteers.create_volunteer(
+        factory,
+        "admin-1",
+        name="Alice",
+        national_register_number="85010199999",
+        eid_document_number="BEI998877",
+        help_periods=[
+            {"first_help_day": "2020-03-21", "last_help_day": None},
+            {"first_help_day": "2099-03-21", "last_help_day": None},
+        ],
+    )
+    volunteer_id = created["id"]
+
+    await mcp_volunteers.deactivate_volunteer(factory, "admin-1", volunteer_id)
+
+    periods = (
+        (
+            await db_session.execute(
+                select(VolunteerPeriod)
+                .where(VolunteerPeriod.volunteer_id == volunteer_id)
+                .order_by(VolunteerPeriod.first_help_day)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    assert len(periods) == 2
+    # An open period ends today; one that had not started closes on its first day.
+    assert periods[0].last_help_day == date.today()
+    assert periods[1].last_help_day == periods[1].first_help_day
+
+
+async def test_deactivate_volunteer_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_volunteers.delete_volunteer(factory, "admin-1", "nonexistent")
+        await mcp_volunteers.deactivate_volunteer(factory, "admin-1", "nonexistent")
+
+
+async def test_reactivate_volunteer_restores_the_role_without_reopening_periods(db_session):
+    factory = mcp_session_factory(db_session)
+    created = await mcp_volunteers.create_volunteer(
+        factory,
+        "admin-1",
+        name="Alice",
+        national_register_number="85010199999",
+        eid_document_number="BEI998877",
+        help_periods=[{"first_help_day": "2020-03-21", "last_help_day": None}],
+    )
+    volunteer_id = created["id"]
+    await mcp_volunteers.deactivate_volunteer(factory, "admin-1", volunteer_id)
+    assert (await mcp_volunteers.list_volunteers(factory, active=True))["volunteers"] == []
+
+    result = await mcp_volunteers.reactivate_volunteer(factory, "admin-1", volunteer_id)
+    assert result == {"reactivated": True, "id": volunteer_id}
+    listed = (await mcp_volunteers.list_volunteers(factory, active=True))["volunteers"]
+    assert [v["id"] for v in listed] == [volunteer_id]
+    # The period that was closed on deactivation stays closed.
+    assert listed[0]["help_periods"][0]["last_help_day"] == date.today()
+    assert listed[0]["retired_roles"] == {}
+
+    assert await mcp_volunteers.reactivate_volunteer(factory, "admin-1", volunteer_id) == result
+    entries = (await db_session.scalars(select(AuditEntry).where(AuditEntry.action == "volunteer_reactivated"))).all()
+    assert len(entries) == 1

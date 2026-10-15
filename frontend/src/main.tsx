@@ -123,15 +123,16 @@ function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) 
   return (
     <nav className="standalone-navbar flex flex-wrap items-center justify-between fixed inset-x-0 top-0 z-header px-4 py-2">
       <div className="site-fluid-container mx-auto w-full px-3 flex justify-between items-center gap-2">
-        <span className="standalone-navbar-brand me-4 whitespace-nowrap text-xl font-bold mb-0">
-          <Icon icon={icon} className="me-2" />
-          {title}
+        <span className="standalone-navbar-brand me-2 flex min-w-0 flex-1 items-center text-xl font-bold mb-0">
+          <Icon icon={icon} className="me-2 shrink-0" />
+          <span className="min-w-0 shrink truncate">{title}</span>
         </span>
-        <div className="standalone-navbar-actions flex gap-2 items-center">
+        <div className="standalone-navbar-actions flex shrink-0 gap-2 items-center">
           <LanguageSwitcher />
           <ButtonLink render={<Link to="/" />} variant="outline" size="sm">
             <Icon icon={ArrowLeftIcon} />
-            {m.back_to_site()}
+            {/* Icon-only on phones so the title keeps its room; the text stays the accessible name. */}
+            <span className="sr-only site-sm:not-sr-only">{m.back_to_site()}</span>
           </ButtonLink>
         </div>
       </div>
