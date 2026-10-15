@@ -1456,5 +1456,7 @@
   "signage_editor_upload": "Afbeelding uploaden",
   "signage_editor_properties": "Laageigenschappen",
   "signage_editor_locked": "Vergrendeld",
-  "signage_editor_visible": "Zichtbaar"
+  "signage_editor_visible": "Zichtbaar",
+  "signage_editor_x": "X (%)",
+  "signage_editor_y": "Y (%)"
 }

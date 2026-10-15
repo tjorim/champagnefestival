@@ -1456,5 +1456,7 @@
   "signage_editor_upload": "Upload image",
   "signage_editor_properties": "Layer properties",
   "signage_editor_locked": "Locked",
-  "signage_editor_visible": "Visible"
+  "signage_editor_visible": "Visible",
+  "signage_editor_x": "X (%)",
+  "signage_editor_y": "Y (%)"
 }
