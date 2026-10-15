@@ -56,7 +56,15 @@ async def setup(client, db_session):
         },
     )
     assert channel.status_code == 201, channel.text
-    template = await client.post("/api/signage/templates", json={"name": "Default"})
+    template = await client.post(
+        "/api/signage/templates",
+        json={
+            "name": "Default",
+            "layers": [
+                {"id": key, "kind": "binding", "binding": key} for key in ("logo", "name", "sponsor", "title", "text")
+            ],
+        },
+    )
     assert template.status_code == 201, template.text
     return channel.json(), template.json(), organizations
 
@@ -231,3 +239,25 @@ async def test_assets_and_admin_auth(client, db_session, monkeypatch, tmp_path):
     for resource in ("channels", "templates", "slides"):
         assert (await client.get(f"/api/signage/{resource}")).status_code == 401
         assert (await client.post(f"/api/signage/{resource}", json={})).status_code == 401
+
+
+async def test_required_bindings_checked_on_assignment_and_shared_edit(client, db_session):
+    channel, template, _ = await setup(client, db_session)
+    empty = (await client.post("/api/signage/templates", json={"name": "Draft"})).json()
+    result = await client.post(
+        "/api/signage/slides",
+        json={
+            "channel_id": channel["id"],
+            "template_id": empty["id"],
+            "kind": "organizations",
+        },
+    )
+    assert result.status_code == 422
+    assert result.json()["code"] == "signage_missing_placeholders"
+    await slide(client, channel, template, kind="organizations", content={})
+    body = {key: template[key] for key in ("name", "background", "layers")}
+    body["layers"][0]["visible"] = False
+    result = await client.put(f"/api/signage/templates/{template['id']}", json=body)
+    assert result.status_code == 422
+    assert result.json()["code"] == "signage_missing_placeholders"
+    assert (await client.get(f"/api/signage/templates/{template['id']}")).json()["layers"][0]["visible"]

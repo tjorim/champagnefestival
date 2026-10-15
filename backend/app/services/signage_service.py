@@ -13,7 +13,7 @@ from app.audit import write_audit_entry
 from app.models import Area, Edition, Event, Layout, Organization, SignageChannel, SignageSlide, SignageTemplate
 from app.services.edition_artwork import public_root
 from app.services.errors import ApiHTTPException
-from app.signage_schemas import Content, DisplayTemplate, Playlist, PublicSlide
+from app.signage_schemas import Content, DisplayTemplate, Playlist, PublicSlide, missing_bindings
 from app.utils import make_id
 
 MODELS = {"channels": SignageChannel, "templates": SignageTemplate, "slides": SignageSlide}
@@ -79,7 +79,13 @@ async def save(db: AsyncSession, resource: str, body: BaseModel, actor: str, req
         fail(404, "signage_edition_not_found", "Edition not found.")
     if resource == "slides":
         await get(db, "channels", data["channel_id"])
-        await get(db, "templates", data["template_id"])
+        template = await get(db, "templates", data["template_id"])
+        if missing_bindings(template.layers, data["kind"]):
+            fail(422, "signage_missing_placeholders", "Template is missing required visible placeholders.")
+    if resource == "templates" and item_id:
+        kinds = await db.scalars(select(SignageSlide.kind).where(SignageSlide.template_id == item_id))
+        if any(missing_bindings(data["layers"], kind) for kind in kinds):
+            fail(422, "signage_missing_placeholders", "Template is missing placeholders required by existing slides.")
     item = await get(db, resource, item_id) if item_id else MODELS[resource](id=make_id("sig"))
     previous_channel_id = item.channel_id if isinstance(item, SignageSlide) and item_id else None
     for key, value in data.items():

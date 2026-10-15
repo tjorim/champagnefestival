@@ -13,6 +13,7 @@ into another planning file.
 | Organisation self-service and review API | [manager login](decisions/1192-organization-manager-login.md), [proposals and review](organization-change-review.md) |
 | Frontend primitives, themes and accessibility | [Frontend UI guide](frontend-ui.md) |
 | Signage channels, templates and public playlists | [Signage API](signage-api.md) |
+| Signage template layers and editor | [Layer contract](signage-layer-contract.md) |
 | Floor-plan geometry | [Coordinate contract](floor-plan-coordinates.md) |
 | API process count and shared state | [Single-worker decision](decisions/932-multi-worker-state.md) |
 | Retention, anonymisation and consent | [Retention decision](decisions/934-data-retention-and-erasure.md) |
