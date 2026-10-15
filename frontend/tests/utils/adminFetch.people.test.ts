@@ -16,7 +16,6 @@ function personPayload(id: string, overrides: Record<string, unknown> = {}) {
     national_register_number: null,
     eid_document_number: null,
     visits_per_month: null,
-    club_name: "",
     notes: "",
     active: true,
     created_at: "2024-01-01T00:00:00Z",

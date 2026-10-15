@@ -52,17 +52,17 @@ async def test_get_member_not_found_for_non_member_person(db_session):
 
 async def test_update_member_partial(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_members.create_member(factory, "admin-1", name="Alice", club_name="Old Club")
+    created = await mcp_members.create_member(factory, "admin-1", name="Alice", notes="Old note")
 
-    updated = await mcp_members.update_member(factory, "admin-1", created["id"], club_name="New Club")
-    assert updated["club_name"] == "New Club"
+    updated = await mcp_members.update_member(factory, "admin-1", created["id"], notes="New note")
+    assert updated["notes"] == "New note"
     assert updated["name"] == "Alice"  # untouched fields survive a partial update
 
 
 async def test_update_member_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
-        await mcp_members.update_member(factory, "admin-1", "nonexistent", club_name="New Club")
+        await mcp_members.update_member(factory, "admin-1", "nonexistent", notes="New note")
 
 
 async def test_update_member_cannot_remove_member_role(db_session):
@@ -77,8 +77,9 @@ async def test_update_member_cannot_remove_member_role(db_session):
 
 async def test_list_members_filters_by_active(db_session):
     factory = mcp_session_factory(db_session)
-    active_member = await mcp_members.create_member(factory, "admin-1", name="Active Alice", active=True)
-    inactive_member = await mcp_members.create_member(factory, "admin-1", name="Inactive Ivan", active=False)
+    active_member = await mcp_members.create_member(factory, "admin-1", name="Active Alice")
+    inactive_member = await mcp_members.create_member(factory, "admin-1", name="Inactive Ivan")
+    await mcp_members.deactivate_member(factory, "admin-1", inactive_member["id"])
 
     active_only = await mcp_members.list_members(factory, active=True)
     ids = [m["id"] for m in active_only["members"]]

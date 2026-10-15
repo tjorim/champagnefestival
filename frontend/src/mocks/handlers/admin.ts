@@ -316,7 +316,6 @@ function filteredPeople(url: URL, role?: string) {
           "address",
           "national_register_number",
           "eid_document_number",
-          "club_name",
           "notes",
         ].some((field) =>
           String(person[field] ?? "")
@@ -730,7 +729,6 @@ export const adminHandlers = [
       national_register_number: null,
       eid_document_number: null,
       visits_per_month: null,
-      club_name: String(body.club_name ?? ""),
       notes: String(body.notes ?? ""),
       active: body.active !== false,
       created_at: now(),
@@ -807,7 +805,6 @@ export const adminHandlers = [
       national_register_number: null,
       eid_document_number: null,
       visits_per_month: typeof body.visits_per_month === "number" ? body.visits_per_month : null,
-      club_name: String(body.club_name ?? ""),
       notes: String(body.notes ?? ""),
       active: body.active !== false,
       role_history: {
@@ -910,7 +907,6 @@ export const adminHandlers = [
       national_register_number: null,
       eid_document_number: null,
       visits_per_month: null,
-      club_name: "",
       notes: String(body.notes ?? ""),
       active: body.active !== false,
       created_at: now(),

@@ -95,9 +95,7 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
         national_register_number=nrr,
         eid_document_number=eid,
         visits_per_month=body.visits_per_month,
-        club_name=body.club_name,
         notes=body.notes,
-        active=body.active,
     )
     sync_roles(person, normalise_roles(body.roles))
     ensure_member_role(person)
@@ -138,7 +136,7 @@ def search_members_stmt(*, q: str | None = None, active: bool | None = None) -> 
 async def apply_member_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
-    for field in ("name", "address", "preferred_language", "visits_per_month", "club_name", "notes", "active"):
+    for field in ("name", "address", "preferred_language", "visits_per_month", "notes"):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
 

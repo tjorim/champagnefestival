@@ -33,7 +33,6 @@ function makePerson(overrides: Partial<Person> = {}): Person {
     nationalRegisterNumber: null,
     eidDocumentNumber: null,
     visitsPerMonth: null,
-    clubName: "",
     notes: "",
     active: true,
     retiredRoles: {},

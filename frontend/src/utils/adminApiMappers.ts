@@ -340,7 +340,6 @@ export function mergeVolunteerPerson(existing: Person | undefined, volunteer: Pe
     email: existing?.email ?? volunteer.email,
     phone: existing?.phone ?? volunteer.phone,
     visitsPerMonth: existing?.visitsPerMonth ?? volunteer.visitsPerMonth,
-    clubName: existing?.clubName ?? volunteer.clubName,
     notes: existing?.notes ?? volunteer.notes,
     roles: [...roles],
     helpPeriods: volunteer.helpPeriods,

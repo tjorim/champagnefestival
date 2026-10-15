@@ -304,7 +304,7 @@ follows the same shape.
 
 | Parameter  | Meaning |
 | ---------- | ------- |
-| `q`        | Search text; whitespace-only is treated as omitted. The same case-insensitive substring search on both endpoints: name, e-mail, phone, address, NISS, eID document number, club, notes and roles, plus fuzzy name/e-mail matching. |
+| `q`        | Search text; whitespace-only is treated as omitted. The same case-insensitive substring search on both endpoints: name, e-mail, phone, address, NISS, eID document number, notes and roles, plus fuzzy name/e-mail matching. |
 | `page`     | 1-based page number (default `1`). May be used without `limit`. |
 | `limit`    | Page size: default **50**, maximum **1000**. An omitted `limit` is never unbounded, and `0` or more than 1000 is a 422. |
 | `sort`     | One of a whitelist; any other value is a 422, never a silent default. People: `name`, `email`, `created`, `updated`, `registration_count`. Volunteers: `name`, `created`, `updated`. |
@@ -319,8 +319,9 @@ follows the same shape.
   reads. `member_since` on `POST`/`PUT /api/members` sets the start of the current
   stretch (the generic people endpoints reject it); a new volunteer starts on
   their earliest `first_help_day`. All of it lives in `app/services/role_history.py`.
-- **`active` with a `role`:** without `role` it is the person-wide archive flag
-  (`Person.active`). With `role` (and on `/api/volunteers`, which implies
+- **`active` with a `role`:** without `role` it is the person-wide flag
+  (`Person.active`), which only marks anonymised people and cannot be set through
+  the create/update endpoints. With `role` (and on `/api/volunteers`, which implies
   `role=volunteer`) it means active *in that role*: not archived and not retired
   from it (`Person.retired_roles`, set by the `deactivate` actions), so
   `active=false` lists people who retired the role plus anyone archived as a

@@ -24,7 +24,6 @@ async def create_volunteer(
     national_register_number: str,
     eid_document_number: str,
     address: str = "",
-    active: bool = True,
     help_periods: list[dict],
 ) -> dict:
     body = validate_with_schema(
@@ -33,7 +32,6 @@ async def create_volunteer(
         address=address,
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
-        active=active,
         help_periods=help_periods,
     )
     async with session_factory() as db:
@@ -74,7 +72,6 @@ async def update_volunteer(
     address: str | None = None,
     national_register_number: str | None = None,
     eid_document_number: str | None = None,
-    active: bool | None = None,
     help_periods: list[dict] | None = None,
     oidc_subject: str | None = None,
     clear_oidc_subject: bool = False,
@@ -86,7 +83,6 @@ async def update_volunteer(
             "address": address,
             "national_register_number": national_register_number,
             "eid_document_number": eid_document_number,
-            "active": active,
             "help_periods": help_periods,
             "oidc_subject": oidc_subject,
         }.items()

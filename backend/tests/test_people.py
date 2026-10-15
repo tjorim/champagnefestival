@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.live import live_bus
+from app.models import Person
 from tests.helpers import ADMIN_HEADERS, _create_event, _post_registration, _registration_body
 
 # ---------------------------------------------------------------------------
@@ -29,9 +30,7 @@ async def test_people_crud_roles_and_filters(client):
         "national_register_number": "85010199999",
         "eid_document_number": "BEI998877",
         "visits_per_month": 1,
-        "club_name": "Champagne Lovers",
         "notes": "Often helps at entrance.",
-        "active": True,
     }
 
     r = await client.post("/api/people", json=payload, headers=ADMIN_HEADERS)
@@ -51,16 +50,16 @@ async def test_people_crud_roles_and_filters(client):
 
     r = await client.put(
         f"/api/people/{person_id}",
-        json={"roles": ["Treasurer", "Festival-Visitor"], "active": False},
+        json={"roles": ["Treasurer", "Festival-Visitor"]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
     assert r.json()["roles"] == ["festival-visitor", "treasurer"]
-    assert r.json()["active"] is False
+    assert r.json()["active"] is True
 
     r = await client.get(
         "/api/people",
-        params={"role": "treasurer", "active": "false"},
+        params={"role": "treasurer", "active": "true"},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
@@ -635,9 +634,7 @@ async def test_members_crud(client):
         "phone": "+32475555111",
         "address": "Spuiplein 1, Bredene",
         "roles": ["festival-visitor"],
-        "club_name": "Champagne Lovers",
         "notes": "Prefers capsule exchange events.",
-        "active": True,
     }
 
     r = await client.post("/api/members", json=payload, headers=ADMIN_HEADERS)
@@ -656,14 +653,14 @@ async def test_members_crud(client):
 
     r = await client.put(
         f"/api/members/{person_id}",
-        json={"roles": ["treasurer"], "active": False},
+        json={"roles": ["treasurer"]},
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 200
     assert "member" in r.json()["roles"]
-    assert r.json()["active"] is False
+    assert r.json()["active"] is True
 
-    r = await client.get("/api/people", params={"role": "member", "active": "false"}, headers=ADMIN_HEADERS)
+    r = await client.get("/api/people", params={"role": "member", "active": "true"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()["items"]) == 1
 
@@ -773,7 +770,7 @@ async def test_deactivate_member_keeps_role_person_and_registrations(client):
 
 
 @pytest.mark.anyio
-async def test_roles_are_retired_independently(client):
+async def test_roles_are_retired_independently(client, db_session):
     """Retiring one role leaves the other role (and the person) active, in lists and counts."""
     created = await client.post(
         "/api/members",
@@ -807,11 +804,13 @@ async def test_roles_are_retired_independently(client):
     assert person["active"] is True and list(person["retired_roles"]) == ["member"]
 
     # An archived person (person-wide) is inactive in every role.
-    archived = await client.put(f"/api/people/{person_id}", json={"active": False}, headers=ADMIN_HEADERS)
-    assert archived.status_code == 200
+    archived = await db_session.get(Person, person_id)
+    archived.active = False
+    await db_session.commit()
     assert person_id in await ids("volunteer", False)
     assert person_id not in await ids("volunteer", True)
-    await client.put(f"/api/people/{person_id}", json={"active": True}, headers=ADMIN_HEADERS)
+    archived.active = True
+    await db_session.commit()
 
     # Reactivating brings the member role back, and a repeat is a no-op.
     assert (await client.post(f"/api/members/{person_id}/reactivate", headers=ADMIN_HEADERS)).status_code == 204
@@ -866,7 +865,6 @@ VOLUNTEER_PAYLOAD = {
     "address": "Kerkstraat 5",
     "national_register_number": "85010112399",
     "eid_document_number": "BEV445566",
-    "active": True,
     "help_periods": [{"first_help_day": "2024-03-15", "last_help_day": "2024-03-17"}],
 }
 

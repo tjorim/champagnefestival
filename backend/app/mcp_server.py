@@ -1780,9 +1780,7 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
-        club_name: str = "",
         notes: str = "",
-        active: bool = True,
     ) -> dict:
         """Create a person. Requires the ``admin`` role.
 
@@ -1800,9 +1798,7 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
-            club_name=club_name,
             notes=notes,
-            active=active,
         )
 
     async def get_person(self, person_id: str) -> dict:
@@ -1821,9 +1817,7 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
-        club_name: str | None = None,
         notes: str | None = None,
-        active: bool | None = None,
     ) -> dict:
         """Partially update a person; omitted fields are left unchanged.
 
@@ -1843,9 +1837,7 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
-            club_name=club_name,
             notes=notes,
-            active=active,
         )
 
     async def delete_person(self, person_id: str) -> dict:
@@ -1871,9 +1863,7 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
-        club_name: str = "",
         notes: str = "",
-        active: bool = True,
         roles: list[str] | None = None,
     ) -> dict:
         """Create a member (a ``Person`` with the ``member`` role, always added automatically).
@@ -1891,9 +1881,7 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
-            club_name=club_name,
             notes=notes,
-            active=active,
             roles=roles,
         )
 
@@ -1917,9 +1905,7 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
-        club_name: str | None = None,
         notes: str | None = None,
-        active: bool | None = None,
         roles: list[str] | None = None,
     ) -> dict:
         """Partially update a member; omitted fields are left unchanged. Requires the ``admin`` role."""
@@ -1935,9 +1921,7 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
-            club_name=club_name,
             notes=notes,
-            active=active,
             roles=roles,
         )
 
@@ -1960,7 +1944,6 @@ class ChampagneFestivalMcpBackend:
         eid_document_number: str,
         help_periods: list[dict],
         address: str = "",
-        active: bool = True,
     ) -> dict:
         """Create a volunteer (a ``Person`` with the ``volunteer`` role).
 
@@ -1978,7 +1961,6 @@ class ChampagneFestivalMcpBackend:
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
             address=address,
-            active=active,
             help_periods=help_periods,
         )
 
@@ -2003,7 +1985,6 @@ class ChampagneFestivalMcpBackend:
         address: str | None = None,
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
-        active: bool | None = None,
         help_periods: list[dict] | None = None,
         oidc_subject: str | None = None,
         clear_oidc_subject: bool = False,
@@ -2028,7 +2009,6 @@ class ChampagneFestivalMcpBackend:
             address=address,
             national_register_number=national_register_number,
             eid_document_number=eid_document_number,
-            active=active,
             help_periods=help_periods,
             oidc_subject=oidc_subject,
             clear_oidc_subject=clear_oidc_subject,

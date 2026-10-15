@@ -88,7 +88,6 @@ const existingPerson = {
   address: "1 Rue de la Paix",
   roles: ["member"],
   notes: "VIP",
-  clubName: "Club A",
   active: true,
   retiredRoles: {},
   roleHistory: { member: [{ startedOn: "2021-04-02", endedOn: null }] },

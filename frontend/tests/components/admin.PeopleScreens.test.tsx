@@ -45,7 +45,6 @@ const person = (index: number) => ({
   email: `p${index}@example.com`,
   phone: "0470000000",
   address: "Street",
-  club_name: "Club",
   notes: "Notes",
   active: index % 2 === 0,
   roles: ["member", "volunteer"],
@@ -182,14 +181,20 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
     await screen.findByRole("row", { name: "Person 00" });
     fireEvent.click(screen.getAllByRole("button", { name: /registration_name/ })[0]!);
     await waitFor(() => expect(h.requests.at(-1)?.searchParams.get("sort")).toBe("name"));
-    fireEvent.click(screen.getByRole("combobox", { name: "admin_people_active_label" }));
-    const inactive = await screen.findByRole("option", { name: /admin_members_filter_inactive/ });
-    fireEvent.pointerDown(inactive, { pointerType: "mouse" });
-    fireEvent.click(inactive);
-    await screen.findByRole("row", { name: "Person 01" });
-    await waitFor(() =>
-      expect(screen.queryByRole("row", { name: "Person 00" })).not.toBeInTheDocument(),
-    );
+    const activeFilter = { name: "admin_people_active_label" };
+    if (kind === "people") {
+      // Active only means something within a role, so the all-people list has no such filter.
+      expect(screen.queryByRole("combobox", activeFilter)).not.toBeInTheDocument();
+    } else {
+      fireEvent.click(screen.getByRole("combobox", activeFilter));
+      const inactive = await screen.findByRole("option", { name: /admin_members_filter_inactive/ });
+      fireEvent.pointerDown(inactive, { pointerType: "mouse" });
+      fireEvent.click(inactive);
+      await screen.findByRole("row", { name: "Person 01" });
+      await waitFor(() =>
+        expect(screen.queryByRole("row", { name: "Person 00" })).not.toBeInTheDocument(),
+      );
+    }
     fireEvent.change(screen.getByRole("textbox", { name: "admin_search_person_placeholder" }), {
       target: { value: "Person 01" },
     });
@@ -204,7 +209,7 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
       kind === "volunteers" ? "/api/volunteers/export" : "/api/people/export",
     );
     expect(url.searchParams.get("q")).toBe("Person 01");
-    expect(url.searchParams.get("active")).toBe("false");
+    expect(url.searchParams.get("active")).toBe(kind === "people" ? null : "false");
     expect(url.searchParams.has("page")).toBe(false);
     if (kind === "volunteers") expect(url.searchParams.get("include_inactive")).toBe("true");
   });

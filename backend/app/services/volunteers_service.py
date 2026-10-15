@@ -191,7 +191,6 @@ async def create_volunteer(
         address=body.address,
         national_register_number=nrr,
         eid_document_number=eid,
-        active=body.active,
     )
     ensure_volunteer_role(person, started_on=min(period.first_help_day for period in body.help_periods))
 
@@ -238,7 +237,7 @@ async def apply_volunteer_update(
     if subject_in_set and body.oidc_subject is not None:
         await ensure_unique_fields(db, oidc_subject=body.oidc_subject, exclude_id=volunteer_id)
 
-    for field in ("name", "address", "active"):
+    for field in ("name", "address"):
         if field in body.model_fields_set:
             setattr(volunteer, field, getattr(body, field))
 

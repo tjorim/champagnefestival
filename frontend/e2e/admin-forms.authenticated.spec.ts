@@ -43,12 +43,6 @@ for (const theme of ["refresh", "classic", "riviera", "cuvee", "remuage", "mille
         await option.click();
         await expect(language).toContainText("Français");
         await expect(language).toBeFocused();
-        // The All people form carries the person-wide Active switch (the member and volunteer forms
-        // retire their own role through row actions instead).
-        const active = dialog.getByRole("switch", { name: "Active", exact: true });
-        await active.focus();
-        await active.press("Space");
-        await expect(active).not.toBeChecked();
         await expect(
           dialog.locator(
             ".form-control, .form-select, .form-check, .form-label, .invalid-feedback",

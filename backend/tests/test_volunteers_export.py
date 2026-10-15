@@ -55,12 +55,13 @@ async def test_volunteers_export_excludes_inactive(client):
             "name": "Inactive Volunteer",
             "national_register_number": "11111111199",
             "eid_document_number": "BEI111111",
-            "active": False,
             "help_periods": [{"first_help_day": "2099-03-20"}],
         },
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 201
+    r = await client.post(f"/api/volunteers/{r.json()['id']}/deactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
 
     r = await client.get("/api/volunteers/export", headers=ADMIN_HEADERS)
     assert r.status_code == 200

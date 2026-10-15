@@ -427,7 +427,12 @@ export default function MyRegistrationsPage({
           <Button
             variant="link"
             className="w-full mt-2 text-subtle"
-            onClick={() => auth.login("/me")}
+            onClick={() => {
+              // Hand over what was typed so the IdP's email link can start from the same address.
+              const loginHint = email.trim();
+              if (loginHint.includes("@")) auth.login("/me", { loginHint });
+              else auth.login("/me");
+            }}
           >
             {m.my_registrations_sign_in_instead()}
           </Button>

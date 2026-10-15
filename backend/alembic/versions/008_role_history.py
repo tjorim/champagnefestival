@@ -7,6 +7,9 @@ simply stops counting as an active member or volunteer, without being archived a
 with one entry per stretch of holding a role (``retired_roles`` is derived from it). Existing
 people start with neither: every role they hold is active with an unknown start.
 
+``people.club_name`` is dropped: every member belongs to the one club the festival cares about,
+so a free-text club name carries nothing.
+
 Revision ID: 008
 Revises: 007
 """
@@ -27,8 +30,10 @@ def upgrade() -> None:
     op.alter_column("people", "retired_roles", server_default=None)
     op.add_column("people", sa.Column("role_history", sa.JSON(), nullable=False, server_default=sa.text("'{}'")))
     op.alter_column("people", "role_history", server_default=None)
+    op.drop_column("people", "club_name")
 
 
 def downgrade() -> None:
+    op.add_column("people", sa.Column("club_name", sa.String(200), nullable=False, server_default=""))
     op.drop_column("people", "role_history")
     op.drop_column("people", "retired_roles")

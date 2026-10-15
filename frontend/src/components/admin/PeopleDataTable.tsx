@@ -33,12 +33,11 @@ export function peopleTableParams(state: AdminTableState, role?: string): People
     sort,
     sort_dir: state.sortDir,
     role: role ?? state.filters.role,
+    // Active only means something within a role: the person-wide flag only marks anonymised people.
     active:
-      state.filters.active === "active"
-        ? true
-        : state.filters.active === "inactive"
-          ? false
-          : undefined,
+      !(role ?? state.filters.role) || !state.filters.active
+        ? undefined
+        : state.filters.active === "active",
   };
 }
 
@@ -102,20 +101,24 @@ export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryActio
       return {
         ...query,
         filters: [
-          {
-            id: "active",
-            label: m.admin_people_active_label(),
-            options: [
-              {
-                value: "active",
-                label: `${m.admin_members_filter_active()} (${activeCounts.data?.active ?? 0})`,
-              },
-              {
-                value: "inactive",
-                label: `${m.admin_members_filter_inactive()} (${activeCounts.data?.inactive ?? 0})`,
-              },
-            ],
-          },
+          ...(params.role
+            ? [
+                {
+                  id: "active",
+                  label: m.admin_people_active_label(),
+                  options: [
+                    {
+                      value: "active",
+                      label: `${m.admin_members_filter_active()} (${activeCounts.data?.active ?? 0})`,
+                    },
+                    {
+                      value: "inactive",
+                      label: `${m.admin_members_filter_inactive()} (${activeCounts.data?.inactive ?? 0})`,
+                    },
+                  ],
+                },
+              ]
+            : []),
           ...(!role
             ? [
                 {

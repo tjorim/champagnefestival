@@ -20,7 +20,6 @@ const data = {
   phone: "",
   address: "",
   roles: ["member"],
-  clubName: "",
   notes: "",
   active: true,
 };

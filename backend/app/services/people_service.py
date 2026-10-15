@@ -156,9 +156,7 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
         visits_per_month=body.visits_per_month,
-        club_name=body.club_name,
         notes=body.notes,
-        active=body.active,
     )
     sync_roles(person, normalise_roles(body.roles))
 
@@ -185,7 +183,7 @@ async def apply_person_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
     reject_member_since(body)
-    for field in ("name", "address", "preferred_language", "visits_per_month", "club_name", "notes", "active"):
+    for field in ("name", "address", "preferred_language", "visits_per_month", "notes"):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
 
@@ -266,9 +264,8 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     pseudonym is derived from the stable person ID, so a repeat produces the
     same row rather than a second, different rewrite.
 
-    Does not touch ``registrations``, ``roles``, ``visits_per_month``, or
-    ``club_name`` — those are the operational/historical record this
-    anonymisation is deliberately scoped to leave alone.
+    Does not touch ``registrations``, ``roles`` or ``visits_per_month`` — those are the
+    operational/historical record this anonymisation is deliberately scoped to leave alone.
     """
     if person.national_register_number or person.eid_document_number:
         raise HTTPException(
@@ -376,7 +373,7 @@ async def merge_people(
             setattr(canonical, field, normalised or None)
 
     # Fill blank string fields on canonical from duplicate.
-    for field in ("email", "phone", "address", "club_name", "notes"):
+    for field in ("email", "phone", "address", "notes"):
         if not getattr(canonical, field) and getattr(duplicate, field):
             setattr(canonical, field, getattr(duplicate, field))
 

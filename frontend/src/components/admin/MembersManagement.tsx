@@ -128,13 +128,6 @@ export default function MembersManagement({
             <span className="text-sm">{roleSince(row.original, "member") ?? "—"}</span>
           ),
         }),
-        columnHelper.accessor("clubName", {
-          enableSorting: false,
-          header: m.admin_people_club_name_label(),
-          cell: ({ getValue }) => (
-            <span className="text-sm">{String(getValue() ?? "") || "—"}</span>
-          ),
-        }),
         columnHelper.accessor("notes", {
           header: m.registration_notes(),
           enableSorting: false,

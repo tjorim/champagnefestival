@@ -58,7 +58,6 @@ def person_search_filter(q: str) -> Any:
         Person.address.ilike(like, escape="\\"),
         Person.national_register_number.ilike(like, escape="\\"),
         Person.eid_document_number.ilike(like, escape="\\"),
-        Person.club_name.ilike(like, escape="\\"),
         Person.notes.ilike(like, escape="\\"),
         cast(Person.roles, Text).ilike(like, escape="\\"),
     )

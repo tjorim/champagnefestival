@@ -20,7 +20,6 @@ async def test_volunteer_crud_and_constraints(client):
         "address": "Dorpsstraat 12, 8450 Bredene",
         "national_register_number": "91010112345",
         "eid_document_number": "BEX123456",
-        "active": True,
         "help_periods": [
             {
                 "first_help_day": "2024-03-15",
@@ -59,21 +58,18 @@ async def test_volunteer_crud_and_constraints(client):
     assert r.status_code == 200
     assert len(r.json()["items"]) == 1
 
-    r = await client.put(
-        f"/api/people/{volunteer_id}",
-        json={"active": False},
-        headers=ADMIN_HEADERS,
-    )
-    assert r.status_code == 200
+    r = await client.post(f"/api/volunteers/{volunteer_id}/deactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
 
     r = await client.get("/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
     assert len(r.json()["items"]) == 1
+    r = await client.post(f"/api/volunteers/{volunteer_id}/reactivate", headers=ADMIN_HEADERS)
+    assert r.status_code == 204
     r = await client.put(
         f"/api/volunteers/{volunteer_id}",
         json={
             "address": "Nieuwe Steenweg 8, 8400 Oostende",
-            "active": True,
             "help_periods": [
                 {
                     "first_help_day": "2024-03-15",
@@ -182,7 +178,6 @@ async def test_volunteers_support_limit_and_page(client):
                 "name": name,
                 "national_register_number": f"9101011234{i}",
                 "eid_document_number": f"BEPAG00{i}",
-                "active": True,
                 "help_periods": [{"first_help_day": "2024-03-15", "last_help_day": None}],
             },
             headers=ADMIN_HEADERS,

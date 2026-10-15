@@ -31,7 +31,11 @@ export interface AuthContextType {
   /** Authentication error to show in the app instead of leaving it in the console/provider only. */
   authError: string | null;
   clearAuthError: () => void;
-  login: (returnTo?: string) => void;
+  /**
+   * Starts the IdP sign-in. `loginHint` pre-fills the address on the IdP's page, which is what lets
+   * its email magic link (and the password form) start from the address the visitor already typed.
+   */
+  login: (returnTo?: string, options?: { loginHint?: string }) => void;
   logout: () => void;
   /**
    * Attempts a silent token renewal against the IdP session, resolving true when
@@ -232,11 +236,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   // handed to the browser, so the control should stay busy until the page unloads
   // rather than flicking back to idle mid-navigation.
   const login = useCallback(
-    (returnTo = "/admin") => {
+    (returnTo = "/admin", options?: { loginHint?: string }) => {
       setRedirectError(null);
       setDismissedOidcError(null);
       setIsSigningIn(true);
-      signinRedirect({ state: { returnTo } }).catch((error: unknown) => {
+      signinRedirect({
+        state: { returnTo },
+        ...(options?.loginHint ? { login_hint: options.loginHint } : {}),
+      }).catch((error: unknown) => {
         devError("signinRedirect failed:", error);
         setIsSigningIn(false);
         setRedirectError(formatAuthError(error, m.auth_sign_in_start_failed()));

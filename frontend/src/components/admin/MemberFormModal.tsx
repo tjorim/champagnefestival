@@ -42,7 +42,6 @@ export interface MemberFormData {
   phone: string;
   preferredLanguage?: "nl" | "fr" | "en" | null;
   address: string;
-  clubName: string;
   notes: string;
   /** ISO day membership started; empty when unknown. */
   memberSince: string;
@@ -64,7 +63,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             phone: member.phone ?? "",
             preferredLanguage: member.preferredLanguage ?? null,
             address: member.address ?? "",
-            clubName: member.clubName ?? "",
             notes: member.notes ?? "",
             memberSince: roleSince(member, "member") ?? "",
           }
@@ -74,7 +72,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             phone: "",
             preferredLanguage: null,
             address: "",
-            clubName: "",
             notes: "",
             memberSince: "",
           },
@@ -92,7 +89,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           phone: value.phone.trim(),
           preferredLanguage: value.preferredLanguage,
           address: value.address.trim(),
-          clubName: value.clubName.trim(),
           notes: value.notes.trim(),
           memberSince: value.memberSince,
         });
@@ -259,24 +255,6 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
                 </AdminField>
               )}
             </form.Field>
-            <AdminField className="mb-4" controlId="member-club">
-              <AdminLabel className="text-sm font-semibold text-highlight">
-                {m.admin_people_club_name_label()}
-              </AdminLabel>
-              <form.Field name="clubName">
-                {(field) => (
-                  <AdminInput
-                    type="text"
-                    className="bg-muted text-content border-input border-warning"
-                    maxLength={200}
-                    value={field.value}
-                    onChange={(e) => field.handleChange(e.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                )}
-              </form.Field>
-            </AdminField>
-
             <AdminField className="mb-4" controlId="member-since">
               <AdminLabel className="text-subtle text-sm">
                 {m.admin_members_since_label()}

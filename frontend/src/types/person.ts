@@ -59,7 +59,6 @@ export interface Person {
   nationalRegisterNumber: string | null;
   eidDocumentNumber: string | null;
   visitsPerMonth: number | null;
-  clubName: string;
   notes: string;
   active: boolean;
   /** Roles the person stepped back from (role to ISO day); they stay in `roles`. */
@@ -83,7 +82,6 @@ export function apiToPerson(d: Record<string, unknown>): Person {
     nationalRegisterNumber: (d.national_register_number as string | null) ?? null,
     eidDocumentNumber: (d.eid_document_number as string | null) ?? null,
     visitsPerMonth: (d.visits_per_month as number | null) ?? null,
-    clubName: (d.club_name ?? "") as string,
     notes: (d.notes ?? "") as string,
     active: (d.active ?? true) as boolean,
     retiredRoles: (d.retired_roles as Record<string, string> | undefined) ?? {},

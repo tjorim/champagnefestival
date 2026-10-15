@@ -246,14 +246,14 @@ async def test_page_past_the_end_is_empty_but_total_still_counts_every_match(cli
 
 @pytest.mark.anyio
 async def test_volunteers_and_people_share_one_q_semantics(client, db_session):
-    """`q` reaches club, notes, phone and roles on both lists, not just the
+    """`q` reaches notes, phone and roles on both lists, not just the
     name/address/NISS/eID subset volunteers used to search."""
     db_session.add_all(
         [
-            Person(id="per_a", name="Aaa", roles=["volunteer"], club_name="Zymurgy Club"),
+            Person(id="per_a", name="Aaa", roles=["volunteer"], notes="Zymurgy Club"),
             Person(id="per_b", name="Bbb", roles=["volunteer"], notes="knows the zymurgy basics"),
             Person(id="per_c", name="Ccc", roles=["volunteer"], phone="+32 400 11 22 33"),
-            Person(id="per_d", name="Ddd", roles=["member"], club_name="Zymurgy Club"),
+            Person(id="per_d", name="Ddd", roles=["member"], notes="Zymurgy Club"),
             Person(id="per_e", name="Eee", roles=["volunteer"]),
         ]
     )

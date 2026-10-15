@@ -116,7 +116,6 @@ def _make_person(
     phone: str = "+32499000000",
     address: str = "Rue de la Paix 1",
     roles: list | None = None,
-    club_name: str = "",
     notes: str = "",
 ) -> Any:
     p = MagicMock()
@@ -126,7 +125,6 @@ def _make_person(
     p.phone = phone
     p.address = address
     p.roles = roles or []
-    p.club_name = club_name
     p.notes = notes
     return p
 
@@ -1220,7 +1218,7 @@ class TestGetGuestRegistration:
     @pytest.mark.anyio
     async def test_admin_sees_all_fields(self):
         reg = _make_registration()
-        person = _make_person(address="Rue 1", notes="VIP", club_name="Club A")
+        person = _make_person(address="Rue 1", notes="VIP")
         db = _make_db_execute([[reg], [person]])
         backend = ChampagneFestivalMcpBackend(_make_session_factory(db))
         token = _make_access_token(["admin"])
@@ -1229,7 +1227,6 @@ class TestGetGuestRegistration:
         p = result["registration"]["person"]
         assert p["address"] == "Rue 1"
         assert p["notes"] == "VIP"
-        assert p["club_name"] == "Club A"
 
 
 # ---------------------------------------------------------------------------
@@ -1782,13 +1779,12 @@ class TestPIIFiltering:
         assert "eid_document_number" not in d
 
     def test_person_dict_admin_shows_all_allowed_fields(self):
-        person = _make_person(address="Rue 1", notes="VIP", club_name="Club A")
+        person = _make_person(address="Rue 1", notes="VIP")
         d = person_dict(person, role=ROLE_ADMIN)
         assert "email" in d
         assert "phone" in d
         assert "address" in d
         assert "notes" in d
-        assert "club_name" in d
         # Sensitive fields that should never appear
         assert "national_register_number" not in d
         assert "eid_document_number" not in d

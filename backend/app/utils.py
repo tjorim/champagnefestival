@@ -608,7 +608,6 @@ def person_to_dict(p: Person) -> dict:
         "national_register_number": p.national_register_number,
         "eid_document_number": p.eid_document_number,
         "visits_per_month": p.visits_per_month,
-        "club_name": p.club_name,
         "notes": p.notes,
         "active": p.active,
         "marketing_opt_in": p.marketing_opt_in,

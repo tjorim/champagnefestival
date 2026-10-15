@@ -1148,7 +1148,6 @@ class Person(Base):
     token belongs to, not *whether* the token may act as a volunteer. See
     docs/decisions/1006-volunteer-identity-self-service.md."""
     visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    club_name: Mapped[str] = mapped_column(String(200), default="")
     notes: Mapped[str] = mapped_column(Text, default="")
     active: Mapped[bool] = mapped_column(Boolean, default=True)
 
