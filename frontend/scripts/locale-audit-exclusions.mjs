@@ -7,6 +7,9 @@ export const excludedFiles = {
 export const diagnosticCallees = ["devError"];
 // Exact source/value exclusions. Never approve a whole component or directory for visible copy.
 export const exclusions = {
+  "signage/SlideRenderer.tsx": {
+    "linear-gradient(135deg,": "CSS gradient syntax for the authored template background",
+  },
   "components/BrandWordmark.tsx": {
     Champagne: "fixed application brand",
     festival: "fixed application brand",
