@@ -22,8 +22,8 @@ function renderSection() {
       authHeaders={() => ({})}
       counts={{ all: 5, members: 3, volunteers: 2 }}
       people={{ ...handlers, onMerge: vi.fn() }}
-      members={{ ...handlers, onEnd: handlers.onDelete, onReactivate: handlers.onDelete }}
-      volunteers={{ ...handlers, onEnd: handlers.onDelete, onReactivate: handlers.onDelete }}
+      members={{ ...handlers, onDeactivate: handlers.onDelete, onReactivate: handlers.onDelete }}
+      volunteers={{ ...handlers, onDeactivate: handlers.onDelete, onReactivate: handlers.onDelete }}
     />,
   );
 }

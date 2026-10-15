@@ -304,7 +304,7 @@ describe("optimistic people mutations", () => {
     );
     let promise!: Promise<unknown>;
     act(() => {
-      promise = h.result.current.endMembershipMutation.mutateAsync("a");
+      promise = h.result.current.deactivateMemberMutation.mutateAsync("a");
     });
     await waitFor(() =>
       expect(h.cached().items[0]?.retiredRoles).toEqual({ member: localIsoDate() }),
@@ -333,7 +333,7 @@ describe("optimistic people mutations", () => {
     );
     let promise!: Promise<unknown>;
     act(() => {
-      promise = h.result.current.endVolunteeringMutation.mutateAsync("a");
+      promise = h.result.current.deactivateVolunteerMutation.mutateAsync("a");
     });
     await waitFor(() =>
       expect(h.cached().items[0]?.helpPeriods[0]?.lastHelpDay).toBe(localIsoDate()),
@@ -368,7 +368,7 @@ describe("optimistic people mutations", () => {
     );
     let promise!: Promise<unknown>;
     act(() => {
-      promise = h.result.current.reactivateMembershipMutation.mutateAsync("a");
+      promise = h.result.current.reactivateMemberMutation.mutateAsync("a");
     });
     await waitFor(() =>
       expect(h.cached().items[0]?.retiredRoles).toEqual({ volunteer: "2026-02-01" }),

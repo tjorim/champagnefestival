@@ -169,17 +169,17 @@ export function usePeopleMutations({
     retry: false,
   });
 
-  const endMembershipMutation = useMutation({
+  const deactivateMemberMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
           `/api/members/${id}/deactivate`,
           { method: "POST", headers: authHeaders() },
-          m.admin_members_error_end(),
+          m.admin_members_error_deactivate(),
         ),
       ),
     // Ending a membership retires the member role; the role, the person and their registrations
-    // stay on file, like endVolunteeringMutation.
+    // stay on file, like deactivateVolunteerMutation.
     ...optimistic((id: string) => ({
       id,
       update: (person) => retireRole(person, "member"),
@@ -187,7 +187,7 @@ export function usePeopleMutations({
     retry: false,
   });
 
-  const reactivateMembershipMutation = useMutation({
+  const reactivateMemberMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
@@ -339,13 +339,13 @@ export function usePeopleMutations({
     retry: false,
   });
 
-  const endVolunteeringMutation = useMutation({
+  const deactivateVolunteerMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
           `/api/volunteers/${id}/deactivate`,
           { method: "POST", headers: authHeaders() },
-          m.admin_volunteers_error_end(),
+          m.admin_volunteers_error_deactivate(),
         ),
       ),
     ...optimistic((id: string) => ({
@@ -364,7 +364,7 @@ export function usePeopleMutations({
     retry: false,
   });
 
-  const reactivateVolunteeringMutation = useMutation({
+  const reactivateVolunteerMutation = useMutation({
     mutationFn: (id: string) =>
       writes.persist(id, takeFence(id), () =>
         fetchVoidOrThrowWithUnauthorized(
@@ -384,14 +384,14 @@ export function usePeopleMutations({
     mergePeopleMutation,
     createMemberMutation,
     updateMemberMutation,
-    endMembershipMutation,
-    reactivateMembershipMutation,
+    deactivateMemberMutation,
+    reactivateMemberMutation,
     createPersonMutation,
     updatePersonMutation,
     deletePersonMutation,
     createVolunteerMutation,
     updateVolunteerMutation,
-    endVolunteeringMutation,
-    reactivateVolunteeringMutation,
+    deactivateVolunteerMutation,
+    reactivateVolunteerMutation,
   };
 }

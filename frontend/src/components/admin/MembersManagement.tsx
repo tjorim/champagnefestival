@@ -27,7 +27,7 @@ interface MembersManagementProps {
   authHeaders: () => Record<string, string>;
   onCreate: (data: MemberFormData) => Promise<void>;
   onUpdate: (id: string, data: MemberFormData) => Promise<void>;
-  onEnd: (id: string) => Promise<void>;
+  onDeactivate: (id: string) => Promise<void>;
   onReactivate: (id: string) => Promise<void>;
 }
 
@@ -43,18 +43,18 @@ function truncateText(value: string, limit = 80): string {
 export default function MembersManagement({
   onCreate,
   onUpdate,
-  onEnd,
+  onDeactivate,
   onReactivate,
   authHeaders,
 }: MembersManagementProps) {
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
-  const [endSuccess, setEndSuccess] = useState(false);
+  const [deactivateSuccess, setDeactivateSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingMember, setEditingMember] = useState<Person | null>(null);
-  const [endingId, setEndingId] = useState<string | null>(null);
-  const [ending, setEnding] = useState(false);
-  const [endError, setEndError] = useState("");
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [deactivateError, setDeactivateError] = useState("");
   const [reactivateSuccess, setReactivateSuccess] = useState(false);
   const [reactivateError, setReactivateError] = useState("");
   const handleReactivate = useCallback(
@@ -71,18 +71,18 @@ export default function MembersManagement({
   );
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
 
-  const handleEndConfirm = async () => {
-    if (!endingId) return;
-    setEnding(true);
-    setEndError("");
+  const handleDeactivateConfirm = async () => {
+    if (!deactivatingId) return;
+    setDeactivating(true);
+    setDeactivateError("");
     try {
-      await onEnd(endingId);
-      setEndSuccess(true);
-      setEndingId(null);
+      await onDeactivate(deactivatingId);
+      setDeactivateSuccess(true);
+      setDeactivatingId(null);
     } catch (err) {
-      setEndError(apiErrorMessage(err, m.admin_members_error_end()));
+      setDeactivateError(apiErrorMessage(err, m.admin_members_error_deactivate()));
     } finally {
-      setEnding(false);
+      setDeactivating(false);
     }
   };
 
@@ -197,11 +197,11 @@ export default function MembersManagement({
                     size="sm"
                     variant="outline-danger"
                     onClick={() => {
-                      setEndingId(member.id);
-                      setEndError("");
+                      setDeactivatingId(member.id);
+                      setDeactivateError("");
                     }}
-                    title={m.admin_members_end_title()}
-                    aria-label={m.admin_members_end_title()}
+                    title={m.admin_members_deactivate_title()}
+                    aria-label={m.admin_members_deactivate_title()}
                   >
                     <Icon icon={TrashIcon} />
                   </Button>
@@ -221,7 +221,7 @@ export default function MembersManagement({
           },
         }),
       ]),
-    [setEditingMember, setShowForm, setEndingId, setEndError, handleReactivate],
+    [setEditingMember, setShowForm, setDeactivatingId, setDeactivateError, handleReactivate],
   );
 
   return (
@@ -255,9 +255,13 @@ export default function MembersManagement({
               {reactivateError}
             </Alert>
           )}
-          {endSuccess && (
-            <Alert variant="success" className="m-4 mb-0" onClose={() => setEndSuccess(false)}>
-              {m.admin_members_end_success()}
+          {deactivateSuccess && (
+            <Alert
+              variant="success"
+              className="m-4 mb-0"
+              onClose={() => setDeactivateSuccess(false)}
+            >
+              {m.admin_members_deactivate_success()}
             </Alert>
           )}
 
@@ -284,34 +288,38 @@ export default function MembersManagement({
         </CardContent>
       </Card>
 
-      {endingId && (
+      {deactivatingId && (
         <Dialog
           open={true}
           onOpenChange={(open) => {
             if (!open)
               (() => {
-                if (!ending) setEndingId(null);
+                if (!deactivating) setDeactivatingId(null);
               })();
           }}
         >
           <DialogContent admin size="default">
             <DialogHeader>
-              <DialogTitle>{m.admin_members_end_title()}</DialogTitle>
+              <DialogTitle>{m.admin_members_deactivate_title()}</DialogTitle>
             </DialogHeader>
             <DialogBody>
-              {endError && (
+              {deactivateError && (
                 <Alert variant="danger" className="py-2 text-sm">
-                  {endError}
+                  {deactivateError}
                 </Alert>
               )}
-              <p>{m.admin_members_end_confirm()}</p>
+              <p>{m.admin_members_deactivate_confirm()}</p>
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEndingId(null)} disabled={ending}>
+              <Button
+                variant="outline"
+                onClick={() => setDeactivatingId(null)}
+                disabled={deactivating}
+              >
                 {m.admin_action_cancel()}
               </Button>
-              <Button variant="danger" onClick={handleEndConfirm} disabled={ending}>
-                {ending ? (
+              <Button variant="danger" onClick={handleDeactivateConfirm} disabled={deactivating}>
+                {deactivating ? (
                   <>
                     <Spinner size="sm" className="me-2" />
                     {m.admin_delete()}
@@ -319,7 +327,7 @@ export default function MembersManagement({
                 ) : (
                   <>
                     <Icon icon={TrashIcon} className="me-1" />
-                    {m.admin_members_end_title()}
+                    {m.admin_members_deactivate_title()}
                   </>
                 )}
               </Button>

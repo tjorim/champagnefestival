@@ -41,15 +41,15 @@ export function useAdminPeopleActions({
     mergePeopleMutation,
     createMemberMutation,
     updateMemberMutation,
-    endMembershipMutation,
-    reactivateMembershipMutation,
+    deactivateMemberMutation,
+    reactivateMemberMutation,
     createPersonMutation,
     updatePersonMutation,
     deletePersonMutation,
     createVolunteerMutation,
     updateVolunteerMutation,
-    endVolunteeringMutation,
-    reactivateVolunteeringMutation,
+    deactivateVolunteerMutation,
+    reactivateVolunteerMutation,
   } = usePeopleMutations({
     queryClient,
     authHeaders,
@@ -122,18 +122,18 @@ export function useAdminPeopleActions({
     ],
   );
 
-  const handleEndMembership = useCallback(
+  const handleDeactivateMember = useCallback(
     async (id: string) => {
-      await endMembershipMutation.mutateAsync(id);
+      await deactivateMemberMutation.mutateAsync(id);
     },
-    [endMembershipMutation],
+    [deactivateMemberMutation],
   );
 
-  const handleReactivateMembership = useCallback(
+  const handleReactivateMember = useCallback(
     async (id: string) => {
-      await reactivateMembershipMutation.mutateAsync(id);
+      await reactivateMemberMutation.mutateAsync(id);
     },
-    [reactivateMembershipMutation],
+    [reactivateMemberMutation],
   );
 
   const handleCreatePerson = useCallback(
@@ -192,29 +192,29 @@ export function useAdminPeopleActions({
     [updateVolunteerMutation],
   );
 
-  const handleEndVolunteering = useCallback(
+  const handleDeactivateVolunteer = useCallback(
     async (id: string) => {
-      await endVolunteeringMutation.mutateAsync(id);
+      await deactivateVolunteerMutation.mutateAsync(id);
     },
-    [endVolunteeringMutation],
+    [deactivateVolunteerMutation],
   );
 
-  const handleReactivateVolunteering = useCallback(
+  const handleReactivateVolunteer = useCallback(
     async (id: string) => {
-      await reactivateVolunteeringMutation.mutateAsync(id);
+      await reactivateVolunteerMutation.mutateAsync(id);
     },
-    [reactivateVolunteeringMutation],
+    [reactivateVolunteerMutation],
   );
 
   return {
     handleCreateMember,
     handleCreatePerson,
     handleCreateVolunteer,
-    handleEndMembership,
+    handleDeactivateMember,
     handleDeletePerson,
-    handleEndVolunteering,
-    handleReactivateMembership,
-    handleReactivateVolunteering,
+    handleDeactivateVolunteer,
+    handleReactivateMember,
+    handleReactivateVolunteer,
     handleMergePeople,
     handleUpdateMember,
     handleUpdatePerson,

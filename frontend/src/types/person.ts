@@ -42,19 +42,9 @@ export interface RoleStretch {
   endedOn: string | null;
 }
 
-/**
- * When the person's current (or latest) stretch of a role started, if known. Volunteers fall back
- * to their earliest help period, since most volunteers predate the role history.
- */
+/** When the person's current (or, if retired, latest) stretch of a role started, if known. */
 export function roleSince(person: Person, role: string): string | null {
-  const stretches = person.roleHistory[role] ?? [];
-  const recorded = stretches.at(-1)?.startedOn ?? null;
-  if (recorded || role !== "volunteer") return recorded;
-  return person.helpPeriods.reduce<string | null>(
-    (earliest, period) =>
-      earliest === null || period.firstHelpDay < earliest ? period.firstHelpDay : earliest,
-    null,
-  );
+  return person.roleHistory[role]?.at(-1)?.startedOn ?? null;
 }
 
 export interface Person {

@@ -25,7 +25,7 @@ interface VolunteersManagementProps {
   authHeaders: () => Record<string, string>;
   onCreate: (data: VolunteerFormData) => Promise<void>;
   onUpdate: (id: string, data: VolunteerFormData) => Promise<void>;
-  onEnd: (id: string) => Promise<void>;
+  onDeactivate: (id: string) => Promise<void>;
   onReactivate: (id: string) => Promise<void>;
 }
 
@@ -41,17 +41,17 @@ export default function VolunteersManagement({
   authHeaders,
   onCreate,
   onUpdate,
-  onEnd,
+  onDeactivate,
   onReactivate,
 }: VolunteersManagementProps) {
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
-  const [endSuccess, setEndSuccess] = useState(false);
+  const [deactivateSuccess, setDeactivateSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingVolunteer, setEditingVolunteer] = useState<Person | null>(null);
-  const [endingId, setEndingId] = useState<string | null>(null);
-  const [ending, setEnding] = useState(false);
-  const [endError, setEndError] = useState("");
+  const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
+  const [deactivateError, setDeactivateError] = useState("");
   const [reactivateSuccess, setReactivateSuccess] = useState(false);
   const [reactivateError, setReactivateError] = useState("");
   const handleReactivate = useCallback(
@@ -66,18 +66,18 @@ export default function VolunteersManagement({
     },
     [onReactivate],
   );
-  const handleEndConfirm = async () => {
-    if (!endingId) return;
-    setEnding(true);
-    setEndError("");
+  const handleDeactivateConfirm = async () => {
+    if (!deactivatingId) return;
+    setDeactivating(true);
+    setDeactivateError("");
     try {
-      await onEnd(endingId);
-      setEndSuccess(true);
-      setEndingId(null);
+      await onDeactivate(deactivatingId);
+      setDeactivateSuccess(true);
+      setDeactivatingId(null);
     } catch (err) {
-      setEndError(apiErrorMessage(err, m.admin_volunteers_error_end()));
+      setDeactivateError(apiErrorMessage(err, m.admin_volunteers_error_deactivate()));
     } finally {
-      setEnding(false);
+      setDeactivating(false);
     }
   };
 
@@ -186,11 +186,11 @@ export default function VolunteersManagement({
                     size="sm"
                     variant="outline-danger"
                     onClick={() => {
-                      setEndingId(volunteer.id);
-                      setEndError("");
+                      setDeactivatingId(volunteer.id);
+                      setDeactivateError("");
                     }}
-                    title={m.admin_volunteers_end_title()}
-                    aria-label={m.admin_volunteers_end_title()}
+                    title={m.admin_volunteers_deactivate_title()}
+                    aria-label={m.admin_volunteers_deactivate_title()}
                   >
                     <Icon icon={TrashIcon} />
                   </Button>
@@ -210,7 +210,7 @@ export default function VolunteersManagement({
           },
         }),
       ]),
-    [setEditingVolunteer, setShowForm, setEndingId, setEndError, handleReactivate],
+    [setEditingVolunteer, setShowForm, setDeactivatingId, setDeactivateError, handleReactivate],
   );
 
   return (
@@ -243,9 +243,13 @@ export default function VolunteersManagement({
               {reactivateError}
             </Alert>
           )}
-          {endSuccess && (
-            <Alert variant="success" className="m-4 mb-0" onClose={() => setEndSuccess(false)}>
-              {m.admin_volunteers_end_success()}
+          {deactivateSuccess && (
+            <Alert
+              variant="success"
+              className="m-4 mb-0"
+              onClose={() => setDeactivateSuccess(false)}
+            >
+              {m.admin_volunteers_deactivate_success()}
             </Alert>
           )}
 
@@ -272,30 +276,35 @@ export default function VolunteersManagement({
         </CardContent>
       </Card>
 
-      {endingId && (
+      {deactivatingId && (
         <Dialog
           open={true}
           onOpenChange={(open) => {
-            if (!open) setEndingId(null);
+            if (!open) setDeactivatingId(null);
           }}
         >
           <DialogContent admin size="default">
             <DialogHeader>
               <DialogTitle className="text-destructive">
                 <Icon icon={TrashIcon} className="me-2" />
-                {m.admin_volunteers_end_title()}
+                {m.admin_volunteers_deactivate_title()}
               </DialogTitle>
             </DialogHeader>
             <DialogBody>
-              {endError && <Alert variant="danger">{endError}</Alert>}
-              <p>{m.admin_volunteers_end_confirm()}</p>
+              {deactivateError && <Alert variant="danger">{deactivateError}</Alert>}
+              <p>{m.admin_volunteers_deactivate_confirm()}</p>
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => setEndingId(null)}>
+              <Button variant="outline" size="sm" onClick={() => setDeactivatingId(null)}>
                 {m.admin_action_cancel()}
               </Button>
-              <Button variant="danger" size="sm" onClick={handleEndConfirm} disabled={ending}>
-                {ending ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={handleDeactivateConfirm}
+                disabled={deactivating}
+              >
+                {deactivating ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
                 {m.admin_action_confirm()}
               </Button>
             </DialogFooter>

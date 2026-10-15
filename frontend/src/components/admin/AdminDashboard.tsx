@@ -204,11 +204,11 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
     handleCreateMember,
     handleCreatePerson,
     handleCreateVolunteer,
-    handleEndMembership,
+    handleDeactivateMember,
     handleDeletePerson,
-    handleEndVolunteering,
-    handleReactivateMembership,
-    handleReactivateVolunteering,
+    handleDeactivateVolunteer,
+    handleReactivateMember,
+    handleReactivateVolunteer,
     handleMergePeople,
     handleUpdateMember,
     handleUpdatePerson,
@@ -649,14 +649,14 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                     members={{
                       onCreate: handleCreateMember,
                       onUpdate: handleUpdateMember,
-                      onEnd: handleEndMembership,
-                      onReactivate: handleReactivateMembership,
+                      onDeactivate: handleDeactivateMember,
+                      onReactivate: handleReactivateMember,
                     }}
                     volunteers={{
                       onCreate: handleCreateVolunteer,
                       onUpdate: handleUpdateVolunteer,
-                      onEnd: handleEndVolunteering,
-                      onReactivate: handleReactivateVolunteering,
+                      onDeactivate: handleDeactivateVolunteer,
+                      onReactivate: handleReactivateVolunteer,
                     }}
                   />
                 )}
