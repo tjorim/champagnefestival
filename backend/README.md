@@ -642,7 +642,7 @@ configuration and Caddy paths; see the [migration and deployment sequence](../do
 
 ## Signage channels and public playlists
 
-Migration `009` adds edition-scoped signage channels, validated layered templates
+Migration `008` adds edition-scoped signage channels, validated layered templates
 and scheduled organisation/notice/image slides. The public clock and playlist
 are `GET /api/signage/time` and `GET /api/signage/{slug}/playlist?locale=nl|fr|en`.
 Admin CRUD and reorder are under `/api/signage`; uploads reuse the artwork

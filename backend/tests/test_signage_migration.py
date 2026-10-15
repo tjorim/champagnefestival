@@ -1,4 +1,4 @@
-"""Migration 009 upgrades existing databases and downgrades without touching editions."""
+"""Migration 008 upgrades existing databases and downgrades without touching editions."""
 
 import os
 from pathlib import Path
@@ -26,7 +26,7 @@ def test_signage_upgrade_and_downgrade(monkeypatch):
     config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "alembic"))
     database = create_engine(migration_url)
     try:
-        command.upgrade(config, "008")
+        command.upgrade(config, "007")
         with database.begin() as connection:
             connection.execute(text("INSERT INTO venues (id, name) VALUES ('venue', 'Venue')"))
             connection.execute(
@@ -53,7 +53,7 @@ def test_signage_upgrade_and_downgrade(monkeypatch):
                     "INSERT INTO signage_slides (id, channel_id, template_id, sort_order, kind, duration, active, content) VALUES ('slide', 'hall', 'template', 0, 'notice', 10, true, '{}')"
                 )
             )
-        command.downgrade(config, "008")
+        command.downgrade(config, "007")
         with database.begin() as connection:
             assert not any(name.startswith("signage_") for name in inspect(connection).get_table_names(schema=schema))
             assert connection.execute(text("SELECT id FROM editions")).scalar_one() == "edition"
