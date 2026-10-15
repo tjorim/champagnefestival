@@ -46,7 +46,7 @@ const person = (index: number) => ({
   phone: "0470000000",
   address: "Street",
   notes: "Notes",
-  active: index % 2 === 0,
+  anonymised: index % 2 !== 0,
   roles: ["member", "volunteer"],
   registration_count: 42,
   national_register_number: "123456",
@@ -69,7 +69,7 @@ function mount(kind: "people" | "members" | "volunteers", count = 25, sort = "")
       (row) =>
         (!url.searchParams.get("q") || row.name.includes(url.searchParams.get("q")!)) &&
         (!url.searchParams.has("active") ||
-          row.active === (url.searchParams.get("active") === "true")),
+          !row.anonymised === (url.searchParams.get("active") === "true")),
     );
     if (url.searchParams.get("sort_dir") === "desc") matching = matching.slice().reverse();
     const page = Number(url.searchParams.get("page") ?? 1);

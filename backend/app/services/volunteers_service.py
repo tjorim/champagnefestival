@@ -145,7 +145,7 @@ def to_volunteer_out(person: Person, help_periods: list[VolunteerPeriod]) -> dic
         "address": d["address"],
         "national_register_number": d["national_register_number"],
         "eid_document_number": d["eid_document_number"],
-        "active": d["active"],
+        "anonymised": d["anonymised"],
         "retired_roles": d["retired_roles"],
         "role_history": d["role_history"],
         "oidc_subject": person.oidc_subject,

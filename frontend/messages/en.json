@@ -607,6 +607,7 @@
   "admin_volunteers_reactivate_success": "Volunteering reactivated. Add a help period for their next stretch.",
   "admin_volunteers_error_reactivate": "Failed to reactivate volunteering.",
   "admin_people_retired_role_badge": "{role} retired",
+  "admin_people_anonymised_badge_label": "anonymised",
   "admin_people_inactive_badge_label": "inactive",
   "admin_people_merge_swap_label": "Swap canonical and duplicate person",
   "admin_people_no_results": "No people found.",

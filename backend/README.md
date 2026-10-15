@@ -319,13 +319,13 @@ follows the same shape.
   reads. `member_since` on `POST`/`PUT /api/members` sets the start of the current
   stretch (the generic people endpoints reject it); a new volunteer starts on
   their earliest `first_help_day`. All of it lives in `app/services/role_history.py`.
-- **`active` with a `role`:** without `role` it is the person-wide flag
-  (`Person.active`), which only marks anonymised people and cannot be set through
-  the create/update endpoints. With `role` (and on `/api/volunteers`, which implies
-  `role=volunteer`) it means active *in that role*: not archived and not retired
-  from it (`Person.retired_roles`, set by the `deactivate` actions), so
-  `active=false` lists people who retired the role plus anyone archived as a
-  whole. `GET /api/people/counts` follows the same rule.
+- **`active` with a `role`:** without `role` it means "not anonymised"
+  (`Person.anonymised`, set only by the anonymise action). With `role` (and on
+  `/api/volunteers`, which implies `role=volunteer`) it means active *in that role*:
+  not anonymised and not retired from it (`Person.retired_roles`, set by the
+  `deactivate` actions), so `active=false` lists people who retired the role plus
+  anyone anonymised. `GET /api/people/counts` follows the same rule. Person reads
+  carry `anonymised` (no `active` field); the create/update endpoints accept neither.
 - **Order without `sort`:** a search (`q`) is ordered by relevance, ending in
   `name, id`; a plain list is newest first (`created_at desc, id desc`). An
   explicit `sort` always overrides relevance.

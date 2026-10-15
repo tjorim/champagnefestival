@@ -101,9 +101,9 @@ async def people_counts(
     """Counts within the full intersection of q, role and active filters."""
     matching = filtered_people_stmt(q=q, role=role, active=active).subquery()
     active_expr = (
-        role_active(role, active_column=matching.c.active, retired_column=matching.c.retired_roles)
+        role_active(role, anonymised_column=matching.c.anonymised, retired_column=matching.c.retired_roles)
         if role
-        else matching.c.active.is_(True)
+        else matching.c.anonymised.is_(False)
     )
     total, active_count = (
         await db.execute(select(func.count(), func.count().filter(active_expr)).select_from(matching))
@@ -181,7 +181,7 @@ async def list_people_due_for_anonymisation(db: AsyncSession = Depends(get_db)) 
         .where(
             Person.national_register_number.is_(None),
             Person.eid_document_number.is_(None),
-            Person.active.is_(True),
+            Person.anonymised.is_(False),
             last_event_date.isnot(None),
             last_event_date < cutoff,
         )

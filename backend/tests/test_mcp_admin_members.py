@@ -172,7 +172,7 @@ async def test_deactivate_member_keeps_role_person_and_registrations(db_session)
 
     # Still a member record with the role retired, not removed.
     still = await mcp_members.get_member(factory, member["id"])
-    assert still["active"] is True
+    assert still["anonymised"] is False
     assert still["retired_roles"] == {"member": date.today().isoformat()}
     assert "member" in still["roles"]
 

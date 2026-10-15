@@ -607,6 +607,7 @@
   "admin_volunteers_reactivate_success": "Vrijwilligerswerk geheractiveerd. Voeg een helpperiode toe voor hun volgende periode.",
   "admin_volunteers_error_reactivate": "Vrijwilligerswerk heractiveren is mislukt.",
   "admin_people_retired_role_badge": "{role} beëindigd",
+  "admin_people_anonymised_badge_label": "geanonimiseerd",
   "admin_people_inactive_badge_label": "inactief",
   "admin_people_merge_swap_label": "Wissel canonieke en duplicaat persoon",
   "admin_people_no_results": "Geen personen gevonden.",

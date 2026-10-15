@@ -40,7 +40,7 @@ async def _seed(db_session, count: int = 24) -> list[Person]:
             name=_NAMES[i % len(_NAMES)],
             email=_EMAILS[i % len(_EMAILS)],
             roles=["volunteer"] if i % 3 == 0 else ["member"],
-            active=i % 4 != 0,
+            anonymised=i % 4 == 0,
             created_at=_STAMPS[i % len(_STAMPS)],
             updated_at=_STAMPS[(i * 2) % len(_STAMPS)],
         )
@@ -132,7 +132,7 @@ async def test_people_default_order_is_newest_first_with_id_tiebreak(client, db_
 @pytest.mark.anyio
 async def test_people_filters_combine_with_sort_and_total_counts_the_filtered_set(client, db_session):
     people = await _seed(db_session)
-    matching = [p for p in people if "member" in p.roles and p.active]
+    matching = [p for p in people if "member" in p.roles and not p.anonymised]
 
     ids, total = await _read_all_pages(
         client, "/api/people", 3, role="member", active="true", sort="name", sort_dir="desc"
@@ -146,7 +146,7 @@ async def test_people_filters_combine_with_sort_and_total_counts_the_filtered_se
 @pytest.mark.anyio
 async def test_volunteers_filters_combine_with_sort_and_total_counts_the_filtered_set(client, db_session):
     people = await _seed(db_session)
-    matching = [p for p in people if "volunteer" in p.roles and not p.active]
+    matching = [p for p in people if "volunteer" in p.roles and p.anonymised]
     assert matching
 
     ids, total = await _read_all_pages(client, "/api/volunteers", 2, active="false", sort="updated")

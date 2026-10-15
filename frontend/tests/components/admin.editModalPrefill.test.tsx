@@ -88,7 +88,7 @@ const existingPerson = {
   address: "1 Rue de la Paix",
   roles: ["member"],
   notes: "VIP",
-  active: true,
+  anonymised: false,
   retiredRoles: {},
   roleHistory: { member: [{ startedOn: "2021-04-02", endedOn: null }] },
   helpPeriods: [{ id: "hp-1", firstHelpDay: "2027-03-06", lastHelpDay: "2027-03-08" }],

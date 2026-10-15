@@ -607,6 +607,7 @@
   "admin_volunteers_reactivate_success": "Bénévolat réactivé. Ajoutez une période d’aide pour leur prochaine période.",
   "admin_volunteers_error_reactivate": "Échec de la réactivation du bénévolat.",
   "admin_people_retired_role_badge": "{role} terminé",
+  "admin_people_anonymised_badge_label": "anonymisé",
   "admin_people_inactive_badge_label": "inactif",
   "admin_people_merge_swap_label": "Échanger la personne canonique et le doublon",
   "admin_people_no_results": "Aucune personne trouvée.",

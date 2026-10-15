@@ -1117,7 +1117,7 @@ class Person(Base):
     retired_roles: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
     """Roles the person has stepped back from, as ``{role: ISO retirement date}``. A retired role
     stays in ``roles`` (with every registration and help period) but the person no longer counts
-    as an active member or volunteer; ``active`` is the separate, person-wide archive flag.
+    as an active member or volunteer; ``anonymised`` is the separate, person-wide marker.
     Derived from ``role_history`` and written only by ``app.services.role_history``."""
     role_history: Mapped[dict[str, list[dict[str, str | None]]]] = mapped_column(JSON, default=dict)
     """When each role was held: ``{role: [{"started_on", "ended_on"}, ...]}`` (ISO days, oldest
@@ -1149,7 +1149,9 @@ class Person(Base):
     docs/decisions/1006-volunteer-identity-self-service.md."""
     visits_per_month: Mapped[int | None] = mapped_column(Integer, nullable=True)
     notes: Mapped[str] = mapped_column(Text, default="")
-    active: Mapped[bool] = mapped_column(Boolean, default=True)
+    anonymised: Mapped[bool] = mapped_column(Boolean, default=False)
+    """Set when the record has been anonymised (``people_service.anonymise_person``); such a person
+    counts as inactive in every role and is not offered for anonymisation again."""
 
     marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
     """Explicit, unticked-by-default consent to be contacted about future

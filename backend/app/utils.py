@@ -609,7 +609,7 @@ def person_to_dict(p: Person) -> dict:
         "eid_document_number": p.eid_document_number,
         "visits_per_month": p.visits_per_month,
         "notes": p.notes,
-        "active": p.active,
+        "anonymised": p.anonymised,
         "marketing_opt_in": p.marketing_opt_in,
         "marketing_opt_in_at": p.marketing_opt_in_at,
         "created_at": p.created_at,

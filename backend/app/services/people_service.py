@@ -279,7 +279,7 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     person.phone = ""
     person.address = ""
     person.notes = ""
-    person.active = False
+    person.anonymised = True
 
     await write_audit_entry(
         db,

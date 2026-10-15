@@ -155,7 +155,7 @@ class PersonOut(BaseModel):
     eid_document_number: str | None
     visits_per_month: int | None
     notes: str
-    active: bool
+    anonymised: bool
     marketing_opt_in: bool
     marketing_opt_in_at: datetime | None
     created_at: datetime
@@ -187,7 +187,7 @@ class PersonAdminSummaryOut(BaseModel):
     role_history: dict[str, list[RoleStretchOut]] = {}
     visits_per_month: int | None
     notes: str
-    active: bool
+    anonymised: bool
     marketing_opt_in: bool
     marketing_opt_in_at: datetime | None
     created_at: datetime
@@ -1039,7 +1039,7 @@ class VolunteerOut(BaseModel):
     address: str
     national_register_number: str | None
     eid_document_number: str | None
-    active: bool
+    anonymised: bool
     retired_roles: dict[str, str] = {}
     role_history: dict[str, list[RoleStretchOut]] = {}
     help_periods: list[VolunteerPeriodOut]

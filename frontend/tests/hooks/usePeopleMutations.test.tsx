@@ -21,7 +21,7 @@ const data = {
   address: "",
   roles: ["member"],
   notes: "",
-  active: true,
+  anonymised: false,
 };
 const person = (id: string) => ({
   id,
@@ -308,7 +308,7 @@ describe("optimistic people mutations", () => {
     await waitFor(() =>
       expect(h.cached().items[0]?.retiredRoles).toEqual({ member: localIsoDate() }),
     );
-    expect(h.cached().items[0]?.active).toBe(true);
+    expect(h.cached().items[0]?.anonymised).toBe(false);
     expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
     expect(h.cached().items[0]?.name).toBe("Original a");
     expect(h.cached().total).toBe(2);
@@ -338,7 +338,7 @@ describe("optimistic people mutations", () => {
       expect(h.cached().items[0]?.helpPeriods[0]?.lastHelpDay).toBe(localIsoDate()),
     );
     expect(h.cached().items[0]?.retiredRoles).toEqual({ volunteer: localIsoDate() });
-    expect(h.cached().items[0]?.active).toBe(true);
+    expect(h.cached().items[0]?.anonymised).toBe(false);
     expect(h.cached().items[0]?.roles).toEqual(["member", "volunteer"]);
     expect(h.cached().items[0]?.helpPeriods).toHaveLength(1);
     expect(h.cached().total).toBe(2);

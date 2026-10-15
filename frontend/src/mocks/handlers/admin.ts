@@ -298,7 +298,7 @@ function registrationToCheckInResponse(
 // Active in a role: not archived as a whole and not retired from that role (as the backend does).
 function isActiveIn(person: Record<string, unknown>, role: string | null | undefined): boolean {
   const retired = (person.retired_roles ?? {}) as Record<string, string>;
-  return Boolean(person.active) && !(role && Object.hasOwn(retired, role));
+  return !person.anonymised && !(role && Object.hasOwn(retired, role));
 }
 function filteredPeople(url: URL, role?: string) {
   const active = url.searchParams.get("active");
@@ -730,7 +730,7 @@ export const adminHandlers = [
       eid_document_number: null,
       visits_per_month: null,
       notes: String(body.notes ?? ""),
-      active: body.active !== false,
+      anonymised: false,
       created_at: now(),
       updated_at: now(),
     };
@@ -806,7 +806,7 @@ export const adminHandlers = [
       eid_document_number: null,
       visits_per_month: typeof body.visits_per_month === "number" ? body.visits_per_month : null,
       notes: String(body.notes ?? ""),
-      active: body.active !== false,
+      anonymised: false,
       role_history: {
         member: [
           {
@@ -908,7 +908,7 @@ export const adminHandlers = [
       eid_document_number: null,
       visits_per_month: null,
       notes: String(body.notes ?? ""),
-      active: body.active !== false,
+      anonymised: false,
       created_at: now(),
       updated_at: now(),
     };

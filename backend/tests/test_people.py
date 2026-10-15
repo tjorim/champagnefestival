@@ -55,7 +55,7 @@ async def test_people_crud_roles_and_filters(client):
     )
     assert r.status_code == 200
     assert r.json()["roles"] == ["festival-visitor", "treasurer"]
-    assert r.json()["active"] is True
+    assert r.json()["anonymised"] is False
 
     r = await client.get(
         "/api/people",
@@ -658,7 +658,7 @@ async def test_members_crud(client):
     )
     assert r.status_code == 200
     assert "member" in r.json()["roles"]
-    assert r.json()["active"] is True
+    assert r.json()["anonymised"] is False
 
     r = await client.get("/api/people", params={"role": "member", "active": "true"}, headers=ADMIN_HEADERS)
     assert r.status_code == 200
@@ -761,7 +761,7 @@ async def test_deactivate_member_keeps_role_person_and_registrations(client):
     assert person.status_code == 200
     assert person.json()["roles"] == ["member", "volunteer"]
     assert list(person.json()["retired_roles"]) == ["member"]
-    assert person.json()["active"] is True
+    assert person.json()["anonymised"] is False
     assert (await client.get(f"/api/registrations/{registration_id}", headers=ADMIN_HEADERS)).status_code == 200
 
     # Ending again is a no-op (convergent), an unknown person is a not-found.
@@ -801,15 +801,15 @@ async def test_roles_are_retired_independently(client, db_session):
     # The person-wide filter (no role) is untouched.
     assert person_id in await ids("member", None)
     person = (await client.get(f"/api/people/{person_id}", headers=ADMIN_HEADERS)).json()
-    assert person["active"] is True and list(person["retired_roles"]) == ["member"]
+    assert person["anonymised"] is False and list(person["retired_roles"]) == ["member"]
 
     # An archived person (person-wide) is inactive in every role.
     archived = await db_session.get(Person, person_id)
-    archived.active = False
+    archived.anonymised = True
     await db_session.commit()
     assert person_id in await ids("volunteer", False)
     assert person_id not in await ids("volunteer", True)
-    archived.active = True
+    archived.anonymised = False
     await db_session.commit()
 
     # Reactivating brings the member role back, and a repeat is a no-op.
@@ -902,7 +902,7 @@ async def test_anonymise_person_blanks_identity_fields_and_keeps_registrations(c
     assert body["phone"] == ""
     assert body["address"] == ""
     assert body["notes"] == ""
-    assert body["active"] is False
+    assert body["anonymised"] is True
 
     # The registration itself — the operational/historical record — survives.
     r = await client.get(f"/api/registrations/{reg['id']}", headers=ADMIN_HEADERS)

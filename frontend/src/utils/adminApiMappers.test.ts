@@ -34,7 +34,7 @@ function makePerson(overrides: Partial<Person> = {}): Person {
     eidDocumentNumber: null,
     visitsPerMonth: null,
     notes: "",
-    active: true,
+    anonymised: false,
     retiredRoles: {},
     roleHistory: {},
     helpPeriods: [],

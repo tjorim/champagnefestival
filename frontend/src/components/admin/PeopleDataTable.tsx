@@ -64,7 +64,10 @@ export function PersonName({ person, role }: { person: Person; role?: string }) 
   return (
     <span className="flex items-center gap-1" aria-busy={pending > 0}>
       {person.name}
-      {(!person.active || (role && !isRoleActive(person, role))) && (
+      {person.anonymised && (
+        <Badge variant="secondary">{m.admin_people_anonymised_badge_label()}</Badge>
+      )}
+      {!person.anonymised && role && !isRoleActive(person, role) && (
         <Badge variant="secondary">{m.admin_people_inactive_badge_label()}</Badge>
       )}
       {!role &&

@@ -69,10 +69,10 @@ def role_retired(role: str, column: Any = None) -> Any:
     return func.json_extract_path_text(column, role.strip().lower()).is_not(None)
 
 
-def role_active(role: str, *, active_column: Any = None, retired_column: Any = None) -> Any:
-    """Active in *role*: the person is not archived and has not retired the role."""
-    active_column = Person.active if active_column is None else active_column
-    return and_(active_column.is_(True), ~role_retired(role, retired_column))
+def role_active(role: str, *, anonymised_column: Any = None, retired_column: Any = None) -> Any:
+    """Active in *role*: the person is not anonymised and has not retired the role."""
+    anonymised_column = Person.anonymised if anonymised_column is None else anonymised_column
+    return and_(anonymised_column.is_(False), ~role_retired(role, retired_column))
 
 
 def filtered_people_stmt(
@@ -83,9 +83,9 @@ def filtered_people_stmt(
 ) -> Select[Any]:
     """``select(Person)`` with the shared filters applied and no ordering.
 
-    ``active`` is person-wide without a ``role``. With a ``role`` it means active *in that role*:
-    not archived and not retired from it (so ``active=false`` lists those who retired the role,
-    and everyone who is archived altogether).
+    ``active`` means "not anonymised" without a ``role``. With a ``role`` it means active *in that role*:
+    not anonymised and not retired from it (so ``active=false`` lists those who retired the role,
+    and everyone who is anonymised).
     """
     stmt = select(Person)
     if role:
@@ -94,7 +94,7 @@ def filtered_people_stmt(
         if role:
             stmt = stmt.where(role_active(role) if active else ~role_active(role))
         else:
-            stmt = stmt.where(Person.active == active)
+            stmt = stmt.where(Person.anonymised == (not active))
     if q and (q_stripped := q.strip()):
         stmt = stmt.where(person_search_filter(q_stripped))
     return stmt

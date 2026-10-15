@@ -90,7 +90,7 @@ async def test_volunteer_crud_and_constraints(client):
     )
     assert r.status_code == 200
     assert r.json()["address"] == "Nieuwe Steenweg 8, 8400 Oostende"
-    assert r.json()["active"] is True
+    assert r.json()["anonymised"] is False
     assert len(r.json()["help_periods"]) == 3
     assert r.json()["help_periods"][1]["notes"] == "Sun: desk"
 
@@ -125,7 +125,7 @@ async def test_volunteer_crud_and_constraints(client):
     person = await client.get(f"/api/people/{volunteer_id}", headers=ADMIN_HEADERS)
     assert "volunteer" in person.json()["roles"]
     assert list(person.json()["retired_roles"]) == ["volunteer"]
-    assert person.json()["active"] is True
+    assert person.json()["anonymised"] is False
     r = await client.get("/api/volunteers", params={"active": "true"}, headers=ADMIN_HEADERS)
     assert r.json()["items"] == []
     r = await client.get("/api/volunteers", params={"active": "false"}, headers=ADMIN_HEADERS)

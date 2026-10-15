@@ -29,12 +29,12 @@ export function lastHelpedDay(periods: VolunteerHelpPeriod[]): string | null {
   return latest;
 }
 
-/** Active in a role: not archived as a whole and not retired from that role. */
+/** Active in a role: the person is not anonymised and has not retired that role. */
 export function isRoleActive(
-  person: Pick<Person, "active" | "retiredRoles">,
+  person: Pick<Person, "anonymised" | "retiredRoles">,
   role: string,
 ): boolean {
-  return person.active && !Object.hasOwn(person.retiredRoles, role);
+  return !person.anonymised && !Object.hasOwn(person.retiredRoles, role);
 }
 
 export interface RoleStretch {
@@ -60,7 +60,8 @@ export interface Person {
   eidDocumentNumber: string | null;
   visitsPerMonth: number | null;
   notes: string;
-  active: boolean;
+  /** Set once the record has been anonymised; such a person is inactive in every role. */
+  anonymised: boolean;
   /** Roles the person stepped back from (role to ISO day); they stay in `roles`. */
   retiredRoles: Record<string, string>;
   /** When each role was held: one stretch per spell, oldest first; null = unknown. */
@@ -83,7 +84,7 @@ export function apiToPerson(d: Record<string, unknown>): Person {
     eidDocumentNumber: (d.eid_document_number as string | null) ?? null,
     visitsPerMonth: (d.visits_per_month as number | null) ?? null,
     notes: (d.notes ?? "") as string,
-    active: (d.active ?? true) as boolean,
+    anonymised: (d.anonymised ?? false) as boolean,
     retiredRoles: (d.retired_roles as Record<string, string> | undefined) ?? {},
     roleHistory: Object.fromEntries(
       Object.entries((d.role_history as Record<string, unknown[]> | undefined) ?? {}).map(

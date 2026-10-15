@@ -1,5 +1,5 @@
 import type { Query, QueryClient } from "@tanstack/react-query";
-import type { Person } from "@/types/person";
+import { isRoleActive, type Person } from "@/types/person";
 import type { PeopleListParams, PeoplePage } from "@/utils/adminPeopleQueries";
 import { queryKeys } from "@/utils/queryKeys";
 
@@ -29,7 +29,8 @@ export function patchPeoplePage(
   const matches = (row: Person | null) =>
     !!row &&
     (!params.role || row.roles.includes(params.role)) &&
-    (params.active === undefined || row.active === params.active);
+    (params.active === undefined ||
+      (params.role ? isRoleActive(row, params.role) : !row.anonymised) === params.active);
   const updated = write.update(person);
   const leaves = matches(person) && !matches(updated);
   return {

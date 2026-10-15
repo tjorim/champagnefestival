@@ -232,7 +232,7 @@ async def test_deactivate_volunteer_keeps_everything(db_session):
     # Still a volunteer record, with the role retired (not removed), and the person intact ...
     still = await mcp_volunteers.get_volunteer(factory, volunteer_id)
     assert still["id"] == volunteer_id
-    assert still["active"] is True
+    assert still["anonymised"] is False
     assert still["retired_roles"] == {"volunteer": date.today().isoformat()}
     person = await db_session.get(Person, volunteer_id)
     assert person is not None

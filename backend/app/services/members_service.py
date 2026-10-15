@@ -194,7 +194,7 @@ async def deactivate_member(db: AsyncSession, person: Person, *, actor: str, req
 
     The role is retired, not removed: it stays in ``roles`` and ``retired_roles["member"]`` records
     the day, so the person stops counting as an active member without being archived as a whole
-    (``Person.active``) and without touching their other roles. The ``Person`` record,
+    (``Person.anonymised``) and without touching their other roles. The ``Person`` record,
     registrations, check-ins and audit history all stay: attendance is what member benefits are
     earned from. Membership resumes with ``reactivate_member``. Erasing a person and their
     registrations is the separate ``people_service.delete_person``. Calling it again changes
