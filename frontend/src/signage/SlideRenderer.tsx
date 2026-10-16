@@ -29,56 +29,73 @@ export function SlideRenderer({ slide }: { slide: PublicSlide }) {
       {slide.kind === "image" && slide.image && (
         <img className="site-signage-background" src={slide.image} alt="" />
       )}
-      {layers.map((layer) => {
-        const binding = layer.binding;
-        const image =
-          layer.kind === "image"
-            ? layer.image
-            : binding === "logo"
-              ? slide.organization?.logo
-              : null;
-        const text =
-          layer.kind === "text"
-            ? layer.text
-            : binding === "name"
-              ? slide.organization?.name
-              : binding === "description"
-                ? slide.organization?.description
-                : binding === "sponsor"
-                  ? slide.organization?.sponsor
-                    ? m.admin_item_sponsor()
-                    : ""
-                  : binding === "title"
-                    ? slide.title
-                    : binding === "text"
-                      ? slide.text
-                      : null;
-        return (
-          <div
-            key={layer.id}
-            className="site-signage-layer"
-            style={{
-              left: `${layer.x}%`,
-              top: `${layer.y}%`,
-              width: `${layer.width}%`,
-              height: `${layer.height}%`,
-              transform: `rotate(${layer.rotation}deg)`,
-              color: layer.color,
-              fontSize: layer.font_size,
-              background: layer.kind === "shape" ? layer.color : undefined,
-              borderRadius: layer.kind === "shape" && layer.shape === "ellipse" ? "50%" : undefined,
-            }}
-          >
-            {image ? (
-              <img className="size-full object-contain" src={image} alt="" />
-            ) : layer.kind === "icon" || binding === "icon" ? (
-              <Sticker name={binding === "icon" ? slide.icon : layer.icon} />
-            ) : (
-              text
-            )}
-          </div>
-        );
-      })}
+      {layers
+        .filter((layer) => layer.visible !== false)
+        .map((layer) => {
+          const binding = layer.kind === "binding" ? layer.binding : null;
+          const image =
+            layer.kind === "image"
+              ? layer.image
+              : binding === "logo"
+                ? slide.organization?.logo
+                : null;
+          const text =
+            layer.kind === "text"
+              ? layer.text
+              : binding === "name"
+                ? slide.organization?.name
+                : binding === "description"
+                  ? slide.organization?.description
+                  : binding === "sponsor"
+                    ? slide.organization?.sponsor
+                      ? m.admin_item_sponsor()
+                      : ""
+                    : binding === "title"
+                      ? slide.title
+                      : binding === "text"
+                        ? slide.text
+                        : null;
+          return (
+            <div
+              key={layer.id}
+              className="site-signage-layer"
+              style={{
+                left: `${layer.x}%`,
+                top: `${layer.y}%`,
+                width: `${layer.width}%`,
+                height: `${layer.height}%`,
+                transform: `rotate(${layer.rotation}deg)`,
+                color: layer.color,
+                fontSize: layer.font_size,
+                fontFamily: {
+                  sans: "Arial, sans-serif",
+                  serif: "Georgia, serif",
+                  mono: "monospace",
+                }[layer.font ?? "sans"],
+                textAlign: layer.align ?? "center",
+                justifyContent: { left: "flex-start", center: "center", right: "flex-end" }[
+                  layer.align ?? "center"
+                ],
+                background: layer.kind === "shape" ? layer.color : undefined,
+                borderRadius:
+                  layer.kind === "shape" && layer.shape === "ellipse" ? "50%" : undefined,
+              }}
+            >
+              {image ? (
+                <img
+                  className="size-full"
+                  style={{ objectFit: layer.fit ?? "contain" }}
+                  src={image}
+                  alt=""
+                />
+              ) : layer.kind === "icon" || binding === "icon" ? (
+                <Sticker name={binding === "icon" ? slide.icon : layer.icon} />
+              ) : (
+                text
+              )}
+            </div>
+          );
+        })}
     </div>
     /* oxlint-enable shadcn/no-inline-styles */
   );

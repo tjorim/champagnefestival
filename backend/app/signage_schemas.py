@@ -38,6 +38,12 @@ class Layer(Document):
     rotation: float = Field(default=0, ge=-360, le=360, allow_inf_nan=False)
     color: str = Field(default="#ffffff", pattern=r"^#[0-9a-fA-F]{6}$")
     font_size: int = Field(default=48, ge=8, le=300)
+    name: str = Field(default="", max_length=100)
+    visible: bool = True
+    locked: bool = False
+    font: Literal["sans", "serif", "mono"] = "sans"
+    align: Literal["left", "center", "right"] = "center"
+    fit: Literal["contain", "cover"] = "contain"
 
     @model_validator(mode="after")
     def required_content(self):
@@ -164,3 +170,13 @@ class Playlist(Document):
     revision: str
     epoch: datetime
     slides: list[PublicSlide]
+
+
+def missing_bindings(layers, kind: str) -> set[str]:
+    required = {"organizations": {"logo", "name", "sponsor"}, "notice": {"title", "text"}, "image": set()}[kind]
+    present = {
+        layer.binding
+        for layer in (Layer.model_validate(value) for value in layers)
+        if layer.visible and layer.kind == "binding"
+    }
+    return required - present

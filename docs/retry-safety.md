@@ -552,3 +552,14 @@ or conflict on slug (channels); there is no deduplication promise to test. Concu
 replacement/reorder calls are deliberately last-writer-wins under the database
 lock, rather than safe for unattended replay. Audit rows participate in the same
 transaction as state changes, including failed reference/conflict rollbacks.
+
+### Signage template editor (#1263)
+
+The editor uses the existing signage writes without automatic retries. Creating a
+new template (`POST /api/signage/templates`) and uploading artwork (`POST
+/api/signage/assets`) allocate new identities and are not retry-safe: after an
+ambiguous failure, reload the template list before creating again. Updating an
+existing template (`PUT /api/signage/templates/{id}`) replaces the document;
+repeating the same payload preserves its content but creates another audit entry
+and advances affected channel revisions. The editor disables writes while a
+request is pending. No write is advertised as automatically retryable.

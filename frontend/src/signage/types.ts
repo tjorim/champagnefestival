@@ -19,6 +19,12 @@ export interface Layer {
   rotation: number;
   color: string;
   font_size: number;
+  name?: string;
+  visible?: boolean;
+  locked?: boolean;
+  font?: "sans" | "serif" | "mono";
+  align?: "left" | "center" | "right";
+  fit?: "contain" | "cover";
 }
 export interface PublicSlide {
   id: string;

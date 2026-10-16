@@ -77,19 +77,22 @@ Deleting a channel cascades its slides; deleting a referenced template returns
 Stable business error codes: `signage_not_found`, `signage_edition_not_found`,
 `signage_conflict` (duplicate slug/reference race), `signage_in_use` (template
 still referenced), `signage_invalid_order`, `signage_invalid_image`, and
-`signage_asset_not_found`. Standard request validation and authentication retain
+`signage_asset_not_found`, and `signage_missing_placeholders` (422 when a slide
+uses an incomplete template or an edit removes required bindings). Standard request validation and authentication retain
 the existing API conventions. Retry decisions: [retry-safety.md](retry-safety.md).
 
 ## Canvas and image assets
 
 Canvas coordinates are percentages on a 1920×1080 reference canvas. `x`/`y`
-mark the layer centre, rotation is clockwise around that centre, width/height
+mark the layer top-left corner, rotation is clockwise around its centre, width/height
 are percentages. Array order is paint order. Layers support `binding`, `text`,
 `image`, `icon`, `shape`; bindings are `logo`, `name`, `description`, `sponsor`,
 `title`, `text`, `icon`. Documents reject arbitrary CSS/HTML and unknown keys;
 colours are six-digit hex, geometry is bounded and finite. Backgrounds support
 `color`, a two-colour `gradient`, or uploaded `image`. Exact defaults and bounds
-are published by OpenAPI (`/docs`, `/openapi.json`).
+are published by OpenAPI (`/docs`, `/openapi.json`). The
+[layer contract](signage-layer-contract.md) describes editor metadata, typography,
+image fit and required bindings.
 
 `POST /api/signage/assets` accepts multipart `file`. It reuses edition hero
 validation: PNG/JPEG/WebP, static only, 10 MiB/40 megapixel limits, landscape

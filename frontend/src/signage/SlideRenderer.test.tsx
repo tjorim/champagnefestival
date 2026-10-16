@@ -73,6 +73,24 @@ describe("shared signage renderer", () => {
     rerender(<SlideRenderer slide={content} />);
     expect(container.querySelector("svg")).not.toBeInTheDocument();
   });
+  it("shares visibility and typography across player and editor", () => {
+    const content = slide("name");
+    Object.assign(content.template.layers[0]!, { font: "serif", align: "left", visible: false });
+    const { rerender } = render(<SlideRenderer slide={content} />);
+    expect(screen.queryByText("Producer")).not.toBeInTheDocument();
+    content.template.layers[0]!.visible = true;
+    rerender(<SlideRenderer slide={content} />);
+    expect(screen.getByText("Producer")).toHaveStyle({
+      fontFamily: "Georgia, serif",
+      textAlign: "left",
+    });
+  });
+  it("uses the template image fit in the shared renderer", () => {
+    const content = slide("logo");
+    content.template.layers[0]!.fit = "cover";
+    const { container } = render(<SlideRenderer slide={content} />);
+    expect(container.querySelector("img")).toHaveStyle({ objectFit: "cover" });
+  });
   it("binds a logo as an image rather than rendering the URL as text", () => {
     const { container } = render(<SlideRenderer slide={slide("logo")} />);
     expect(container.querySelector("img")).toHaveAttribute("src", "/images/logo.svg");

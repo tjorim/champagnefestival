@@ -8,6 +8,8 @@ export const diagnosticCallees = ["devError"];
 // Exact source/value exclusions. Never approve a whole component or directory for visible copy.
 export const exclusions = {
   "signage/SlideRenderer.tsx": {
+    "Arial, sans-serif": "CSS font-family stack from the validated signage font allow-list",
+    "Georgia, serif": "CSS font-family stack from the validated signage font allow-list",
     "linear-gradient(135deg,": "CSS gradient syntax for the authored template background",
   },
   "components/BrandWordmark.tsx": {

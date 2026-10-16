@@ -1,0 +1,53 @@
+@layer components {
+  .site-signage-editor-viewport {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+  }
+  .site-signage-editor-canvas {
+    position: absolute;
+    width: 1920px;
+    height: 1080px;
+    transform-origin: top left;
+  }
+  .site-signage-editor-selection {
+    position: absolute;
+    pointer-events: none;
+  }
+  .site-signage-editor-hit {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    touch-action: none;
+    cursor: move;
+  }
+  .site-signage-editor-hit[aria-pressed="true"],
+  .site-signage-editor-hit:focus-visible {
+    outline: 6px solid var(--surface-primary);
+    outline-offset: -6px;
+  }
+  .site-signage-editor-resize,
+  .site-signage-editor-rotate {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    background: var(--surface-primary);
+    border: 4px solid var(--surface-background);
+    pointer-events: auto;
+    touch-action: none;
+  }
+  .site-signage-editor-resize {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+  }
+  .site-signage-editor-rotate {
+    right: 0;
+    top: 0;
+    border-radius: 50%;
+    cursor: grab;
+  }
+}

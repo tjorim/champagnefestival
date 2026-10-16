@@ -13,6 +13,9 @@ and are independent of the `x`/`y`/`rotation` contract described here. It also d
 cover `Layout.day_id`/`edition_id` resolution or seating/reservation assignment — see
 issue #802 for that.
 
+Signage uses the same top-left anchor and clockwise centre rotation on a fixed
+1920×1080 canvas; see the separate [signage layer contract](signage-layer-contract.md).
+
 ## Position (`x`, `y`)
 
 - **Type:** float, range `[0, 100]` inclusive — enforced by `TableCreate`/`TableUpdate`/

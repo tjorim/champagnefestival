@@ -5,7 +5,7 @@ into the [frontend UI guide](frontend-ui.md) on 2026-10-07. Completion records
 and original findings remain below; detailed migration history remains in Git.
 
 
-Updated 2026-10-07. This is the current scope, dependency and preferred-order
+Updated 2026-10-16. This is the current scope, dependency and preferred-order
 record for the August 2026 audit and communications roadmap. GitHub issues
 hold discussion and workflow state; decision documents hold current contracts.
 
@@ -70,6 +70,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1263](https://github.com/tjorim/champagnefestival/issues/1263) | Completed | 2026-10-16 | #1263; shared renderer, layer-model and authenticated editor tests | Layered template editor with uploads, real-data previews, accessible geometry controls, history, translated UI and service-enforced required bindings; see [layer contract](signage-layer-contract.md). |
 | [#1190](https://github.com/tjorim/champagnefestival/issues/1190) | Repository implementation complete; production rollout retains separate gates | 2026-10-07 | PRs #1207, #1208, #1211, #1212, #1213; shared-renderer integration | All five sub-issues are closed; review uses the shared table renderer. The full organization rename has no aliases and is folded into migration `004`; see [upgrade guidance](organization-change-review.md#terminology-and-upgrade). Production remains gated on apps#262/apps#263; account unification remains #1209. |
 | [#1195](https://github.com/tjorim/champagnefestival/issues/1195) | Repository implementation complete; production activation gated on tjorim/apps#263 | 2026-10-07 | PR #1213; [API contract](organization-description-translation.md) | Editable, stateless translation drafts with configured languages, rate/concurrency limits and stale-result protection. Normal save/submit controls publication; production activation remains apps#263. |
 | [#1194](https://github.com/tjorim/champagnefestival/issues/1194) | Repository implementation complete; production serving gated on tjorim/apps#262 | 2026-10-07 | PR #1212; [storage, API and recovery](organization-logo-upload.md) | Validated PNG uploads, private proposals/previews and immediate admin publication. Transactional cleanup and lock-protected reconciliation cover replacement, deletion and crash recovery; production storage/serving remains apps#262. |
@@ -153,3 +154,18 @@ caching. Cuts and an always-visible status dot settle the proposed display
 choices. This remains partial until the multi-laptop acceptance rehearsal in
 [signage setup](signage-setup.md) is completed, including actual sleep prevention
 and offline reload on venue hardware. The editor can reuse `SlideRenderer`.
+
+## Signage template editor (#1263)
+
+Completed 2026-10-16. The editor lives under Content → Announcements → Screen
+templates and reuses `SlideRenderer`; the schema gains backwards-compatible layer
+metadata, visibility, locking, font, alignment and image-fit defaults. The
+[layer contract](signage-layer-contract.md) documents geometry, required bindings,
+the Arial/Georgia/monospace font list, Lucide/uploaded stickers and the decision
+to keep geometry exclusively in templates. Existing organisation and slide records
+provide preview content with the same translation fallback as the player.
+
+- [x] Custom backgrounds, logo/name placeholders and stickers render with existing content.
+- [x] Missing required visible bindings are flagged before saving for a preview kind; the service rejects assignment and shared-template edits that violate slide requirements.
+- [x] Editor and player use the same renderer and tested top-left coordinate contract.
+- [x] Frontend lint, formatting, typecheck/build and the full unit suite pass. All 373 other browser cases passed in the full run; the editor case passed after correcting an ambiguous rotation-field test locator. The latest targeted suite has 12 frontend signage tests; 14 backend signage tests and backend lint/format/typecheck pass.
