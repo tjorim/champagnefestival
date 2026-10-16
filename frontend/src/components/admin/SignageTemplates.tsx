@@ -385,7 +385,8 @@ export default function SignageTemplates({
     const current = gesture.current;
     if (!current) return;
     if (cancel) setDraft(current.draft);
-    else {
+    // Compare content: pointer moves can create new objects without changing geometry.
+    else if (JSON.stringify(draft) !== JSON.stringify(current.draft)) {
       setPast((items) => [...items.slice(-99), current.draft]);
       setFuture([]);
     }

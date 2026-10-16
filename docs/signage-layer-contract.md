@@ -34,5 +34,6 @@ The editor and player both use `SlideRenderer`. The editor scales that same fixe
 canvas to its available width and overlays manipulation controls. Arrow keys move
 a selected canvas layer by one percentage point (Shift: five); numeric properties
 provide keyboard resize and rotation. Pointer handles support touch and mouse.
-Each pointer gesture is one undo step; cancelled gestures restore their starting
-state. Undo history is local to the open template and is not persisted.
+Each pointer gesture that changes content is one undo step; clicks and gestures
+that return to their starting geometry preserve redo history. Cancelled gestures
+restore their starting state. Undo history is local to the open template and is not persisted.

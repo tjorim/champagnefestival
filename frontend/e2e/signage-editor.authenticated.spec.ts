@@ -38,6 +38,22 @@ test("creates a layered template, validates bindings and preserves edits through
   await expect(page.locator(".site-signage-stage")).toContainText("Welcome to the festival");
   await page.getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.locator(".site-signage-stage")).not.toContainText("Welcome to the festival");
+  const selectedHit = page.locator('.site-signage-editor-hit[aria-pressed="true"]');
+  await selectedHit.click();
+  await expect(page.getByRole("button", { name: "Redo", exact: true })).toBeEnabled();
+  // Returning to the starting coordinates is also a no-op, even after pointer moves.
+  const originalBounds = await selectedHit.boundingBox();
+  if (!originalBounds) throw new Error("Selected layer is not visible");
+  const origin = {
+    x: originalBounds.x + originalBounds.width / 2,
+    y: originalBounds.y + originalBounds.height / 2,
+  };
+  await page.mouse.move(origin.x, origin.y);
+  await page.mouse.down();
+  await page.mouse.move(origin.x + 20, origin.y + 10);
+  await page.mouse.move(origin.x, origin.y);
+  await page.mouse.up();
+  await expect(page.getByRole("button", { name: "Redo", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.locator(".site-signage-stage")).toContainText("Welcome to the festival");
   const hit = page.locator('.site-signage-editor-hit[aria-pressed="true"]');
