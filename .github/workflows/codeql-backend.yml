@@ -1,23 +1,10 @@
 name: CodeQL Backend
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/codeql-backend.yml"
-  push:
-    branches: [main]
-    paths:
-      - "backend/**"
-      - ".github/workflows/codeql-backend.yml"
+  workflow_call:
+  workflow_dispatch:
   schedule:
     - cron: "0 3 * * 1"
-  workflow_dispatch:
-
-concurrency:
-  group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}"
-  cancel-in-progress: true
 
 permissions:
   contents: read
