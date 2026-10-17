@@ -32,7 +32,7 @@
     "@tanstack/react-db": "^0.5.5",
     "@tanstack/react-form": "2.0.0-alpha.2",
     "@tanstack/react-query": "^5.104.2",
-    "@tanstack/react-router": "^1.170.41",
+    "@tanstack/react-router": "^1.170.44",
     "@tanstack/react-table": "9.3.1",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",

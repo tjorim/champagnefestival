@@ -36,8 +36,8 @@ importers:
         specifier: ^5.104.2
         version: 5.104.2(react@19.3.0)
       '@tanstack/react-router':
-        specifier: ^1.170.41
-        version: 1.170.41(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: ^1.170.44
+        version: 1.170.44(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@tanstack/react-table':
         specifier: 9.3.1
         version: 9.3.1(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -1376,8 +1376,8 @@ packages:
     resolution: {integrity: sha512-u/2s1rJ1pSdFgU/oKz2zt/Wdb3XQK9LY1IIL2pLMu0AVYK5f8Ue5UwaCjcUxEAI8g6XJpbmEuy2wLIwHZbZnwA==}
     engines: {node: '>=18'}
 
-  '@tanstack/history@1.162.4':
-    resolution: {integrity: sha512-utTS5L2OkeYUzXGohL1Z8sefu1GLNOJcxe8Hd6iIdc/Xo1K1nDB2JEp4iSFhvYh33xKC9V91TxrS8qfrpoKobQ==}
+  '@tanstack/history@1.162.5':
+    resolution: {integrity: sha512-w1+YvwmTkwt5n8yUqEH3IWZ9DsmorCZW/EQ3KYHnqEgIkOZpH54NvW6/Epq3Dzb8H0ifIeYX8PExvrNLIH5FIA==}
     engines: {node: '>=20.19'}
 
   '@tanstack/pacer-lite@0.2.2':
@@ -1412,8 +1412,8 @@ packages:
     peerDependencies:
       react: ^18 || ^19
 
-  '@tanstack/react-router@1.170.41':
-    resolution: {integrity: sha512-Mpvw8Wm5MGDbTqI8Yc9flLKxbOHwoWocv0H2aGKcgw2a017oK5nZWqa954P+DrUx/8fI98YNywnHP5XcD3tQ9w==}
+  '@tanstack/react-router@1.170.44':
+    resolution: {integrity: sha512-uIIZ3CHU1yWlkMkmbnGFX3WIfZozF+tNrOMMEoM9lo+jzPInCRq80LBqW3DH9ixNHWjB3TM/cNIvr05uGIlP3A==}
     engines: {node: '>=20.19'}
     peerDependencies:
       react: '>=18.0.0 || >=19.0.0'
@@ -1437,8 +1437,8 @@ packages:
     peerDependencies:
       react: '>=18'
 
-  '@tanstack/router-core@1.171.34':
-    resolution: {integrity: sha512-X+19pGuuLVPvvAvPYw9v/+ktRk5cCll8AtfpBpOhDRmVgUMrfqze0467xtq8YRVVs/mmo5rVtWn/7Tp32RDBKw==}
+  '@tanstack/router-core@1.171.37':
+    resolution: {integrity: sha512-11Le36++mHNeeFIABz4C3PdTWyJ1ilOmGmANOQOypknZwC1xN674al5BUqWuimKasWane1/XSNcEx8NYNHh0+A==}
     engines: {node: '>=20.19'}
 
   '@tanstack/store@0.11.1':
@@ -2524,14 +2524,14 @@ packages:
   scheduler@0.28.0:
     resolution: {integrity: sha512-juorfCmIkIw8tT+p5BXSm6PJjQF/ycEYmKyzURCIt/RaZIhL+PulbQ9Yu2z1HdOJDdqDTlxA1+xKBmHXJsczAw==}
 
-  seroval-plugins@1.6.8:
-    resolution: {integrity: sha512-N7mWAMydj89EnYTHtRpS3LBrAz3J9O6oVrqpuXuvlAHfAUG8WEKqtbAd7SBiJNY5NfCAFhSdyAh7wI4Shjqy4g==}
+  seroval-plugins@1.6.9:
+    resolution: {integrity: sha512-kiDK/Tb8IWZ61WEU8pA2PDmAuw37gKph9Y77OZlD56mg0Y2g0Bg7gZ1HeHhs5d40w+nRoUq/wj08V26ilbez9g==}
     engines: {node: '>=10'}
     peerDependencies:
       seroval: ^1.0
 
-  seroval@1.6.8:
-    resolution: {integrity: sha512-HlSgSAkTk4EqHcje1ptJjfZi1YDv5KbhVJ/d3P7T/nAXua2VmDu+AKDX5VTdFfZf48nDkWB2TKYt0DrCSa+3wg==}
+  seroval@1.6.9:
+    resolution: {integrity: sha512-UeEzHwAK+yl0YLbsvROV1t5yMYEwZZ0CfKYxDvUgS2fO9Vxdf8djqVIB+OuVpuawRNPqw68LE1Du/GMsW2ZPqA==}
     engines: {node: '>=10'}
 
   set-cookie-parser@3.1.2:
@@ -3601,7 +3601,7 @@ snapshots:
       '@tanstack/pacer-lite': 0.2.2
       '@tanstack/store': 0.11.2
 
-  '@tanstack/history@1.162.4': {}
+  '@tanstack/history@1.162.5': {}
 
   '@tanstack/pacer-lite@0.2.2': {}
 
@@ -3638,11 +3638,11 @@ snapshots:
       '@tanstack/query-core': 5.104.2
       react: 19.3.0
 
-  '@tanstack/react-router@1.170.41(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@tanstack/react-router@1.170.44(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@tanstack/history': 1.162.4
+      '@tanstack/history': 1.162.5
       '@tanstack/react-store': 0.11.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@tanstack/router-core': 1.171.34
+      '@tanstack/router-core': 1.171.37
       isbot: 5.2.2
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
@@ -3669,12 +3669,12 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
-  '@tanstack/router-core@1.171.34':
+  '@tanstack/router-core@1.171.37':
     dependencies:
-      '@tanstack/history': 1.162.4
+      '@tanstack/history': 1.162.5
       cookie-es: 3.1.1
-      seroval: 1.6.8
-      seroval-plugins: 1.6.8(seroval@1.6.8)
+      seroval: 1.6.9
+      seroval-plugins: 1.6.9(seroval@1.6.9)
 
   '@tanstack/store@0.11.1': {}
 
@@ -4668,11 +4668,11 @@ snapshots:
 
   scheduler@0.28.0: {}
 
-  seroval-plugins@1.6.8(seroval@1.6.8):
+  seroval-plugins@1.6.9(seroval@1.6.9):
     dependencies:
-      seroval: 1.6.8
+      seroval: 1.6.9
 
-  seroval@1.6.8: {}
+  seroval@1.6.9: {}
 
   set-cookie-parser@3.1.2: {}
 
