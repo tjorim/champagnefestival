@@ -1495,5 +1495,7 @@
   "signage_channels_test": "Tester sur écran",
   "signage_channels_empty": "Aucune diapositive à l’heure choisie.",
   "signage_channels_total": "{count} diapositives · {seconds} secondes au total",
-  "signage_channels_duration_status": "{seconds} s · {status}"
+  "signage_channels_duration_status": "{seconds} s · {status}",
+  "admin_section_load_error": "Cette rubrique n’a pas pu être chargée. Rechargez la page pour réessayer.",
+  "admin_reload_page": "Recharger la page"
 }

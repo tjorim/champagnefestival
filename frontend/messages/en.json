@@ -1495,5 +1495,7 @@
   "signage_channels_test": "Test on screen",
   "signage_channels_empty": "No slides at the selected time.",
   "signage_channels_total": "{count} slides · {seconds} seconds total",
-  "signage_channels_duration_status": "{seconds} s · {status}"
+  "signage_channels_duration_status": "{seconds} s · {status}",
+  "admin_section_load_error": "This section could not be loaded. Reload the page to try again.",
+  "admin_reload_page": "Reload page"
 }

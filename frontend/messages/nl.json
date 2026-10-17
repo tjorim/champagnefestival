@@ -1495,5 +1495,7 @@
   "signage_channels_test": "Testen op scherm",
   "signage_channels_empty": "Geen dia’s op het gekozen tijdstip.",
   "signage_channels_total": "{count} dia’s · {seconds} seconden totaal",
-  "signage_channels_duration_status": "{seconds} s · {status}"
+  "signage_channels_duration_status": "{seconds} s · {status}",
+  "admin_section_load_error": "Dit onderdeel kon niet worden geladen. Herlaad de pagina om opnieuw te proberen.",
+  "admin_reload_page": "Pagina herladen"
 }
