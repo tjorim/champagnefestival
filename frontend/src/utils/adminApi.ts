@@ -157,7 +157,7 @@ export function signageRequest<T>(
       body: body === undefined ? undefined : JSON.stringify(body),
       signal,
     },
-    "Unable to update signage.",
+    m.signage_channels_error(),
   );
 }
 

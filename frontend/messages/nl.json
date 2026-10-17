@@ -1494,5 +1494,6 @@
   "signage_channels_preview_help": "Het voorbeeld bevat niet-opgeslagen wijzigingen en volgt de planning en actieve status van dia’s op het gekozen tijdstip, ook voor een inactief kanaal. Sla wijzigingen op om te publiceren. Schermen halen updates elke 30 seconden op en schakelen bij een cyclusovergang.",
   "signage_channels_test": "Testen op scherm",
   "signage_channels_empty": "Geen dia’s op het gekozen tijdstip.",
-  "signage_channels_total": "{count} dia’s · {seconds} seconden totaal"
+  "signage_channels_total": "{count} dia’s · {seconds} seconden totaal",
+  "signage_channels_duration_status": "{seconds} s · {status}"
 }

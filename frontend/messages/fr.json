@@ -1494,5 +1494,6 @@
   "signage_channels_preview_help": "L’aperçu inclut les modifications non enregistrées et respecte les horaires et l’état actif des diapositives à l’heure choisie, même pour un canal inactif. Enregistrez pour publier. Les écrans récupèrent les mises à jour toutes les 30 secondes et basculent en fin de cycle.",
   "signage_channels_test": "Tester sur écran",
   "signage_channels_empty": "Aucune diapositive à l’heure choisie.",
-  "signage_channels_total": "{count} diapositives · {seconds} secondes au total"
+  "signage_channels_total": "{count} diapositives · {seconds} secondes au total",
+  "signage_channels_duration_status": "{seconds} s · {status}"
 }

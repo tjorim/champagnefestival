@@ -1494,5 +1494,6 @@
   "signage_channels_preview_help": "Preview includes unsaved edits and honours slide schedules and active flags at the selected time, even for an inactive channel. Save changes to publish. Screens fetch updates every 30 seconds and switch at a cycle boundary.",
   "signage_channels_test": "Test on screen",
   "signage_channels_empty": "No slides at the selected time.",
-  "signage_channels_total": "{count} slides · {seconds} seconds total"
+  "signage_channels_total": "{count} slides · {seconds} seconds total",
+  "signage_channels_duration_status": "{seconds} s · {status}"
 }

@@ -41,6 +41,8 @@ import { SlideRenderer } from "@/signage/SlideRenderer";
 import { signageIcons } from "@/signage/icons";
 import "@/signage/editor.css";
 
+const channelPath = (slug: string) => `/signage/${slug}`;
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <AdminField>
@@ -81,8 +83,10 @@ function Row({
         {label}
       </Button>
       <span>
-        {slide.duration}s ·{" "}
-        {slide.active ? m.signage_channels_active() : m.signage_channels_inactive()}
+        {m.signage_channels_duration_status({
+          seconds: slide.duration,
+          status: slide.active ? m.signage_channels_active() : m.signage_channels_inactive(),
+        })}
       </span>
       <Button
         className="hover:bg-primary"
@@ -310,8 +314,8 @@ export default function SignageChannels({
               <span>
                 {item.active ? m.signage_channels_active() : m.signage_channels_inactive()}
               </span>
-              <a href={`/signage/${item.slug}`} target="_blank" rel="noreferrer">
-                /signage/{item.slug}
+              <a href={channelPath(item.slug)} target="_blank" rel="noreferrer">
+                {channelPath(item.slug)}
               </a>
               <Button
                 className="hover:bg-primary"
