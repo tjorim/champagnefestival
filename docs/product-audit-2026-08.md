@@ -70,6 +70,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1265](https://github.com/tjorim/champagnefestival/issues/1265) | Completed | 2026-10-18 | #1265; archive, capture-failure and offline Chromium export tests | Published-channel PNG snapshots and local-folder HTML/JSON bundles reuse the renderer and epoch clock; translated admin actions and setup/retry guidance. |
 | [#1264](https://github.com/tjorim/champagnefestival/issues/1264) | Completed | 2026-10-17 | #1264; draft-projection, renderer/model and authenticated playlist/axe tests | Content → Screen channels: channel links, typed organisation blocks, translated notices, uploads, schedules, drag/keyboard ordering and shared-renderer draft playback. |
 | [#1263](https://github.com/tjorim/champagnefestival/issues/1263) | Completed | 2026-10-16 | #1263; shared renderer, layer-model and authenticated editor tests | Layered template editor with uploads, real-data previews, accessible geometry controls, history, translated UI and service-enforced required bindings; see [layer contract](signage-layer-contract.md). |
 | [#1190](https://github.com/tjorim/champagnefestival/issues/1190) | Repository implementation complete; production rollout retains separate gates | 2026-10-07 | PRs #1207, #1208, #1211, #1212, #1213; shared-renderer integration | All five sub-issues are closed; review uses the shared table renderer. The full organization rename has no aliases and is folded into migration `004`; see [upgrade guidance](organization-change-review.md#terminology-and-upgrade). Production remains gated on apps#262/apps#263; account unification remains #1209. |
@@ -187,7 +188,7 @@ active flags and the selected preview instant. Local schedule inputs become
 timezone-aware API timestamps. All filled notice languages render stacked in the
 shared renderer. Public screens poll every 30 seconds, with a five-second API cache,
 and apply content revisions at a cycle boundary. Urgent interruptions remain out
-of scope. #1265 can reuse this channel/playlist contract for exports; #1262's venue
+of scope. #1265 reuses this published channel/playlist contract for frozen PNG and offline exports; #1262's venue
 hardware rehearsal remains a separate acceptance gate.
 
 - [x] Producers, vendors, sponsors and notices can be added, reordered and timed.
@@ -200,3 +201,49 @@ hardware rehearsal remains a separate acceptance gate.
 See [retry safety](retry-safety.md#channels-and-playlist-editor-1264) for explicit-save
 and uncertain-response handling. This records repository implementation, not a
 production deployment or completion of the venue rehearsal.
+
+
+## Signage exports (#1265)
+
+Completed 2026-10-18. Channel admin downloads the currently published playlist
+as a local-folder HTML player with frozen PNG slides and JSON, or as a PNG-only
+ZIP. The existing renderer and epoch/duration clock are reused. Building the bundle
+is justified by cold offline startup, which service-worker caching cannot guarantee.
+See [setup and rehearsal](signage-setup.md#cold-start-offline-exports-1265).
+
+- [x] Local-folder playback without network access; timing follows the system clock.
+- [x] Shared-renderer 1920×1080 images, also used directly in offline playback.
+- [x] Frontend lint, formatting, translation parity and production build/typecheck pass; all 1,169 unit tests and the authenticated offline export browser test pass. A pagination timeout in the first full run passed on targeted and full reruns.
+
+This records repository implementation; the two-laptop venue rehearsal remains
+required before event use.
+
+
+CI follow-up for PR #1350 (2026-10-18): generated HTML is now a raw template
+and player JavaScript is emitted from typed, self-contained functions. The locale
+audit checks the export code without exclusions, and the exported page title uses
+the translated start label. Locale audit, formatting, lint, export regression tests,
+offline browser playback and production build/typecheck pass.
+
+## Planned video export follow-up (#1349)
+
+Planned 2026-10-18, not implemented. [#1349](https://github.com/tjorim/champagnefestival/issues/1349)
+is the separate MP4 follow-up excluded from #1265. Browser-rendered PNGs and a
+frozen published duration manifest go through an authenticated background export
+job to [apps#273](https://github.com/tjorim/apps/issues/273), a shared private media
+worker. No server-side Chromium is required. [Travel #457](https://github.com/tjorim/travel/issues/457)
+migrates its existing video derivatives to a separate profile on the same worker.
+
+Preferred delivery order: worker contract and profiles, Travel privacy/output
+parity and production cutover, then Champagnefestival MP4 activation. Application
+adapters can be developed against the agreed fixtures after the contract exists.
+The synchronized HTML and PNG exports remain independent of this service.
+
+- [ ] Shared worker contract, limits, durable lifecycle and production wiring available.
+- [ ] Admin-only snapshot/upload, durable jobs, translated progress/errors and private MP4 download implemented with documented retry safety.
+- [ ] One-cycle 1080p output matches the PNGs and configured durations, including the final slide; privacy, cancellation, restart, expiry and outage checks pass.
+- [ ] Frontend/backend/browser checks and representative venue video playback pass.
+
+The full scope and acceptance criteria remain in #1349. This section records
+planned work and does not mark the video feature complete or change #1265's
+original HTML/PNG scope.

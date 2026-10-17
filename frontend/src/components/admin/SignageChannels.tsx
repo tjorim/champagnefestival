@@ -222,7 +222,7 @@ export default function SignageChannels({
     setDraft(next);
     resetPreview();
   }
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<void>, fallback = m.signage_channels_error()) {
     if (busy) return;
     setBusy(true);
     setError("");
@@ -230,7 +230,7 @@ export default function SignageChannels({
     try {
       await action();
     } catch (cause) {
-      setError(signageOperationErrorMessage(cause, m.signage_channels_error()));
+      setError(signageOperationErrorMessage(cause, fallback));
     } finally {
       setBusy(false);
     }
@@ -328,6 +328,29 @@ export default function SignageChannels({
               >
                 {m.signage_channels_copy({ name: item.name })}
               </Button>
+              {[true, false].map((bundle) => (
+                <Button
+                  key={String(bundle)}
+                  variant="outline"
+                  onClick={() =>
+                    void run(async () => {
+                      const playlist = await fetchJsonOrThrowWithUnauthorized<Playlist>(
+                        `/api/signage/${encodeURIComponent(item.slug)}/playlist?locale=${getLocale()}`,
+                        { headers: authHeaders() },
+                        m.signage_export_error(),
+                      );
+                      const { downloadExport } = await import("@/signage/export");
+                      await downloadExport(playlist, item.slug, bundle, {
+                        start: m.signage_start(),
+                        setup: m.signage_export_setup(),
+                      });
+                      setStatus(m.signage_export_done());
+                    }, m.signage_export_error())
+                  }
+                >
+                  {bundle ? m.signage_export_bundle() : m.signage_export_images()}
+                </Button>
+              ))}
             </li>
           ))}
         </ul>

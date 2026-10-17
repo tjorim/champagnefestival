@@ -52,3 +52,27 @@ names come from the shared `frontend/src/signage/icons.ts` catalogue:
 Unknown icons render empty; upload an image sticker for other artwork. Named
 imports keep the full Lucide catalogue out of the player bundle. Template colours are validated
 hex values from the API, covered by a scoped dynamic-style lint exception.
+
+## Cold-start offline exports (#1265)
+
+In **Content → Screen channels**, choose **Download offline bundle** for a saved,
+active channel. Export while online; the snapshot includes only slides currently
+published and scheduled at export time, with organisations and notice translations
+frozen. Unsaved editor drafts are excluded. Keep the tab open until the download
+finishes. An empty channel or unavailable image fails the export rather than
+producing a partial bundle.
+
+Extract the ZIP completely, copy the same folder to each laptop and open
+`index.html` in Chromium, even without an internet connection. No local web server
+is needed. `playlist.json` records the frozen revision, epoch, durations and local
+PNG filenames; the player embeds that same JSON to avoid local-file fetch limits.
+The shared renderer produces the 1920×1080 PNGs used by the bundle. **Download
+slide images** produces a ZIP containing just those numbered PNGs for other tools.
+
+Synchronise system clocks before disconnecting; the offline player uses system
+time and the original playlist epoch, so clocks accurate within a second give
+slide changes within about a second. It cannot correct a wrong clock from the
+server. Press **Start screen**, disable OS sleep/blanking and connect mains power;
+wake locks may be unavailable for local files. Re-export to refresh content or
+schedules. There are no live updates or video exports. Rehearse a cold offline
+start on two laptops and several full cycles before relying on the bundle.

@@ -1497,5 +1497,10 @@
   "signage_channels_total": "{count} diapositives · {seconds} secondes au total",
   "signage_channels_duration_status": "{seconds} s · {status}",
   "admin_section_load_error": "Cette rubrique n’a pas pu être chargée. Rechargez la page pour réessayer.",
-  "admin_reload_page": "Recharger la page"
+  "admin_reload_page": "Recharger la page",
+  "signage_export_bundle": "Télécharger le dossier hors ligne",
+  "signage_export_images": "Télécharger les images des diapositives",
+  "signage_export_error": "Échec de l’exportation. Vérifiez que le canal est actif, contient des diapositives et que toutes les images sont disponibles, puis réessayez.",
+  "signage_export_done": "Exportation téléchargée.",
+  "signage_export_setup": "Instantané hors ligne : synchronisez les horloges des ordinateurs, utilisez le même dossier et désactivez la veille. Le contenu est figé au moment de l’exportation."
 }

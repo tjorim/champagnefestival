@@ -1497,5 +1497,10 @@
   "signage_channels_total": "{count} slides · {seconds} seconds total",
   "signage_channels_duration_status": "{seconds} s · {status}",
   "admin_section_load_error": "This section could not be loaded. Reload the page to try again.",
-  "admin_reload_page": "Reload page"
+  "admin_reload_page": "Reload page",
+  "signage_export_bundle": "Download offline bundle",
+  "signage_export_images": "Download slide images",
+  "signage_export_error": "Export failed. Check that the channel is active, has slides and all images are available, then try again.",
+  "signage_export_done": "Export downloaded.",
+  "signage_export_setup": "Offline snapshot: synchronise system clocks on all laptops, use the same bundle and disable sleep. Content is frozen at export time."
 }
