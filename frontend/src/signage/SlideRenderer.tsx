@@ -12,6 +12,12 @@ function Sticker({ name }: { name: string | null }) {
 /** Shared 1920×1080 canvas for the public player and editor previews. */
 export function SlideRenderer({ slide }: { slide: PublicSlide }) {
   const { background, layers } = slide.template;
+  function noticeText(field: "title" | "text") {
+    const filled = (["nl", "fr", "en"] as const)
+      .map((lang) => slide.translations?.[`${field}_${lang}`])
+      .filter(Boolean);
+    return filled.length ? filled.join("\n") : slide[field];
+  }
   return (
     /* oxlint-disable shadcn/no-inline-styles -- Validated template colors and canvas coordinates are data, shared with the editor preview. */
     <div
@@ -51,9 +57,9 @@ export function SlideRenderer({ slide }: { slide: PublicSlide }) {
                       ? m.admin_item_sponsor()
                       : ""
                     : binding === "title"
-                      ? slide.title
+                      ? noticeText("title")
                       : binding === "text"
-                        ? slide.text
+                        ? noticeText("text")
                         : null;
           return (
             <div

@@ -153,6 +153,28 @@ icon. Persisted floor-plan `bi-*` values remain API identifiers:
 [AreaIcon](../frontend/src/components/AreaIcon.tsx) maps them to Lucide and uses
 `StoreIcon` for unknown values.
 
+## Admin section loading
+
+The registrations view and booking detail remain eager inside the admin route.
+Secondary sections use module-level `React.lazy` imports in `AdminDashboard`;
+selecting a section downloads its code and shared dependencies. Named content
+and edition exports share the same dynamically imported module. Avoid starting
+these imports from the sidebar or preloading every section on login.
+
+`AdminSectionPane` uses the shared `SuspenseWithBoundary` with the existing
+accessible table/panel skeleton. The dashboard keys the pane by section so a
+pending or failed download leaves the sidebar usable. Download failures show
+translated recovery text and an explicit page reload; writes are not replayed.
+
+A same-dependency production comparison on 2026-10-17 measured the admin chunk
+at 1065 → 374 KiB and its complete static JavaScript dependency graph at
+2201 → 1481 KiB. Total JavaScript grew from 2629 to 2653 KiB due to splitting
+and shared-module overhead. These are uncompressed sizes from the build
+manifest, excluding dynamic sections from the initial graph. CI retains a
+450 KiB admin ceiling, a 2700 KiB total ceiling and the existing public entry
+ceiling. The authenticated lazy-section tests check demand loading, navigation
+while loading, and recovery after a failed download.
+
 ## Specialised renderers and verification
 
 Floor plans, scanners, QR output, Leaflet, charts and theme artwork keep

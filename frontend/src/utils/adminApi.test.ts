@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "./apiErrors";
-import { fetchJsonOrThrow, requestApi } from "./adminApi";
+import { m } from "@/paraglide/messages";
+import { fetchJsonOrThrow, requestApi, signageOperationErrorMessage } from "./adminApi";
 
 beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -113,5 +114,28 @@ describe("adminApi", () => {
     const error = await requestApi("/api/x", {}).catch((caught: unknown) => caught);
 
     expect(error).toMatchObject({ status: 0, code: "network_error" });
+  });
+});
+
+describe("signage error guidance", () => {
+  it("requires reconciliation after an uncertain network response instead of suggesting a retry", () => {
+    const fallback = m.signage_channels_error();
+    expect(
+      signageOperationErrorMessage(
+        new ApiError("Failed to fetch", { status: 0, code: "network_error" }),
+        fallback,
+      ),
+    ).toBe(fallback);
+  });
+  it("keeps translated stable codes and hides unknown diagnostics", () => {
+    expect(
+      signageOperationErrorMessage(
+        new ApiError("private detail", { status: 429, code: "rate_limited" }),
+        m.signage_channels_error(),
+      ),
+    ).toBe(m.api_error_rate_limited());
+    expect(
+      signageOperationErrorMessage(new Error("private detail"), m.signage_channels_error()),
+    ).toBe(m.signage_channels_error());
   });
 });

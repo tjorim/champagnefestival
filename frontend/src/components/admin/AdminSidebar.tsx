@@ -246,13 +246,25 @@ export default function AdminSidebar({
                 groupKey="content"
                 icon={LayersIcon}
                 label={m.admin_content_tab()}
-                itemKeys={["faq", "announcements", "policies", "contact-details"]}
+                itemKeys={[
+                  "faq",
+                  "announcements",
+                  "signage-channels",
+                  "policies",
+                  "contact-details",
+                ]}
                 {...groupProps}
               >
                 <SidebarItem
                   itemKey="faq"
                   icon={CircleHelpIcon}
                   label={m.admin_content_faq_section()}
+                  {...itemProps}
+                />
+                <SidebarItem
+                  itemKey="signage-channels"
+                  icon={LayersIcon}
+                  label={m.signage_channels_heading()}
                   {...itemProps}
                 />
                 <SidebarItem

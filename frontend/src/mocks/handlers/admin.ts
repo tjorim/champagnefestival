@@ -366,6 +366,12 @@ function peopleEnvelope(url: URL, role?: string) {
 }
 
 export const adminHandlers = [
+  // The announcements panel mounts before the signage editor tab is selected.
+  http.get("/api/announcements", ({ request }) => {
+    const authError = requireAuth(request);
+    return authError ?? HttpResponse.json([]);
+  }),
+
   http.get("/api/mock/scenario", () => {
     return HttpResponse.json({
       active: activeScenario,

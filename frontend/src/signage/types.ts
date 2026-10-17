@@ -31,6 +31,9 @@ export interface PublicSlide {
   kind: "organization" | "notice" | "image";
   duration: number;
   template: { background: Background; layers: Layer[] };
+  translations?: Partial<
+    Record<"text_nl" | "text_fr" | "text_en" | "title_nl" | "title_fr" | "title_en", string | null>
+  > | null;
   text: string | null;
   title: string | null;
   image: string | null;

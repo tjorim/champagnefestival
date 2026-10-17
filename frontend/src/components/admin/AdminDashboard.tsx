@@ -1,4 +1,3 @@
-import OrganizationChangeReview from "./OrganizationChangeReview";
 import { useSyncExternalStore } from "react";
 import { adminCachePersistence } from "@/state/adminCachePersistence";
 import { AdminCacheStatus } from "./AdminCacheStatus";
@@ -13,22 +12,7 @@ import { apiErrorMessage } from "@/utils/apiErrors";
 import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
-import LayoutEditor from "./LayoutEditor";
-import VenueManagement from "./VenueManagement";
-import { ContentSection, EditionsSection } from "./ContentManagement";
-import CategoryManagement from "./CategoryManagement";
-import FaqManagement from "./FaqManagement";
-import AnnouncementsSection from "./AnnouncementsSection";
-import PolicyManagement from "./PolicyManagement";
-import PushOptIn from "@/components/PushOptIn";
-import SettingsManagement from "./SettingsManagement";
-import ContactMessagesManagement from "./ContactMessagesManagement";
-import ScratchpadManagement from "./ScratchpadManagement";
-import WaitlistManagement from "./WaitlistManagement";
 import type { ItemDraft } from "./itemTypes";
-import PeopleSection from "./PeopleSection";
-import AnalyticsDashboard from "./AnalyticsDashboard";
-import AuditLogViewer from "./AuditLogViewer";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
 import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
@@ -52,6 +36,31 @@ import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { devError } from "@/utils/devLog";
 import { recordSignOutReason } from "@/utils/signOutReason";
 import { Card, CardContent } from "@/components/ui/card";
+import AdminSectionPane from "./AdminSectionPane";
+
+// Keep secondary tools out of the initial registrations download.
+const OrganizationChangeReview = React.lazy(() => import("./OrganizationChangeReview"));
+const LayoutEditor = React.lazy(() => import("./LayoutEditor"));
+const VenueManagement = React.lazy(() => import("./VenueManagement"));
+const CategoryManagement = React.lazy(() => import("./CategoryManagement"));
+const FaqManagement = React.lazy(() => import("./FaqManagement"));
+const AnnouncementsSection = React.lazy(() => import("./AnnouncementsSection"));
+const SignageChannels = React.lazy(() => import("./SignageChannels"));
+const PolicyManagement = React.lazy(() => import("./PolicyManagement"));
+const SettingsManagement = React.lazy(() => import("./SettingsManagement"));
+const ContactMessagesManagement = React.lazy(() => import("./ContactMessagesManagement"));
+const ScratchpadManagement = React.lazy(() => import("./ScratchpadManagement"));
+const WaitlistManagement = React.lazy(() => import("./WaitlistManagement"));
+const PeopleSection = React.lazy(() => import("./PeopleSection"));
+const AnalyticsDashboard = React.lazy(() => import("./AnalyticsDashboard"));
+const AuditLogViewer = React.lazy(() => import("./AuditLogViewer"));
+const PushOptIn = React.lazy(() => import("@/components/PushOptIn"));
+const ContentSection = React.lazy(() =>
+  import("./ContentManagement").then((module) => ({ default: module.ContentSection })),
+);
+const EditionsSection = React.lazy(() =>
+  import("./ContentManagement").then((module) => ({ default: module.EditionsSection })),
+);
 
 /** Sections that are about the running edition; the active-edition strip is shown on these only. */
 const ACTIVE_EDITION_SECTIONS: ReadonlySet<string> = new Set([
@@ -505,7 +514,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             {isAnyPending && !cacheStatus.warmStart ? (
               <AdminSkeleton variant={skeletonVariantForSection(effectiveActiveKey)} />
             ) : (
-              <div className="admin-content-pane" key={effectiveActiveKey}>
+              <AdminSectionPane key={effectiveActiveKey} section={effectiveActiveKey}>
                 {effectiveActiveKey === "registrations" && (
                   <RegistrationList
                     registrations={registrations}
@@ -675,6 +684,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 {canManageAdminSections && activeKey === "faq" && (
                   <FaqManagement authHeaders={authHeaders} />
                 )}
+                {canManageAdminSections && activeKey === "signage-channels" && (
+                  <SignageChannels authHeaders={authHeaders} />
+                )}
                 {canManageAdminSections && activeKey === "announcements" && (
                   <AnnouncementsSection authHeaders={authHeaders} />
                 )}
@@ -693,7 +705,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 {canManageAdminSections && activeKey === "contact-messages" && (
                   <ContactMessagesManagement authHeaders={authHeaders} />
                 )}
-              </div>
+              </AdminSectionPane>
             )}
           </div>
         </div>

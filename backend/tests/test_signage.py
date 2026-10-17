@@ -236,6 +236,7 @@ async def test_assets_and_admin_auth(client, db_session, monkeypatch, tmp_path):
     ] == "signage_invalid_image"
     assert (await client.get("/uploads/signage/bad.jpg")).status_code == 404
     app.dependency_overrides.pop(require_admin)
+    assert (await client.post("/api/signage/preview", json={})).status_code == 401
     for resource in ("channels", "templates", "slides"):
         assert (await client.get(f"/api/signage/{resource}")).status_code == 401
         assert (await client.post(f"/api/signage/{resource}", json={})).status_code == 401
@@ -261,3 +262,53 @@ async def test_required_bindings_checked_on_assignment_and_shared_edit(client, d
     assert result.status_code == 422
     assert result.json()["code"] == "signage_missing_placeholders"
     assert (await client.get(f"/api/signage/templates/{template['id']}")).json()["layers"][0]["visible"]
+
+
+@pytest.mark.anyio
+async def test_draft_preview_filters_schedules_and_never_publishes(client, db_session):
+    channel, template, _ = await setup(client, db_session)
+    now = datetime.now(UTC)
+    body = {
+        "channel": {key: channel[key] for key in ("name", "slug", "edition_id", "active")},
+        "at": now.isoformat(),
+        "slides": [
+            {
+                "channel_id": channel["id"],
+                "template_id": template["id"],
+                "kind": "organizations",
+                "active": True,
+                "duration": 7,
+                "content": {"organization_type": kind},
+                "sort_order": index,
+            }
+            for index, kind in enumerate(("vendor", "sponsor", "producer"))
+        ],
+    }
+    body["channel"]["active"] = False
+    response = await client.post("/api/signage/preview", json=body)
+    assert response.status_code == 200, response.text
+    assert response.headers["cache-control"] == "no-store"
+    assert [row["organization"]["name"] for row in response.json()["slides"]] == [
+        "Food",
+        "Main",
+        "Partner",
+        "Alpha",
+        "Zulu",
+    ]
+    assert sum(row["duration"] for row in response.json()["slides"]) == 35
+    body["slides"][0]["active"] = False
+    body["slides"][1]["starts_at"] = (now + timedelta(hours=1)).isoformat()
+    body["slides"][2]["ends_at"] = now.isoformat()
+    assert (await client.post("/api/signage/preview", json=body)).json()["slides"] == []
+    assert (await client.get("/api/signage/slides")).json() == []
+    assert (await client.get("/api/signage/hall/playlist")).json()["slides"] == []
+    body["at"] = "2026-10-16T12:00:00"
+    assert (await client.post("/api/signage/preview", json=body)).status_code == 422
+
+
+@pytest.mark.anyio
+async def test_public_organization_block_filter(client, db_session):
+    channel, template, _ = await setup(client, db_session)
+    await slide(client, channel, template, kind="organizations", content={"organization_type": "vendor"})
+    result = await client.get("/api/signage/hall/playlist")
+    assert [item["organization"]["name"] for item in result.json()["slides"]] == ["Food"]
