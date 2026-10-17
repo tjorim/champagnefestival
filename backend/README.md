@@ -650,3 +650,32 @@ validation/storage pattern. See [the signage API contract](../docs/signage-api.m
 for payloads, privacy, cache validators, fixed-epoch semantics, vendor membership,
 image storage/hosting and retry decisions. The player and editors remain separate
 work (#1262–#1264).
+
+
+## Request schema conventions
+
+Create and update models declare their own defaults, required fields, and
+nullability. Do not derive a partial update from a complete create model, or
+narrow mutable fields inherited from an optional base. Keep write contracts
+explicit; do not generate partial models dynamically or suppress override errors.
+
+Reuse the constrained `Annotated` value types in `app/schema_types.py` for fields
+with the same contract. Constraints belong on the non-null value type; use
+`ValueType | None = None` for optional update fields. Keep descriptions and
+operation-specific defaults on the concrete model. Different domain limits need
+different types, even when the underlying Python type matches.
+
+Share normalisation and validation through a base when both operations use the
+same rules. When a shared validator needs fields whose types differ between
+complete and partial requests, use a generic base specialised with the exact
+field types (see the translated-content schemas). Simple models do not need a
+generic base solely to share field constraints. Keep operation-specific and
+merged-state validation on the relevant concrete model. For example, a poll label
+is required even on update, and a volunteer's blank identity fields have different
+create and update semantics.
+
+Omission and explicit `null` are separate API decisions. Preserve
+`model_fields_set` / `exclude_unset=True` handling, and document any intentional
+change in null handling or write validation in `docs/retry-safety.md`. Tests in
+`tests/test_request_schemas.py` cover create/update constraint consistency and
+complete-versus-partial nullability.

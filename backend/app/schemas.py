@@ -14,6 +14,46 @@ from pydantic import BaseModel, EmailStr, Field, field_validator, model_validato
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
 from app.models import MAX_POLL_QUANTITY
+from app.schema_types import (
+    AreaDimension,
+    ClockTime,
+    EditionYear,
+    FloorPlanPosition,
+    FloorPlanRotation,
+    GuestCount,
+    HexColor,
+    MarkdownSource,
+    MonthlyVisits,
+    NonEmptyText,
+    NonEmptyText20,
+    NonEmptyText50,
+    NonEmptyText200,
+    NonEmptyText600,
+    NonNegativeQuantity,
+    OrderQuantity,
+    PositiveQuantity,
+    ProductPrice,
+    ResourceId,
+    ResourceKey,
+    RoomDimension,
+    SortOrder,
+    StockQuantity,
+    TableCapacity,
+    TableDimension,
+    Text20,
+    Text30,
+    Text50,
+    Text100,
+    Text120,
+    Text200,
+    Text300,
+    Text500,
+    Text600,
+    Text1000,
+    Text2000,
+    Text4000,
+    Text10000,
+)
 from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 # ---------------------------------------------------------------------------
@@ -59,12 +99,12 @@ class OrderItemBase(BaseModel):
     name_nl: str | None = None
     name_fr: str | None = None
     name_en: str | None = None
-    quantity: int = Field(ge=1)
+    quantity: PositiveQuantity
     price: float = Field(ge=0)
     category: str
-    delivered_quantity: int | None = Field(default=None, ge=0)
+    delivered_quantity: NonNegativeQuantity | None = None
     delivered: bool = False
-    included_quantity: int = Field(default=0, ge=0)
+    included_quantity: NonNegativeQuantity = 0
     """How many of `quantity` came free via a product bundle (see
     Product.included_product_id) — only `quantity - included_quantity` is
     billed at `price` per unit."""
@@ -102,15 +142,15 @@ class OrderItemRequest(RequestModel):
     arbitrary or zero price, or order a product that doesn't exist.
     """
 
-    product_id: str = Field(min_length=1)
-    quantity: int = Field(ge=1, le=1000000)
+    product_id: NonEmptyText
+    quantity: OrderQuantity
 
 
 class RegistrationDeliveryUpdate(RequestModel):
     """The only order-line fields an entrance volunteer may change."""
 
-    product_id: str = Field(min_length=1)
-    delivered_quantity: int = Field(ge=0)
+    product_id: NonEmptyText
+    delivered_quantity: NonNegativeQuantity
 
 
 # ---------------------------------------------------------------------------
@@ -258,9 +298,9 @@ class _CategoryLabels[LabelLanguageT: Language | None, SortOrderT: int | None](R
     """Per-language label of an event or product category: the original language must have text."""
 
     label_language: LabelLanguageT
-    label_nl: str | None = Field(default=None, max_length=100)
-    label_fr: str | None = Field(default=None, max_length=100)
-    label_en: str | None = Field(default=None, max_length=100)
+    label_nl: Text100 | None = None
+    label_fr: Text100 | None = None
+    label_en: Text100 | None = None
     sort_order: SortOrderT
 
     @field_validator("label_nl", "label_fr", "label_en", mode="before")
@@ -278,7 +318,7 @@ class CategoryLabels(_CategoryLabels[Language | None, int | None]):
     """Per-language label of an event or product category: the original language must have text."""
 
     label_language: Language | None = None
-    sort_order: int | None = Field(default=None, ge=0, le=100000)
+    sort_order: SortOrder | None = None
 
 
 class CategoryCreate(_CategoryLabels[Language, int]):
@@ -287,7 +327,7 @@ class CategoryCreate(_CategoryLabels[Language, int]):
         description="Stable identifier stored on the events or products using it: lowercase letters, digits, `-` and `_`. Cannot be changed.",
     )
     label_language: Language = DEFAULT_ORIGINAL_LANGUAGE
-    sort_order: int = Field(default=0, ge=0, le=100000)
+    sort_order: SortOrder = 0
 
     @model_validator(mode="after")
     def check_label(self) -> Self:
@@ -323,13 +363,13 @@ class _EventTextFields[TitleLanguageT: Language | None](RequestModel):
     """
 
     title_language: TitleLanguageT
-    title_nl: str | None = Field(default=None, max_length=200)
-    title_fr: str | None = Field(default=None, max_length=200)
-    title_en: str | None = Field(default=None, max_length=200)
+    title_nl: Text200 | None = None
+    title_fr: Text200 | None = None
+    title_en: Text200 | None = None
     description_language: Language | None = None
-    description_nl: str | None = Field(default=None, max_length=10000)
-    description_fr: str | None = Field(default=None, max_length=10000)
-    description_en: str | None = Field(default=None, max_length=10000)
+    description_nl: Text10000 | None = None
+    description_fr: Text10000 | None = None
+    description_en: Text10000 | None = None
 
     @field_validator(
         "title_nl",
@@ -368,12 +408,12 @@ class EventTextFields(_EventTextFields[Language | None]):
 
 
 class EventCreate(_EventTextFields[Language]):
-    edition_id: str = Field(min_length=1, max_length=100)
+    edition_id: ResourceKey
     title_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     date: dt_date
-    start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    category: str = Field(min_length=1, max_length=50)
+    start_time: ClockTime
+    end_time: ClockTime | None = None
+    category: NonEmptyText50
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
@@ -385,11 +425,11 @@ class EventCreate(_EventTextFields[Language]):
 
 
 class EventUpdate(EventTextFields):
-    edition_id: str | None = Field(default=None, min_length=1, max_length=100)
+    edition_id: ResourceKey | None = None
     date: dt_date | None = None
-    start_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
-    category: str | None = Field(default=None, min_length=1, max_length=50)
+    start_time: ClockTime | None = None
+    end_time: ClockTime | None = None
+    category: NonEmptyText50 | None = None
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
@@ -458,9 +498,9 @@ class EventPublicOut(EventTextOut):
 
 
 class ProductInclusion(RequestModel):
-    product_id: str = Field(min_length=1, max_length=64)
-    quantity: int = Field(default=1, ge=1, le=1000000)
-    per_quantity: int = Field(default=1, ge=1, le=1000000)
+    product_id: ResourceId
+    quantity: OrderQuantity = 1
+    per_quantity: OrderQuantity = 1
     rounding: Literal["up", "down"] = "down"
 
 
@@ -471,13 +511,13 @@ class _ProductTextFields[NameLanguageT: Language | None](RequestModel):
     original. A blank text is stored as `None`."""
 
     name_language: NameLanguageT
-    name_nl: str | None = Field(default=None, max_length=200)
-    name_fr: str | None = Field(default=None, max_length=200)
-    name_en: str | None = Field(default=None, max_length=200)
+    name_nl: Text200 | None = None
+    name_fr: Text200 | None = None
+    name_en: Text200 | None = None
     description_language: Language | None = None
-    description_nl: str | None = Field(default=None, max_length=300)
-    description_fr: str | None = Field(default=None, max_length=300)
-    description_en: str | None = Field(default=None, max_length=300)
+    description_nl: Text300 | None = None
+    description_fr: Text300 | None = None
+    description_en: Text300 | None = None
 
     @field_validator(
         "name_nl", "name_fr", "name_en", "description_nl", "description_fr", "description_en", mode="before"
@@ -509,16 +549,16 @@ class ProductTextFields(_ProductTextFields[Language | None]):
 class ProductCreate(_ProductTextFields[Language]):
     name_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     unit: Literal["item", "table", "person"] = "item"
-    stock: int | None = Field(default=None, ge=0, le=2147483647)
+    stock: StockQuantity | None = None
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
-    event_id: str = Field(min_length=1, max_length=64)
-    price: Decimal = Field(ge=0, decimal_places=2, max_digits=10)
-    category: str = Field(min_length=1, max_length=50)
+    event_id: ResourceId
+    price: ProductPrice
+    category: NonEmptyText50
     """Key of a product category (see ``/api/product-categories``)."""
     purchasable: bool = True
     required: bool = False
-    included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
-    included_per_guests: int | None = Field(default=None, ge=1)
+    included_product_id: ResourceId | None = None
+    included_per_guests: PositiveQuantity | None = None
 
     @model_validator(mode="after")
     def check_text(self) -> Self:
@@ -539,14 +579,14 @@ class ProductCreate(_ProductTextFields[Language]):
 
 class ProductUpdate(ProductTextFields):
     unit: Literal["item", "table", "person"] | None = None
-    stock: int | None = Field(default=None, ge=0, le=2147483647)
+    stock: StockQuantity | None = None
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
     update_existing_contents: bool = False
     update_existing_prices: bool = False
     confirm_shortage: bool = False
     preview_token: str | None = None
-    price: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
-    category: str | None = Field(default=None, min_length=1, max_length=50)
+    price: ProductPrice | None = None
+    category: NonEmptyText50 | None = None
     purchasable: bool | None = None
     required: bool | None = None
     # Nullable and independently settable, so the router (not this schema) decides
@@ -554,8 +594,8 @@ class ProductUpdate(ProductTextFields):
     # a PATCH may touch only one field while leaving the other as already stored.
     # `purchasable`/`required` are validated against the *resulting* state too
     # (see app.services.product_changes.change_product), for the same reason.
-    included_product_id: str | None = Field(default=None, min_length=1, max_length=64)
-    included_per_guests: int | None = Field(default=None, ge=1)
+    included_product_id: ResourceId | None = None
+    included_per_guests: PositiveQuantity | None = None
 
 
 class ProductOut(BaseModel):
@@ -678,14 +718,14 @@ class RegistrationNotesRequest(RequestModel):
 
 
 class RegistrationCreate(RegistrationNotesRequest):
-    name: str = Field(min_length=1, max_length=200)
+    name: NonEmptyText200
     email: EmailStr
-    phone: str = Field(min_length=1, max_length=50)
+    phone: NonEmptyText50
     preferred_language: Literal["nl", "fr", "en"] = "nl"
-    event_id: str = Field(min_length=1, max_length=64)
-    guest_count: int = Field(ge=1, le=20)
+    event_id: ResourceId
+    guest_count: GuestCount
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
-    notes: str = Field(default="", max_length=4000)
+    notes: Text4000 = ""
     marketing_opt_in: bool = Field(
         default=False,
         description=(
@@ -703,20 +743,20 @@ class RegistrationCreate(RegistrationNotesRequest):
 
 
 class TableAllocation(RequestModel):
-    table_id: str = Field(min_length=1, max_length=64)
+    table_id: ResourceId
     guest_count: int = Field(ge=0, le=20)
     exclusive: bool = False
 
 
 class RegistrationUpdate(RegistrationNotesRequest):
     allocations: list[TableAllocation] | None = Field(default=None, max_length=1000)
-    guest_count: int | None = Field(default=None, ge=1, le=20)
+    guest_count: GuestCount | None = None
     status: RegistrationStatus | None = None
-    amount_due: Decimal | None = Field(default=None, ge=0, decimal_places=2, max_digits=10)
+    amount_due: ProductPrice | None = None
     confirm_over_capacity: bool = False
     order_items: list[OrderItemRequest] | None = Field(default=None, max_length=50)
-    notes: str | None = Field(default=None, max_length=4000)
-    person_id: str | None = Field(default=None, min_length=1)
+    notes: Text4000 | None = None
+    person_id: NonEmptyText | None = None
     checked_in: bool | None = None
     strap_issued: bool | None = None
 
@@ -728,7 +768,7 @@ class RegistrationVolunteerAssignment(RequestModel):
     use the account much, or the booking predates their self-registration.
     """
 
-    volunteer_id: str = Field(min_length=1)
+    volunteer_id: NonEmptyText
 
 
 class RegistrationOut(BaseModel):
@@ -809,10 +849,10 @@ class PaymentTransactionCreate(RequestModel):
     effective_date: dt_date
     """When the money actually moved (e.g. a bank-transfer date), which may
     predate when this entry is recorded."""
-    reference: str | None = Field(default=None, max_length=200)
-    note: str | None = Field(default=None, max_length=2000)
-    reversed_transaction_id: str | None = Field(default=None, min_length=1, max_length=64)
-    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+    reference: Text200 | None = None
+    note: Text2000 | None = None
+    reversed_transaction_id: ResourceId | None = None
+    idempotency_key: NonEmptyText200 | None = None
     """Client-generated key so a retried/ambiguous submission cannot book or
     refund money twice — see docs/retry-safety.md."""
 
@@ -988,11 +1028,11 @@ class VisitorSessionStatus(BaseModel):
 class RegistrationAdminCreate(RegistrationNotesRequest):
     """Admin-only registration creation — skips spam checks, accepts person_id directly."""
 
-    person_id: str = Field(min_length=1, max_length=64)
-    event_id: str = Field(min_length=1, max_length=64)
-    guest_count: int = Field(ge=1, le=20)
+    person_id: ResourceId
+    event_id: ResourceId
+    guest_count: GuestCount
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
-    notes: str = Field(default="", max_length=4000)
+    notes: Text4000 = ""
     status: RegistrationStatus = "confirmed"
 
     @field_validator("event_id", "notes", mode="before")
@@ -1004,7 +1044,7 @@ class RegistrationAdminCreate(RegistrationNotesRequest):
 class VolunteerHelpPeriodIn(RequestModel):
     first_help_day: dt_date
     last_help_day: dt_date | None = None
-    notes: str = Field(default="", max_length=2000)
+    notes: Text2000 = ""
 
     @field_validator("notes", mode="before")
     @classmethod
@@ -1019,10 +1059,10 @@ class VolunteerHelpPeriodIn(RequestModel):
 
 
 class VolunteerCreate(RequestModel):
-    name: str = Field(min_length=1, max_length=200)
-    address: str = Field(default="", max_length=300)
-    national_register_number: str = Field(min_length=1, max_length=20)
-    eid_document_number: str = Field(min_length=1, max_length=50)
+    name: NonEmptyText200
+    address: Text300 = ""
+    national_register_number: NonEmptyText20
+    eid_document_number: NonEmptyText50
     help_periods: list[VolunteerHelpPeriodIn] = Field(min_length=1)
 
     @field_validator("name", "national_register_number", "eid_document_number", mode="before")
@@ -1032,10 +1072,10 @@ class VolunteerCreate(RequestModel):
 
 
 class VolunteerUpdate(RequestModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    address: str | None = Field(default=None, max_length=300)
-    national_register_number: str | None = Field(default=None, min_length=1, max_length=20)
-    eid_document_number: str | None = Field(default=None, min_length=1, max_length=50)
+    name: NonEmptyText200 | None = None
+    address: Text300 | None = None
+    national_register_number: NonEmptyText20 | None = None
+    eid_document_number: NonEmptyText50 | None = None
     help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
     oidc_subject: str | None = Field(default=None, max_length=255)
     """Admin-only override for the self-service identity link (#1006) — e.g.
@@ -1092,11 +1132,8 @@ class VolunteerListEnvelope(BaseModel):
 # ---------------------------------------------------------------------------
 
 
-class PollOptionCreate(RequestModel):
-    edition_id: str = Field(min_length=1, max_length=100)
-    label: str = Field(min_length=1, max_length=200)
-
-    @field_validator("label", mode="after")
+class _PollOptionFields(RequestModel):
+    @field_validator("label", mode="after", check_fields=False)
     @classmethod
     def strip_label(cls, value: str) -> str:
         if not value.strip():
@@ -1104,15 +1141,13 @@ class PollOptionCreate(RequestModel):
         return value.strip()
 
 
-class PollOptionUpdate(RequestModel):
-    label: str = Field(min_length=1, max_length=200)
+class PollOptionCreate(_PollOptionFields):
+    edition_id: ResourceKey
+    label: NonEmptyText200
 
-    @field_validator("label", mode="after")
-    @classmethod
-    def strip_label(cls, value: str) -> str:
-        if not value.strip():
-            raise ValueError("Label must not be blank.")
-        return value.strip()
+
+class PollOptionUpdate(_PollOptionFields):
+    label: NonEmptyText200
 
 
 class PollOptionOut(BaseModel):
@@ -1134,7 +1169,7 @@ class VolunteerPollOptionOut(BaseModel):
 
 
 class PollSelectionItem(RequestModel):
-    option_id: str = Field(min_length=1, max_length=64)
+    option_id: ResourceId
     quantity: int = Field(ge=1, le=MAX_POLL_QUANTITY)
 
 
@@ -1227,31 +1262,31 @@ class VolunteerRegistrationUpdate(RequestModel):
 
 
 class PersonCreate(RequestModel):
-    name: str = Field(min_length=1, max_length=200)
+    name: NonEmptyText200
     email: EmailStr | None = None
-    phone: str = Field(default="", max_length=50)
+    phone: Text50 = ""
     preferred_language: Literal["nl", "fr", "en"] | None = None
-    address: str = Field(default="", max_length=300)
+    address: Text300 = ""
     roles: list[str] = Field(default_factory=list)
-    national_register_number: str | None = Field(default=None, max_length=20)
-    eid_document_number: str | None = Field(default=None, max_length=50)
-    visits_per_month: int | None = Field(default=None, ge=1, le=31)
-    notes: str = Field(default="", max_length=2000)
+    national_register_number: Text20 | None = None
+    eid_document_number: Text50 | None = None
+    visits_per_month: MonthlyVisits | None = None
+    notes: Text2000 = ""
     member_since: dt_date | None = None
     """Member endpoints only: the day membership started (defaults to today for a new member)."""
 
 
 class PersonUpdate(RequestModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
+    name: NonEmptyText200 | None = None
     email: EmailStr | None = None
-    phone: str | None = Field(default=None, max_length=50)
+    phone: Text50 | None = None
     preferred_language: Literal["nl", "fr", "en"] | None = None
-    address: str | None = Field(default=None, max_length=300)
+    address: Text300 | None = None
     roles: list[str] | None = None
-    national_register_number: str | None = Field(default=None, max_length=20)
-    eid_document_number: str | None = Field(default=None, max_length=50)
-    visits_per_month: int | None = Field(default=None, ge=1, le=31)
-    notes: str | None = Field(default=None, max_length=2000)
+    national_register_number: Text20 | None = None
+    eid_document_number: Text50 | None = None
+    visits_per_month: MonthlyVisits | None = None
+    notes: Text2000 | None = None
     member_since: dt_date | None = None
     """Member endpoints only: the day the current stretch of membership started."""
     marketing_opt_in: bool | None = None
@@ -1267,9 +1302,9 @@ class PersonUpdate(RequestModel):
 
 class OrganizationDescription(RequestModel):
     description_language: Literal["nl", "fr", "en"] | None = None
-    description_nl: str | None = Field(default=None, max_length=600)
-    description_fr: str | None = Field(default=None, max_length=600)
-    description_en: str | None = Field(default=None, max_length=600)
+    description_nl: Text600 | None = None
+    description_fr: Text600 | None = None
+    description_en: Text600 | None = None
 
     @field_validator("description_nl", "description_fr", "description_en", mode="before")
     @classmethod
@@ -1287,9 +1322,9 @@ class OrganizationDescription(RequestModel):
 
 
 class OrganizationCreate(OrganizationDescription):
-    name: str = Field(min_length=1, max_length=200)
-    image: str = Field(default="", max_length=500)
-    website: str = Field(default="", max_length=500)
+    name: NonEmptyText200
+    image: Text500 = ""
+    website: Text500 = ""
     active: bool = True
     type: Literal["producer", "sponsor", "vendor"] = "vendor"
     contact_person_id: str | None = None
@@ -1300,9 +1335,9 @@ class OrganizationCreate(OrganizationDescription):
 
 
 class OrganizationUpdate(OrganizationDescription):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    image: str | None = Field(default=None, max_length=500)
-    website: str | None = Field(default=None, max_length=500)
+    name: NonEmptyText200 | None = None
+    image: Text500 | None = None
+    website: Text500 | None = None
     active: bool | None = None
     type: Literal["producer", "sponsor", "vendor"] | None = None
     contact_person_id: str | None = None
@@ -1333,9 +1368,9 @@ class OrganizationOut(BaseModel):
 
 
 class LayoutCreate(RequestModel):
-    event_id: str = Field(min_length=1, max_length=64)
-    room_id: str = Field(min_length=1, max_length=64)
-    label: str = Field(default="", max_length=200)
+    event_id: ResourceId
+    room_id: ResourceId
+    label: Text200 = ""
 
 
 class LayoutCopyCreate(LayoutCreate):
@@ -1368,7 +1403,7 @@ class LayoutBulkCreate(RequestModel):
     """
 
     items: list[LayoutCreate] = Field(min_length=1, max_length=200)
-    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+    idempotency_key: NonEmptyText200 | None = None
 
 
 class LayoutBulkOut(BaseModel):
@@ -1381,16 +1416,16 @@ class LayoutBulkOut(BaseModel):
 
 
 class TableTypeCreate(RequestModel):
-    name: str = Field(min_length=1, max_length=200)
+    name: NonEmptyText200
     venue_id: str
     shape: Literal["rectangle", "round"] = "rectangle"
     # No defensible default exists for physical dimensions (unlike shape/height_type,
     # which have a legitimate industry-standard default) — required so a caller can't
     # silently persist a 0.7 x 1.8m table type without realising it (see #835).
-    width_m: float = Field(ge=0.1, le=20.0)
-    length_m: float = Field(ge=0.1, le=20.0)
+    width_m: TableDimension
+    length_m: TableDimension
     height_type: Literal["low", "high"] = "low"
-    capacity: int = Field(ge=1, le=50)
+    capacity: TableCapacity
     active: bool = True
 
     @model_validator(mode="after")
@@ -1402,13 +1437,13 @@ class TableTypeCreate(RequestModel):
 
 
 class TableTypeUpdate(RequestModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
+    name: NonEmptyText200 | None = None
     venue_id: str | None = None
     shape: Literal["rectangle", "round"] | None = None
-    width_m: float | None = Field(default=None, ge=0.1, le=20.0)
-    length_m: float | None = Field(default=None, ge=0.1, le=20.0)
+    width_m: TableDimension | None = None
+    length_m: TableDimension | None = None
     height_type: Literal["low", "high"] | None = None
-    capacity: int | None = Field(default=None, ge=1, le=50)
+    capacity: TableCapacity | None = None
     active: bool | None = None
 
 
@@ -1437,7 +1472,7 @@ class TableTypeBulkCreate(RequestModel):
     """
 
     items: list[TableTypeCreate] = Field(min_length=1, max_length=200)
-    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+    idempotency_key: NonEmptyText200 | None = None
 
 
 class TableTypeBulkOut(BaseModel):
@@ -1468,20 +1503,20 @@ ROTATION_DESCRIPTION = "Clockwise rotation in whole degrees [0, 359], pivoting a
 
 
 class TableCreate(RequestModel):
-    name: str = Field(min_length=1, max_length=200)
-    x: float = Field(ge=0, le=100, default=50.0, description=X_POSITION_DESCRIPTION)
-    y: float = Field(ge=0, le=100, default=50.0, description=Y_POSITION_DESCRIPTION)
+    name: NonEmptyText200
+    x: FloorPlanPosition = Field(default=50.0, description=X_POSITION_DESCRIPTION)
+    y: FloorPlanPosition = Field(default=50.0, description=Y_POSITION_DESCRIPTION)
     table_type_id: str
-    rotation: int = Field(ge=0, le=359, default=0, description=ROTATION_DESCRIPTION)
+    rotation: FloorPlanRotation = Field(default=0, description=ROTATION_DESCRIPTION)
     layout_id: str
 
 
 class TableUpdate(RequestModel):
-    name: str | None = None
-    x: float | None = Field(default=None, ge=0, le=100, description=X_POSITION_DESCRIPTION)
-    y: float | None = Field(default=None, ge=0, le=100, description=Y_POSITION_DESCRIPTION)
+    name: NonEmptyText200 | None = None
+    x: FloorPlanPosition | None = Field(default=None, description=X_POSITION_DESCRIPTION)
+    y: FloorPlanPosition | None = Field(default=None, description=Y_POSITION_DESCRIPTION)
     table_type_id: str | None = None
-    rotation: int | None = Field(default=None, ge=0, le=359, description=ROTATION_DESCRIPTION)
+    rotation: FloorPlanRotation | None = Field(default=None, description=ROTATION_DESCRIPTION)
     layout_id: str | None = None
 
 
@@ -1512,7 +1547,7 @@ class TableBulkCreate(RequestModel):
     """
 
     items: list[TableCreate] = Field(min_length=1, max_length=200)
-    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+    idempotency_key: NonEmptyText200 | None = None
 
 
 class TableBulkOut(BaseModel):
@@ -1526,25 +1561,25 @@ class TableBulkOut(BaseModel):
 
 class AreaCreate(RequestModel):
     layout_id: str = Field(max_length=64)
-    label: str = Field(min_length=1, max_length=200)
-    icon: str = Field(default="bi-shop", max_length=50)
+    label: NonEmptyText200
+    icon: Text50 = "bi-shop"
     organization_id: int | None = None
-    width_m: float = Field(ge=0.1, le=50.0, default=1.5)
-    length_m: float = Field(ge=0.1, le=50.0, default=1.0)
-    x: float = Field(ge=0, le=100, default=50.0, description=X_POSITION_DESCRIPTION)
-    y: float = Field(ge=0, le=100, default=50.0, description=Y_POSITION_DESCRIPTION)
-    rotation: int = Field(ge=0, le=359, default=0, description=ROTATION_DESCRIPTION)
+    width_m: AreaDimension = 1.5
+    length_m: AreaDimension = 1.0
+    x: FloorPlanPosition = Field(default=50.0, description=X_POSITION_DESCRIPTION)
+    y: FloorPlanPosition = Field(default=50.0, description=Y_POSITION_DESCRIPTION)
+    rotation: FloorPlanRotation = Field(default=0, description=ROTATION_DESCRIPTION)
 
 
 class AreaUpdate(RequestModel):
-    label: str | None = Field(default=None, min_length=1, max_length=200)
-    icon: str | None = Field(default=None, max_length=50)
+    label: NonEmptyText200 | None = None
+    icon: Text50 | None = None
     organization_id: int | None = None
-    width_m: float | None = Field(default=None, ge=0.1, le=50.0)
-    length_m: float | None = Field(default=None, ge=0.1, le=50.0)
-    x: float | None = Field(default=None, ge=0, le=100, description=X_POSITION_DESCRIPTION)
-    y: float | None = Field(default=None, ge=0, le=100, description=Y_POSITION_DESCRIPTION)
-    rotation: int | None = Field(default=None, ge=0, le=359, description=ROTATION_DESCRIPTION)
+    width_m: AreaDimension | None = None
+    length_m: AreaDimension | None = None
+    x: FloorPlanPosition | None = Field(default=None, description=X_POSITION_DESCRIPTION)
+    y: FloorPlanPosition | None = Field(default=None, description=Y_POSITION_DESCRIPTION)
+    rotation: FloorPlanRotation | None = Field(default=None, description=ROTATION_DESCRIPTION)
 
 
 class AreaOut(BaseModel):
@@ -1670,8 +1705,8 @@ class LayoutRevisionSummaryOut(BaseModel):
 
 
 class LayoutRevisionSaveRequest(RequestModel):
-    label: str = Field(min_length=1, max_length=200)
-    change_note: str | None = Field(default=None, max_length=2000)
+    label: NonEmptyText200
+    change_note: Text2000 | None = None
 
     @field_validator("label", mode="before")
     @classmethod
@@ -1805,22 +1840,22 @@ class VenuePlanOut(BaseModel):
 
 
 class VenueCreate(RequestModel):
-    name: str = Field(min_length=1, max_length=200)
-    address: str = Field(default="", max_length=200)
-    city: str = Field(default="", max_length=100)
-    postal_code: str = Field(default="", max_length=20)
-    country: str = Field(default="", max_length=100)
+    name: NonEmptyText200
+    address: Text200 = ""
+    city: Text100 = ""
+    postal_code: Text20 = ""
+    country: Text100 = ""
     lat: float = 0.0
     lng: float = 0.0
     active: bool = True
 
 
 class VenueUpdate(RequestModel):
-    name: str | None = Field(default=None, min_length=1, max_length=200)
-    address: str | None = Field(default=None, max_length=200)
-    city: str | None = Field(default=None, max_length=100)
-    postal_code: str | None = Field(default=None, max_length=20)
-    country: str | None = Field(default=None, max_length=100)
+    name: NonEmptyText200 | None = None
+    address: Text200 | None = None
+    city: Text100 | None = None
+    postal_code: Text20 | None = None
+    country: Text100 | None = None
     lat: float | None = None
     lng: float | None = None
     active: bool | None = None
@@ -1849,21 +1884,21 @@ class VenueOut(BaseModel):
 
 class RoomCreate(RequestModel):
     venue_id: str
-    name: str = Field(min_length=1, max_length=200)
+    name: NonEmptyText200
     # Required, not defaulted — a 20x15m default would silently masquerade as a
     # measured room dimension for whatever venue was actually entered (see #835).
-    width_m: float = Field(ge=1, le=500)
-    length_m: float = Field(ge=1, le=500)
-    color: str = Field(default="#6c757d", pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    width_m: RoomDimension
+    length_m: RoomDimension
+    color: HexColor = "#6c757d"
     active: bool = True
 
 
 class RoomUpdate(RequestModel):
     venue_id: str | None = None
-    name: str | None = None
-    width_m: float | None = Field(default=None, ge=1, le=500)
-    length_m: float | None = Field(default=None, ge=1, le=500)
-    color: str | None = Field(default=None, pattern=r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+    name: NonEmptyText200 | None = None
+    width_m: RoomDimension | None = None
+    length_m: RoomDimension | None = None
+    color: HexColor | None = None
     active: bool | None = None
 
 
@@ -1891,7 +1926,7 @@ class RoomBulkCreate(RequestModel):
     """
 
     items: list[RoomCreate] = Field(min_length=1, max_length=200)
-    idempotency_key: str | None = Field(default=None, min_length=1, max_length=200)
+    idempotency_key: NonEmptyText200 | None = None
 
 
 class RoomBulkOut(BaseModel):
@@ -1904,8 +1939,8 @@ class RoomBulkOut(BaseModel):
 
 
 class EditionCreate(RequestModel):
-    id: str = Field(min_length=1, max_length=100)
-    year: int = Field(ge=2020, le=2100)
+    id: ResourceKey
+    year: EditionYear
     month: str
     venue_id: str
     edition_type: EditionType = "festival"
@@ -1919,7 +1954,7 @@ class EditionCreate(RequestModel):
 
 
 class EditionUpdate(RequestModel):
-    year: int | None = Field(default=None, ge=2020, le=2100)
+    year: EditionYear | None = None
     month: str | None = None
     venue_id: str | None = None
     edition_type: EditionType | None = None
@@ -2159,8 +2194,8 @@ class IntegrationClientCreatedOut(IntegrationClientOut):
 class AppSettingsUpdate(RequestModel):
     maintenance_mode: bool | None = None
     public_email: EmailStr | Literal[""] | None = None
-    public_phone: str | None = Field(default=None, max_length=30)
-    facebook_url: str | None = Field(default=None, max_length=500)
+    public_phone: Text30 | None = None
+    facebook_url: Text500 | None = None
 
     @field_validator("public_phone")
     @classmethod
@@ -2205,12 +2240,12 @@ class _FaqTextFields[TextLanguageT: Language | None](RequestModel):
     its question and answer have text. A blank text is stored as `None`."""
 
     text_language: TextLanguageT
-    question_nl: str | None = Field(default=None, max_length=500)
-    question_fr: str | None = Field(default=None, max_length=500)
-    question_en: str | None = Field(default=None, max_length=500)
-    answer_nl: str | None = Field(default=None, max_length=10000)
-    answer_fr: str | None = Field(default=None, max_length=10000)
-    answer_en: str | None = Field(default=None, max_length=10000)
+    question_nl: Text500 | None = None
+    question_fr: Text500 | None = None
+    question_en: Text500 | None = None
+    answer_nl: Text10000 | None = None
+    answer_fr: Text10000 | None = None
+    answer_en: Text10000 | None = None
 
     @field_validator("question_nl", "question_fr", "question_en", "answer_nl", "answer_fr", "answer_en", mode="before")
     @classmethod
@@ -2297,17 +2332,17 @@ class _AnnouncementFields[TextLanguageT: Language | None, LevelT: AnnouncementLe
     optional translations, and visitors fall back to the original."""
 
     text_language: TextLanguageT
-    text_nl: str | None = Field(default=None, max_length=500)
-    text_fr: str | None = Field(default=None, max_length=500)
-    text_en: str | None = Field(default=None, max_length=500)
+    text_nl: Text500 | None = None
+    text_fr: Text500 | None = None
+    text_en: Text500 | None = None
     level: LevelT
     active: ActiveT
     starts_at: datetime | None = None
     ends_at: datetime | None = None
-    link_url: str | None = Field(default=None, max_length=1000)
-    link_label_nl: str | None = Field(default=None, max_length=120)
-    link_label_fr: str | None = Field(default=None, max_length=120)
-    link_label_en: str | None = Field(default=None, max_length=120)
+    link_url: Text1000 | None = None
+    link_label_nl: Text120 | None = None
+    link_label_fr: Text120 | None = None
+    link_label_en: Text120 | None = None
 
     _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
 
@@ -2446,10 +2481,10 @@ class PolicyDraftUpdate(RequestModel):
     its original language (`content_language`)."""
 
     content_language: Language | None = None
-    content_nl: str | None = Field(default=None, max_length=200_000)
-    content_fr: str | None = Field(default=None, max_length=200_000)
-    content_en: str | None = Field(default=None, max_length=200_000)
-    change_summary: str | None = Field(default=None, max_length=2000)
+    content_nl: MarkdownSource | None = None
+    content_fr: MarkdownSource | None = None
+    content_en: MarkdownSource | None = None
+    change_summary: Text2000 | None = None
 
 
 class PolicyRenderRequest(RequestModel):
@@ -2459,7 +2494,7 @@ class PolicyRenderRequest(RequestModel):
     admin previews here is guaranteed to match what publishing would produce.
     """
 
-    markdown: str = Field(default="", max_length=200_000)
+    markdown: MarkdownSource = ""
 
 
 class PolicyRenderOut(BaseModel):
@@ -2509,12 +2544,12 @@ class EditionAttendanceStats(BaseModel):
 class PushSubscriptionKeys(RequestModel):
     """The ``keys`` object from a browser ``PushSubscription.toJSON()``."""
 
-    p256dh: str = Field(min_length=1, max_length=200)
-    auth: str = Field(min_length=1, max_length=50)
+    p256dh: NonEmptyText200
+    auth: NonEmptyText50
 
 
 class PushSubscribeRequest(RequestModel):
-    endpoint: str = Field(min_length=1, max_length=600)
+    endpoint: NonEmptyText600
     keys: PushSubscriptionKeys
     locale: Literal["nl", "fr", "en"]
     categories: list[str] = Field(default_factory=list, max_length=10)
@@ -2538,7 +2573,7 @@ class PushSubscriptionOut(BaseModel):
 
 
 class PushUnsubscribeRequest(RequestModel):
-    endpoint: str = Field(min_length=1, max_length=600)
+    endpoint: NonEmptyText600
 
 
 class VapidPublicKeyOut(BaseModel):
@@ -2549,7 +2584,7 @@ class VapidPublicKeyOut(BaseModel):
 
 
 class PushTestRequest(RequestModel):
-    subscription_id: str = Field(min_length=1, max_length=64)
+    subscription_id: ResourceId
 
 
 # ---------------------------------------------------------------------------
@@ -2570,15 +2605,15 @@ class _ComposedMessageFields[
     body have text (otherwise the original is delivered)."""
 
     text_language: TextLanguageT
-    title_nl: str | None = Field(default=None, max_length=500)
-    title_fr: str | None = Field(default=None, max_length=500)
-    title_en: str | None = Field(default=None, max_length=500)
-    body_nl: str | None = Field(default=None, max_length=500)
-    body_fr: str | None = Field(default=None, max_length=500)
-    body_en: str | None = Field(default=None, max_length=500)
+    title_nl: Text500 | None = None
+    title_fr: Text500 | None = None
+    title_en: Text500 | None = None
+    body_nl: Text500 | None = None
+    body_fr: Text500 | None = None
+    body_en: Text500 | None = None
     level: LevelT
     channels: ChannelsT
-    link_url: str | None = Field(default=None, max_length=1000)
+    link_url: Text1000 | None = None
 
     _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
 
@@ -2694,7 +2729,7 @@ class ManagedOrganizationOut(OrganizationDescription):
 
 class OrganizationChangeSubmit(OrganizationDescription):
     submission_id: UUID
-    website: str | None = Field(default=None, max_length=500)
+    website: Text500 | None = None
 
     @field_validator("website")
     @classmethod
@@ -2709,7 +2744,7 @@ class OrganizationChangeSubmit(OrganizationDescription):
 
 class OrganizationChangeDecision(RequestModel):
     decision: Literal["accepted", "rejected"]
-    reason: str | None = Field(default=None, max_length=2000)
+    reason: Text2000 | None = None
 
 
 class OrganizationChangeOut(BaseModel):

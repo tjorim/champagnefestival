@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +20,7 @@ from app.auth import require_admin
 from app.database import get_db
 from app.models import Event, Product, WaitlistEntry
 from app.ratelimit import check_rate_limit, get_client_ip
+from app.schema_types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
 from app.schemas import RequestModel
 from app.spam import check_form_timing, check_honeypot
 from app.utils import product_available_quantity, product_sold_out
@@ -29,12 +30,12 @@ router = APIRouter(prefix="/api/waitlist", tags=["waitlist"])
 
 class WaitlistEntryRequest(RequestModel):
     submission_id: UUID
-    product_id: str = Field(min_length=1, max_length=64)
-    name: str = Field(min_length=1, max_length=200)
+    product_id: ResourceId
+    name: NonEmptyText200
     email: EmailStr
-    phone: str | None = Field(default=None, max_length=30)
-    guest_count: int = Field(default=1, ge=1, le=20)
-    notes: str = Field(default="", max_length=2000)
+    phone: Text30 | None = None
+    guest_count: GuestCount = 1
+    notes: Text2000 = ""
     honeypot: str | None = None
     form_start_time: str | None = None
 

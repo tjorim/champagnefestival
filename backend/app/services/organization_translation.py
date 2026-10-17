@@ -11,13 +11,14 @@ from pydantic import BaseModel, Field
 
 from app.config import settings
 from app.ratelimit import check_rate_limit
+from app.schema_types import NonEmptyText600
 from app.schemas import RequestModel
 
 Language = Literal["nl", "fr", "en"]
 
 
 class TranslationRequest(RequestModel):
-    text: str = Field(min_length=1, max_length=600)
+    text: NonEmptyText600
     source: Language
     target: Language
 

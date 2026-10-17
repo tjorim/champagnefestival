@@ -576,3 +576,12 @@ channel and slide drafts at a timezone-aware instant. It uses the public playlis
 expansion and scheduling rules, allocates no persisted identities, writes no audit
 entries and never publishes changes. It returns `Cache-Control: no-store`.
 Repeating it is safe; the editor requests it explicitly without automatic retries.
+
+
+## Shared request field constraints (2026-10-17)
+
+Create and update request schemas reuse constrained value types without changing
+write retry strategies, defaults, or omission/null semantics. Table and room name
+updates now enforce the same 1–200 character limit as creation; invalid names fail
+request validation before a write. This does not introduce automatic retries or
+change the existing retry-safety decisions for those operations.
