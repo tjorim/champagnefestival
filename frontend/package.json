@@ -53,7 +53,7 @@
     "@inlang/paraglide-js": "^2.27.0",
     "@inlang/plugin-m-function-matcher": "^2.3.3",
     "@inlang/plugin-message-format": "^4.5.3",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.0",
     "@shadcn/lint": "^0.2.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/table-core": "9.3.1",
