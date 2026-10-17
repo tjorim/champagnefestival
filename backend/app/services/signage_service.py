@@ -13,7 +13,7 @@ from app.audit import write_audit_entry
 from app.models import Area, Edition, Event, Layout, Organization, SignageChannel, SignageSlide, SignageTemplate
 from app.services.edition_artwork import public_root
 from app.services.errors import ApiHTTPException
-from app.signage_schemas import Content, DisplayTemplate, Playlist, PublicSlide, missing_bindings
+from app.signage_schemas import Content, DisplayTemplate, Playlist, PlaylistPreview, PublicSlide, missing_bindings
 from app.utils import make_id
 
 MODELS = {"channels": SignageChannel, "templates": SignageTemplate, "slides": SignageSlide}
@@ -150,15 +150,20 @@ def localized(content: Content, field: str, locale: str):
     return getattr(content, f"{field}_{locale}") or getattr(content, f"{field}_{content.text_language}")
 
 
-async def playlist(db: AsyncSession, slug: str, locale: str, now: datetime | None = None) -> Playlist:
+async def playlist(
+    db: AsyncSession, slug: str, locale: str, now: datetime | None = None, *, preview: PlaylistPreview | None = None
+) -> Playlist:
     now = now or datetime.now(UTC)
-    channel = await db.scalar(
-        select(SignageChannel).where(SignageChannel.slug == slug, SignageChannel.active.is_(True))
+    channel = (
+        SignageChannel(id="preview", epoch=now, **preview.channel.model_dump())
+        if preview
+        else await db.scalar(select(SignageChannel).where(SignageChannel.slug == slug, SignageChannel.active.is_(True)))
     )
     if channel is None:
         fail(404, "signage_not_found", "Channel not found.")
     edition = await db.get(Edition, channel.edition_id)
-    assert edition is not None
+    if edition is None:
+        fail(404, "signage_edition_not_found", "Edition not found.")
     organizations = list(
         (
             await db.scalars(
@@ -196,6 +201,17 @@ async def playlist(db: AsyncSession, slug: str, locale: str, now: datetime | Non
             .order_by(SignageSlide.sort_order, SignageSlide.id)
         )
     ).all()
+    if preview:
+        rows = []
+        for index, draft in enumerate(preview.slides):
+            template = await get(db, "templates", draft.template_id)
+            if missing_bindings(template.layers, draft.kind):
+                fail(422, "signage_missing_placeholders", "Template is missing required visible placeholders.")
+            validate_assets(draft.model_dump(mode="json"))
+            slide = SignageSlide(id=f"preview-{index}", **draft.model_dump(mode="python"))
+            if slide.active:
+                rows.append((slide, template))
+        rows.sort(key=lambda row: (row[0].sort_order, row[0].id))
     slides = []
     for slide, template in rows:
         if slide.starts_at and now < slide.starts_at or slide.ends_at and now >= slide.ends_at:
@@ -203,7 +219,8 @@ async def playlist(db: AsyncSession, slug: str, locale: str, now: datetime | Non
         public_template = DisplayTemplate.model_validate(template)
         if slide.kind == "organizations":
             for org in organizations:
-                if org.type not in ("producer", "vendor", "sponsor"):
+                selected_type = slide.content.get("organization_type")
+                if org.type not in ("producer", "vendor", "sponsor") or selected_type and org.type != selected_type:
                     continue
                 description = getattr(org, f"description_{locale}") or (
                     getattr(org, f"description_{org.description_language}") if org.description_language else None

@@ -18,6 +18,7 @@ import VenueManagement from "./VenueManagement";
 import { ContentSection, EditionsSection } from "./ContentManagement";
 import CategoryManagement from "./CategoryManagement";
 import FaqManagement from "./FaqManagement";
+import SignageChannels from "./SignageChannels";
 import AnnouncementsSection from "./AnnouncementsSection";
 import PolicyManagement from "./PolicyManagement";
 import PushOptIn from "@/components/PushOptIn";
@@ -674,6 +675,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {canManageAdminSections && activeKey === "faq" && (
                   <FaqManagement authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "signage-channels" && (
+                  <SignageChannels authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "announcements" && (
                   <AnnouncementsSection authHeaders={authHeaders} />

@@ -5,7 +5,7 @@ into the [frontend UI guide](frontend-ui.md) on 2026-10-07. Completion records
 and original findings remain below; detailed migration history remains in Git.
 
 
-Updated 2026-10-16. This is the current scope, dependency and preferred-order
+Updated 2026-10-17. This is the current scope, dependency and preferred-order
 record for the August 2026 audit and communications roadmap. GitHub issues
 hold discussion and workflow state; decision documents hold current contracts.
 
@@ -70,6 +70,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1264](https://github.com/tjorim/champagnefestival/issues/1264) | Completed | 2026-10-17 | #1264; draft-projection, renderer/model and authenticated playlist/axe tests | Content → Screen channels: channel links, typed organisation blocks, translated notices, uploads, schedules, drag/keyboard ordering and shared-renderer draft playback. |
 | [#1263](https://github.com/tjorim/champagnefestival/issues/1263) | Completed | 2026-10-16 | #1263; shared renderer, layer-model and authenticated editor tests | Layered template editor with uploads, real-data previews, accessible geometry controls, history, translated UI and service-enforced required bindings; see [layer contract](signage-layer-contract.md). |
 | [#1190](https://github.com/tjorim/champagnefestival/issues/1190) | Repository implementation complete; production rollout retains separate gates | 2026-10-07 | PRs #1207, #1208, #1211, #1212, #1213; shared-renderer integration | All five sub-issues are closed; review uses the shared table renderer. The full organization rename has no aliases and is folded into migration `004`; see [upgrade guidance](organization-change-review.md#terminology-and-upgrade). Production remains gated on apps#262/apps#263; account unification remains #1209. |
 | [#1195](https://github.com/tjorim/champagnefestival/issues/1195) | Repository implementation complete; production activation gated on tjorim/apps#263 | 2026-10-07 | PR #1213; [API contract](organization-description-translation.md) | Editable, stateless translation drafts with configured languages, rate/concurrency limits and stale-result protection. Normal save/submit controls publication; production activation remains apps#263. |
@@ -169,3 +170,33 @@ provide preview content with the same translation fallback as the player.
 - [x] Missing required visible bindings are flagged before saving for a preview kind; the service rejects assignment and shared-template edits that violate slide requirements.
 - [x] Editor and player use the same renderer and tested top-left coordinate contract.
 - [x] Frontend lint, formatting, typecheck/build and the full unit suite pass. All 373 other browser cases passed in the full run; the editor case passed after correcting an ambiguous rotation-field test locator. The latest targeted suite has 12 frontend signage tests; 14 backend signage tests and backend lint/format/typecheck pass.
+
+
+## Signage channels and playlist editor (#1264)
+
+Completed 2026-10-17. Content → Screen channels manages edition-bound channels,
+public links and active flags. The playlist supports producers, vendors and
+sponsors separately (existing all-organisation blocks remain supported), translated
+notices and uploaded images. Compatible templates come from #1263. Explicit saves
+publish each change; drag handles and arrow buttons save a complete playlist order.
+
+The authenticated, read-only preview projects drafts with the same organisation
+expansion and schedule rules as the public API, including inactive channels. It
+plays through `SlideRenderer`, reports expanded duration/count, and respects slide
+active flags and the selected preview instant. Local schedule inputs become
+timezone-aware API timestamps. All filled notice languages render stacked in the
+shared renderer. Public screens poll every 30 seconds, with a five-second API cache,
+and apply content revisions at a cycle boundary. Urgent interruptions remain out
+of scope. #1265 can reuse this channel/playlist contract for exports; #1262's venue
+hardware rehearsal remains a separate acceptance gate.
+
+- [x] Producers, vendors, sponsors and notices can be added, reordered and timed.
+- [x] Active flags and schedule boundaries filter both previews and public playlists.
+- [x] Channel links can be copied and opened in the public player.
+- [x] Draft playback uses the shared renderer without publishing changes.
+- [x] English, Dutch and French UI, targeted unit/backend tests and authenticated Playwright/axe coverage.
+- [x] Frontend lint, formatting and production build (including typecheck); 1,163 tests in the full unit run, followed by 21 focused final regression checks; all 375 Playwright cases and 1,626 backend tests pass. Backend delivery tests use both `DATABASE_URL` and `TEST_DATABASE_URL` pointed at the local test database.
+
+See [retry safety](retry-safety.md#channels-and-playlist-editor-1264) for explicit-save
+and uncertain-response handling. This records repository implementation, not a
+production deployment or completion of the venue rehearsal.

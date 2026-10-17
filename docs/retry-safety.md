@@ -563,3 +563,16 @@ existing template (`PUT /api/signage/templates/{id}`) replaces the document;
 repeating the same payload preserves its content but creates another audit entry
 and advances affected channel revisions. The editor disables writes while a
 request is pending. No write is advertised as automatically retryable.
+
+### Channels and playlist editor (#1264)
+
+Channel and slide creation, replacement, deletion, reorder and uploads use the
+operations above with no automatic write retries or offline queue. Controls are
+disabled while requests are pending. After an uncertain response, reload and
+reconcile saved state before retrying. Reorder sends complete saved membership.
+
+`POST /api/signage/preview` is an authenticated, read-only projection of submitted
+channel and slide drafts at a timezone-aware instant. It uses the public playlist
+expansion and scheduling rules, allocates no persisted identities, writes no audit
+entries and never publishes changes. It returns `Cache-Control: no-store`.
+Repeating it is safe; the editor requests it explicitly without automatic retries.

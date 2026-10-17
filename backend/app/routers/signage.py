@@ -17,6 +17,7 @@ from app.signage_schemas import (
     ChannelOut,
     ChannelWrite,
     Playlist,
+    PlaylistPreview,
     Reorder,
     SlideOut,
     SlideWrite,
@@ -224,3 +225,11 @@ async def get_templates(item_id: str, db: AsyncSession = Depends(get_db)):
 @router.get("/slides/{item_id}", response_model=SlideOut, dependencies=[Depends(require_admin)])
 async def get_slides(item_id: str, db: AsyncSession = Depends(get_db)):
     return await service.get(db, "slides", item_id)
+
+
+@router.post("/preview", response_model=Playlist, dependencies=[Depends(require_admin)])
+async def preview_playlist(
+    body: PlaylistPreview, response: Response, locale: FaqLocale = "nl", db: AsyncSession = Depends(get_db)
+):
+    response.headers["Cache-Control"] = "no-store"
+    return await service.playlist(db, "", locale, body.at, preview=body)

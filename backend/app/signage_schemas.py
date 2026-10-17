@@ -84,6 +84,7 @@ class ChannelOut(ChannelWrite):
 
 
 class Content(Document):
+    organization_type: Literal["producer", "vendor", "sponsor"] | None = None
     text_language: Literal["nl", "fr", "en"] = "en"
     text_nl: str | None = Field(default=None, max_length=500)
     text_fr: str | None = Field(default=None, max_length=500)
@@ -132,6 +133,19 @@ class SlideWrite(Document):
 class SlideOut(SlideWrite):
     id: str
     model_config = ConfigDict(from_attributes=True)
+
+
+class PlaylistPreview(Document):
+    channel: ChannelWrite
+    slides: list[SlideWrite] = Field(max_length=1000)
+    at: datetime
+
+    @field_validator("at")
+    @classmethod
+    def timezone_required(cls, value):
+        if value.utcoffset() is None:
+            raise ValueError("preview time requires a timezone")
+        return value
 
 
 class Reorder(Document):

@@ -1,5 +1,10 @@
 import { m } from "@/paraglide/messages";
-import { ApiError, apiErrorFromResponse } from "@/utils/apiErrors";
+import {
+  ApiError,
+  apiErrorFromResponse,
+  apiErrorMessage,
+  hasApiErrorCode,
+} from "@/utils/apiErrors";
 
 export const SESSION_EXPIRED_ERROR = "session_expired";
 export const UNAUTHORIZED_ERROR = "unauthorized";
@@ -134,4 +139,29 @@ export async function downloadFileOrThrow(
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(objectUrl), 100);
+}
+
+/** Signage writes are explicit and never automatically retried (docs/retry-safety.md). */
+export function signageRequest<T>(
+  path: string,
+  headers: Record<string, string>,
+  method = "GET",
+  body?: unknown,
+  signal?: AbortSignal,
+): Promise<T> {
+  return fetchJsonOrThrowWithUnauthorized<T>(
+    `/api/signage/${path}`,
+    {
+      method,
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal,
+    },
+    "Unable to update signage.",
+  );
+}
+
+/** An uncertain write may have succeeded: preserve the caller's reconciliation guidance. */
+export function signageOperationErrorMessage(error: unknown, fallback: string): string {
+  return hasApiErrorCode(error, "network_error") ? fallback : apiErrorMessage(error, fallback);
 }
