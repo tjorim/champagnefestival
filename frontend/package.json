@@ -68,7 +68,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "@vitest/ui": "^5.0.4",
     "fake-indexeddb": "^6.2.5",
-    "happy-dom": "^20.14.5",
+    "happy-dom": "^21.0.1",
     "jest-axe": "^11.0.0",
     "msw": "^2.15.0",
     "oxc-parser": "^0.154.0",
