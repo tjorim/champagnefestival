@@ -7,7 +7,11 @@ test("creates a layered template, validates bindings and preserves edits through
   await expect(page.locator("section#admin.admin-authenticated")).toBeVisible();
   const content = page.getByRole("button", { name: "Content", exact: true });
   if ((await content.getAttribute("aria-expanded")) != "true") await content.click();
+  const announcementsResponse = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/announcements",
+  );
   await page.getByRole("button", { name: "Announcements", exact: true }).click();
+  expect((await announcementsResponse).status()).toBe(200);
   await page.getByRole("tab", { name: "Screen templates" }).click();
   const save = page.getByRole("button", { name: "Save template", exact: true });
   await page.getByLabel("Name", { exact: true }).first().fill("Festival template");
