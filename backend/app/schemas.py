@@ -28,9 +28,6 @@ FaqLocale = Literal["nl", "en", "fr"]
 AnnouncementLevel = Literal["info", "warning", "urgent"]
 
 
-# Complete request schemas intentionally narrow optional fields inherited from
-# shared partial-update schemas. Pydantic validates these declarations on input;
-# targeted invalid-mutable-override suppressions preserve their non-null contracts.
 class RequestModel(BaseModel):
     """Base for external request bodies; reject misspelled or stale fields."""
 
@@ -257,14 +254,14 @@ class EditionSummaryOut(BaseModel):
 CATEGORY_KEY_PATTERN = r"^[a-z][a-z0-9_-]{0,49}$"
 
 
-class CategoryLabels(RequestModel):
+class _CategoryLabels[LabelLanguageT: Language | None, SortOrderT: int | None](RequestModel):
     """Per-language label of an event or product category: the original language must have text."""
 
-    label_language: Language | None = None
+    label_language: LabelLanguageT
     label_nl: str | None = Field(default=None, max_length=100)
     label_fr: str | None = Field(default=None, max_length=100)
     label_en: str | None = Field(default=None, max_length=100)
-    sort_order: int | None = Field(default=None, ge=0, le=100000)
+    sort_order: SortOrderT
 
     @field_validator("label_nl", "label_fr", "label_en", mode="before")
     @classmethod
@@ -277,13 +274,20 @@ class CategoryLabels(RequestModel):
         return self
 
 
-class CategoryCreate(CategoryLabels):
+class CategoryLabels(_CategoryLabels[Language | None, int | None]):
+    """Per-language label of an event or product category: the original language must have text."""
+
+    label_language: Language | None = None
+    sort_order: int | None = Field(default=None, ge=0, le=100000)
+
+
+class CategoryCreate(_CategoryLabels[Language, int]):
     key: str = Field(
         pattern=CATEGORY_KEY_PATTERN,
         description="Stable identifier stored on the events or products using it: lowercase letters, digits, `-` and `_`. Cannot be changed.",
     )
-    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
-    sort_order: int = Field(default=0, ge=0, le=100000)  # ty: ignore[invalid-mutable-override]
+    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    sort_order: int = Field(default=0, ge=0, le=100000)
 
     @model_validator(mode="after")
     def check_label(self) -> Self:
@@ -309,7 +313,7 @@ class CategoryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class EventTextFields(RequestModel):
+class _EventTextFields[TitleLanguageT: Language | None](RequestModel):
     """Per-language event title and description (#1222).
 
     Same contract as ``OrganizationDescription``: the original language must be
@@ -318,7 +322,7 @@ class EventTextFields(RequestModel):
     has a title.
     """
 
-    title_language: Language | None = None
+    title_language: TitleLanguageT
     title_nl: str | None = Field(default=None, max_length=200)
     title_fr: str | None = Field(default=None, max_length=200)
     title_en: str | None = Field(default=None, max_length=200)
@@ -351,9 +355,21 @@ class EventTextFields(RequestModel):
         return self
 
 
-class EventCreate(EventTextFields):
+class EventTextFields(_EventTextFields[Language | None]):
+    """Per-language event title and description (#1222).
+
+    Same contract as ``OrganizationDescription``: the original language must be
+    filled, the others are optional, and public reads fall back to the original.
+    A blank text is stored as ``None``. Unlike an organisation, an event always
+    has a title.
+    """
+
+    title_language: Language | None = None
+
+
+class EventCreate(_EventTextFields[Language]):
     edition_id: str = Field(min_length=1, max_length=100)
-    title_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
+    title_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     date: dt_date
     start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -448,13 +464,13 @@ class ProductInclusion(RequestModel):
     rounding: Literal["up", "down"] = "down"
 
 
-class ProductTextFields(RequestModel):
+class _ProductTextFields[NameLanguageT: Language | None](RequestModel):
     """Product name and description per language (#1222), like event titles: the
     original language must have the name, the description is optional (but needs
     text in its original language when present), and visitors fall back to the
     original. A blank text is stored as `None`."""
 
-    name_language: Language | None = None
+    name_language: NameLanguageT
     name_nl: str | None = Field(default=None, max_length=200)
     name_fr: str | None = Field(default=None, max_length=200)
     name_en: str | None = Field(default=None, max_length=200)
@@ -481,8 +497,17 @@ class ProductTextFields(RequestModel):
         return self
 
 
-class ProductCreate(ProductTextFields):
-    name_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
+class ProductTextFields(_ProductTextFields[Language | None]):
+    """Product name and description per language (#1222), like event titles: the
+    original language must have the name, the description is optional (but needs
+    text in its original language when present), and visitors fall back to the
+    original. A blank text is stored as `None`."""
+
+    name_language: Language | None = None
+
+
+class ProductCreate(_ProductTextFields[Language]):
+    name_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     unit: Literal["item", "table", "person"] = "item"
     stock: int | None = Field(default=None, ge=0, le=2147483647)
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
@@ -2174,12 +2199,12 @@ class AppSettingsOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class FaqTextFields(RequestModel):
+class _FaqTextFields[TextLanguageT: Language | None](RequestModel):
     """A question and its answer per language (#1222): the original language must
     have both, the others are optional, and a language is shown only when both
     its question and answer have text. A blank text is stored as `None`."""
 
-    text_language: Language | None = None
+    text_language: TextLanguageT
     question_nl: str | None = Field(default=None, max_length=500)
     question_fr: str | None = Field(default=None, max_length=500)
     question_en: str | None = Field(default=None, max_length=500)
@@ -2199,8 +2224,16 @@ class FaqTextFields(RequestModel):
         return self
 
 
-class FaqItemCreate(FaqTextFields):
-    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
+class FaqTextFields(_FaqTextFields[Language | None]):
+    """A question and its answer per language (#1222): the original language must
+    have both, the others are optional, and a language is shown only when both
+    its question and answer have text. A blank text is stored as `None`."""
+
+    text_language: Language | None = None
+
+
+class FaqItemCreate(_FaqTextFields[Language]):
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
     active: bool = True
 
     @model_validator(mode="after")
@@ -2256,17 +2289,19 @@ class FaqItemPublicOut(BaseModel):
 _BLANK_TO_NONE = ("text_nl", "text_fr", "text_en", "link_label_nl", "link_label_fr", "link_label_en")
 
 
-class AnnouncementFields(RequestModel):
+class _AnnouncementFields[TextLanguageT: Language | None, LevelT: AnnouncementLevel | None, ActiveT: bool | None](
+    RequestModel
+):
     """Announcement text and link label per language (#1222): the original language
     must have the text (and the link label when there is a link), the others are
     optional translations, and visitors fall back to the original."""
 
-    text_language: Language | None = None
+    text_language: TextLanguageT
     text_nl: str | None = Field(default=None, max_length=500)
     text_fr: str | None = Field(default=None, max_length=500)
     text_en: str | None = Field(default=None, max_length=500)
-    level: AnnouncementLevel | None = None
-    active: bool | None = None
+    level: LevelT
+    active: ActiveT
     starts_at: datetime | None = None
     ends_at: datetime | None = None
     link_url: str | None = Field(default=None, max_length=1000)
@@ -2289,12 +2324,22 @@ class AnnouncementFields(RequestModel):
         return value
 
 
-class AnnouncementWrite(AnnouncementFields):
+class AnnouncementFields(_AnnouncementFields[Language | None, AnnouncementLevel | None, bool | None]):
+    """Announcement text and link label per language (#1222): the original language
+    must have the text (and the link label when there is a link), the others are
+    optional translations, and visitors fall back to the original."""
+
+    text_language: Language | None = None
+    level: AnnouncementLevel | None = None
+    active: bool | None = None
+
+
+class AnnouncementWrite(_AnnouncementFields[Language, AnnouncementLevel, bool]):
     """The complete, validated state of an announcement (create body, and what an update merges into)."""
 
-    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
-    level: AnnouncementLevel = "info"  # ty: ignore[invalid-mutable-override]
-    active: bool = False  # ty: ignore[invalid-mutable-override]
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    level: AnnouncementLevel = "info"
+    active: bool = False
 
     @model_validator(mode="after")
     def validate_announcement(self):
@@ -2515,20 +2560,24 @@ ComposedMessageChannel = Literal["announcement", "push"]
 ComposedMessageState = Literal["draft", "scheduled", "sent"]
 
 
-class ComposedMessageFields(RequestModel):
+class _ComposedMessageFields[
+    TextLanguageT: Language | None,
+    LevelT: AnnouncementLevel | None,
+    ChannelsT: list[ComposedMessageChannel] | None,
+](RequestModel):
     """Title and body per language (#1222): the original language must have both,
     the others are optional, and a language is used only when both its title and
     body have text (otherwise the original is delivered)."""
 
-    text_language: Language | None = None
+    text_language: TextLanguageT
     title_nl: str | None = Field(default=None, max_length=500)
     title_fr: str | None = Field(default=None, max_length=500)
     title_en: str | None = Field(default=None, max_length=500)
     body_nl: str | None = Field(default=None, max_length=500)
     body_fr: str | None = Field(default=None, max_length=500)
     body_en: str | None = Field(default=None, max_length=500)
-    level: AnnouncementLevel | None = None
-    channels: list[ComposedMessageChannel] | None = Field(default=None, min_length=1)
+    level: LevelT
+    channels: ChannelsT
     link_url: str | None = Field(default=None, max_length=1000)
 
     _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
@@ -2546,12 +2595,24 @@ class ComposedMessageFields(RequestModel):
         return value
 
 
-class ComposedMessageWrite(ComposedMessageFields):
+class ComposedMessageFields(
+    _ComposedMessageFields[Language | None, AnnouncementLevel | None, list[ComposedMessageChannel] | None]
+):
+    """Title and body per language (#1222): the original language must have both,
+    the others are optional, and a language is used only when both its title and
+    body have text (otherwise the original is delivered)."""
+
+    text_language: Language | None = None
+    level: AnnouncementLevel | None = None
+    channels: list[ComposedMessageChannel] | None = Field(default=None, min_length=1)
+
+
+class ComposedMessageWrite(_ComposedMessageFields[Language, AnnouncementLevel, list[ComposedMessageChannel]]):
     """The complete, validated state of a composed message (create body, and what an update merges into)."""
 
-    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
-    level: AnnouncementLevel = "info"  # ty: ignore[invalid-mutable-override]
-    channels: list[ComposedMessageChannel] = Field(min_length=1)  # ty: ignore[invalid-mutable-override]
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    level: AnnouncementLevel = "info"
+    channels: list[ComposedMessageChannel] = Field(min_length=1)
 
     @model_validator(mode="after")
     def validate_composed_message(self):

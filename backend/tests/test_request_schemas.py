@@ -3,6 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
+from app import schemas
 from app.schemas import EditionUpdate, RequestModel
 
 
@@ -28,3 +29,30 @@ def test_all_request_model_subclasses_inherit_strict_validation() -> None:
 def test_edition_update_rejects_null_non_nullable_fields(field: str) -> None:
     with pytest.raises(ValidationError, match=f"{field} may be omitted but cannot be null"):
         EditionUpdate.model_validate({field: None})
+
+
+@pytest.mark.parametrize(
+    ("complete_name", "partial_name", "field"),
+    [
+        ("CategoryCreate", "CategoryUpdate", "label_language"),
+        ("CategoryCreate", "CategoryUpdate", "sort_order"),
+        ("EventCreate", "EventUpdate", "title_language"),
+        ("ProductCreate", "ProductUpdate", "name_language"),
+        ("FaqItemCreate", "FaqItemUpdate", "text_language"),
+        ("AnnouncementWrite", "AnnouncementUpdate", "text_language"),
+        ("AnnouncementWrite", "AnnouncementUpdate", "level"),
+        ("AnnouncementWrite", "AnnouncementUpdate", "active"),
+        ("ComposedMessageWrite", "ComposedMessageUpdate", "text_language"),
+        ("ComposedMessageWrite", "ComposedMessageUpdate", "level"),
+        ("ComposedMessageWrite", "ComposedMessageUpdate", "channels"),
+    ],
+)
+def test_complete_and_partial_request_field_nullability(complete_name: str, partial_name: str, field: str) -> None:
+    complete = getattr(schemas, complete_name)
+    partial = getattr(schemas, partial_name)
+
+    assert getattr(partial.model_validate({}), field) is None
+    assert getattr(partial.model_validate({field: None}), field) is None
+    with pytest.raises(ValidationError) as exc_info:
+        complete.model_validate({field: None})
+    assert any(error["loc"] == (field,) and error["type"] != "missing" for error in exc_info.value.errors())
