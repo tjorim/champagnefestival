@@ -583,3 +583,11 @@ Offline bundles and slide-image ZIPs read the public playlist and render/downloa
 files entirely in the browser. They make no server writes and do not publish editor
 drafts. There is no automatic retry; repeating the action is safe and creates a
 new snapshot/download, which may reflect newer published content.
+
+## Shared request field constraints (2026-10-17)
+
+Create and update request schemas reuse constrained value types without changing
+write retry strategies, defaults, or omission/null semantics. Table and room name
+updates now enforce the same 1–200 character limit as creation; invalid names fail
+request validation before a write. This does not introduce automatic retries or
+change the existing retry-safety decisions for those operations.

@@ -10,13 +10,14 @@ docs/decisions/1006-volunteer-identity-self-service.md for the full design.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_volunteer
 from app.database import get_db
 from app.dependencies import get_request_id
 from app.models import Person
+from app.schema_types import NonEmptyText20, NonEmptyText50, NonEmptyText200
 from app.schemas import (
     RequestModel,
     VolunteerPollOptionOut,
@@ -29,13 +30,13 @@ router = APIRouter(prefix="/api/me/volunteer", tags=["me", "volunteers"], depend
 
 
 class VolunteerIdentityRegisterRequest(RequestModel):
-    name: str = Field(min_length=1, max_length=200)
-    national_register_number: str = Field(min_length=1, max_length=20)
-    eid_document_number: str = Field(min_length=1, max_length=50)
+    name: NonEmptyText200
+    national_register_number: NonEmptyText20
+    eid_document_number: NonEmptyText50
 
 
 class VolunteerEidCorrectionRequest(RequestModel):
-    eid_document_number: str = Field(min_length=1, max_length=50)
+    eid_document_number: NonEmptyText50
 
 
 class VolunteerIdentityOut(BaseModel):
