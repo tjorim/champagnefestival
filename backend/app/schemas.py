@@ -28,6 +28,9 @@ FaqLocale = Literal["nl", "en", "fr"]
 AnnouncementLevel = Literal["info", "warning", "urgent"]
 
 
+# Complete request schemas intentionally narrow optional fields inherited from
+# shared partial-update schemas. Pydantic validates these declarations on input;
+# targeted invalid-mutable-override suppressions preserve their non-null contracts.
 class RequestModel(BaseModel):
     """Base for external request bodies; reject misspelled or stale fields."""
 
@@ -279,8 +282,8 @@ class CategoryCreate(CategoryLabels):
         pattern=CATEGORY_KEY_PATTERN,
         description="Stable identifier stored on the events or products using it: lowercase letters, digits, `-` and `_`. Cannot be changed.",
     )
-    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE
-    sort_order: int = Field(default=0, ge=0, le=100000)
+    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
+    sort_order: int = Field(default=0, ge=0, le=100000)  # ty: ignore[invalid-mutable-override]
 
     @model_validator(mode="after")
     def check_label(self) -> Self:
@@ -350,7 +353,7 @@ class EventTextFields(RequestModel):
 
 class EventCreate(EventTextFields):
     edition_id: str = Field(min_length=1, max_length=100)
-    title_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    title_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
     date: dt_date
     start_time: str = Field(pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
     end_time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
@@ -479,7 +482,7 @@ class ProductTextFields(RequestModel):
 
 
 class ProductCreate(ProductTextFields):
-    name_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    name_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
     unit: Literal["item", "table", "person"] = "item"
     stock: int | None = Field(default=None, ge=0, le=2147483647)
     inclusions: list[ProductInclusion] | None = Field(default=None, max_length=50)
@@ -2197,7 +2200,7 @@ class FaqTextFields(RequestModel):
 
 
 class FaqItemCreate(FaqTextFields):
-    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
     active: bool = True
 
     @model_validator(mode="after")
@@ -2289,9 +2292,9 @@ class AnnouncementFields(RequestModel):
 class AnnouncementWrite(AnnouncementFields):
     """The complete, validated state of an announcement (create body, and what an update merges into)."""
 
-    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
-    level: AnnouncementLevel = "info"
-    active: bool = False
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
+    level: AnnouncementLevel = "info"  # ty: ignore[invalid-mutable-override]
+    active: bool = False  # ty: ignore[invalid-mutable-override]
 
     @model_validator(mode="after")
     def validate_announcement(self):
@@ -2546,9 +2549,9 @@ class ComposedMessageFields(RequestModel):
 class ComposedMessageWrite(ComposedMessageFields):
     """The complete, validated state of a composed message (create body, and what an update merges into)."""
 
-    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE
-    level: AnnouncementLevel = "info"
-    channels: list[ComposedMessageChannel] = Field(min_length=1)
+    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE  # ty: ignore[invalid-mutable-override]
+    level: AnnouncementLevel = "info"  # ty: ignore[invalid-mutable-override]
+    channels: list[ComposedMessageChannel] = Field(min_length=1)  # ty: ignore[invalid-mutable-override]
 
     @model_validator(mode="after")
     def validate_composed_message(self):
