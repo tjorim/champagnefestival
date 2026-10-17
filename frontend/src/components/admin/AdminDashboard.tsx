@@ -18,7 +18,6 @@ import VenueManagement from "./VenueManagement";
 import { ContentSection, EditionsSection } from "./ContentManagement";
 import CategoryManagement from "./CategoryManagement";
 import FaqManagement from "./FaqManagement";
-import SignageChannels from "./SignageChannels";
 import AnnouncementsSection from "./AnnouncementsSection";
 import PolicyManagement from "./PolicyManagement";
 import PushOptIn from "@/components/PushOptIn";
@@ -75,6 +74,8 @@ function activeEditionLabel(edition: { editionType: string; year: number }): str
       return `${m.festival_name()} ${edition.year}`;
   }
 }
+
+const SignageChannels = React.lazy(() => import("./SignageChannels"));
 
 interface AdminDashboardProps {
   visible: boolean;
@@ -677,7 +678,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <FaqManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "signage-channels" && (
-                  <SignageChannels authHeaders={authHeaders} />
+                  <React.Suspense fallback={<AdminSkeleton variant="panel" />}>
+                    <SignageChannels authHeaders={authHeaders} />
+                  </React.Suspense>
                 )}
                 {canManageAdminSections && activeKey === "announcements" && (
                   <AnnouncementsSection authHeaders={authHeaders} />
