@@ -1,6 +1,8 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
+    allow:
+      - dependency-type: all
     directory: "/frontend"
     schedule:
       interval: "weekly"
@@ -89,6 +91,8 @@ updates:
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
+    allow:
+      - dependency-type: all
     directory: "/backend"
     schedule:
       interval: "weekly"
