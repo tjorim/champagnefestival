@@ -1497,5 +1497,10 @@
   "signage_channels_total": "{count} dia’s · {seconds} seconden totaal",
   "signage_channels_duration_status": "{seconds} s · {status}",
   "admin_section_load_error": "Dit onderdeel kon niet worden geladen. Herlaad de pagina om opnieuw te proberen.",
-  "admin_reload_page": "Pagina herladen"
+  "admin_reload_page": "Pagina herladen",
+  "signage_export_bundle": "Offlinebundel downloaden",
+  "signage_export_images": "Dia-afbeeldingen downloaden",
+  "signage_export_error": "Exporteren mislukt. Controleer of het kanaal actief is, dia’s bevat en alle afbeeldingen beschikbaar zijn. Probeer het daarna opnieuw.",
+  "signage_export_done": "Export gedownload.",
+  "signage_export_setup": "Offline momentopname: synchroniseer de systeemklokken op alle laptops, gebruik dezelfde bundel en schakel de slaapstand uit. De inhoud staat vast op het moment van exporteren."
 }

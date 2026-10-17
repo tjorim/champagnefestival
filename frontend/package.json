@@ -37,6 +37,8 @@
     "class-variance-authority": "^0.7.1",
     "cn": "^0.4.0",
     "dayjs": "^1.11.23",
+    "fflate": "^0.8.3",
+    "html-to-image": "^1.11.13",
     "jsqr": "^1.4.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.52.0",
