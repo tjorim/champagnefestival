@@ -5,6 +5,7 @@ import { strToU8, zipSync } from "fflate";
 import { SlideRenderer } from "./SlideRenderer";
 import { slideAtTime } from "./clock";
 import { playlistImages, type Playlist } from "./types";
+import offlineTemplate from "./offline-player.html?raw";
 
 export interface ExportPlaylist {
   revision: string;
@@ -20,25 +21,67 @@ export function offlineHtml(playlist: ExportPlaylist, start: string, setup: stri
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;");
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Signage</title><style>
-html,body{margin:0;width:100%;height:100%;background:black;color:white;font-family:Arial,sans-serif}img{position:absolute;width:100%;height:100%;object-fit:contain}img[hidden]{display:none}button,p{position:relative;margin:1rem}button{font:inherit;padding:1rem}
-</style></head><body><button type="button">${escape(start)}</button><p>${escape(setup)}</p><script id="playlist" type="application/json">${JSON.stringify(playlist).replaceAll("<", "\\u003c")}</script><script src="player.js"></script></body></html>`;
+  const values = {
+    start: escape(start),
+    setup: escape(setup),
+    playlist: JSON.stringify(playlist).replaceAll("<", "\\u003c"),
+  };
+  return offlineTemplate.replace(
+    /\{\{(start|setup|playlist)\}\}/g,
+    (_, key: keyof typeof values) => values[key],
+  );
 }
 
-// slideAtTime is deliberately pure: its emitted JavaScript runs without app imports.
+/** Serialized after TypeScript compilation; depends only on its clock argument and browser APIs. */
+function offlinePlayer(clock: typeof slideAtTime) {
+  const playlist: ExportPlaylist = JSON.parse(document.getElementById("playlist")!.textContent!);
+  const images = playlist.slides.map((slide) => {
+    const image = new Image();
+    image.src = slide.image;
+    image.alt = "";
+    image.hidden = true;
+    document.body.prepend(image);
+    return image;
+  });
+  function tick() {
+    const position = clock(
+      playlist.slides.map((slide) => slide.duration),
+      Date.parse(playlist.epoch),
+      Date.now(),
+    );
+    images.forEach((image, index) => {
+      image.hidden = index !== position.index;
+    });
+    setTimeout(tick, Math.max(1, Math.min(position.remaining, 250)));
+  }
+  void Promise.all(images.map((image) => image.decode())).then(tick);
+  let started = false;
+  let lock: WakeLockSentinel | undefined;
+  async function wake() {
+    if (started && navigator.wakeLock && (!lock || lock.released)) {
+      try {
+        lock = await navigator.wakeLock.request("screen");
+      } catch {
+        /* OS sleep is covered in setup guidance. */
+      }
+    }
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") void wake();
+  });
+  const button = document.querySelector("button")!;
+  button.onclick = () => {
+    started = true;
+    void document.documentElement.requestFullscreen?.().catch(() => {});
+    void wake();
+    button.hidden = true;
+    document.querySelector("p")!.hidden = true;
+  };
+}
+
+// Both functions are deliberately self-contained for execution without app imports.
 export function offlineScript() {
-  return `"use strict";
-const slideAtTime = ${slideAtTime.toString()};
-const playlist = JSON.parse(document.getElementById('playlist').textContent);
-const images = playlist.slides.map(slide => {const image = new Image(); image.src = slide.image; image.alt = ''; image.hidden = true; document.body.prepend(image); return image;});
-function tick() { const position = slideAtTime(playlist.slides.map(slide => slide.duration), Date.parse(playlist.epoch), Date.now()); images.forEach((image,index) => {image.hidden = index !== position.index;}); setTimeout(tick, Math.max(1,Math.min(position.remaining,250))); }
-Promise.all(images.map(image => image.decode())).then(tick);
-document.addEventListener('visibilitychange', () => { if(document.visibilityState === 'visible') wake(); });
-let started = false;
-let lock;
-async function wake() {if(started && navigator.wakeLock && (!lock || lock.released)) {try {lock = await navigator.wakeLock.request('screen');} catch {}}}
-document.querySelector('button').onclick = () => { started = true; document.documentElement.requestFullscreen?.().catch(() => {}); wake(); document.querySelector('button').hidden = true; document.querySelector('p').hidden = true; };
-`;
+  return `(${offlinePlayer.toString()})(${slideAtTime.toString()});`;
 }
 
 /** Capture the live player's DOM/CSS at its native canvas resolution. */

@@ -49,6 +49,7 @@ describe("signage export", () => {
     );
     expect(html).not.toContain("<script>alert");
     expect(html).not.toContain("<img src=x>");
+    expect(html).toContain("<title>&lt;img src=x&gt;</title>");
     expect(html).toContain("\\u003c/script>");
   });
   it("rejects unavailable assets instead of creating incomplete slides", async () => {

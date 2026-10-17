@@ -219,6 +219,12 @@ This records repository implementation; the two-laptop venue rehearsal remains
 required before event use.
 
 
+CI follow-up for PR #1350 (2026-10-18): generated HTML is now a raw template
+and player JavaScript is emitted from typed, self-contained functions. The locale
+audit checks the export code without exclusions, and the exported page title uses
+the translated start label. Locale audit, formatting, lint, export regression tests,
+offline browser playback and production build/typecheck pass.
+
 ## Planned video export follow-up (#1349)
 
 Planned 2026-10-18, not implemented. [#1349](https://github.com/tjorim/champagnefestival/issues/1349)
