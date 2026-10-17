@@ -1,8 +1,8 @@
 /**
  * Spike for #1175: how should a server-driven admin table (the Members list)
  * load its pages? Two candidates run against the same fake paged server on the
- * installed versions (`@tanstack/db` 0.11.3, `@tanstack/query-db-collection`
- * 1.3.4, `@tanstack/react-query` 5.104):
+ * installed versions (`@tanstack/db` 0.14.0, `@tanstack/query-db-collection`
+ * 1.4.4, `@tanstack/react-query` 5.104):
  *
  * - TanStack DB `syncMode: "on-demand"` with a live query per page.
  * - TanStack Query with `placeholderData: keepPreviousData`.
@@ -52,7 +52,7 @@ function respond(ms: number, signal: AbortSignal | undefined): Promise<void> {
   });
 }
 
-describe("on-demand collection sync (@tanstack/db 0.11.3, query-db-collection 1.3.4)", () => {
+describe("on-demand collection sync (@tanstack/db 0.14.0, query-db-collection 1.4.4)", () => {
   interface Call {
     limit: number | undefined;
     offset: number | undefined;
@@ -246,15 +246,23 @@ describe("on-demand collection sync (@tanstack/db 0.11.3, query-db-collection 1.
     expect(result.current.data.map((row) => row.id)).toEqual(["p01"]);
   });
 
-  it("refetches active subsets after a direct write, so the server result wins", async () => {
+  it("keeps a direct write until an explicit refetch reconciles with the server", async () => {
     const { collection, calls } = createOnDemand();
     const { result } = renderHook(() => page(collection as MemberCollection, 0));
     await waitFor(() => expect(result.current.isReady).toBe(true));
     const before = calls.length;
 
-    await collection.utils.writeUpsert({ id: "p01", name: "Renamed locally" });
+    await act(async () => {
+      await collection.utils.writeUpsert({ id: "p01", name: "Renamed locally" });
+    });
 
-    await waitFor(() => expect(calls.length).toBeGreaterThan(before));
+    await waitFor(() => expect(result.current.data[0]?.name).toBe("Renamed locally"));
+    expect(calls).toHaveLength(before);
+
+    await act(async () => {
+      await collection.utils.refetch();
+    });
+    expect(calls.length).toBeGreaterThan(before);
     await waitFor(() => expect(collection.get("p01")?.name).toBe("Person 1"));
   });
 

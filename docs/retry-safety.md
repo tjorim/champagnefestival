@@ -577,6 +577,12 @@ expansion and scheduling rules, allocates no persisted identities, writes no aud
 entries and never publishes changes. It returns `Cache-Control: no-store`.
 Repeating it is safe; the editor requests it explicitly without automatic retries.
 
+### Signage exports (#1265)
+
+Offline bundles and slide-image ZIPs read the public playlist and render/download
+files entirely in the browser. They make no server writes and do not publish editor
+drafts. There is no automatic retry; repeating the action is safe and creates a
+new snapshot/download, which may reflect newer published content.
 
 ## Shared request field constraints (2026-10-17)
 
