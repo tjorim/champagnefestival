@@ -1,21 +1,10 @@
 name: CodeQL Actions
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - ".github/workflows/**"
-  push:
-    branches: [main]
-    paths:
-      - ".github/workflows/**"
+  workflow_call:
+  workflow_dispatch:
   schedule:
     - cron: "0 3 * * 1"
-  workflow_dispatch:
-
-concurrency:
-  group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}"
-  cancel-in-progress: true
 
 permissions:
   contents: read

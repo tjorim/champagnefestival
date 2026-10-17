@@ -1,15 +1,7 @@
 name: PR Preview Build
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/pr-preview.yml"
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  workflow_call:
 
 permissions:
   contents: read

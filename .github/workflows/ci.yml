@@ -1,0 +1,182 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  changes:
+    name: Detect changed components
+    runs-on: ubuntu-24.04
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      pebble: ${{ steps.filter.outputs.pebble }}
+      codeql-actions: ${{ steps.filter.outputs.codeql-actions }}
+      codeql-android: ${{ steps.filter.outputs.codeql-android }}
+      codeql-backend: ${{ steps.filter.outputs.codeql-backend }}
+      codeql-frontend: ${{ steps.filter.outputs.codeql-frontend }}
+      pr-preview: ${{ steps.filter.outputs.pr-preview }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: filter
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: |
+            android:
+              - 'android/**'
+              - 'VERSION'
+              - '.github/workflows/android.yml'
+              - '.github/workflows/ci.yml'
+            backend:
+              - 'backend/**'
+              - 'VERSION'
+              - '.github/workflows/backend-ci.yml'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - 'VERSION'
+              - '.github/workflows/frontend-ci.yml'
+              - '.github/workflows/ci.yml'
+            pebble:
+              - 'pebble/**'
+              - 'frontend/src/components/PebblePairPage.tsx'
+              - 'frontend/src/config/oidc.ts'
+              - 'frontend/src/contexts/AuthContext.tsx'
+              - 'frontend/src/main.tsx'
+              - 'frontend/src/router.tsx'
+              - 'backend/app/models.py'
+              - 'backend/app/routers/me.py'
+              - 'backend/app/services/pebble_access.py'
+              - '.github/workflows/pebble.yml'
+              - '.github/workflows/ci.yml'
+            codeql-actions:
+              - '.github/workflows/**'
+              - '.github/workflows/codeql-actions.yml'
+              - '.github/workflows/ci.yml'
+            codeql-android:
+              - 'android/**'
+              - '.github/workflows/codeql-android.yml'
+              - '.github/workflows/ci.yml'
+            codeql-backend:
+              - 'backend/**'
+              - '.github/workflows/codeql-backend.yml'
+              - '.github/workflows/ci.yml'
+            codeql-frontend:
+              - 'frontend/**'
+              - '.github/workflows/codeql-frontend.yml'
+              - '.github/workflows/ci.yml'
+            pr-preview:
+              - 'frontend/**'
+              - '.github/workflows/pr-preview.yml'
+              - '.github/workflows/ci.yml'
+
+  android:
+    name: Android
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.android == 'true'
+    uses: ./.github/workflows/android.yml
+
+  backend:
+    name: Backend
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.backend == 'true'
+    uses: ./.github/workflows/backend-ci.yml
+
+  frontend:
+    name: Frontend
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.frontend == 'true'
+    uses: ./.github/workflows/frontend-ci.yml
+
+  pebble:
+    name: Pebble
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.pebble == 'true'
+    uses: ./.github/workflows/pebble.yml
+
+  codeql-actions:
+    name: CodeQL (Actions)
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.codeql-actions == 'true'
+    uses: ./.github/workflows/codeql-actions.yml
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+
+  codeql-android:
+    name: CodeQL (Android)
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.codeql-android == 'true'
+    uses: ./.github/workflows/codeql-android.yml
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+
+  codeql-backend:
+    name: CodeQL (Backend)
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.codeql-backend == 'true'
+    uses: ./.github/workflows/codeql-backend.yml
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+
+  codeql-frontend:
+    name: CodeQL (Frontend)
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.codeql-frontend == 'true'
+    uses: ./.github/workflows/codeql-frontend.yml
+    permissions:
+      actions: read
+      contents: read
+      packages: read
+      security-events: write
+
+  pr-preview:
+    name: PR preview
+    needs: changes
+    if: github.event_name == 'pull_request' && needs.changes.outputs.pr-preview == 'true'
+    uses: ./.github/workflows/pr-preview.yml
+    permissions:
+      contents: read
+      pull-requests: write
+
+  gate:
+    name: CI gate
+    if: always()
+    needs:
+      - changes
+      - android
+      - backend
+      - frontend
+      - pebble
+      - codeql-actions
+      - codeql-android
+      - codeql-backend
+      - codeql-frontend
+      - pr-preview
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Require every job to have passed or been skipped
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+        run: echo "$NEEDS" | jq -e 'all(.[]; .result == "success" or .result == "skipped")' > /dev/null
