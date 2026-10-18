@@ -48,7 +48,7 @@ For #953:
 
 ## Dependencies and accepted boundaries
 
-- #1195 adds optional self-hosted description drafts to the admin and manager editors. Repository behavior is implemented; production activation, the French decision and shared-worker contention remain gated on `tjorim/apps#263`. See [configuration and API contract](organization-description-translation.md).
+- #1195 adds optional self-hosted description drafts to the admin and manager editors. Backend callers now support mounted app-scoped engine keys and bounded transport without automatic retries; authentication activation must follow both caller releases. Repository behavior is implemented; production activation, the French decision and shared-worker contention remain gated on `tjorim/apps#263`. See [configuration and API contract](organization-description-translation.md).
 
 - #1190 and its five repository sub-issues are implemented; see the [review API and upgrade guidance](organization-change-review.md). Production rollout remains gated on `tjorim/apps#262` and `tjorim/apps#263`; account unification remains #1209.
 

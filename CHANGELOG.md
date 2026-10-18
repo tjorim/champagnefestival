@@ -11,6 +11,13 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ## [Unreleased]
 
+### Changed
+
+- Description translation drafts support a mounted per-app engine credential and
+  a total deadline with a separate connection timeout. Unavailable configured
+  keys fail closed; operational logs expose only fixed codes and timing. Engine
+  authentication rollout is coordinated with Apps and Travel.
+
 ### Added
 
 - Opt-in private MP4 signage exports (#1349): frozen published-channel PNG capture, bounded uploads, durable background encoding through apps#273, translated progress/history/cancellation and authenticated 24-hour downloads (migration `008`). HTML/PNG and live/offline players remain independent; production activation requires worker and Travel rollout verification.

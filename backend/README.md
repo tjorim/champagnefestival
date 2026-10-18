@@ -632,10 +632,12 @@ See the [API and workflow contract](../docs/organization-change-review.md) and
 ### Organization description draft translation (#1195)
 
 Set `TRANSLATION_SERVICE_URL` to the self-hosted LibreTranslate base URL to enable
-explicit drafts. `TRANSLATION_LANGUAGES` defaults to `nl,en`; leaving the URL empty
+explicit drafts. `TRANSLATION_API_KEY_FILE` points at the mounted per-app engine
+credential (missing or invalid configured file fails closed, never anonymous).
+`TRANSLATION_LANGUAGES` defaults to `nl,en`; leaving the URL empty
 hides the action. Admin and live manager capabilities/draft endpoints are documented
 in [the API contract](../docs/organization-description-translation.md), including
-90-second timeout, identity limits, retry safety and the apps#263 production gate.
+90-second total deadline, identity limits, retry safety and the apps#263 production gate.
 
 The coordinated organization domain rename requires matching API clients, storage
 configuration and Caddy paths; see the [migration and deployment sequence](../docs/organization-change-review.md#terminology-and-upgrade).
