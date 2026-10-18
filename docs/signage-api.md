@@ -112,7 +112,7 @@ include uploaded files; preserve the artwork storage volume too.
 
 ## Private MP4 exports (#1349)
 
-Migration `009` adds server-owned `signage_video_exports`. Every endpoint below
+Migration `008` adds server-owned `signage_video_exports`. Every endpoint below
 requires a current admin session; reads, writes and downloads are additionally
 scoped to the initiating OIDC subject (another admin receives 404). Responses
 are private/no-store. No worker credential, worker ID or artifact URL is exposed.

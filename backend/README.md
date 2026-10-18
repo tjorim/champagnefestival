@@ -682,7 +682,7 @@ complete-versus-partial nullability.
 
 ## Private signage MP4 jobs (#1349)
 
-Migration `009` adds creator-scoped frozen exports. The opt-in apps#273 adapter
+Migration `008` adds creator-scoped frozen exports. The opt-in apps#273 adapter
 uses `MEDIA_WORKER_URL`, `MEDIA_WORKER_TOKEN_FILE` and a private persistent
 `SIGNAGE_VIDEO_STORAGE` shared by API replicas; blank URL disables new MP4
 exports without affecting HTML/PNG. API lifespan reconciliation resumes after

@@ -242,7 +242,7 @@ The synchronized HTML and PNG exports remain independent of this service.
 
 - [x] Shared worker v1 contract, limits and durable lifecycle available (apps cbb88ec).
 - [ ] Production wiring, private storage mount and Travel parity/cutover verified.
-- [x] Admin-only snapshot/upload, durable jobs, translated progress/errors and private MP4 download implemented with documented retry safety (migration `009`; `signage_video` adapter and lifecycle tests).
+- [x] Admin-only snapshot/upload, durable jobs, translated progress/errors and private MP4 download implemented with documented retry safety (migration `008`; `signage_video` adapter and lifecycle tests).
 - [x] Local real-worker 1080p output matches PNG captures; ffprobe and frame-by-frame/Chromium checks cover cuts/final hold and one-slide output. Postgres lifecycle tests cover privacy, cancellation, restart, expiry and outages. Local encoder: ffmpeg 8.1.3; production uses the worker’s pinned 8.0.1 image and still needs rehearsal.
 - [x] Local frontend/backend checks and signage admin browser tests pass (1,676 backend tests; 36 final signage checks including real encoding; 1,170 frontend tests plus capture-cancellation regression; production build, typecheck, lint and formatting).
 - [ ] Representative venue tooling/playback and production pinned-encoder rehearsal pass.

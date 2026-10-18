@@ -99,7 +99,7 @@ or wake-lock handling. Use the offline HTML bundle when clock-based coordinated
 playback is required. Rehearse the MP4 in the venue's actual player before use.
 HTML/PNG export and the live/offline players work without the media worker.
 
-Operator activation is separate from installing this code. Apply migration `009`;
+Operator activation is separate from installing this code. Apply migration `008`;
 configure `MEDIA_WORKER_URL=http://media-worker:8090` and the mounted
 `MEDIA_WORKER_TOKEN_FILE`, and mount `SIGNAGE_VIDEO_STORAGE` as a private
 persistent volume shared by API replicas (outside static/Caddy roots). The API's
