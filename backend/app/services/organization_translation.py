@@ -3,6 +3,10 @@
 Used for organisation descriptions (#1195) and event titles/descriptions (#1222)."""
 
 import asyncio
+import logging
+import re
+import time
+from pathlib import Path
 from typing import Literal
 
 import httpx
@@ -15,6 +19,7 @@ from app.schema_types import NonEmptyText600
 from app.schemas import RequestModel
 
 Language = Literal["nl", "fr", "en"]
+logger = logging.getLogger(__name__)
 
 
 class TranslationRequest(RequestModel):
@@ -43,6 +48,7 @@ class TranslationCapabilities(BaseModel):
 
 # Reject bursts instead of creating an unbounded queue on the single-CPU service.
 _worker = asyncio.Lock()
+TRANSLATION_TOTAL_TIMEOUT_SECONDS = 90
 
 
 def capabilities() -> TranslationCapabilities:
@@ -75,19 +81,34 @@ async def suggest(
     if _worker.locked():
         raise HTTPException(503, "Translation is busy. Try again later.")
     async with _worker:
+        started = time.monotonic()
         try:
-            async with httpx.AsyncClient(timeout=90.0, trust_env=False) as client:
+            payload = {"q": body.text, "source": body.source, "target": body.target, "format": "text"}
+            if settings.translation_api_key_file:
+                key = Path(settings.translation_api_key_file).read_text().strip()
+                if not re.fullmatch(r"[A-Za-z0-9_-]{32,128}", key):
+                    raise ValueError("Invalid credential")
+                payload["api_key"] = key
+            async with (
+                asyncio.timeout(TRANSLATION_TOTAL_TIMEOUT_SECONDS),
+                httpx.AsyncClient(
+                    timeout=httpx.Timeout(90.0, connect=5.0), trust_env=False, follow_redirects=False
+                ) as client,
+            ):
                 response = await client.post(
                     f"{settings.translation_service_url.rstrip('/')}/translate",
-                    json={"q": body.text, "source": body.source, "target": body.target, "format": "text"},
+                    json=payload,
                 )
                 response.raise_for_status()
                 text = response.json().get("translatedText")
                 if not isinstance(text, str) or not text.strip() or len(text) > max_length:
                     raise ValueError("Invalid draft")
+                logger.info("translation_completed duration_ms=%d", int((time.monotonic() - started) * 1000))
                 return TranslationDraft(text=text)
-        except httpx.TimeoutException:
+        except httpx.TimeoutException, TimeoutError:
+            logger.warning("translation_failed code=timeout")
             raise HTTPException(504, "Translation timed out. Try again later.") from None
-        except httpx.HTTPError, ValueError, AttributeError:
+        except httpx.HTTPError, ValueError, AttributeError, OSError:
+            logger.warning("translation_failed code=service_unavailable")
             # Never expose or log service errors, since they can contain the text.
             raise HTTPException(503, "Translation is unavailable. Try again later.") from None

@@ -466,6 +466,11 @@ identity rate limit and service CPU, and may return a different draft. The clien
 never automatically retries; the user can explicitly request another draft.
 A process-wide single-flight limit rejects bursts instead of queuing them. Saving
 or submitting the resulting text retains the existing organization write contracts.
+The backend uses a five-second connection timeout and 90-second total deadline.
+Redirects, ambient proxies and automatic retries are disabled. An unavailable
+configured credential file or an engine authentication failure becomes a sanitized
+failure; it never triggers an anonymous retry. The key is sent only in the native
+JSON body to the configured private engine.
 See [API, configuration and limits](organization-description-translation.md).
 
 ### Event translations and categories (#1222)

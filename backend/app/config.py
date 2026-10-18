@@ -145,6 +145,8 @@ class Settings(BaseSettings):
     """Self-hosted LibreTranslate base URL; empty disables description drafts."""
     translation_languages: str = "nl,en"
     """Comma-separated loaded site languages; French requires infra approval."""
+    translation_api_key_file: str = ""
+    """Backend-only credential file; configured files must be readable and valid."""
 
     organization_review_recipient: str = ""
     organization_logo_public_root: str = "./uploads/public/organizations"
