@@ -40,6 +40,7 @@ import type { Playlist } from "@/signage/types";
 import { SlideRenderer } from "@/signage/SlideRenderer";
 import { signageIcons } from "@/signage/icons";
 import "@/signage/editor.css";
+import SignageVideoExports from "./SignageVideoExports";
 
 const channelPath = (slug: string) => `/signage/${slug}`;
 
@@ -301,6 +302,7 @@ export default function SignageChannels({
         </Alert>
       )}
       {status && <p role="status">{status}</p>}
+      <SignageVideoExports channels={channels.data ?? []} authHeaders={authHeaders} />
       <fieldset disabled={busy} className="space-y-4">
         <Button className="hover:bg-primary" onClick={() => selectChannel()}>
           {m.signage_channels_new()}

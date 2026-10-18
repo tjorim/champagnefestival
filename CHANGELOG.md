@@ -13,6 +13,8 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Added
 
+- Opt-in private MP4 signage exports (#1349): frozen published-channel PNG capture, bounded uploads, durable background encoding through apps#273, translated progress/history/cancellation and authenticated 24-hour downloads (migration `009`). HTML/PNG and live/offline players remain independent; production activation requires worker and Travel rollout verification.
+
 - Signage backend foundation (#1261): edition-scoped channels, layered templates, scheduled translated slides, validated image uploads, audited admin CRUD/reorder and privacy-reviewed public playlists with cache validators and a server clock (migration `008`). Channels keep a fixed epoch; player and editors follow separately.
 
 - Organisers choose how sponsors appear on the public site (#1226). The edition editor lists the lineup as a drag-and-drop (or arrow-button) ordered list and gives each sponsor a level — main sponsor, partner or supporter. The sponsors section shows one row per level with larger logos for higher levels and translated headings (untiered sponsors come last, and without any levels the section is a single row), in lineup order within a level instead of alphabetically; producers stay alphabetical. `POST`/`PUT /api/editions` and MCP `create_edition`/`update_edition` take `sponsor_tiers` (organization id → `main`, `partner` or `supporter`; only lineup sponsors, replaced as a whole when given, kept otherwise), the edition responses list `sponsors` ordered by level then lineup order with a `sponsor_tier` on each item, and the admin response carries the `organizations` lineup order (migration `007`; existing editions keep their lineup and start without levels)

@@ -1656,3 +1656,30 @@ class SignageSlide(Base):
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     content: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class SignageVideoExport(Base):
+    """Private, creator-owned frozen exports; retry identities outlive worker tombstones."""
+
+    __tablename__ = "signage_video_exports"
+    __table_args__ = (UniqueConstraint("creator", "idempotency_key", name="uq_signage_video_creator_key"),)
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    creator: Mapped[str] = mapped_column(String(255), index=True)
+    idempotency_key: Mapped[str] = mapped_column(String(128))
+    channel_id: Mapped[str | None] = mapped_column(ForeignKey("signage_channels.id", ondelete="SET NULL"), index=True)
+    channel_name: Mapped[str] = mapped_column(String(200))
+    locale: Mapped[str] = mapped_column(String(2))
+    snapshot: Mapped[dict] = mapped_column(JSON)
+    profile: Mapped[str] = mapped_column(String(40), default="signage-slideshow-v1")
+    uploads: Mapped[dict] = mapped_column(JSON, default=dict)
+    payload_digest: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    worker_id: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+    state: Mapped[str] = mapped_column(String(20), default="preparing", index=True)
+    cancel_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    acknowledged: Mapped[bool] = mapped_column(Boolean, default=False)
+    local_cleaned: Mapped[bool] = mapped_column(Boolean, default=False)
+    error_code: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    artifact: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)

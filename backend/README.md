@@ -679,3 +679,15 @@ Omission and explicit `null` are separate API decisions. Preserve
 change in null handling or write validation in `docs/retry-safety.md`. Tests in
 `tests/test_request_schemas.py` cover create/update constraint consistency and
 complete-versus-partial nullability.
+
+## Private signage MP4 jobs (#1349)
+
+Migration `009` adds creator-scoped frozen exports. The opt-in apps#273 adapter
+uses `MEDIA_WORKER_URL`, `MEDIA_WORKER_TOKEN_FILE` and a private persistent
+`SIGNAGE_VIDEO_STORAGE` shared by API replicas; blank URL disables new MP4
+exports without affecting HTML/PNG. API lifespan reconciliation resumes after
+restart and local expiry cleanup continues even when remote processing is
+disabled. Never mount this volume into Caddy or a public upload directory.
+See [API, limits and lifecycle](../docs/signage-api.md#private-mp4-exports-1349),
+[setup/activation](../docs/signage-setup.md#one-cycle-mp4-exports-1349) and
+[retry safety](../docs/retry-safety.md#private-signage-video-exports-1349).

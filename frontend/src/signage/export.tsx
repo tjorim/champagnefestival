@@ -85,11 +85,21 @@ export function offlineScript() {
 }
 
 /** Capture the live player's DOM/CSS at its native canvas resolution. */
-export async function renderSlideImages(playlist: Playlist) {
+export async function renderSlideImages(
+  playlist: Playlist,
+  options: {
+    signal?: AbortSignal;
+    onSlide?: (index: number, bytes: Uint8Array) => Promise<void>;
+  } = {},
+) {
   // Embed assets ourselves: capture libraries can silently omit failed fetches.
   const assets = new Map<string, string>();
   for (const url of playlistImages(playlist)) {
-    const response = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+    options.signal?.throwIfAborted();
+    const timeout = AbortSignal.timeout(15_000);
+    const response = await fetch(url, {
+      signal: options.signal ? AbortSignal.any([options.signal, timeout]) : timeout,
+    });
     if (!response.ok) throw new Error("Export image unavailable");
     const blob = await response.blob();
     const data = await new Promise<string>((resolve, reject) => {
@@ -108,6 +118,7 @@ export async function renderSlideImages(playlist: Playlist) {
   const files: Record<string, Uint8Array> = {};
   try {
     for (const [index, slide] of playlist.slides.entries()) {
+      options.signal?.throwIfAborted();
       flushSync(() => root.render(<SlideRenderer slide={slide} />));
       for (const image of host.querySelectorAll("img")) {
         const source = image.getAttribute("src");
@@ -122,9 +133,10 @@ export async function renderSlideImages(playlist: Playlist) {
         skipFonts: true,
       });
       if (!blob) throw new Error("Slide capture failed");
-      files[`slides/${String(index + 1).padStart(3, "0")}.png`] = new Uint8Array(
-        await blob.arrayBuffer(),
-      );
+      options.signal?.throwIfAborted();
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      if (options.onSlide) await options.onSlide(index, bytes);
+      else files[`slides/${String(index + 1).padStart(3, "0")}.png`] = bytes;
     }
     return files;
   } finally {

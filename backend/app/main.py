@@ -1,8 +1,9 @@
 """FastAPI application entry point."""
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -51,6 +52,7 @@ from app.routers import (
     registrations,
     rooms,
     signage,
+    signage_video,
     table_types,
     tables,
     venue_plan,
@@ -124,7 +126,16 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None]:
     logger.info("Startup complete — server ready to accept connections")
     logger.info("=" * 60)
 
-    yield
+    from app.database import async_session_factory
+    from app.services.signage_video import run as reconcile_video
+
+    video_task = asyncio.create_task(reconcile_video(async_session_factory))
+    try:
+        yield
+    finally:
+        video_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await video_task
 
     # Shutdown
     logger.info("Champagnefestival API shutting down...")
@@ -197,6 +208,7 @@ async def api_http_exception_handler(request: Request, exc: ApiHTTPException) ->
 
 app.include_router(registrations.router)
 app.include_router(announcements.router)
+app.include_router(signage_video.router)
 app.include_router(signage.router)
 app.include_router(signage.assets_router)
 app.include_router(auth.router)

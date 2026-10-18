@@ -225,9 +225,9 @@ audit checks the export code without exclusions, and the exported page title use
 the translated start label. Locale audit, formatting, lint, export regression tests,
 offline browser playback and production build/typecheck pass.
 
-## Planned video export follow-up (#1349)
+## Video export implementation and activation (#1349)
 
-Planned 2026-10-18, not implemented. [#1349](https://github.com/tjorim/champagnefestival/issues/1349)
+Application integration implemented 2026-10-18, activation/venue validation pending. [#1349](https://github.com/tjorim/champagnefestival/issues/1349)
 is the separate MP4 follow-up excluded from #1265. Browser-rendered PNGs and a
 frozen published duration manifest go through an authenticated background export
 job to [apps#273](https://github.com/tjorim/apps/issues/273), a shared private media
@@ -235,15 +235,18 @@ worker. No server-side Chromium is required. [Travel #457](https://github.com/tj
 migrates its existing video derivatives to a separate profile on the same worker.
 
 Preferred delivery order: worker contract and profiles, Travel privacy/output
-parity and production cutover, then Champagnefestival MP4 activation. Application
-adapters can be developed against the agreed fixtures after the contract exists.
+parity and production cutover, then Champagnefestival MP4 activation. The contract
+and worker are now available in [apps commit cbb88ec](https://github.com/tjorim/apps/commit/cbb88ec9f19d1ea3e429ad9e1e7b8679239379ad).
+The adapter uses that v1 contract and remains opt-in.
 The synchronized HTML and PNG exports remain independent of this service.
 
-- [ ] Shared worker contract, limits, durable lifecycle and production wiring available.
-- [ ] Admin-only snapshot/upload, durable jobs, translated progress/errors and private MP4 download implemented with documented retry safety.
-- [ ] One-cycle 1080p output matches the PNGs and configured durations, including the final slide; privacy, cancellation, restart, expiry and outage checks pass.
-- [ ] Frontend/backend/browser checks and representative venue video playback pass.
+- [x] Shared worker v1 contract, limits and durable lifecycle available (apps cbb88ec).
+- [ ] Production wiring, private storage mount and Travel parity/cutover verified.
+- [x] Admin-only snapshot/upload, durable jobs, translated progress/errors and private MP4 download implemented with documented retry safety (migration `009`; `signage_video` adapter and lifecycle tests).
+- [x] Local real-worker 1080p output matches PNG captures; ffprobe and frame-by-frame/Chromium checks cover cuts/final hold and one-slide output. Postgres lifecycle tests cover privacy, cancellation, restart, expiry and outages. Local encoder: ffmpeg 8.1.3; production uses the worker’s pinned 8.0.1 image and still needs rehearsal.
+- [x] Local frontend/backend checks and signage admin browser tests pass (1,676 backend tests; 36 final signage checks including real encoding; 1,170 frontend tests plus capture-cancellation regression; production build, typecheck, lint and formatting).
+- [ ] Representative venue tooling/playback and production pinned-encoder rehearsal pass.
 
 The full scope and acceptance criteria remain in #1349. This section records
-planned work and does not mark the video feature complete or change #1265's
+partial delivery and does not mark the video feature complete or change #1265's
 original HTML/PNG scope.
