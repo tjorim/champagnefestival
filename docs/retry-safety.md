@@ -591,3 +591,47 @@ write retry strategies, defaults, or omission/null semantics. Table and room nam
 updates now enforce the same 1–200 character limit as creation; invalid names fail
 request validation before a write. This does not introduce automatic retries or
 change the existing retry-safety decisions for those operations.
+
+### Private signage video exports (#1349)
+
+- Snapshot creation persists a creator-scoped `Idempotency-Key` and frozen
+  playlist under the signage transaction lock. Same channel/locale/key replays
+  the same job; a changed selection conflicts. Tombstones never allocate new
+  worker jobs. No browser write is automatically retried; after uncertainty,
+  inspect the export list. The mounted UI retains its key for another attempt.
+- Preparations have a fixed 45-minute creation-based deadline. Expired
+  preparations are excluded from admission immediately, reject upload/submit,
+  and are cancelled/cleaned automatically. Retries never renew that deadline;
+  submitting before it passes preserves the existing 24-hour artifact lifecycle.
+- PNG `PUT` slots accept the same byte hash while preparing and reject changed
+  pixels or a closed job. The immutable index determines order and the recorded
+  playlist determines durations. Files fsync before upload metadata commits;
+  resending the same bytes repairs an interrupted file/metadata commit without
+  another slot. All slots must be committed before submit is accepted.
+- Submit persists the payload digest/state once under a row lock. Repeated
+  submit (including after completion/expiry) returns the same job and never
+  creates another encode. The background dispatcher alone retries worker
+  submission with its persisted app-job ID/digest. Lost acknowledgements and
+  restarts resolve to the same worker ID; 409 admission-in-progress/temporary
+  failures back off. Malformed worker response shapes also commit backoff and
+  yield to other jobs instead of rolling back the scheduling update. Explicit
+  remote rejection fails the job. There is no local
+  fallback after an uncertain remote request.
+- Worker ID commits before result use. App bytes are downloaded with finite
+  size/time limits and a verified hash, then readiness commits; only a later
+  pass ACKs worker outputs. Polling, download and ACK retries cannot duplicate
+  readiness or publish drafts/content. Artifact expiry/missing files give a
+  recoverable expired job, never an automatic fresh encode. After 24 hours only
+  bodyless uncertain-submission lookup is allowed, stopping before the worker's
+  seven-day tombstones can disappear. App identity tombstones are retained.
+- Local cleanup has its own elected batch loop, independent of remote outage
+  backoff. A durable `local_cleaned` flag and row locks keep failed cleanup
+  retryable without racing an in-flight capture or artifact download.
+- Cancellation is a monotonic flag; repeating it is harmless, including on
+  terminal jobs. It revokes downloads and queues remote cancel/ACK. Channel
+  deletion nulls the job FK, giving the same denial/cleanup behavior. Role and
+  creator checks run on every request. A revoked admin's job still expires.
+- Snapshot/upload/submit/cancel retry behavior, restart/lost-ACK recovery,
+  reconciler contention, private download, expiry, deletion and revoked access
+  are exercised in `backend/tests/test_signage_video.py`; browser capture and
+  rediscovery are in `frontend/e2e/signage-video.authenticated.spec.ts`.

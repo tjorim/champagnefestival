@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { strFromU8, unzipSync } from "fflate";
+import { toBlob } from "html-to-image";
 import { exportArchive, offlineHtml, renderSlideImages } from "./export";
 import type { Playlist } from "./types";
 
@@ -72,6 +73,30 @@ describe("signage export", () => {
       value: { ready: Promise.resolve() },
     });
     await expect(renderSlideImages(playlist)).rejects.toThrow("Capture failed");
+    expect(document.querySelector(".site-signage-export")).toBeNull();
+  });
+  it("streams captured slides in playlist order and releases the canvas on cancellation", async () => {
+    Object.defineProperty(document, "fonts", {
+      configurable: true,
+      value: { ready: Promise.resolve() },
+    });
+    const controller = new AbortController();
+    vi.mocked(toBlob).mockResolvedValueOnce(new Blob([new Uint8Array([1, 2, 3])]));
+    const received: number[] = [];
+    await expect(
+      renderSlideImages(
+        { ...playlist, slides: [playlist.slides[0]!, playlist.slides[0]!] },
+        {
+          signal: controller.signal,
+          onSlide: async (index, bytes) => {
+            received.push(index);
+            expect([...bytes]).toEqual([1, 2, 3]);
+            controller.abort();
+          },
+        },
+      ),
+    ).rejects.toThrow();
+    expect(received).toEqual([0]);
     expect(document.querySelector(".site-signage-export")).toBeNull();
   });
 });

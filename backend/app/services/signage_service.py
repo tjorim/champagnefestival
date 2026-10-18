@@ -151,7 +151,13 @@ def localized(content: Content, field: str, locale: str):
 
 
 async def playlist(
-    db: AsyncSession, slug: str, locale: str, now: datetime | None = None, *, preview: PlaylistPreview | None = None
+    db: AsyncSession,
+    slug: str,
+    locale: str,
+    now: datetime | None = None,
+    *,
+    preview: PlaylistPreview | None = None,
+    export_limits: tuple[int, int] | None = None,
 ) -> Playlist:
     now = now or datetime.now(UTC)
     channel = (
@@ -213,6 +219,17 @@ async def playlist(
                 rows.append((slide, template))
         rows.sort(key=lambda row: (row[0].sort_order, row[0].id))
     slides = []
+    cycle_seconds = 0
+
+    def append_slide(item: PublicSlide):
+        nonlocal cycle_seconds
+        cycle_seconds += item.duration
+        # Abort expansion before allocating an excessive frozen video manifest.
+        # Public/live and draft preview callers do not opt into export limits.
+        if export_limits and (len(slides) >= export_limits[0] or cycle_seconds > export_limits[1]):
+            fail(422, "signage_video_playlist_limit", "Playlist exceeds video export limits.")
+        slides.append(item)
+
     for slide, template in rows:
         if slide.starts_at and now < slide.starts_at or slide.ends_at and now >= slide.ends_at:
             continue
@@ -225,7 +242,7 @@ async def playlist(
                 description = getattr(org, f"description_{locale}") or (
                     getattr(org, f"description_{org.description_language}") if org.description_language else None
                 )
-                slides.append(
+                append_slide(
                     PublicSlide(
                         id=f"{slide.id}:{org.id}",
                         kind="organization",
@@ -242,7 +259,7 @@ async def playlist(
                 )
         else:
             content = Content.model_validate(slide.content)
-            slides.append(
+            append_slide(
                 PublicSlide(
                     id=slide.id,
                     kind="notice" if slide.kind == "notice" else "image",

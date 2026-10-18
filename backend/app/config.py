@@ -224,6 +224,32 @@ class Settings(BaseSettings):
     # Validators
     # ------------------------------------------------------------------
 
+    # Private media adapter is explicitly opt-in; no browser receives these values.
+    media_worker_url: str = ""
+    media_worker_token_file: str = "/run/secrets/media_champagnefestival_token"
+    signage_video_storage: str = "./private/signage-video"
+
+    @field_validator("media_worker_url")
+    @classmethod
+    def validate_media_worker_url(cls, value: str) -> str:
+        from urllib.parse import urlsplit
+
+        if value:
+            parsed = urlsplit(value)
+            # Accessing port also validates numeric range and malformed authorities.
+            _ = parsed.port
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.hostname
+                or parsed.username
+                or parsed.password
+                or parsed.query
+                or parsed.fragment
+                or parsed.path not in {"", "/"}
+            ):
+                raise ValueError("MEDIA_WORKER_URL must be an HTTP(S) origin without credentials or a path.")
+        return value.rstrip("/")
+
     @field_validator("translation_languages")
     @classmethod
     def validate_translation_languages(cls, value: str) -> str:

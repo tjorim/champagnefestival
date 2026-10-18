@@ -109,3 +109,90 @@ serves these routes itself; production must proxy `/uploads/signage/*` to the
 backend or map this URL prefix to that directory in Caddy. Edition artwork's
 reconciler ignores the signage subdirectory. Database backups alone do not
 include uploaded files; preserve the artwork storage volume too.
+
+## Private MP4 exports (#1349)
+
+Migration `008` adds server-owned `signage_video_exports`. Every endpoint below
+requires a current admin session; reads, writes and downloads are additionally
+scoped to the initiating OIDC subject (another admin receives 404). Responses
+are private/no-store. No worker credential, worker ID or artifact URL is exposed.
+
+- `GET /api/signage/video-exports/capability` reports `available`, `max_slides`
+  (60) and `max_seconds` (600). Available means the explicit worker origin and
+  readable credential file are configured; it is not a worker health promise.
+- `POST /api/signage/video-exports`, with `Idempotency-Key` (16–128 ASCII
+  letters/digits/underscore/hyphen) and `{channel_id, locale}` (locale defaults
+  to `nl`), records the active channel's current published playlist, revision,
+  epoch and expanded organisation/translation/schedule projection. It returns
+  job metadata and `playlist` for capture. Empty/over-limit cycles fail before
+  capture; drafts and later channel edits never enter this snapshot.
+- `PUT /api/signage/video-exports/{id}/slides/{index}` uploads raw `image/png`
+  bytes into a zero-based immutable slot. Each upload has a 30-second deadline,
+  8 MiB ceiling and real single-frame PNG decode/1920×1080 validation; the entire
+  set is at most 120 MiB. Filenames/URLs/durations/order cannot be uploaded or
+  overridden. Pixels are accepted as admin-authored output, not claimed to be
+  server-verified equivalents of the renderer. No remote input fetching occurs.
+- `POST /api/signage/video-exports/{id}/submit` checks the complete ordered set,
+  persists its canonical SHA256 digest and changes to `submitted` atomically.
+  Encoding never holds this HTTP request open. The browser may close afterwards.
+- `GET /api/signage/video-exports` lists up to 100 of the creator's jobs, prioritising pending/downloadable work before recent history;
+  `GET /api/signage/video-exports/{id}` reads one. States: `preparing`,
+  `submitted`, `queued`, `running`, `ready`, `failed`, `cancelled`, `expired`.
+  Metadata includes channel name, locale, cycle length/count and absolute app
+  expiry. `retrying` explains temporary worker outages without encoder details.
+- `POST /api/signage/video-exports/{id}/cancel` requests cancellation/removal,
+  immediately hides the download and is safe to repeat. A remote pass already
+  holding the row lock can delay this request by up to its 125-second bound.
+- `GET /api/signage/video-exports/{id}/download` streams only a ready, unexpired
+  private MP4 (160 MiB maximum, 120-second transfer deadline, no Range support).
+  Repeated downloads have no write/publication effect. Worker hashes and sizes
+  are verified before committing readiness, and worker outputs are acknowledged
+  only in a subsequent reconciliation pass after that commit.
+
+Stable application errors use `signage_video_` with `unavailable`, `not_found`,
+`invalid_key`, `playlist_limit`, `capacity`, `conflict`, `incomplete`,
+`invalid_image`, `input_limit`, or `not_ready`. The interface uses translated
+operation guidance, never backend/encoder diagnostics.
+
+Each API process runs a lifespan reconciler; a Postgres advisory transaction lock
+allows one remote pass globally, with row locking against uploads, cancellation
+and channel deletion. Each pass is bounded to 125 seconds, status polling is
+scheduled at least 3 seconds apart (15 seconds on outages or malformed worker
+responses). Invalid response shapes are treated as worker failures and commit
+backoff so they cannot repeatedly preempt other jobs. API restart does not
+lose job identity. Same-key/digest replay resolves uncertain worker acceptance;
+there is no local encoder fallback. The worker ID commits in a separate pass
+before status/artifact use. ACK retries cannot duplicate local completion.
+
+Storage is an operator-configured **private persistent volume**, shared by all
+API replicas. Files/directories are mode 0600/0700, atomically replaced and
+fsynced. Admission allows at most two preparing/encoding jobs and six total
+active/retained jobs globally, with 480 MiB minimum free disk at creation. Reserve
+at least 2 GiB for app staging/artifacts and monitor it separately from worker
+spool storage. The output is silent 30 fps H.264/yuv420p, faststart, one cycle;
+the worker rounds cumulative boundaries within half a frame.
+
+Preparation must finish within **45 minutes of snapshot creation**. After that
+fixed deadline, upload/submit are rejected, the job is reported as `cancelled`,
+and both admission counters immediately ignore it. Cleanup cancels the
+preparation and removes its PNGs without requiring the creator to remain an
+admin or return to the tab. Replayed creates/uploads do not extend this deadline;
+submitted jobs retain their normal encoding/download lifecycle.
+
+App downloads expire **24 hours after snapshot creation**, independently of the
+worker's completion-based retention. Local expired/cancelled bytes are cleaned by a separate 30-second batch loop
+even when credentials are disabled or remote submission/ACK requests are
+blocked. Cleanup skips rows held by a remote pass (at most 125 seconds) and
+retries filesystem failures; API downtime defers cleanup until startup. Channel deletion sets
+the retained job's FK to null, denies downloads immediately and schedules remote
+cancellation/cleanup. Revoked admins cannot read/cancel/download; their jobs
+still expire automatically. A job with missing app/worker artifacts becomes
+`expired`; start a new explicit export. Successfully acknowledged app artifacts
+remain available until app expiry even though worker status is then expired.
+
+After app expiry, content/upload/artifact metadata is reduced to a compact
+identity/duration tombstone. Retry identity rows remain indefinitely to outlive
+the worker's seven-day deduplication window. No expired job is resubmitted with
+bytes: uncertain submissions use a bodyless lookup, and even that stops before
+six days. A new encode always requires a new explicit app job. Interrupted
+browser preparation is cancellable from the list; cancel it and start again.

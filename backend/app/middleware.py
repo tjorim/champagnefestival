@@ -42,7 +42,7 @@ def add_cors_middleware(app: FastAPI, settings: Settings, *, mcp_enabled: bool =
         "allow_origins": cors_origins,
         "allow_credentials": "*" not in cors_origins,
         "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Accept", "Authorization", "X-Request-ID"],
+        "allow_headers": ["Content-Type", "Accept", "Authorization", "X-Request-ID", "Idempotency-Key"],
         "expose_headers": ["X-Request-ID"],
     }
 

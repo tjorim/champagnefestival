@@ -13,6 +13,14 @@ function authorized(request: Request) {
   );
 }
 export const signageHandlers = [
+  http.get("/api/signage/video-exports/capability", ({ request }) =>
+    authorized(request)
+      ? HttpResponse.json({ available: false, max_slides: 60, max_seconds: 600 })
+      : new HttpResponse(null, { status: 401 }),
+  ),
+  http.get("/api/signage/video-exports", ({ request }) =>
+    authorized(request) ? HttpResponse.json([]) : new HttpResponse(null, { status: 401 }),
+  ),
   http.get("/api/signage/templates", ({ request }) =>
     authorized(request) ? HttpResponse.json(templates) : new HttpResponse(null, { status: 401 }),
   ),
