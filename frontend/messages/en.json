@@ -1505,7 +1505,7 @@
   "signage_export_setup": "Offline snapshot: synchronise system clocks on all laptops, use the same bundle and disable sleep. Content is frozen at export time.",
   "signage_video_title": "Video exports",
   "signage_video_download": "Download video (MP4)",
-  "signage_video_explanation": "One cycle of the published channel, with content, language and schedules frozen now. Keep this tab open during preparation and upload. Encoding continues afterwards; return here to download within 24 hours of starting. MP4 playback has no cross-screen synchronisation or live updates.",
+  "signage_video_explanation": "One cycle of the published channel, with content, language and schedules frozen now. Keep this tab open and finish preparation and upload within 45 minutes. Encoding continues afterwards; return here to download within 24 hours of starting. MP4 playback has no cross-screen synchronisation or live updates.",
   "signage_video_limits": "Up to {count} slides and {seconds} seconds per cycle.",
   "signage_video_channel": "Published channel",
   "signage_video_choose": "Choose a channel",

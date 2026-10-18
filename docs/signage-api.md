@@ -157,7 +157,9 @@ operation guidance, never backend/encoder diagnostics.
 Each API process runs a lifespan reconciler; a Postgres advisory transaction lock
 allows one remote pass globally, with row locking against uploads, cancellation
 and channel deletion. Each pass is bounded to 125 seconds, status polling is
-scheduled at least 3 seconds apart (15 seconds on outages). API restart does not
+scheduled at least 3 seconds apart (15 seconds on outages or malformed worker
+responses). Invalid response shapes are treated as worker failures and commit
+backoff so they cannot repeatedly preempt other jobs. API restart does not
 lose job identity. Same-key/digest replay resolves uncertain worker acceptance;
 there is no local encoder fallback. The worker ID commits in a separate pass
 before status/artifact use. ACK retries cannot duplicate local completion.
@@ -169,6 +171,13 @@ active/retained jobs globally, with 480 MiB minimum free disk at creation. Reser
 at least 2 GiB for app staging/artifacts and monitor it separately from worker
 spool storage. The output is silent 30 fps H.264/yuv420p, faststart, one cycle;
 the worker rounds cumulative boundaries within half a frame.
+
+Preparation must finish within **45 minutes of snapshot creation**. After that
+fixed deadline, upload/submit are rejected, the job is reported as `cancelled`,
+and both admission counters immediately ignore it. Cleanup cancels the
+preparation and removes its PNGs without requiring the creator to remain an
+admin or return to the tab. Replayed creates/uploads do not extend this deadline;
+submitted jobs retain their normal encoding/download lifecycle.
 
 App downloads expire **24 hours after snapshot creation**, independently of the
 worker's completion-based retention. Local expired/cancelled bytes are cleaned by a separate 30-second batch loop

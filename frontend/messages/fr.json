@@ -1505,7 +1505,7 @@
   "signage_export_setup": "Instantané hors ligne : synchronisez les horloges des ordinateurs, utilisez le même dossier et désactivez la veille. Le contenu est figé au moment de l’exportation.",
   "signage_video_title": "Exports vidéo",
   "signage_video_download": "Télécharger la vidéo (MP4)",
-  "signage_video_explanation": "Un cycle du canal publié, avec le contenu, la langue et les horaires figés maintenant. Gardez cet onglet ouvert pendant la préparation et le transfert. L’encodage continue ensuite ; revenez ici pour télécharger dans les 24 heures suivant le démarrage. La lecture MP4 ne synchronise pas les écrans et ne reçoit pas de mises à jour en direct.",
+  "signage_video_explanation": "Un cycle du canal publié, avec le contenu, la langue et les horaires figés maintenant. Gardez cet onglet ouvert et terminez la préparation et le transfert dans les 45 minutes. L’encodage continue ensuite ; revenez ici pour télécharger dans les 24 heures suivant le démarrage. La lecture MP4 ne synchronise pas les écrans et ne reçoit pas de mises à jour en direct.",
   "signage_video_limits": "Jusqu’à {count} diapositives et {seconds} secondes par cycle.",
   "signage_video_channel": "Canal publié",
   "signage_video_choose": "Choisissez un canal",

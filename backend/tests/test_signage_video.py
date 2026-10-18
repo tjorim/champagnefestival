@@ -527,3 +527,139 @@ async def test_local_retention_does_not_wait_for_unavailable_remote_jobs(client,
     finally:
         release.set()
         await remote
+
+
+async def test_abandoned_preparations_release_admission_before_cleanup(client, db_session, engine, configured):
+    first, channel, _ = await new_job(client, db_session)
+    second = (
+        await client.post(
+            "/api/signage/video-exports",
+            json={"channel_id": channel["id"]},
+            headers={"Idempotency-Key": "second-prepare-key"},
+        )
+    ).json()
+    for job in (first, second):
+        await client.put(
+            f"/api/signage/video-exports/{job['id']}/slides/0", content=png(), headers={"Content-Type": "image/png"}
+        )
+    deadline = datetime.now(UTC) - service.PREPARE_TIMEOUT
+    await db_session.execute(update(SignageVideoExport).values(created_at=deadline))
+    await db_session.commit()
+    # Fill the retained-job ceiling too, so both admission counters must ignore stale preparations.
+    for index in range(4):
+        response = await client.post(
+            "/api/signage/video-exports",
+            json={"channel_id": channel["id"]},
+            headers={"Idempotency-Key": f"more-stale-preparations-{index}"},
+        )
+        assert response.status_code == 201, response.text
+        await db_session.execute(
+            update(SignageVideoExport).where(SignageVideoExport.id == response.json()["id"]).values(created_at=deadline)
+        )
+        await db_session.commit()
+    # No cleanup tick is needed for another admin to reclaim capacity.
+    app.dependency_overrides[get_actor_id] = lambda: "admin-b"
+    replacement = await client.post(
+        "/api/signage/video-exports",
+        json={"channel_id": channel["id"]},
+        headers={"Idempotency-Key": "replacement-prepare-key"},
+    )
+    assert replacement.status_code == 201, replacement.text
+    app.dependency_overrides[get_actor_id] = lambda: "admin-a"
+    assert (await client.get(f"/api/signage/video-exports/{first['id']}")).json()["state"] == "cancelled"
+    assert (
+        await client.put(
+            f"/api/signage/video-exports/{first['id']}/slides/0", content=png(), headers={"Content-Type": "image/png"}
+        )
+    ).status_code == 409
+    assert (await client.post(f"/api/signage/video-exports/{first['id']}/submit")).status_code == 409
+    # The fixture reuses a session; emulate request teardown after rejected row-locked writes.
+    await db_session.rollback()
+    await service.cleanup_tick(async_sessionmaker(engine, expire_on_commit=False))
+    db_session.expire_all()
+    for job in (first, second):
+        row = await db_session.get(SignageVideoExport, job["id"])
+        assert row.state == "cancelled" and row.acknowledged and row.local_cleaned
+        assert not service.directory(job["id"]).exists()
+    assert (await client.get(f"/api/signage/video-exports/{first['id']}")).json()["state"] == "cancelled"
+
+
+async def test_preparation_deadline_does_not_cancel_submitted_jobs(client, db_session, engine, configured):
+    job, _, _ = await new_job(client, db_session)
+    await uploaded(client, job)
+    await db_session.execute(update(SignageVideoExport).values(created_at=datetime.now(UTC) - service.PREPARE_TIMEOUT))
+    await db_session.commit()
+    await service.cleanup_tick(async_sessionmaker(engine, expire_on_commit=False))
+    worker = FakeWorker()
+    await pass_worker(engine, db_session, worker)
+    row = await db_session.get(SignageVideoExport, job["id"])
+    assert row.worker_id == worker.id and not row.cancel_requested
+
+
+@pytest.mark.parametrize(
+    "failure", [TypeError("invalid id"), AttributeError("invalid object"), KeyError("missing field")]
+)
+async def test_worker_contract_exception_backs_off_and_allows_next_job(client, db_session, engine, configured, failure):
+    first, channel, _ = await new_job(client, db_session)
+    await uploaded(client, first)
+    second = (
+        await client.post(
+            "/api/signage/video-exports",
+            json={"channel_id": channel["id"]},
+            headers={"Idempotency-Key": "second-encoding-key"},
+        )
+    ).json()
+    await uploaded(client, second)
+    worker = FakeWorker()
+    worker.submit = AsyncMock(side_effect=[failure, {"api_version": "v1", "id": worker.id, "state": "queued"}])
+    factory = async_sessionmaker(engine, expire_on_commit=False)
+    before = datetime.now(UTC)
+    await service.tick(factory, worker)
+    db_session.expire_all()
+    failed = await db_session.get(SignageVideoExport, first["id"])
+    assert failed.error_code == "worker_unavailable"
+    assert failed.next_attempt_at >= before + timedelta(seconds=15)
+    # Do not reset retry times: the real query must select the other job.
+    await service.tick(factory, worker)
+    db_session.expire_all()
+    next_job = await db_session.get(SignageVideoExport, second["id"])
+    assert next_job.worker_id == worker.id
+
+
+@pytest.mark.parametrize(
+    "response",
+    [[], {"api_version": "v1", "id": 123, "state": "queued"}, {"api_version": "v1", "id": "a" * 32, "state": []}],
+)
+async def test_malformed_submission_json_is_retryable(client, db_session, engine, configured, response):
+    job, _, _ = await new_job(client, db_session)
+    await uploaded(client, job)
+    worker = FakeWorker()
+    worker.submit = AsyncMock(return_value=response)
+    await pass_worker(engine, db_session, worker)
+    row = await db_session.get(SignageVideoExport, job["id"])
+    assert row.error_code == "worker_unavailable" and row.next_attempt_at > datetime.now(UTC)
+    assert row.worker_id is None
+
+
+@pytest.mark.parametrize(
+    "artifacts",
+    [
+        None,
+        [],
+        {"video.mp4": []},
+        {"video.mp4": {"content_type": "video/mp4", "width": 1920, "height": 1080, "bytes": 10, "sha256": 123}},
+    ],
+)
+async def test_malformed_artifact_json_is_retryable(client, db_session, engine, configured, artifacts):
+    job, _, _ = await new_job(client, db_session)
+    await uploaded(client, job)
+    worker = FakeWorker()
+    await pass_worker(engine, db_session, worker)
+    worker.status = AsyncMock(
+        return_value={"api_version": "v1", "id": worker.id, "state": "succeeded", "artifacts": artifacts}
+    )
+    await pass_worker(engine, db_session, worker)
+    row = await db_session.get(SignageVideoExport, job["id"])
+    assert row.error_code == "worker_unavailable" and row.state != "ready"
+    assert row.next_attempt_at > datetime.now(UTC)
+    assert worker.acks == 0

@@ -599,6 +599,10 @@ change the existing retry-safety decisions for those operations.
   the same job; a changed selection conflicts. Tombstones never allocate new
   worker jobs. No browser write is automatically retried; after uncertainty,
   inspect the export list. The mounted UI retains its key for another attempt.
+- Preparations have a fixed 45-minute creation-based deadline. Expired
+  preparations are excluded from admission immediately, reject upload/submit,
+  and are cancelled/cleaned automatically. Retries never renew that deadline;
+  submitting before it passes preserves the existing 24-hour artifact lifecycle.
 - PNG `PUT` slots accept the same byte hash while preparing and reject changed
   pixels or a closed job. The immutable index determines order and the recorded
   playlist determines durations. Files fsync before upload metadata commits;
@@ -609,7 +613,9 @@ change the existing retry-safety decisions for those operations.
   creates another encode. The background dispatcher alone retries worker
   submission with its persisted app-job ID/digest. Lost acknowledgements and
   restarts resolve to the same worker ID; 409 admission-in-progress/temporary
-  failures back off. Explicit remote rejection fails the job. There is no local
+  failures back off. Malformed worker response shapes also commit backoff and
+  yield to other jobs instead of rolling back the scheduling update. Explicit
+  remote rejection fails the job. There is no local
   fallback after an uncertain remote request.
 - Worker ID commits before result use. App bytes are downloaded with finite
   size/time limits and a verified hash, then readiness commits; only a later

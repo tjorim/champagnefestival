@@ -1505,7 +1505,7 @@
   "signage_export_setup": "Offline momentopname: synchroniseer de systeemklokken op alle laptops, gebruik dezelfde bundel en schakel de slaapstand uit. De inhoud staat vast op het moment van exporteren.",
   "signage_video_title": "Video-exports",
   "signage_video_download": "Video downloaden (MP4)",
-  "signage_video_explanation": "Eén cyclus van het gepubliceerde kanaal, met inhoud, taal en planning nu vastgelegd. Houd dit tabblad open tijdens de voorbereiding en upload. Het coderen gaat daarna verder; kom hier terug om binnen 24 uur na de start te downloaden. MP4-weergave heeft geen synchronisatie tussen schermen of live updates.",
+  "signage_video_explanation": "Eén cyclus van het gepubliceerde kanaal, met inhoud, taal en planning nu vastgelegd. Houd dit tabblad open en voltooi de voorbereiding en upload binnen 45 minuten. Het coderen gaat daarna verder; kom hier terug om binnen 24 uur na de start te downloaden. MP4-weergave heeft geen synchronisatie tussen schermen of live updates.",
   "signage_video_limits": "Maximaal {count} dia’s en {seconds} seconden per cyclus.",
   "signage_video_channel": "Gepubliceerd kanaal",
   "signage_video_choose": "Kies een kanaal",

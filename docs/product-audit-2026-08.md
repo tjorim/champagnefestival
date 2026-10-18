@@ -237,7 +237,10 @@ migrates its existing video derivatives to a separate profile on the same worker
 Preferred delivery order: worker contract and profiles, Travel privacy/output
 parity and production cutover, then Champagnefestival MP4 activation. The contract
 and worker are now available in [apps commit cbb88ec](https://github.com/tjorim/apps/commit/cbb88ec9f19d1ea3e429ad9e1e7b8679239379ad).
-The adapter uses that v1 contract and remains opt-in.
+The adapter uses that v1 contract and remains opt-in. Review hardening for
+#1352 bounds preparation to 45 minutes (including admission, upload/submit and
+cleanup) and makes malformed worker responses back off without blocking other
+exports; lifecycle regressions cover both cases.
 The synchronized HTML and PNG exports remain independent of this service.
 
 - [x] Shared worker v1 contract, limits and durable lifecycle available (apps cbb88ec).

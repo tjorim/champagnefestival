@@ -90,8 +90,9 @@ its configured duration; it is one cycle, not a recording of the tab.
 
 Keep the tab open through preparation/upload. Once submitted, encoding continues
 without the tab; return to **Your video exports** to find progress, download or
-cancel/remove your exports. Interrupted preparation must be cancelled and
-restarted. Temporary encoder outages retry in the background. Failed/expired
+cancel/remove your exports. Preparation has a fixed 45-minute deadline;
+abandoned preparations are automatically cancelled and their uploads cleaned
+up. You can cancel an interrupted preparation and restart sooner. Temporary encoder outages retry in the background. Failed/expired
 jobs require a new export. Downloads expire 24 hours after starting the snapshot.
 
 An MP4 has no server/system-clock synchronisation between screens, live updates

@@ -36,6 +36,7 @@ MAX_INPUT_BYTES = 120 * 1024**2
 MAX_OUTPUT_BYTES = 160 * 1024**2
 MAX_SECONDS = 600
 RETENTION = timedelta(hours=24)
+PREPARE_TIMEOUT = timedelta(minutes=45)
 ACTIVE = {"preparing", "submitted", "queued", "running"}
 TERMINAL = {"ready", "failed", "cancelled", "expired"}
 KEY = re.compile(r"[A-Za-z0-9_-]{16,128}\Z")
@@ -122,11 +123,20 @@ def digest(job: SignageVideoExport) -> str:
     ).hexdigest()
 
 
+def preparation_expired(job: SignageVideoExport, now: datetime) -> bool:
+    return job.state == "preparing" and job.created_at <= now - PREPARE_TIMEOUT
+
+
+def stale_preparations(now: datetime):
+    return (SignageVideoExport.state == "preparing") & (SignageVideoExport.created_at <= now - PREPARE_TIMEOUT)
+
+
 def summary(job: SignageVideoExport) -> dict:
     state = job.state
-    if job.expires_at <= datetime.now(UTC):
+    now = datetime.now(UTC)
+    if job.expires_at <= now:
         state = "expired"
-    elif job.cancel_requested or job.channel_id is None:
+    elif job.cancel_requested or job.channel_id is None or preparation_expired(job, now):
         state = "cancelled"
     elif state == "ready" and not (directory(job.id) / "video.mp4").is_file():
         state = "expired"
@@ -182,12 +192,16 @@ async def create(db: AsyncSession, channel_id: str, locale: str, key: str, actor
     active_count = await db.scalar(
         select(func.count())
         .select_from(SignageVideoExport)
-        .where(SignageVideoExport.state.in_(ACTIVE), SignageVideoExport.expires_at > now)
+        .where(SignageVideoExport.state.in_(ACTIVE), SignageVideoExport.expires_at > now, ~stale_preparations(now))
     )
     retained_count = await db.scalar(
         select(func.count())
         .select_from(SignageVideoExport)
-        .where(SignageVideoExport.state.in_(ACTIVE | {"ready"}), SignageVideoExport.expires_at > now)
+        .where(
+            SignageVideoExport.state.in_(ACTIVE | {"ready"}),
+            SignageVideoExport.expires_at > now,
+            ~stale_preparations(now),
+        )
     )
     if (active_count or 0) >= 2 or (retained_count or 0) >= 6:
         fail(429, "capacity")
@@ -367,6 +381,9 @@ def validate_artifact(data: dict, seconds: int) -> dict:
 async def reconcile(db: AsyncSession, job: SignageVideoExport, worker: WorkerClient | None):
     now = datetime.now(UTC)
     expired = job.expires_at <= now
+    if preparation_expired(job, now):
+        job.cancel_requested = True
+        job.error_code = "preparation_timeout"
     stop = expired or job.cancel_requested or job.channel_id is None
     if job.state == "ready" and not (directory(job.id) / "video.mp4").is_file():
         job.state = "expired"
@@ -474,7 +491,8 @@ async def tick(factory, worker: WorkerClient | None):
                 job.acknowledged = True
             else:
                 job.error_code = "worker_unavailable"
-        except httpx.HTTPError, TimeoutError, OSError, ValueError:
+        except httpx.HTTPError, TimeoutError, OSError, ValueError, TypeError, AttributeError, KeyError:
+            # Malformed worker JSON must commit backoff too, rather than starving the queue.
             job.error_code = "worker_unavailable"
         if job.state in TERMINAL and job.state != "ready":
             try:
@@ -524,6 +542,7 @@ async def cleanup_tick(factory):
                         (SignageVideoExport.expires_at <= now)
                         | SignageVideoExport.cancel_requested
                         | SignageVideoExport.channel_id.is_(None)
+                        | stale_preparations(now)
                     )
                 )
                 | ((SignageVideoExport.expires_at <= now) & (SignageVideoExport.state != "expired")),
@@ -533,6 +552,9 @@ async def cleanup_tick(factory):
             .limit(100)
         )
         for job in jobs:
+            if preparation_expired(job, now):
+                job.cancel_requested = True
+                job.error_code = "preparation_timeout"
             job.state = "expired" if job.expires_at <= now else "cancelled"
             try:
                 await asyncio.to_thread(remove_directory, directory(job.id))

@@ -63,6 +63,8 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Fixed
 
+- Abandoned signage video preparations release capacity after 45 minutes and are cleaned automatically; malformed encoder responses back off so other exports can progress (#1349, #1352).
+
 - Android authentication now uses the dedicated native Keycloak client, restoring sign-in with the app's custom redirect scheme (#793)
 
 ## [2026.8.1] - 2026-08-01
