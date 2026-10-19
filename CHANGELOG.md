@@ -11,6 +11,10 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ## [Unreleased]
 
+### Fixed
+
+- Signage MP4 export reconciliation backs off on any unexpected exception (apps#279). Previously only handled types did, so a row whose reconciliation raised something else kept its `next_attempt_at`, stayed first in the queue and blocked every export behind it, retrying every three seconds. The failing row now takes the usual 15-second backoff (`worker_unavailable`) and the next export proceeds; the log line names the exception type only.
+
 ### Changed
 
 - Description translation drafts support a mounted per-app engine credential and

@@ -595,7 +595,15 @@ async def test_preparation_deadline_does_not_cancel_submitted_jobs(client, db_se
 
 
 @pytest.mark.parametrize(
-    "failure", [TypeError("invalid id"), AttributeError("invalid object"), KeyError("missing field")]
+    "failure",
+    [
+        TypeError("invalid id"),
+        AttributeError("invalid object"),
+        KeyError("missing field"),
+        # Unlisted types must back off too, or one bad row blocks every export behind it.
+        RuntimeError("unexpected"),
+        IndexError("unexpected"),
+    ],
 )
 async def test_worker_contract_exception_backs_off_and_allows_next_job(client, db_session, engine, configured, failure):
     first, channel, _ = await new_job(client, db_session)

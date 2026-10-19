@@ -21,7 +21,7 @@ from uuid import uuid4
 
 import httpx
 from PIL import Image
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -480,37 +480,56 @@ async def tick(factory, worker: WorkerClient | None):
         )
         if job is None:
             return
+        job_id = job.id
         try:
-            async with asyncio.timeout(125):
-                await reconcile(db, job, worker)
-        except WorkerError as exc:
-            if exc.status in {404, 410} and job.worker_id:
-                # Remote expiry/loss after our durable copy does not invalidate it.
-                if job.state != "ready" or not (directory(job.id) / "video.mp4").is_file():
-                    job.state = "expired"
-                job.acknowledged = True
-            else:
-                job.error_code = "worker_unavailable"
-        except httpx.HTTPError, TimeoutError, OSError, ValueError, TypeError, AttributeError, KeyError:
-            # Malformed worker JSON must commit backoff too, rather than starving the queue.
+            await _reconcile_locked(db, job, worker)
+        except Exception as exc:
+            # Any other failure must still move next_attempt_at, or this row stays
+            # first in the queue and blocks every export behind it. Log the type
+            # only: never media, manifests, credentials or worker responses.
+            await db.rollback()
+            logger.warning("Signage export reconciliation raised %s; backing off", type(exc).__name__)
+            await db.execute(
+                update(SignageVideoExport)
+                .where(SignageVideoExport.id == job_id)
+                .values(error_code="worker_unavailable", next_attempt_at=datetime.now(UTC) + timedelta(seconds=15))
+            )
+            await db.commit()
+
+
+async def _reconcile_locked(db: AsyncSession, job: SignageVideoExport, worker: WorkerClient | None):
+    """One locked reconciliation pass; commits its own backoff. Raises only for unexpected failures."""
+    try:
+        async with asyncio.timeout(125):
+            await reconcile(db, job, worker)
+    except WorkerError as exc:
+        if exc.status in {404, 410} and job.worker_id:
+            # Remote expiry/loss after our durable copy does not invalidate it.
+            if job.state != "ready" or not (directory(job.id) / "video.mp4").is_file():
+                job.state = "expired"
+            job.acknowledged = True
+        else:
             job.error_code = "worker_unavailable"
-        if job.state in TERMINAL and job.state != "ready":
-            try:
-                await asyncio.to_thread(remove_directory, directory(job.id))
-                job.local_cleaned = True
-            except OSError:
-                # Keep terminal cleanup discoverable, even if remote ACK already won.
-                job.acknowledged = False
-                job.local_cleaned = False
-                job.error_code = "worker_unavailable"
-        if job.expires_at <= datetime.now(UTC):
-            # Keep only a compact identity/duration tombstone, never rendered content.
-            job.snapshot = {"slides": [{"duration": s["duration"]} for s in job.snapshot["slides"]]}
-            job.uploads = {}
-            job.artifact = None
-        # Never log media, manifests, bearer credentials or worker responses.
-        job.next_attempt_at = datetime.now(UTC) + timedelta(seconds=15 if job.error_code else 3)
-        await db.commit()
+    except httpx.HTTPError, TimeoutError, OSError, ValueError, TypeError, AttributeError, KeyError:
+        # Malformed worker JSON must commit backoff too, rather than starving the queue.
+        job.error_code = "worker_unavailable"
+    if job.state in TERMINAL and job.state != "ready":
+        try:
+            await asyncio.to_thread(remove_directory, directory(job.id))
+            job.local_cleaned = True
+        except OSError:
+            # Keep terminal cleanup discoverable, even if remote ACK already won.
+            job.acknowledged = False
+            job.local_cleaned = False
+            job.error_code = "worker_unavailable"
+    if job.expires_at <= datetime.now(UTC):
+        # Keep only a compact identity/duration tombstone, never rendered content.
+        job.snapshot = {"slides": [{"duration": s["duration"]} for s in job.snapshot["slides"]]}
+        job.uploads = {}
+        job.artifact = None
+    # Never log media, manifests, bearer credentials or worker responses.
+    job.next_attempt_at = datetime.now(UTC) + timedelta(seconds=15 if job.error_code else 3)
+    await db.commit()
 
 
 async def dispatch_loop(factory):
