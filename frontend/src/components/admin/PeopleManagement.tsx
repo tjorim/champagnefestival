@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { PersonDuplicates } from "./PersonDuplicates";
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
@@ -616,9 +617,7 @@ export default function PeopleManagement({
               {!loadingPersonRegistrations &&
                 !personRegistrationsError &&
                 personRegistrations.length === 0 && (
-                  <p className="text-subtle text-center py-6 mb-0">
-                    {m.admin_people_registrations_empty()}
-                  </p>
+                  <AdminEmptyState>{m.admin_people_registrations_empty()}</AdminEmptyState>
                 )}
               {!loadingPersonRegistrations &&
                 !personRegistrationsError &&

@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { Button } from "@/components/ui/button";
 import { AdminField, AdminTextarea } from "@/components/admin/AdminFields";
 import { useState } from "react";
@@ -103,7 +104,7 @@ export default function ScratchpadManagement({
       <CardContent>
         <p className="text-subtle text-sm">{m.admin_scratchpad_description()}</p>
         {editionId === "" ? (
-          <p className="text-subtle mb-0">{m.admin_scratchpad_no_active_edition()}</p>
+          <AdminEmptyState>{m.admin_scratchpad_no_active_edition()}</AdminEmptyState>
         ) : (
           <>
             {query.isError && <Alert variant="danger">{m.admin_error_load_scratchpad()}</Alert>}

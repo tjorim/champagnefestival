@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { AdminField, AdminInput, AdminLabel } from "@/components/admin/AdminFields";
 import { useState } from "react";
 import { useForm } from "@tanstack/react-form";
@@ -155,7 +156,7 @@ export default function EditionPollOptionsModal({
           ) : optionsQuery.isError ? (
             <Alert variant="danger">{m.admin_content_error_load()}</Alert>
           ) : options.length === 0 ? (
-            <p className="text-sm text-subtle">{m.admin_poll_no_options()}</p>
+            <AdminEmptyState>{m.admin_poll_no_options()}</AdminEmptyState>
           ) : (
             <>
               <PresentationList className="mb-2">

@@ -1,4 +1,12 @@
 import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
+import { AdminEmptyState } from "./AdminEmptyState";
+import {
   AdminField,
   AdminLabel,
   AdminSelect,
@@ -221,7 +229,7 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
             </Spinner>
           </div>
         ) : entries.length === 0 ? (
-          <p className="text-subtle">{m.admin_audit_no_entries()}</p>
+          <AdminEmptyState>{m.admin_audit_no_entries()}</AdminEmptyState>
         ) : (
           <>
             <Table>
@@ -252,25 +260,31 @@ export default function AuditLogViewer({ authHeaders }: AuditLogViewerProps) {
               </TableBody>
             </Table>
 
-            <div className="flex justify-between items-center">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1}
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-              >
-                {m.admin_audit_previous_page()}
-              </Button>
-              <span className="text-subtle text-sm">{m.admin_audit_page_label({ page })}</span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={entries.length < PAGE_SIZE}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                {m.admin_audit_next_page()}
-              </Button>
-            </div>
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    text={m.admin_audit_previous_page()}
+                    size="sm"
+                    disabled={page <= 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <span className="px-2 text-subtle text-sm" aria-current="page">
+                    {m.admin_audit_page_label({ page })}
+                  </span>
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    text={m.admin_audit_next_page()}
+                    size="sm"
+                    disabled={entries.length < PAGE_SIZE}
+                    onClick={() => setPage((p) => p + 1)}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </>
         )}
       </CardContent>

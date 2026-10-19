@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 /**
  * CategoryManagement — CRUD for the categories events or products are filed under.
  *
@@ -245,7 +246,7 @@ export default function CategoryManagement({
               </Spinner>
             </div>
           ) : categories.length === 0 ? (
-            <p className="text-subtle text-center py-6 mb-0">{config.empty()}</p>
+            <AdminEmptyState>{config.empty()}</AdminEmptyState>
           ) : (
             <Table>
               <TableHeader>

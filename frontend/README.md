@@ -11,6 +11,13 @@ pnpm dev            # dev server → http://localhost:5173
 ```
 
 The dev server proxies `/api/*` to `http://localhost:8000` (backend).
+For sign-in from your own browser without local Keycloak, start Vite with
+`DEV_AUTH_BYPASS_TOKEN=dev-token pnpm dev` and run the development backend with
+the same token. Opening <http://localhost:5173/admin> then signs in automatically;
+see [local admin setup](../README.md#local-admin-sign-in-without-keycloak).
+The opt-in lives in the Vite server, with no login bootstrap URL or production
+application-code bypass.
+
 To develop without a running backend, see [Mock API (MSW)](#mock-api-msw) below.
 
 ## Available scripts
@@ -80,7 +87,9 @@ pnpm dev
 ```
 
 A `[MSW] Mock Service Worker active` notice appears in the browser console when the worker is
-running. Log in to the Admin Dashboard with token **`dev-token`**.
+running. To enter the Admin Dashboard in your own browser without Keycloak,
+start Vite with `DEV_AUTH_BYPASS_TOKEN=dev-token pnpm dev` and open `/admin`.
+The seeded development session is accepted by the mock handlers.
 
 > [!NOTE]
 > In-memory state resets on every page reload — this is intentional. Use the real backend for

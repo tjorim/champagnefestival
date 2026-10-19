@@ -1,4 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render as renderBase, screen, within } from "@testing-library/react";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import type { ReactElement } from "react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import AdminSidebar from "@/components/admin/AdminSidebar";
@@ -40,6 +42,10 @@ vi.mock("@/paraglide/messages", () => ({
   },
 }));
 
+function render(ui: ReactElement) {
+  return renderBase(<SidebarProvider>{ui}</SidebarProvider>);
+}
+
 const expandedGroups = new Set(["events", "content", "venue"]);
 
 function renderSidebar(setActiveKey = vi.fn(), canManageAdminSections = true) {
@@ -49,8 +55,6 @@ function renderSidebar(setActiveKey = vi.fn(), canManageAdminSections = true) {
       setActiveKey={setActiveKey}
       expandedGroups={expandedGroups}
       toggleGroup={vi.fn()}
-      sidebarOpen={false}
-      setSidebarOpen={vi.fn()}
       navRef={createRef<HTMLElement>()}
       handleNavKeyDown={vi.fn()}
       registrationCount={2}
@@ -106,8 +110,6 @@ describe("AdminSidebar", () => {
         setActiveKey={vi.fn()}
         expandedGroups={new Set(["system"])}
         toggleGroup={vi.fn()}
-        sidebarOpen={false}
-        setSidebarOpen={vi.fn()}
         navRef={createRef<HTMLElement>()}
         handleNavKeyDown={vi.fn()}
         registrationCount={0}

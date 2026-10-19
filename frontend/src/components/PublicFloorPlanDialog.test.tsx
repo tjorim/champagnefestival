@@ -2,6 +2,7 @@ import { cleanup, fireEvent, render, screen, within } from "@testing-library/rea
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw";
 import { afterEach, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import type { EditionPlan } from "@/utils/planApi";
@@ -95,6 +96,22 @@ it("switches day and room, and says when the organization is not in the room", a
   fireEvent.click(screen.getByRole("button", { name: /Fri/ }));
   expect(screen.queryByRole("group", { name: "Room" })).not.toBeInTheDocument();
   expect(screen.getByRole("status")).toHaveTextContent("Bollinger: Stand 12");
+});
+
+it("supports room keyboard navigation and keeps a room selected", async () => {
+  server.use(http.get("/api/editions/2099/plan", () => HttpResponse.json(plan)));
+  const user = userEvent.setup();
+  mount();
+  await screen.findByRole("region", { name: "Floor plan of Cellar" });
+  const cellar = screen.getByRole("button", { name: "Cellar" });
+  await user.click(cellar);
+  expect(cellar).toHaveAttribute("aria-pressed", "true");
+  await user.keyboard("{ArrowLeft}");
+  const hall = screen.getByRole("button", { name: "Hall 5" });
+  expect(hall).toHaveFocus();
+  await user.keyboard(" ");
+  expect(hall).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("region", { name: "Floor plan of Hall 5" })).toBeInTheDocument();
 });
 
 it("falls back to a message when the plan cannot be loaded", async () => {

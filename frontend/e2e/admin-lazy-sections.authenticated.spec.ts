@@ -41,6 +41,7 @@ test("downloads secondary tools only on selection and keeps navigation usable wh
     await page.getByRole("button", { name: "Analytics", exact: true }).click();
     await expect.poll(() => intercepted).toBe(true);
     await expect(page.locator(".admin-content-pane .admin-skeleton")).toBeVisible();
+    await expect(page.locator('.admin-content-pane [data-slot="skeleton"]').first()).toBeVisible();
     await page.getByRole("button", { name: /^Registrations/ }).click();
     await expectRegistrations(page);
     release();

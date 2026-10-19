@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
@@ -92,7 +93,7 @@ export default function WaitlistManagement({
           <Alert variant="danger">{m.admin_error_handle_waitlist_entry()}</Alert>
         )}
         {entries.data?.length === 0 && (
-          <p className="text-subtle mb-0">{m.admin_waitlist_empty()}</p>
+          <AdminEmptyState>{m.admin_waitlist_empty()}</AdminEmptyState>
         )}
         {entries.data?.map((entry) => (
           <article key={entry.id} className="border-b border-subtle pb-4 mb-4">

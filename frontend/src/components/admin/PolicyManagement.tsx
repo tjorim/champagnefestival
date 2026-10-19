@@ -1,4 +1,6 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { AdminTextarea, AdminLabel } from "@/components/admin/AdminFields";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -430,22 +432,23 @@ export default function PolicyManagement({
                     </Badge>
                   ))}
                 </div>
-                <div
-                  role="group"
+                <ToggleGroup
+                  value={[locale]}
+                  onValueChange={(values) => {
+                    const value = values[0];
+                    if (LOCALES.includes(value as typeof locale)) setLocale(value as typeof locale);
+                  }}
                   aria-label={m.language_select()}
-                  className="flex gap-1 border-b border-border"
+                  variant="outline"
+                  size="sm"
+                  className="mb-2"
                 >
                   {LOCALES.map((l) => (
-                    <Button
-                      key={l}
-                      variant={locale === l ? "default" : "ghost"}
-                      aria-pressed={locale === l}
-                      onClick={() => setLocale(l)}
-                    >
+                    <ToggleGroupItem key={l} value={l}>
                       {l.toUpperCase()}
-                    </Button>
+                    </ToggleGroupItem>
                   ))}
-                </div>
+                </ToggleGroup>
                 <div className="border border-t-0 border-border p-4">
                   <ButtonGroup aria-label={m.admin_policy_markdown_toolbar_aria()} className="mb-2">
                     <Button
@@ -631,9 +634,9 @@ export default function PolicyManagement({
               </Table>
             </div>
             {contentFor(published, locale) === "" && published && (
-              <p className="text-subtle text-sm">
+              <AdminEmptyState>
                 {m.admin_policy_no_published_content({ locale: locale.toUpperCase() })}
-              </p>
+              </AdminEmptyState>
             )}
           </>
         )}

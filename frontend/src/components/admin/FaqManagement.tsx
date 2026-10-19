@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { Button } from "@/components/ui/button";
 import {
   ChevronDownIcon,
@@ -407,7 +408,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               </Spinner>
             </div>
           ) : sortedItems.length === 0 ? (
-            <p className="text-subtle text-center py-6 mb-0">{m.admin_no_faq_items()}</p>
+            <AdminEmptyState>{m.admin_no_faq_items()}</AdminEmptyState>
           ) : (
             <div className="w-full">
               <Table>

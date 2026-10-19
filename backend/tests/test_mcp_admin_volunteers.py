@@ -38,17 +38,39 @@ async def test_create_get_list_volunteer(db_session):
     assert any(v["id"] == volunteer_id for v in listed["volunteers"])
 
 
-async def test_create_volunteer_requires_at_least_one_help_period(db_session):
+@pytest.mark.parametrize("details", [{}, {"help_periods": []}])
+async def test_create_volunteer_with_name_only(db_session, details):
     factory = mcp_session_factory(db_session)
-    with pytest.raises(ValueError, match="help_periods"):
-        await mcp_volunteers.create_volunteer(
-            factory,
-            "admin-1",
-            name="Alice",
-            national_register_number="85010199999",
-            eid_document_number="BEI998877",
-            help_periods=[],
-        )
+    created = await mcp_volunteers.create_volunteer(factory, "admin-1", name="Alice", **details)
+    assert created["national_register_number"] is None
+    assert created["eid_document_number"] is None
+    assert created["help_periods"] == []
+    person = await db_session.get(Person, created["id"])
+    assert "volunteer" in person.roles
+
+
+async def test_update_volunteer_can_clear_all_optional_details(db_session):
+    factory = mcp_session_factory(db_session)
+    created = await mcp_volunteers.create_volunteer(
+        factory,
+        "admin-1",
+        name="Alice",
+        national_register_number="85010199999",
+        eid_document_number="BEI998877",
+        help_periods=HELP_PERIODS,
+    )
+    updated = await mcp_volunteers.update_volunteer(
+        factory,
+        "admin-1",
+        created["id"],
+        national_register_number="",
+        eid_document_number="",
+        help_periods=[],
+    )
+    assert updated["national_register_number"] is None
+    assert updated["eid_document_number"] is None
+    assert updated["help_periods"] == []
+    assert updated["role_history"] == created["role_history"]
 
 
 async def test_create_volunteer_rejects_invalid_input(db_session):

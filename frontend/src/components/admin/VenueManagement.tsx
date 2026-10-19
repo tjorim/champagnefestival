@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminField,
   AdminLabel,
@@ -620,10 +621,10 @@ export default function VenueManagement({
           </Alert>
         )}
         {venues.length === 0 ? (
-          <p className="text-subtle text-center text-sm my-4">
+          <AdminEmptyState>
             <Icon icon={InfoIcon} className="me-1" />
             {m.admin_no_venues()}
-          </p>
+          </AdminEmptyState>
         ) : (
           venues.map((venue) => {
             const isArchived = !venue.active;
@@ -702,7 +703,7 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueRooms.length === 0 ? (
-                      <p className="text-subtle text-sm italic mb-4">{m.admin_room_no_rooms()}</p>
+                      <AdminEmptyState>{m.admin_room_no_rooms()}</AdminEmptyState>
                     ) : (
                       <PresentationList flush className="mb-4">
                         {venueRooms.map((room) => (
@@ -797,7 +798,7 @@ export default function VenueManagement({
                       </Button>
                     </div>
                     {venueTableTypes.length === 0 ? (
-                      <p className="text-subtle text-sm italic mb-0">{m.admin_no_table_types()}</p>
+                      <AdminEmptyState>{m.admin_no_table_types()}</AdminEmptyState>
                     ) : (
                       <PresentationList flush className="mb-0">
                         {venueTableTypes.map((tt) => (

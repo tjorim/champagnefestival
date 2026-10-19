@@ -29,7 +29,7 @@ export default function PeopleSection({
   const [tab, setTab] = useState<PeopleTab>("all");
   return (
     <Tabs value={tab} onValueChange={(value) => setTab(value as PeopleTab)}>
-      <TabsList variant="pills" className="mb-4" aria-label={m.admin_people_tab()}>
+      <TabsList variant="line" className="mb-5" aria-label={m.admin_people_tab()}>
         <TabsTrigger value="all">
           {m.admin_directory_tab()} ({counts.all})
         </TabsTrigger>

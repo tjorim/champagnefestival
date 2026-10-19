@@ -1,7 +1,9 @@
 # Signage layer contract
 
 Templates use the existing signage background and ordered `layers` JSON columns.
-The first layer is at the back. The canvas is 1920×1080; `x` and `y` are the
+The first stored layer is at the back. The editor's layer list reverses that order,
+showing the frontmost layer first. Drag handles and per-row forward/backward buttons
+change this same stored order; visibility and locking are available on each row. The canvas is 1920×1080; `x` and `y` are the
 **top-left** corner in canvas percentages, width and height are canvas percentages,
 and rotation is clockwise in degrees about the layer centre. See also the
 [floor-plan contract](floor-plan-coordinates.md). Slides supply content only;
@@ -37,3 +39,16 @@ provide keyboard resize and rotation. Pointer handles support touch and mouse.
 Each pointer gesture that changes content is one undo step; clicks and gestures
 that return to their starting geometry preserve redo history. Cancelled gestures
 restore their starting state. Undo history is local to the open template and is not persisted.
+
+The template dialog places the layer list beside the canvas on desktop and below
+it on narrow screens. Properties show content, appearance and position controls
+for the selected layer: typography for text, image fit for images/logo bindings,
+and colour for text, shapes and icons. Background controls are collapsible and
+show only settings relevant to the selected background type.
+
+The add menu offers each placeholder directly. **Add missing placeholders** restores
+existing hidden, unlocked bindings before creating new slots, preserving existing
+IDs and geometry. New required slots receive separate starter positions; hidden
+locked slots remain untouched. The 100-layer document limit also applies to these
+actions. Every completed reorder, visibility/lock change or automatic placeholder
+addition is one local undo step. These edits remain drafts until **Save template**.

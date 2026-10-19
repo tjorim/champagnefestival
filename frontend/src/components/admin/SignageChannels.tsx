@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronUpIcon, ChevronDownIcon, GripVerticalIcon } from "lucide-react";
@@ -137,7 +138,7 @@ function Preview({ playlist }: { playlist: Playlist }) {
           count: playlist.slides.length,
         })}
       </p>
-      {!slide && <p>{m.signage_channels_empty()}</p>}
+      {!slide && <AdminEmptyState>{m.signage_channels_empty()}</AdminEmptyState>}
       <div ref={viewport} className="site-signage-editor-viewport">
         {/* oxlint-disable-next-line shadcn/no-inline-styles -- Scale the shared 1920x1080 canvas to the measured preview width. */}
         <div className="site-signage-editor-canvas" style={{ transform: `scale(${scale})` }}>

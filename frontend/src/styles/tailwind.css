@@ -251,6 +251,8 @@
   --text-plan: 0.55rem;
   --spacing-content-md: var(--layout-column-md, 83.333333%);
   --spacing-content-lg: var(--layout-column-lg, 66.666667%);
+  --spacing-header: var(--header-height, 4rem);
+  --spacing-admin-sidebar: calc(100dvh - var(--header-height, 4rem));
   --spacing-column-gutter: var(--layout-column-gutter, 0.75rem);
   --container-account: 33.75rem;
   --color-content: var(--layout-content, var(--base-light));
@@ -279,6 +281,12 @@
   --color-border: var(--surface-border);
   --color-input: var(--surface-border);
   --color-ring: var(--surface-primary);
+  --color-sidebar: var(--surface-muted);
+  --color-sidebar-foreground: var(--surface-foreground);
+  --color-sidebar-accent: var(--surface-primary);
+  --color-sidebar-accent-foreground: var(--surface-primary-foreground);
+  --color-sidebar-border: var(--surface-border);
+  --color-sidebar-ring: var(--surface-primary);
   --color-warning: var(--surface-warning, var(--base-warning));
   --color-warning-foreground: var(--surface-warning-foreground, var(--base-dark));
   --color-progress-track: var(--base-secondary);

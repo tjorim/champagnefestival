@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { AdminField, AdminLabel, AdminSelect, AdminOption } from "@/components/admin/AdminFields";
 import { MinusIcon, PencilIcon, PlusIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -225,7 +226,7 @@ export default function LayoutCompareModal({
           {baselineId === currentId ? (
             <p className="text-subtle text-sm mb-0">{m.admin_layout_compare_same_plan()}</p>
           ) : tableDiff.length === 0 && areaDiff.length === 0 ? (
-            <p className="text-subtle text-sm mb-0">{m.admin_layout_compare_no_changes()}</p>
+            <AdminEmptyState>{m.admin_layout_compare_no_changes()}</AdminEmptyState>
           ) : (
             <>
               {tableDiff.length > 0 && (

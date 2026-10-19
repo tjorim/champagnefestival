@@ -25,7 +25,6 @@ from app.schema_types import (
     MarkdownSource,
     MonthlyVisits,
     NonEmptyText,
-    NonEmptyText20,
     NonEmptyText50,
     NonEmptyText200,
     NonEmptyText600,
@@ -1061,22 +1060,27 @@ class VolunteerHelpPeriodIn(RequestModel):
 class VolunteerCreate(RequestModel):
     name: NonEmptyText200
     address: Text300 = ""
-    national_register_number: NonEmptyText20
-    eid_document_number: NonEmptyText50
-    help_periods: list[VolunteerHelpPeriodIn] = Field(min_length=1)
+    national_register_number: Text20 | None = None
+    eid_document_number: Text50 | None = None
+    help_periods: list[VolunteerHelpPeriodIn] = Field(default_factory=list)
 
-    @field_validator("name", "national_register_number", "eid_document_number", mode="before")
+    @field_validator("name", mode="before")
     @classmethod
-    def strip_required_strings(cls, value: str) -> str:
+    def strip_name(cls, value: str) -> str:
         return value.strip() if isinstance(value, str) else value
+
+    @field_validator("national_register_number", "eid_document_number", mode="before")
+    @classmethod
+    def strip_identity(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
 
 
 class VolunteerUpdate(RequestModel):
     name: NonEmptyText200 | None = None
     address: Text300 | None = None
-    national_register_number: NonEmptyText20 | None = None
-    eid_document_number: NonEmptyText50 | None = None
-    help_periods: list[VolunteerHelpPeriodIn] | None = Field(default=None, min_length=1)
+    national_register_number: Text20 | None = None
+    eid_document_number: Text50 | None = None
+    help_periods: list[VolunteerHelpPeriodIn] | None = None
     oidc_subject: str | None = Field(default=None, max_length=255)
     """Admin-only override for the self-service identity link (#1006) — e.g.
     to unlink a mistaken registration (explicit ``null``) or hand-link a

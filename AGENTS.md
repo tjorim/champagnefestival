@@ -43,10 +43,15 @@ uv run alembic upgrade head
 > dev user with the admin and volunteer realm roles. Refuses to start if set
 > outside `ENVIRONMENT=development`.
 >
-> The frontend has the matching piece for local UI work: `frontend/e2e/auth.setup.ts`
-> seeds a browser session as that same dev-bypass user (Playwright's standard
-> `storageState` auth pattern — https://playwright.dev/docs/auth — nothing in
-> application code changes). See `frontend/e2e/README.md`.
+> For manual UI work, start Vite with the same `DEV_AUTH_BYPASS_TOKEN`; opening
+> `http://localhost:5173/admin` in any browser is then already signed in as that
+> dev user. The Vite dev server seeds the session and authenticates proxied API
+> calls; production builds and `pnpm preview` do not enable it. See the root
+> README's "Local admin sign-in without Keycloak" section.
+>
+> Authenticated browser tests retain `frontend/e2e/auth.setup.ts` and Playwright's
+> standard `storageState` pattern (https://playwright.dev/docs/auth), with no
+> application-code bypass. See `frontend/e2e/README.md`.
 
 ## Versioning
 
@@ -131,6 +136,11 @@ Tailwind v4 and Base UI are the frontend stack; Bootstrap was removed in #1111
   inline styles. Dynamic positioning needs a deliberate, narrow lint exception
   (a scoped `oxlint-disable` comment with a justification; floor-plan
   coordinates, saved colours and data-derived ratios are the existing cases).
+- Before implementing or restyling UI, inspect existing shared components and
+  check the configured shadcn/Base UI registry and official documentation for
+  an existing component, variant or behaviour. Reuse or generate the supported
+  implementation first; add custom code only for requirements it does not cover.
+  Apply shared improvements consistently to the relevant consumers.
 - Generate Base UI primitives on demand with `cd frontend && pnpm dlx shadcn@latest
   add <component>` using the committed `components.json` (`base-vega`, Lucide,
   Tailwind v4). Own and restyle the generated source; never run `init` over the

@@ -72,7 +72,7 @@ export const ALLOWED_VIOLATIONS: Readonly<Record<string, Readonly<Record<string,
  * Waits for finite CSS animations (the admin content pane fades in over 200ms) to finish, so axe
  * never measures contrast against a half-transparent element. Infinite ones (spinners) are skipped.
  */
-async function settleAnimations(page: Page): Promise<void> {
+export async function settleAnimations(page: Page): Promise<void> {
   await page.evaluate(() =>
     Promise.all(
       document

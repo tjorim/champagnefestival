@@ -1,3 +1,11 @@
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
+import { AdminEmptyState } from "./AdminEmptyState";
 import { NotebookTextIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
@@ -186,7 +194,7 @@ export default function LedgerModal({
             </Alert>
           )}
           {!loading && !error && total === 0 && (
-            <p className="text-subtle text-center py-6 mb-0">{m.admin_payment_history_empty()}</p>
+            <AdminEmptyState>{m.admin_payment_history_empty()}</AdminEmptyState>
           )}
           {!loading && !error && total > 0 && (
             <div className="w-full">
@@ -224,25 +232,31 @@ export default function LedgerModal({
               <span className="text-muted-foreground text-sm">
                 {m.admin_ledger_page_summary({ from: rangeFrom, to: rangeTo, total })}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isFetching || page <= 1}
-                onClick={onPreviousPage}
-              >
-                {m.admin_ledger_previous_page()}
-              </Button>
-              <span className="text-muted-foreground text-sm">
-                {page} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={isFetching || page >= totalPages}
-                onClick={onNextPage}
-              >
-                {m.admin_ledger_next_page()}
-              </Button>
+              <Pagination className="w-auto">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      size="sm"
+                      text={m.admin_ledger_previous_page()}
+                      disabled={isFetching || page <= 1}
+                      onClick={onPreviousPage}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <span className="px-2 text-muted-foreground text-sm" aria-current="page">
+                      {page} / {totalPages}
+                    </span>
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      size="sm"
+                      text={m.admin_ledger_next_page()}
+                      disabled={isFetching || page >= totalPages}
+                      onClick={onNextPage}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
             </div>
           )}
           <Button variant="outline" size="sm" onClick={onHide}>

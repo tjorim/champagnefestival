@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminField,
   AdminLabel,
@@ -831,7 +832,7 @@ export default function EventProductsModal({
             ) : (
               <>
                 {products.length === 0 ? (
-                  <p className="text-subtle italic text-sm">{m.admin_products_empty()}</p>
+                  <AdminEmptyState>{m.admin_products_empty()}</AdminEmptyState>
                 ) : (
                   <PresentationList flush className="mb-2">
                     {products.map((product) => renderRow(product))}

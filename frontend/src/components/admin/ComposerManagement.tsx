@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminField,
   AdminLabel,
@@ -492,7 +493,7 @@ export default function ComposerManagement({
         )}
 
         {items.length === 0 ? (
-          <p className="text-center text-subtle mt-6 mb-0">{m.admin_composer_empty()}</p>
+          <AdminEmptyState>{m.admin_composer_empty()}</AdminEmptyState>
         ) : (
           <div className="w-full">
             <Table>

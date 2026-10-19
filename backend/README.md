@@ -673,8 +673,15 @@ complete and partial requests, use a generic base specialised with the exact
 field types (see the translated-content schemas). Simple models do not need a
 generic base solely to share field constraints. Keep operation-specific and
 merged-state validation on the relevant concrete model. For example, a poll label
-is required even on update, and a volunteer's blank identity fields have different
-create and update semantics.
+is required even on update, and volunteer updates distinguish omitted identity/help-period fields from
+explicitly cleared values. Admin volunteer creation requires only a name, matching
+creating a person with the volunteer role: identity numbers default to `null` and
+help periods to `[]`. Blank identity input normalises to `null` on both create and
+update. On update, omitted identity fields stay unchanged, while explicit `null`
+or blank strings clear them. Omitted/null `help_periods` stay unchanged; `[]`
+clears all periods, and supplied periods still require a valid start and date range.
+The separate volunteer self-registration flow retains its checksum-validated identity
+requirements.
 
 Omission and explicit `null` are separate API decisions. Preserve
 `model_fields_set` / `exclude_unset=True` handling, and document any intentional

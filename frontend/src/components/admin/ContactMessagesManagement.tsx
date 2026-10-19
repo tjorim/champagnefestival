@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -65,7 +66,7 @@ export default function ContactMessagesManagement({
           <Alert variant="danger">{m.admin_error_handle_contact_message()}</Alert>
         )}
         {messages.data?.length === 0 && (
-          <p className="text-subtle mb-0">{m.admin_contact_messages_empty()}</p>
+          <AdminEmptyState>{m.admin_contact_messages_empty()}</AdminEmptyState>
         )}
         {messages.data?.map((message) => (
           <article key={message.id} className="border-b border-subtle pb-4 mb-4">

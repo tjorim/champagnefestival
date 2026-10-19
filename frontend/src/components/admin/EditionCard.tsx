@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -305,7 +306,7 @@ export default function EditionCard({
               {m.admin_loading_events()}
             </div>
           ) : sortedEvents.length === 0 ? (
-            <p className="text-subtle italic text-sm">{m.admin_content_edition_no_events()}</p>
+            <AdminEmptyState>{m.admin_content_edition_no_events()}</AdminEmptyState>
           ) : (
             <PresentationList flush className="mb-1">
               {sortedEvents.map((event) => (
