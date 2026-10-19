@@ -7,6 +7,10 @@ export const excludedFiles = {
 export const diagnosticCallees = ["devError"];
 // Exact source/value exclusions. Never approve a whole component or directory for visible copy.
 export const exclusions = {
+  "components/ui/sidebar.tsx": {
+    "; path=/; max-age=":
+      "HTTP cookie attributes for sidebar state persistence, not interface copy",
+  },
   "signage/SlideRenderer.tsx": {
     "Arial, sans-serif": "CSS font-family stack from the validated signage font allow-list",
     "Georgia, serif": "CSS font-family stack from the validated signage font allow-list",
