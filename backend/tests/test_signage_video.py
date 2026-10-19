@@ -115,9 +115,7 @@ async def pass_worker(engine, db_session, worker):
 
 
 async def test_frozen_snapshot_locale_schedules_and_retry(client, db_session, configured):
-    job, channel, template = await new_job(
-        client, db_session, content={"text_language": "fr", "text_fr": "Bonjour", "text_en": "Hello"}
-    )
+    job, channel, template = await new_job(client, db_session, content={"text": "Hello"})
     await slide(client, channel, template, duration=99, starts_at=(datetime.now(UTC) + timedelta(hours=1)).isoformat())
     await slide(client, channel, template, active=False)
     # Later publication and schedule changes cannot affect the recorded manifest.

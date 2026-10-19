@@ -100,17 +100,12 @@ class ChannelOut(ChannelWrite):
 
 class Content(Document):
     organization_type: Literal["producer", "vendor", "sponsor"] | None = None
-    text_language: Literal["nl", "fr", "en"] = "en"
-    text_nl: Text500 | None = None
-    text_fr: Text500 | None = None
-    text_en: Text500 | None = None
-    title_nl: Text120 | None = None
-    title_fr: Text120 | None = None
-    title_en: Text120 | None = None
+    title: Text120 | None = None
+    text: Text500 | None = None
     icon: SignageIconName | None = None
     image: SignageImagePath | None = None
 
-    @field_validator("text_nl", "text_fr", "text_en", "title_nl", "title_fr", "title_en")
+    @field_validator("title", "text")
     @classmethod
     def strip_text(cls, value):
         return value.strip() or None if isinstance(value, str) else value
@@ -134,14 +129,10 @@ class SlideWrite(Document):
                 raise ValueError("schedule timestamps require a timezone")
         if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
             raise ValueError("ends_at must be later than starts_at")
-        if self.kind == "notice" and not getattr(self.content, f"text_{self.content.text_language}"):
-            raise ValueError("notice requires original-language text")
+        if self.kind == "notice" and not self.content.text:
+            raise ValueError("notice requires text")
         if self.kind == "image" and not self.content.image:
             raise ValueError("image slide requires an uploaded image")
-        if any(getattr(self.content, f"title_{lang}") for lang in ("nl", "fr", "en")) and not getattr(
-            self.content, f"title_{self.content.text_language}"
-        ):
-            raise ValueError("title requires original-language text")
         return self
 
 
@@ -188,7 +179,6 @@ class PublicSlide(Document):
     template: DisplayTemplate
     text: str | None = None
     title: str | None = None
-    translations: Content | None = None
     image: str | None = None
     icon: str | None = None
     organization: DisplayOrganization | None = None

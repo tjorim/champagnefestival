@@ -77,12 +77,6 @@ test("captures a frozen playlist, finds the job after navigation, downloads and 
         image: null,
         icon: "info",
         organization: null,
-        translations: {
-          text_language: "en",
-          text_nl: "Welkom",
-          text_fr: "Bienvenue",
-          text_en: "Welcome",
-        },
         template: {
           background: { kind: "color", color: "#00ff00", end_color: "#000000", image: null },
           layers: [

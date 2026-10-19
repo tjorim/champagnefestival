@@ -204,9 +204,7 @@ export default function SignageChannels({
     item.kind === "organizations" && item.content.organization_type
       ? orgLabels[item.content.organization_type]
       : item.kind === "notice"
-        ? item.content[`title_${item.content.text_language}`] ||
-          item.content[`text_${item.content.text_language}`] ||
-          kindLabels.notice
+        ? item.content.title || item.content.text || kindLabels.notice
         : kindLabels[item.kind];
   const compatible = (templates.data ?? []).filter(
     (item) => !draft || missingBindings(item, draft.kind).length === 0,
@@ -563,55 +561,31 @@ export default function SignageChannels({
             ))}
             {draft.kind === "notice" && (
               <>
-                <Field label={m.signage_channels_language()}>
-                  <AdminSelect
-                    value={draft.content.text_language}
-                    onValueChange={(value) =>
+                <Field label={m.signage_editor_title()}>
+                  <AdminInput
+                    maxLength={120}
+                    value={draft.content.title ?? ""}
+                    onChange={(e) =>
                       changeSlide({
                         ...draft,
-                        content: { ...draft.content, text_language: value as "nl" | "fr" | "en" },
+                        content: { ...draft.content, title: e.target.value || null },
                       })
                     }
-                  >
-                    {["nl", "fr", "en"].map((lang) => (
-                      <AdminOption key={lang} value={lang}>
-                        {lang.toUpperCase()}
-                      </AdminOption>
-                    ))}
-                  </AdminSelect>
+                  />
                 </Field>
-                {(["nl", "fr", "en"] as const).map((lang) => (
-                  <div key={lang} className="space-y-2">
-                    <Field label={`${m.signage_editor_title()} (${lang.toUpperCase()})`}>
-                      <AdminInput
-                        maxLength={120}
-                        value={draft.content[`title_${lang}`] ?? ""}
-                        onChange={(e) =>
-                          changeSlide({
-                            ...draft,
-                            content: {
-                              ...draft.content,
-                              [`title_${lang}`]: e.target.value || null,
-                            },
-                          })
-                        }
-                      />
-                    </Field>
-                    <Field label={`${m.signage_editor_text()} (${lang.toUpperCase()})`}>
-                      <AdminTextarea
-                        maxLength={500}
-                        required={lang === draft.content.text_language}
-                        value={draft.content[`text_${lang}`] ?? ""}
-                        onChange={(e) =>
-                          changeSlide({
-                            ...draft,
-                            content: { ...draft.content, [`text_${lang}`]: e.target.value || null },
-                          })
-                        }
-                      />
-                    </Field>
-                  </div>
-                ))}
+                <Field label={m.signage_editor_text()}>
+                  <AdminTextarea
+                    maxLength={500}
+                    required
+                    value={draft.content.text ?? ""}
+                    onChange={(e) =>
+                      changeSlide({
+                        ...draft,
+                        content: { ...draft.content, text: e.target.value || null },
+                      })
+                    }
+                  />
+                </Field>
                 <Field label={m.signage_editor_icon()}>
                   <AdminSelect
                     value={draft.content.icon ?? ""}

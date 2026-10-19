@@ -1,17 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { emptySlide, validSlide, moveSlide, localSchedule } from "./playlistModel";
 describe("playlist editing contracts", () => {
-  it("requires original notice content, bounded duration and ordered schedule", () => {
+  it("requires notice text, bounded duration and ordered schedule", () => {
     const slide = { ...emptySlide("hall", 0), template_id: "template", kind: "notice" as const };
     expect(validSlide(slide)).toBe(false);
-    slide.content.text_nl = "Geen honden";
+    slide.content.text = "No dogs";
     expect(validSlide(slide)).toBe(true);
     slide.duration = 1.5;
     expect(validSlide(slide)).toBe(false);
     slide.duration = 10;
-    slide.content.title_fr = "Attention";
-    expect(validSlide(slide)).toBe(false);
-    slide.content.title_nl = "Opgelet";
+    slide.content.title = "Attention";
     slide.starts_at = "2026-10-16T12:00:00Z";
     slide.ends_at = "2026-10-16T12:00:00Z";
     expect(validSlide(slide)).toBe(false);

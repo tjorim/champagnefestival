@@ -57,7 +57,7 @@ hex values from the API, covered by a scoped dynamic-style lint exception.
 
 In **Content → Screen channels**, choose **Download offline bundle** for a saved,
 active channel. Export while online; the snapshot includes only slides currently
-published and scheduled at export time, with organisations and notice translations
+published and scheduled at export time, with organisations and notice text
 frozen. Unsaved editor drafts are excluded. Keep the tab open until the download
 finishes. An empty channel or unavailable image fails the export rather than
 producing a partial bundle.
@@ -83,7 +83,7 @@ When video export is configured, **Content → Screen channels → Video exports
 lets an admin select an active published channel and choose **Download video
 (MP4)**. It captures the same 1920×1080 PNG renderer, uploads numbered slides,
 then queues one silent 30 fps H.264 video. Up to 60 slides and 600 seconds are
-allowed. Current organisation content, translations and schedule membership
+allowed. Current organisation content and schedule membership
 are frozen at snapshot time; unsaved edits and later schedule changes are
 excluded. The playlist starts at its first slide and holds the final slide for
 its configured duration; it is one cycle, not a recording of the tab.

@@ -43,18 +43,14 @@ function slide(binding: Layer["binding"]): PublicSlide {
   };
 }
 describe("shared signage renderer", () => {
-  it("stacks all filled notice languages and retains legacy fallback", () => {
+  it("renders the notice text exactly as the organiser typed it", () => {
     const content = slide("text");
     content.kind = "notice";
-    content.text = "No dogs";
-    content.translations = { text_nl: "Geen honden", text_fr: "Pas de chiens", text_en: "No dogs" };
-    const { container, rerender } = render(<SlideRenderer slide={content} />);
+    content.text = "Geen honden\nNo dogs";
+    const { container } = render(<SlideRenderer slide={content} />);
     expect(container.querySelector(".site-signage-layer")?.textContent).toBe(
-      "Geen honden\nPas de chiens\nNo dogs",
+      "Geen honden\nNo dogs",
     );
-    content.translations = null;
-    rerender(<SlideRenderer slide={content} />);
-    expect(screen.getByText("No dogs")).toBeInTheDocument();
   });
   it("uses top-left percentage coordinates and clockwise rotation", () => {
     render(<SlideRenderer slide={slide("name")} />);
