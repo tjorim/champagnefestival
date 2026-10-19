@@ -138,7 +138,7 @@ export default function MaintenancePage({ flyerImage }: { flyerImage?: string | 
                 <img
                   src={flyerSrc}
                   alt={m.maintenance_flyer_alt()}
-                  className="mx-auto h-auto max-h-svh w-auto max-w-full rounded-md object-contain"
+                  className="maintenance-page__lightbox-image mx-auto h-auto w-auto max-w-full rounded-md object-contain"
                 />
               </DialogBody>
             </DialogContent>

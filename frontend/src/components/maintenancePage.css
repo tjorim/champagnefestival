@@ -287,4 +287,10 @@
     max-height: clamp(200px, 30vh, 460px);
     border-radius: 0.25rem;
   }
+
+  /* The lightbox is a portaled dialog, so it sits outside .maintenance-page. Leave room
+     for the dialog header and padding so the whole flyer fits the viewport. */
+  .maintenance-page__lightbox-image {
+    max-height: calc(100svh - 10rem);
+  }
 }
