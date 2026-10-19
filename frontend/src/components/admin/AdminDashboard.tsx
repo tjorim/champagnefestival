@@ -409,9 +409,12 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       aria-labelledby="admin-title"
       className={isAuthenticated ? "admin-authenticated" : "py-12"}
     >
-      <h2 id="admin-title" className="sr-only">
-        {m.admin_title()}
-      </h2>
+      {/* The signed-out login form renders its own visible #admin-title heading. */}
+      {isAuthenticated && (
+        <h2 id="admin-title" className="sr-only">
+          {m.admin_title()}
+        </h2>
+      )}
       {!isAuthenticated ? (
         /* ---- Login (OIDC redirect) ---- */
         <AdminLoginForm />
