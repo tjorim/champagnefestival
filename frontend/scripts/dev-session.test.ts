@@ -2,7 +2,7 @@ import { resolve } from "node:path";
 import { runInNewContext } from "node:vm";
 import { describe, expect, it } from "vitest";
 import type { HtmlTagDescriptor } from "vite";
-import { developmentSession } from "./dev-session";
+import { developmentSession, isLoopback } from "./dev-session";
 
 const index = resolve(import.meta.dirname, "../index.html");
 function tags(
@@ -73,5 +73,21 @@ describe("development browser session", () => {
       localStorage: { setItem: (key: string, value: string) => storage.set(key, value) },
     });
     expect([...storage.keys()][0]).toContain("</script><script>");
+  });
+
+  it("only serves loopback clients while the bypass proxy is active", () => {
+    expect(["127.0.0.1", "::1", "::ffff:127.0.0.1"].every(isLoopback)).toBe(true);
+    expect([undefined, "192.168.1.20", "::ffff:192.168.1.20"].some(isLoopback)).toBe(false);
+    const hook = developmentSession({ DEV_AUTH_BYPASS_TOKEN: "test-bypass" }, true).plugin
+      ?.configureServer;
+    if (typeof hook !== "function") throw new Error("Expected the development server hook");
+    let guard: (request: object, response: object, next: () => void) => void = () => {};
+    Reflect.apply(hook, {}, [{ middlewares: { use: (fn: typeof guard) => (guard = fn) } }]);
+    const response = { statusCode: 200, end: (_body: string) => {} };
+    let passed = false;
+    guard({ socket: { remoteAddress: "192.168.1.20" } }, response, () => (passed = true));
+    expect([passed, response.statusCode]).toEqual([false, 403]);
+    guard({ socket: { remoteAddress: "127.0.0.1" } }, response, () => (passed = true));
+    expect(passed).toBe(true);
   });
 });
