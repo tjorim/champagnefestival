@@ -146,10 +146,6 @@ async def reorder(db: AsyncSession, channel_id: str, ids: list[str], actor: str,
     return sorted(slides, key=lambda slide: slide.sort_order)
 
 
-def localized(content: Content, field: str, locale: str):
-    return getattr(content, f"{field}_{locale}") or getattr(content, f"{field}_{content.text_language}")
-
-
 async def playlist(
     db: AsyncSession,
     slug: str,
@@ -265,9 +261,8 @@ async def playlist(
                     kind="notice" if slide.kind == "notice" else "image",
                     duration=slide.duration,
                     template=public_template,
-                    text=localized(content, "text", locale),
-                    title=localized(content, "title", locale),
-                    translations=content,
+                    text=content.text,
+                    title=content.title,
                     image=content.image,
                     icon=content.icon,
                 )

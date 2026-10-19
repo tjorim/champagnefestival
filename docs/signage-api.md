@@ -28,8 +28,8 @@ snapshot contract. Do not claim cycle-boundary switching is implemented here.
   `Cache-Control: no-store`.
 - `GET /api/signage/{slug}/playlist?locale=nl|fr|en` (default `nl`) →
   `{revision, epoch, slides}`. Each slide has a stable `id`, `kind`, integer
-  `duration` in seconds, a `{background, layers}` template, optional localised
-  `text`/`title`, original/translated `translations`, `image`, `icon`, and an
+  `duration` in seconds, a `{background, layers}` template, optional
+  `text`/`title`, `image`, `icon`, and an
   optional `organization: {name, logo, description, sponsor, sponsor_tier}`.
   No channel/edition configuration, contact, stand, room, seating, registration,
   audit or other admin fields are returned. The response models explicitly
@@ -46,10 +46,10 @@ alphabetically, vendors alphabetically, sponsors by main/partner/supporter/untie
 then edition lineup order. Producers/sponsors come from the edition lineup;
 vendors come from areas assigned to the edition's active events, deduplicated
 across layouts. Stand geometry and labels are never projected. Text and
-organisation descriptions fall back to their original language. Manual text is
-limited to 500 characters per language, titles to 120. The original language
-defaults to `en`, as with other translated content. The translations are also
-returned so the player can stack languages without another fetch.
+organisation descriptions fall back to their original language. Notice text is
+typed once by the organiser and shown exactly as written (any languages are typed
+into the same box); it is not translated or selected by `locale`. Text is limited
+to 500 characters, titles to 120.
 
 ## Administrative writes (require_admin)
 
@@ -63,7 +63,7 @@ Channels accept `{slug, name, edition_id, active}` (default inactive). Templates
 accept `{name, background, layers}`. Slides accept `{channel_id, template_id,
 sort_order, kind, duration, active, starts_at, ends_at, content}`. Default duration
 is 10 seconds, range 1–3600; slides default inactive. `kind` is `organizations`,
-`notice` or `image`. Notices require original-language text; images require an
+`notice` or `image`. Notices require text (the title is optional); images require an
 uploaded image. UTC offsets are mandatory on schedule timestamps. Unknown fields,
 invalid schedules, layer documents and text lengths return 422.
 
@@ -123,7 +123,7 @@ are private/no-store. No worker credential, worker ID or artifact URL is exposed
 - `POST /api/signage/video-exports`, with `Idempotency-Key` (16–128 ASCII
   letters/digits/underscore/hyphen) and `{channel_id, locale}` (locale defaults
   to `nl`), records the active channel's current published playlist, revision,
-  epoch and expanded organisation/translation/schedule projection. It returns
+  epoch and expanded organisation/schedule projection. It returns
   job metadata and `playlist` for capture. Empty/over-limit cycles fail before
   capture; drafts and later channel edits never enter this snapshot.
 - `PUT /api/signage/video-exports/{id}/slides/{index}` uploads raw `image/png`

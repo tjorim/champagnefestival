@@ -62,9 +62,8 @@ test("edits channels and playlists, previews drafts and supports accessible reor
   await page.getByRole("button", { name: "Add slide", exact: true }).click();
   await select("Type", "Notice");
   await select("Template", "Playlist template");
-  await page.getByLabel("Text (NL)", { exact: true }).fill("Geen honden");
-  await page.getByLabel("Text (EN)", { exact: true }).fill("No dogs allowed");
-  await page.getByLabel("Title (NL)", { exact: true }).fill("Opgelet");
+  await page.getByLabel("Text", { exact: true }).fill("Geen honden / No dogs allowed");
+  await page.getByLabel("Title", { exact: true }).fill("Opgelet");
   const draftResponse = page.waitForResponse(
     (response) =>
       response.url().includes("/api/signage/preview") && response.request().method() === "POST",
@@ -73,10 +72,10 @@ test("edits channels and playlists, previews drafts and supports accessible reor
   const projected = await (await draftResponse).json();
   expect(
     projected.slides.some(
-      (slide: { kind: string; translations?: { text_nl: string; text_en: string } }) =>
+      (slide: { kind: string; title?: string; text?: string }) =>
         slide.kind === "notice" &&
-        slide.translations?.text_nl === "Geen honden" &&
-        slide.translations?.text_en === "No dogs allowed",
+        slide.title === "Opgelet" &&
+        slide.text === "Geen honden / No dogs allowed",
     ),
   ).toBe(true);
   await expect(

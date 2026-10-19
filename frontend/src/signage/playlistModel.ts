@@ -11,13 +11,8 @@ export interface Channel extends ChannelDraft {
   revision: number;
 }
 export interface SlideContent {
-  text_language: "nl" | "fr" | "en";
-  text_nl: string | null;
-  text_fr: string | null;
-  text_en: string | null;
-  title_nl: string | null;
-  title_fr: string | null;
-  title_en: string | null;
+  title: string | null;
+  text: string | null;
   icon: string | null;
   image: string | null;
   organization_type?: "producer" | "vendor" | "sponsor" | null;
@@ -47,13 +42,8 @@ export function emptySlide(channel_id: string, sort_order: number): SlideDraft {
     starts_at: null,
     ends_at: null,
     content: {
-      text_language: "nl",
-      text_nl: null,
-      text_fr: null,
-      text_en: null,
-      title_nl: null,
-      title_fr: null,
-      title_en: null,
+      title: null,
+      text: null,
       icon: null,
       image: null,
       organization_type: "producer",
@@ -72,9 +62,7 @@ export function validSlide(slide: SlideDraft): boolean {
     (!slide.starts_at ||
       !slide.ends_at ||
       Date.parse(slide.ends_at) > Date.parse(slide.starts_at)) &&
-    (slide.kind !== "notice" || Boolean(content[`text_${content.text_language}`]?.trim())) &&
-    (!["nl", "fr", "en"].some((lang) => content[`title_${lang as "nl" | "fr" | "en"}`]?.trim()) ||
-      Boolean(content[`title_${content.text_language}`]?.trim())) &&
+    (slide.kind !== "notice" || Boolean(content.text?.trim())) &&
     (slide.kind !== "image" || Boolean(content.image))
   );
 }

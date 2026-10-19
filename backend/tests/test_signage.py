@@ -75,7 +75,7 @@ async def slide(client, channel, template, **kwargs):
         "template_id": template["id"],
         "kind": "notice",
         "active": True,
-        "content": {"text_en": "Hello"},
+        "content": {"text": "Hello"},
         **kwargs,
     }
     result = await client.post("/api/signage/slides", json=body)
@@ -92,7 +92,7 @@ async def test_public_playlist_privacy_order_translation_and_cache(client, db_se
         channel,
         template,
         sort_order=1,
-        content={"text_language": "fr", "text_fr": "Bonjour", "text_nl": "Hallo"},
+        content={"title": "Hi", "text": "Bonjour"},
     )
     now = datetime.now(UTC)
     await slide(client, channel, template, active=False)
@@ -109,9 +109,11 @@ async def test_public_playlist_privacy_order_translation_and_cache(client, db_se
         "Partner",
     ]
     assert data["slides"][-1]["text"] == "Bonjour"
+    assert data["slides"][-1]["title"] == "Hi"
     assert data["slides"][3]["organization"]["sponsor"] is True
     assert (await client.get("/api/signage/hall/playlist?locale=en")).json() == data
-    assert (await client.get("/api/signage/hall/playlist?locale=nl")).json()["slides"][-1]["text"] == "Hallo"
+    # Notice text is typed once by the organiser and is not translated per locale.
+    assert (await client.get("/api/signage/hall/playlist?locale=nl")).json()["slides"][-1]["text"] == "Bonjour"
     forbidden = {
         "stand",
         "stands",
@@ -221,7 +223,7 @@ async def test_assets_and_admin_auth(client, db_session, monkeypatch, tmp_path):
     repeated = await client.post("/api/signage/assets", files={"file": ("image.png", image.getvalue(), "image/png")})
     assert repeated.status_code == 201 and repeated.json()["url"] != url
     channel, template, _ = await setup(client, db_session)
-    await slide(client, channel, template, kind="image", content={"image": url, "text_en": "Caption"})
+    await slide(client, channel, template, kind="image", content={"image": url, "text": "Caption"})
     shown = (await client.get("/api/signage/hall/playlist")).json()["slides"][0]
     assert shown["image"] == url and shown["text"] == "Caption"
     missing = "/uploads/signage/" + "0" * 32 + "-" + "0" * 64 + ".jpg"

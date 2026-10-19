@@ -5,7 +5,7 @@ into the [frontend UI guide](frontend-ui.md) on 2026-10-07. Completion records
 and original findings remain below; detailed migration history remains in Git.
 
 
-Updated 2026-10-17. This is the current scope, dependency and preferred-order
+Updated 2026-10-18. This is the current scope, dependency and preferred-order
 record for the August 2026 audit and communications roadmap. GitHub issues
 hold discussion and workflow state; decision documents hold current contracts.
 
@@ -46,6 +46,12 @@ For #953:
 - [ ] Localised public navigation enabled after verification.
 - [ ] Privacy/account copy published for the implemented session.
 
+For #1260 (venue rehearsal; see [signage setup](signage-setup.md#rehearsal-required-before-event-use)):
+
+- [x] Repository implementation of all sub-issues (#1261–#1265) and the separate MP4 follow-up (#1349).
+- [ ] Two-laptop rehearsal with one deliberately wrong clock: slides match within about one second, a mid-cycle publish switches at the cycle boundary.
+- [ ] Offline reload, wake lock beyond the OS sleep timeout and reconnect verified on venue hardware.
+
 ## Dependencies and accepted boundaries
 
 - #1195 adds optional self-hosted description drafts to the admin and manager editors. Backend callers now support mounted app-scoped engine keys and bounded transport without automatic retries; authentication activation must follow both caller releases. Repository behavior is implemented; production activation, the French decision and shared-worker contention remain gated on `tjorim/apps#263`. See [configuration and API contract](organization-description-translation.md).
@@ -70,6 +76,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1260](https://github.com/tjorim/champagnefestival/issues/1260) | Repository implementation complete; venue rehearsal retains a separate gate | 2026-10-18 | #1261–#1265 (PRs #1270, #1271, #1272, #1301, #1350) and #1349 (PR #1352); [signage epic summary](#signage-epic-1260) | Public `/signage/{channel}` player synced to the server clock, wake lock, offline worker cache, layered template editor, channel/playlist admin and offline/PNG/MP4 exports. Urgent interrupts and video/audio slides remain out of scope. |
 | [#1265](https://github.com/tjorim/champagnefestival/issues/1265) | Completed | 2026-10-18 | #1265; archive, capture-failure and offline Chromium export tests | Published-channel PNG snapshots and local-folder HTML/JSON bundles reuse the renderer and epoch clock; translated admin actions and setup/retry guidance. |
 | [#1264](https://github.com/tjorim/champagnefestival/issues/1264) | Completed | 2026-10-17 | #1264; draft-projection, renderer/model and authenticated playlist/axe tests | Content → Screen channels: channel links, typed organisation blocks, translated notices, uploads, schedules, drag/keyboard ordering and shared-renderer draft playback. |
 | [#1263](https://github.com/tjorim/champagnefestival/issues/1263) | Completed | 2026-10-16 | #1263; shared renderer, layer-model and authenticated editor tests | Layered template editor with uploads, real-data previews, accessible geometry controls, history, translated UI and service-enforced required bindings; see [layer contract](signage-layer-contract.md). |
@@ -145,6 +152,28 @@ The original findings, specifications and implementation history remain in
 Git at `88396baf3275ae40cdd907239a0df6a04baed137`. Consult them for historical
 context, not as a checklist of current or future obligations. Current source contracts are indexed in [docs/README.md](README.md).
 
+## Signage epic (#1260)
+
+Repository implementation complete 2026-10-18; the venue rehearsal remains open.
+Sub-issues #1261–#1265 are closed, as is the separate MP4 export #1349 (which does
+not add video slides or audio). Decisions on the epic's open questions:
+
+- **Urgent interrupts:** out of scope. Screens poll every 30 seconds and apply a
+  new revision at the next cycle boundary (#1264).
+- **Video slides:** not in scope for now (no clip slide type; may be revisited); #1349 exports a frozen one-cycle MP4 only.
+- **Notice text:** one free title and one free text box, no `_nl`/`_fr`/`_en` fields.
+  Organisers type any languages they want into the box and they render as typed.
+  This replaced the earlier per-language stacking before the first release.
+
+Acceptance criteria mapping:
+
+- [x] Producers, vendors and sponsors appear without re-entry, sponsors with the translated badge; notices are added and scheduled in Content → Screen channels (#1264).
+- [x] Template design (background, bound placeholders, stickers) with a draft preview through the shared renderer before publication (#1263, #1264).
+- [x] Last known playlist keeps looping offline; wake lock requested behind **Start screen** and re-requested when the tab returns (#1262, implementation).
+- [x] Frontend signage unit tests (26) pass; backend and E2E suites passed in the sub-issue deliveries recorded above.
+- [ ] Two laptops show the same slide within about one second with one wrong clock, and screens stay awake past the OS sleep timeout. Implemented (offset from lowest-round-trip samples, tested with a wrong device clock) but still needs the physical rehearsal in [signage setup](signage-setup.md#rehearsal-required-before-event-use).
+
+
 ## Signage player follow-up (#1262)
 
 Implementation status: 2026-10-15; venue acceptance remains open.
@@ -185,8 +214,8 @@ The authenticated, read-only preview projects drafts with the same organisation
 expansion and schedule rules as the public API, including inactive channels. It
 plays through `SlideRenderer`, reports expanded duration/count, and respects slide
 active flags and the selected preview instant. Local schedule inputs become
-timezone-aware API timestamps. All filled notice languages render stacked in the
-shared renderer. Public screens poll every 30 seconds, with a five-second API cache,
+timezone-aware API timestamps. Notices are a single free title and text, typed as the organiser wants them shown
+(changed 2026-10-18; the earlier per-language stacking was dropped). Public screens poll every 30 seconds, with a five-second API cache,
 and apply content revisions at a cycle boundary. Urgent interruptions remain out
 of scope. #1265 reuses this published channel/playlist contract for frozen PNG and offline exports; #1262's venue
 hardware rehearsal remains a separate acceptance gate.

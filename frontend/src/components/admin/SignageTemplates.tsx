@@ -92,13 +92,8 @@ interface Notice {
   id: string;
   kind: string;
   content: {
-    text_language: "nl" | "fr" | "en";
-    text_nl: string | null;
-    text_fr: string | null;
-    text_en: string | null;
-    title_nl: string | null;
-    title_fr: string | null;
-    title_en: string | null;
+    title: string | null;
+    text: string | null;
     icon: string | null;
     image: string | null;
   };
@@ -298,8 +293,8 @@ export default function SignageTemplates({
             (org.description_language ? org[`description_${org.description_language}`] : null),
         }
       : null,
-    title: content?.[`title_${locale}`] || content?.[`title_${content.text_language}`] || null,
-    text: content?.[`text_${locale}`] || content?.[`text_${content.text_language}`] || null,
+    title: content?.title || null,
+    text: content?.text || null,
     icon: content?.icon ?? null,
     image: kind === "image" ? (content?.image ?? null) : null,
   };
@@ -462,9 +457,7 @@ export default function SignageTemplates({
           Object.fromEntries(
             samples.map((item) => [
               String(item.id),
-              "name" in item
-                ? item.name
-                : item.content[`title_${item.content.text_language}`] || item.id,
+              "name" in item ? item.name : item.content.title || item.id,
             ]),
           ),
         )
