@@ -171,9 +171,13 @@ at 1065 → 374 KiB and its complete static JavaScript dependency graph at
 2201 → 1481 KiB. Total JavaScript grew from 2629 to 2653 KiB due to splitting
 and shared-module overhead. These are uncompressed sizes from the build
 manifest, excluding dynamic sections from the initial graph. CI retains a
-450 KiB admin ceiling, a 2700 KiB total ceiling and the existing public entry
-ceiling. The authenticated lazy-section tests check demand loading, navigation
-while loading, and recovery after a failed download.
+450 KiB admin ceiling and the existing public entry ceiling. PR #1356 raised
+the total ceiling from 2700 to 2750 KiB for guarded admin editor dialogs: a
+same-dependency comparison against parent `710d002d` measured 2698.3 → 2702.8 KiB
+(+4.6 KiB), with the public entry and admin chunks essentially unchanged at
+676.6 and 375.5 KiB respectively. No dependencies were added. The authenticated
+lazy-section tests check demand loading, navigation while loading, and recovery
+after a failed download.
 
 ## Specialised renderers and verification
 
