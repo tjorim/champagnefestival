@@ -569,6 +569,12 @@ repeating the same payload preserves its content but creates another audit entry
 and advances affected channel revisions. The editor disables writes while a
 request is pending. No write is advertised as automatically retryable.
 
+Layer drag/arrow ordering, row visibility/locking, direct layer additions and
+**Add missing placeholders** only change the local draft and its undo history.
+They make no API write until the existing explicit template save; reordering does
+not call the channel playlist reorder endpoint. The save and upload retry decisions
+above therefore also cover the revised layer panel (2026-10-19).
+
 ### Channels and playlist editor (#1264)
 
 Channel and slide creation, replacement, deletion, reorder and uploads use the
@@ -640,3 +646,51 @@ change the existing retry-safety decisions for those operations.
   reconciler contention, private download, expiry, deletion and revoked access
   are exercised in `backend/tests/test_signage_video.py`; browser capture and
   rediscovery are in `frontend/e2e/signage-video.authenticated.spec.ts`.
+
+### Signage editor dialogs (2026-10-19)
+
+Channel, slide and template create/edit dialogs retain the existing endpoint and
+retry decisions above. Each Save makes one POST (new) or PUT (existing), with
+no automatic retry; pending saves block dismissal and additional submission.
+Cancel, Escape and backdrop dismissal make no write request and ask before
+discarding changed fields. Artwork uploads remain immediate, separate writes;
+cancelling an editor does not remove an already uploaded asset. Browser coverage
+checks create/edit requests, closing after save and discarding unsaved edits.
+
+### Announcement and composer editor dialogs (2026-10-19)
+
+The announcement and composer dialogs keep the POST/PUT retry decisions above:
+creates and updates have no idempotency key and are never retried automatically.
+Save disables submission, field editing and dismissal until the request completes.
+A failure keeps the draft and a translated error in the dialog; a successful
+response closes it and refreshes the list. Cancel, Escape, close and backdrop
+dismissal make no write request and ask before discarding dirty fields. The
+editor snapshots its target and initial values, so a list refetch cannot silently
+change them. Publishing, reordering, deletion and confirmed composer scheduling
+retain their existing endpoint semantics. Targeted tests cover correct create
+and update requests, overlapping-submit prevention, pending dismissal, failed
+saves without retries and draft preservation during refetch. Browser tests cover
+guarded dismissal, focus return, translated fields and desktop/mobile layouts.
+
+### Optional admin volunteer details (2026-10-19)
+
+`POST /api/volunteers` (including MCP `create_volunteer`) now permits omitted/null
+identity numbers and omitted/empty help periods, matching the People volunteer
+role flow. It still creates a new person with a generated ID and audit entry, so
+creates remain non-optimistic and must not be automatically retried. `PUT` and MCP
+updates retain their partial semantics: omitted identity fields are preserved;
+explicit null/blank identity values clear them (MCP uses blank strings to clear).
+Omitted/null periods are preserved; `help_periods: []` explicitly removes all
+periods. The full-list replacement converges sequentially, but lacks a version
+precondition and writes an audit entry; client retry remains disabled and callers
+must reconcile after uncertain responses. Clearing periods does not retire the
+volunteer role or erase its role history. REST/MCP regressions cover adding, preserving
+and clearing optional details. Self-service identity contracts are unchanged.
+
+### Shared shadcn controls (2026-10-19, PR #1356)
+
+Sidebar navigation, toggle-group filters, loading skeletons, empty-state layout
+and pagination change presentation, local selection and read queries. Their
+migration adds no API write or automatic retry. Existing empty-state actions
+keep their domain handlers, and all create/update/delete operations keep their
+existing pending guards and retry decisions.

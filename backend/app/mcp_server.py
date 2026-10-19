@@ -1940,15 +1940,16 @@ class ChampagneFestivalMcpBackend:
     async def create_volunteer(
         self,
         name: str,
-        national_register_number: str,
-        eid_document_number: str,
-        help_periods: list[dict],
+        national_register_number: str | None = None,
+        eid_document_number: str | None = None,
+        help_periods: list[dict] | None = None,
         address: str = "",
     ) -> dict:
         """Create a volunteer (a ``Person`` with the ``volunteer`` role).
 
         ``help_periods`` is a list of ``{"first_help_day": "YYYY-MM-DD", "last_help_day":
-        "YYYY-MM-DD" | None, "notes": str}`` and must contain at least one entry.
+        "YYYY-MM-DD" | None, "notes": str}``. Identity numbers and help periods
+        are optional and can be added later; omitted periods default to an empty list.
         ``notes`` is a free-text, admin-only rough schedule/notepad for that period
         (e.g. "Fri: bar, Sat: serving") — there is no structured role/task model.
         Requires the ``admin`` role.
@@ -1991,7 +1992,7 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update a volunteer; omitted fields are left unchanged.
 
-        Passing ``help_periods`` replaces the full set of help periods.
+        Passing ``help_periods`` replaces the full set of help periods; ``[]`` clears them.
         ``oidc_subject`` is the self-service identity link (#1006) — normally
         established by the volunteer themselves; set it here only to hand-link
         a volunteer who can't or won't complete self-registration themselves.

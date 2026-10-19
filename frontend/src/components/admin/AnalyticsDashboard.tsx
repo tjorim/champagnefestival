@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { DownloadIcon, FileSpreadsheetIcon, NotebookTextIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
@@ -365,7 +366,7 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
           </Spinner>
         </div>
       ) : editions.length === 0 ? (
-        <p className="text-subtle">{m.admin_analytics_no_data()}</p>
+        <AdminEmptyState>{m.admin_analytics_no_data()}</AdminEmptyState>
       ) : showTable ? (
         <Table>
           <caption className="sr-only">{m.admin_analytics_table_caption()}</caption>

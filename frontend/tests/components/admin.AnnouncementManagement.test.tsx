@@ -59,6 +59,7 @@ describe("AnnouncementManagement", () => {
     });
     await screen.findByText("Doors open at six");
 
+    fireEvent.click(screen.getByRole("button", { name: "New announcement" }));
     fireEvent.change(screen.getByLabelText(/Text.*NL/i), { target: { value: "Deuren open" } });
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
 

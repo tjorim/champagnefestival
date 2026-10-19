@@ -39,6 +39,9 @@ test("edits channels and playlists, previews drafts and supports accessible reor
     await page.getByRole("combobox", { name: label, exact: true }).click();
     await page.getByRole("option", { name: option, exact: true }).click();
   }
+  await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "New channel", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "New channel", exact: true })).toBeVisible();
   await page.getByLabel("Name", { exact: true }).fill("Hall five");
   await page.getByLabel("Public link name").fill("hall-five");
   await page.getByRole("combobox", { name: "Edition", exact: true }).click();
@@ -49,6 +52,23 @@ test("edits channels and playlists, previews drafts and supports accessible reor
     "href",
     "/signage/hall-five",
   );
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit Hall five", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "Edit Hall five", exact: true })).toBeVisible();
+  await page.getByLabel("Name", { exact: true }).fill("Unsaved name");
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page
+    .getByRole("alertdialog", { name: "Discard changes?", exact: true })
+    .getByRole("button", { name: "Discard", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Edit Hall five", exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Hall five");
+  const update = page.waitForRequest(
+    (request) => request.url().includes("/api/signage/channels/") && request.method() === "PUT",
+  );
+  await page.getByRole("button", { name: "Save channel", exact: true }).click();
+  await update;
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   for (const group of ["Producer", "Vendor", "Sponsor"]) {
     await page.getByRole("button", { name: "Add slide", exact: true }).click();
     await select("Organisation group", group);
@@ -111,10 +131,14 @@ test("edits channels and playlists, previews drafts and supports accessible reor
       (slide: { kind: string }) => slide.kind === "notice",
     ),
   ).toBe(false);
-  const results = await new AxeBuilder({ page }).include("section#admin").analyze();
+  const results = await new AxeBuilder({ page }).include('[data-slot="dialog-content"]').analyze();
   expect(results.violations).toEqual([]);
   // Reopen the saved row: unsaved schedule and active edits never overwrite it.
-  await page.getByRole("button", { name: "Cancel slide edits", exact: true }).click();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page
+    .getByRole("alertdialog", { name: "Discard changes?", exact: true })
+    .getByRole("button", { name: "Discard", exact: true })
+    .click();
   await notice.click();
   await expect(page.getByLabel("Starts at (local time)")).toHaveValue("");
   await expect(page.getByRole("checkbox", { name: "Slide active", exact: true })).toBeChecked();

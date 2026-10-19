@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminField,
   AdminLabel,
@@ -411,7 +412,7 @@ export default function BookingEditor({
               </Alert>
             )}
             {ledgerQuery.data && ledgerQuery.data.length === 0 && (
-              <p className="text-sm text-subtle">{m.admin_payment_history_empty()}</p>
+              <AdminEmptyState>{m.admin_payment_history_empty()}</AdminEmptyState>
             )}
             {ledgerQuery.data && ledgerQuery.data.length > 0 && (
               <PresentationList flush className="mb-4">

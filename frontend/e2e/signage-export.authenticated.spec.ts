@@ -62,6 +62,9 @@ test("exports rendered PNGs and plays an extracted bundle offline using the syst
   const content = page.getByRole("button", { name: "Content", exact: true });
   if ((await content.getAttribute("aria-expanded")) !== "true") await content.click();
   await page.getByRole("button", { name: "Screen channels", exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "New channel", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "New channel", exact: true })).toBeVisible();
   await page.getByLabel("Name", { exact: true }).fill("Export test");
   await page.getByLabel("Public link name").fill("export-test");
   await page.getByRole("combobox", { name: "Edition", exact: true }).click();

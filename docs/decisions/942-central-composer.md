@@ -70,3 +70,13 @@ error handling and accessibility. Shared delivery rules are in the
 
 Consolidated 2026-09-08. Original proposals and implementation history remain
 in Git at `88396baf3275ae40cdd907239a0df6a04baed137`; they are not current requirements.
+
+## Editor interaction update (2026-10-19)
+
+The announcement editor and message-draft composer now open from explicit New
+and Edit actions in shared admin dialogs. The lists, publish/send actions and
+results stay on the section page. Dialogs protect unsaved edits on dismissal,
+block dismissal while saving, show translated save failures in place and close
+after success. Form baselines are captured when opening, preserving local edits
+while composer polling refreshes the list. Delivery and retry semantics above
+are unchanged.

@@ -209,3 +209,72 @@ async def test_volunteers_support_limit_and_page(client):
     all_results = [r for r in all_response.json()["items"] if r["id"] in created_ids]
     assert all_results[:2] == first_page_results
     assert all_results[2:3] == second_page_results
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "details",
+    [
+        {},
+        {"national_register_number": None, "eid_document_number": None, "help_periods": []},
+        {"national_register_number": "  ", "eid_document_number": ""},
+    ],
+)
+async def test_volunteer_creation_matches_people_with_volunteer_role(client, details):
+    response = await client.post("/api/volunteers", json={"name": "  Name only  ", **details}, headers=ADMIN_HEADERS)
+    assert response.status_code == 201
+    volunteer = response.json()
+    assert volunteer["name"] == "Name only"
+    assert volunteer["national_register_number"] is None
+    assert volunteer["eid_document_number"] is None
+    assert volunteer["help_periods"] == []
+    person = await client.get(f"/api/people/{volunteer['id']}", headers=ADMIN_HEADERS)
+    assert person.status_code == 200
+    assert "volunteer" in person.json()["roles"]
+    assert "volunteer" in person.json()["role_history"]
+    listing = await client.get("/api/volunteers", params={"active": True}, headers=ADMIN_HEADERS)
+    assert volunteer["id"] in {row["id"] for row in listing.json()["items"]}
+
+
+@pytest.mark.anyio
+async def test_volunteer_details_can_be_added_later_preserved_and_removed(client):
+    created = await client.post("/api/volunteers", json={"name": "Start small"}, headers=ADMIN_HEADERS)
+    assert created.status_code == 201
+    path = f"/api/volunteers/{created.json()['id']}"
+    details = {
+        "national_register_number": "91.01.01-123.45",
+        "eid_document_number": "BEX123456",
+        "help_periods": [{"first_help_day": "2026-10-19", "last_help_day": None}],
+    }
+    added = await client.put(path, json=details, headers=ADMIN_HEADERS)
+    assert added.status_code == 200
+    assert added.json()["national_register_number"] == "91010112345"
+    assert len(added.json()["help_periods"]) == 1
+    preserved = await client.put(path, json={"name": "Renamed", "help_periods": None}, headers=ADMIN_HEADERS)
+    assert preserved.status_code == 200
+    assert preserved.json()["help_periods"] == added.json()["help_periods"]
+    assert preserved.json()["eid_document_number"] == added.json()["eid_document_number"]
+    cleared = await client.put(
+        path,
+        json={"national_register_number": "", "eid_document_number": None, "help_periods": []},
+        headers=ADMIN_HEADERS,
+    )
+    assert cleared.status_code == 200
+    assert cleared.json()["help_periods"] == []
+    assert cleared.json()["national_register_number"] is None
+    assert cleared.json()["eid_document_number"] is None
+    assert cleared.json()["role_history"] == created.json()["role_history"]
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {"name": "  "},
+        {"name": "Incomplete", "help_periods": [{}]},
+        {"name": "Null periods", "help_periods": None},
+    ],
+)
+async def test_optional_volunteer_details_do_not_allow_invalid_entries(client, payload):
+    response = await client.post("/api/volunteers", json=payload, headers=ADMIN_HEADERS)
+    assert response.status_code == 422

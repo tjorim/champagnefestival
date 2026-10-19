@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import type { ColumnDef, RowData } from "@tanstack/react-table";
@@ -388,7 +389,9 @@ function ServerAdminDataTable<T extends RowData>({
           {result.isError && <Button onClick={() => result.refetch()}>{labels.retry}</Button>}
         </div>
       )}
-      {result.data && result.data.items.length === 0 && <p>{labels.empty}</p>}
+      {result.data && result.data.items.length === 0 && (
+        <AdminEmptyState>{labels.empty}</AdminEmptyState>
+      )}
       <div className="hidden md:block">
         <AdminControlledTable
           table={table}

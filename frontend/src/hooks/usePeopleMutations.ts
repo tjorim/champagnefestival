@@ -278,8 +278,8 @@ export function usePeopleMutations({
           body: JSON.stringify({
             name: data.name,
             address: data.address,
-            national_register_number: data.nationalRegisterNumber,
-            eid_document_number: data.eidDocumentNumber,
+            national_register_number: data.nationalRegisterNumber || null,
+            eid_document_number: data.eidDocumentNumber || null,
             help_periods: data.helpPeriods.map((period) => ({
               first_help_day: period.firstHelpDay,
               last_help_day: period.lastHelpDay,
@@ -304,8 +304,8 @@ export function usePeopleMutations({
             body: JSON.stringify({
               name: data.name,
               address: data.address,
-              national_register_number: data.nationalRegisterNumber,
-              eid_document_number: data.eidDocumentNumber,
+              national_register_number: data.nationalRegisterNumber || null,
+              eid_document_number: data.eidDocumentNumber || null,
               help_periods: data.helpPeriods.map((period) => ({
                 first_help_day: period.firstHelpDay,
                 last_help_day: period.lastHelpDay,

@@ -111,7 +111,11 @@ jobs:
           # adds shared/module overhead: total 2629 -> 2653 KiB. No new dependencies.
           # Lower the admin ceiling and allow modest headroom for chunk overhead;
           # retain the public entry ceiling.
-          TOTAL_MAX_KB=2700
+          # Total raised 2700 -> 2750 for PR #1356's guarded admin editor
+          # dialogs. Same-dependency builds against parent 710d002d: total
+          # 2698 -> 2702 KiB (+4.6 KiB); index stays 676 and admin stays 375.
+          # No new dependencies; retain the public entry and admin ceilings.
+          TOTAL_MAX_KB=2750
           INDEX_MAX_KB=1050
           ADMIN_MAX_KB=450
 

@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
@@ -10,6 +11,7 @@ import {
   TriangleAlertIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Icon } from "@/components/Icon";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -171,108 +173,109 @@ export default function EditionCard({
     }
   }
 
-  const collapseId = `edition-collapse-${edition.id}`;
-
   return (
-    <Card tone="secondary" className="mb-2">
-      <CardHeader className="flex justify-between items-center gap-2 flex-wrap py-2">
-        <Button
-          variant="link"
-          className="text-highlight no-underline p-0 text-left font-semibold"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          aria-controls={collapseId}
-        >
-          <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} />
-          {edition.id}
-        </Button>
-        <span className="flex items-center gap-2 flex-wrap">
-          <Badge variant={typeDisplay.bg}>{typeDisplay.label}</Badge>
-          {startDate && endDate ? (
-            <span className="text-subtle text-sm">
-              {startDate.toLocaleDateString()}
-              {startDate.getTime() !== endDate.getTime()
-                ? ` – ${endDate.toLocaleDateString()}`
-                : ""}
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card tone="secondary" className="mb-2">
+        <CardHeader className="flex justify-between items-center gap-2 flex-wrap py-2">
+          <CollapsibleTrigger
+            render={
+              <Button
+                variant="link"
+                className="text-highlight no-underline p-0 text-left font-semibold"
+              />
+            }
+          >
+            <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} />
+            {edition.id}
+          </CollapsibleTrigger>
+          <span className="flex items-center gap-2 flex-wrap">
+            <Badge variant={typeDisplay.bg}>{typeDisplay.label}</Badge>
+            {startDate && endDate ? (
+              <span className="text-subtle text-sm">
+                {startDate.toLocaleDateString()}
+                {startDate.getTime() !== endDate.getTime()
+                  ? ` – ${endDate.toLocaleDateString()}`
+                  : ""}
+              </span>
+            ) : (
+              <span className="text-subtle text-sm">
+                {m.admin_edition_dates_defined_by_events()}
+              </span>
+            )}
+          </span>
+          <Badge variant={edition.active ? "success" : "secondary"}>
+            {edition.active ? m.admin_content_edition_active() : m.admin_content_edition_inactive()}
+          </Badge>
+          <Badge variant="secondary">
+            {sortedEvents.length} {m.admin_edition_events()}
+          </Badge>
+          {(edition.producers?.length ?? 0) > 0 && (
+            <Badge variant="secondary">
+              {edition.producers!.length} {m.admin_edition_producers()}
+            </Badge>
+          )}
+          {(edition.sponsors?.length ?? 0) > 0 && (
+            <Badge variant="secondary">
+              {edition.sponsors!.length} {m.admin_edition_sponsors()}
+            </Badge>
+          )}
+          {eventsQuery.isFetching && (
+            <Spinner label={m.admin_loading_events()} size="sm" variant="warning" />
+          )}
+          {saveError && (
+            <span className="text-destructive text-sm">
+              <Icon icon={TriangleAlertIcon} className="me-1" />
+              {saveError}
+            </span>
+          )}
+          {deleteError && (
+            <span className="text-destructive text-sm">
+              <Icon icon={TriangleAlertIcon} className="me-1" />
+              {deleteError}
+            </span>
+          )}
+          {confirmDelete ? (
+            <span className="flex items-center gap-1">
+              <Button size="sm" variant="danger" onClick={handleDelete} disabled={deleting}>
+                {deleting && <Spinner size="sm" role="status" aria-hidden="true" />}
+                {m.admin_action_confirm()}
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
+                {m.admin_action_cancel()}
+              </Button>
             </span>
           ) : (
-            <span className="text-subtle text-sm">{m.admin_edition_dates_defined_by_events()}</span>
+            <span className="flex gap-1">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setPollOptionsModalOpen(true)}
+                aria-label={m.admin_poll_modal_title({ edition: edition.id })}
+                title={m.admin_poll_modal_title({ edition: edition.id })}
+              >
+                <Icon icon={CoffeeIcon} />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditionModalOpen(true)}
+                aria-label={`${m.admin_edit()} ${edition.id}`}
+              >
+                <Icon icon={PencilIcon} />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline-danger"
+                onClick={() => setConfirmDelete(true)}
+                aria-label={`${m.admin_delete()} ${edition.id}`}
+              >
+                <Icon icon={TrashIcon} />
+              </Button>
+            </span>
           )}
-        </span>
-        <Badge variant={edition.active ? "success" : "secondary"}>
-          {edition.active ? m.admin_content_edition_active() : m.admin_content_edition_inactive()}
-        </Badge>
-        <Badge variant="secondary">
-          {sortedEvents.length} {m.admin_edition_events()}
-        </Badge>
-        {(edition.producers?.length ?? 0) > 0 && (
-          <Badge variant="secondary">
-            {edition.producers!.length} {m.admin_edition_producers()}
-          </Badge>
-        )}
-        {(edition.sponsors?.length ?? 0) > 0 && (
-          <Badge variant="secondary">
-            {edition.sponsors!.length} {m.admin_edition_sponsors()}
-          </Badge>
-        )}
-        {eventsQuery.isFetching && (
-          <Spinner label={m.admin_loading_events()} size="sm" variant="warning" />
-        )}
-        {saveError && (
-          <span className="text-destructive text-sm">
-            <Icon icon={TriangleAlertIcon} className="me-1" />
-            {saveError}
-          </span>
-        )}
-        {deleteError && (
-          <span className="text-destructive text-sm">
-            <Icon icon={TriangleAlertIcon} className="me-1" />
-            {deleteError}
-          </span>
-        )}
-        {confirmDelete ? (
-          <span className="flex items-center gap-1">
-            <Button size="sm" variant="danger" onClick={handleDelete} disabled={deleting}>
-              {deleting && <Spinner size="sm" role="status" aria-hidden="true" />}
-              {m.admin_action_confirm()}
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setConfirmDelete(false)}>
-              {m.admin_action_cancel()}
-            </Button>
-          </span>
-        ) : (
-          <span className="flex gap-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setPollOptionsModalOpen(true)}
-              aria-label={m.admin_poll_modal_title({ edition: edition.id })}
-              title={m.admin_poll_modal_title({ edition: edition.id })}
-            >
-              <Icon icon={CoffeeIcon} />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setEditionModalOpen(true)}
-              aria-label={`${m.admin_edit()} ${edition.id}`}
-            >
-              <Icon icon={PencilIcon} />
-            </Button>
-            <Button
-              size="sm"
-              variant="outline-danger"
-              onClick={() => setConfirmDelete(true)}
-              aria-label={`${m.admin_delete()} ${edition.id}`}
-            >
-              <Icon icon={TrashIcon} />
-            </Button>
-          </span>
-        )}
-      </CardHeader>
+        </CardHeader>
 
-      {open && (
-        <CardContent id={collapseId} className="pt-2 pb-2">
+        <CollapsibleContent render={<CardContent className="pt-2 pb-2" />}>
           {(() => {
             const venue = venues.find((value) => value.id === edition.venue.id);
             if (!venue) return null;
@@ -305,7 +308,7 @@ export default function EditionCard({
               {m.admin_loading_events()}
             </div>
           ) : sortedEvents.length === 0 ? (
-            <p className="text-subtle italic text-sm">{m.admin_content_edition_no_events()}</p>
+            <AdminEmptyState>{m.admin_content_edition_no_events()}</AdminEmptyState>
           ) : (
             <PresentationList flush className="mb-1">
               {sortedEvents.map((event) => (
@@ -362,41 +365,43 @@ export default function EditionCard({
               ))}
             </PresentationList>
           )}
-        </CardContent>
-      )}
+        </CollapsibleContent>
 
-      <EditionModal
-        show={editionModalOpen}
-        initial={edition}
-        venues={venues}
-        authHeaders={authHeaders}
-        onSaved={(updated) => {
-          onUpdated(updated);
-          setEditionModalOpen(false);
-        }}
-        onHide={() => setEditionModalOpen(false)}
-      />
-      <EventModal
-        show={eventModalOpen}
-        edition={edition}
-        initial={editingEvent}
-        authHeaders={authHeaders}
-        onSave={handleEventSaved}
-        onHide={() => setEventModalOpen(false)}
-      />
-      <EventProductsModal
-        show={productsModalOpen}
-        event={productsEvent}
-        authHeaders={authHeaders}
-        onHide={() => setProductsModalOpen(false)}
-        onProductsChanged={() => queryClient.invalidateQueries({ queryKey: editionEventsQueryKey })}
-      />
-      <EditionPollOptionsModal
-        show={pollOptionsModalOpen}
-        edition={edition}
-        authHeaders={authHeaders}
-        onHide={() => setPollOptionsModalOpen(false)}
-      />
-    </Card>
+        <EditionModal
+          show={editionModalOpen}
+          initial={edition}
+          venues={venues}
+          authHeaders={authHeaders}
+          onSaved={(updated) => {
+            onUpdated(updated);
+            setEditionModalOpen(false);
+          }}
+          onHide={() => setEditionModalOpen(false)}
+        />
+        <EventModal
+          show={eventModalOpen}
+          edition={edition}
+          initial={editingEvent}
+          authHeaders={authHeaders}
+          onSave={handleEventSaved}
+          onHide={() => setEventModalOpen(false)}
+        />
+        <EventProductsModal
+          show={productsModalOpen}
+          event={productsEvent}
+          authHeaders={authHeaders}
+          onHide={() => setProductsModalOpen(false)}
+          onProductsChanged={() =>
+            queryClient.invalidateQueries({ queryKey: editionEventsQueryKey })
+          }
+        />
+        <EditionPollOptionsModal
+          show={pollOptionsModalOpen}
+          edition={edition}
+          authHeaders={authHeaders}
+          onHide={() => setPollOptionsModalOpen(false)}
+        />
+      </Card>
+    </Collapsible>
   );
 }

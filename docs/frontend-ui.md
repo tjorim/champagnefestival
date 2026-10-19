@@ -136,8 +136,8 @@ if no newer edits arrived while that save was pending.
 - Tooltips supplement an accessible description; ContentManagement exposes
   edition usage with the trigger's `aria-description` as well as a sighted hint.
 - RegistrationList Progress retains its accessible label. LayoutEditor room
-  selection and PolicyManagement locales use labelled button groups with
-  `aria-pressed`, because they switch one editor rather than independent panels.
+  selection and PolicyManagement locales use labelled Toggle Groups, because
+  they switch one editor rather than independent panels.
 
 Actions use buttons; navigation uses real links through `ButtonLink`. Alerts
 use `role="alert"` by default and `role="status"` for polite feedback. Spinners
@@ -171,9 +171,15 @@ at 1065 → 374 KiB and its complete static JavaScript dependency graph at
 2201 → 1481 KiB. Total JavaScript grew from 2629 to 2653 KiB due to splitting
 and shared-module overhead. These are uncompressed sizes from the build
 manifest, excluding dynamic sections from the initial graph. CI retains a
-450 KiB admin ceiling, a 2700 KiB total ceiling and the existing public entry
-ceiling. The authenticated lazy-section tests check demand loading, navigation
-while loading, and recovery after a failed download.
+450 KiB admin ceiling and the existing public entry ceiling. PR #1356 raised
+the total ceiling from 2700 to 2750 KiB for guarded admin editor dialogs: a
+same-dependency comparison against parent `710d002d` measured 2698.3 → 2702.8 KiB
+(+4.6 KiB), with the public entry and admin chunks essentially unchanged at
+676.6 and 375.5 KiB respectively. The signage layer-panel and generated-tab follow-up measures
+2715 KiB total, with entry/admin chunks still at 676/375 KiB, inside the same
+ceilings. No dependencies were added. The authenticated
+lazy-section tests check demand loading, navigation while loading, and recovery
+after a failed download.
 
 ## Specialised renderers and verification
 
@@ -188,3 +194,116 @@ confirmation variants, keyboard selection and archived/multiple selections.
 Browser tests cover public registration focus/scroll behaviour, mobile bounds,
 runtime themes and cascade layers. Keep those checks when changing the relevant
 primitive or theme; historical migration checklists are not a second test suite.
+
+## Admin record editor dialogs
+
+Announcements, message composer drafts, screen channels, slides and screen
+templates keep their lists on the section page and open creation/editing in
+`frontend/src/components/admin/AdminEditorDialog.tsx`. The shared shell uses
+Base UI Dialog and the admin theme scope, with a mode-specific title,
+Save/Create and Cancel actions, focus return, dirty-dismissal confirmation and
+a busy guard. Save errors belong inside the open dialog.
+
+Use a stable snapshot as the form baseline when opening an editor. Background
+list refreshes must not reset its fields or change its create/update target.
+Close after a successful save and refresh the list; preserve the draft on error.
+Do not automatically retry writes; see [retry safety](retry-safety.md).
+
+
+All admin sections with tabs (Screens, Announcements and People) use the generated
+shadcn `base-vega` Tabs component and its built-in `TabsList` **line** variant.
+Source was generated with `pnpm dlx shadcn@latest add tabs --path src/components/ui
+--overwrite --yes` (shadcn 4.22.0), using the committed `components.json`.
+Owned adaptations use `@/lib/utils`, named Tailwind utilities instead of
+arbitrary values, the installed Base UI `data-orientation` attributes, and explicit
+orientation/activate-on-focus forwarding. A scrolling wrapper preserves the line
+indicator for longer admin lists. Screens adds icons and short Channels/Templates
+labels. Base UI retains panel associations and arrow/Home/End keyboard navigation;
+all admin tab lists have accessible names.
+
+Public schedule and account consumers opt into `Tabs themed`, a narrow compatibility
+mode that leaves the existing runtime-theme slot styling in control. The component's
+normal default and line appearances retain the generated shadcn styling.
+
+The generated-tab replacement was verified with 1,187 frontend unit tests, 47
+Chromium browser cases (admin flows plus public schedule/account widgets in all
+six themes at desktop/mobile widths), lint, formatting and the production build.
+
+## Shared admin controls (2026-10-19, PR #1356)
+
+Sidebar, Toggle Group, Skeleton, Empty and Pagination were generated from the
+configured shadcn `base-vega` registry with shadcn 4.22.0, including Sidebar's Sheet and
+mobile hook and Toggle Group's Toggle dependency. Existing Button, Input,
+Separator and Tooltip sources were retained. No package dependencies were added.
+
+- Admin navigation composes Sidebar menus with Base UI Collapsible groups. The
+  mobile Sheet owns the modal focus trap, dismissal and focus return; selecting a
+  destination closes it. The existing 992px breakpoint, role-based destinations,
+  counts, sync status and arrow/Home/End navigation remain. The desktop panel is
+  offset below the site header through the provider's `belowHeader` option and
+  named height/offset tokens; its content scrolls between header and footer.
+- Registration, organisation and edition filters, policy languages, floor-plan
+  rooms/layers and public floor-plan day/room selectors use Toggle Group. Required
+  selections ignore an empty value. Active-edition filtering remains an independent
+  Toggle. The preview theme switcher also uses Toggle Group at desktop widths.
+- AdminSkeleton keeps its table/card layouts and single loading announcement,
+  with generated Skeleton bars, visible semantic colours and reduced-motion support.
+- AdminEmptyState composes Empty's header, description and optional action slots
+  across lists, tables and dialogs. Existing translated messages and recovery
+  actions remain with each domain; picker results and table-cell placeholders
+  retain their compact specialised representations.
+- AdminTablePagination shares generated Pagination controls with registration
+  tables, the audit log and the ledger dialog. Audit pagination keeps its existing
+  next-page heuristic without inventing a total count. Page actions render native buttons, honour disabled
+  boundaries/pending states and use translated labels. Link pagination remains
+  available through `href` for actual navigation.
+
+Owned adaptations use `@/lib/utils`, semantic tokens and named Tailwind utilities
+instead of generated arbitrary values/inline styles. Sheet portals retain the
+admin theme scope. Toggle Group forwards orientation to Base UI; its built-in
+spacing options map to named utilities. Domain mutations and retry decisions stay
+with the existing callers.
+
+Validation: all 1,191 frontend unit tests, lint, formatting, message parity and the
+production build pass. Targeted authenticated browser coverage includes all six
+themes, desktop/mobile forms, sidebar focus/dismissal, keyboard toggles, empty
+filters, table controls, lazy loading and signage dialogs. The build measures
+2730 KiB total JavaScript, 684 KiB public entry and 396 KiB AdminDashboard, within
+the existing 2750/1050/450 KiB budgets.
+
+## Remaining hand-rolled UI (2026-10-19, #1357)
+
+Follow-up to PR #1356: the last custom compositions that had a generated equivalent were
+replaced, and the ones that stay are recorded here with the reason.
+
+Replaced:
+
+- `MaintenancePage` flyer lightbox uses the generated `Dialog`. The flyer card is the
+  `DialogTrigger` and keeps the page's own card styling; the dialog supplies the focus
+  trap, Escape, scroll lock and focus return that the old manual `role="dialog"` overlay
+  lacked. The lightbox is now a standard titled dialog (flyer name, close button, themed
+  surface, blurred backdrop) rather than a full-screen dark overlay; the image is capped
+  to the viewport height so the whole flyer fits. Unit tests (`tests/components/MaintenancePage.test.tsx`) and
+  `e2e/maintenance-lightbox.spec.ts` cover the dialog's axe scan, Escape and focus
+  return in light, dark and narrow scenarios.
+- `EditionCard` expand/collapse uses `Collapsible`; Base UI now provides
+  `aria-expanded`/`aria-controls` and the panel is unmounted while closed.
+- The `SignageTemplates` background section uses `Collapsible` instead of a native
+  `<details>`, so it matches the other disclosure controls and focus ring.
+- `radio-group` was deleted: nothing in the application used it. Generate it again with
+  `pnpm dlx shadcn@latest add radio-group` when a form needs one.
+
+Kept as they are:
+
+| Component | Why it stays |
+| --- | --- |
+| `AnnouncementBanner` ticker item button | It is the text of a scrolling, live-region ticker item and is styled by the `announcement-ticker__item-content` rules per level. The generated `Button` adds height, padding, border and nowrap that would break the ticker. The details open in a generated `Dialog`. |
+| `LogoWall` card button | A stretched button (`after:absolute after:inset-0`) makes the whole card the target while the heading stays the accessible name. `Button` is an inline sized control and would fight that overlay. |
+| `AdminDashboard` active-edition strip | `admin-active-edition-strip` is a full-width summary row (edition label, day progress, check-in count) that doubles as the "filter registrations by the active edition" action. It is a multi-segment status banner styled by `admin.css`, not a sized control, so `Button` would add height, padding and nowrap that fight the layout. |
+| `ContentManagement` tooltip trigger | `TooltipTrigger render={<button type="button" />}` makes an item name look like inline text with a dotted underline while exposing the "used in editions" tooltip to keyboard users. Rendering through the Base UI trigger already gives it the generated tooltip behaviour; `Button` would restyle it as a control. |
+| `signage/offline-player.html` | The standalone offline signage export is a static HTML template with no React or Tailwind, so it cannot use any generated component. |
+| `CheckInPage` | Has no raw `<button>`; it already uses `Button`/`ButtonLink`. |
+| `MaintenancePage` flyer card trigger | A `DialogTrigger` rendered with the page's own card and zoom-overlay stylesheet; it is the `Dialog`'s trigger, not a hand-rolled button. |
+| `ThemeSwitcher` native `<select>` | A preview-only control with fixed styling that deliberately does not follow the theme being previewed; the generated `Select` would restyle itself with the theme. |
+| Canvas hit targets in `LayoutEditor` and `SignageTemplates` | Domain rendering: elements are positioned from floor-plan or layer coordinates, support pointer dragging/resizing and rotate with the item. They are not general-purpose buttons. |
+| `aria-pressed` selection in `SignageChannels`, sort buttons in `AdminDataTable` | These are already `Button`s. They represent a selected list item or the active sort column, not an independent on/off setting, so `Toggle`/`ToggleGroup` semantics would misdescribe them. |

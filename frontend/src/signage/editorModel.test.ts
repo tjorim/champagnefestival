@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { emptyTemplate, missingBindings, newLayer, validTemplate } from "./editorModel";
+import {
+  addMissingBindings,
+  moveLayer,
+  emptyTemplate,
+  missingBindings,
+  newLayer,
+  validTemplate,
+} from "./editorModel";
 
 describe("signage template requirements", () => {
   it("requires the sponsor slot because organisation playlists include sponsors", () => {
@@ -44,4 +51,41 @@ it("validates the same bounded layer document before saving", () => {
   expect(validTemplate(draft)).toBe(true);
   draft.layers[0]!.x = Number.NaN;
   expect(validTemplate(draft)).toBe(false);
+});
+
+describe("layer panel edits", () => {
+  it("adds distinct starter slots, restores hidden layers and preserves existing artwork", () => {
+    const hidden = { ...newLayer("binding", "logo"), visible: false, x: 7 };
+    const draft = { ...emptyTemplate(), layers: [hidden] };
+    const next = addMissingBindings(draft, "organizations");
+    expect(missingBindings(next, "organizations")).toEqual([]);
+    expect(next.layers).toHaveLength(3);
+    expect(next.layers[0]).toMatchObject({ id: hidden.id, visible: true, x: 7 });
+    expect(next.layers[1]!.y).not.toBe(next.layers[2]!.y);
+    expect(draft.layers[0]!.visible).toBe(false);
+    expect(addMissingBindings(next, "organizations")).toEqual(next);
+  });
+  it("leaves locked hidden slots intact and respects the layer limit", () => {
+    const locked = { ...newLayer("binding", "title"), visible: false, locked: true };
+    const next = addMissingBindings({ ...emptyTemplate(), layers: [locked] }, "notice");
+    expect(next.layers[0]).toEqual(locked);
+    expect(missingBindings(next, "notice")).toEqual([]);
+    const full = {
+      ...emptyTemplate(),
+      layers: Array.from({ length: 100 }, () => newLayer("text")),
+    };
+    expect(addMissingBindings(full, "notice").layers).toHaveLength(100);
+    full.layers[0] = { ...newLayer("binding", "title"), visible: false };
+    expect(addMissingBindings(full, "notice").layers[0]!.visible).toBe(true);
+  });
+  it("moves layers without changing identities or the source array, and protects locked sources", () => {
+    const layers = [newLayer("text"), newLayer("shape"), newLayer("icon")];
+    const moved = moveLayer(layers, 0, 2);
+    expect(moved).toEqual([layers[1], layers[2], layers[0]]);
+    expect(layers[0]!.kind).toBe("text");
+    expect(moveLayer(layers, 0, 3)).toBe(layers);
+    expect(moveLayer(layers, -1, 0)).toBe(layers);
+    layers[0]!.locked = true;
+    expect(moveLayer(layers, 0, 1)).toBe(layers);
+  });
 });

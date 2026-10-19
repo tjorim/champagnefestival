@@ -1,4 +1,10 @@
-import { Button } from "@/components/ui/button";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationPrevious,
+  PaginationNext,
+} from "@/components/ui/pagination";
 import {
   Select,
   SelectTrigger,
@@ -65,15 +71,21 @@ export function AdminTablePagination({
             ))}
           </SelectContent>
         </Select>
-        <Button variant="outline" size="sm" disabled={!canPreviousPage} onClick={onPreviousPage}>
-          {m.admin_table_page_previous()}
-        </Button>
-        <span className="text-muted-foreground text-sm">
-          {pageIndex + 1} / {pageCount}
-        </span>
-        <Button variant="outline" size="sm" disabled={!canNextPage} onClick={onNextPage}>
-          {m.admin_table_page_next()}
-        </Button>
+        <Pagination className="w-auto">
+          <PaginationContent>
+            <PaginationItem>
+              <PaginationPrevious size="sm" disabled={!canPreviousPage} onClick={onPreviousPage} />
+            </PaginationItem>
+            <PaginationItem>
+              <span className="px-2 text-muted-foreground text-sm" aria-current="page">
+                {pageIndex + 1} / {pageCount}
+              </span>
+            </PaginationItem>
+            <PaginationItem>
+              <PaginationNext size="sm" disabled={!canNextPage} onClick={onNextPage} />
+            </PaginationItem>
+          </PaginationContent>
+        </Pagination>
       </div>
     </div>
   );

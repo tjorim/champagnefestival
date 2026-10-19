@@ -519,7 +519,7 @@ export default function MyAccountPage() {
               {m.manager_error()}
             </Alert>
           )}
-          <Tabs value={activeTab} onValueChange={(value) => setSelectedTab(String(value))}>
+          <Tabs themed value={activeTab} onValueChange={(value) => setSelectedTab(String(value))}>
             {visibleTabs.length > 1 && (
               <TabsList className="mb-3">
                 {visibleTabs.map((tab) => (

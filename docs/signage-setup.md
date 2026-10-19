@@ -121,3 +121,11 @@ The browser test feeds actual PNG captures into the worker and inspects the cuts
 and final hold in Chromium; the backend test verifies a single-slide encode,
 private download and faststart with ffprobe. Normal tests use isolated worker
 fixtures and do not require production credentials.
+
+Manage reusable screen layouts in **Content → Screen channels → Screen templates**.
+The **Screen channels** tab manages channels and their playlists.
+
+Use **New channel**, **Add slide** or **New template** to create an item, and its
+edit action to change it. Editors open in admin modals; **Save** closes the modal
+after saving, and **Cancel** asks before discarding unsaved changes. Select a
+channel name to manage its playlist.

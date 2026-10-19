@@ -72,7 +72,7 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
 
   return (
     <div>
-      <Tabs value={activeDay} onValueChange={(value) => setActiveDay(Number(value))}>
+      <Tabs themed value={activeDay} onValueChange={(value) => setActiveDay(Number(value))}>
         <TabsList className="schedule-tabs mb-4 justify-center">
           {days.map((day) => (
             <div key={day.id}>

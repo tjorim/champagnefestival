@@ -192,7 +192,7 @@ async def create_volunteer(
         national_register_number=nrr,
         eid_document_number=eid,
     )
-    ensure_volunteer_role(person, started_on=min(period.first_help_day for period in body.help_periods))
+    ensure_volunteer_role(person, started_on=min((period.first_help_day for period in body.help_periods), default=None))
 
     db.add(person)
     await db.flush()

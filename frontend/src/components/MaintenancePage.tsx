@@ -1,6 +1,14 @@
-import { ExternalLinkIcon, ImageIcon, XIcon, ZoomInIcon } from "lucide-react";
+import { ExternalLinkIcon, ImageIcon, ZoomInIcon } from "lucide-react";
 import BrandWordmark from "./BrandWordmark";
 import { Icon } from "@/components/Icon";
+import {
+  Dialog,
+  DialogBody,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useEffect, useState } from "react";
 import { m } from "@/paraglide/messages";
 import { usePublicSettings } from "@/hooks/useMaintenanceMode";
@@ -57,7 +65,6 @@ export default function MaintenancePage({ flyerImage }: { flyerImage?: string | 
   const flyerSrc = [managedArtwork(flyerImage), DEFAULT_FLYER].find(
     (source): source is string => source !== null && !failedSources.includes(source),
   );
-  const [lightboxOpen, setLightboxOpen] = useState(false);
 
   useEffect(() => {
     // Several visual themes reserve body padding for their own header/nav
@@ -74,20 +81,6 @@ export default function MaintenancePage({ flyerImage }: { flyerImage?: string | 
       document.body.style.paddingLeft = previousPaddingLeft;
     };
   }, []);
-
-  useEffect(() => {
-    if (!lightboxOpen) return;
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setLightboxOpen(false);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = previousOverflow;
-    };
-  }, [lightboxOpen]);
 
   return (
     <div className="maintenance-page">
@@ -120,49 +113,38 @@ export default function MaintenancePage({ flyerImage }: { flyerImage?: string | 
             </div>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setLightboxOpen(true)}
-            aria-label={m.maintenance_flyer_alt()}
-            className="maintenance-page__flyer-card maintenance-page__flyer-trigger"
-          >
-            <img
-              src={flyerSrc}
-              alt=""
-              onError={() => setFailedSources((failed) => [...failed, flyerSrc])}
-              className="maintenance-page__flyer-image"
-            />
-            <span className="maintenance-page__flyer-overlay" aria-hidden="true">
-              <Icon icon={ZoomInIcon} className="text-3xl text-primary-foreground" />
-            </span>
-          </button>
+          // The dialog owns the focus trap, Escape, scroll lock and focus return to
+          // the trigger; the trigger keeps this page's own card styling.
+          <Dialog>
+            <DialogTrigger
+              aria-label={m.maintenance_flyer_alt()}
+              className="maintenance-page__flyer-card maintenance-page__flyer-trigger"
+            >
+              <img
+                src={flyerSrc}
+                alt=""
+                onError={() => setFailedSources((failed) => [...failed, flyerSrc])}
+                className="maintenance-page__flyer-image"
+              />
+              <span className="maintenance-page__flyer-overlay" aria-hidden="true">
+                <Icon icon={ZoomInIcon} className="text-3xl text-primary-foreground" />
+              </span>
+            </DialogTrigger>
+            <DialogContent size="lg" className="w-fit max-w-full">
+              <DialogHeader>
+                <DialogTitle>{m.maintenance_flyer_alt()}</DialogTitle>
+              </DialogHeader>
+              <DialogBody>
+                <img
+                  src={flyerSrc}
+                  alt={m.maintenance_flyer_alt()}
+                  className="maintenance-page__lightbox-image mx-auto h-auto w-auto max-w-full rounded-md object-contain"
+                />
+              </DialogBody>
+            </DialogContent>
+          </Dialog>
         )}
       </div>
-
-      {lightboxOpen && flyerSrc && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={m.maintenance_flyer_alt()}
-          onClick={() => setLightboxOpen(false)}
-          className="maintenance-page__lightbox"
-        >
-          <button
-            type="button"
-            onClick={() => setLightboxOpen(false)}
-            aria-label={m.close()}
-            className="maintenance-page__lightbox-close"
-          >
-            <Icon icon={XIcon} />
-          </button>
-          <img
-            src={flyerSrc}
-            alt={m.maintenance_flyer_alt()}
-            onClick={(event) => event.stopPropagation()}
-            className="maintenance-page__lightbox-image"
-          />
-        </div>
-      )}
     </div>
   );
 }

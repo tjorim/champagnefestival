@@ -13,10 +13,15 @@ the default handlers hard-code is seeded in `localStorage` before load (use
 
 ## Admin dashboard auth
 
-Reaching `/admin` normally means a real Keycloak login. For local debugging and
-authenticated e2e coverage, use Playwright's own recommended pattern instead —
-authenticate once, save the session, reuse it — rather than clicking through
-Keycloak every time:
+For ordinary manual debugging in your own browser, run Vite with
+`DEV_AUTH_BYPASS_TOKEN=dev-token pnpm dev`, run the backend in development with
+the same token, then open <http://localhost:5173/admin>. The Vite dev server
+seeds the OIDC session before the application loads and authenticates proxied
+API calls. No special login URL is needed. See
+[local admin setup](../../README.md#local-admin-sign-in-without-keycloak).
+
+For authenticated e2e coverage, leave that frontend opt-in unset and use
+Playwright's authenticate-once/storageState pattern:
 
 - **New authenticated e2e specs**: name the file `*.authenticated.spec.ts`. It
   automatically runs under the `chromium-admin` project (see
@@ -27,7 +32,7 @@ Keycloak every time:
   which is what `admin.spec.ts`'s "shows login prompt when not authenticated"
   test needs.
 
-- **Manual debugging in a real browser**:
+- **Optional separate Playwright browser window**:
   ```bash
   pnpm dev                                    # terminal 1
   pnpm exec playwright test --project=setup   # once, generates e2e/.auth/admin.json
@@ -46,8 +51,8 @@ Authorization header instead.
 
 This is test/dev tooling only — `frontend/src/config/oidc.ts` and
 `frontend/src/contexts/AuthContext.tsx` are untouched, and the normal login
-flow works exactly as before for anyone not opting into the authenticated
-project.
+flow works exactly as before when neither the Vite dev-session opt-in nor
+the authenticated Playwright project is used.
 
 ## Accessibility scans
 

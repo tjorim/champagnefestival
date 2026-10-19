@@ -196,9 +196,8 @@ test.describe("Remuage visual theme", () => {
     await page.setViewportSize({ width: 320, height: 720 });
     await page.goto("/");
 
-    await expect(
-      page.getByRole("group", { name: /visual design preview switcher/i }),
-    ).toBeVisible();
+    // Below 576px the toggle group gives way to the compact select.
+    await expect(page.locator(".theme-switcher").getByRole("combobox")).toBeVisible();
     await expect(page.locator(".remuage-hero__actions a")).toHaveCount(2);
     await expectNoPageHorizontalScroll(page);
   });

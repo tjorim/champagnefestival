@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminField,
   AdminLabel,
@@ -8,7 +9,7 @@ import {
   AdminCheck,
 } from "@/components/admin/AdminFields";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AreaIcon } from "@/components/AreaIcon";
 import {
   ArrowLeftRightIcon,
@@ -526,7 +527,7 @@ function RoomCanvas({
           {isEmpty && (
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-subtle text-center pointer-events-none">
               <Icon icon={Grid3X3Icon} className="text-5xl" />
-              <p className="mt-2 text-sm">{m.admin_no_tables()}</p>
+              <AdminEmptyState>{m.admin_no_tables()}</AdminEmptyState>
             </div>
           )}
           {roomTables.map((table) => {
@@ -929,65 +930,64 @@ export default function LayoutEditor({
               {activeLayoutDateLabel}
             </span>
           )}
-          <div className="flex flex-wrap gap-1" role="group" aria-label={m.admin_rooms_tab()}>
+          <ToggleGroup
+            variant="outline"
+            size="sm"
+            value={[activeRoomId ?? ""]}
+            onValueChange={(values) => {
+              if (values[0]) handleSelectRoom(values[0]);
+            }}
+            aria-label={m.admin_rooms_tab()}
+          >
             {rooms.map((room) => {
               const roomTableCount = layouts
                 .filter((l) => l.roomId === room.id)
                 .reduce((sum, l) => sum + tables.filter((t) => t.layoutId === l.id).length, 0);
               return (
-                <span key={room.id}>
-                  <Button
-                    size="sm"
-                    variant={activeRoomId === room.id ? "default" : "ghost"}
-                    aria-pressed={activeRoomId === room.id}
-                    onClick={() => handleSelectRoom(room.id)}
-                  >
-                    <span
-                      className="mr-1 inline-block size-2.5 rounded-full"
+                <ToggleGroupItem key={room.id} value={room.id}>
+                  <span
+                    className="mr-1 inline-block size-2.5 rounded-full"
 
-                      /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
-                      style={{
-                        background: safeRoomColor(room.color),
-                      }}
-                      /* oxlint-enable shadcn/no-inline-styles */
-                      aria-hidden="true"
-                    />
-                    {room.name}
-                    <span className="ml-1 rounded bg-muted px-1 text-xs text-muted-foreground">
-                      {roomTableCount}
-                    </span>
-                  </Button>
-                </span>
+                    /* oxlint-disable shadcn/no-inline-styles -- Dynamic floor-plan geometry, interaction state and saved room colors. */
+                    style={{
+                      background: safeRoomColor(room.color),
+                    }}
+                    /* oxlint-enable shadcn/no-inline-styles */
+                    aria-hidden="true"
+                  />
+                  {room.name}
+                  <span className="ml-1 rounded bg-muted px-1 text-xs text-muted-foreground">
+                    {roomTableCount}
+                  </span>
+                </ToggleGroupItem>
               );
             })}
-          </div>
+          </ToggleGroup>
           <div className="flex gap-2 items-center">
-            <ButtonGroup aria-label={m.admin_layout_layer_aria()}>
-              <Button
-                variant={layer === "seating" ? "warning" : "outline"}
-                aria-pressed={layer === "seating"}
-                size="sm"
-                onClick={() => {
+            <ToggleGroup
+              variant="outline"
+              size="sm"
+              aria-label={m.admin_layout_layer_aria()}
+              value={[layer]}
+              onValueChange={(values) => {
+                if (values[0] === "seating") {
                   setLayer("seating");
                   setSelectedArea(null);
-                }}
-              >
-                <Icon icon={UsersIcon} />
-                {m.admin_layout_seating()}
-              </Button>
-              <Button
-                variant={layer === "areas" ? "info" : "outline"}
-                aria-pressed={layer === "areas"}
-                size="sm"
-                onClick={() => {
+                } else if (values[0] === "areas") {
                   setLayer("areas");
                   setSelectedTable(null);
-                }}
-              >
+                }
+              }}
+            >
+              <ToggleGroupItem value="seating">
+                <Icon icon={UsersIcon} />
+                {m.admin_layout_seating()}
+              </ToggleGroupItem>
+              <ToggleGroupItem value="areas">
                 <Icon icon={StoreIcon} />
                 {m.admin_layout_areas()}
-              </Button>
-            </ButtonGroup>
+              </ToggleGroupItem>
+            </ToggleGroup>
             {layer === "seating" ? (
               <Button
                 variant="outline-warning"
@@ -1028,10 +1028,10 @@ export default function LayoutEditor({
 
         <CardContent className="p-2">
           {rooms.length === 0 ? (
-            <p className="text-subtle text-center text-sm mb-0">
+            <AdminEmptyState>
               <Icon icon={InfoIcon} className="me-1" />
               {m.admin_room_no_rooms()}
-            </p>
+            </AdminEmptyState>
           ) : activeRoom ? (
             <div>
               <div className="flex items-center justify-between mb-2">
@@ -1129,7 +1129,7 @@ export default function LayoutEditor({
                   onMoveArea={onMoveArea}
                 />
               ) : (
-                <p className="text-subtle text-center text-sm py-6 mb-0">{m.admin_no_layouts()}</p>
+                <AdminEmptyState>{m.admin_no_layouts()}</AdminEmptyState>
               )}
             </div>
           ) : null}

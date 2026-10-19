@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 import { adminCachePersistence } from "@/state/adminCachePersistence";
 import { AdminCacheStatus } from "./AdminCacheStatus";
 import { usePersonDuplicates } from "./PersonDuplicates";
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,6 +13,7 @@ import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
 import type { ItemDraft } from "./itemTypes";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
 import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
@@ -45,7 +46,7 @@ const VenueManagement = React.lazy(() => import("./VenueManagement"));
 const CategoryManagement = React.lazy(() => import("./CategoryManagement"));
 const FaqManagement = React.lazy(() => import("./FaqManagement"));
 const AnnouncementsSection = React.lazy(() => import("./AnnouncementsSection"));
-const SignageChannels = React.lazy(() => import("./SignageChannels"));
+const SignageSection = React.lazy(() => import("./SignageSection"));
 const PolicyManagement = React.lazy(() => import("./PolicyManagement"));
 const SettingsManagement = React.lazy(() => import("./SettingsManagement"));
 const ContactMessagesManagement = React.lazy(() => import("./ContactMessagesManagement"));
@@ -113,7 +114,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set(["events", "content", "venue", "system"]),
   );
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // A non-admin who lands on a restricted section (stale state, a role
   // downgrade) has nothing to show there — derive the fallback for render
@@ -369,9 +369,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
     if (!navRef.current) return;
     const buttons = Array.from(
-      navRef.current.querySelectorAll<HTMLButtonElement>(
-        "button.admin-nav-item, button.admin-nav-group-header",
-      ),
+      navRef.current.querySelectorAll<HTMLButtonElement>('[data-sidebar="menu-button"]'),
     );
     const focused = document.activeElement;
     const idx = buttons.indexOf(focused as HTMLButtonElement);
@@ -390,16 +388,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       buttons[buttons.length - 1]?.focus();
     }
   }, []);
-
-  // Close mobile sidebar on Escape key
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSidebarOpen(false);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [sidebarOpen]);
 
   if (!visible) return null;
 
@@ -421,28 +409,23 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       aria-labelledby="admin-title"
       className={isAuthenticated ? "admin-authenticated" : "py-12"}
     >
+      {/* The signed-out login form renders its own visible #admin-title heading. */}
+      {isAuthenticated && (
+        <h2 id="admin-title" className="sr-only">
+          {m.admin_title()}
+        </h2>
+      )}
       {!isAuthenticated ? (
         /* ---- Login (OIDC redirect) ---- */
         <AdminLoginForm />
       ) : (
         /* ---- Authenticated: sidebar layout ---- */
-        <div className="admin-layout">
-          {/* Mobile overlay */}
-          {sidebarOpen && (
-            <div
-              className="admin-sidebar-overlay"
-              onClick={() => setSidebarOpen(false)}
-              aria-hidden="true"
-            />
-          )}
-
+        <SidebarProvider belowHeader className="admin-layout">
           <AdminSidebar
             activeKey={effectiveActiveKey}
             setActiveKey={setActiveKey}
             expandedGroups={expandedGroups}
             toggleGroup={toggleGroup}
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
             navRef={navRef}
             handleNavKeyDown={handleNavKeyDown}
             registrationCount={registrationCountsQuery.data?.all ?? 0}
@@ -685,7 +668,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <FaqManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "signage-channels" && (
-                  <SignageChannels authHeaders={authHeaders} />
+                  <SignageSection authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "announcements" && (
                   <AnnouncementsSection authHeaders={authHeaders} />
@@ -708,7 +691,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
               </AdminSectionPane>
             )}
           </div>
-        </div>
+        </SidebarProvider>
       )}
 
       {/* Registration detail modal */}

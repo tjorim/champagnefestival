@@ -1,6 +1,10 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import {
   AdminField,
@@ -8,7 +12,7 @@ import {
   AdminInput,
   AdminSelect,
   AdminOption,
-  AdminCheck,
+  AdminTextarea,
 } from "./AdminFields";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { apiErrorMessage } from "@/utils/apiErrors";
@@ -17,6 +21,8 @@ import { getLocale } from "@/paraglide/runtime";
 import { SlideRenderer } from "@/signage/SlideRenderer";
 import { signageIcons } from "@/signage/icons";
 import {
+  addMissingBindings,
+  moveLayer,
   emptyTemplate,
   missingBindings,
   newLayer,
@@ -28,6 +34,8 @@ import {
 } from "@/signage/editorModel";
 import type { Layer, PublicSlide } from "@/signage/types";
 import "@/signage/editor.css";
+import AdminEditorDialog from "./AdminEditorDialog";
+import SignageLayerPanel from "./SignageLayerPanel";
 
 const labels = () => ({
   name: m.signage_editor_name(),
@@ -104,16 +112,88 @@ export default function SignageTemplates({
 }: {
   authHeaders: () => Record<string, string>;
 }) {
-  const [draft, setDraft] = useState<TemplateDraft>(emptyTemplate);
-  const [id, setId] = useState<string | null>(null);
+  const [editing, setEditing] = useState<Template | null | undefined>(undefined);
+  const [saved, setSaved] = useState(false);
+  const templates = useQuery({
+    queryKey: ["admin", "signage", "templates"],
+    queryFn: ({ signal }) =>
+      fetchJsonOrThrowWithUnauthorized<Template[]>(
+        "/api/signage/templates",
+        { headers: authHeaders(), signal },
+        m.admin_error_load_data(),
+      ),
+  });
+  return (
+    <div className="space-y-4">
+      <h2 className="text-xl font-semibold">{m.signage_editor_heading()}</h2>
+      {templates.error && <Alert variant="danger">{m.admin_error_load_data()}</Alert>}
+      {saved && <p role="status">{m.signage_editor_saved()}</p>}
+      <Button
+        onClick={() => {
+          setSaved(false);
+          setEditing(null);
+        }}
+      >
+        {m.signage_editor_new()}
+      </Button>
+      <ul className="space-y-2">
+        {templates.data?.map((template) => (
+          <li key={template.id} className="flex items-center justify-between gap-2">
+            <span>{template.name}</span>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSaved(false);
+                setEditing(template);
+              }}
+            >
+              {m.admin_edit_item({ name: template.name })}
+            </Button>
+          </li>
+        ))}
+      </ul>
+      {editing !== undefined && (
+        <TemplateEditor
+          authHeaders={authHeaders}
+          template={editing}
+          onClose={() => setEditing(undefined)}
+          onSaved={() => {
+            setEditing(undefined);
+            setSaved(true);
+            void templates.refetch();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function TemplateEditor({
+  authHeaders,
+  template,
+  onClose,
+  onSaved,
+}: {
+  authHeaders: () => Record<string, string>;
+  template: Template | null;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [initial] = useState<TemplateDraft>(() =>
+    template
+      ? { name: template.name, background: template.background, layers: template.layers }
+      : emptyTemplate(),
+  );
+  const [draft, setDraft] = useState<TemplateDraft>(initial);
+  const id = template?.id;
   const [selected, setSelected] = useState<string | null>(null);
   const [past, setPast] = useState<TemplateDraft[]>([]);
   const [future, setFuture] = useState<TemplateDraft[]>([]);
   const [kind, setKind] = useState<TemplateKind>("organizations");
   const [sample, setSample] = useState("");
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [scale, setScale] = useState(0.3);
   const viewport = useRef<HTMLDivElement>(null);
   const gesture = useRef<{
@@ -125,15 +205,6 @@ export default function SignageTemplates({
     centerX: number;
     centerY: number;
   } | null>(null);
-  const templates = useQuery({
-    queryKey: ["admin", "signage", "templates"],
-    queryFn: ({ signal }) =>
-      fetchJsonOrThrowWithUnauthorized<Template[]>(
-        "/api/signage/templates",
-        { headers: authHeaders(), signal },
-        m.admin_error_load_data(),
-      ),
-  });
   const organizations = useQuery({
     queryKey: ["admin", "signage", "samples", "organizations"],
     queryFn: ({ signal }) =>
@@ -163,7 +234,6 @@ export default function SignageTemplates({
     setPast((items) => [...items.slice(-99), draft]);
     setFuture([]);
     setDraft(next);
-    setSaved(false);
   }
   function undo() {
     const previous = past.at(-1);
@@ -171,7 +241,6 @@ export default function SignageTemplates({
       setFuture([draft, ...future]);
       setDraft(previous);
       setPast(past.slice(0, -1));
-      setSaved(false);
     }
   }
   function redo() {
@@ -179,21 +248,7 @@ export default function SignageTemplates({
       setPast([...past, draft]);
       setDraft(future[0]);
       setFuture(future.slice(1));
-      setSaved(false);
     }
-  }
-  function load(template?: Template) {
-    setId(template?.id ?? null);
-    setDraft(
-      template
-        ? { name: template.name, background: template.background, layers: template.layers }
-        : emptyTemplate(),
-    );
-    setPast([]);
-    setFuture([]);
-    setSelected(null);
-    setError("");
-    setSaved(false);
   }
   const layer = draft.layers.find((item) => item.id === selected);
   function patchLayer(patch: Partial<Layer>) {
@@ -204,24 +259,22 @@ export default function SignageTemplates({
       });
   }
   function add(type: Layer["kind"], binding: Layer["binding"] = null) {
+    if (busy || draft.layers.length >= 100) return;
     const item = newLayer(type, binding);
     change({ ...draft, layers: [...draft.layers, item] });
     setSelected(item.id);
   }
-  function reorder(delta: number) {
-    if (!layer) return;
-    const layers = [...draft.layers];
-    const from = layers.indexOf(layer);
-    const to = from + delta;
-    if (to < 0 || to >= layers.length) return;
-    [layers[from], layers[to]] = [layers[to]!, layers[from]!];
-    change({ ...draft, layers });
+  function reorder(from: number, to: number) {
+    if (busy) return;
+    const layers = moveLayer(draft.layers, from, to);
+    if (layers !== draft.layers) change({ ...draft, layers });
   }
   async function save() {
+    if (busy) return;
     setBusy(true);
     setError("");
     try {
-      const result = await fetchJsonOrThrowWithUnauthorized<Template>(
+      await fetchJsonOrThrowWithUnauthorized<Template>(
         `/api/signage/templates${id ? `/${id}` : ""}`,
         {
           method: id ? "PUT" : "POST",
@@ -230,9 +283,7 @@ export default function SignageTemplates({
         },
         m.signage_editor_error(),
       );
-      setId(result.id);
-      setSaved(true);
-      await templates.refetch();
+      onSaved();
     } catch (cause) {
       setError(apiErrorMessage(cause, m.signage_editor_error()));
     } finally {
@@ -299,6 +350,13 @@ export default function SignageTemplates({
     image: kind === "image" ? (content?.image ?? null) : null,
   };
   const missing = missingBindings(draft, kind);
+  const isText =
+    layer &&
+    (layer.kind === "text" ||
+      (layer.kind === "binding" &&
+        ["name", "description", "sponsor", "title", "text"].includes(layer.binding ?? "")));
+  const isImage =
+    layer && (layer.kind === "image" || (layer.kind === "binding" && layer.binding === "logo"));
   const fieldLabels = labels();
   const options = optionLabels();
   function choose(
@@ -374,7 +432,6 @@ export default function SignageTemplates({
         item.id === current.layer.id ? { ...item, ...patch } : item,
       ),
     });
-    setSaved(false);
   }
   function finish(cancel = false) {
     const current = gesture.current;
@@ -388,351 +445,409 @@ export default function SignageTemplates({
     gesture.current = null;
   }
   return (
-    <div className="flex flex-col gap-4" aria-busy={busy}>
-      <h2 className="text-xl font-semibold">{m.signage_editor_heading()}</h2>
-      {(error || templates.error || organizations.error || notices.error) && (
-        <Alert variant="danger">{error || m.admin_error_load_data()}</Alert>
-      )}
-      {saved && <p role="status">{m.signage_editor_saved()}</p>}
-      <div className="flex flex-wrap gap-2">
-        <Button disabled={busy} onClick={() => load()}>
-          {m.signage_editor_new()}
-        </Button>
+    <AdminEditorDialog
+      title={template ? m.admin_edit_item({ name: template.name }) : m.signage_editor_new()}
+      size="xl"
+      busy={busy}
+      dirty={JSON.stringify(draft) !== JSON.stringify(initial)}
+      onClose={onClose}
+      footer={
         <Button
           disabled={busy || !validTemplate(draft) || missing.length > 0}
           onClick={() => void save()}
         >
           {m.signage_editor_save()}
         </Button>
-        <Button disabled={busy || !past.length} onClick={undo}>
-          {m.signage_editor_undo()}
-        </Button>
-        <Button disabled={busy || !future.length} onClick={redo}>
-          {m.signage_editor_redo()}
-        </Button>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {templates.data?.map((template) => (
-          <Button
-            key={template.id}
-            variant={id === template.id ? "default" : "outline"}
-            disabled={busy}
-            onClick={() => load(template)}
-          >
-            {template.name}
+      }
+    >
+      <div className="flex flex-col gap-4">
+        {(error || organizations.error || notices.error) && (
+          <Alert variant="danger">{error || m.admin_error_load_data()}</Alert>
+        )}
+        <div className="flex flex-wrap gap-2">
+          <Button disabled={busy || !past.length} onClick={undo}>
+            {m.signage_editor_undo()}
           </Button>
-        ))}
-      </div>
-      <AdminField>
-        <AdminLabel>{fieldLabels.name}</AdminLabel>
-        <AdminInput
-          maxLength={200}
-          value={draft.name}
-          disabled={busy}
-          onChange={(event) => change({ ...draft, name: event.target.value })}
-        />
-      </AdminField>
-      {choose(
-        m.signage_editor_preview_kind(),
-        kind,
-        ["organizations", "notice", "image"],
-        (value) => {
-          setKind(value as TemplateKind);
-          setSample("");
-        },
-        false,
-        {
-          organizations: m.signage_editor_organisations(),
-          notice: m.signage_editor_notice(),
-          image: m.signage_editor_image(),
-        },
-      )}
-      {samples.length > 0 ? (
-        choose(
-          m.signage_editor_sample(),
-          sample || String(samples[0]!.id),
-          samples.map((item) => String(item.id)),
-          setSample,
-          false,
-          Object.fromEntries(
-            samples.map((item) => [
-              String(item.id),
-              "name" in item ? item.name : item.content.title || item.id,
-            ]),
-          ),
-        )
-      ) : (
-        <p>{m.signage_editor_no_samples()}</p>
-      )}
-      {missing.length > 0 && (
-        <Alert>
-          {m.signage_editor_missing()} {missing.map((key) => bindingLabels()[key]).join(", ")}
-        </Alert>
-      )}
-      <div ref={viewport} className="site-signage-editor-viewport">
-        {/* oxlint-disable shadcn/no-inline-styles -- The editor scales the shared 1920×1080 renderer and validated layer geometry to its measured viewport. */}
-        <div className="site-signage-editor-canvas" style={{ transform: `scale(${scale})` }}>
-          <SlideRenderer slide={preview} />
-          {draft.layers
-            .filter((item) => item.visible !== false)
-            .map((item) => (
-              <div
-                key={item.id}
-                className="site-signage-editor-selection"
-                style={{
-                  left: `${item.x}%`,
-                  top: `${item.y}%`,
-                  width: `${item.width}%`,
-                  height: `${item.height}%`,
-                  transform: `rotate(${item.rotation}deg)`,
+          <Button disabled={busy || !future.length} onClick={redo}>
+            {m.signage_editor_redo()}
+          </Button>
+        </div>
+        <div className="grid items-start gap-3 md:grid-cols-3">
+          <AdminField>
+            <AdminLabel>{fieldLabels.name}</AdminLabel>
+            <AdminInput
+              maxLength={200}
+              value={draft.name}
+              disabled={busy}
+              onChange={(event) => change({ ...draft, name: event.target.value })}
+            />
+          </AdminField>
+          {choose(
+            m.signage_editor_preview_kind(),
+            kind,
+            ["organizations", "notice", "image"],
+            (value) => {
+              setKind(value as TemplateKind);
+              setSample("");
+            },
+            false,
+            {
+              organizations: m.signage_editor_organisations(),
+              notice: m.signage_editor_notice(),
+              image: m.signage_editor_image(),
+            },
+          )}
+          {samples.length > 0 ? (
+            choose(
+              m.signage_editor_sample(),
+              sample || String(samples[0]!.id),
+              samples.map((item) => String(item.id)),
+              setSample,
+              false,
+              Object.fromEntries(
+                samples.map((item) => [
+                  String(item.id),
+                  "name" in item ? item.name : item.content.title || item.id,
+                ]),
+              ),
+            )
+          ) : (
+            <AdminEmptyState>{m.signage_editor_no_samples()}</AdminEmptyState>
+          )}
+        </div>
+        {missing.length > 0 && (
+          <Alert>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span>
+                {m.signage_editor_missing()} {missing.map((key) => bindingLabels()[key]).join(", ")}
+              </span>
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={() => {
+                  const next = addMissingBindings(draft, kind);
+                  if (JSON.stringify(next) !== JSON.stringify(draft)) change(next);
+                  const first = next.layers.find(
+                    (item) =>
+                      item.kind === "binding" &&
+                      missing.some((binding) => binding === item.binding) &&
+                      item.visible !== false,
+                  );
+                  if (first) setSelected(first.id);
                 }}
               >
-                <button
-                  type="button"
-                  className="site-signage-editor-hit"
-                  aria-label={`${m.signage_editor_move()}: ${item.name || (item.binding && bindingLabels()[item.binding]) || options[item.kind]}`}
-                  aria-pressed={selected === item.id}
-                  disabled={item.locked || busy}
-                  onClick={() => setSelected(item.id)}
-                  onPointerDown={(event) => start(event, item, "move")}
-                  onPointerMove={move}
-                  onPointerUp={() => finish()}
-                  onPointerCancel={() => finish(true)}
-                  onKeyDown={(event) => {
-                    if (item.locked || busy) return;
-                    const delta = event.shiftKey ? 5 : 1;
-                    const directions: Record<string, Partial<Layer>> = {
-                      ArrowLeft: { x: Math.max(0, item.x - delta) },
-                      ArrowRight: { x: Math.min(100, item.x + delta) },
-                      ArrowUp: { y: Math.max(0, item.y - delta) },
-                      ArrowDown: { y: Math.min(100, item.y + delta) },
-                    };
-                    if (directions[event.key]) {
-                      event.preventDefault();
-                      setSelected(item.id);
-                      change({
-                        ...draft,
-                        layers: draft.layers.map((layer) =>
-                          layer.id === item.id ? { ...layer, ...directions[event.key] } : layer,
-                        ),
-                      });
-                    }
-                  }}
-                />
-                {selected === item.id &&
-                  !item.locked &&
-                  ["resize", "rotate"].map((mode) => (
+                {m.signage_editor_add_missing()}
+              </Button>
+            </div>
+          </Alert>
+        )}
+        <div className="grid items-start gap-4 lg:grid-cols-3">
+          <div ref={viewport} className="site-signage-editor-viewport lg:col-span-2">
+            {/* oxlint-disable shadcn/no-inline-styles -- The editor scales the shared 1920×1080 renderer and validated layer geometry to its measured viewport. */}
+            <div className="site-signage-editor-canvas" style={{ transform: `scale(${scale})` }}>
+              <SlideRenderer slide={preview} />
+              {draft.layers
+                .filter((item) => item.visible !== false)
+                .map((item) => (
+                  <div
+                    key={item.id}
+                    className="site-signage-editor-selection"
+                    style={{
+                      left: `${item.x}%`,
+                      top: `${item.y}%`,
+                      width: `${item.width}%`,
+                      height: `${item.height}%`,
+                      transform: `rotate(${item.rotation}deg)`,
+                    }}
+                  >
                     <button
-                      key={mode}
                       type="button"
-                      className={`site-signage-editor-${mode}`}
-                      style={{ width: 44 / scale, height: 44 / scale }}
-                      aria-label={
-                        mode === "resize" ? m.signage_editor_resize() : m.signage_editor_rotation()
-                      }
-                      onPointerDown={(event) => start(event, item, mode as "resize" | "rotate")}
+                      className="site-signage-editor-hit"
+                      aria-label={`${m.signage_editor_move()}: ${item.name || (item.binding && bindingLabels()[item.binding]) || options[item.kind]}`}
+                      aria-pressed={selected === item.id}
+                      disabled={item.locked || busy}
+                      onClick={() => setSelected(item.id)}
+                      onPointerDown={(event) => start(event, item, "move")}
                       onPointerMove={move}
                       onPointerUp={() => finish()}
                       onPointerCancel={() => finish(true)}
+                      onKeyDown={(event) => {
+                        if (item.locked || busy) return;
+                        const delta = event.shiftKey ? 5 : 1;
+                        const directions: Record<string, Partial<Layer>> = {
+                          ArrowLeft: { x: Math.max(0, item.x - delta) },
+                          ArrowRight: { x: Math.min(100, item.x + delta) },
+                          ArrowUp: { y: Math.max(0, item.y - delta) },
+                          ArrowDown: { y: Math.min(100, item.y + delta) },
+                        };
+                        if (directions[event.key]) {
+                          event.preventDefault();
+                          setSelected(item.id);
+                          change({
+                            ...draft,
+                            layers: draft.layers.map((layer) =>
+                              layer.id === item.id ? { ...layer, ...directions[event.key] } : layer,
+                            ),
+                          });
+                        }
+                      }}
                     />
-                  ))}
-              </div>
-            ))}
-        </div>
-        {/* oxlint-enable shadcn/no-inline-styles */}
-      </div>
-      <div className="grid gap-4 lg:grid-cols-3">
-        <section className="flex flex-col gap-2">
-          <h3>{m.signage_editor_layers()}</h3>
-          {draft.layers.map((item) => (
-            <Button
-              variant={selected === item.id ? "default" : "outline"}
-              key={item.id}
-              onClick={() => setSelected(item.id)}
+                    {selected === item.id &&
+                      !item.locked &&
+                      ["resize", "rotate"].map((mode) => (
+                        <button
+                          key={mode}
+                          type="button"
+                          className={`site-signage-editor-${mode}`}
+                          style={{ width: 44 / scale, height: 44 / scale }}
+                          aria-label={
+                            mode === "resize"
+                              ? m.signage_editor_resize()
+                              : m.signage_editor_rotation()
+                          }
+                          onPointerDown={(event) => start(event, item, mode as "resize" | "rotate")}
+                          onPointerMove={move}
+                          onPointerUp={() => finish()}
+                          onPointerCancel={() => finish(true)}
+                        />
+                      ))}
+                  </div>
+                ))}
+            </div>
+            {/* oxlint-enable shadcn/no-inline-styles */}
+          </div>
+          <div className="min-w-0 space-y-4 lg:row-span-2">
+            <SignageLayerPanel
+              layers={draft.layers}
+              selected={selected}
+              busy={busy}
+              bindingLabels={bindingLabels()}
+              kindLabels={options}
+              onSelect={setSelected}
+              onMove={reorder}
+              onAdd={add}
+              onPatch={(id, patch) => {
+                change({
+                  ...draft,
+                  layers: draft.layers.map((item) =>
+                    item.id === id ? { ...item, ...patch } : item,
+                  ),
+                });
+              }}
+            />
+            <Collapsible
+              open={backgroundOpen}
+              onOpenChange={setBackgroundOpen}
+              className="rounded-md border border-border p-3"
             >
-              {item.name || (item.binding && bindingLabels()[item.binding]) || options[item.kind]}
-            </Button>
-          ))}
-          {choose(
-            m.signage_editor_add(),
-            "",
-            ["binding", "text", "image", "icon", "shape"],
-            (value) => add(value as Layer["kind"], value === "binding" ? "name" : null),
-          )}
-          {layer && (
-            <>
-              <Button disabled={busy || !!layer.locked} onClick={() => reorder(-1)}>
-                {m.signage_editor_back()}
-              </Button>
-              <Button disabled={busy || !!layer.locked} onClick={() => reorder(1)}>
-                {m.signage_editor_front()}
-              </Button>
+              <CollapsibleTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-sm text-left font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                <Icon icon={backgroundOpen ? ChevronDownIcon : ChevronRightIcon} />
+                {fieldLabels.background}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-3">
+                {choose(
+                  fieldLabels.kind,
+                  draft.background.kind,
+                  ["color", "gradient", "image"],
+                  (value) =>
+                    change({
+                      ...draft,
+                      background: {
+                        ...draft.background,
+                        kind: value as TemplateDraft["background"]["kind"],
+                      },
+                    }),
+                )}
+                {draft.background.kind !== "image" &&
+                  (draft.background.kind === "gradient"
+                    ? (["color", "end_color"] as const)
+                    : (["color"] as const)
+                  ).map((key) => (
+                    <AdminField key={key}>
+                      <AdminLabel>{fieldLabels[key]}</AdminLabel>
+                      <AdminInput
+                        type="color"
+                        disabled={busy}
+                        value={draft.background[key]}
+                        onChange={(event) =>
+                          change({
+                            ...draft,
+                            background: { ...draft.background, [key]: event.target.value },
+                          })
+                        }
+                      />
+                    </AdminField>
+                  ))}
+                {draft.background.kind === "image" && (
+                  <AdminField>
+                    <AdminLabel>{m.signage_editor_upload()}</AdminLabel>
+                    <AdminInput
+                      type="file"
+                      accept="image/*"
+                      disabled={busy}
+                      onChange={(event) => void upload(event.target.files?.[0], "background")}
+                    />
+                  </AdminField>
+                )}
+              </CollapsibleContent>
+            </Collapsible>
+          </div>
+          {layer ? (
+            <section
+              aria-label={m.signage_editor_properties()}
+              className="lg:col-span-2 space-y-4 rounded-md border border-border p-3"
+            >
+              <h3 className="font-semibold">{m.signage_editor_properties()}</h3>
+              {layer.locked && (
+                <p className="text-sm text-subtle">{m.signage_editor_locked_help()}</p>
+              )}
+              <fieldset disabled={busy || layer.locked} className="space-y-3">
+                <legend className="mb-2 font-medium">{m.signage_editor_content()}</legend>
+                <AdminField>
+                  <AdminLabel>{m.signage_editor_layer_name()}</AdminLabel>
+                  <AdminInput
+                    value={layer.name ?? ""}
+                    maxLength={100}
+                    onChange={(event) => patchLayer({ name: event.target.value })}
+                  />
+                </AdminField>
+                {layer.kind === "text" && (
+                  <AdminField>
+                    <AdminLabel>{fieldLabels.text}</AdminLabel>
+                    <AdminTextarea
+                      value={layer.text}
+                      maxLength={500}
+                      onChange={(event) => patchLayer({ text: event.target.value })}
+                    />
+                  </AdminField>
+                )}
+                {layer.kind === "binding" &&
+                  choose(
+                    fieldLabels.binding,
+                    layer.binding ?? "name",
+                    Object.keys(bindingLabels()),
+                    (value) => patchLayer({ binding: value as Layer["binding"] }),
+                    layer.locked,
+                    bindingLabels(),
+                  )}
+                {layer.kind === "image" && (
+                  <AdminField>
+                    <AdminLabel>{m.signage_editor_upload()}</AdminLabel>
+                    <AdminInput
+                      type="file"
+                      accept="image/*"
+                      onChange={(event) => void upload(event.target.files?.[0], "layer")}
+                    />
+                  </AdminField>
+                )}
+                {layer.kind === "shape" &&
+                  choose(
+                    fieldLabels.shape,
+                    layer.shape,
+                    ["rectangle", "ellipse"],
+                    (value) => patchLayer({ shape: value as Layer["shape"] }),
+                    layer.locked,
+                  )}
+                {layer.kind === "icon" &&
+                  choose(
+                    fieldLabels.icon,
+                    layer.icon ?? "info",
+                    Object.keys(signageIcons),
+                    (value) => patchLayer({ icon: value }),
+                    layer.locked,
+                  )}
+              </fieldset>
+              <fieldset disabled={busy || layer.locked} className="grid gap-3 sm:grid-cols-2">
+                <legend className="mb-2 font-medium">{m.signage_editor_appearance()}</legend>
+                {!isImage && (
+                  <AdminField>
+                    <AdminLabel>{fieldLabels.color}</AdminLabel>
+                    <AdminInput
+                      type="color"
+                      value={layer.color}
+                      onChange={(event) => patchLayer({ color: event.target.value })}
+                    />
+                  </AdminField>
+                )}
+                {isText && (
+                  <>
+                    <AdminField>
+                      <AdminLabel>{fieldLabels.font_size}</AdminLabel>
+                      <AdminInput
+                        type="number"
+                        min={8}
+                        max={300}
+                        step={1}
+                        value={layer.font_size}
+                        onChange={(event) => {
+                          if (event.target.value && event.target.validity.valid)
+                            patchLayer({ font_size: Number(event.target.value) });
+                        }}
+                      />
+                    </AdminField>
+                    {choose(
+                      fieldLabels.font,
+                      layer.font ?? "sans",
+                      ["sans", "serif", "mono"],
+                      (value) => patchLayer({ font: value as Layer["font"] }),
+                      layer.locked,
+                    )}
+                    {choose(
+                      fieldLabels.align,
+                      layer.align ?? "center",
+                      ["left", "center", "right"],
+                      (value) => patchLayer({ align: value as Layer["align"] }),
+                      layer.locked,
+                    )}
+                  </>
+                )}
+                {isImage &&
+                  choose(
+                    fieldLabels.fit,
+                    layer.fit ?? "contain",
+                    ["contain", "cover"],
+                    (value) => patchLayer({ fit: value as Layer["fit"] }),
+                    layer.locked,
+                  )}
+              </fieldset>
+              <fieldset disabled={busy || layer.locked} className="grid gap-3 sm:grid-cols-2">
+                <legend className="mb-2 font-medium">{m.signage_editor_position()}</legend>
+                {(["x", "y", "width", "height", "rotation"] as const).map((key) => (
+                  <AdminField key={key}>
+                    <AdminLabel>{fieldLabels[key]}</AdminLabel>
+                    <AdminInput
+                      type="number"
+                      step="any"
+                      value={layer[key]}
+                      min={key === "rotation" ? -360 : key === "width" || key === "height" ? 1 : 0}
+                      max={key === "rotation" ? 360 : 100}
+                      onChange={(event) => {
+                        if (event.target.value && event.target.validity.valid)
+                          patchLayer({ [key]: Number(event.target.value) });
+                      }}
+                    />
+                  </AdminField>
+                ))}
+              </fieldset>
               <Button
+                variant="destructive"
                 disabled={busy || !!layer.locked}
                 onClick={() => {
-                  change({ ...draft, layers: draft.layers.filter((item) => item.id !== selected) });
+                  change({
+                    ...draft,
+                    layers: draft.layers.filter((item) => item.id !== selected),
+                  });
                   setSelected(null);
                 }}
               >
                 {m.signage_editor_remove()}
               </Button>
-            </>
+            </section>
+          ) : (
+            <p className="lg:col-span-2 text-sm text-subtle">{m.signage_editor_select_layer()}</p>
           )}
-        </section>
-        <section className="flex flex-col gap-2">
-          <h3>{fieldLabels.background}</h3>
-          {choose(
-            fieldLabels.kind,
-            draft.background.kind,
-            ["color", "gradient", "image"],
-            (value) =>
-              change({
-                ...draft,
-                background: {
-                  ...draft.background,
-                  kind: value as TemplateDraft["background"]["kind"],
-                },
-              }),
-          )}
-          {(["color", "end_color"] as const).map((key) => (
-            <AdminField key={key}>
-              <AdminLabel>{fieldLabels[key]}</AdminLabel>
-              <AdminInput
-                type="color"
-                disabled={busy}
-                value={draft.background[key]}
-                onChange={(event) =>
-                  change({
-                    ...draft,
-                    background: { ...draft.background, [key]: event.target.value },
-                  })
-                }
-              />
-            </AdminField>
-          ))}
-          <AdminField>
-            <AdminLabel>{m.signage_editor_upload()}</AdminLabel>
-            <AdminInput
-              type="file"
-              accept="image/*"
-              disabled={busy}
-              onChange={(event) => void upload(event.target.files?.[0], "background")}
-            />
-          </AdminField>
-        </section>
-        {layer && (
-          <section className="flex flex-col gap-2">
-            <h3>{m.signage_editor_properties()}</h3>
-            <AdminCheck
-              checked={layer.locked ?? false}
-              disabled={busy}
-              onCheckedChange={(checked) => patchLayer({ locked: checked === true })}
-              label={m.signage_editor_locked()}
-            />
-            <AdminCheck
-              checked={layer.visible !== false}
-              disabled={busy || layer.locked}
-              onCheckedChange={(checked) => patchLayer({ visible: checked === true })}
-              label={m.signage_editor_visible()}
-            />
-            {(["name", "text", "color"] as const).map((key) => (
-              <AdminField key={key}>
-                <AdminLabel>{fieldLabels[key]}</AdminLabel>
-                <AdminInput
-                  type={key === "color" ? "color" : "text"}
-                  value={layer[key] ?? ""}
-                  maxLength={key === "name" ? 100 : 500}
-                  disabled={busy || layer.locked}
-                  onChange={(event) => patchLayer({ [key]: event.target.value })}
-                />
-              </AdminField>
-            ))}
-            {(["x", "y", "width", "height", "rotation", "font_size"] as const).map((key) => (
-              <AdminField key={key}>
-                <AdminLabel>{fieldLabels[key]}</AdminLabel>
-                <AdminInput
-                  type="number"
-                  step={key === "font_size" ? 1 : "any"}
-                  value={layer[key]}
-                  min={
-                    key === "rotation"
-                      ? -360
-                      : key === "font_size"
-                        ? 8
-                        : key === "width" || key === "height"
-                          ? 1
-                          : 0
-                  }
-                  max={key === "rotation" ? 360 : key === "font_size" ? 300 : 100}
-                  disabled={busy || layer.locked}
-                  onChange={(event) => {
-                    const input = event.target;
-                    if (input.value && input.validity.valid)
-                      patchLayer({ [key]: Number(input.value) });
-                  }}
-                />
-              </AdminField>
-            ))}
-            {layer.kind === "binding" &&
-              choose(
-                fieldLabels.binding,
-                layer.binding ?? "name",
-                Object.keys(bindingLabels()),
-                (value) => patchLayer({ binding: value as Layer["binding"] }),
-                layer.locked,
-                bindingLabels(),
-              )}
-            {choose(
-              fieldLabels.font,
-              layer.font ?? "sans",
-              ["sans", "serif", "mono"],
-              (value) => patchLayer({ font: value as Layer["font"] }),
-              layer.locked,
-            )}
-            {choose(
-              fieldLabels.align,
-              layer.align ?? "center",
-              ["left", "center", "right"],
-              (value) => patchLayer({ align: value as Layer["align"] }),
-              layer.locked,
-            )}
-            {choose(
-              fieldLabels.fit,
-              layer.fit ?? "contain",
-              ["contain", "cover"],
-              (value) => patchLayer({ fit: value as Layer["fit"] }),
-              layer.locked,
-            )}
-            {layer.kind === "shape" &&
-              choose(
-                fieldLabels.shape,
-                layer.shape,
-                ["rectangle", "ellipse"],
-                (value) => patchLayer({ shape: value as Layer["shape"] }),
-                layer.locked,
-              )}
-            {layer.kind === "icon" &&
-              choose(
-                fieldLabels.icon,
-                layer.icon ?? "info",
-                Object.keys(signageIcons),
-                (value) => patchLayer({ icon: value }),
-                layer.locked,
-              )}
-            {layer.kind === "image" && (
-              <AdminField>
-                <AdminLabel>{m.signage_editor_upload()}</AdminLabel>
-                <AdminInput
-                  type="file"
-                  accept="image/*"
-                  disabled={busy || layer.locked}
-                  onChange={(event) => void upload(event.target.files?.[0], "layer")}
-                />
-              </AdminField>
-            )}
-          </section>
-        )}
+        </div>
       </div>
-    </div>
+    </AdminEditorDialog>
   );
 }

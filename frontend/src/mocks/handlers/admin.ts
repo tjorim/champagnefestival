@@ -910,8 +910,11 @@ export const adminHandlers = [
       phone: String(body.phone ?? ""),
       address: String(body.address ?? ""),
       roles: ["volunteer"],
-      national_register_number: null,
-      eid_document_number: null,
+      national_register_number: body.national_register_number ?? null,
+      eid_document_number: body.eid_document_number ?? null,
+      help_periods: Array.isArray(body.help_periods)
+        ? body.help_periods.map((period, index) => ({ ...period, id: index + 1 }))
+        : [],
       visits_per_month: null,
       notes: String(body.notes ?? ""),
       anonymised: false,
