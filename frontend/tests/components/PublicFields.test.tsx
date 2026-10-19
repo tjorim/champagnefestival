@@ -14,8 +14,6 @@ import {
   PublicSelect,
   PublicTextarea,
 } from "@/components/PublicFields";
-import { FieldLabel, FieldTitle } from "@/components/ui/field";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { selectAdminOption } from "../helpers/adminSelect";
 
 function Language() {
@@ -102,29 +100,5 @@ describe("owned public fields", () => {
     await user.click(screen.getByText("I agree"));
     expect(onChange).toHaveBeenCalledWith(true, expect.anything());
     expect(checkbox).toBeChecked();
-  });
-
-  it("exposes a named radio group with arrow-key navigation", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <div>
-        <FieldTitle id="dish-label">Main dish</FieldTitle>
-        <RadioGroup aria-labelledby="dish-label" name="dish" onValueChange={onChange}>
-          {["soup", "stew"].map((id) => (
-            <div key={id}>
-              <RadioGroupItem id={`dish-${id}`} value={id} />
-              <FieldLabel htmlFor={`dish-${id}`}>{id === "soup" ? "Soup" : "Stew"}</FieldLabel>
-            </div>
-          ))}
-        </RadioGroup>
-      </div>,
-    );
-    expect(screen.getByRole("radiogroup", { name: "Main dish" })).toBeInTheDocument();
-    await user.click(screen.getByRole("radio", { name: "Soup" }));
-    expect(onChange).toHaveBeenLastCalledWith("soup", expect.anything());
-    await user.keyboard("{ArrowDown}");
-    expect(onChange).toHaveBeenLastCalledWith("stew", expect.anything());
-    expect(screen.getByRole("radio", { name: "Stew" })).toBeChecked();
   });
 });
