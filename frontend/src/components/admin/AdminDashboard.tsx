@@ -45,7 +45,7 @@ const VenueManagement = React.lazy(() => import("./VenueManagement"));
 const CategoryManagement = React.lazy(() => import("./CategoryManagement"));
 const FaqManagement = React.lazy(() => import("./FaqManagement"));
 const AnnouncementsSection = React.lazy(() => import("./AnnouncementsSection"));
-const SignageChannels = React.lazy(() => import("./SignageChannels"));
+const SignageSection = React.lazy(() => import("./SignageSection"));
 const PolicyManagement = React.lazy(() => import("./PolicyManagement"));
 const SettingsManagement = React.lazy(() => import("./SettingsManagement"));
 const ContactMessagesManagement = React.lazy(() => import("./ContactMessagesManagement"));
@@ -685,7 +685,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                   <FaqManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "signage-channels" && (
-                  <SignageChannels authHeaders={authHeaders} />
+                  <SignageSection authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "announcements" && (
                   <AnnouncementsSection authHeaders={authHeaders} />

@@ -640,3 +640,28 @@ change the existing retry-safety decisions for those operations.
   reconciler contention, private download, expiry, deletion and revoked access
   are exercised in `backend/tests/test_signage_video.py`; browser capture and
   rediscovery are in `frontend/e2e/signage-video.authenticated.spec.ts`.
+
+### Signage editor dialogs (2026-10-19)
+
+Channel, slide and template create/edit dialogs retain the existing endpoint and
+retry decisions above. Each Save makes one POST (new) or PUT (existing), with
+no automatic retry; pending saves block dismissal and additional submission.
+Cancel, Escape and backdrop dismissal make no write request and ask before
+discarding changed fields. Artwork uploads remain immediate, separate writes;
+cancelling an editor does not remove an already uploaded asset. Browser coverage
+checks create/edit requests, closing after save and discarding unsaved edits.
+
+### Announcement and composer editor dialogs (2026-10-19)
+
+The announcement and composer dialogs keep the POST/PUT retry decisions above:
+creates and updates have no idempotency key and are never retried automatically.
+Save disables submission, field editing and dismissal until the request completes.
+A failure keeps the draft and a translated error in the dialog; a successful
+response closes it and refreshes the list. Cancel, Escape, close and backdrop
+dismissal make no write request and ask before discarding dirty fields. The
+editor snapshots its target and initial values, so a list refetch cannot silently
+change them. Publishing, reordering, deletion and confirmed composer scheduling
+retain their existing endpoint semantics. Targeted tests cover correct create
+and update requests, overlapping-submit prevention, pending dismissal, failed
+saves without retries and draft preservation during refetch. Browser tests cover
+guarded dismissal, focus return, translated fields and desktop/mobile layouts.

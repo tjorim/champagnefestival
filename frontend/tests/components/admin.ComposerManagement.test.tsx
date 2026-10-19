@@ -72,6 +72,7 @@ describe("ComposerManagement", () => {
 
     renderComposer();
     await screen.findByText("No composed messages yet.");
+    fireEvent.click(screen.getByRole("button", { name: "New message draft" }));
 
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Nieuwe titel" } });
     fireEvent.change(screen.getByLabelText("Body"), { target: { value: "Nieuwe inhoud" } });
@@ -127,13 +128,14 @@ describe("ComposerManagement", () => {
     );
     renderComposer();
     await screen.findByText("No composed messages yet.");
+    fireEvent.click(screen.getByRole("button", { name: "New message draft" }));
     const button = screen.getByRole("button", { name: "Create draft" });
     fireEvent.click(button);
     await waitFor(() => expect(button).toBeDisabled());
-    fireEvent.submit(button.closest("form")!);
+    fireEvent.submit(document.getElementById("composer-form")!);
     await waitFor(() => expect(requests).toBe(1));
     finish();
-    await waitFor(() => expect(button).toBeEnabled());
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(requests).toBe(1);
   });
 
@@ -150,7 +152,7 @@ describe("ComposerManagement", () => {
     await screen.findByText("Festivalupdate");
     fireEvent.click(screen.getByRole("button", { name: "Send" }));
     fireEvent.click(await screen.findByRole("button", { name: "Confirm" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Scheduling failed");
+    expect(await screen.findByRole("alert")).toHaveTextContent("The message could not be sent.");
     expect(requests).toBe(1);
   });
 

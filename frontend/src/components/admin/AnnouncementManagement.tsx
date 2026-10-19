@@ -7,7 +7,7 @@ import {
   AdminCheck,
 } from "@/components/admin/AdminFields";
 import { useCallback, useMemo, useState } from "react";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,8 @@ import {
   fetchVoidOrThrowWithUnauthorized,
 } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import AdminEditorDialog from "./AdminEditorDialog";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
@@ -107,14 +109,18 @@ export default function AnnouncementManagement({
   const key = queryKeys.admin.announcements;
   const query = useQuery({
     queryKey: key,
-    queryFn: async () => {
-      const response = await fetch("/api/announcements", { headers: authHeaders() });
-      if (!response.ok) throw new Error(m.admin_error_load_announcements());
-      return response.json() as Promise<Announcement[]>;
-    },
+    queryFn: ({ signal }) =>
+      fetchJsonOrThrowWithUnauthorized<Announcement[]>(
+        "/api/announcements",
+        { headers: authHeaders(), signal },
+        m.admin_error_load_announcements(),
+      ),
   });
   const items = useMemo(() => query.data ?? [], [query.data]);
-  const [editing, setEditing] = useState<string | null>(null);
+  // Keep the editor baseline independent of list refetches while it is open.
+  const [editor, setEditor] = useState<{ id: string | null; initial: Draft } | null>(null);
+  const editing = editor?.id ?? null;
+  const [editorError, setEditorError] = useState("");
   const [preview, setPreview] = useState<"nl" | "en" | "fr">("nl");
   const [error, setError] = useState("");
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
@@ -125,7 +131,7 @@ export default function AnnouncementManagement({
         `/api/announcements${editing ? `/${editing}` : ""}`,
         {
           method: editing ? "PUT" : "POST",
-          headers: authHeaders(),
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({
             ...writePayload(payload),
             starts_at: iso(payload.starts_at),
@@ -136,59 +142,56 @@ export default function AnnouncementManagement({
         m.admin_error_save_announcement(),
       ),
     onSuccess: () => {
-      form.reset(empty);
-      setEditing(null);
+      closeEditor();
       void refresh();
     },
     retry: false,
   });
 
-  const editingItem = editing ? (items.find((i) => i.id === editing) ?? null) : null;
-
-  // Derived rather than a static template: `useForm` re-applies `defaultValues`
-  // on every render, so a template that disagrees with what `form.reset(record)`
-  // stored gets re-applied and blanks the form. See EditionModal for the details.
-  const formDefaultValues = useMemo(
-    (): Draft =>
-      editingItem
-        ? {
-            text_language: editingItem.text_language,
-            text_nl: editingItem.text_nl,
-            text_en: editingItem.text_en,
-            text_fr: editingItem.text_fr,
-            level: editingItem.level,
-            active: editingItem.active,
-            starts_at: localDate(editingItem.starts_at),
-            ends_at: localDate(editingItem.ends_at),
-            link_url: editingItem.link_url,
-            link_label_nl: editingItem.link_label_nl,
-            link_label_en: editingItem.link_label_en,
-            link_label_fr: editingItem.link_label_fr,
-          }
-        : empty,
-    [editingItem],
-  );
-
   const form = useForm({
-    defaultValues: formDefaultValues,
+    defaultValues: editor?.initial ?? empty,
     onSubmit: async ({ value }) => {
-      setError("");
+      if (save.isPending) return;
+      setEditorError("");
       try {
         await save.mutateAsync(value);
       } catch (reason) {
-        setError(String(reason));
+        setEditorError(apiErrorMessage(reason, m.admin_error_save_announcement()));
       }
     },
   });
 
-  // Seed the form when entering edit mode. Reset during render (the
-  // "adjusting state when a prop changes" pattern) since this only needs to
-  // react to `editing` changing to a specific item, not to every render.
-  const [lastEditing, setLastEditing] = useState(editing);
-  if (editing !== lastEditing) {
-    setLastEditing(editing);
-    if (editing) form.reset(formDefaultValues);
+  const dirty = useSelector(form.atom, (state) => !state.isDefaultValue);
+  const openEditor = useCallback(
+    (item?: Announcement) => {
+      const initial: Draft = item
+        ? {
+            text_language: item.text_language,
+            text_nl: item.text_nl,
+            text_en: item.text_en,
+            text_fr: item.text_fr,
+            level: item.level,
+            active: item.active,
+            starts_at: localDate(item.starts_at),
+            ends_at: localDate(item.ends_at),
+            link_url: item.link_url,
+            link_label_nl: item.link_label_nl,
+            link_label_en: item.link_label_en,
+            link_label_fr: item.link_label_fr,
+          }
+        : empty;
+      setEditor({ id: item?.id ?? null, initial });
+      setEditorError("");
+      form.reset(initial);
+    },
+    [form],
+  );
+  function closeEditor() {
+    setEditor(null);
+    setEditorError("");
+    form.reset(empty);
   }
+
   const remove = useMutation({
     mutationFn: (id: string) =>
       fetchVoidOrThrowWithUnauthorized(
@@ -197,8 +200,11 @@ export default function AnnouncementManagement({
         m.admin_error_delete_announcement_request(),
       ),
     onSuccess: () => void refresh(),
+    onError: (reason) => setError(apiErrorMessage(reason, m.admin_error_delete_announcement())),
     retry: false,
   });
+  // Stable mutation callbacks keep table action buttons mounted for focus return.
+  const deleteAnnouncement = remove.mutate;
   const handleDelete = useCallback(
     async (id: string) => {
       const confirmed = await confirm({
@@ -206,9 +212,9 @@ export default function AnnouncementManagement({
         body: m.admin_announcement_delete_confirm(),
         errorFallback: m.admin_error_delete_announcement(),
       });
-      if (confirmed) remove.mutate(id);
+      if (confirmed) deleteAnnouncement(id);
     },
-    [confirm, remove],
+    [confirm, deleteAnnouncement],
   );
   const update = useCallback(
     async (item: Announcement, values: Partial<Announcement>) =>
@@ -216,7 +222,7 @@ export default function AnnouncementManagement({
         `/api/announcements/${item.id}`,
         {
           method: "PUT",
-          headers: authHeaders(),
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify(writePayload({ ...item, ...values })),
         },
         m.admin_error_update_announcement(),
@@ -237,7 +243,7 @@ export default function AnnouncementManagement({
         "/api/announcements/reorder",
         {
           method: "POST",
-          headers: authHeaders(),
+          headers: { "Content-Type": "application/json", ...authHeaders() },
           body: JSON.stringify({ ordered_ids: ordered.map((item) => item.id) }),
         },
         m.admin_error_reorder_announcements(),
@@ -268,6 +274,45 @@ export default function AnnouncementManagement({
     }
   };
 
+  const actionsColumn = useMemo(
+    () =>
+      columnHelper.display({
+        id: "actions",
+        header: m.admin_actions_label(),
+        enableSorting: false,
+        meta: { tdClassName: "whitespace-nowrap" },
+        cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <>
+              <Button size="sm" onClick={() => openEditor(item)}>
+                {m.admin_edit()}
+              </Button>{" "}
+              <Button
+                size="sm"
+                variant="warning"
+                onClick={() =>
+                  void update(item, { active: !item.active })
+                    .then(refresh)
+                    .catch((reason) =>
+                      setError(apiErrorMessage(reason, m.admin_error_update_announcement())),
+                    )
+                }
+              >
+                {item.active
+                  ? m.admin_announcement_disable_action()
+                  : m.admin_announcement_publish_action()}
+              </Button>{" "}
+              <Button size="sm" variant="danger" onClick={() => void handleDelete(item.id)}>
+                {m.admin_delete()}
+              </Button>
+            </>
+          );
+        },
+      }),
+    [update, refresh, handleDelete, openEditor],
+  );
+
   const columns = useMemo(
     () =>
       columnHelper.columns([
@@ -281,7 +326,11 @@ export default function AnnouncementManagement({
                 size="sm"
                 variant="outline"
                 disabled={!row.index}
-                onClick={() => void move(row.index, -1)}
+                onClick={() =>
+                  void move(row.index, -1).catch((reason) =>
+                    setError(apiErrorMessage(reason, m.admin_error_reorder_announcements())),
+                  )
+                }
               >
                 ↑
               </Button>{" "}
@@ -289,7 +338,11 @@ export default function AnnouncementManagement({
                 size="sm"
                 variant="outline"
                 disabled={row.index === items.length - 1}
-                onClick={() => void move(row.index, 1)}
+                onClick={() =>
+                  void move(row.index, 1).catch((reason) =>
+                    setError(apiErrorMessage(reason, m.admin_error_reorder_announcements())),
+                  )
+                }
               >
                 ↓
               </Button>
@@ -330,194 +383,178 @@ export default function AnnouncementManagement({
             </Badge>
           ),
         }),
-        columnHelper.display({
-          id: "actions",
-          header: m.admin_actions_label(),
-          enableSorting: false,
-          meta: { tdClassName: "whitespace-nowrap" },
-          cell: ({ row }) => {
-            const item = row.original;
-            return (
-              <>
-                <Button size="sm" onClick={() => setEditing(item.id)}>
-                  {m.admin_edit()}
-                </Button>{" "}
-                <Button
-                  size="sm"
-                  variant="warning"
-                  onClick={() =>
-                    void update(item, { active: !item.active })
-                      .then(refresh)
-                      .catch((reason) => setError(String(reason)))
-                  }
-                >
-                  {item.active
-                    ? m.admin_announcement_disable_action()
-                    : m.admin_announcement_publish_action()}
-                </Button>{" "}
-                <Button size="sm" variant="danger" onClick={() => void handleDelete(item.id)}>
-                  {m.admin_delete()}
-                </Button>
-              </>
-            );
-          },
-        }),
+        actionsColumn,
       ]),
-    [items, preview, move, update, refresh, handleDelete],
+    [items, preview, move, actionsColumn],
   );
 
   const table = useAppTable({ data: items, columns, getRowId: (row) => row.id }, () => ({}));
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-medium leading-tight mb-0">
           {m.admin_announcements_section()}
         </h2>
+        <Button onClick={() => openEditor()}>{m.admin_announcement_new()}</Button>
       </CardHeader>
       <CardContent>
-        {error && <Alert variant="danger">{error}</Alert>}
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void form.handleSubmit();
-          }}
-        >
-          <form.Field name="text_language">
-            {(field) => (
-              <OriginalLanguageSelect
-                controlId="announcement-text-language"
-                label={m.admin_announcement_original_language()}
-                value={field.value}
-                onChange={(language) => field.handleChange(language)}
-              />
+        {(error || query.error) && (
+          <Alert variant="danger" role="alert">
+            {error || apiErrorMessage(query.error, m.admin_error_load_announcements())}
+          </Alert>
+        )}
+        {editor && (
+          <AdminEditorDialog
+            title={editing ? m.admin_announcement_edit() : m.admin_announcement_new()}
+            busy={save.isPending}
+            dirty={dirty}
+            onClose={closeEditor}
+            footer={
+              <Button type="submit" form="announcement-form" disabled={save.isPending}>
+                {editing ? m.admin_save() : m.admin_create_action()}
+              </Button>
+            }
+          >
+            {editorError && (
+              <Alert variant="danger" role="alert">
+                {editorError}
+              </Alert>
             )}
-          </form.Field>
-          <p className="text-sm text-subtle mb-2">{m.admin_announcement_text_help()}</p>
-          <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2">
-            {(["nl", "en", "fr"] as const).map((locale) => (
-              <AdminField className="site-md:w-4/12" key={locale}>
-                <AdminLabel>
-                  {m.admin_announcement_text_label({ locale: locale.toUpperCase() })}
-                </AdminLabel>
-                <form.Field name={`text_${locale}`}>
-                  {(field) => (
-                    <AdminInput
-                      maxLength={500}
-                      value={field.value ?? ""}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                  )}
-                </form.Field>
-              </AdminField>
-            ))}
-          </div>
-          <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mt-1">
-            <AdminField className="site-md:w-3/12">
-              <AdminLabel>{m.admin_announcement_level_label()}</AdminLabel>
-              <form.Field name="level">
-                {(field) => (
-                  <AdminSelect
-                    value={field.value}
-                    onValueChange={(event) => field.handleChange(event as Draft["level"])}
-                    onBlur={field.handleBlur}
-                  >
-                    <AdminOption value="info">{m.admin_announcement_level_info()}</AdminOption>
-                    <AdminOption value="warning">
-                      {m.admin_announcement_level_warning()}
-                    </AdminOption>
-                    <AdminOption value="urgent">{m.admin_announcement_level_urgent()}</AdminOption>
-                  </AdminSelect>
-                )}
-              </form.Field>
-            </AdminField>
-            <AdminField className="site-md:w-3/12">
-              <AdminLabel>{m.admin_announcement_starts_label()}</AdminLabel>
-              <form.Field name="starts_at">
-                {(field) => (
-                  <AdminInput
-                    type="datetime-local"
-                    value={localDate(field.value)}
-                    onChange={(event) => field.handleChange(event.target.value || null)}
-                    onBlur={field.handleBlur}
-                  />
-                )}
-              </form.Field>
-            </AdminField>
-            <AdminField className="site-md:w-3/12">
-              <AdminLabel>{m.admin_announcement_ends_label()}</AdminLabel>
-              <form.Field name="ends_at">
-                {(field) => (
-                  <AdminInput
-                    type="datetime-local"
-                    value={localDate(field.value)}
-                    onChange={(event) => field.handleChange(event.target.value || null)}
-                    onBlur={field.handleBlur}
-                  />
-                )}
-              </form.Field>
-            </AdminField>
-            <AdminField className="site-md:w-3/12">
-              <AdminLabel>{m.admin_announcement_link_url_label()}</AdminLabel>
-              <form.Field name="link_url">
-                {(field) => (
-                  <AdminInput
-                    type="url"
-                    value={field.value ?? ""}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    onBlur={field.handleBlur}
-                  />
-                )}
-              </form.Field>
-            </AdminField>
-          </div>
-          <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mt-1">
-            {(["nl", "en", "fr"] as const).map((locale) => (
-              <AdminField className="site-md:w-4/12" key={locale}>
-                <AdminLabel>
-                  {m.admin_announcement_link_label_field({ locale: locale.toUpperCase() })}
-                </AdminLabel>
-                <form.Field name={`link_label_${locale}`}>
-                  {(field) => (
-                    <AdminInput
-                      value={field.value ?? ""}
-                      onChange={(event) => field.handleChange(event.target.value)}
-                      onBlur={field.handleBlur}
-                    />
-                  )}
-                </form.Field>
-              </AdminField>
-            ))}
-          </div>
-          <form.Field name="active">
-            {(field) => (
-              <AdminCheck
-                className="mt-4"
-                label={m.admin_announcement_publish_immediately()}
-                checked={field.value}
-                onCheckedChange={(event) => field.handleChange(event)}
-              />
-            )}
-          </form.Field>
-          <div className="flex gap-2 mt-4">
-            <Button type="submit" disabled={save.isPending}>
-              {editing ? m.admin_save() : m.admin_create_action()}
-            </Button>
-            {editing && (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setEditing(null);
-                  form.reset(empty);
+            <fieldset disabled={save.isPending}>
+              <form
+                id="announcement-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!save.isPending) void form.handleSubmit();
                 }}
               >
-                {m.admin_action_cancel()}
-              </Button>
-            )}
-          </div>
-        </form>
-        <hr />
+                <form.Field name="text_language">
+                  {(field) => (
+                    <OriginalLanguageSelect
+                      controlId="announcement-text-language"
+                      label={m.admin_announcement_original_language()}
+                      value={field.value}
+                      onChange={(language) => field.handleChange(language)}
+                    />
+                  )}
+                </form.Field>
+                <p className="text-sm text-subtle mb-2">{m.admin_announcement_text_help()}</p>
+                <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2">
+                  {(["nl", "en", "fr"] as const).map((locale) => (
+                    <AdminField className="site-md:w-4/12" key={locale}>
+                      <AdminLabel>
+                        {m.admin_announcement_text_label({ locale: locale.toUpperCase() })}
+                      </AdminLabel>
+                      <form.Field name={`text_${locale}`}>
+                        {(field) => (
+                          <AdminInput
+                            maxLength={500}
+                            value={field.value ?? ""}
+                            onChange={(event) => field.handleChange(event.target.value)}
+                            onBlur={field.handleBlur}
+                          />
+                        )}
+                      </form.Field>
+                    </AdminField>
+                  ))}
+                </div>
+                <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mt-1">
+                  <AdminField className="site-md:w-3/12">
+                    <AdminLabel>{m.admin_announcement_level_label()}</AdminLabel>
+                    <form.Field name="level">
+                      {(field) => (
+                        <AdminSelect
+                          value={field.value}
+                          onValueChange={(event) => field.handleChange(event as Draft["level"])}
+                          onBlur={field.handleBlur}
+                        >
+                          <AdminOption value="info">
+                            {m.admin_announcement_level_info()}
+                          </AdminOption>
+                          <AdminOption value="warning">
+                            {m.admin_announcement_level_warning()}
+                          </AdminOption>
+                          <AdminOption value="urgent">
+                            {m.admin_announcement_level_urgent()}
+                          </AdminOption>
+                        </AdminSelect>
+                      )}
+                    </form.Field>
+                  </AdminField>
+                  <AdminField className="site-md:w-3/12">
+                    <AdminLabel>{m.admin_announcement_starts_label()}</AdminLabel>
+                    <form.Field name="starts_at">
+                      {(field) => (
+                        <AdminInput
+                          type="datetime-local"
+                          value={localDate(field.value)}
+                          onChange={(event) => field.handleChange(event.target.value || null)}
+                          onBlur={field.handleBlur}
+                        />
+                      )}
+                    </form.Field>
+                  </AdminField>
+                  <AdminField className="site-md:w-3/12">
+                    <AdminLabel>{m.admin_announcement_ends_label()}</AdminLabel>
+                    <form.Field name="ends_at">
+                      {(field) => (
+                        <AdminInput
+                          type="datetime-local"
+                          value={localDate(field.value)}
+                          onChange={(event) => field.handleChange(event.target.value || null)}
+                          onBlur={field.handleBlur}
+                        />
+                      )}
+                    </form.Field>
+                  </AdminField>
+                  <AdminField className="site-md:w-3/12">
+                    <AdminLabel>{m.admin_announcement_link_url_label()}</AdminLabel>
+                    <form.Field name="link_url">
+                      {(field) => (
+                        <AdminInput
+                          type="url"
+                          value={field.value ?? ""}
+                          onChange={(event) => field.handleChange(event.target.value)}
+                          onBlur={field.handleBlur}
+                        />
+                      )}
+                    </form.Field>
+                  </AdminField>
+                </div>
+                <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mt-1">
+                  {(["nl", "en", "fr"] as const).map((locale) => (
+                    <AdminField className="site-md:w-4/12" key={locale}>
+                      <AdminLabel>
+                        {m.admin_announcement_link_label_field({ locale: locale.toUpperCase() })}
+                      </AdminLabel>
+                      <form.Field name={`link_label_${locale}`}>
+                        {(field) => (
+                          <AdminInput
+                            value={field.value ?? ""}
+                            onChange={(event) => field.handleChange(event.target.value)}
+                            onBlur={field.handleBlur}
+                          />
+                        )}
+                      </form.Field>
+                    </AdminField>
+                  ))}
+                </div>
+                <form.Field name="active">
+                  {(field) => (
+                    <AdminCheck
+                      className="mt-4"
+                      label={m.admin_announcement_publish_immediately()}
+                      checked={field.value}
+                      onCheckedChange={(event) => field.handleChange(event)}
+                    />
+                  )}
+                </form.Field>
+              </form>
+            </fieldset>
+          </AdminEditorDialog>
+        )}
+
         <AdminSelect
           className="mb-4 w-auto"
           aria-label={m.admin_announcement_preview_language_label()}

@@ -188,3 +188,17 @@ confirmation variants, keyboard selection and archived/multiple selections.
 Browser tests cover public registration focus/scroll behaviour, mobile bounds,
 runtime themes and cascade layers. Keep those checks when changing the relevant
 primitive or theme; historical migration checklists are not a second test suite.
+
+## Admin record editor dialogs
+
+Announcements, message composer drafts, screen channels, slides and screen
+templates keep their lists on the section page and open creation/editing in
+`frontend/src/components/admin/AdminEditorDialog.tsx`. The shared shell uses
+Base UI Dialog and the admin theme scope, with a mode-specific title,
+Save/Create and Cancel actions, focus return, dirty-dismissal confirmation and
+a busy guard. Save errors belong inside the open dialog.
+
+Use a stable snapshot as the form baseline when opening an editor. Background
+list refreshes must not reset its fields or change its create/update target.
+Close after a successful save and refresh the list; preserve the draft on error.
+Do not automatically retry writes; see [retry safety](retry-safety.md).

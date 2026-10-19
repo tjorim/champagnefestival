@@ -1522,5 +1522,13 @@
   "signage_video_until": "Available until {date}",
   "signage_video_error": "The video export could not be completed. Check your exports below before trying again. If preparation was interrupted, cancel that export and start again. Existing HTML and PNG downloads remain available.",
   "signage_video_retrying": "The encoder is temporarily unavailable; this export will retry automatically.",
-  "signage_video_status": "{channel} ({locale}) · {seconds}s · {state}"
+  "signage_video_status": "{channel} ({locale}) · {seconds}s · {state}",
+  "admin_editor_discard_title": "Discard changes?",
+  "admin_editor_discard_body": "Your unsaved changes will be lost.",
+  "signage_edit_slide": "Edit slide",
+  "admin_announcement_new": "New announcement",
+  "admin_announcement_edit": "Edit announcement",
+  "admin_composer_new": "New message draft",
+  "admin_composer_edit": "Edit message draft",
+  "admin_editor_discard_error": "Could not close the editor. Please try again."
 }

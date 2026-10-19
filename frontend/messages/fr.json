@@ -1522,5 +1522,13 @@
   "signage_video_until": "Disponible jusqu’au {date}",
   "signage_video_error": "L’export vidéo n’a pas pu être terminé. Vérifiez vos exports ci-dessous avant de réessayer. Si la préparation a été interrompue, annulez cet export et recommencez. Les téléchargements HTML et PNG restent disponibles.",
   "signage_video_retrying": "L’encodeur est temporairement indisponible ; cet export sera réessayé automatiquement.",
-  "signage_video_status": "{channel} ({locale}) · {seconds}s · {state}"
+  "signage_video_status": "{channel} ({locale}) · {seconds}s · {state}",
+  "admin_editor_discard_title": "Abandonner les modifications ?",
+  "admin_editor_discard_body": "Vos modifications non enregistrées seront perdues.",
+  "signage_edit_slide": "Modifier la diapositive",
+  "admin_announcement_new": "Nouvelle annonce",
+  "admin_announcement_edit": "Modifier l’annonce",
+  "admin_composer_new": "Nouveau brouillon de message",
+  "admin_composer_edit": "Modifier le brouillon de message",
+  "admin_editor_discard_error": "Impossible de fermer l’éditeur. Veuillez réessayer."
 }

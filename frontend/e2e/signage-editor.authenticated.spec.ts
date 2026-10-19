@@ -7,12 +7,11 @@ test("creates a layered template, validates bindings and preserves edits through
   await expect(page.locator("section#admin.admin-authenticated")).toBeVisible();
   const content = page.getByRole("button", { name: "Content", exact: true });
   if ((await content.getAttribute("aria-expanded")) != "true") await content.click();
-  const announcementsResponse = page.waitForResponse(
-    (response) => new URL(response.url()).pathname === "/api/announcements",
-  );
-  await page.getByRole("button", { name: "Announcements", exact: true }).click();
-  expect((await announcementsResponse).status()).toBe(200);
+  await page.getByRole("button", { name: "Screen channels", exact: true }).click();
   await page.getByRole("tab", { name: "Screen templates" }).click();
+  await expect(page.getByLabel("Name", { exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "New template", exact: true }).click();
+  await expect(page.getByRole("dialog", { name: "New template", exact: true })).toBeVisible();
   const save = page.getByRole("button", { name: "Save template", exact: true });
   await page.getByLabel("Name", { exact: true }).first().fill("Festival template");
   await expect(save).toBeDisabled();
@@ -86,7 +85,32 @@ test("creates a layered template, validates bindings and preserves edits through
   await expect(page.locator(".site-signage-stage")).not.toContainText("Welcome to the festival");
   await save.click();
   await expect(page.getByRole("status").filter({ hasText: "Template saved." })).toBeVisible();
-  await page.getByRole("button", { name: "New template", exact: true }).click();
-  await page.getByRole("button", { name: "Festival template", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit Festival template", exact: true }).click();
+  await expect(
+    page.getByRole("dialog", { name: "Edit Festival template", exact: true }),
+  ).toBeVisible();
   await expect(page.getByLabel("Name", { exact: true }).first()).toHaveValue("Festival template");
+  await page.getByLabel("Name", { exact: true }).first().fill("Unsaved template name");
+  await page.keyboard.press("Escape");
+  const discard = page.getByRole("alertdialog", { name: "Discard changes?", exact: true });
+  await expect(discard).toBeVisible();
+  await discard.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true }).first()).toHaveValue(
+    "Unsaved template name",
+  );
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await discard.getByRole("button", { name: "Discard", exact: true }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.getByRole("button", { name: "Edit Festival template", exact: true }).click();
+  await expect(page.getByLabel("Name", { exact: true }).first()).toHaveValue("Festival template");
+  await page.getByLabel("Name", { exact: true }).first().fill("Updated template");
+  const update = page.waitForRequest(
+    (request) => request.url().includes("/api/signage/templates/") && request.method() === "PUT",
+  );
+  await save.click();
+  await update;
+  await expect(
+    page.getByRole("button", { name: "Edit Updated template", exact: true }),
+  ).toBeVisible();
 });

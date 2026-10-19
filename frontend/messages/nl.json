@@ -1522,5 +1522,13 @@
   "signage_video_until": "Beschikbaar tot {date}",
   "signage_video_error": "De video-export kon niet worden voltooid. Controleer je exports hieronder voordat je opnieuw probeert. Als de voorbereiding werd onderbroken, annuleer die export en begin opnieuw. De bestaande HTML- en PNG-downloads blijven beschikbaar.",
   "signage_video_retrying": "De encoder is tijdelijk niet beschikbaar; deze export probeert het automatisch opnieuw.",
-  "signage_video_status": "{channel} ({locale}) · {seconds}s · {state}"
+  "signage_video_status": "{channel} ({locale}) · {seconds}s · {state}",
+  "admin_editor_discard_title": "Wijzigingen verwerpen?",
+  "admin_editor_discard_body": "Je niet-opgeslagen wijzigingen gaan verloren.",
+  "signage_edit_slide": "Dia bewerken",
+  "admin_announcement_new": "Nieuwe aankondiging",
+  "admin_announcement_edit": "Aankondiging bewerken",
+  "admin_composer_new": "Nieuw berichtconcept",
+  "admin_composer_edit": "Berichtconcept bewerken",
+  "admin_editor_discard_error": "De editor kon niet worden gesloten. Probeer het opnieuw."
 }
