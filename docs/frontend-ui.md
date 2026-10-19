@@ -270,3 +270,40 @@ themes, desktop/mobile forms, sidebar focus/dismissal, keyboard toggles, empty
 filters, table controls, lazy loading and signage dialogs. The build measures
 2730 KiB total JavaScript, 684 KiB public entry and 396 KiB AdminDashboard, within
 the existing 2750/1050/450 KiB budgets.
+
+## Remaining hand-rolled UI (2026-10-19, #1357)
+
+Follow-up to PR #1356: the last custom compositions that had a generated equivalent were
+replaced, and the ones that stay are recorded here with the reason.
+
+Replaced:
+
+- `MaintenancePage` flyer lightbox uses the generated `Dialog`. The flyer card is the
+  `DialogTrigger` and keeps the page's own card styling; the dialog supplies the focus
+  trap, Escape, scroll lock and focus return that the old manual `role="dialog"` overlay
+  lacked. The lightbox is now a standard titled dialog (flyer name, close button, themed
+  surface, blurred backdrop) rather than a full-screen dark overlay; the image is capped
+  to the viewport height so the whole flyer fits. Unit tests (`tests/components/MaintenancePage.test.tsx`) and
+  `e2e/maintenance-lightbox.spec.ts` cover the dialog's axe scan, Escape and focus
+  return in light, dark and narrow scenarios.
+- `EditionCard` expand/collapse uses `Collapsible`; Base UI now provides
+  `aria-expanded`/`aria-controls` and the panel is unmounted while closed.
+- The `SignageTemplates` background section uses `Collapsible` instead of a native
+  `<details>`, so it matches the other disclosure controls and focus ring.
+- `radio-group` was deleted: nothing in the application used it. Generate it again with
+  `pnpm dlx shadcn@latest add radio-group` when a form needs one.
+
+Kept as they are:
+
+| Component | Why it stays |
+| --- | --- |
+| `AnnouncementBanner` ticker item button | It is the text of a scrolling, live-region ticker item and is styled by the `announcement-ticker__item-content` rules per level. The generated `Button` adds height, padding, border and nowrap that would break the ticker. The details open in a generated `Dialog`. |
+| `LogoWall` card button | A stretched button (`after:absolute after:inset-0`) makes the whole card the target while the heading stays the accessible name. `Button` is an inline sized control and would fight that overlay. |
+| `AdminDashboard` active-edition strip | `admin-active-edition-strip` is a full-width summary row (edition label, day progress, check-in count) that doubles as the "filter registrations by the active edition" action. It is a multi-segment status banner styled by `admin.css`, not a sized control, so `Button` would add height, padding and nowrap that fight the layout. |
+| `ContentManagement` tooltip trigger | `TooltipTrigger render={<button type="button" />}` makes an item name look like inline text with a dotted underline while exposing the "used in editions" tooltip to keyboard users. Rendering through the Base UI trigger already gives it the generated tooltip behaviour; `Button` would restyle it as a control. |
+| `signage/offline-player.html` | The standalone offline signage export is a static HTML template with no React or Tailwind, so it cannot use any generated component. |
+| `CheckInPage` | Has no raw `<button>`; it already uses `Button`/`ButtonLink`. |
+| `MaintenancePage` flyer card trigger | A `DialogTrigger` rendered with the page's own card and zoom-overlay stylesheet; it is the `Dialog`'s trigger, not a hand-rolled button. |
+| `ThemeSwitcher` native `<select>` | A preview-only control with fixed styling that deliberately does not follow the theme being previewed; the generated `Select` would restyle itself with the theme. |
+| Canvas hit targets in `LayoutEditor` and `SignageTemplates` | Domain rendering: elements are positioned from floor-plan or layer coordinates, support pointer dragging/resizing and rotate with the item. They are not general-purpose buttons. |
+| `aria-pressed` selection in `SignageChannels`, sort buttons in `AdminDataTable` | These are already `Button`s. They represent a selected list item or the active sort column, not an independent on/off setting, so `Toggle`/`ToggleGroup` semantics would misdescribe them. |

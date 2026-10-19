@@ -288,36 +288,9 @@
     border-radius: 0.25rem;
   }
 
-  .maintenance-page__lightbox {
-    position: fixed;
-    inset: 0;
-    z-index: 20;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2rem;
-    background-color: rgb(0 0 0 / 0.85);
-  }
-  .maintenance-page__lightbox-close {
-    position: absolute;
-    top: 1rem;
-    right: 1rem;
-    width: 2.75rem;
-    height: 2.75rem;
-    color: #fff8ec;
-    font-size: 1.25rem;
-    line-height: 1;
-    background: rgb(255 255 255 / 0.15);
-    border: 0;
-    border-radius: 50%;
-    cursor: pointer;
-  }
-  .maintenance-page .maintenance-page__lightbox-image {
-    width: auto;
-    height: auto;
-    max-width: 90vw;
-    max-height: 90vh;
-    border-radius: 0.5rem;
-    box-shadow: 0 20px 60px rgb(0 0 0 / 0.6);
+  /* The lightbox is a portaled dialog, so it sits outside .maintenance-page. Leave room
+     for the dialog header and padding so the whole flyer fits the viewport. */
+  .maintenance-page__lightbox-image {
+    max-height: calc(100svh - 10rem);
   }
 }

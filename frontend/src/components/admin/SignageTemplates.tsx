@@ -1,7 +1,10 @@
 import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import {
   AdminField,
@@ -190,6 +193,7 @@ function TemplateEditor({
   const [sample, setSample] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [backgroundOpen, setBackgroundOpen] = useState(false);
   const [scale, setScale] = useState(0.3);
   const viewport = useRef<HTMLDivElement>(null);
   const gesture = useRef<{
@@ -631,9 +635,16 @@ function TemplateEditor({
                 });
               }}
             />
-            <details className="rounded-md border border-border p-3">
-              <summary className="cursor-pointer font-semibold">{fieldLabels.background}</summary>
-              <div className="mt-3 space-y-3">
+            <Collapsible
+              open={backgroundOpen}
+              onOpenChange={setBackgroundOpen}
+              className="rounded-md border border-border p-3"
+            >
+              <CollapsibleTrigger className="flex w-full cursor-pointer items-center gap-2 rounded-sm text-left font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+                <Icon icon={backgroundOpen ? ChevronDownIcon : ChevronRightIcon} />
+                {fieldLabels.background}
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-3 space-y-3">
                 {choose(
                   fieldLabels.kind,
                   draft.background.kind,
@@ -678,8 +689,8 @@ function TemplateEditor({
                     />
                   </AdminField>
                 )}
-              </div>
-            </details>
+              </CollapsibleContent>
+            </Collapsible>
           </div>
           {layer ? (
             <section
