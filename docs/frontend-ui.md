@@ -290,10 +290,6 @@ Replaced:
   `aria-expanded`/`aria-controls` and the panel is unmounted while closed.
 - The `SignageTemplates` background section uses `Collapsible` instead of a native
   `<details>`, so it matches the other disclosure controls and focus ring.
-- The preview `ThemeSwitcher` pins the semantic surface tokens (foreground, primary,
-  muted, border) on its own dark pill, as the admin scope does. Its toggles previously
-  inherited the active theme's tokens, which left unpressed labels dark on dark and the
-  pressed label below 4.5:1 contrast in light mode.
 - `radio-group` was deleted: nothing in the application used it. Generate it again with
   `pnpm dlx shadcn@latest add radio-group` when a form needs one.
 
