@@ -26,7 +26,7 @@ def test_signage_upgrade_and_downgrade(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", migration_url.render_as_string(hide_password=False))
     config = Config()
     config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "alembic"))
-    assert ScriptDirectory.from_config(config).get_heads() == ["010"]
+    assert ScriptDirectory.from_config(config).get_heads() == ["009"]
     database = create_engine(migration_url)
     try:
         command.upgrade(config, "007")

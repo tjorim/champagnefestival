@@ -97,11 +97,24 @@ def test_order_question_upgrade_constraints_and_downgrade(monkeypatch):
         ]:
             with pytest.raises(IntegrityError), database.begin() as conn:
                 conn.execute(text(sql))
+        with database.begin() as conn:
+            conn.execute(
+                text(
+                    "INSERT INTO poll_deletion_notifications (id,recipient,subject,body) "
+                    "VALUES ('notification','volunteer@example.com','Question removed','Your answer: Soup × 2')"
+                )
+            )
+            assert (
+                conn.execute(text("SELECT body FROM poll_deletion_notifications")).scalar_one()
+                == "Your answer: Soup × 2"
+            )
         command.downgrade(config, "008")
+        assert "poll_deletion_notifications" not in inspect(database).get_table_names(schema=schema)
         assert "registration_order_answers" not in inspect(database).get_table_names(schema=schema)
         with database.begin() as conn:
             assert conn.execute(text("SELECT id FROM registrations")).scalar_one() == "order"
         command.upgrade(config, "009")
+        assert "poll_deletion_notifications" in inspect(database).get_table_names(schema=schema)
     finally:
         database.dispose()
         with admin.begin() as conn:
