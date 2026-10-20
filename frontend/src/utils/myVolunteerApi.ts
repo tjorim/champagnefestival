@@ -109,6 +109,9 @@ export interface MyPollQuestion {
   /** The answer to a yes/no question; null while unanswered. */
   attending: boolean | null;
   people: number;
+  optionId: string | null;
+  text: string | null;
+  rating: number | null;
 }
 
 export interface MyPoll {
@@ -154,6 +157,9 @@ function parseQuestion(raw: Record<string, unknown>): MyPollQuestion {
     selections,
     attending: typeof raw.attending === "boolean" ? raw.attending : null,
     people: Number(raw.people ?? 0),
+    optionId: typeof raw.option_id === "string" ? raw.option_id : null,
+    text: typeof raw.text === "string" ? raw.text : null,
+    rating: typeof raw.rating === "number" ? raw.rating : null,
   };
 }
 
@@ -236,4 +242,20 @@ export function answerMyYesNoQuestion(
 /** Save the volunteer's dietary note for the meals (empty clears it). */
 export function saveMyPollNote(accessToken: string, locale: string, note: string): Promise<MyPoll> {
   return pollRequest(accessToken, "/note", locale, m.my_poll_save_error(), { note });
+}
+
+/** Replace or clear one typed scalar answer. */
+export function answerMyScalarQuestion(
+  accessToken: string,
+  locale: string,
+  questionId: string,
+  answer: { option_id: string | null } | { text: string | null } | { rating: number | null },
+): Promise<MyPoll> {
+  return pollRequest(
+    accessToken,
+    `/questions/${encodeURIComponent(questionId)}`,
+    locale,
+    m.my_poll_save_error(),
+    answer,
+  );
 }

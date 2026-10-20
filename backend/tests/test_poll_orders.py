@@ -93,6 +93,9 @@ async def test_admin_enters_and_corrects_a_volunteers_answers(client, volunteer_
     )
     assert r.status_code == 200, r.text
     assert r.json() == {
+        "choices": [],
+        "texts": [],
+        "ratings": [],
         "volunteer_id": sofie,
         "name": "Sofie De Smet",
         "note": "Geen noten",

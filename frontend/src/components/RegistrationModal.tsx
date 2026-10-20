@@ -1,3 +1,5 @@
+import { OrderAnswerInputs } from "@/components/OrderAnswers";
+import type { OrderAnswer } from "@/utils/orderQuestions";
 import {
   CalendarCheckIcon,
   CircleCheckIcon,
@@ -67,6 +69,7 @@ interface RegistrationFields {
 
 export default function RegistrationModal({ show, onHide, event }: RegistrationModalProps) {
   const auth = useAuth();
+  const [orderAnswers, setOrderAnswers] = useState<OrderAnswer[]>([]);
   const [orderItems, setOrderItems] = useState<OrderItem[]>([]);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [registrationId, setRegistrationId] = useState("");
@@ -112,6 +115,9 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         const created = await submitRegistrationMutation.mutateAsync({
           ...value,
           eventId: event.id,
+          orderAnswers: orderAnswers.filter((a) =>
+            event.orderQuestions?.some((q) => q.id === a.question_id && q.active),
+          ),
           orderItems: showOrderItems ? orderItems : [],
         });
         setRegistrationId(created.id);
@@ -281,6 +287,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       formStartTime: new Date().toISOString(),
     });
     setOrderItems([]);
+    setOrderAnswers([]);
     setSubmitSuccess(false);
     setRegistrationId("");
     setSubmitError("");
@@ -605,6 +612,12 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 </Alert>
               )}
 
+              <OrderAnswerInputs
+                questions={(event?.orderQuestions ?? []).filter((q) => q.active)}
+                answers={orderAnswers}
+                onChange={setOrderAnswers}
+                disabled={isSubmitting}
+              />
               <form.Field name="notes">
                 {(field) => (
                   <PublicField className="mb-4" controlId="res-notes">

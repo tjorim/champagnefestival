@@ -1,7 +1,6 @@
 """The volunteer poll: questions per edition, who answered what, admin entry and the volunteer's own answers.
 
-A question is ``yes_no`` (will you join this, and with how many people) or ``meals`` (pick a quantity of
-each option, see ``app.services.poll_options_service``). Each question has its own optional closing time.
+Questions support attendance, meals, single choice, free text and ratings. Each has its own optional closing time.
 Everything specific to a kind lives in ``app.services.poll_kinds``; this module never branches on it.
 
 Used by ``app.routers.poll_questions`` and ``app.routers.volunteer_self`` (REST) and
@@ -492,6 +491,9 @@ async def set_volunteer_poll_order(
             "option_count": len(body.selections),
             "total_quantity": sum(s.quantity for s in body.selections),
             "attendance_count": len(body.attendance),
+            "choice_count": len(body.choices),
+            "text_count": len(body.texts),
+            "rating_count": len(body.ratings),
             "note_changed": body.note is not None,
             "closed_questions_changed": closed_changes,
         },

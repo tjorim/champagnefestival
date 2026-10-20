@@ -191,6 +191,9 @@ async def admin_create_registration(
 ) -> dict:
     person = await people_service.get_person_or_404(db, body.person_id)
     event = await inventory.lock_event(db, body.event_id)
+    from app.services.order_questions_service import validate_answers
+
+    order_answers = await validate_answers(db, event.id, body.order_answers, admin=True)
     resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
     if body.status != "cancelled":
         await inventory.check_stock(db, event, resolved_order_items)
@@ -204,6 +207,7 @@ async def admin_create_registration(
         person_id=person.id,
         check_in_token=secrets.token_urlsafe(32),
     )
+    registration.order_answers = order_answers
     registration.order_items = resolved_order_items
     registration.product_snapshot = snapshot
     registration.amount_due = inventory.order_total(resolved_order_items) if resolved_order_items else None
@@ -437,6 +441,7 @@ async def apply_registration_update(
     if registration.checked_in != pre_checked_in or registration.strap_issued != pre_strap_issued:
         await notify_live_event(db, live_mapping.check_in_changed(**scope))
     metadata_fields = {
+        "order_answers",
         "guest_count",
         "status",
         "amount_due",
@@ -446,6 +451,19 @@ async def apply_registration_update(
     if any(f in body.model_fields_set for f in metadata_fields) or clear_amount_due:
         await notify_live_event(db, live_mapping.registration_changed(action="updated", **scope))
 
+    if body.order_answers is not None:
+        from app.services.order_questions_service import validate_answers
+
+        registration.order_answers = await validate_answers(db, registration.event_id, body.order_answers, admin=True)
+        await write_audit_entry(
+            db,
+            actor=actor,
+            action="order_answers_set",
+            resource_type="registration",
+            resource_id=registration.id,
+            request_id=request_id,
+            details={"answer_count": len(registration.order_answers)},
+        )
     await db.commit()
     registration = await get_registration_or_404(db, registration.id)
     person_map = await fetch_person_map(db, [registration])

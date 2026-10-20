@@ -18,6 +18,7 @@ from app.schemas import (
     AdminPollOrderIn,
     DietaryTag,
     PollAttendanceItem,
+    PollChoiceItem,
     PollOptionCreate,
     PollOptionReorder,
     PollOptionUpdate,
@@ -26,7 +27,9 @@ from app.schemas import (
     PollQuestionKind,
     PollQuestionReorder,
     PollQuestionUpdate,
+    PollRatingItem,
     PollSelectionItem,
+    PollTextItem,
 )
 from app.services import poll_options_service, poll_questions_service
 from app.translations import Language
@@ -258,16 +261,23 @@ async def set_volunteer_poll_order(
     volunteer_id: str,
     selections: list[PollSelectionItem] | None = None,
     attendance: list[PollAttendanceItem] | None = None,
+    choices: list[PollChoiceItem] | None = None,
+    texts: list[PollTextItem] | None = None,
+    ratings: list[PollRatingItem] | None = None,
     note: str | None = None,
     confirm_closed: bool = False,
 ) -> dict:
     """Enter or correct a volunteer's answers. ``selections`` and ``attendance`` replace all their picks and
-    yes/no answers for the edition; ``note`` omitted keeps their note and an empty string clears it. A change
+    yes/no answers for the edition. ``choices``, ``texts`` and ``ratings`` also replace the corresponding
+    answers (omitted lists clear them); ``note`` omitted keeps their note and an empty string clears it. A change
     to a closed question needs ``confirm_closed``."""
     body = validate_with_schema(
         AdminPollOrderIn,
         selections=selections or [],
         attendance=attendance or [],
+        choices=choices or [],
+        texts=texts or [],
+        ratings=ratings or [],
         note=note,
         confirm_closed=confirm_closed,
     )

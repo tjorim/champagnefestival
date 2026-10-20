@@ -13,7 +13,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import EditionPollOption, VolunteerPollSelection
+from app.models import EditionPollOption, VolunteerPollChoice, VolunteerPollSelection
 from app.schemas import PollOptionCreate, PollOptionLabels, PollOptionReorder, PollOptionUpdate
 from app.services.errors import ApiHTTPException
 from app.services.poll_common import OPTION_ORDER, get_question_or_404, is_closed, lock_edition
@@ -33,11 +33,19 @@ async def list_poll_options(
     locale: str | None = None,
 ) -> list[dict]:
     """Options in display order with what volunteers asked for in total (what to order from the caterer)."""
+    choice_count = (
+        select(func.count())
+        .select_from(VolunteerPollChoice)
+        .where(VolunteerPollChoice.option_id == EditionPollOption.id)
+        .correlate(EditionPollOption)
+        .scalar_subquery()
+    )
     stmt = (
         select(
             EditionPollOption,
             func.coalesce(func.sum(VolunteerPollSelection.quantity), 0),
             func.count(VolunteerPollSelection.volunteer_id),
+            choice_count,
         )
         .outerjoin(VolunteerPollSelection, VolunteerPollSelection.option_id == EditionPollOption.id)
         .group_by(EditionPollOption.id)
@@ -48,8 +56,13 @@ async def list_poll_options(
     if edition_id is not None:
         stmt = stmt.where(EditionPollOption.edition_id == edition_id)
     return [
-        poll_option_to_dict(option, total_quantity=int(total), volunteer_count=int(count), locale=locale)
-        for option, total, count in (await db.execute(stmt)).all()
+        poll_option_to_dict(
+            option,
+            total_quantity=int(total) + int(choices),
+            volunteer_count=int(count) + int(choices),
+            locale=locale,
+        )
+        for option, total, count, choices in (await db.execute(stmt)).all()
     ]
 
 
@@ -72,7 +85,7 @@ async def create_poll_option(
 ) -> dict:
     question = await get_question_or_404(db, body.question_id)
     if not kind_of(question).has_options:
-        raise ApiHTTPException(422, "poll_question_not_meals", "Only a meals question has options.")
+        raise ApiHTTPException(422, "poll_question_not_meals", "This question kind does not have options.")
     await lock_edition(db, question.edition_id)
     option = EditionPollOption(
         id=make_id("poll"),
@@ -147,6 +160,13 @@ async def delete_poll_option(
             )
         )
     ).all()
+    picks = [(volunteer, quantity) for volunteer, quantity in picks]
+    picks.extend(
+        (volunteer_id, 1)
+        for volunteer_id in (
+            await db.execute(select(VolunteerPollChoice.volunteer_id).where(VolunteerPollChoice.option_id == option_id))
+        ).scalars()
+    )
     if picks:
         question = await get_question_or_404(db, option.question_id)
         if is_closed(question):
@@ -165,6 +185,7 @@ async def delete_poll_option(
     # ON DELETE CASCADE on volunteer_poll_selections.option_id would do this
     # anyway; deleting explicitly keeps the audit trail's ordering obvious.
     await db.execute(delete(VolunteerPollSelection).where(VolunteerPollSelection.option_id == option_id))
+    await db.execute(delete(VolunteerPollChoice).where(VolunteerPollChoice.option_id == option_id))
     await db.delete(option)
     await write_audit_entry(
         db,

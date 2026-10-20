@@ -741,3 +741,39 @@ and pagination change presentation, local selection and read queries. Their
 migration adds no API write or automatic retry. Existing empty-state actions
 keep their domain handlers, and all create/update/delete operations keep their
 existing pending guards and retry decisions.
+
+
+### Additional volunteer poll kinds (#1360, 2026-10-20)
+
+The existing question/option create, update, reorder, copy and delete decisions above also apply to
+single choice, free text and rating. Creating a question or option still allocates an ID and is not
+retry-safe; the UI does not automatically retry any poll write.
+
+Volunteer `PUT /api/me/volunteer/poll/questions/{id}` replaces one scalar value (`option_id`, `text`,
+or `rating`) under the same Person row lock. Explicit null clears; whitespace-only text also clears.
+Repeating the same request converges without duplicate answers (volunteer/question primary keys), and a
+closed question rejects the write. Admin `PUT /api/poll-questions/orders/{volunteer_id}` and MCP
+`set_volunteer_poll_order` fully replace `choices`, `texts`, and `ratings` alongside the existing lists;
+omitted lists clear those answers. Repeating converges, last writer wins, each execution adds an audit
+entry, and changing a closed question requires `confirm_closed`. Single-choice option deletion uses the
+same in-use/closed guards and confirmation as meals. Lifecycle tests cover repeated writes, clearing,
+closed-question correction and wrong-question options; migration tests cover uniqueness and constraints.
+
+### Visitor order questions (2026-10-20)
+
+- `PUT /api/events/{event_id}/order-questions` is a **convergent full configuration replace** under the event
+  row lock shared with checkout. The browser creates question/option UUIDs once in its draft and retains them
+  on failure, so replaying the same body updates the same rows rather than creating duplicates. Array order is
+  absolute. Omitted unused definitions are deleted; omitted used definitions are deactivated, and used wording,
+  kinds and options cannot change. Each execution records an audit entry and invalidates public rendering.
+  Concurrent edits are last writer wins; there is no version precondition or automatic retry. Reload before
+  replacing another administrator's changes. Tests repeat configuration and verify stable IDs and retained answers.
+- Public `POST /api/registrations` and admin/MCP registration creation retain their existing **not retry-safe**
+  decision. Optional `order_answers` are validated and inserted atomically with the booking; they do not add
+  idempotency to order creation. After an ambiguous result, look up the order before submitting another one.
+- Admin `PUT /api/registrations/{id}` / MCP `update_registration` replaces `order_answers` only when a list is
+  provided; omitted/null keeps them, `[]` clears. Repeating the same list converges under the existing event/
+  registration locks and primary key `(registration_id, question_id)`. Concurrent corrections are last writer
+  wins and each execution is audited (answer counts only). There is no automatic retry. Tests cover replacement,
+  omission, clearing, inactive-question correction, event scope and typed constraints. Monetary and inventory
+  calculations do not use question answers.

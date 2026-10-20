@@ -1,3 +1,4 @@
+import { orderAnswersBody } from "@/utils/orderQuestions";
 import { useCallback, type Dispatch, type SetStateAction } from "react";
 import { type QueryClient, type QueryKey } from "@tanstack/react-query";
 import { m } from "@/paraglide/messages";
@@ -53,6 +54,7 @@ export function bookingUpdatePayload(update: BookingUpdate, confirmOverCapacity 
       exclusive: allocation.exclusive,
     })),
     notes: update.notes,
+    ...(update.orderAnswers ? { order_answers: orderAnswersBody(update.orderAnswers) } : {}),
     status: update.status,
     confirm_over_capacity: confirmOverCapacity,
   };

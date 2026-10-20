@@ -53,7 +53,13 @@ export default function VolunteerPollOrderDialog({
   const anyClosed = questions.some((question) => question.closed);
 
   function answerPayload(): AnswerPayload {
-    const payload: AnswerPayload = { quantities: {}, attendance: {} };
+    const payload: AnswerPayload = {
+      quantities: {},
+      attendance: {},
+      choices: {},
+      texts: {},
+      ratings: {},
+    };
     for (const question of questions) {
       ANSWER_FIELDS[question.kind].contribute(question, drafts[question.id], payload);
     }

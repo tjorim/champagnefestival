@@ -45,6 +45,7 @@ async def test_export_returns_csv_guest_list(client):
         "Checked In",
         "Strap Issued",
         "Notes",
+        "Order answers",
     ]
     assert len(rows) == 2
     assert rows[1][0] == "Export Guest"

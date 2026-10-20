@@ -26,6 +26,7 @@ from app.models import (
     Person,
     Product,
     Registration,
+    RegistrationOrderAnswer,
     Room,
     Table,
     TableType,
@@ -148,6 +149,7 @@ def event_to_summary_dict(
         # edge pointing at a hidden (non-purchasable) product — a hidden
         # product's id/name/stock/etc. must never reach an unauthenticated
         # caller, not even indirectly as a bundle-target reference.
+        "order_questions": [q.as_dict() for q in event.order_questions if not public or q.active],
         "products": (
             _public_products(event.products, locale)
             if public
@@ -295,6 +297,7 @@ def registration_to_dict(r: Registration, person: Person, event: Event, *, publi
         "edition_id": event.edition_id,
         "event": event_to_summary_dict(event, include_edition=True, public=public),
         "guest_count": r.guest_count,
+        "order_answers": [a.as_dict() for a in r.order_answers],
         "order_items": _visible_order_items(r.order_items) if public else r.order_items,
         "notes": r.notes,
         "table_id": (r.allocations[0].table_id if r.allocations else None),
@@ -376,6 +379,7 @@ def registration_to_guest_dict(r: Registration, person: Person, event: Event) ->
         "event_date": event.date,
         "check_in_token": r.check_in_token,
         "guest_count": r.guest_count,
+        "order_answers": [a.as_dict() for a in r.order_answers],
         "order_items": _visible_order_items(r.order_items),
         "status": r.status,
         "payment_status": r.payment_status,
@@ -626,3 +630,11 @@ def person_summary_dict(p: Person) -> dict:
     explicitly rather than relying on schema validation to drop the keys.
     """
     return {k: v for k, v in person_to_dict(p).items() if k not in _IDENTITY_FIELDS}
+
+
+def order_answer_text(answer: RegistrationOrderAnswer) -> str:
+    """Dutch question/value for admin exports; CSV escaping happens at the boundary."""
+    value = answer.text if answer.text is not None else answer.rating
+    if answer.option_id is not None:
+        value = next((o.label_nl for o in answer.question.options if o.id == answer.option_id), "")
+    return f"{answer.question.title_nl}: {value}"

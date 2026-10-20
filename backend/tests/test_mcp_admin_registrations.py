@@ -402,3 +402,29 @@ async def test_delete_registration_not_found(db_session):
     factory = mcp_session_factory(db_session)
     with pytest.raises(ValueError, match="not found"):
         await mcp_registrations.delete_registration(factory, "admin-1", "nonexistent")
+
+
+async def test_admin_create_and_update_order_answers(db_session):
+    from app.schemas import OrderQuestionList
+    from app.services.order_questions_service import configure
+
+    factory = mcp_session_factory(db_session)
+    person, event = await _seed_event(db_session, with_product=False)
+    await configure(
+        db_session,
+        event.id,
+        OrderQuestionList.model_validate({"questions": [{"id": "score", "kind": "rating", "title_nl": "Score"}]}),
+        actor="admin",
+        request_id=None,
+    )
+    created = await mcp_registrations.create_registration(
+        factory,
+        "admin",
+        person_id=person.id,
+        event_id=event.id,
+        guest_count=1,
+        order_answers=[{"question_id": "score", "rating": 5}],
+    )
+    assert created["order_answers"][0]["rating"] == 5
+    updated = await mcp_registrations.update_registration(factory, "admin", created["id"], order_answers=[])
+    assert updated["order_answers"] == []

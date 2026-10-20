@@ -5,8 +5,8 @@ audit trail, who answered what). Each kind is a ``PollKind`` here that knows how
 validated and shown, so the service never branches on the kind. To add a kind: subclass ``PollKind``, register
 it in ``KINDS``, and extend ``POLL_QUESTION_KINDS`` (and its check constraint) and ``PollQuestionKind``.
 
-An answer is one value per volunteer and question: a ``{option_id: quantity}`` mapping for ``meals`` and an
-``(attending, people)`` tuple for ``yes_no``. A question a volunteer did not answer has no entry.
+An answer is one value per volunteer and question: a ``{option_id: quantity}`` mapping for ``meals``, an
+``(attending, people)`` tuple for ``yes_no``, or one option ID, text or rating for the scalar kinds. A question a volunteer did not answer has no entry.
 """
 
 from __future__ import annotations
@@ -22,7 +22,10 @@ from app.models import (
     EditionPollOption,
     EditionPollQuestion,
     VolunteerPollAnswer,
+    VolunteerPollChoice,
+    VolunteerPollRating,
     VolunteerPollSelection,
+    VolunteerPollText,
 )
 from app.schemas import AdminPollOrderIn, PollAttendanceItem, VolunteerPollAnswerIn
 from app.services.errors import ApiHTTPException
@@ -160,7 +163,12 @@ class MealsKind(PollKind):
     async def volunteer_answer(
         self, db: AsyncSession, question: EditionPollQuestion, body: VolunteerPollAnswerIn
     ) -> Answer:
-        if body.selections is None or body.attending is not None or body.people is not None:
+        if (
+            body.selections is None
+            or body.attending is not None
+            or body.people is not None
+            or any(getattr(body, field) is not None for field in ("option_id", "text", "rating"))
+        ):
             raise ApiHTTPException(422, "poll_answer_invalid", "A meals question is answered with selections.")
         if not {selection.option_id for selection in body.selections} <= set(await self._option_ids(db, question)):
             raise ApiHTTPException(
@@ -174,7 +182,11 @@ class MealsKind(PollKind):
         questions: dict[str, EditionPollQuestion],
         option_question: dict[str, str],
     ) -> dict[str, Answer]:
-        if not {selection.option_id for selection in body.selections} <= set(option_question):
+        if any(
+            option_question.get(selection.option_id) not in questions
+            or questions[option_question[selection.option_id]].kind != self.name
+            for selection in body.selections
+        ):
             raise ApiHTTPException(
                 404, "poll_option_not_found", "One or more poll options are not part of this edition."
             )
@@ -285,7 +297,11 @@ class YesNoKind(PollKind):
     async def volunteer_answer(
         self, db: AsyncSession, question: EditionPollQuestion, body: VolunteerPollAnswerIn
     ) -> Answer:
-        if body.attending is None or body.selections is not None:
+        if (
+            body.attending is None
+            or body.selections is not None
+            or any(getattr(body, field) is not None for field in ("option_id", "text", "rating"))
+        ):
             raise ApiHTTPException(422, "poll_answer_invalid", "A yes/no question is answered with attending.")
         try:
             item = PollAttendanceItem(
@@ -328,8 +344,146 @@ class YesNoKind(PollKind):
         return {"attending": answer[0], "people": answer[1]} if answer else {}
 
 
-KINDS: dict[str, PollKind] = {kind.name: kind for kind in (YesNoKind(), MealsKind())}
+class ScalarKind(PollKind):
+    """Shared persistence for answers with one typed value per question."""
+
+    model: ClassVar[Any]
+    field: ClassVar[str]
+    collection: ClassVar[str]
+
+    async def answered_count(self, db: AsyncSession, question: EditionPollQuestion) -> int:
+        return int(
+            (
+                await db.execute(
+                    select(func.count()).select_from(self.model).where(self.model.question_id == question.id)
+                )
+            ).scalar_one()
+        )
+
+    async def stats(self, db: AsyncSession, edition_id: str) -> dict[str, dict[str, int]]:
+        rows = await db.execute(
+            select(self.model.question_id, func.count())
+            .join(EditionPollQuestion, EditionPollQuestion.id == self.model.question_id)
+            .where(EditionPollQuestion.edition_id == edition_id)
+            .group_by(self.model.question_id)
+        )
+        return {qid: {"answered_count": int(count)} for qid, count in rows.all()}
+
+    async def load_answers(
+        self, db: AsyncSession, edition_id: str, volunteer_ids: list[str] | None
+    ) -> dict[str, dict[str, Answer]]:
+        stmt = (
+            select(self.model)
+            .join(EditionPollQuestion, EditionPollQuestion.id == self.model.question_id)
+            .where(EditionPollQuestion.edition_id == edition_id)
+        )
+        if volunteer_ids is not None:
+            stmt = stmt.where(self.model.volunteer_id.in_(volunteer_ids))
+        answers: dict[str, dict[str, Answer]] = {}
+        for row in (await db.execute(stmt)).scalars():
+            answers.setdefault(row.volunteer_id, {})[row.question_id] = getattr(row, self.field)
+        return answers
+
+    async def replace_answer(
+        self, db: AsyncSession, volunteer_id: str, question: EditionPollQuestion, answer: Answer | None
+    ) -> None:
+        await db.execute(
+            delete(self.model).where(self.model.volunteer_id == volunteer_id, self.model.question_id == question.id)
+        )
+        if answer is not None:
+            db.add(self.model(volunteer_id=volunteer_id, question_id=question.id, **{self.field: answer}))
+
+    async def delete_question_data(self, db: AsyncSession, question: EditionPollQuestion) -> None:
+        await db.execute(delete(self.model).where(self.model.question_id == question.id))
+        if self.has_options:
+            await db.execute(delete(EditionPollOption).where(EditionPollOption.question_id == question.id))
+
+    async def volunteer_answer(
+        self, db: AsyncSession, question: EditionPollQuestion, body: VolunteerPollAnswerIn
+    ) -> Answer:
+        value = scalar_answer_fields(self.name, body)[self.field]
+        if self.has_options and value is not None and value not in await MealsKind._option_ids(db, question):
+            raise ApiHTTPException(404, "poll_option_not_found", "The option is not part of this question.")
+        return value
+
+    def normalize(self, value: Answer) -> Answer:
+        return value
+
+    def admin_answers(
+        self, body: AdminPollOrderIn, questions: dict[str, EditionPollQuestion], option_question: dict[str, str]
+    ) -> dict[str, Answer]:
+        answers = {}
+        for item in getattr(body, self.collection):
+            question = questions.get(item.question_id)
+            if question is None or question.kind != self.name:
+                raise ApiHTTPException(
+                    404, "poll_question_not_found", "The question is not part of this edition or kind."
+                )
+            value = self.normalize(getattr(item, self.field))
+            if self.has_options and option_question.get(value) != question.id:
+                raise ApiHTTPException(404, "poll_option_not_found", "The option is not part of this question.")
+            if value is not None:
+                answers[question.id] = value
+        return answers
+
+    def audit_details(self, answer: Answer) -> dict[str, Any]:
+        # Do not copy potentially sensitive free text into the immutable audit log.
+        return {"kind": self.name, "cleared": answer is None}
+
+    def row_defaults(self) -> dict[str, Any]:
+        return {self.collection: []}
+
+    def add_to_row(
+        self, row: dict[str, Any], question: EditionPollQuestion, answer: Answer, order: dict[str, int]
+    ) -> None:
+        row[self.collection].append({"question_id": question.id, self.field: answer})
+
+    def view_fields(self, answer: Answer | None, options: list[EditionPollOption]) -> dict[str, Any]:
+        return {self.field: answer}
+
+
+class SingleChoiceKind(ScalarKind):
+    name = "single_choice"
+    model = VolunteerPollChoice
+    field = "option_id"
+    collection = "choices"
+    has_options = True
+
+
+class FreeTextKind(ScalarKind):
+    name = "free_text"
+    model = VolunteerPollText
+    field = "text"
+    collection = "texts"
+
+    def normalize(self, value: Answer) -> Answer:
+        return value.strip() or None if value is not None else None
+
+
+class RatingKind(ScalarKind):
+    name = "rating"
+    model = VolunteerPollRating
+    field = "rating"
+    collection = "ratings"
+
+
+KINDS: dict[str, PollKind] = {
+    kind.name: kind for kind in (YesNoKind(), MealsKind(), SingleChoiceKind(), FreeTextKind(), RatingKind())
+}
 
 
 def kind_of(question: EditionPollQuestion) -> PollKind:
     return KINDS[question.kind]
+
+
+def scalar_answer_fields(kind_name: str, body: VolunteerPollAnswerIn) -> dict[str, Answer]:
+    """Validate a scalar answer for either a volunteer question or a visitor order."""
+    handler = KINDS[kind_name]
+    if not isinstance(handler, ScalarKind):
+        raise ApiHTTPException(422, "poll_answer_invalid", "This question requires a scalar answer.")
+    fields = {"selections", "attending", "people", "option_id", "text", "rating"}
+    if handler.field not in body.model_fields_set or any(
+        getattr(body, field) is not None for field in fields - {handler.field}
+    ):
+        raise ApiHTTPException(422, "poll_answer_invalid", f"This question is answered with {handler.field}.")
+    return {handler.field: handler.normalize(getattr(body, handler.field))}

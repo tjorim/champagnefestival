@@ -61,7 +61,7 @@ function option(
 /** A stored question as the admin API returns it. */
 function question(
   id: string,
-  kind: "yes_no" | "meals",
+  kind: "yes_no" | "meals" | "single_choice" | "free_text" | "rating",
   title: string,
   extra: Record<string, unknown> = {},
 ) {
@@ -683,6 +683,9 @@ describe("EditionPollModal answers", () => {
       selections: [{ option_id: "opt-1", quantity: 3 }],
       attendance: [{ question_id: "q-dinner", attending: true, people: 4 }],
       note: "Vegetarisch",
+      choices: [],
+      texts: [],
+      ratings: [],
       confirm_closed: false,
     });
   });
@@ -723,6 +726,9 @@ describe("EditionPollModal answers", () => {
       selections: [{ option_id: "opt-1", quantity: 2 }],
       attendance: [{ question_id: "q-dinner", attending: true, people: 3 }],
       note: "Geen noten",
+      choices: [],
+      texts: [],
+      ratings: [],
       confirm_closed: true,
     });
   });
@@ -746,5 +752,67 @@ describe("EditionPollModal answers", () => {
     await user.click(screen.getByRole("button", { name: "admin_action_cancel" }));
 
     expect(put).not.toHaveBeenCalled();
+  });
+});
+
+describe("additional poll kinds", () => {
+  it("shows and exports all three kinds, and preserves them through an admin correction", async () => {
+    const qs = [
+      question("choice", "single_choice", "Vervoer", { options: [option("bus", "Bus", 1, 1)] }),
+      question("text", "free_text", "Suggestie"),
+      question("rating", "rating", "Score"),
+    ];
+    const orders = {
+      questions: qs,
+      volunteers: [
+        {
+          volunteer_id: "extra",
+          name: "Extra Volunteer",
+          note: null,
+          answered_question_ids: ["choice", "text", "rating"],
+          selections: [],
+          attendance: [],
+          choices: [{ question_id: "choice", option_id: "bus" }],
+          texts: [{ question_id: "text", text: "Meer bubbels" }],
+          ratings: [{ question_id: "rating", rating: 4 }],
+        },
+      ],
+      volunteer_count: 1,
+    };
+    let body: Record<string, unknown> | null = null;
+    server.use(
+      http.put("/api/poll-questions/orders/:volunteerId", async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({});
+      }),
+    );
+    const user = userEvent.setup();
+    renderModal(qs, { orders });
+    const row = (await screen.findByText("Extra Volunteer")).closest("tr")!;
+    expect(within(row).getByText("Bus")).toBeInTheDocument();
+    expect(within(row).getByText("Meer bubbels")).toBeInTheDocument();
+    expect(within(row).getByText("4")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "admin_poll_orders_export" }));
+    expect(exportToCsv).toHaveBeenLastCalledWith("volunteer-poll-2026-october.csv", [
+      {
+        admin_poll_orders_volunteer: "Extra Volunteer",
+        Vervoer: "Bus",
+        Suggestie: "Meer bubbels",
+        Score: "4",
+        admin_poll_orders_note: "",
+      },
+    ]);
+    await user.click(within(row).getByRole("button", { name: "admin_poll_orders_edit" }));
+    const textbox = screen.getByDisplayValue("Meer bubbels");
+    await user.clear(textbox);
+    await user.type(textbox, "Meer soep");
+    await user.click(screen.getByRole("button", { name: "admin_poll_order_save" }));
+    await user.click(screen.getByRole("button", { name: "admin_action_confirm" }));
+    await waitFor(() => expect(body).not.toBeNull());
+    expect(body).toMatchObject({
+      choices: [{ question_id: "choice", option_id: "bus" }],
+      texts: [{ question_id: "text", text: "Meer soep" }],
+      ratings: [{ question_id: "rating", rating: 4 }],
+    });
   });
 });

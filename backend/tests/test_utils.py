@@ -28,6 +28,7 @@ def _make_registration():
         check_in_token="check-in-secret",
         guest_count=2,
         order_items=[],
+        order_answers=[],
         status="confirmed",
         payment_status="paid",
         amount_due=None,

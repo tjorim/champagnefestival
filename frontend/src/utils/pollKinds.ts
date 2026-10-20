@@ -5,7 +5,13 @@ import { m } from "@/paraglide/messages";
  * `components/admin/pollAnswerFields.tsx`, `components/MyPollAnswers.tsx` and `PollOrdersTable`), so adding a
  * kind to this list fails type-checking until each of them says what to do with it.
  */
-export const POLL_QUESTION_KINDS = ["yes_no", "meals"] as const;
+export const POLL_QUESTION_KINDS = [
+  "yes_no",
+  "meals",
+  "single_choice",
+  "free_text",
+  "rating",
+] as const;
 export type PollQuestionKind = (typeof POLL_QUESTION_KINDS)[number];
 
 /** An unknown kind from the API reads as the original `meals` question. */
@@ -16,6 +22,9 @@ export function parsePollKind(value: unknown): PollQuestionKind {
 const LABELS: Record<PollQuestionKind, () => string> = {
   yes_no: () => m.admin_poll_question_kind_yes_no(),
   meals: () => m.admin_poll_question_kind_meals(),
+  single_choice: () => m.admin_poll_question_kind_single_choice(),
+  free_text: () => m.admin_poll_question_kind_free_text(),
+  rating: () => m.admin_poll_question_kind_rating(),
 };
 
 export function pollKindLabel(kind: PollQuestionKind): string {
@@ -32,9 +41,12 @@ const SUMMARIES: Record<PollQuestionKind, ((counts: PollCounts) => string) | nul
   yes_no: ({ yesCount, peopleTotal, noCount }) =>
     m.admin_poll_yes_no_summary({ yes: yesCount, people: peopleTotal, no: noCount }),
   meals: null,
+  single_choice: null,
+  free_text: null,
+  rating: null,
 };
 
-/** What volunteers answered in one line, or null for a kind that has per-option totals instead. */
+/** Optional one-line statistics; every kind also shows its answered count. */
 export function pollCountsSummary(kind: PollQuestionKind, counts: PollCounts): string | null {
   return SUMMARIES[kind]?.(counts) ?? null;
 }
@@ -43,10 +55,25 @@ export function pollCountsSummary(kind: PollQuestionKind, counts: PollCounts): s
 export const POLL_KIND_HAS_OPTIONS: Record<PollQuestionKind, boolean> = {
   yes_no: false,
   meals: true,
+  single_choice: true,
+  free_text: false,
+  rating: false,
 };
 
 /** Whether the volunteer's dietary note belongs to the kind (it stays editable while one is open). */
 export const POLL_KIND_HAS_NOTE: Record<PollQuestionKind, boolean> = {
+  single_choice: false,
+  free_text: false,
+  rating: false,
   yes_no: false,
   meals: true,
+};
+
+/** Dietary tags describe meal options only; other configured choices use labels alone. */
+export const POLL_KIND_HAS_DIETARY_TAGS: Record<PollQuestionKind, boolean> = {
+  yes_no: false,
+  meals: true,
+  single_choice: false,
+  free_text: false,
+  rating: false,
 };

@@ -1,3 +1,4 @@
+import { OrderAnswerSummary } from "@/components/OrderAnswers";
 import {
   CalendarDaysIcon,
   CircleCheckIcon,
@@ -649,6 +650,7 @@ export default function MyRegistrationsPage({
                             {m.my_registrations_request_change()}
                           </Button>
                         )}
+                        <OrderAnswerSummary answers={registration.orderAnswers} />
                         {registration.orderItems.some((item) => item.visible) && (
                           <PresentationList flush className="mt-2">
                             {registration.orderItems
