@@ -14,6 +14,7 @@ vi.mock("@/paraglide/messages", () => ({
   m: {
     close: () => "Close",
     festival_name: () => "Champagnefestival",
+    language_select: () => "Select language",
     maintenance_title: () => "We will be back soon",
     maintenance_message: () => "Maintenance in progress",
     maintenance_facebook_cta: () => "Follow us on Facebook",
@@ -43,6 +44,11 @@ describe("MaintenancePage", () => {
     expect(container.querySelector("style")).toBeNull();
     expect(container.querySelector("[style]")).toBeNull();
     expect(container.querySelector(".maintenance-page__title")).toBeInTheDocument();
+  });
+
+  it("offers the language switcher so visitors can leave the detected language", async () => {
+    render(<MaintenancePage />);
+    expect(await screen.findByRole("button", { name: "Select language" })).toBeInTheDocument();
   });
 
   it("hides the Facebook action when the setting is empty", () => {
