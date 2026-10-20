@@ -324,6 +324,7 @@ describe("EditionPollModal questions", () => {
     await user.click(await screen.findByRole("button", { name: "admin_action_confirm" }));
 
     await waitFor(() => expect(deleteUrl).toContain("confirm_answers=true"));
+    expect(deleteUrl).toContain("notify=true");
   });
 
   it("explains a refused deletion from the error code", async () => {
@@ -523,9 +524,13 @@ describe("EditionPollModal meal options", () => {
         'admin_poll_delete_body_in_use({"label":"Vol-au-vent","volunteers":3,"quantity":5})',
       ),
     ).toBeInTheDocument();
+    const notify = screen.getByRole("checkbox", { name: 'admin_poll_notify_removed({"count":3})' });
+    expect(notify).toBeChecked();
+    await user.click(notify);
     await user.click(await screen.findByRole("button", { name: "admin_action_confirm" }));
 
     await waitFor(() => expect(deleteUrl).toContain("confirm_selections=true"));
+    expect(deleteUrl).toContain("notify=false");
   });
 
   it("moves an option down by sending the whole new order", async () => {

@@ -702,9 +702,10 @@ export async function deletePollQuestion(
   questionId: string,
   authHeaders: () => Record<string, string>,
   confirmAnswers = false,
+  notify = true,
 ): Promise<void> {
   await safeFetch(
-    `/api/poll-questions/${questionId}${confirmAnswers ? "?confirm_answers=true" : ""}`,
+    `/api/poll-questions/${questionId}?notify=${notify}${confirmAnswers ? "&confirm_answers=true" : ""}`,
     { method: "DELETE", headers: authHeaders() },
     m.admin_content_error_save(),
   );
@@ -777,9 +778,10 @@ export async function deletePollOption(
   optionId: string,
   authHeaders: () => Record<string, string>,
   confirmSelections = false,
+  notify = true,
 ): Promise<void> {
   await safeFetch(
-    `/api/poll-options/${optionId}${confirmSelections ? "?confirm_selections=true" : ""}`,
+    `/api/poll-options/${optionId}?notify=${notify}${confirmSelections ? "&confirm_selections=true" : ""}`,
     { method: "DELETE", headers: authHeaders() },
     m.admin_content_error_save(),
   );

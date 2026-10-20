@@ -1,5 +1,8 @@
 """Dutch is the one required language of translated content, and the volunteer meal poll grows up.
 
+Also stores durable email snapshots of deleted volunteer poll answers in
+``poll_deletion_notifications`` for delivery after the deletion commits.
+
 Part 1 - Dutch base language.
 
 Migration 006 gave every translated text an *original language* (``title_language``,
@@ -504,10 +507,21 @@ def _downgrade_order_questions() -> None:
     op.drop_table("event_order_questions")
 
 
+def _upgrade_poll_deletion_notifications() -> None:
+    op.create_table(
+        "poll_deletion_notifications",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("recipient", sa.String(320), nullable=False),
+        sa.Column("subject", sa.String(200), nullable=False),
+        sa.Column("body", sa.Text(), nullable=False),
+    )
+
+
 def upgrade() -> None:
     _upgrade_meal_poll()
     _upgrade_poll_kinds()
     _upgrade_order_questions()
+    _upgrade_poll_deletion_notifications()
     _copy_original_into_dutch()
     _carry_pending_changes()
     for table, old_name, _old_sql, _new_name, _new_sql in CONSTRAINTS:
@@ -519,6 +533,7 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_table("poll_deletion_notifications")
     _downgrade_order_questions()
     _downgrade_poll_kinds()
     for table, _old_name, _old_sql, new_name, _new_sql in CONSTRAINTS:

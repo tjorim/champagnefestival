@@ -18,6 +18,7 @@ from app.schemas import PollOptionCreate, PollOptionLabels, PollOptionReorder, P
 from app.services.errors import ApiHTTPException
 from app.services.poll_common import OPTION_ORDER, get_question_or_404, is_closed, lock_edition
 from app.services.poll_kinds import kind_of
+from app.services.poll_notifications import queue_removed_answers
 from app.utils import get_or_404, make_id, poll_option_to_dict
 
 
@@ -149,10 +150,15 @@ async def delete_poll_option(
     actor: str,
     request_id: str | None = None,
     confirm_selections: bool = False,
+    notify: bool = True,
 ) -> None:
     """Delete an option. When volunteers already picked it, the caller must confirm that their picks
     are removed, and a closed question refuses the deletion outright: its picks are final."""
     option = await get_poll_option_or_404(db, option_id)
+    question = await get_question_or_404(db, option.question_id, lock=True)
+    # Recheck after acquiring the shared question lock: another delete may have won.
+    if await db.scalar(select(EditionPollOption.id).where(EditionPollOption.id == option_id)) is None:
+        raise ApiHTTPException(404, "poll_option_not_found", "Poll option not found.")
     picks = (
         await db.execute(
             select(VolunteerPollSelection.volunteer_id, VolunteerPollSelection.quantity).where(
@@ -168,7 +174,6 @@ async def delete_poll_option(
         ).scalars()
     )
     if picks:
-        question = await get_question_or_404(db, option.question_id)
         if is_closed(question):
             raise ApiHTTPException(
                 409,
@@ -182,6 +187,8 @@ async def delete_poll_option(
                 f"{len(picks)} volunteer(s) picked this option ({sum(q for _, q in picks)} in total); "
                 "confirm to remove their picks.",
             )
+    if notify:
+        await queue_removed_answers(db, question, option=option, actor=actor, request_id=request_id)
     # ON DELETE CASCADE on volunteer_poll_selections.option_id would do this
     # anyway; deleting explicitly keeps the audit trail's ordering obvious.
     await db.execute(delete(VolunteerPollSelection).where(VolunteerPollSelection.option_id == option_id))

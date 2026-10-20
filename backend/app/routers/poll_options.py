@@ -76,9 +76,15 @@ async def delete_poll_option(
     confirm_selections: bool = Query(
         default=False, description="Required when volunteers already picked the option; their picks are removed."
     ),
+    notify: bool = Query(default=True, description="Email affected volunteers after deletion."),
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> None:
     await poll_options_service.delete_poll_option(
-        db, option_id, actor=actor, request_id=_request_id(request), confirm_selections=confirm_selections
+        db,
+        option_id,
+        actor=actor,
+        request_id=_request_id(request),
+        confirm_selections=confirm_selections,
+        notify=notify,
     )

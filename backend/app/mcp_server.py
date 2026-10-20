@@ -1592,13 +1592,14 @@ class ChampagneFestivalMcpBackend:
             reopen=reopen,
         )
 
-    async def delete_poll_question(self, question_id: str, confirm_answers: bool = False) -> dict:
+    async def delete_poll_question(self, question_id: str, confirm_answers: bool = False, notify: bool = True) -> dict:
         """Delete a poll question with its options and answers. When volunteers answered it, nothing is deleted
-        unless ``confirm_answers`` is true; a closed question refuses the deletion (reopen it first). Requires
+        unless ``confirm_answers`` is true; ``notify`` emails affected volunteers by default.
+        A closed question refuses the deletion (reopen it first). Requires
         the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.delete_poll_question(
-            self.session_factory, self._actor(), question_id, confirm_answers=confirm_answers
+            self.session_factory, self._actor(), question_id, confirm_answers=confirm_answers, notify=notify
         )
 
     async def reorder_poll_questions(self, edition_id: str, ordered_ids: list[str]) -> dict:
@@ -1671,13 +1672,14 @@ class ChampagneFestivalMcpBackend:
             dietary_tags=dietary_tags,
         )
 
-    async def delete_poll_option(self, option_id: str, confirm_selections: bool = False) -> dict:
+    async def delete_poll_option(self, option_id: str, confirm_selections: bool = False, notify: bool = True) -> dict:
         """Delete a meal poll option. When volunteers already picked it, nothing is deleted unless
-        ``confirm_selections`` is true, which removes their picks; a closed question refuses the deletion
+        ``confirm_selections`` is true, which removes their picks. ``notify`` emails affected volunteers
+        by default; a closed question refuses the deletion
         (reopen it first). Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.delete_poll_option(
-            self.session_factory, self._actor(), option_id, confirm_selections=confirm_selections
+            self.session_factory, self._actor(), option_id, confirm_selections=confirm_selections, notify=notify
         )
 
     async def reorder_poll_options(self, question_id: str, ordered_ids: list[str]) -> dict:

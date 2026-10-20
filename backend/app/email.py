@@ -353,3 +353,25 @@ async def deliver_organization_change_notification(change_id: str) -> bool:
             logger.exception("Failed to send organization proposal notification for change_id=%s", change_id)
             return False
         return True
+
+
+async def deliver_poll_deletion_notification(notification_id: str) -> bool:
+    """Send the committed snapshot; failures are retried by the outbox worker."""
+    from app.models import PollDeletionNotification
+
+    async with async_session_factory() as db:
+        notification = await db.get(PollDeletionNotification, notification_id)
+        if notification is None or not settings.smtp_host or not settings.smtp_from:
+            return False
+        message = EmailMessage()
+        message["Subject"] = notification.subject
+        message["From"] = settings.smtp_from
+        message["To"] = notification.recipient
+        message["Message-ID"] = f"<poll-deletion-{notification.id}@champagnefestival>"
+        message.set_content(notification.body)
+        try:
+            await asyncio.to_thread(_send_message_sync, message)
+        except Exception:
+            logger.exception("Poll deletion notification failed for notification_id=%s", notification_id)
+            return False
+        return True
