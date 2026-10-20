@@ -17,6 +17,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Changed
 
+- Dutch is the default original language for everything an administrator writes for visitors (REST and MCP create calls, and the policy draft default), since the vzw and the festival are in Flanders. A create call that sends only English text must now set its `*_language` to `en`, or it is rejected. Migration `009` makes Dutch the original language of the built-in event and product categories that migration `006` seeded as English (only those still carrying their seeded labels). The maintenance page offers the language switcher and starts in the visitor's saved or browser language.
 - Description translation drafts support a mounted per-app engine credential and
   a total deadline with a separate connection timeout. Unavailable configured
   keys fail closed; operational logs expose only fixed codes and timing. Engine
