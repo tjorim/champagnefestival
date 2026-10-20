@@ -91,10 +91,17 @@ def test_layout_name_updates_reject_names_that_creation_rejects(model: type[Requ
 
 
 @pytest.mark.parametrize("model", [schemas.PollOptionCreate, schemas.PollOptionUpdate])
-def test_poll_label_validation_is_shared(
+def test_poll_label_text_is_trimmed_and_blank_becomes_none(
     model: type[schemas.PollOptionCreate] | type[schemas.PollOptionUpdate],
 ) -> None:
-    payload = {"edition_id": "edition"} if model is schemas.PollOptionCreate else {}
-    assert model.model_validate({**payload, "label": "  Dinner  "}).label == "Dinner"
-    with pytest.raises(ValidationError, match="Label must not be blank"):
-        model.model_validate({**payload, "label": "   "})
+    payload = {"question_id": "question"} if model is schemas.PollOptionCreate else {}
+    assert model.model_validate({**payload, "label_nl": "  Dinner  "}).label_nl == "Dinner"
+    if model is schemas.PollOptionUpdate:  # the service rejects a missing Dutch label on the merged result
+        assert model.model_validate({"label_nl": "  ", "label_fr": "x"}).label_nl is None
+
+
+def test_poll_option_creation_requires_a_dutch_label() -> None:
+    with pytest.raises(ValidationError, match="Dutch label"):
+        schemas.PollOptionCreate.model_validate({"question_id": "question", "label_nl": "   "})
+    with pytest.raises(ValidationError, match="Dutch label"):
+        schemas.PollOptionCreate.model_validate({"question_id": "question", "label_en": "Dinner"})

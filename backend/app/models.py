@@ -1110,26 +1110,97 @@ class VolunteerPeriod(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
-class EditionPollOption(Base):
-    """A food choice offered to volunteers for one edition (a dish, a soup, ...).
-    The choices are catering-dependent and change every edition, so they are
-    admin-configured content rather than a fixed list, mirroring how `Product`
-    holds one event's orderable items. Everything is delivered on the same day,
-    so there is no kind or day: a volunteer simply picks how many of each they
-    want (`VolunteerPollSelection.quantity`).
+POLL_QUESTION_KINDS = ("yes_no", "meals")
+"""``yes_no``: will you join this (dinner on Sunday, a play in December)? ``meals``: pick dishes, several
+of one if you like."""
+
+MAX_POLL_PEOPLE = 10
+"""The most people one "yes" can stand for (the volunteer plus guests)."""
+
+
+class EditionPollQuestion(Base):
+    """One question put to the volunteers of an edition.
+
+    ``yes_no`` asks whether they join something and with how many people
+    (`VolunteerPollAnswer`); ``meals`` offers `EditionPollOption`s of which they pick a quantity each
+    (`VolunteerPollSelection`). Every question has its own translated title (Dutch required), an
+    optional description, a place in the list and an optional closing time after which volunteers can
+    no longer change their answer.
     """
 
-    __tablename__ = "edition_poll_options"
+    __tablename__ = "edition_poll_questions"
+    __table_args__ = (
+        CheckConstraint("kind IN ('yes_no', 'meals')", name="ck_edition_poll_questions_kind"),
+        CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_edition_poll_questions_title_nl"),
+        CheckConstraint(_optional_dutch_check("description"), name="ck_edition_poll_questions_description_nl"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    label: Mapped[str] = mapped_column(String(200), nullable=False)
-    """Shown to volunteers only (never public), so it is not translated."""
+    kind: Mapped[str] = mapped_column(String(10), nullable=False)
+    title_nl: Mapped[str] = mapped_column(String(200), nullable=False)
+    title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    description_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    description_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    description_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    closes_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    """When volunteers can no longer change their answer, or ``None`` while it stays open."""
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    def localized_title(self, locale: str | None) -> str:
+        return resolve_text({"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, locale)
+
+    def localized_description(self, locale: str | None) -> str:
+        return resolve_text({"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en}, locale)
+
+
+class EditionPollOption(Base):
+    """A food choice offered to volunteers for one edition (a dish, a soup, ...).
+    The choices are catering-dependent and change every edition, so they are
+    admin-configured content rather than a fixed list, mirroring how `Product`
+    holds one event's orderable items. It belongs to a ``meals`` question
+    (`EditionPollQuestion`); a volunteer simply picks how many of each they want
+    (`VolunteerPollSelection.quantity`).
+
+    The label is translated like other content (Dutch required, French and English
+    optional), so volunteers see it in their own language. `dietary_tags` flags what
+    the dish suits or contains; the admin orders the list with `sort_order`.
+    """
+
+    __tablename__ = "edition_poll_options"
+    __table_args__ = (CheckConstraint("(length(trim(label_nl)) > 0) IS TRUE", name="ck_edition_poll_options_label_nl"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    edition_id: Mapped[str] = mapped_column(
+        String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    question_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), index=True, nullable=False
+    )
+    """The ``meals`` question this option belongs to; ``edition_id`` is that question's edition."""
+    label_nl: Mapped[str] = mapped_column(String(200), nullable=False)
+    label_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    label_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    """Shown to volunteers only (never public)."""
+    dietary_tags: Mapped[list[str]] = mapped_column(JSON, default=list)
+    """Values from ``app.schemas.DietaryTag``, e.g. ``["vegetarian", "gluten_free"]``."""
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    @property
+    def label(self) -> str:
+        """The Dutch label: what admin lists and audit entries show."""
+        return self.label_nl
+
+    def localized_label(self, locale: str | None) -> str:
+        return resolve_text({"nl": self.label_nl, "fr": self.label_fr, "en": self.label_en}, locale)
 
 
 MAX_POLL_QUANTITY = 20
@@ -1151,6 +1222,40 @@ class VolunteerPollSelection(Base):
     )
     quantity: Mapped[int] = mapped_column(Integer, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class VolunteerPollAnswer(Base):
+    """A volunteer's answer to a ``yes_no`` `EditionPollQuestion`: whether they join and, when they do,
+    with how many people (themselves included). No row means not answered yet."""
+
+    __tablename__ = "volunteer_poll_answers"
+    __table_args__ = (
+        CheckConstraint(
+            f"(attending AND people BETWEEN 1 AND {MAX_POLL_PEOPLE}) OR (NOT attending AND people = 0)",
+            name="ck_volunteer_poll_answers_people",
+        ),
+    )
+
+    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
+    question_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), primary_key=True
+    )
+    attending: Mapped[bool] = mapped_column(Boolean, nullable=False)
+    people: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class VolunteerMealNote(Base):
+    """A volunteer's free-text dietary note (allergies, preferences) for one edition's ``meals`` questions."""
+
+    __tablename__ = "volunteer_meal_notes"
+
+    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
+    edition_id: Mapped[str] = mapped_column(
+        String(100), ForeignKey("editions.id", ondelete="CASCADE"), primary_key=True
+    )
+    note: Mapped[str] = mapped_column(String(500), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
 class AuditEntry(Base):

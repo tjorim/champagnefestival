@@ -321,6 +321,8 @@ ADMIN_READ_TOOLS = {
     "list_signage_video_exports",
     "get_signage_video_export",
     "list_waitlist_entries",
+    "list_poll_questions",
+    "list_poll_orders",
 }
 ADMIN_WRITE_TOOLS = {
     "create_announcement",
@@ -347,6 +349,13 @@ ADMIN_WRITE_TOOLS = {
     "cancel_signage_video_export",
     "mark_waitlist_entry_handled",
     "delete_waitlist_entry",
+    "reorder_poll_options",
+    "create_poll_question",
+    "update_poll_question",
+    "delete_poll_question",
+    "reorder_poll_questions",
+    "copy_poll_questions",
+    "set_volunteer_poll_order",
 }
 
 

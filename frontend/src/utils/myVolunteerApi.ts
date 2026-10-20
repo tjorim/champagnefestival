@@ -1,4 +1,7 @@
 import { m } from "@/paraglide/messages";
+import { apiErrorFromResponse } from "@/utils/apiErrors";
+import type { DietaryTag } from "@/utils/dietaryTags";
+import { parsePollKind, type PollQuestionKind } from "@/utils/pollKinds";
 
 export interface MyVolunteerIdentity {
   linked: boolean;
@@ -79,66 +82,158 @@ export async function updateMyEidDocumentNumber(
 
 export interface PollOption {
   id: string;
+  /** In the language asked for (Dutch when that language has no label). */
   label: string;
+  dietaryTags: DietaryTag[];
 }
 
 /** The most of one option a volunteer can ask for (the server enforces the same limit). */
 export const MAX_POLL_QUANTITY = 20;
 
+/** The most people one "yes" can stand for, the volunteer included (the server enforces the same limit). */
+export const MAX_POLL_PEOPLE = 10;
+
 /** Quantity per option id; an option with none is absent. */
 export type MyPollSelections = Record<string, number>;
 
-export interface MyPollOptions {
-  editionId: string | null;
+export interface MyPollQuestion {
+  id: string;
+  kind: PollQuestionKind;
+  title: string;
+  description: string;
+  /** When answers can no longer be changed, or null while the question has no deadline. */
+  closesAt: string | null;
+  closed: boolean;
   options: PollOption[];
   selections: MyPollSelections;
+  /** The answer to a yes/no question; null while unanswered. */
+  attending: boolean | null;
+  people: number;
 }
 
-function parsePollOptions(data: unknown): MyPollOptions {
-  const record = data as { edition_id?: unknown; options?: unknown; selections?: unknown };
-  const isRecord = (value: unknown): value is Record<string, unknown> =>
-    typeof value === "object" && value !== null;
-  const rawOptions = Array.isArray(record.options) ? record.options : [];
-  const rawSelections = Array.isArray(record.selections) ? record.selections : [];
+export interface MyPoll {
+  editionId: string | null;
+  questions: MyPollQuestion[];
+  /** The volunteer's own dietary note, if they left one. */
+  note: string | null;
+}
+
+const DIETARY_TAGS: readonly string[] = [
+  "vegetarian",
+  "vegan",
+  "gluten_free",
+  "lactose_free",
+  "contains_nuts",
+];
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+function parseQuestion(raw: Record<string, unknown>): MyPollQuestion {
   const selections: MyPollSelections = {};
-  for (const selection of rawSelections.filter(isRecord)) {
+  for (const selection of (Array.isArray(raw.selections) ? raw.selections : []).filter(isRecord)) {
     const quantity = Number(selection.quantity);
     if (typeof selection.option_id === "string" && quantity > 0) {
       selections[selection.option_id] = quantity;
     }
   }
   return {
-    editionId: typeof record.edition_id === "string" ? record.edition_id : null,
-    options: rawOptions
-      .filter(isRecord)
-      .map((o) => ({ id: String(o.id ?? ""), label: String(o.label ?? "") })),
+    id: String(raw.id ?? ""),
+    kind: parsePollKind(raw.kind),
+    title: String(raw.title ?? ""),
+    description: String(raw.description ?? ""),
+    closesAt: typeof raw.closes_at === "string" ? raw.closes_at : null,
+    closed: raw.closed === true,
+    options: (Array.isArray(raw.options) ? raw.options : []).filter(isRecord).map((o) => ({
+      id: String(o.id ?? ""),
+      label: String(o.label ?? ""),
+      dietaryTags: Array.isArray(o.dietary_tags)
+        ? o.dietary_tags.filter((tag): tag is DietaryTag => DIETARY_TAGS.includes(String(tag)))
+        : [],
+    })),
     selections,
+    attending: typeof raw.attending === "boolean" ? raw.attending : null,
+    people: Number(raw.people ?? 0),
   };
 }
 
-/** Fetch the active edition's meal poll options and the quantities this volunteer asked for. */
-export async function getMyPollOptions(accessToken: string): Promise<MyPollOptions> {
-  const response = await fetch("/api/me/volunteer/poll-options", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!response.ok) throw new Error(m.my_poll_load_error());
-  return parsePollOptions(await response.json());
+function parsePoll(data: unknown): MyPoll {
+  const record = isRecord(data) ? data : {};
+  return {
+    editionId: typeof record.edition_id === "string" ? record.edition_id : null,
+    questions: (Array.isArray(record.questions) ? record.questions : [])
+      .filter(isRecord)
+      .map(parseQuestion),
+    note: typeof record.note === "string" && record.note ? record.note : null,
+  };
 }
 
-/** Replace the signed-in volunteer's own meal quantities. */
-export async function replaceMyPollSelections(
+const POLL_URL = "/api/me/volunteer/poll";
+
+async function pollRequest(
   accessToken: string,
+  path: string,
+  locale: string,
+  fallback: string,
+  body?: unknown,
+): Promise<MyPoll> {
+  const response = await fetch(`${POLL_URL}${path}?locale=${encodeURIComponent(locale)}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+    },
+    ...(body === undefined ? {} : { method: "PUT", body: JSON.stringify(body) }),
+  });
+  if (!response.ok) throw await apiErrorFromResponse(response, fallback);
+  return parsePoll(await response.json());
+}
+
+/** Fetch the active edition's poll questions (in `locale`) and what this volunteer answered. */
+export function getMyPoll(accessToken: string, locale: string): Promise<MyPoll> {
+  return pollRequest(accessToken, "", locale, m.my_poll_load_error());
+}
+
+/** Replace the volunteer's picks for one meals question; an option with no quantity is dropped. */
+export function answerMyMealsQuestion(
+  accessToken: string,
+  locale: string,
+  questionId: string,
   selections: MyPollSelections,
-): Promise<MyPollOptions> {
-  const response = await fetch("/api/me/volunteer/poll-selections", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
-    body: JSON.stringify({
+): Promise<MyPoll> {
+  return pollRequest(
+    accessToken,
+    `/questions/${encodeURIComponent(questionId)}`,
+    locale,
+    m.my_poll_save_error(),
+    {
       selections: Object.entries(selections)
         .filter(([, quantity]) => quantity > 0)
         .map(([option_id, quantity]) => ({ option_id, quantity })),
-    }),
-  });
-  if (!response.ok) return throwDetailOrFallback(response, m.my_poll_save_error());
-  return parsePollOptions(await response.json());
+    },
+  );
+}
+
+/** Answer a yes/no question; `people` counts everyone a yes stands for, the volunteer included. */
+export function answerMyYesNoQuestion(
+  accessToken: string,
+  locale: string,
+  questionId: string,
+  attending: boolean,
+  people: number,
+): Promise<MyPoll> {
+  return pollRequest(
+    accessToken,
+    `/questions/${encodeURIComponent(questionId)}`,
+    locale,
+    m.my_poll_save_error(),
+    {
+      attending,
+      ...(attending ? { people } : {}),
+    },
+  );
+}
+
+/** Save the volunteer's dietary note for the meals (empty clears it). */
+export function saveMyPollNote(accessToken: string, locale: string, note: string): Promise<MyPoll> {
+  return pollRequest(accessToken, "/note", locale, m.my_poll_save_error(), { note });
 }

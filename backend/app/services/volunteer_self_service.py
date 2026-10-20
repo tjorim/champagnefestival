@@ -22,14 +22,12 @@ docs/decisions/1006-volunteer-identity-self-service.md.
 from __future__ import annotations
 
 from fastapi import HTTPException
-from sqlalchemy import delete, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import EditionPollOption, Person, VolunteerPollSelection
-from app.schemas import VolunteerPollSelectionsIn
-from app.services.editions_service import find_active_edition
+from app.models import Person
 from app.services.identity_checksum import validate_eid_checksum, validate_niss_checksum
 from app.services.people_service import normalise_optional_identity
 from app.services.volunteers_service import ensure_volunteer_role
@@ -207,102 +205,3 @@ async def update_eid_document_number(
         ) from exc
     await db.refresh(person)
     return person
-
-
-async def get_active_edition_poll_options(db: AsyncSession) -> tuple[str | None, list[EditionPollOption]]:
-    """The active festival edition's poll options (empty list, `None` edition
-    id if there is no active festival edition or it has none configured)."""
-    edition = await find_active_edition(db, edition_type="festival")
-    if edition is None:
-        return None, []
-    options = (
-        (
-            await db.execute(
-                select(EditionPollOption)
-                .where(EditionPollOption.edition_id == edition.id)
-                .order_by(EditionPollOption.created_at, EditionPollOption.id)
-            )
-        )
-        .scalars()
-        .all()
-    )
-    return edition.id, list(options)
-
-
-async def get_poll_selections(db: AsyncSession, volunteer_id: str, edition_id: str | None) -> list[dict]:
-    """Only this ``edition_id``'s selections — a volunteer who helped a past
-    edition keeps whatever they picked then, but it must never surface (or,
-    in ``replace_poll_selections``, be deleted) as if it were this edition's
-    picks."""
-    if edition_id is None:
-        return []
-    rows = (
-        await db.execute(
-            select(VolunteerPollSelection.option_id, VolunteerPollSelection.quantity)
-            .join(EditionPollOption, EditionPollOption.id == VolunteerPollSelection.option_id)
-            .where(
-                VolunteerPollSelection.volunteer_id == volunteer_id,
-                EditionPollOption.edition_id == edition_id,
-            )
-            .order_by(EditionPollOption.created_at, EditionPollOption.id)
-        )
-    ).all()
-    return [{"option_id": option_id, "quantity": quantity} for option_id, quantity in rows]
-
-
-async def replace_poll_selections(
-    db: AsyncSession,
-    *,
-    volunteer_id: str,
-    body: VolunteerPollSelectionsIn,
-    actor: str,
-    request_id: str | None = None,
-) -> list[dict]:
-    """Replace this volunteer's own quantities. Safe to wholesale-replace: every
-    row touched is keyed by `volunteer_id`, so this can never affect another
-    volunteer's selections or the options themselves (see
-    `VolunteerPollSelectionsIn`'s docstring). Only ever replaces the *active
-    edition's* selections — a volunteer's picks from a past edition are left
-    untouched, never wiped out by saving this edition's choices.
-
-    Locks the volunteer's own `Person` row first (mirrors
-    `register_volunteer_identity`'s use of the same pattern) so two
-    concurrent replacements for the same volunteer (a double-submit, or a
-    retry racing the original) serialize instead of interleaving their
-    delete-then-insert.
-    """
-    await db.execute(select(Person.id).where(Person.id == volunteer_id).with_for_update())
-    active_edition_id, options = await get_active_edition_poll_options(db)
-    valid_ids = {option.id for option in options}
-    requested_ids = {selection.option_id for selection in body.selections}
-    if not requested_ids <= valid_ids:
-        raise HTTPException(status_code=404, detail="One or more poll options are not part of the active edition.")
-
-    if active_edition_id is not None:
-        current_edition_option_ids = select(EditionPollOption.id).where(
-            EditionPollOption.edition_id == active_edition_id
-        )
-        await db.execute(
-            delete(VolunteerPollSelection).where(
-                VolunteerPollSelection.volunteer_id == volunteer_id,
-                VolunteerPollSelection.option_id.in_(current_edition_option_ids),
-            )
-        )
-    for selection in body.selections:
-        db.add(
-            VolunteerPollSelection(
-                volunteer_id=volunteer_id, option_id=selection.option_id, quantity=selection.quantity
-            )
-        )
-
-    await write_audit_entry(
-        db,
-        actor=actor,
-        action="volunteer_poll_selections_updated",
-        resource_type="person",
-        resource_id=volunteer_id,
-        request_id=request_id,
-        details={"option_count": len(body.selections), "total_quantity": sum(s.quantity for s in body.selections)},
-    )
-    await db.commit()
-    return await get_poll_selections(db, volunteer_id, active_edition_id)

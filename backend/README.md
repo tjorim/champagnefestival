@@ -578,14 +578,76 @@ the Dutch column first and logging each table it did that for), creates
 use is kept as a category of its own and logged), and drops `policies.required_locales`.
 Its downgrade keeps only the original-language text.
 
-Volunteer-only text is not translated. The meal poll (`edition_poll_options`) has a plain
-`label` per option and no kind: everything is delivered on the same day, so a volunteer
-just asks for a quantity of each option (`PUT /api/me/volunteer/poll-selections` with
-`{"selections": [{"option_id", "quantity"}]}`, quantity 1 to 20, an option left out means
-none, a full replace). The admin list (`GET /api/poll-options`, MCP `list_poll_options`) also
-returns each option's `total_quantity` and `volunteer_count`, the numbers to order from the
-caterer. It also turns an existing pick into a quantity of one and drops the kind;
-its downgrade makes every option a `dinner` (the kind that allows any number of picks).
+Volunteer-only text is not translated into other content tables, but the volunteer poll follows the
+same pattern for its question titles and option labels.
+
+#### Volunteer poll: questions (migration `009`)
+
+An edition's poll is a list of **questions** (`edition_poll_questions`), each of one `kind`:
+
+- `yes_no`: "will you join x on y" (dinner on Sunday, a play in December). A volunteer answers yes or no;
+  a yes also says how many people it stands for, themselves included (`people`, 1 to 10; a no stores 0).
+- `meals`: "choose your meals". The question owns a list of options (`edition_poll_options`, with a
+  `question_id`) and a volunteer asks for a quantity of each (1 to 20; an option left out means none),
+  so they can mix dishes or take several of one.
+
+Questions are translated like other content (`title_nl` required, `title_fr`/`title_en`, same for
+`description_*`), carry a `sort_order` (new ones go last) and their own `closes_at`. Options are `label_nl`
+(required), `label_fr`, `label_en` and a `dietary_tags` list (`vegetarian`, `vegan`, `gluten_free`,
+`lactose_free`, `contains_nuts`, replaced as a whole on update); only a meals question has options
+(422 `poll_question_not_meals` otherwise).
+
+- **Admin REST:** `GET/POST /api/poll-questions`, `PUT/DELETE /api/poll-questions/{id}`,
+  `POST /api/poll-questions/reorder` (`{edition_id, ordered_ids}`, every question exactly once) and
+  `POST /api/poll-questions/copy` (`{from_edition_id, to_edition_id}`: copies questions and their options,
+  never the answers, skipping questions whose kind and Dutch title already exist in the target).
+  Options: `POST/GET /api/poll-options`, `PUT/DELETE /api/poll-options/{id}`,
+  `POST /api/poll-options/reorder` (`{question_id, ordered_ids}`). Question reads include the counts to
+  order from: per option `total_quantity` and `volunteer_count`, per yes/no question `yes_count`,
+  `no_count` and `people_total`.
+- **Closing is per question:** `closes_at` is when volunteers can no longer change that answer.
+  `PUT /api/poll-questions/{id}` with `closes_at: null` reopens it and a past time closes it now. A
+  volunteer save on a closed question is a 409 with code `poll_question_closed`. The dietary note follows
+  the meals questions: it can be saved while at least one of them is open.
+- **Volunteer REST:** `GET /api/me/volunteer/poll?locale=` returns the active edition's questions in the
+  language asked for (Dutch fallback) with the volunteer's own answers; `PUT /api/me/volunteer/poll/questions/{id}`
+  replaces the answer to one question (`{selections: [{option_id, quantity}]}` for meals,
+  `{attending, people}` for yes/no); `PUT /api/me/volunteer/poll/note` sets the dietary note
+  (`{note}`, at most 500 characters, an empty string clears it; `volunteer_meal_notes`).
+- **Who answered what:** `GET /api/poll-questions/orders?edition_id=` lists every active volunteer (also
+  those who answered nothing) and anyone else holding an answer, with their answers in question order and
+  their note; MCP `list_poll_orders`. It contains volunteer names (admin only).
+- **Admin entry:** `PUT /api/poll-questions/orders/{volunteer_id}?edition_id=` (MCP `set_volunteer_poll_order`)
+  enters or corrects a volunteer's answers and note on their behalf, for example from an email. The body is
+  `{selections, attendance, note, confirm_closed}`; it replaces everything the volunteer answered for the
+  edition. A change to a question that has closed needs `confirm_closed: true` (otherwise 409
+  `poll_question_closed`). The volunteer must have the `volunteer` role (404 `volunteer_not_found`) and
+  every option and question must belong to the edition (404 `poll_option_not_found` /
+  `poll_question_not_found`). The audit entry `volunteer_poll_selections_set_by_admin` records the admin as
+  actor, the volunteer as subject and whether a closed question was changed. The admin dialog asks for a
+  confirmation first, with a stronger one when a question has closed.
+- **Deleting** an option volunteers picked is a 409 `poll_option_in_use` (with how many and how much) until
+  `?confirm_selections=true`; deleting a question volunteers answered is a 409 `poll_question_in_use` until
+  `?confirm_answers=true`. Confirming removes those answers and the audit entry lists them. On a closed
+  question both are a 409 `poll_question_closed` regardless: reopen it first.
+- MCP: `create_`/`update_`/`delete_poll_question`, `list_poll_questions`, `reorder_poll_questions`,
+  `copy_poll_questions`, `create_`/`update_`/`delete_poll_option`, `list_poll_options`,
+  `reorder_poll_options`, `list_poll_orders`, `set_volunteer_poll_order`. `update_poll_question` takes
+  `closes_at` or `reopen`.
+
+Everything that differs per kind (how answers are stored, counted, validated and shown) lives in one
+`PollKind` per kind in `app/services/poll_kinds.py`; `poll_questions_service` never branches on the kind. To
+add a kind, add a handler there and register it in `KINDS`, extend `POLL_QUESTION_KINDS` (and the check
+constraint with a migration) and `PollQuestionKind`; `tests/test_poll_kinds.py` fails until they agree. On the
+frontend the per-kind pieces are `Record<PollQuestionKind, ...>` maps (`utils/pollKinds.ts`,
+`components/MyPollAnswers.tsx`, `components/admin/pollAnswerFields.tsx`, `PollOrdersTable`), so a new kind
+fails type-checking until each says what to do with it. The REST shapes still carry kind-specific fields
+(`selections`, `attendance`), which a new kind would extend.
+
+Migration `009` turns the earlier option-only poll into this model: each edition that has options gets one
+"Maaltijden" meals question holding them (closing time and all), and its downgrade drops the questions and
+the yes/no answers. The poll was never released before `009`, so the API of the intermediate option-only
+shape (`/api/poll-options/settings|orders|copy`, `/api/me/volunteer/poll-options|poll-selections`) no longer exists.
 
 ### Organization manager self-service (#1192)
 
