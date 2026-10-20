@@ -1627,5 +1627,6 @@
   "order_questions_save": "Save order questions",
   "order_questions_saved": "Order questions saved.",
   "api_error_order_question_in_use": "This question has already been answered. Deactivate it and add a new question to change its wording, type or options.",
-  "api_error_order_question_unavailable": "These questions have changed. Reopen the order form and check your answers."
+  "api_error_order_question_unavailable": "These questions have changed. Reopen the order form and check your answers.",
+  "admin_poll_notify_removed": "Email {count} affected volunteers"
 }

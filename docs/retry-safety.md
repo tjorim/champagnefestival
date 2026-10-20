@@ -777,3 +777,21 @@ closed-question correction and wrong-question options; migration tests cover uni
   wins and each execution is audited (answer counts only). There is no automatic retry. Tests cover replacement,
   omission, clearing, inactive-question correction, event scope and typed constraints. Monetary and inventory
   calculations do not use question answers.
+
+### Volunteer poll deletion notifications (#1361)
+
+REST and MCP question/option deletes accept `notify` (default `true`), independently
+of the required confirmation for existing answers. A confirmed delete snapshots one
+translated email per affected volunteer with an email address and enqueues it in the
+same transaction as deletion. The worker sends only after commit; SMTP failure leaves
+the deletion committed and retries through the durable outbox. `notify=false` and
+unanswered items enqueue nothing. Each snapshot contains the removed answer and labels,
+with the person's preferred language and Dutch content fallback. Snapshots have no
+foreign key to the deleted poll records.
+
+Deletes are not replayable successes: repeating a successful delete returns 404 and
+queues no further mail. Jobs use `poll-deletion:{resource_id}:{volunteer_id}` unique
+keys. Delivery is at-least-once: an ambiguous SMTP success or lost worker lease can
+result in another email, with the same Message-ID. Clients must not automatically
+retry the delete. Notification snapshots currently remain stored alongside delivery
+history; they include the recipient and removed answer.

@@ -122,12 +122,12 @@ async def update_poll_question(
 
 
 async def delete_poll_question(
-    session_factory: Any, actor: str, question_id: str, *, confirm_answers: bool = False
+    session_factory: Any, actor: str, question_id: str, *, confirm_answers: bool = False, notify: bool = True
 ) -> dict:
     async with session_factory() as db:
         try:
             await poll_questions_service.delete_poll_question(
-                db, question_id, actor=actor, confirm_answers=confirm_answers
+                db, question_id, actor=actor, confirm_answers=confirm_answers, notify=notify
             )
         except HTTPException as exc:
             raise as_value_error(exc) from exc
@@ -221,12 +221,12 @@ async def update_poll_option(
 
 
 async def delete_poll_option(
-    session_factory: Any, actor: str, option_id: str, *, confirm_selections: bool = False
+    session_factory: Any, actor: str, option_id: str, *, confirm_selections: bool = False, notify: bool = True
 ) -> dict:
     async with session_factory() as db:
         try:
             await poll_options_service.delete_poll_option(
-                db, option_id, actor=actor, confirm_selections=confirm_selections
+                db, option_id, actor=actor, confirm_selections=confirm_selections, notify=notify
             )
         except HTTPException as exc:
             raise as_value_error(exc) from exc

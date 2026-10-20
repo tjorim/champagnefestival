@@ -1627,5 +1627,6 @@
   "order_questions_save": "Bestelvragen opslaan",
   "order_questions_saved": "Bestelvragen opgeslagen.",
   "api_error_order_question_in_use": "Deze vraag is al beantwoord. Deactiveer deze en voeg een nieuwe vraag toe om de tekst, het type of de opties te wijzigen.",
-  "api_error_order_question_unavailable": "Deze vragen zijn gewijzigd. Open het bestelformulier opnieuw en controleer je antwoorden."
+  "api_error_order_question_unavailable": "Deze vragen zijn gewijzigd. Open het bestelformulier opnieuw en controleer je antwoorden.",
+  "admin_poll_notify_removed": "Stuur {count} betrokken vrijwilligers een e-mail"
 }

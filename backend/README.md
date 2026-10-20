@@ -633,6 +633,9 @@ Questions are translated like other content (`title_nl` required, `title_fr`/`ti
   `?confirm_selections=true`; deleting a question volunteers answered is a 409 `poll_question_in_use` until
   `?confirm_answers=true`. Confirming removes those answers and the audit entry lists them. On a closed
   question both are a 409 `poll_question_closed` regardless: reopen it first.
+- Confirmed poll deletes email affected volunteers through the durable outbox by default (#1361).
+  REST and MCP accept `notify=false` to skip email. Each volunteer receives one translated
+  snapshot of the removed answer; delivery failures do not undo deletion.
 - MCP: `create_`/`update_`/`delete_poll_question`, `list_poll_questions`, `reorder_poll_questions`,
   `copy_poll_questions`, `create_`/`update_`/`delete_poll_option`, `list_poll_options`,
   `reorder_poll_options`, `list_poll_orders`, `set_volunteer_poll_order`. `update_poll_question` takes

@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
@@ -143,8 +144,8 @@ export default function PollOptionsEditor({
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (option: PollOption) =>
-      deletePollOption(option.id, authHeaders, option.volunteerCount > 0),
+    mutationFn: ({ option, notify }: { option: PollOption; notify: boolean }) =>
+      deletePollOption(option.id, authHeaders, option.volunteerCount > 0, notify),
     retry: false,
   });
   const reorderMutation = useMutation({
@@ -176,22 +177,39 @@ export default function PollOptionsEditor({
   }
 
   async function handleDelete(option: PollOption) {
+    let notify = true;
     const confirmed = await confirm({
       title: m.admin_poll_delete_title(),
-      body:
-        option.volunteerCount > 0
-          ? m.admin_poll_delete_body_in_use({
-              label: option.label,
-              volunteers: option.volunteerCount,
-              quantity: option.totalQuantity,
-            })
-          : m.admin_poll_delete_body({ label: option.label }),
+      body: (
+        <>
+          <p>
+            {option.volunteerCount > 0
+              ? m.admin_poll_delete_body_in_use({
+                  label: option.label,
+                  volunteers: option.volunteerCount,
+                  quantity: option.totalQuantity,
+                })
+              : m.admin_poll_delete_body({ label: option.label })}
+          </p>
+          {option.volunteerCount > 0 && (
+            <label className="mt-3 flex items-center gap-2">
+              <Checkbox
+                defaultChecked
+                onCheckedChange={(checked) => {
+                  notify = checked;
+                }}
+              />
+              {m.admin_poll_notify_removed({ count: option.volunteerCount })}
+            </label>
+          )}
+        </>
+      ),
       errorFallback: m.admin_content_error_save(),
       variant: "danger",
     });
     if (!confirmed) return;
     await run(async () => {
-      await deleteMutation.mutateAsync(option);
+      await deleteMutation.mutateAsync({ option, notify });
       onOptionsChange(options.filter((o) => o.id !== option.id));
     });
   }

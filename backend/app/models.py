@@ -1828,3 +1828,14 @@ class RegistrationOrderAnswer(Base):
             "rating": self.rating,
             "question": self.question.as_dict(),
         }
+
+
+class PollDeletionNotification(Base):
+    """Immutable email snapshot; survives deletion of the question and its answers."""
+
+    __tablename__ = "poll_deletion_notifications"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    recipient: Mapped[str] = mapped_column(String(320), nullable=False)
+    subject: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)

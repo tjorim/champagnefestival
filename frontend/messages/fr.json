@@ -1627,5 +1627,6 @@
   "order_questions_save": "Enregistrer les questions",
   "order_questions_saved": "Questions enregistrées.",
   "api_error_order_question_in_use": "Cette question a déjà reçu une réponse. Désactivez-la et ajoutez une nouvelle question pour changer son texte, son type ou ses options.",
-  "api_error_order_question_unavailable": "Ces questions ont changé. Rouvrez le formulaire de commande et vérifiez vos réponses."
+  "api_error_order_question_unavailable": "Ces questions ont changé. Rouvrez le formulaire de commande et vérifiez vos réponses.",
+  "admin_poll_notify_removed": "Envoyer un e-mail aux {count} bénévoles concernés"
 }

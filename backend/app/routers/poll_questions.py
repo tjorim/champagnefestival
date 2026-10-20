@@ -118,9 +118,10 @@ async def delete_poll_question(
     confirm_answers: bool = Query(
         default=False, description="Required when volunteers already answered; their answers are removed."
     ),
+    notify: bool = Query(default=True, description="Email affected volunteers after deletion."),
     db: AsyncSession = Depends(get_db),
     actor: str = Depends(get_actor_id),
 ) -> None:
     await poll_questions_service.delete_poll_question(
-        db, question_id, actor=actor, request_id=_request_id(request), confirm_answers=confirm_answers
+        db, question_id, actor=actor, request_id=_request_id(request), confirm_answers=confirm_answers, notify=notify
     )
