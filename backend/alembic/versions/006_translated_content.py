@@ -39,7 +39,7 @@ logger = logging.getLogger("alembic.runtime.migration")
 
 # Key, sort order and label per language (nl, fr, en) of the categories every
 # installation starts with: the ones the schedule always knew plus a few more.
-# English is their original language, like anything created through the API.
+# Dutch is their original language, like anything created through the API.
 DEFAULT_CATEGORIES = (
     ("tasting", 10, "Degustatie", "Dégustation", "Tasting"),
     ("vip", 20, "VIP Evenement", "Événement VIP", "VIP Event"),
@@ -110,7 +110,7 @@ def _create_categories(connection) -> None:
     op.bulk_insert(
         categories,
         [
-            {"key": key, "label_language": "en", "label_nl": nl, "label_fr": fr, "label_en": en, "sort_order": order}
+            {"key": key, "label_language": "nl", "label_nl": nl, "label_fr": fr, "label_en": en, "sort_order": order}
             for key, order, nl, fr, en in DEFAULT_CATEGORIES
         ],
     )
@@ -463,7 +463,7 @@ def _downgrade_edition_artwork() -> None:
 
 # --- Product categories -----------------------------------------------------------
 
-# Key, sort order and label per language (nl, fr, en). English is the original
+# Key, sort order and label per language (nl, fr, en). Dutch is the original
 # language, like anything created through the API.
 DEFAULT_PRODUCT_CATEGORIES = (
     ("champagne", 10, "Champagne", "Champagne", "Champagne"),
@@ -506,7 +506,7 @@ def _upgrade_product_categories() -> None:
     op.bulk_insert(
         categories,
         [
-            {"key": key, "label_language": "en", "label_nl": nl, "label_fr": fr, "label_en": en, "sort_order": order}
+            {"key": key, "label_language": "nl", "label_nl": nl, "label_fr": fr, "label_en": en, "sort_order": order}
             for key, order, nl, fr, en in DEFAULT_PRODUCT_CATEGORIES
         ],
     )

@@ -167,6 +167,8 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
                 event_categories["tasting"].label_fr,
                 event_categories["tasting"].label_en,
             ) == ("Degustatie", "Dégustation", "Tasting")
+            # The built-in categories are Dutch-original, like anything created through the API.
+            assert {event_categories[key].label_language for key in ("tasting", "vip", "other")} == {"nl"}
             assert (event_categories["community"].label_language, event_categories["community"].label_nl) == (
                 "nl",
                 "community",
@@ -248,6 +250,7 @@ def test_content_and_product_categories_survive_the_upgrade_and_downgrade(monkey
             "Food",
         )
         assert (categories["voucher"].label_language, categories["voucher"].label_nl) == ("nl", "voucher")
+        assert {categories[key].label_language for key in ("champagne", "food", "other")} == {"nl"}
 
         with pytest.raises(IntegrityError, match="fk_events_category"), database.begin() as connection:
             connection.execute(text("UPDATE events SET category = 'gala' WHERE id = 'tasting'"))
