@@ -1130,7 +1130,10 @@ class EditionPollQuestion(Base):
 
     __tablename__ = "edition_poll_questions"
     __table_args__ = (
-        CheckConstraint("kind IN ('yes_no', 'meals')", name="ck_edition_poll_questions_kind"),
+        CheckConstraint(
+            "kind IN (" + ", ".join(f"'{kind}'" for kind in POLL_QUESTION_KINDS) + ")",
+            name="ck_edition_poll_questions_kind",
+        ),
         CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_edition_poll_questions_title_nl"),
         CheckConstraint(_optional_dutch_check("description"), name="ck_edition_poll_questions_description_nl"),
     )

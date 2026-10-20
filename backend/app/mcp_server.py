@@ -56,7 +56,7 @@ from app.mcp.admin import organizations as mcp_admin_organizations
 from app.mcp.admin import payments as mcp_admin_payments
 from app.mcp.admin import people as mcp_admin_people
 from app.mcp.admin import policies as mcp_admin_policies
-from app.mcp.admin import poll_options as mcp_admin_poll_options
+from app.mcp.admin import poll as mcp_admin_poll
 from app.mcp.admin import product_categories as mcp_admin_product_categories
 from app.mcp.admin import products as mcp_admin_products
 from app.mcp.admin import registrations as mcp_admin_registrations
@@ -1522,7 +1522,7 @@ class ChampagneFestivalMcpBackend:
         ``closed``) and counts of who answered. ``title`` is resolved for ``locale`` (Dutch when omitted).
         Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.list_poll_questions(self.session_factory, edition_id, locale)
+        return await mcp_admin_poll.list_poll_questions(self.session_factory, edition_id, locale)
 
     async def create_poll_question(
         self,
@@ -1542,7 +1542,7 @@ class ChampagneFestivalMcpBackend:
         English are optional translations. ``closes_at`` (with a timezone) is when volunteers can no longer
         change their answer. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.create_poll_question(
+        return await mcp_admin_poll.create_poll_question(
             self.session_factory,
             self._actor(),
             edition_id=edition_id,
@@ -1573,7 +1573,7 @@ class ChampagneFestivalMcpBackend:
         their answer (a past time closes the question now); ``reopen=true`` clears it. The kind cannot change.
         Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.update_poll_question(
+        return await mcp_admin_poll.update_poll_question(
             self.session_factory,
             self._actor(),
             question_id,
@@ -1592,7 +1592,7 @@ class ChampagneFestivalMcpBackend:
         unless ``confirm_answers`` is true; a closed question refuses the deletion (reopen it first). Requires
         the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.delete_poll_question(
+        return await mcp_admin_poll.delete_poll_question(
             self.session_factory, self._actor(), question_id, confirm_answers=confirm_answers
         )
 
@@ -1600,7 +1600,7 @@ class ChampagneFestivalMcpBackend:
         """Set the display order of an edition's poll questions; ``ordered_ids`` must name every question of the
         edition exactly once. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.reorder_poll_questions(
+        return await mcp_admin_poll.reorder_poll_questions(
             self.session_factory, self._actor(), edition_id=edition_id, ordered_ids=ordered_ids
         )
 
@@ -1609,7 +1609,7 @@ class ChampagneFestivalMcpBackend:
         times), after the ones already there. A question whose kind and Dutch title exist in the target is
         skipped, so repeating the copy adds nothing. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.copy_poll_questions(
+        return await mcp_admin_poll.copy_poll_questions(
             self.session_factory, self._actor(), from_edition_id=from_edition_id, to_edition_id=to_edition_id
         )
 
@@ -1625,7 +1625,7 @@ class ChampagneFestivalMcpBackend:
         Volunteers pick a quantity of each. The Dutch label is required; French and English are optional
         translations. ``dietary_tags`` flags what the meal suits or contains. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.create_poll_option(
+        return await mcp_admin_poll.create_poll_option(
             self.session_factory,
             self._actor(),
             question_id=question_id,
@@ -1642,7 +1642,7 @@ class ChampagneFestivalMcpBackend:
         quantity volunteers asked for and how many volunteers picked each (what to order from the caterer).
         ``label`` is resolved for ``locale`` (Dutch when omitted). Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.list_poll_options(self.session_factory, question_id, edition_id, locale)
+        return await mcp_admin_poll.list_poll_options(self.session_factory, question_id, edition_id, locale)
 
     async def update_poll_option(
         self,
@@ -1656,7 +1656,7 @@ class ChampagneFestivalMcpBackend:
         their quantities. An empty string clears a translation (the Dutch label cannot be cleared);
         ``dietary_tags`` replaces the whole list. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.update_poll_option(
+        return await mcp_admin_poll.update_poll_option(
             self.session_factory,
             self._actor(),
             option_id,
@@ -1671,7 +1671,7 @@ class ChampagneFestivalMcpBackend:
         ``confirm_selections`` is true, which removes their picks; a closed question refuses the deletion
         (reopen it first). Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.delete_poll_option(
+        return await mcp_admin_poll.delete_poll_option(
             self.session_factory, self._actor(), option_id, confirm_selections=confirm_selections
         )
 
@@ -1679,7 +1679,7 @@ class ChampagneFestivalMcpBackend:
         """Set the display order of a meals question's options; ``ordered_ids`` must name every option of the
         question exactly once. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.reorder_poll_options(
+        return await mcp_admin_poll.reorder_poll_options(
             self.session_factory, self._actor(), question_id=question_id, ordered_ids=ordered_ids
         )
 
@@ -1688,7 +1688,7 @@ class ChampagneFestivalMcpBackend:
         answered yet) with their meal picks, yes/no answers (with number of people) and dietary note, next to
         the questions in display order with counts. Contains volunteer names. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.list_poll_orders(self.session_factory, edition_id, locale)
+        return await mcp_admin_poll.list_poll_orders(self.session_factory, edition_id, locale)
 
     async def set_volunteer_poll_order(
         self,
@@ -1706,7 +1706,7 @@ class ChampagneFestivalMcpBackend:
         to a closed question needs ``confirm_closed`` to be true. Audited with you as the actor. Requires the
         ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.set_volunteer_poll_order(
+        return await mcp_admin_poll.set_volunteer_poll_order(
             self.session_factory,
             self._actor(),
             edition_id=edition_id,

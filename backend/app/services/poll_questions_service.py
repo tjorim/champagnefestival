@@ -5,7 +5,7 @@ each option, see ``app.services.poll_options_service``). Each question has its o
 Everything specific to a kind lives in ``app.services.poll_kinds``; this module never branches on it.
 
 Used by ``app.routers.poll_questions`` and ``app.routers.volunteer_self`` (REST) and
-``app.mcp.admin.poll_options`` (MCP). Raises ``HTTPException`` directly; the MCP adapter translates it
+``app.mcp.admin.poll`` (MCP). Raises ``HTTPException`` directly; the MCP adapter translates it
 into ``MCPToolError`` at its own boundary (``app.mcp.utils.as_value_error``).
 """
 
@@ -483,7 +483,7 @@ async def set_volunteer_poll_order(
     await write_audit_entry(
         db,
         actor=actor,
-        action="volunteer_poll_selections_set_by_admin",
+        action="volunteer_poll_answers_set_by_admin",
         resource_type="person",
         resource_id=volunteer_id,
         request_id=request_id,

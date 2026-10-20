@@ -2,7 +2,7 @@
 
 The questions themselves, who answered what and the volunteer's own answers are in
 ``app.routers.poll_questions``. Business logic lives in ``app.services.poll_options_service`` and is shared
-with ``app.mcp.admin.poll_options``.
+with ``app.mcp.admin.poll``.
 """
 
 from fastapi import APIRouter, Depends, Query, Request, status

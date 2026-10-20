@@ -22,7 +22,7 @@ export function pollKindLabel(kind: PollQuestionKind): string {
   return LABELS[kind]();
 }
 
-export interface PollCounts {
+interface PollCounts {
   yesCount: number;
   noCount: number;
   peopleTotal: number;

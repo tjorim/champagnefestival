@@ -48,7 +48,6 @@ interface PolicyVersion {
 
 interface Policy {
   key: string;
-  title_language: Locale;
   title_nl: string | null;
   title_en: string | null;
   title_fr: string | null;
@@ -379,7 +378,7 @@ export default function PolicyManagement({
           <>
             <div className="flex justify-between items-center mb-4">
               <div>
-                <strong>{policy[`title_${policy.title_language}`]}</strong>
+                <strong>{policy.title_nl ?? policy.key}</strong>
                 {published && (
                   <div className="text-subtle text-sm">
                     {m.admin_policy_currently_published({

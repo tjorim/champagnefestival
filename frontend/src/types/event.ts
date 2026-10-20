@@ -85,8 +85,6 @@ export interface Product extends ProductTranslations {
 
 export type EventLanguage = "nl" | "fr" | "en";
 
-export const EVENT_LANGUAGES: readonly EventLanguage[] = ["nl", "fr", "en"];
-
 /** Stored text in every language; mirrors the organisation description fields. */
 export interface EventTranslations {
   titleNl: string | null;

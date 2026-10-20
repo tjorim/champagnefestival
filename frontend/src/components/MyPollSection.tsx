@@ -35,6 +35,7 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
   const token = () => getAccessToken() ?? "";
   const [poll, setPoll] = useState<MyPoll | null>(null);
   const [noteDraft, setNoteDraft] = useState<{ saved: string; text: string } | null>(null);
+  const [noteConfirmed, setNoteConfirmed] = useState(false);
 
   const loadMutation = useMutation({
     mutationFn: () => getMyPoll(token(), getLocale()),
@@ -59,8 +60,10 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
   if (!poll || poll.questions.length === 0) return null;
 
   const saving = saveMutation.isPending;
-  const save = (action: (accessToken: string, locale: string) => Promise<MyPoll>) =>
+  const save = (action: (accessToken: string, locale: string) => Promise<MyPoll>) => {
+    setNoteConfirmed(false);
     saveMutation.mutate(action);
+  };
   const noted = poll.questions.filter((question) => POLL_KIND_HAS_NOTE[question.kind]);
   const noteOpen = noted.some((question) => !question.closed);
   const savedNote = poll.note ?? "";
@@ -95,7 +98,10 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
               maxLength={500}
               disabled={!noteOpen}
               value={note}
-              onChange={(event) => setNoteDraft({ saved: savedNote, text: event.target.value })}
+              onChange={(event) => {
+                setNoteConfirmed(false);
+                setNoteDraft({ saved: savedNote, text: event.target.value });
+              }}
             />
           </PublicField>
           <Button
@@ -104,11 +110,19 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
             className="mb-2"
             disabled={!noteOpen || saving || note.trim() === savedNote}
             onClick={() =>
-              save((accessToken, locale) => saveMyPollNote(accessToken, locale, note.trim()))
+              saveMutation.mutate(
+                (accessToken, locale) => saveMyPollNote(accessToken, locale, note.trim()),
+                { onSuccess: () => setNoteConfirmed(true) },
+              )
             }
           >
             {m.my_poll_note_save()}
           </Button>
+          {noteConfirmed && (
+            <p className="text-sm mb-2" role="status">
+              {m.my_poll_note_saved()}
+            </p>
+          )}
         </>
       )}
       {saveMutation.isError && (

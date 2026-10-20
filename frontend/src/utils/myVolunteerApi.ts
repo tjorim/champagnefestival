@@ -94,7 +94,7 @@ export const MAX_POLL_QUANTITY = 20;
 export const MAX_POLL_PEOPLE = 10;
 
 /** Quantity per option id; an option with none is absent. */
-export type MyPollSelections = Record<string, number>;
+type MyPollSelections = Record<string, number>;
 
 export interface MyPollQuestion {
   id: string;

@@ -623,7 +623,7 @@ Questions are translated like other content (`title_nl` required, `title_fr`/`ti
   edition. A change to a question that has closed needs `confirm_closed: true` (otherwise 409
   `poll_question_closed`). The volunteer must have the `volunteer` role (404 `volunteer_not_found`) and
   every option and question must belong to the edition (404 `poll_option_not_found` /
-  `poll_question_not_found`). The audit entry `volunteer_poll_selections_set_by_admin` records the admin as
+  `poll_question_not_found`). The audit entry `volunteer_poll_answers_set_by_admin` records the admin as
   actor, the volunteer as subject and whether a closed question was changed. The admin dialog asks for a
   confirmation first, with a stronger one when a question has closed.
 - **Deleting** an option volunteers picked is a 409 `poll_option_in_use` (with how many and how much) until

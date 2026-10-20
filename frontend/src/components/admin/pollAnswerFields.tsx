@@ -124,7 +124,7 @@ const meals: AnswerKind<MealsDraft> = {
 /** The draft of one question's answer; its shape belongs to the question's kind. */
 export type AnswerDraft = unknown;
 
-export interface AnswerFields {
+interface AnswerFields {
   initial: (question: Question, volunteer: Volunteer) => AnswerDraft;
   Fields: ComponentType<FieldsProps<AnswerDraft>>;
   contribute: (question: Question, draft: AnswerDraft, payload: AnswerPayload) => void;

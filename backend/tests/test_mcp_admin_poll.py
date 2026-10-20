@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from app.mcp.admin import poll_options as mcp_poll
+from app.mcp.admin import poll as mcp_poll
 from app.models import Edition, Person, Venue
 from app.schemas import PollAttendanceItem, PollSelectionItem
 from tests.helpers import mcp_session_factory

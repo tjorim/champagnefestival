@@ -121,7 +121,7 @@ async def test_admin_enters_and_corrects_a_volunteers_answers(client, volunteer_
         (
             await db_session.execute(
                 select(AuditEntry)
-                .where(AuditEntry.action == "volunteer_poll_selections_set_by_admin")
+                .where(AuditEntry.action == "volunteer_poll_answers_set_by_admin")
                 .order_by(AuditEntry.timestamp.desc())
             )
         )
@@ -161,7 +161,7 @@ async def test_changing_a_closed_question_needs_confirmation_but_other_changes_d
         (
             await db_session.execute(
                 select(AuditEntry)
-                .where(AuditEntry.action == "volunteer_poll_selections_set_by_admin")
+                .where(AuditEntry.action == "volunteer_poll_answers_set_by_admin")
                 .order_by(AuditEntry.timestamp.desc())
             )
         )

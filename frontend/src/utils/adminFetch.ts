@@ -614,17 +614,6 @@ export async function downloadRegistrationsCsv(
   );
 }
 
-export async function downloadVolunteersCsv(
-  authHeaders: () => Record<string, string>,
-): Promise<void> {
-  await downloadFileOrThrow(
-    "/api/volunteers/export",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-    "volunteers-insurance-list.csv",
-  );
-}
-
 /** Page size used by the ledger drill-down modal (#1032) — mirrors the
  * server's own default when a caller doesn't specify a limit. */
 export const LEDGER_PAGE_SIZE = 50;

@@ -26,7 +26,7 @@ const TEXT_FIELDS = [
   { language: m.admin_language_en, title: "titleEn", description: "descriptionEn" },
 ] as const;
 
-export function toQuestionWrite(question: PollQuestion): PollQuestionWrite {
+function toQuestionWrite(question: PollQuestion): PollQuestionWrite {
   return {
     titleNl: question.titleNl,
     titleFr: question.titleFr ?? "",

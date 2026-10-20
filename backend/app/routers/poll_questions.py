@@ -2,7 +2,7 @@
 
 A question is ``yes_no`` (will you join this, with how many people) or ``meals`` (pick dishes; the options
 are managed through ``app.routers.poll_options``). Each question has its own optional closing time.
-Business logic lives in ``app.services.poll_questions_service`` and is shared with ``app.mcp.admin.poll_options``.
+Business logic lives in ``app.services.poll_questions_service`` and is shared with ``app.mcp.admin.poll``.
 """
 
 from fastapi import APIRouter, Depends, Query, Request, status

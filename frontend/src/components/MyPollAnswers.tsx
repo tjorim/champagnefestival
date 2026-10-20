@@ -15,9 +15,9 @@ import {
 } from "@/utils/myVolunteerApi";
 import type { PollQuestionKind } from "@/utils/pollKinds";
 
-export type SaveAnswer = (action: (accessToken: string, locale: string) => Promise<MyPoll>) => void;
+type SaveAnswer = (action: (accessToken: string, locale: string) => Promise<MyPoll>) => void;
 
-export interface AnswerInputProps {
+interface AnswerInputProps {
   question: MyPollQuestion;
   /** Disables the controls while an answer is being saved. */
   saving: boolean;

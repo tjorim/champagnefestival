@@ -1,7 +1,7 @@
 """Meal options of a ``meals`` poll question (admin only; see ``app.services.poll_questions_service`` for
 the questions themselves).
 
-Used by both ``app.routers.poll_options`` (REST) and ``app.mcp.admin.poll_options`` (MCP). Raises
+Used by both ``app.routers.poll_options`` (REST) and ``app.mcp.admin.poll`` (MCP). Raises
 ``HTTPException`` directly; the MCP adapter translates it into ``MCPToolError`` at its own boundary
 (``app.mcp.utils.as_value_error``).
 """

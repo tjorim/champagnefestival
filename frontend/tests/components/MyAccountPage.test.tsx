@@ -74,6 +74,7 @@ vi.mock("@/paraglide/messages", () => ({
     my_poll_closes_at: ({ time }: { time: string }) => `Change your choices until ${time}.`,
     my_poll_note_label: () => "Allergies or dietary requirements",
     my_poll_note_save: () => "Save note",
+    my_poll_note_saved: () => "Note saved.",
     poll_dietary_vegan: () => "Vegan",
     api_error_poll_question_closed: () =>
       "This question has closed, so this can no longer be changed.",
@@ -609,6 +610,11 @@ describe("MyAccountPage", () => {
 
       await waitFor(() => expect(saved).toHaveLength(1));
       expect(saved[0]).toEqual({ note: "Glutenvrij" });
+      expect(await screen.findByText("Note saved.")).toBeInTheDocument();
+
+      // Editing the note again takes the confirmation away until it is saved.
+      await user.type(note, "!");
+      expect(screen.queryByText("Note saved.")).not.toBeInTheDocument();
     });
 
     it("shows a closed question as read-only while the other stays open", async () => {

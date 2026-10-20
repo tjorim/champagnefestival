@@ -31,9 +31,6 @@ from app.schemas import (
 from app.services import poll_options_service, poll_questions_service
 from app.translations import Language
 
-QUESTION_TEXT_FIELDS = ("title_nl", "title_fr", "title_en", "description_nl", "description_fr", "description_en")
-
-
 # --- Questions ------------------------------------------------------------------------------------
 
 
