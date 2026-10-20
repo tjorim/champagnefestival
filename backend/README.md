@@ -460,8 +460,7 @@ supersession use the private review workflow below (#1193).
 ### Event titles, descriptions and categories (#1222)
 
 Events keep their text per language, following the organisation pattern.
-`title_language` (`nl`, `fr`, `en`; default `en` for API and MCP clients, the admin
-form preselects Dutch) names the original language and
+`title_language` (`nl`, `fr`, `en`; default `nl`, matching the admin form) names the original language and
 `title_nl`/`title_fr`/`title_en` hold the texts (each at most 200 characters). The
 description works the same way with `description_language` and
 `description_nl/fr/en` (each at most 10000 characters; all null means no
@@ -543,8 +542,7 @@ limited to 2000 characters and a separate rate-limit bucket); see
 ### Translated content and product categories (#1222)
 
 Everything an administrator writes for visitors follows the organisation
-description pattern: an original language (`*_language`, default `en` for API and
-MCP clients; the admin forms preselect Dutch) that must have text, optional
+description pattern: an original language (`*_language`, default `nl`) that must have text, optional
 translations in `_nl`/`_fr`/`_en`, and a fallback to the original language, so a
 blank translation never hides content. Updates validate the merged stored and
 requested text; an empty string clears a translation; blank text is stored as null;

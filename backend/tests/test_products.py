@@ -6,7 +6,7 @@ import pytest
 
 from tests.helpers import ADMIN_HEADERS, _create_event
 
-PRODUCT_PAYLOAD = {"name_en": "Bottle of Champagne", "price": "25.00", "category": "champagne"}
+PRODUCT_PAYLOAD = {"name_language": "en", "name_en": "Bottle of Champagne", "price": "25.00", "category": "champagne"}
 
 
 async def _create_product(client, event_id: str, **overrides):
@@ -706,6 +706,7 @@ async def test_product_bundle_rejects_cross_event_target(client):
         json={
             **PRODUCT_PAYLOAD,
             "event_id": event_a["id"],
+            "name_language": "en",
             "name_en": "VIP Table",
             "included_product_id": bottle_on_b["id"],
             "included_per_guests": 2,
@@ -728,6 +729,7 @@ async def test_product_bundle_allows_a_hidden_target(client):
         json={
             **PRODUCT_PAYLOAD,
             "event_id": event["id"],
+            "name_language": "en",
             "name_en": "VIP Table",
             "included_product_id": hidden["id"],
             "included_per_guests": 2,
@@ -741,6 +743,7 @@ async def test_product_bundle_allows_a_hidden_target(client):
         json={
             **PRODUCT_PAYLOAD,
             "event_id": event["id"],
+            "name_language": "en",
             "name_en": "VIP Table 2",
             "inclusions": [{"product_id": hidden["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
         },
@@ -768,6 +771,7 @@ async def test_product_bundle_rejects_chaining(client):
         json={
             **PRODUCT_PAYLOAD,
             "event_id": event["id"],
+            "name_language": "en",
             "name_en": "Top",
             "included_product_id": middle["id"],
             "included_per_guests": 1,

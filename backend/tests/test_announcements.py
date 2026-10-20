@@ -30,7 +30,7 @@ async def test_public_visibility_is_server_scheduled_and_locale_explicit(client)
             "active": True,
             "starts_at": (now + timedelta(hours=1)).isoformat(),
         },
-        {"text_en": "English only", "active": True},
+        {"text_language": "en", "text_en": "English only", "active": True},
         {"text_language": "nl", "text_nl": "Disabled", "active": False},
     ]
     for payload in payloads:
@@ -72,29 +72,29 @@ async def test_translations_and_link_labels_follow_the_visitor_language(client):
 
 
 @pytest.mark.anyio
-async def test_the_original_language_is_required_and_defaults_to_english(client):
-    created = await client.post("/api/announcements", json={"text_en": "Hello"}, headers=ADMIN_HEADERS)
+async def test_the_original_language_is_required_and_defaults_to_dutch(client):
+    created = await client.post("/api/announcements", json={"text_nl": "Hallo"}, headers=ADMIN_HEADERS)
     assert created.status_code == 201
-    assert created.json()["text_language"] == "en"
+    assert created.json()["text_language"] == "nl"
     for payload in (
-        {"text_nl": "Alleen Nederlands"},  # the default original language (en) has no text
+        {"text_en": "English only"},  # the default original language (nl) has no text
         {"text_language": "nl"},
         {"text_language": "fr", "text_nl": "Pas de français"},
-        {"text_en": "Link", "link_url": "https://example.com", "link_label_nl": "Meer"},  # label not in en
+        {"text_nl": "Link", "link_url": "https://example.com", "link_label_en": "More"},  # label not in nl
     ):
         assert (await client.post("/api/announcements", json=payload, headers=ADMIN_HEADERS)).status_code == 422
 
     item = created.json()
-    cleared = await client.put(f"/api/announcements/{item['id']}", json={"text_en": ""}, headers=ADMIN_HEADERS)
+    cleared = await client.put(f"/api/announcements/{item['id']}", json={"text_nl": ""}, headers=ADMIN_HEADERS)
     assert cleared.status_code == 400
     assert "original language" in cleared.text
     switched = await client.put(
-        f"/api/announcements/{item['id']}", json={"text_language": "nl", "text_nl": "Hallo"}, headers=ADMIN_HEADERS
+        f"/api/announcements/{item['id']}", json={"text_language": "en", "text_en": "Hello"}, headers=ADMIN_HEADERS
     )
     assert switched.status_code == 200
-    assert switched.json()["text_nl"] == "Hallo"
-    translated = await client.put(f"/api/announcements/{item['id']}", json={"text_en": ""}, headers=ADMIN_HEADERS)
-    assert translated.json()["text_en"] is None  # a translation can be cleared
+    assert switched.json()["text_en"] == "Hello"
+    translated = await client.put(f"/api/announcements/{item['id']}", json={"text_nl": ""}, headers=ADMIN_HEADERS)
+    assert translated.json()["text_nl"] is None  # a translation can be cleared
 
 
 @pytest.mark.anyio

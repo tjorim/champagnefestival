@@ -156,6 +156,7 @@ async def test_mcp_tools_manage_categories_and_events_use_them(db_session):
         factory,
         "admin-1",
         edition_id="edition-cat",
+        title_language="en",
         title_en="Gala-avond",
         date=date(2099, 3, 21),
         start_time="19:00",

@@ -67,7 +67,7 @@ async def test_poll_option_label_is_stripped_and_required(client):
     option_id = r.json()["id"]
     assert r.json()["label"] == "Vol-au-vent"
 
-    for body in ({"label": "   "}, {"label": ""}, {"label_en": "Old shape"}, {}):
+    for body in ({"label": "   "}, {"label": ""}, {"label_language": "en", "label_en": "Old shape"}, {}):
         r = await client.put(f"/api/poll-options/{option_id}", json=body, headers=ADMIN_HEADERS)
         assert r.status_code == 422, body
     r = await client.post(

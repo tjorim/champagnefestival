@@ -80,6 +80,7 @@ async def _registration(client, *, amount_due: str | None = None, person_id: str
         "/api/events",
         json={
             "edition_id": edition_id,
+            "title_language": "en",
             "title_en": "Ledger Bourse",
             "date": "2026-11-21",
             "start_time": "09:00",

@@ -70,6 +70,7 @@ async def _setup(client, *, active: bool = True) -> dict:
             "/api/events",
             {
                 "edition_id": EDITION_ID,
+                "title_language": "en",
                 "title_en": day,
                 "date": event_date,
                 "start_time": "14:00",

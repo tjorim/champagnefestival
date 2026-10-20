@@ -19,7 +19,14 @@ async def _create(client, **body):
 async def _product(client, event_id: str, category: str, **overrides):
     return await client.post(
         "/api/products",
-        json={"event_id": event_id, "price": "5.00", "category": category, "name_en": "Item", **overrides},
+        json={
+            "event_id": event_id,
+            "price": "5.00",
+            "category": category,
+            "name_language": "en",
+            "name_en": "Item",
+            **overrides,
+        },
         headers=ADMIN_HEADERS,
     )
 
@@ -161,7 +168,7 @@ async def test_mcp_tools_manage_categories_and_products_use_them(client, db_sess
         )
 
     product = await mcp_products.create_product(
-        factory, "admin-1", event_id=event["id"], price=2.5, category="soft", name_en="Cola"
+        factory, "admin-1", event_id=event["id"], price=2.5, category="soft", name_language="en", name_en="Cola"
     )
     with pytest.raises(ValueError, match="1 product"):
         await mcp_categories.delete_product_category(factory, "admin-1", "soft")

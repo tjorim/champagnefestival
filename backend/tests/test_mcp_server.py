@@ -1001,6 +1001,7 @@ class TestGetActiveEditionObjEditionTypeScoping:
                 "/api/events",
                 json={
                     "edition_id": edition_id,
+                    "title_language": "en",
                     "title_en": f"{edition_type} event",
                     "date": event_date,
                     "start_time": "18:00",

@@ -113,7 +113,7 @@ async def test_active_faq_falls_back_to_the_original_language(client):
 @pytest.mark.anyio
 async def test_faq_create_and_update_validate_the_original_language(client):
     for body in (
-        {"question_nl": "Vraag", "answer_nl": "Antwoord"},  # default original (en) is empty
+        {"question_en": "Question", "answer_en": "Answer"},  # default original (nl) is empty
         {"text_language": "nl", "question_nl": "Vraag"},  # no answer
         {"text_language": "fr", "question_nl": "Vraag", "answer_nl": "Antwoord"},
         {"text_language": "nl", "question_nl": "  ", "answer_nl": "Antwoord"},
@@ -127,10 +127,10 @@ async def test_faq_create_and_update_validate_the_original_language(client):
     assert no_answer.status_code == 400
     assert "original language" in no_answer.text
     english = await client.post(
-        "/api/faq", json={"question_en": "Question", "answer_en": "Answer"}, headers=ADMIN_HEADERS
+        "/api/faq", json={"question_nl": "Vraag", "answer_nl": "Antwoord"}, headers=ADMIN_HEADERS
     )
     assert english.status_code == 201
-    assert english.json()["text_language"] == "en"  # English is the default original language
+    assert english.json()["text_language"] == "nl"  # Dutch is the default original language
 
     switched = await client.put(
         f"/api/faq/{faq_id}",

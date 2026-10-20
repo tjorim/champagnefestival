@@ -17,10 +17,10 @@ from typing import Literal, get_args
 Language = Literal["nl", "fr", "en"]
 LANGUAGES: tuple[Language, ...] = get_args(Language)
 
-DEFAULT_ORIGINAL_LANGUAGE: Language = "en"
+DEFAULT_ORIGINAL_LANGUAGE: Language = "nl"
 """Original language assumed by the REST and MCP create calls when none is given.
-Scripts and agents work best in English; the admin form still defaults to Dutch
-for the editors, and rows that predate translations were migrated as Dutch."""
+Dutch, because the vzw and the festival venue are in Flanders; rows that predate
+translations were migrated as Dutch too."""
 
 
 def resolve_text(

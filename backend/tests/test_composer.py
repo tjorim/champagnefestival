@@ -81,7 +81,7 @@ async def test_create_draft(client):
 async def test_create_draft_rejects_missing_title(client):
     r = await client.post(
         "/api/composer",
-        json=_draft_body(title_nl=None, title_en=None, title_fr=None),
+        json=_draft_body(title_nl=None, text_language="en", title_en=None, title_fr=None),
         headers=ADMIN_HEADERS,
     )
     assert r.status_code == 422
@@ -441,7 +441,7 @@ async def test_push_result_counts_do_not_leak_between_different_messages(client,
 async def test_create_rejects_split_locale_pair(client):
     response = await client.post(
         "/api/composer",
-        json={"title_nl": "Titel", "body_en": "Body", "channels": ["push"]},
+        json={"title_nl": "Titel", "text_language": "en", "body_en": "Body", "channels": ["push"]},
         headers=ADMIN_HEADERS,
     )
     assert response.status_code == 422
@@ -471,7 +471,9 @@ async def test_announcement_allows_text_over_push_byte_limit(client):
 
 async def test_update_validates_merged_locale_pairs(client):
     created = await client.post(
-        "/api/composer", json={"title_en": "Title", "body_en": "Body", "channels": ["push"]}, headers=ADMIN_HEADERS
+        "/api/composer",
+        json={"text_language": "en", "title_en": "Title", "body_en": "Body", "channels": ["push"]},
+        headers=ADMIN_HEADERS,
     )
     message_id = created.json()["id"]
     response = await client.put(f"/api/composer/{message_id}", json={"title_en": "Updated"}, headers=ADMIN_HEADERS)
@@ -519,17 +521,17 @@ async def test_schedule_revalidates_legacy_push_payload(client, db_session):
 
 
 async def test_composed_message_requires_a_complete_pair_in_its_original_language(client):
-    only_dutch_title = _draft_body(text_language="nl", body_nl=None)
-    assert (await client.post("/api/composer", json=only_dutch_title, headers=ADMIN_HEADERS)).status_code == 422
-    english_default = _draft_body()
-    english_default.pop("text_language")
-    created = await client.post("/api/composer", json=english_default, headers=ADMIN_HEADERS)
+    only_english_title = _draft_body(text_language="en", body_en=None)
+    assert (await client.post("/api/composer", json=only_english_title, headers=ADMIN_HEADERS)).status_code == 422
+    dutch_default = _draft_body()
+    dutch_default.pop("text_language")
+    created = await client.post("/api/composer", json=dutch_default, headers=ADMIN_HEADERS)
     assert created.status_code == 201
-    assert created.json()["text_language"] == "en"  # English is the default original language
+    assert created.json()["text_language"] == "nl"  # Dutch is the default original language
 
     message_id = created.json()["id"]
     cleared = await client.put(
-        f"/api/composer/{message_id}", json={"body_en": "", "body_nl": "x"}, headers=ADMIN_HEADERS
+        f"/api/composer/{message_id}", json={"body_nl": "", "body_en": "x"}, headers=ADMIN_HEADERS
     )
     assert cleared.status_code == 400
     switched = await client.put(f"/api/composer/{message_id}", json={"text_language": "fr"}, headers=ADMIN_HEADERS)

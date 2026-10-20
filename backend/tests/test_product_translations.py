@@ -29,8 +29,8 @@ async def test_a_product_has_a_name_per_language_with_an_original(client):
     assert (product["name"], product["name_language"], product["name_fr"]) == ("Champagnefles", "nl", None)
     assert (product["description"], product["description_en"]) == ("Goed gekoeld", None)
 
-    default = await _product(client, event["id"], name_en="Plain")
-    assert default["name_language"] == "en"  # English is the default original language
+    default = await _product(client, event["id"], name_nl="Gewoon")
+    assert default["name_language"] == "nl"  # Dutch is the default original language
 
 
 @pytest.mark.parametrize(
@@ -56,7 +56,9 @@ async def test_a_product_needs_its_name_in_the_original_language(client, overrid
 
 async def test_updating_one_translation_keeps_the_rest_and_validates_the_result(client):
     event = await _create_event(client, edition_id="edition-product-text-update")
-    product = await _product(client, event["id"], name_en="Bottle", description_language="en", description_en="Chilled")
+    product = await _product(
+        client, event["id"], name_language="en", name_en="Bottle", description_language="en", description_en="Chilled"
+    )
 
     translated = await client.put(
         f"/api/products/{product['id']}", json={"name_fr": "Bouteille"}, headers=ADMIN_HEADERS
@@ -79,7 +81,7 @@ async def test_updating_one_translation_keeps_the_rest_and_validates_the_result(
 async def test_public_products_resolve_the_visitors_language_with_fallback(client):
     event = await _create_event(client, edition_id="edition-product-text-public")
     await _product(client, event["id"], name_language="nl", name_nl="Fles", name_fr="Bouteille")
-    await _product(client, event["id"], name_en="Only English")
+    await _product(client, event["id"], name_language="en", name_en="Only English")
 
     def names(payload):
         edition_events = [e for edition in payload for e in edition["events"]]

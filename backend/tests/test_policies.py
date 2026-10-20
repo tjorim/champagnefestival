@@ -140,17 +140,17 @@ async def test_create_edit_and_publish_draft_from_scratch(client, db_session):
 async def test_publish_refused_without_content_in_the_original_language(client, db_session):
     await _seed_policy(db_session)
     created = await client.post("/api/policies/privacy/draft", json={}, headers=ADMIN_HEADERS)
-    assert created.json()["content_language"] == "en"  # English is the default original language
+    assert created.json()["content_language"] == "nl"  # Dutch is the default original language
     await client.put(
         "/api/policies/privacy/draft",
-        json={"content_nl": "Alleen NL."},
+        json={"content_en": "English only."},
         headers=ADMIN_HEADERS,
     )
     response = await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)
     assert response.status_code == 400
-    assert "original language 'en'" in response.json()["detail"]
+    assert "original language 'nl'" in response.json()["detail"]
 
-    await client.put("/api/policies/privacy/draft", json={"content_language": "nl"}, headers=ADMIN_HEADERS)
+    await client.put("/api/policies/privacy/draft", json={"content_language": "en"}, headers=ADMIN_HEADERS)
     assert (await client.post("/api/policies/privacy/draft/publish", headers=ADMIN_HEADERS)).status_code == 200
 
 
