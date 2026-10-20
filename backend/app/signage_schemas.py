@@ -111,11 +111,14 @@ class Content(Document):
         return value.strip() or None if isinstance(value, str) else value
 
 
+SlideKind = Literal["organizations", "notice", "image"]
+
+
 class SlideWrite(Document):
     channel_id: str
     template_id: str
     sort_order: NonNegativeQuantity = 0
-    kind: Literal["organizations", "notice", "image"]
+    kind: SlideKind
     duration: int = Field(default=10, ge=1, le=3600)
     active: bool = False
     starts_at: datetime | None = None

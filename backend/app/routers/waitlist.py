@@ -2,11 +2,11 @@
 
 A visitor asks to be contacted if a sold-out product frees up. Scoped to a
 `Product`, not an `Event` — see `WaitlistEntry`'s docstring in app.models.
-Self-contained (no shared MCP tool set), matching `app.routers.contact`'s
-shape rather than the REST/MCP-shared services elsewhere in this codebase.
+The public submission is self-contained (spam guards, per-client rate limit); the
+administrator queue lives in `app.services.waitlist_service`, shared with the MCP tools.
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
@@ -14,14 +14,15 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from app.auth import require_admin
 from app.database import get_db
-from app.models import Event, Product, WaitlistEntry
+from app.models import Product, WaitlistEntry
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schema_types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
 from app.schemas import RequestModel
+from app.services import waitlist_service as service
+from app.services.errors import ServiceError, to_http_exception
 from app.spam import check_form_timing, check_honeypot
 from app.utils import product_available_quantity, product_sold_out
 
@@ -59,21 +60,8 @@ class WaitlistEntryAdminOut(WaitlistEntryOut):
     event_title: str
 
 
-def _to_admin_out(entry: WaitlistEntry) -> WaitlistEntryAdminOut:
-    return WaitlistEntryAdminOut(
-        id=entry.id,
-        product_id=entry.product_id,
-        name=entry.name,
-        email=entry.email,
-        phone=entry.phone,
-        guest_count=entry.guest_count,
-        notes=entry.notes,
-        created_at=entry.created_at,
-        handled_at=entry.handled_at,
-        product_name=entry.product.name,
-        event_id=entry.product.event_id,
-        event_title=entry.product.event.title,
-    )
+def _to_admin_out(entry: dict) -> WaitlistEntryAdminOut:
+    return WaitlistEntryAdminOut(**entry)
 
 
 @router.post("")
@@ -114,49 +102,28 @@ async def submit_waitlist_entry(
     return {"ok": True}
 
 
+async def _call(operation):
+    try:
+        return await operation
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+
+
 @router.get("", response_model=list[WaitlistEntryAdminOut], dependencies=[Depends(require_admin)])
 async def list_waitlist_entries(
     db: AsyncSession = Depends(get_db),
     product_id: str | None = None,
     event_id: str | None = None,
 ) -> list[WaitlistEntryAdminOut]:
-    stmt = (
-        select(WaitlistEntry)
-        .join(Product, Product.id == WaitlistEntry.product_id)
-        .options(selectinload(WaitlistEntry.product).selectinload(Product.event))
-        .order_by(WaitlistEntry.created_at)
-    )
-    if product_id is not None:
-        stmt = stmt.where(WaitlistEntry.product_id == product_id)
-    if event_id is not None:
-        stmt = stmt.join(Event, Event.id == Product.event_id).where(Event.id == event_id)
-    entries = (await db.execute(stmt)).scalars().all()
+    entries = await service.list_entries(db, product_id=product_id, event_id=event_id)
     return [_to_admin_out(entry) for entry in entries]
-
-
-async def _get_entry_or_404(db: AsyncSession, entry_id: str) -> WaitlistEntry:
-    entry = await db.get(
-        WaitlistEntry,
-        entry_id,
-        options=[selectinload(WaitlistEntry.product).selectinload(Product.event)],
-    )
-    if entry is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waitlist entry not found")
-    return entry
 
 
 @router.put("/{entry_id}/handled", response_model=WaitlistEntryAdminOut, dependencies=[Depends(require_admin)])
 async def mark_waitlist_entry_handled(entry_id: str, db: AsyncSession = Depends(get_db)) -> WaitlistEntryAdminOut:
-    entry = await _get_entry_or_404(db, entry_id)
-    if entry.handled_at is None:
-        entry.handled_at = datetime.now(UTC)
-        await db.commit()
-        await db.refresh(entry, attribute_names=["handled_at"])
-    return _to_admin_out(entry)
+    return _to_admin_out(await _call(service.mark_handled(db, entry_id)))
 
 
 @router.delete("/{entry_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_admin)])
 async def delete_waitlist_entry(entry_id: str, db: AsyncSession = Depends(get_db)) -> None:
-    entry = await _get_entry_or_404(db, entry_id)
-    await db.delete(entry)
-    await db.commit()
+    await _call(service.delete_entry(db, entry_id))

@@ -128,3 +128,22 @@ class TestNoRedundantDateUnions:
         variants = schema.get("anyOf", [schema])
         string_variants = [v for v in variants if v.get("type") == "string"]
         assert len(string_variants) <= 1, f"{tool_name}.{param_name} exposes redundant string variants: {variants}"
+
+
+class TestContentAndSignageEnums:
+    async def test_composer_channels_are_constrained(self, tool_schemas):
+        items = tool_schemas["create_composed_message"]["properties"]["channels"]["items"]
+        assert items["enum"] == ["announcement", "push"]
+
+    async def test_announcement_level_and_language_are_constrained(self, tool_schemas):
+        props = tool_schemas["create_announcement"]["properties"]
+        assert props["level"]["enum"] == ["info", "warning", "urgent"]
+        assert props["text_language"]["enum"] == ["nl", "fr", "en"]
+        assert props["text_language"]["default"] == "nl"
+
+    async def test_signage_slide_kind_is_constrained(self, tool_schemas):
+        assert tool_schemas["create_signage_slide"]["properties"]["kind"]["enum"] == [
+            "organizations",
+            "notice",
+            "image",
+        ]

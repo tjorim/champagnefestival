@@ -11,8 +11,9 @@ It exposes operational tools that allow desktop agents (Claude Desktop, Codex CL
 - How many guests are checked in?
 
 Admins additionally get full write/management parity with the admin REST API — editions,
-events, venues, rooms, table types, tables, layouts, areas, FAQ, settings, organizations,
-people, members, volunteers, registrations, and read access to the audit trail. See
+events, venues, rooms, table types, tables, layouts, areas, FAQ, announcements, the central
+composer, policies, signage, the waitlist queue, settings, organizations, people, members,
+volunteers, registrations, and read access to the audit trail. See
 [Admin write/management tools](#admin-writemanagement-tools) below.
 
 ---
@@ -84,6 +85,12 @@ complete regardless of which surface made the change. All are `admin`-only excep
 | Layouts | `create_layout`, `copy_layout`, `list_layouts` (`edition_id`/`room_id` filters), `get_layout` (`include_tables` to also return its tables/areas), `delete_layout` |
 | Areas | `create_area`, `list_areas` (`layout_id` filter), `get_area`, `update_area`, `delete_area` |
 | FAQ | `create_faq_item`, `list_faq_items`, `update_faq_item`, `delete_faq_item`, `reorder_faq_items` |
+| Announcements | `list_announcements`, `create_announcement`, `update_announcement` (`active` publishes or unpublishes; `clear_starts_at`/`clear_ends_at`/`clear_link_url`), `reorder_announcements`, `delete_announcement` |
+| Composer | `list_composed_messages`, `get_composed_message`, `create_composed_message` (always a draft), `update_composed_message` (drafts only), `schedule_composed_message` (sends to visitors; omit `scheduled_at` to send now) |
+| Policies | `list_policies`, `get_policy`, `preview_policy_markdown`, `create_policy_draft` (`source_version_number` seeds a rollback), `update_policy_draft`, `discard_policy_draft`, `publish_policy_draft` |
+| Signage | `list_`/`get_`/`create_`/`update_`/`delete_` `signage_channel`, `signage_template` and `signage_slide` (`list_` uses the plural), `reorder_signage_slides`, `get_signage_playlist`, `preview_signage_playlist`. Image uploads stay in the admin UI, so image backgrounds, layers and slides can only reference an image uploaded there. |
+| Signage video | `get_signage_video_capability`, `list_signage_video_exports`, `get_signage_video_export`, `cancel_signage_video_export` (your own jobs only; creating, uploading and downloading an export stays in the admin UI) |
+| Waitlist | `list_waitlist_entries` (`product_id`/`event_id` filters), `mark_waitlist_entry_handled`, `delete_waitlist_entry` (visitors join through the public form only) |
 | Settings | `get_settings` (public), `set_maintenance_mode` |
 | Organizations | `create_organization`, `get_organization`, `list_organizations`, `update_organization`, `delete_organization` |
 | People | `create_person`, `get_person`, `update_person`, `delete_person`, `merge_people` |

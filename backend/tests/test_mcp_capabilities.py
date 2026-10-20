@@ -300,3 +300,67 @@ def test_layout_comparison_and_restore_preview_are_read_tools():
         assert tool_effect(name) == TOOL_EFFECT_READ, name
         assert tool_annotations(name).read_only_hint is True, name
     assert tool_effect("restore_layout_revision") == TOOL_EFFECT_WRITE
+
+
+ADMIN_READ_TOOLS = {
+    "list_announcements",
+    "list_composed_messages",
+    "get_composed_message",
+    "list_policies",
+    "get_policy",
+    "preview_policy_markdown",
+    "list_signage_channels",
+    "get_signage_channel",
+    "list_signage_templates",
+    "get_signage_template",
+    "list_signage_slides",
+    "get_signage_slide",
+    "get_signage_playlist",
+    "preview_signage_playlist",
+    "get_signage_video_capability",
+    "list_signage_video_exports",
+    "get_signage_video_export",
+    "list_waitlist_entries",
+}
+ADMIN_WRITE_TOOLS = {
+    "create_announcement",
+    "update_announcement",
+    "reorder_announcements",
+    "delete_announcement",
+    "create_composed_message",
+    "update_composed_message",
+    "schedule_composed_message",
+    "create_policy_draft",
+    "update_policy_draft",
+    "discard_policy_draft",
+    "publish_policy_draft",
+    "create_signage_channel",
+    "update_signage_channel",
+    "delete_signage_channel",
+    "create_signage_template",
+    "update_signage_template",
+    "delete_signage_template",
+    "create_signage_slide",
+    "update_signage_slide",
+    "delete_signage_slide",
+    "reorder_signage_slides",
+    "cancel_signage_video_export",
+    "mark_waitlist_entry_handled",
+    "delete_waitlist_entry",
+}
+
+
+@pytest.mark.anyio
+async def test_content_and_signage_admin_tools_are_registered_admin_only_with_the_right_effect():
+    """Announcements, composer, policies, signage (+ video exports) and the waitlist queue have
+    REST admin endpoints, so they need MCP tools too — and none of them may be reachable by
+    volunteers or anonymous callers."""
+    mcp = create_mcp_server(session_factory=MagicMock())
+    manifest = cast(dict[str, Any], await get_mcp_capabilities(mcp))
+    by_name = {entry["name"]: entry for entry in cast(list[dict[str, Any]], manifest["tools"])}
+
+    for name in ADMIN_READ_TOOLS | ADMIN_WRITE_TOOLS:
+        assert by_name[name]["access"]["role"] == ROLE_ADMIN, name
+        assert tool_auth(name) is not None, name
+    assert {by_name[name]["effect"] for name in ADMIN_READ_TOOLS} == {TOOL_EFFECT_READ}
+    assert {by_name[name]["effect"] for name in ADMIN_WRITE_TOOLS} == {TOOL_EFFECT_WRITE}

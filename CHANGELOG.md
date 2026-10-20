@@ -24,6 +24,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Added
 
+- MCP admin tools for the REST admin endpoints that had none: announcements, the central composer, policy drafts and publishing, signage (channels, templates, slides, reorder, playlist and preview), your own signage video exports (list, get, cancel), and the waitlist queue. They call the same services as the REST routes, so validation, locking and audit entries are shared; the waitlist and video-export list/cancel logic moved into services for that. Image uploads and video export creation stay in the admin UI.
 - Opt-in private MP4 signage exports (#1349): frozen published-channel PNG capture, bounded uploads, durable background encoding through apps#273, translated progress/history/cancellation and authenticated 24-hour downloads (migration `008`). HTML/PNG and live/offline players remain independent; production activation requires worker and Travel rollout verification.
 
 - Signage backend foundation (#1261): edition-scoped channels, layered templates, scheduled slides with free-text notices, validated image uploads, audited admin CRUD/reorder and privacy-reviewed public playlists with cache validators and a server clock (migration `008`). Channels keep a fixed epoch; player and editors follow separately.

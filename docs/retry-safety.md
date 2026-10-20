@@ -542,7 +542,8 @@ at-least-once, including across Message-ID changes. See [upgrade guidance](organ
 All writes require `require_admin` and create transactional audit entries with
 unchanged actor/request attribution on every execution. A PostgreSQL advisory
 transaction lock serialises signage writes. No REST or other shared surface
-advertises automatic retries; signage currently has no MCP/mobile write adapter.
+advertises automatic retries. The MCP tools listed below (2026-10-20) call the same service functions, so every
+row here applies to them unchanged; there is still no mobile write adapter.
 
 | Operation | Retry decision |
 | --- | --- |
@@ -557,6 +558,33 @@ or conflict on slug (channels); there is no deduplication promise to test. Concu
 replacement/reorder calls are deliberately last-writer-wins under the database
 lock, rather than safe for unattended replay. Audit rows participate in the same
 transaction as state changes, including failed reference/conflict rollbacks.
+
+### MCP parity for content, signage and the waitlist (2026-10-20)
+
+Admin MCP tools now cover the REST admin endpoints for announcements
+(`create_|update_|reorder_|delete_announcement`), the composer
+(`create_|update_|schedule_composed_message`), policies
+(`create_|update_|discard_|publish_policy_draft`), signage
+(`create_|update_|delete_signage_{channel,template,slide}`, `reorder_signage_slides`,
+`cancel_signage_video_export`) and the waitlist queue
+(`mark_waitlist_entry_handled`, `delete_waitlist_entry`). They call the same service
+functions as the REST routes, so each keeps the retry decision documented for its REST
+operation: no tool is advertised as retryable and none retries on its own. Differences
+worth knowing:
+
+- `update_signage_{channel,template,slide}` read the stored document, merge the provided
+  fields and save it as a whole, so the read-merge-write is **not** version-guarded:
+  a concurrent edit between the read and the write is overwritten (last writer wins).
+  Reconcile with the matching `get_` tool before repeating an uncertain update.
+- `update_announcement` and `update_composed_message` merge inside the service under the
+  same rules as REST; the `clear_*` flags send an explicit `null`, so repeating one converges.
+- `schedule_composed_message` shares the REST route's in-process rate limit
+  (`composer-schedule`, 10 per window per actor) and its row-lock plus outbox protection;
+  a repeat after success is rejected because the message is no longer a draft.
+- Signage image uploads and video-export creation, slide upload, submission and download
+  need file bytes and stay browser-only; `cancel_signage_video_export` converges on the
+  job being cancelled and is scoped to the job's creator, like the REST route.
+- The waitlist tools do not write audit entries, matching the REST routes.
 
 ### Signage template editor (#1263)
 
