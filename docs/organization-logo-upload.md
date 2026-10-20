@@ -52,7 +52,8 @@ uv run python -m app.services.organization_logos
 This removes unreferenced managed files from both roots. Recovery and logo
 mutations share a PostgreSQL transaction advisory lock, so recovery cannot
 race an in-flight upload or acceptance. Run after restart and periodically as
-an operational recovery job. Back up the database and both roots together.
+an operational recovery job. Back up the database and both roots together;
+the backup relies on the rules in `file-storage-contract.md`.
 History retains the decision and filename, but previews exist only while a
 logo remains pending. Storage must be writable by the API process; I/O failures
 fail the operation, and deletion failures are logged for reconciliation.
