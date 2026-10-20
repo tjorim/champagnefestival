@@ -542,9 +542,11 @@ limited to 2000 characters and a separate rate-limit bucket); see
 ### Translated content and product categories (#1222)
 
 Everything an administrator writes for visitors follows the organisation
-description pattern: an original language (`*_language`, default `nl`) that must have text, optional
+description pattern: an original language (`*_language`) that must have text, optional
 translations in `_nl`/`_fr`/`_en`, and a fallback to the original language, so a
-blank translation never hides content. Updates validate the merged stored and
+blank translation never hides content. The language of a required text (a title, a
+name, a label, an FAQ question) defaults to `nl`; an optional description has no
+default, so text sent without its `description_language` is rejected. Updates validate the merged stored and
 requested text; an empty string clears a translation; blank text is stored as null;
 database check constraints enforce the same rule.
 
