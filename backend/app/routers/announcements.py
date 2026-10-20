@@ -25,8 +25,8 @@ router = APIRouter(prefix="/api/announcements", tags=["announcements"])
 
 @router.get("/active", response_model=list[AnnouncementPublicOut])
 async def active(locale: FaqLocale = Query(default="nl"), db: AsyncSession = Depends(get_db)) -> list[dict]:
-    """Active, in-window announcements in display order, in `locale` (the original
-    language when that locale has no text)."""
+    """Active, in-window announcements in display order, in `locale` (Dutch
+    when that locale has no text)."""
     now = datetime.now(UTC)
     result = await db.execute(
         select(Announcement)

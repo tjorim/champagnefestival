@@ -48,7 +48,7 @@ async def get_active_edition(
     """Return the current or next upcoming active edition, optionally filtered by type.
 
     `locale` resolves each event's `title`/`description` for that language, falling
-    back to the event's original language; every stored language is returned too.
+    back to Dutch; every stored language is returned too.
 
     Only the edition's *active* events are considered: an inactive (draft/cancelled)
     event neither keeps an otherwise-finished edition classified as upcoming, nor

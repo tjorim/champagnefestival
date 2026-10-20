@@ -91,7 +91,6 @@ interface Organization {
   name: string;
   image: string;
   type: string;
-  description_language: "nl" | "fr" | "en" | null;
   description_nl: string | null;
   description_fr: string | null;
   description_en: string | null;
@@ -339,9 +338,7 @@ function TemplateEditor({
           name: org.name,
           logo: org.image,
           sponsor: org.type === "sponsor",
-          description:
-            org[`description_${locale}`] ||
-            (org.description_language ? org[`description_${org.description_language}`] : null),
+          description: org[`description_${locale}`] || org.description_nl,
         }
       : null,
     title: content?.title || null,

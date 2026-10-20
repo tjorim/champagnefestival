@@ -155,11 +155,11 @@ async def test_organizations_support_limit_and_page(client):
 @pytest.mark.anyio
 async def test_description_validation_and_partial_updates(client):
     for payload in (
-        {"description_fr": "Bonjour"},
-        {"description_language": "fr", "description_en": "Hello"},
-        {"description_language": "de", "description_fr": "Bonjour"},
-        {"description_language": "fr", "description_fr": " "},
-        {"description_language": "fr", "description_fr": "x" * 601},
+        {"description_fr": "Bonjour"},  # a translation without Dutch text
+        {"description_en": "Hello"},
+        {"description_language": "nl", "description_nl": "Hallo"},  # the original-language flag is gone
+        {"description_nl": " ", "description_fr": "Bonjour"},
+        {"description_nl": "x" * 601},
     ):
         response = await client.post("/api/organizations", json={"name": "Maison", **payload}, headers=ADMIN_HEADERS)
         assert response.status_code == 422
@@ -167,32 +167,27 @@ async def test_description_validation_and_partial_updates(client):
         "/api/organizations",
         json={
             "name": "Maison",
-            "description_language": "fr",
-            "description_fr": " Bonjour ",
+            "description_nl": " Hallo ",
             "description_en": "<b>Hello</b> **wine**",
         },
         headers=ADMIN_HEADERS,
     )
     assert response.status_code == 201
     row = response.json()
-    assert row["description_fr"] == "Bonjour"
+    assert row["description_nl"] == "Hallo"
     assert row["description_en"] == "<b>Hello</b> **wine**"
+    assert "description_language" not in row
     url = f"/api/organizations/{row['id']}"
-    response = await client.put(url, json={"description_nl": "Welkom"}, headers=ADMIN_HEADERS)
+    response = await client.put(url, json={"description_fr": "Bonjour"}, headers=ADMIN_HEADERS)
     assert response.status_code == 200
-    assert response.json()["description_fr"] == "Bonjour"
-    response = await client.put(url, json={"description_fr": None}, headers=ADMIN_HEADERS)
-    assert response.status_code == 400
-    response = await client.put(url, json={"description_language": "nl", "description_fr": None}, headers=ADMIN_HEADERS)
-    assert response.status_code == 200
+    assert response.json()["description_nl"] == "Hallo"
+    response = await client.put(url, json={"description_nl": None}, headers=ADMIN_HEADERS)
+    assert response.status_code == 400  # translations remain, so Dutch cannot be cleared
     response = await client.put(
-        url, json={"description_language": None, "description_nl": None, "description_en": " "}, headers=ADMIN_HEADERS
+        url, json={"description_nl": None, "description_fr": None, "description_en": " "}, headers=ADMIN_HEADERS
     )
     assert response.status_code == 200
-    assert all(
-        response.json()[field] is None
-        for field in ("description_language", "description_nl", "description_fr", "description_en")
-    )
+    assert all(response.json()[field] is None for field in ("description_nl", "description_fr", "description_en"))
 
 
 @pytest.mark.anyio
@@ -200,17 +195,16 @@ async def test_description_validation_and_partial_updates(client):
     "description",
     [
         {"description_fr": "Bonjour"},
-        {"description_language": "fr", "description_en": "Hello"},
-        {"description_language": "de", "description_fr": "Bonjour"},
-        {"description_language": "fr", "description_fr": " "},
+        {"description_en": "Hello"},
+        {"description_nl": " ", "description_fr": "Bonjour"},
     ],
 )
-async def test_database_requires_original_description(db_session, description):
+async def test_database_requires_a_dutch_description_when_translated(db_session, description):
     from sqlalchemy.exc import IntegrityError
 
     from app.models import Organization
 
-    with pytest.raises(IntegrityError, match="ck_organizations_description_original"):
+    with pytest.raises(IntegrityError, match="ck_organizations_description_nl"):
         async with db_session.begin_nested():
             db_session.add(Organization(name="Invalid description", **description))
             await db_session.flush()

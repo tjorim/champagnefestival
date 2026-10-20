@@ -1,7 +1,6 @@
 import type { EventLanguage, EventTranslations, Product, ProductTranslations } from "@/types/event";
 
-type EventText = Pick<EventTranslations, "titleLanguage" | "descriptionLanguage"> &
-  Partial<EventTranslations> & { title: string; description: string };
+type EventText = Partial<EventTranslations> & { title: string; description: string };
 
 function isLanguage(locale: string): locale is EventLanguage {
   return locale === "nl" || locale === "fr" || locale === "en";
@@ -16,13 +15,13 @@ const DESCRIPTION_KEYS = {
 
 /**
  * The event title for a visitor's locale: that language when it has text, else
- * the original language (the same fallback as `organizationDescription`, and as
- * the backend's `resolve_text`), so a blank translation never hides the title.
+ * Dutch (the same fallback as `organizationDescription`, and as the backend's
+ * `resolve_text`), so a blank translation never hides the title.
  */
 export function eventTitle(event: EventText, locale: string): string {
   return (
     (isLanguage(locale) ? event[TITLE_KEYS[locale]]?.trim() : null) ||
-    event[TITLE_KEYS[event.titleLanguage]]?.trim() ||
+    event.titleNl?.trim() ||
     event.title
   );
 }
@@ -31,9 +30,7 @@ export function eventTitle(event: EventText, locale: string): string {
 export function eventDescription(event: EventText, locale: string): string {
   return (
     (isLanguage(locale) ? event[DESCRIPTION_KEYS[locale]]?.trim() : null) ||
-    (event.descriptionLanguage
-      ? event[DESCRIPTION_KEYS[event.descriptionLanguage]]?.trim()
-      : null) ||
+    event.descriptionNl?.trim() ||
     event.description
   );
 }
@@ -47,11 +44,11 @@ const PRODUCT_DESCRIPTION_KEYS = {
 
 type ProductText = Pick<Product, "name" | "description"> & ProductTranslations;
 
-/** The product name for a visitor's locale; falls back to the original language. */
+/** The product name for a visitor's locale; falls back to Dutch. */
 export function productName(product: ProductText, locale: string): string {
   return (
     (isLanguage(locale) ? product[NAME_KEYS[locale]]?.trim() : null) ||
-    product[NAME_KEYS[product.nameLanguage]]?.trim() ||
+    product.nameNl?.trim() ||
     product.name
   );
 }
@@ -60,9 +57,7 @@ export function productName(product: ProductText, locale: string): string {
 export function productDescription(product: ProductText, locale: string): string {
   return (
     (isLanguage(locale) ? product[PRODUCT_DESCRIPTION_KEYS[locale]]?.trim() : null) ||
-    (product.descriptionLanguage
-      ? product[PRODUCT_DESCRIPTION_KEYS[product.descriptionLanguage]]?.trim()
-      : null) ||
+    product.descriptionNl?.trim() ||
     product.description
   );
 }

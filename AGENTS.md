@@ -107,7 +107,7 @@ Future workflow additions should follow these conventions:
 ## Conventions
 
 - Use American English in code, comments, and identifiers; use British English in user-facing UI text and translations (`frontend/messages/`)
-- Content written for visitors (events, FAQ, announcements, policies, products, categories, ...) stores an original language plus optional `_nl`/`_fr`/`_en` translations and falls back to the original; follow the pattern in `backend/README.md` ("Translated content and product categories") instead of adding single-language text columns
+- Content written for visitors (events, FAQ, announcements, policies, products, categories, ...) stores required Dutch text (`_nl`) plus optional `_fr`/`_en` translations and falls back to Dutch (there is no original-language field); follow the pattern in `backend/README.md` ("Translated content and product categories") instead of adding single-language text columns
 - Never render `error.message` (or a backend `detail`) in the interface: it is English diagnostics. Show `apiErrorMessage(error, m.<translated operation fallback>())` from `frontend/src/utils/apiErrors.ts`, and give errors the interface can explain a stable `code` in the backend (`ApiHTTPException`; see `backend/README.md`, "Error codes")
 - Follow `backend/README.md` ("Request schema conventions") for create/update schemas; reuse `backend/app/schema_types.py` constraints and keep defaults and nullability explicit.
 - Prefer targeted tests first, then broader checks before handoff

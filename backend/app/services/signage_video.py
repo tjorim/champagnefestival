@@ -165,6 +165,30 @@ async def owned(db: AsyncSession, job_id: str, actor: str, *, lock: bool = False
     return job
 
 
+async def list_owned(db: AsyncSession, actor: str) -> list[dict]:
+    """The caller's exports: live ones first, then newest first (at most 100)."""
+    jobs = await db.scalars(
+        select(SignageVideoExport)
+        .where(SignageVideoExport.creator == actor)
+        .order_by(
+            (
+                SignageVideoExport.state.in_(ACTIVE | {"ready"}) & (SignageVideoExport.expires_at > datetime.now(UTC))
+            ).desc(),
+            SignageVideoExport.created_at.desc(),
+        )
+        .limit(100)
+    )
+    return [summary(job) for job in jobs]
+
+
+async def cancel(db: AsyncSession, job_id: str, actor: str) -> dict:
+    job = await owned(db, job_id, actor, lock=True)
+    job.cancel_requested = True
+    job.next_attempt_at = datetime.now(UTC)
+    await db.commit()
+    return summary(job)
+
+
 async def create(db: AsyncSession, channel_id: str, locale: str, key: str, actor: str) -> SignageVideoExport:
     if not KEY.fullmatch(key):
         fail(422, "invalid_key")

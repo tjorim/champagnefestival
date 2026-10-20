@@ -6,7 +6,7 @@ export const seedOrganizations = [
     name: "Maison Moët & Chandon",
     image: "/images/moet.png",
     website: "https://www.moet.com",
-    description_language: "fr",
+    description_nl: "Champagnehuis dat zijn cuvées voorstelt op het festival.",
     description_fr: "Maison de champagne présentant ses cuvées au festival.",
     description_en: "Champagne house presenting its cuvées at the festival.",
     active: true,

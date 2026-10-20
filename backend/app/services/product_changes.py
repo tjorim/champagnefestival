@@ -20,11 +20,9 @@ from app.services import product_inventory as inventory
 from app.services.errors import ServiceError, to_http_exception
 
 TEXT_FIELDS = (
-    "name_language",
     "name_nl",
     "name_fr",
     "name_en",
-    "description_language",
     "description_nl",
     "description_fr",
     "description_en",
@@ -34,15 +32,11 @@ TEXT_FIELDS = (
 def apply_text_changes(product: Product, changes: dict) -> None:
     """Merge requested name/description changes into the product's stored text and
     validate the result before assigning it: a partial update may change one
-    translation. Clearing every description text also drops its language."""
+    translation. Dutch name text is required, and a description needs Dutch text."""
     texts = {field: getattr(product, field) for field in TEXT_FIELDS}
     texts.update(changes)
-    if not any(texts[f"description_{language}"] for language in ("nl", "fr", "en")) and (
-        "description_language" not in changes
-    ):
-        texts["description_language"] = None
     try:
-        validated = ProductTextFields.model_validate(texts).validate_original()
+        validated = ProductTextFields.model_validate(texts).validate_dutch()
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
     for field in TEXT_FIELDS:

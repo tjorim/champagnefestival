@@ -27,7 +27,6 @@ from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import faq_item_to_dict, make_id
 
 TEXT_FIELDS = (
-    "text_language",
     "question_nl",
     "question_fr",
     "question_en",
@@ -65,7 +64,7 @@ async def create_faq_item(db: AsyncSession, *, actor: str, body: FaqItemCreate, 
             resource_type="faq_item",
             resource_id=f.id,
             request_id=request_id,
-            details={"question": f.localized(f.text_language)[0], "text_language": f.text_language},
+            details={"question": f.question_nl},
         )
         try:
             await notify_render_cache_invalidate(db)
@@ -89,7 +88,7 @@ async def update_faq_item(
     texts = {field: getattr(f, field) for field in TEXT_FIELDS}
     texts.update(body.model_dump(include=set(TEXT_FIELDS), exclude_unset=True))
     try:
-        validated = FaqTextFields.model_validate(texts).validate_original()
+        validated = FaqTextFields.model_validate(texts).validate_dutch()
     except ValueError as exc:
         raise ValidationFailedError(str(exc)) from exc
     for field in TEXT_FIELDS:

@@ -45,6 +45,7 @@ from app.routers import (
     people,
     policies,
     poll_options,
+    poll_questions,
     product_categories,
     products,
     public_pages,
@@ -234,6 +235,7 @@ app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(products.router)
 app.include_router(poll_options.router)
+app.include_router(poll_questions.router)
 app.include_router(push.router)
 app.include_router(volunteers.router)
 app.include_router(volunteer_ops.router)

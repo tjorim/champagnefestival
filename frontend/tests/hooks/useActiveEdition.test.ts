@@ -59,7 +59,7 @@ describe("useActiveEdition", () => {
       id: 1,
       name: "Maison",
       image: "/logo.svg",
-      description_language: "fr",
+      description_nl: "Hallo",
       description_fr: "Bonjour",
       description_en: "Hello",
     };

@@ -66,7 +66,6 @@ async def _push_result_counts(db: AsyncSession, message_id: str) -> dict[str, in
 async def to_dict(db: AsyncSession, item: ComposedMessage) -> dict:
     return {
         "id": item.id,
-        "text_language": item.text_language,
         "title_nl": item.title_nl,
         "title_fr": item.title_fr,
         "title_en": item.title_en,

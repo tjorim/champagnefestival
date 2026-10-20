@@ -91,7 +91,7 @@ def test_organization_rename_preserves_data_and_reverses(monkeypatch):
                     assert "organization_id" in {
                         column["name"] for column in inspector.get_columns("organization_changes", schema=schema)
                     }
-                    assert {"description_language", "description_nl", "description_fr", "description_en"} <= {
+                    assert {"description_nl", "description_fr", "description_en"} <= {
                         column["name"] for column in inspector.get_columns("organizations", schema=schema)
                     }
                 else:
@@ -134,9 +134,7 @@ def test_organization_rename_preserves_data_and_reverses(monkeypatch):
         # Revision 004 owns the new descriptions/history. Verify their creation
         # and normal removal on downgrade, while pre-existing records survive.
         with database.begin() as connection:
-            connection.execute(
-                text("UPDATE organizations SET description_language = 'nl', description_nl = 'Description'")
-            )
+            connection.execute(text("UPDATE organizations SET description_nl = 'Description'"))
             connection.execute(
                 text("""INSERT INTO organization_changes (id, organization_id, submitted_by,
                 submitted_values, proposed, superseded_fields, status, created_at)

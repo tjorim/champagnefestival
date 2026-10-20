@@ -58,7 +58,6 @@ async def test_one_link_unlocks_own_bookings_and_organizations(client, db_sessio
         "type",
         "website",
         "active",
-        "description_language",
         "description_nl",
         "description_fr",
         "description_en",

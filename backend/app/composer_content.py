@@ -10,11 +10,10 @@ LOCALES = ("nl", "en", "fr")
 
 def pick_locale_text(message: object, locale: str) -> tuple[str, str] | None:
     """The (title, body) for *locale*: that language when its title and body are
-    both filled, otherwise the message's original language."""
+    both filled, otherwise Dutch."""
     title, body = resolve_pair(
         {code: getattr(message, f"title_{code}", None) for code in LOCALES},
         {code: getattr(message, f"body_{code}", None) for code in LOCALES},
-        getattr(message, "text_language", None),
         locale,
     )
     return (title, body) if title and body else None

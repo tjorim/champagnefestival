@@ -33,12 +33,9 @@ import { apiErrorMessage } from "@/utils/apiErrors";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
-import { OriginalLanguageSelect } from "@/components/admin/LocalizedFields";
 
 interface Announcement {
   id: string;
-  /** Original language of the text and link label; the others are optional translations. */
-  text_language: "nl" | "fr" | "en";
   text_nl: string | null;
   text_en: string | null;
   text_fr: string | null;
@@ -54,7 +51,6 @@ interface Announcement {
 }
 type Draft = Omit<Announcement, "id" | "sort_order">;
 const empty: Draft = {
-  text_language: "nl",
   text_nl: "",
   text_en: "",
   text_fr: "",
@@ -85,7 +81,6 @@ const columnHelper = createAppColumnHelper<Announcement>();
 
 function writePayload(item: Draft) {
   return {
-    text_language: item.text_language,
     text_nl: item.text_nl,
     text_en: item.text_en,
     text_fr: item.text_fr,
@@ -166,7 +161,6 @@ export default function AnnouncementManagement({
     (item?: Announcement) => {
       const initial: Draft = item
         ? {
-            text_language: item.text_language,
             text_nl: item.text_nl,
             text_en: item.text_en,
             text_fr: item.text_fr,
@@ -353,10 +347,7 @@ export default function AnnouncementManagement({
           id: "preview",
           header: m.admin_announcement_preview_column(),
           enableSorting: false,
-          cell: ({ row }) =>
-            row.original[`text_${preview}`] || (
-              <em>{row.original[`text_${row.original.text_language}`]}</em>
-            ),
+          cell: ({ row }) => row.original[`text_${preview}`] || <em>{row.original.text_nl}</em>,
         }),
         columnHelper.display({
           id: "locales",
@@ -429,16 +420,6 @@ export default function AnnouncementManagement({
                   if (!save.isPending) void form.handleSubmit();
                 }}
               >
-                <form.Field name="text_language">
-                  {(field) => (
-                    <OriginalLanguageSelect
-                      controlId="announcement-text-language"
-                      label={m.admin_announcement_original_language()}
-                      value={field.value}
-                      onChange={(language) => field.handleChange(language)}
-                    />
-                  )}
-                </form.Field>
                 <p className="text-sm text-subtle mb-2">{m.admin_announcement_text_help()}</p>
                 <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2">
                   {(["nl", "en", "fr"] as const).map((locale) => (

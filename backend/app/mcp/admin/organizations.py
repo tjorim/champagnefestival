@@ -27,7 +27,6 @@ async def create_organization(
     website: str = "",
     active: bool = True,
     type: str = "vendor",
-    description_language: str | None = None,
     description_nl: str | None = None,
     description_fr: str | None = None,
     description_en: str | None = None,
@@ -40,7 +39,6 @@ async def create_organization(
         website=website,
         active=active,
         type=type,
-        description_language=description_language,
         description_nl=description_nl,
         description_fr=description_fr,
         description_en=description_en,
@@ -87,7 +85,6 @@ async def update_organization(
     website: str | None = None,
     active: bool | None = None,
     type: str | None = None,
-    description_language: str | None = None,
     description_nl: str | None = None,
     description_fr: str | None = None,
     description_en: str | None = None,
@@ -97,7 +94,6 @@ async def update_organization(
     provided: dict[str, Any] = {
         k: v
         for k, v in {
-            "description_language": description_language,
             "description_nl": description_nl,
             "description_fr": description_fr,
             "description_en": description_en,
@@ -110,8 +106,6 @@ async def update_organization(
         }.items()
         if v is not None
     }
-    if description_language == "":
-        provided["description_language"] = None
     body = validate_with_schema(OrganizationUpdate, **provided)
     async with session_factory() as db:
         e = await get_or_error(db, Organization, organization_id, f"Organization '{organization_id}' not found.")

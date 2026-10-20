@@ -16,7 +16,10 @@ const BASE_VENUE = {
 
 type Language = "nl" | "fr" | "en";
 
-/** Original-language text for an event, as the API returns it (`title`/`description` resolved to the original). */
+/**
+ * Event text as the API returns it: `title`/`description` are the Dutch text. The text given in
+ * another language is copied into Dutch, like migration 009 does, so Dutch is always filled.
+ */
 function originalText(
   language: Language,
   title: string,
@@ -26,23 +29,25 @@ function originalText(
   const titles: Record<Language, string | null> = { nl: null, fr: null, en: null };
   Object.assign(titles, translations);
   titles[language] = title;
+  titles.nl ??= title;
   const descriptions: Record<Language, string | null> = { nl: null, fr: null, en: null };
-  if (description) descriptions[language] = description;
+  if (description) {
+    descriptions[language] = description;
+    descriptions.nl ??= description;
+  }
   return {
     title,
     description,
-    title_language: language,
     title_nl: titles.nl,
     title_fr: titles.fr,
     title_en: titles.en,
-    description_language: description ? language : null,
     description_nl: descriptions.nl,
     description_fr: descriptions.fr,
     description_en: descriptions.en,
   };
 }
 
-/** Original-language name of a product, as the API returns it. */
+/** Name of a product as the API returns it; text given in another language is also copied into Dutch. */
 function productName(
   language: Language,
   name: string,
@@ -51,14 +56,13 @@ function productName(
   const names: Record<Language, string | null> = { nl: null, fr: null, en: null };
   Object.assign(names, translations);
   names[language] = name;
+  names.nl ??= name;
   return {
     name,
-    name_language: language,
     name_nl: names.nl,
     name_fr: names.fr,
     name_en: names.en,
     description: "",
-    description_language: null,
     description_nl: null,
     description_fr: null,
     description_en: null,
@@ -259,7 +263,7 @@ export const seedEditions = [
         name: "Maison Moët & Chandon",
         image: "/images/moet.png",
         website: "https://www.moet.com",
-        description_language: "fr",
+        description_nl: "Champagnehuis dat zijn cuvées voorstelt op het festival.",
         description_fr: "Maison de champagne présentant ses cuvées au festival.",
         description_en: "Champagne house presenting its cuvées at the festival.",
         type: "producer",

@@ -40,7 +40,12 @@ async def test_create_reservation_checkout_summary_hides_admin_product_data(clie
     purchasable = (
         await client.post(
             "/api/products",
-            json={"event_id": event["id"], "name_en": "Bottle", "price": "25.00", "category": "champagne"},
+            json={
+                "event_id": event["id"],
+                "name_nl": "Bottle",
+                "price": "25.00",
+                "category": "champagne",
+            },
             headers=ADMIN_HEADERS,
         )
     ).json()
@@ -49,7 +54,7 @@ async def test_create_reservation_checkout_summary_hides_admin_product_data(clie
             "/api/products",
             json={
                 "event_id": event["id"],
-                "name_en": "Kitchen Supply",
+                "name_nl": "Kitchen Supply",
                 "price": "1.00",
                 "category": "other",
                 "purchasable": False,
@@ -142,7 +147,7 @@ async def test_event_rejects_registration_window_without_registration_required(c
         "/api/events",
         json={
             "edition_id": "edition-event-validation",
-            "title_en": "Walk-in Only Event",
+            "title_nl": "Walk-in Only Event",
             "date": "2099-03-21",
             "start_time": "18:00",
             "end_time": "22:00",

@@ -142,7 +142,6 @@ it("fills the manager form but submits only after review and editing", async () 
           type: "producer",
           active: true,
           website: "",
-          description_language: "nl",
           description_nl: "Hallo",
         },
       ]}
@@ -174,7 +173,6 @@ it("fills the admin form and saves only after manual review", async () => {
         id: 42,
         name: "House",
         image: "/logos/house.png",
-        description_language: "nl",
         description_nl: "Hallo",
       }}
       authHeaders={() => ({})}

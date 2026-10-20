@@ -46,7 +46,7 @@ alphabetically, vendors alphabetically, sponsors by main/partner/supporter/untie
 then edition lineup order. Producers/sponsors come from the edition lineup;
 vendors come from areas assigned to the edition's active events, deduplicated
 across layouts. Stand geometry and labels are never projected. Text and
-organisation descriptions fall back to their original language. Notice text is
+organisation descriptions fall back to Dutch. Notice text is
 typed once by the organiser and shown exactly as written (any languages are typed
 into the same box); it is not translated or selected by `locale`. Text is limited
 to 500 characters, titles to 120.

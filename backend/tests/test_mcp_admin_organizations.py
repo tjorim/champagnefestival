@@ -133,16 +133,19 @@ async def test_update_organization_blocked_retype_to_vendor_while_linked(db_sess
 async def test_mcp_description_update_and_clear(db_session):
     factory = mcp_session_factory(db_session)
     row = await mcp_organizations.create_organization(
-        factory, "admin-1", name="Maison", description_language="fr", description_fr="Bonjour"
+        factory, "admin-1", name="Maison", description_nl="Hallo", description_fr="Bonjour"
     )
     row = await mcp_organizations.update_organization(factory, "admin-1", row["id"], description_en="Hello")
+    assert row["description_nl"] == "Hallo"
     assert row["description_fr"] == "Bonjour"
     assert row["description_en"] == "Hello"
-    with pytest.raises(ValueError, match="original language"):
-        await mcp_organizations.update_organization(factory, "admin-1", row["id"], description_fr="")
+    with pytest.raises(ValueError, match="Dutch"):
+        await mcp_organizations.update_organization(factory, "admin-1", row["id"], description_nl="")
+    with pytest.raises(ValueError, match="Dutch"):
+        await mcp_organizations.create_organization(factory, "admin-1", name="Maison", description_fr="Bonjour")
     row = await mcp_organizations.update_organization(
-        factory, "admin-1", row["id"], description_language="", description_fr="", description_en=""
+        factory, "admin-1", row["id"], description_nl="", description_fr="", description_en=""
     )
-    assert row["description_language"] is None
+    assert row["description_nl"] is None
     assert row["description_fr"] is None
     assert row["description_en"] is None

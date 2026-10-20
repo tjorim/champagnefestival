@@ -141,57 +141,39 @@ function tablesWithRegistrationAssignments(): Record<string, unknown>[] {
   });
 }
 
-/** The per-language event text of a create/update body, with `title`/`description` resolved to the original language. */
+/** The per-language event text of a create/update body, with `title`/`description` resolved to Dutch. */
 function eventTextFromBody(body: Record<string, unknown>) {
   const text = (key: string) => (typeof body[key] === "string" ? (body[key] as string) : null);
-  const language =
-    body.title_language === "fr" || body.title_language === "en" ? body.title_language : "nl";
-  const descriptionLanguage =
-    body.description_language === "fr" || body.description_language === "en"
-      ? body.description_language
-      : body.description_language === "nl"
-        ? "nl"
-        : null;
   const fields = {
-    title_language: language,
     title_nl: text("title_nl"),
     title_fr: text("title_fr"),
     title_en: text("title_en"),
-    description_language: descriptionLanguage,
     description_nl: text("description_nl"),
     description_fr: text("description_fr"),
     description_en: text("description_en"),
   };
   return {
     ...fields,
-    title: fields[`title_${language}`] ?? "",
-    description: (descriptionLanguage && fields[`description_${descriptionLanguage}`]) || "",
+    title: fields.title_nl ?? "",
+    description: fields.description_nl ?? "",
   };
 }
 
-function asLanguage(value: unknown): "nl" | "fr" | "en" | null {
-  return value === "nl" || value === "fr" || value === "en" ? value : null;
-}
-
-/** The per-language product text of a create/update body, with `name`/`description` resolved to the original language. */
+/** The per-language product text of a create/update body, with `name`/`description` resolved to Dutch. */
 function productTextFromBody(body: Record<string, unknown>) {
   const text = (key: string) => (typeof body[key] === "string" ? (body[key] as string) : null);
-  const language = asLanguage(body.name_language) ?? "en";
-  const descriptionLanguage = asLanguage(body.description_language);
   const fields = {
-    name_language: language,
     name_nl: text("name_nl"),
     name_fr: text("name_fr"),
     name_en: text("name_en"),
-    description_language: descriptionLanguage,
     description_nl: text("description_nl"),
     description_fr: text("description_fr"),
     description_en: text("description_en"),
   };
   return {
     ...fields,
-    name: fields[`name_${language}`] ?? "",
-    description: (descriptionLanguage && fields[`description_${descriptionLanguage}`]) || "",
+    name: fields.name_nl ?? "",
+    description: fields.description_nl ?? "",
   };
 }
 
@@ -217,11 +199,8 @@ function categoryHandlers(
           { status: 409 },
         );
       }
-      const language: "nl" | "fr" | "en" =
-        body.label_language === "fr" || body.label_language === "en" ? body.label_language : "nl";
       const created = {
         key,
-        label_language: language,
         label_nl: (body.label_nl as string | null) ?? null,
         label_fr: (body.label_fr as string | null) ?? null,
         label_en: (body.label_en as string | null) ?? null,
@@ -229,7 +208,7 @@ function categoryHandlers(
         created_at: now(),
         updated_at: now(),
       };
-      const category = { ...created, label: created[`label_${language}`] ?? key };
+      const category = { ...created, label: created.label_nl ?? key };
       store.items.push(category);
       sort();
       return HttpResponse.json(category, { status: 201 });
@@ -243,7 +222,7 @@ function categoryHandlers(
       const merged = { ...store.items[index]!, ...body, updated_at: now() };
       store.items[index] = {
         ...merged,
-        label: merged[`label_${merged.label_language}`] ?? merged.key,
+        label: merged.label_nl ?? merged.key,
       };
       return HttpResponse.json(store.items[index]);
     }),

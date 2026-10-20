@@ -1,5 +1,6 @@
 import { ExternalLinkIcon, ImageIcon, ZoomInIcon } from "lucide-react";
 import BrandWordmark from "./BrandWordmark";
+import LanguageSwitcher from "./LanguageSwitcher";
 import { Icon } from "@/components/Icon";
 import {
   Dialog,
@@ -85,6 +86,11 @@ export default function MaintenancePage({ flyerImage }: { flyerImage?: string | 
   return (
     <div className="maintenance-page">
       <div className="maintenance-page__scrim" aria-hidden="true" />
+      {/* The locale comes from Paraglide (saved choice, then the browser language,
+          then Dutch), so visitors land in their own language and can still switch. */}
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher />
+      </div>
       <div className="maintenance-page__content">
         <span className="maintenance-page__wordmark">
           <BrandWordmark />

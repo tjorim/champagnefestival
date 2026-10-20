@@ -84,7 +84,6 @@ function label(key: string, nl: string, fr: string, en: string) {
   return {
     key,
     label: nl,
-    label_language: "nl",
     label_nl: nl,
     label_fr: fr,
     label_en: en,
@@ -215,7 +214,6 @@ describe("Schedule component", () => {
       titleFr: "Soirée d'ouverture",
       titleEn: "Opening night",
       description: "Een glas om te starten",
-      descriptionLanguage: "nl" as const,
       descriptionNl: "Een glas om te starten",
       descriptionFr: "Un verre pour commencer",
       category: "ceremony" as const,
@@ -224,7 +222,7 @@ describe("Schedule component", () => {
     it.each([
       ["nl", "Openingsavond", "Een glas om te starten", "Ceremony"],
       ["fr", "Soirée d'ouverture", "Un verre pour commencer", "Cérémonie"],
-      // No English description: the original shows instead of an empty paragraph.
+      // No English description: Dutch shows instead of an empty paragraph.
       ["en", "Opening night", "Een glas om te starten", "Ceremony"],
     ])(
       "shows the %s text and a translated category",
@@ -237,7 +235,7 @@ describe("Schedule component", () => {
       },
     );
 
-    it("shows the original for every locale when it has no translations", () => {
+    it("shows the Dutch text for every locale when it has no translations", () => {
       for (const locale of ["nl", "fr", "en"] as const) {
         vi.mocked(getLocale).mockReturnValue(locale);
         const { unmount } = renderSchedule(<Schedule events={[mockEvents[0]!]} />);

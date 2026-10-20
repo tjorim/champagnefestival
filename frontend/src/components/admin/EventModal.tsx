@@ -24,7 +24,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { m } from "@/paraglide/messages";
-import { type Event, type EventFormData, type EventLanguage } from "@/types/event";
+import { type Event, type EventFormData } from "@/types/event";
 import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import type { Edition } from "./editionTypes";
 
@@ -63,11 +63,9 @@ interface EventModalProps {
 
 const EMPTY_FORM: EventFormData = {
   editionId: "",
-  titleLanguage: "nl",
   titleNl: "",
   titleFr: "",
   titleEn: "",
-  descriptionLanguage: "nl",
   descriptionNl: "",
   descriptionFr: "",
   descriptionEn: "",
@@ -107,11 +105,9 @@ export default function EventModal({
       initial
         ? {
             editionId: initial.editionId,
-            titleLanguage: initial.titleLanguage,
             titleNl: initial.titleNl ?? "",
             titleFr: initial.titleFr ?? "",
             titleEn: initial.titleEn ?? "",
-            descriptionLanguage: initial.descriptionLanguage ?? initial.titleLanguage,
             descriptionNl: initial.descriptionNl ?? "",
             descriptionFr: initial.descriptionFr ?? "",
             descriptionEn: initial.descriptionEn ?? "",
@@ -139,19 +135,14 @@ export default function EventModal({
   const form = useForm({
     defaultValues,
     onSubmit: ({ value }) => {
-      const titleOriginal = TEXT_LANGUAGES.find(({ language }) => language === value.titleLanguage);
-      if (!titleOriginal || !value[titleOriginal.title].trim()) {
+      if (!value.titleNl.trim()) {
         setTextError("title");
         return;
       }
-      const descriptionOriginal = TEXT_LANGUAGES.find(
-        ({ language }) => language === value.descriptionLanguage,
+      const hasTranslatedDescription = Boolean(
+        value.descriptionFr.trim() || value.descriptionEn.trim(),
       );
-      const hasDescription = TEXT_LANGUAGES.some(({ description }) => value[description].trim());
-      if (
-        hasDescription &&
-        (!descriptionOriginal || !value[descriptionOriginal.description].trim())
-      ) {
+      if (hasTranslatedDescription && !value.descriptionNl.trim()) {
         setTextError("description");
         return;
       }
@@ -219,27 +210,6 @@ export default function EventModal({
           <DialogBody>
             <p className="text-sm text-subtle mb-4">{m.admin_event_text_help()}</p>
             <div className="flex gap-2 flex-wrap mb-4">
-              <AdminField controlId="event-title-language" className="min-w-40 grow-1 basis-40">
-                <AdminLabel className="text-subtle text-sm mb-1">
-                  {m.admin_event_title_language()}
-                </AdminLabel>
-                <form.Field name="titleLanguage">
-                  {(field) => (
-                    <AdminSelect
-                      size="sm"
-                      className="bg-muted text-content border-input"
-                      value={field.value}
-                      onValueChange={(value) => field.handleChange(value as EventLanguage)}
-                    >
-                      {TEXT_LANGUAGES.map(({ language, label }) => (
-                        <AdminOption key={language} value={language}>
-                          {label()}
-                        </AdminOption>
-                      ))}
-                    </AdminSelect>
-                  )}
-                </form.Field>
-              </AdminField>
               <AdminField controlId="event-category" className="min-w-40 grow-1 basis-40">
                 <AdminLabel className="text-subtle text-sm mb-1">
                   {m.admin_content_event_category()}
@@ -299,24 +269,19 @@ export default function EventModal({
                   )}
                 </form.Field>
                 <form.Subscribe selector={(state) => state.values}>
-                  {(values) => {
-                    const original = TEXT_LANGUAGES.find(
-                      (entry) => entry.language === values.titleLanguage,
-                    );
-                    return (
-                      <OrganizationTranslationSuggestion
-                        key={`${show}-${initial?.id ?? "new"}-title-${language}`}
-                        url="/api/events/translation"
-                        headers={authHeaders}
-                        maxLength={EVENT_TRANSLATION_LIMIT}
-                        source={values.titleLanguage}
-                        target={language}
-                        text={original ? values[original.title] : ""}
-                        targetText={values[title]}
-                        onDraft={(text) => form.setFieldValue(title, text.slice(0, 200))}
-                      />
-                    );
-                  }}
+                  {(values) => (
+                    <OrganizationTranslationSuggestion
+                      key={`${show}-${initial?.id ?? "new"}-title-${language}`}
+                      url="/api/events/translation"
+                      headers={authHeaders}
+                      maxLength={EVENT_TRANSLATION_LIMIT}
+                      source="nl"
+                      target={language}
+                      text={values.titleNl}
+                      targetText={values[title]}
+                      onDraft={(text) => form.setFieldValue(title, text.slice(0, 200))}
+                    />
+                  )}
                 </form.Subscribe>
               </AdminField>
             ))}
@@ -405,27 +370,6 @@ export default function EventModal({
               </AdminField>
             </div>
 
-            <AdminField controlId="event-description-language" className="mb-4 max-w-60">
-              <AdminLabel className="text-subtle text-sm mb-1">
-                {m.admin_event_description_language()}
-              </AdminLabel>
-              <form.Field name="descriptionLanguage">
-                {(field) => (
-                  <AdminSelect
-                    size="sm"
-                    className="bg-muted text-content border-input"
-                    value={field.value}
-                    onValueChange={(value) => field.handleChange(value as EventLanguage)}
-                  >
-                    {TEXT_LANGUAGES.map(({ language, label }) => (
-                      <AdminOption key={language} value={language}>
-                        {label()}
-                      </AdminOption>
-                    ))}
-                  </AdminSelect>
-                )}
-              </form.Field>
-            </AdminField>
             {textError === "description" && (
               <AdminError>{m.admin_event_description_original_required()}</AdminError>
             )}
@@ -452,24 +396,19 @@ export default function EventModal({
                   )}
                 </form.Field>
                 <form.Subscribe selector={(state) => state.values}>
-                  {(values) => {
-                    const original = TEXT_LANGUAGES.find(
-                      (entry) => entry.language === values.descriptionLanguage,
-                    );
-                    return (
-                      <OrganizationTranslationSuggestion
-                        key={`${show}-${initial?.id ?? "new"}-description-${language}`}
-                        url="/api/events/translation"
-                        headers={authHeaders}
-                        maxLength={EVENT_TRANSLATION_LIMIT}
-                        source={values.descriptionLanguage}
-                        target={language}
-                        text={original ? values[original.description] : ""}
-                        targetText={values[description]}
-                        onDraft={(text) => form.setFieldValue(description, text)}
-                      />
-                    );
-                  }}
+                  {(values) => (
+                    <OrganizationTranslationSuggestion
+                      key={`${show}-${initial?.id ?? "new"}-description-${language}`}
+                      url="/api/events/translation"
+                      headers={authHeaders}
+                      maxLength={EVENT_TRANSLATION_LIMIT}
+                      source="nl"
+                      target={language}
+                      text={values.descriptionNl}
+                      targetText={values[description]}
+                      onDraft={(text) => form.setFieldValue(description, text)}
+                    />
+                  )}
                 </form.Subscribe>
               </AdminField>
             ))}

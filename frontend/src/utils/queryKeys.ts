@@ -69,8 +69,9 @@ export const queryKeys = {
     personOptionsRoot: ["admin", "person-options"] as const,
     editionEvents: (editionId: string) => ["admin", "edition-events", editionId] as const,
     eventProducts: (eventId: string) => ["admin", "event-products", eventId] as const,
-    editionPollOptions: (editionId: string) =>
-      ["admin", "edition-poll-options", editionId] as const,
+    editionPollQuestions: (editionId: string) =>
+      ["admin", "edition-poll-questions", editionId] as const,
+    editionPollOrders: (editionId: string) => ["admin", "edition-poll-orders", editionId] as const,
     editionModalOrganizations: ["admin", "edition-modal", "organizations"] as const,
     itemModalPeople: (query: string) => ["admin", "item-modal", "people", query] as const,
     peopleRegistrations: (personId: string) =>

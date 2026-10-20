@@ -20,7 +20,7 @@ from app.models import EventCategory, ProductCategory
 from app.schemas import CategoryCreate, CategoryLabels, CategoryUpdate
 from app.services.errors import ConflictError, NotFoundError, ServiceError, ValidationFailedError
 
-LABEL_FIELDS = ("label_language", "label_nl", "label_fr", "label_en")
+LABEL_FIELDS = ("label_nl", "label_fr", "label_en")
 
 
 @dataclass(frozen=True)
@@ -40,7 +40,6 @@ def category_to_dict(category: EventCategory | ProductCategory, locale: str | No
     return {
         "key": category.key,
         "label": category.localized_label(locale),
-        "label_language": category.label_language,
         "label_nl": category.label_nl,
         "label_fr": category.label_fr,
         "label_en": category.label_en,
@@ -90,7 +89,7 @@ async def create_category(
         resource_type=f"{kind.noun}_category",
         resource_id=category.key,
         request_id=request_id,
-        details={"label_language": category.label_language},
+        details={"label_nl": category.label_nl},
     )
     await db.commit()
     await db.refresh(category)
@@ -111,7 +110,7 @@ async def update_category(
     labels = {name: getattr(category, name) for name in LABEL_FIELDS}
     labels.update(body.model_dump(include=set(LABEL_FIELDS), exclude_unset=True))
     try:
-        validated = CategoryLabels.model_validate(labels).validate_original()
+        validated = CategoryLabels.model_validate(labels).validate_dutch()
     except ValueError as exc:
         raise ValidationFailedError(str(exc)) from exc
     for name in LABEL_FIELDS:

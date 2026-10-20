@@ -31,7 +31,7 @@ export const productCategoriesQueryOptions = categoriesQueryOptions(
 
 /**
  * The label of a category for a visitor's language: that language when it has
- * text, else the original language (as for event titles). `null` while the
+ * text, else Dutch (as for event titles). `null` while the
  * categories are loading or when the key is unknown, so callers can omit the
  * label instead of showing a raw key.
  */
@@ -45,7 +45,7 @@ export function categoryLabel(
   const byLanguage = { nl: category.labelNl, fr: category.labelFr, en: category.labelEn };
   const localized =
     locale === "nl" || locale === "fr" || locale === "en" ? byLanguage[locale] : null;
-  return localized?.trim() || byLanguage[category.labelLanguage]?.trim() || category.label || null;
+  return localized?.trim() || category.labelNl?.trim() || category.label || null;
 }
 
 export function useEventCategories() {

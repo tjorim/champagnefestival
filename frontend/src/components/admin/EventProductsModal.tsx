@@ -30,9 +30,7 @@ import { Spinner } from "@/components/ui/spinner";
 import {
   EMPTY_LOCALIZED_TEXT,
   LocalizedInputs,
-  OriginalLanguageSelect,
-  hasOriginal,
-  type Language,
+  hasDutch,
   type LocalizedText,
 } from "@/components/admin/LocalizedFields";
 import { m } from "@/paraglide/messages";
@@ -59,9 +57,7 @@ interface EventProductsModalProps {
 }
 
 interface ProductFormState {
-  nameLanguage: Language;
   name: LocalizedText;
-  descriptionLanguage: Language;
   description: LocalizedText;
   price: string;
   category: string;
@@ -78,9 +74,7 @@ interface ProductFormState {
 }
 
 const EMPTY_FORM: ProductFormState = {
-  nameLanguage: "nl",
   name: EMPTY_LOCALIZED_TEXT,
-  descriptionLanguage: "nl",
   description: EMPTY_LOCALIZED_TEXT,
   price: "",
   category: "",
@@ -155,13 +149,11 @@ export default function EventProductsModal({
     (): ProductFormState =>
       editingProduct
         ? {
-            nameLanguage: editingProduct.nameLanguage,
             name: {
               nl: editingProduct.nameNl ?? "",
               fr: editingProduct.nameFr ?? "",
               en: editingProduct.nameEn ?? "",
             },
-            descriptionLanguage: editingProduct.descriptionLanguage ?? editingProduct.nameLanguage,
             description: {
               nl: editingProduct.descriptionNl ?? "",
               fr: editingProduct.descriptionFr ?? "",
@@ -201,8 +193,15 @@ export default function EventProductsModal({
     defaultValues: formDefaultValues,
     onSubmit: async ({ value }) => {
       setError("");
-      if (!hasOriginal(value.nameLanguage, value.name)) {
+      if (!hasDutch(value.name)) {
         setError(m.admin_products_name_required());
+        return;
+      }
+      if (
+        (value.description.fr.trim() || value.description.en.trim()) &&
+        !hasDutch(value.description)
+      ) {
+        setError(m.admin_products_description_required());
         return;
       }
       if (!value.category) {
@@ -224,9 +223,7 @@ export default function EventProductsModal({
         const payload: ProductWrite = {
           eventId,
           id: editingId ?? undefined,
-          nameLanguage: value.nameLanguage,
           name: value.name,
-          descriptionLanguage: value.descriptionLanguage,
           description: value.description,
           price,
           category: value.category,
@@ -331,16 +328,6 @@ export default function EventProductsModal({
         noValidate
         className="border-t border-input pt-4 mt-2"
       >
-        <form.Field name="nameLanguage">
-          {(field) => (
-            <OriginalLanguageSelect
-              controlId="product-name-language"
-              label={m.admin_products_name_language()}
-              value={field.value}
-              onChange={(language) => field.handleChange(language)}
-            />
-          )}
-        </form.Field>
         <p className="text-sm text-subtle mb-4">{m.admin_products_text_help()}</p>
         <form.Field name="name">
           {(field) => (
@@ -351,16 +338,6 @@ export default function EventProductsModal({
               onChange={(language, text) =>
                 field.handleChange({ ...field.value, [language]: text })
               }
-            />
-          )}
-        </form.Field>
-        <form.Field name="descriptionLanguage">
-          {(field) => (
-            <OriginalLanguageSelect
-              controlId="product-description-language"
-              label={m.admin_products_description_language()}
-              value={field.value}
-              onChange={(language) => field.handleChange(language)}
             />
           )}
         </form.Field>
@@ -753,8 +730,8 @@ export default function EventProductsModal({
                   {m.admin_inventory_review()}
                 </h3>
                 <p>
-                  {preview.payload.name[preview.payload.nameLanguage]}: €
-                  {preview.payload.price.toFixed(2)}; {m.admin_inventory_stock()}:{" "}
+                  {preview.payload.name.nl}: €{preview.payload.price.toFixed(2)};{" "}
+                  {m.admin_inventory_stock()}:{" "}
                   {preview.payload.stock ?? m.admin_inventory_unlimited()}
                 </p>
                 {preview.result.bookings.map((b) => (

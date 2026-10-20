@@ -6,7 +6,6 @@ const categories = [
   apiToCategory({
     key: "tasting",
     label: "Degustatie",
-    label_language: "nl",
     label_nl: "Degustatie",
     label_fr: "Dégustation",
     label_en: null,
@@ -15,16 +14,16 @@ const categories = [
   apiToCategory({
     key: "gala",
     label: "Gala",
-    label_language: "en",
+    label_nl: "Gala",
     label_en: "Gala",
     sort_order: 20,
   }),
 ];
 
 describe("apiToCategory", () => {
-  it("maps the stored labels, defaulting the language and order", () => {
+  it("maps the stored labels, defaulting the order", () => {
     expect(categories[0]).toMatchObject({ key: "tasting", labelFr: "Dégustation", labelEn: null });
-    expect(apiToCategory({ key: "x" })).toMatchObject({ labelLanguage: "nl", sortOrder: 0 });
+    expect(apiToCategory({ key: "x" })).toMatchObject({ labelNl: null, sortOrder: 0 });
   });
 });
 
@@ -33,7 +32,7 @@ describe("categoryLabel", () => {
     expect(categoryLabel(categories, "tasting", "fr")).toBe("Dégustation");
   });
 
-  it("falls back to the original language", () => {
+  it("falls back to Dutch", () => {
     expect(categoryLabel(categories, "tasting", "en")).toBe("Degustatie");
     expect(categoryLabel(categories, "gala", "nl")).toBe("Gala");
     expect(categoryLabel(categories, "tasting", "de")).toBe("Degustatie");

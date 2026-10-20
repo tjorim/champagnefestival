@@ -388,7 +388,7 @@ async def _create_standalone_event(client, *, edition_id: str, edition_type: str
         "/api/events",
         json={
             "edition_id": edition_id,
-            "title_en": "Bourse afternoon",
+            "title_nl": "Bourse afternoon",
             "date": "2099-04-01",
             "start_time": "13:00",
             "end_time": "17:00",

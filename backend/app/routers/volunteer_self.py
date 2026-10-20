@@ -9,7 +9,7 @@ docs/decisions/1006-volunteer-identity-self-service.md for the full design.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,12 +19,13 @@ from app.dependencies import get_request_id
 from app.models import Person
 from app.schema_types import NonEmptyText20, NonEmptyText50, NonEmptyText200
 from app.schemas import (
+    FaqLocale,
     RequestModel,
-    VolunteerPollOptionOut,
-    VolunteerPollOptionsOut,
-    VolunteerPollSelectionsIn,
+    VolunteerPollAnswerIn,
+    VolunteerPollNoteIn,
+    VolunteerPollOut,
 )
-from app.services import volunteer_self_service
+from app.services import poll_questions_service, volunteer_self_service
 
 router = APIRouter(prefix="/api/me/volunteer", tags=["me", "volunteers"], dependencies=[Depends(require_volunteer)])
 
@@ -112,48 +113,64 @@ async def update_my_eid_document_number(
     return _identity_out(person)
 
 
-@router.get("/poll-options", response_model=VolunteerPollOptionsOut)
-async def get_my_poll_options(
+@router.get("/poll", response_model=VolunteerPollOut)
+async def get_my_poll(
     response: Response,
+    locale: FaqLocale = Query(default="nl"),
     subject: str = Depends(get_actor_id),
     db: AsyncSession = Depends(get_db),
-) -> VolunteerPollOptionsOut:
-    """The active festival edition's meal options, plus the quantities this
-    volunteer asked for. Selections come back empty if the caller isn't linked to
-    a volunteer record yet, rather than 404ing — there's nothing wrong with
-    browsing the options before registering."""
+) -> dict:
+    """The active festival edition's poll questions in `locale` (Dutch when a language has no text), with
+    this volunteer's own answers and dietary note and whether each question has closed. Answers come back
+    empty if the caller isn't linked to a volunteer record yet, rather than 404ing — there's nothing wrong
+    with browsing the questions before registering."""
     response.headers["Cache-Control"] = "no-store"
-    edition_id, options = await volunteer_self_service.get_active_edition_poll_options(db)
     person = await volunteer_self_service.get_linked_volunteer(db, subject)
-    selections = (
-        await volunteer_self_service.get_poll_selections(db, person.id, edition_id) if person is not None else []
-    )
-    return VolunteerPollOptionsOut(
-        edition_id=edition_id,
-        options=[VolunteerPollOptionOut(id=o.id, label=o.label) for o in options],
-        selections=selections,
-    )
+    return await poll_questions_service.volunteer_poll_view(db, person.id if person else None, locale)
 
 
-@router.put("/poll-selections", response_model=VolunteerPollOptionsOut)
-async def replace_my_poll_selections(
-    body: VolunteerPollSelectionsIn,
-    subject: str = Depends(get_actor_id),
-    db: AsyncSession = Depends(get_db),
-    request_id: str | None = Depends(get_request_id),
-) -> VolunteerPollOptionsOut:
+async def _linked_volunteer(db: AsyncSession, subject: str) -> Person:
     person = await volunteer_self_service.get_linked_volunteer(db, subject)
     if person is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Your account isn't linked to a volunteer record yet.",
         )
-    selections = await volunteer_self_service.replace_poll_selections(
-        db, volunteer_id=person.id, body=body, actor=subject, request_id=request_id
+    return person
+
+
+@router.put("/poll/questions/{question_id}", response_model=VolunteerPollOut)
+async def answer_my_poll_question(
+    question_id: str,
+    body: VolunteerPollAnswerIn,
+    locale: FaqLocale = Query(default="nl"),
+    subject: str = Depends(get_actor_id),
+    db: AsyncSession = Depends(get_db),
+    request_id: str | None = Depends(get_request_id),
+) -> dict:
+    """Answer one question: `selections` (a quantity per option) for a meals question, `attending` and
+    `people` for a yes/no question. A closed question refuses it (409 `poll_question_closed`)."""
+    person = await _linked_volunteer(db, subject)
+    return await poll_questions_service.answer_poll_question(
+        db,
+        volunteer_id=person.id,
+        question_id=question_id,
+        body=body,
+        locale=locale,
+        actor=subject,
+        request_id=request_id,
     )
-    edition_id, options = await volunteer_self_service.get_active_edition_poll_options(db)
-    return VolunteerPollOptionsOut(
-        edition_id=edition_id,
-        options=[VolunteerPollOptionOut(id=o.id, label=o.label) for o in options],
-        selections=selections,
+
+
+@router.put("/poll/note", response_model=VolunteerPollOut)
+async def save_my_poll_note(
+    body: VolunteerPollNoteIn,
+    locale: FaqLocale = Query(default="nl"),
+    subject: str = Depends(get_actor_id),
+    db: AsyncSession = Depends(get_db),
+    request_id: str | None = Depends(get_request_id),
+) -> dict:
+    person = await _linked_volunteer(db, subject)
+    return await poll_questions_service.save_poll_note(
+        db, volunteer_id=person.id, note=body.note, locale=locale, actor=subject, request_id=request_id
     )

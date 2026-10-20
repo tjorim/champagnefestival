@@ -1,17 +1,14 @@
 """Admin-only creator-scoped video jobs; credentials and files stay private."""
 
 import asyncio
-from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, Header, Request, Response
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
-from app.models import SignageVideoExport
 from app.schema_types import ResourceId
 from app.schemas import FaqLocale
 from app.services import signage_video as service
@@ -41,19 +38,7 @@ async def capability():
 
 @router.get("")
 async def list_exports(db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)):
-    jobs = await db.scalars(
-        select(SignageVideoExport)
-        .where(SignageVideoExport.creator == actor)
-        .order_by(
-            (
-                SignageVideoExport.state.in_(service.ACTIVE | {"ready"})
-                & (SignageVideoExport.expires_at > datetime.now(UTC))
-            ).desc(),
-            SignageVideoExport.created_at.desc(),
-        )
-        .limit(100)
-    )
-    return [service.summary(job) for job in jobs]
+    return await service.list_owned(db, actor)
 
 
 @router.post("", status_code=201)
@@ -104,11 +89,7 @@ async def submit_export(job_id: str, db: AsyncSession = Depends(get_db), actor: 
 
 @router.post("/{job_id}/cancel")
 async def cancel_export(job_id: str, db: AsyncSession = Depends(get_db), actor: str = Depends(get_actor_id)):
-    job = await service.owned(db, job_id, actor, lock=True)
-    job.cancel_requested = True
-    job.next_attempt_at = datetime.now(UTC)
-    await db.commit()
-    return service.summary(job)
+    return await service.cancel(db, job_id, actor)
 
 
 @router.get("/{job_id}/download")

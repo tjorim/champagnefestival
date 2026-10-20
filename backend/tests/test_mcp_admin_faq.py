@@ -14,7 +14,6 @@ async def test_create_list_faq_item(db_session):
     created = await mcp_faq.create_faq_item(
         factory,
         "admin-1",
-        text_language="nl",
         question_nl="Vraag?",
         answer_nl="Antwoord.",
         question_en="Question?",
@@ -33,7 +32,6 @@ async def test_update_faq_item_clears_optional_locale_with_empty_string(db_sessi
     created = await mcp_faq.create_faq_item(
         factory,
         "admin-1",
-        text_language="nl",
         question_nl="Vraag?",
         answer_nl="Antwoord.",
         question_en="Question?",
@@ -46,19 +44,17 @@ async def test_update_faq_item_clears_optional_locale_with_empty_string(db_sessi
     assert updated["question_nl"] == "Vraag?"  # untouched fields survive a partial update
 
 
-async def test_create_faq_item_rejects_an_empty_original_question(db_session):
+async def test_create_faq_item_rejects_an_empty_dutch_question(db_session):
     factory = mcp_session_factory(db_session)
-    with pytest.raises(ValueError, match="original language"):
-        await mcp_faq.create_faq_item(factory, "admin-1", text_language="nl", question_nl="", answer_nl="Antwoord.")
+    with pytest.raises(ValueError, match="Dutch"):
+        await mcp_faq.create_faq_item(factory, "admin-1", question_nl="", answer_nl="Antwoord.")
 
 
-async def test_update_faq_item_rejects_clearing_the_original_question(db_session):
+async def test_update_faq_item_rejects_clearing_the_dutch_question(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_faq.create_faq_item(
-        factory, "admin-1", text_language="nl", question_nl="Vraag?", answer_nl="Antwoord."
-    )
+    created = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag?", answer_nl="Antwoord.")
 
-    with pytest.raises(ValueError, match="original language"):
+    with pytest.raises(ValueError, match="Dutch"):
         await mcp_faq.update_faq_item(factory, "admin-1", created["id"], question_nl="")
 
 
@@ -70,9 +66,7 @@ async def test_update_faq_item_not_found(db_session):
 
 async def test_delete_faq_item(db_session):
     factory = mcp_session_factory(db_session)
-    created = await mcp_faq.create_faq_item(
-        factory, "admin-1", text_language="nl", question_nl="Vraag?", answer_nl="Antwoord."
-    )
+    created = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag?", answer_nl="Antwoord.")
 
     result = await mcp_faq.delete_faq_item(factory, "admin-1", created["id"])
     assert result == {"deleted": True, "id": created["id"]}
@@ -89,23 +83,15 @@ async def test_delete_faq_item_not_found(db_session):
 
 async def test_create_faq_item_appends_after_the_current_last_item(db_session):
     factory = mcp_session_factory(db_session)
-    first = await mcp_faq.create_faq_item(
-        factory, "admin-1", text_language="nl", question_nl="Vraag 1?", answer_nl="Antwoord 1."
-    )
-    second = await mcp_faq.create_faq_item(
-        factory, "admin-1", text_language="nl", question_nl="Vraag 2?", answer_nl="Antwoord 2."
-    )
+    first = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 1?", answer_nl="Antwoord 1.")
+    second = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 2?", answer_nl="Antwoord 2.")
     assert second["sort_order"] > first["sort_order"]
 
 
 async def test_reorder_faq_items(db_session):
     factory = mcp_session_factory(db_session)
-    first = await mcp_faq.create_faq_item(
-        factory, "admin-1", text_language="nl", question_nl="Vraag 1?", answer_nl="Antwoord 1."
-    )
-    second = await mcp_faq.create_faq_item(
-        factory, "admin-1", text_language="nl", question_nl="Vraag 2?", answer_nl="Antwoord 2."
-    )
+    first = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 1?", answer_nl="Antwoord 1.")
+    second = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 2?", answer_nl="Antwoord 2.")
 
     reordered = await mcp_faq.reorder_faq_items(factory, "admin-1", ordered_ids=[second["id"], first["id"]])
     assert [item["id"] for item in reordered["faq_items"]] == [second["id"], first["id"]]
@@ -114,12 +100,8 @@ async def test_reorder_faq_items(db_session):
 
 async def test_reorder_faq_items_rejects_stale_list(db_session):
     factory = mcp_session_factory(db_session)
-    first = await mcp_faq.create_faq_item(
-        factory, "admin-1", text_language="nl", question_nl="Vraag 1?", answer_nl="Antwoord 1."
-    )
-    await mcp_faq.create_faq_item(
-        factory, "admin-1", text_language="nl", question_nl="Vraag 2?", answer_nl="Antwoord 2."
-    )
+    first = await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 1?", answer_nl="Antwoord 1.")
+    await mcp_faq.create_faq_item(factory, "admin-1", question_nl="Vraag 2?", answer_nl="Antwoord 2.")
 
     with pytest.raises(ValueError, match="stale"):
         await mcp_faq.reorder_faq_items(factory, "admin-1", ordered_ids=[first["id"]])

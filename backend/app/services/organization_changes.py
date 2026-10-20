@@ -101,7 +101,7 @@ async def submit(
         return payload(existing, organization)
     descriptions = {field: values.get(field, getattr(organization, field)) for field in DESCRIPTION_FIELDS}
     try:
-        OrganizationDescription.model_validate(descriptions).validate_original()
+        OrganizationDescription.model_validate(descriptions).validate_dutch()
     except ValueError as exc:
         raise ValidationFailedError(str(exc)) from exc
     previous = await pending(db, organization.id)
@@ -141,11 +141,11 @@ async def supersede(db: AsyncSession, organization: Organization, fields: set[st
         return
     removed = set(change.proposed).intersection(fields)
     remaining = {key: value for key, value in change.proposed.items() if key not in removed}
-    # A language switch/clear can invalidate a remaining translation. Retire that
+    # Clearing the Dutch text can invalidate a remaining translation. Retire that
     # dependent description proposal as well rather than accepting invalid live data.
     merged = {field: remaining.get(field, getattr(organization, field)) for field in DESCRIPTION_FIELDS}
     try:
-        OrganizationDescription.model_validate(merged).validate_original()
+        OrganizationDescription.model_validate(merged).validate_dutch()
     except ValueError:
         removed.update(set(remaining).intersection(DESCRIPTION_FIELDS))
         remaining = {key: value for key, value in remaining.items() if key not in DESCRIPTION_FIELDS}

@@ -181,7 +181,6 @@ async def _load_organizations_by_ids(db: AsyncSession, ids: set[int]) -> dict[in
             "name": organization.name,
             "image": organization.image,
             "website": organization.website,
-            "description_language": organization.description_language,
             "description_nl": organization.description_nl,
             "description_fr": organization.description_fr,
             "description_en": organization.description_en,
@@ -359,7 +358,7 @@ async def edition_payloads(
     the two shapes are incompatible.
 
     `locale` resolves each event's `title`/`description` for that language
-    (original language when `None`); see `event_to_summary_dict`.
+    (Dutch when `None`); see `event_to_summary_dict`.
     """
     venues = await _load_venues_by_ids(db, {edition.venue_id for edition in editions})
     organization_map = await _load_organizations_by_ids(

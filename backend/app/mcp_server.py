@@ -41,8 +41,10 @@ from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
 from app.mcp import public as mcp_public
 from app.mcp import seating as mcp_seating
+from app.mcp.admin import announcements as mcp_admin_announcements
 from app.mcp.admin import areas as mcp_admin_areas
 from app.mcp.admin import audit as mcp_admin_audit
+from app.mcp.admin import composer as mcp_admin_composer
 from app.mcp.admin import editions as mcp_admin_editions
 from app.mcp.admin import event_categories as mcp_admin_event_categories
 from app.mcp.admin import events as mcp_admin_events
@@ -53,16 +55,20 @@ from app.mcp.admin import members as mcp_admin_members
 from app.mcp.admin import organizations as mcp_admin_organizations
 from app.mcp.admin import payments as mcp_admin_payments
 from app.mcp.admin import people as mcp_admin_people
-from app.mcp.admin import poll_options as mcp_admin_poll_options
+from app.mcp.admin import policies as mcp_admin_policies
+from app.mcp.admin import poll as mcp_admin_poll
 from app.mcp.admin import product_categories as mcp_admin_product_categories
 from app.mcp.admin import products as mcp_admin_products
 from app.mcp.admin import registrations as mcp_admin_registrations
 from app.mcp.admin import rooms as mcp_admin_rooms
 from app.mcp.admin import settings as mcp_admin_settings
+from app.mcp.admin import signage as mcp_admin_signage
+from app.mcp.admin import signage_video as mcp_admin_signage_video
 from app.mcp.admin import table_types as mcp_admin_table_types
 from app.mcp.admin import tables as mcp_admin_tables
 from app.mcp.admin import venues as mcp_admin_venues
 from app.mcp.admin import volunteers as mcp_admin_volunteers
+from app.mcp.admin import waitlist as mcp_admin_waitlist
 from app.mcp.auth import build_keycloak_auth as build_keycloak_auth
 from app.mcp.capabilities import (
     ROLE_ADMIN,
@@ -76,15 +82,23 @@ from app.schemas import (
     ROTATION_DESCRIPTION,
     X_POSITION_DESCRIPTION,
     Y_POSITION_DESCRIPTION,
+    AnnouncementLevel,
+    ComposedMessageChannel,
+    DietaryTag,
     EditionType,
+    FaqLocale,
     LayoutCreate,
+    PollAttendanceItem,
+    PollQuestionKind,
+    PollSelectionItem,
     RoomCreate,
     SponsorTier,
     TableCreate,
     TableTypeCreate,
 )
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
-from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
+from app.signage_schemas import SlideKind as SignageSlideKind
+from app.translations import Language
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
@@ -263,8 +277,7 @@ class ChampagneFestivalMcpBackend:
             capsule-exchange edition instead.
         locale:
             ``nl``, ``fr`` or ``en``. ``title`` and ``description`` are resolved for this
-            language and fall back to the event's original language; omit it for the
-            original. Every stored language is also returned (``title_nl`` and so on).
+            language and fall back to Dutch; omit it for Dutch. Every stored language is also returned (``title_nl`` and so on).
 
         Returns a list of events with date, times, title, and category.
         No PII is included.
@@ -275,7 +288,7 @@ class ChampagneFestivalMcpBackend:
         """List the event categories (the valid ``category`` values for events) in display order.
 
         ``label`` is resolved for ``locale`` (``nl``, ``fr`` or ``en``) and falls back to the
-        category's original language; every stored label is also returned.
+        category's Dutch label; every stored label is also returned.
         """
         return await mcp_admin_event_categories.list_event_categories(self.session_factory, locale)
 
@@ -283,7 +296,7 @@ class ChampagneFestivalMcpBackend:
         """List the product categories (the valid ``category`` values for products) in display order.
 
         ``label`` is resolved for ``locale`` (``nl``, ``fr`` or ``en``) and falls back to the
-        category's original language; every stored label is also returned.
+        category's Dutch label; every stored label is also returned.
         """
         return await mcp_admin_product_categories.list_product_categories(self.session_factory, locale)
 
@@ -1129,11 +1142,9 @@ class ChampagneFestivalMcpBackend:
         date: dt_date,
         start_time: str,
         category: str,
-        title_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
-        description_language: Language | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1148,8 +1159,8 @@ class ChampagneFestivalMcpBackend:
         ``category`` is the key of an existing event category (see
         ``list_event_categories``). The title (and optional description) is stored per
         language: fill ``title_nl``/``title_fr``/``title_en`` (and optionally
-        ``description_*``); the text in ``title_language`` (default ``nl``) is required.
-        Visitors see their language and fall back to the original.
+        ``description_*``); the Dutch title is required.
+        Visitors see their language and fall back to Dutch.
 
         Off-festival (bourse/capsule-exchange) editions may only contain events on
         a single date. ``registrations_open_from`` may only be set when
@@ -1163,11 +1174,9 @@ class ChampagneFestivalMcpBackend:
             date=date,
             start_time=start_time,
             category=category,
-            title_language=title_language,
             title_nl=title_nl,
             title_fr=title_fr,
             title_en=title_en,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -1187,11 +1196,9 @@ class ChampagneFestivalMcpBackend:
         self,
         event_id: str,
         edition_id: str | None = None,
-        title_language: Language | None = None,
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
-        description_language: Language | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1215,7 +1222,7 @@ class ChampagneFestivalMcpBackend:
         to unset them instead of providing a value.
 
         Titles and descriptions are per language (``title_nl``/``title_fr``/``title_en``,
-        ``description_*``); the original language must keep its text, and an empty
+        ``description_*``); the Dutch text must be kept, and an empty
         string clears a translation. Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1224,11 +1231,9 @@ class ChampagneFestivalMcpBackend:
             self._actor(),
             event_id,
             edition_id=edition_id,
-            title_language=title_language,
             title_nl=title_nl,
             title_fr=title_fr,
             title_en=title_en,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -1248,7 +1253,6 @@ class ChampagneFestivalMcpBackend:
     async def create_event_category(
         self,
         key: str,
-        label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         label_nl: str | None = None,
         label_fr: str | None = None,
         label_en: str | None = None,
@@ -1257,7 +1261,7 @@ class ChampagneFestivalMcpBackend:
         """Create an event category. Requires the ``admin`` role.
 
         ``key`` is the stable identifier events store (lowercase letters, digits, ``-`` and
-        ``_``) and cannot be changed later. The label in ``label_language`` is required; the
+        ``_``) and cannot be changed later. The Dutch label is required; the
         other languages are optional and fall back to it.
         """
         self._require_admin()
@@ -1265,7 +1269,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             key=key,
-            label_language=label_language,
             label_nl=label_nl,
             label_fr=label_fr,
             label_en=label_en,
@@ -1275,7 +1278,6 @@ class ChampagneFestivalMcpBackend:
     async def update_event_category(
         self,
         key: str,
-        label_language: Language | None = None,
         label_nl: str | None = None,
         label_fr: str | None = None,
         label_en: str | None = None,
@@ -1283,7 +1285,7 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update an event category; omitted fields are left unchanged.
 
-        An empty string clears a translation; the label in the original language cannot be
+        An empty string clears a translation; the Dutch label cannot be
         cleared. Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1291,7 +1293,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             key,
-            label_language=label_language,
             label_nl=label_nl,
             label_fr=label_fr,
             label_en=label_en,
@@ -1306,7 +1307,6 @@ class ChampagneFestivalMcpBackend:
     async def create_product_category(
         self,
         key: str,
-        label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         label_nl: str | None = None,
         label_fr: str | None = None,
         label_en: str | None = None,
@@ -1315,7 +1315,7 @@ class ChampagneFestivalMcpBackend:
         """Create a product category. Requires the ``admin`` role.
 
         ``key`` is the stable identifier products store (lowercase letters, digits, ``-`` and
-        ``_``) and cannot be changed later. The label in ``label_language`` is required; the
+        ``_``) and cannot be changed later. The Dutch label is required; the
         other languages are optional and fall back to it.
         """
         self._require_admin()
@@ -1323,7 +1323,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             key=key,
-            label_language=label_language,
             label_nl=label_nl,
             label_fr=label_fr,
             label_en=label_en,
@@ -1333,7 +1332,6 @@ class ChampagneFestivalMcpBackend:
     async def update_product_category(
         self,
         key: str,
-        label_language: Language | None = None,
         label_nl: str | None = None,
         label_fr: str | None = None,
         label_en: str | None = None,
@@ -1341,7 +1339,7 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update a product category; omitted fields are left unchanged.
 
-        An empty string clears a translation; the label in the original language cannot be
+        An empty string clears a translation; the Dutch label cannot be
         cleared. Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1349,7 +1347,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             key,
-            label_language=label_language,
             label_nl=label_nl,
             label_fr=label_fr,
             label_en=label_en,
@@ -1373,11 +1370,9 @@ class ChampagneFestivalMcpBackend:
         event_id: str,
         price: float,
         category: str,
-        name_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         name_nl: str | None = None,
         name_fr: str | None = None,
         name_en: str | None = None,
-        description_language: Language | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1393,9 +1388,9 @@ class ChampagneFestivalMcpBackend:
 
         ``category`` is the key of an existing product category (see
         ``list_product_categories``). The name (and optional description) is stored per language: fill
-        ``name_nl``/``name_fr``/``name_en`` — the one in ``name_language`` (default
-        ``en``) is required — and likewise ``description_*`` with
-        ``description_language``. Visitors see their language and fall back to the original.
+        ``name_nl``/``name_fr``/``name_en`` — the Dutch one is required — and likewise
+        ``description_*`` (Dutch required when any description is given). Visitors see their
+        language and fall back to Dutch.
 
         ``purchasable`` (default ``true``) decides both standalone order
         availability and visitor visibility: a purchasable product can be
@@ -1415,11 +1410,9 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             event_id=event_id,
-            name_language=name_language,
             name_nl=name_nl,
             name_fr=name_fr,
             name_en=name_en,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -1447,11 +1440,9 @@ class ChampagneFestivalMcpBackend:
     async def update_product(
         self,
         product_id: str,
-        name_language: Language | None = None,
         name_nl: str | None = None,
         name_fr: str | None = None,
         name_en: str | None = None,
-        description_language: Language | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1476,7 +1467,7 @@ class ChampagneFestivalMcpBackend:
         """Partially update a product; omitted fields are left unchanged.
 
         Name and description are per language: an empty string clears a
-        translation, and the original language must keep its name.
+        translation, and the Dutch name must be kept.
         ``stock``/``inclusions``/``included_product_id``/``included_per_guests``
         have no natural "clear" value, so pass ``clear_stock=True`` /
         ``clear_inclusions=True`` / ``clear_included_product_id=True`` /
@@ -1492,11 +1483,9 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             product_id,
-            name_language=name_language,
             name_nl=name_nl,
             name_fr=name_fr,
             name_en=name_en,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -1524,42 +1513,214 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_products.delete_product(self.session_factory, self._actor(), product_id)
 
-    # -- Volunteer meal poll options ------------------------------------
+    # -- Volunteer poll: questions, meal options and answers ------------------------------------
 
-    async def create_poll_option(self, edition_id: str, label: str) -> dict:
-        """Add one meal choice (a dish, a soup, ...) volunteers can order for an edition.
-        Volunteers pick a quantity of each. Requires the ``admin`` role."""
+    async def list_poll_questions(self, edition_id: str, locale: Language | None = None) -> list[dict]:
+        """List the volunteer poll questions of an edition in display order. A question is ``yes_no`` (will
+        you join this, with how many people) or ``meals`` (pick dishes, a quantity each; its ``options`` are
+        included with what volunteers asked for in total). Each has its own closing time (``closes_at``,
+        ``closed``) and counts of who answered. ``title`` is resolved for ``locale`` (Dutch when omitted).
+        Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.create_poll_option(
-            self.session_factory, self._actor(), edition_id=edition_id, label=label
+        return await mcp_admin_poll.list_poll_questions(self.session_factory, edition_id, locale)
+
+    async def create_poll_question(
+        self,
+        edition_id: str,
+        kind: PollQuestionKind,
+        title_nl: str | None = None,
+        title_fr: str | None = None,
+        title_en: str | None = None,
+        description_nl: str | None = None,
+        description_fr: str | None = None,
+        description_en: str | None = None,
+        closes_at: datetime | None = None,
+    ) -> dict:
+        """Add a question to an edition's volunteer poll, after the existing ones. ``kind`` is ``yes_no`` (for
+        example "Will you join the dinner on Sunday?"; volunteers answer yes with a number of people, or no) or
+        ``meals`` (add options afterwards with ``create_poll_option``). The Dutch title is required; French and
+        English are optional translations. ``closes_at`` (with a timezone) is when volunteers can no longer
+        change their answer. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.create_poll_question(
+            self.session_factory,
+            self._actor(),
+            edition_id=edition_id,
+            kind=kind,
+            title_nl=title_nl,
+            title_fr=title_fr,
+            title_en=title_en,
+            description_nl=description_nl,
+            description_fr=description_fr,
+            description_en=description_en,
+            closes_at=closes_at,
         )
 
-    async def list_poll_options(self, edition_id: str | None = None) -> list[dict]:
-        """List meal poll options, optionally filtered by edition, with the total
-        quantity volunteers asked for and how many volunteers picked each (what to
-        order from the caterer). Requires the ``admin`` role."""
+    async def update_poll_question(
+        self,
+        question_id: str,
+        title_nl: str | None = None,
+        title_fr: str | None = None,
+        title_en: str | None = None,
+        description_nl: str | None = None,
+        description_fr: str | None = None,
+        description_en: str | None = None,
+        closes_at: datetime | None = None,
+        reopen: bool = False,
+    ) -> dict:
+        """Partially update a poll question; omitted fields are left unchanged and an empty string clears a
+        translation (the Dutch title cannot be cleared). ``closes_at`` sets when volunteers can no longer change
+        their answer (a past time closes the question now); ``reopen=true`` clears it. The kind cannot change.
+        Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.list_poll_options(self.session_factory, edition_id)
+        return await mcp_admin_poll.update_poll_question(
+            self.session_factory,
+            self._actor(),
+            question_id,
+            title_nl=title_nl,
+            title_fr=title_fr,
+            title_en=title_en,
+            description_nl=description_nl,
+            description_fr=description_fr,
+            description_en=description_en,
+            closes_at=closes_at,
+            reopen=reopen,
+        )
 
-    async def update_poll_option(self, option_id: str, label: str) -> dict:
-        """Rename a meal poll option; volunteers keep their quantities. Requires the
+    async def delete_poll_question(self, question_id: str, confirm_answers: bool = False) -> dict:
+        """Delete a poll question with its options and answers. When volunteers answered it, nothing is deleted
+        unless ``confirm_answers`` is true; a closed question refuses the deletion (reopen it first). Requires
+        the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.delete_poll_question(
+            self.session_factory, self._actor(), question_id, confirm_answers=confirm_answers
+        )
+
+    async def reorder_poll_questions(self, edition_id: str, ordered_ids: list[str]) -> dict:
+        """Set the display order of an edition's poll questions; ``ordered_ids`` must name every question of the
+        edition exactly once. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.reorder_poll_questions(
+            self.session_factory, self._actor(), edition_id=edition_id, ordered_ids=ordered_ids
+        )
+
+    async def copy_poll_questions(self, from_edition_id: str, to_edition_id: str) -> dict:
+        """Copy the poll questions of one edition to another with their meal options (never answers or closing
+        times), after the ones already there. A question whose kind and Dutch title exist in the target is
+        skipped, so repeating the copy adds nothing. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.copy_poll_questions(
+            self.session_factory, self._actor(), from_edition_id=from_edition_id, to_edition_id=to_edition_id
+        )
+
+    async def create_poll_option(
+        self,
+        question_id: str,
+        label_nl: str | None = None,
+        label_fr: str | None = None,
+        label_en: str | None = None,
+        dietary_tags: list[DietaryTag] | None = None,
+    ) -> dict:
+        """Add one meal choice (a dish, a soup, ...) to a ``meals`` poll question, after the existing ones.
+        Volunteers pick a quantity of each. The Dutch label is required; French and English are optional
+        translations. ``dietary_tags`` flags what the meal suits or contains. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.create_poll_option(
+            self.session_factory,
+            self._actor(),
+            question_id=question_id,
+            label_nl=label_nl,
+            label_fr=label_fr,
+            label_en=label_en,
+            dietary_tags=dietary_tags,
+        )
+
+    async def list_poll_options(
+        self, question_id: str | None = None, edition_id: str | None = None, locale: Language | None = None
+    ) -> list[dict]:
+        """List meal poll options in display order, optionally filtered by question or edition, with the total
+        quantity volunteers asked for and how many volunteers picked each (what to order from the caterer).
+        ``label`` is resolved for ``locale`` (Dutch when omitted). Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.list_poll_options(self.session_factory, question_id, edition_id, locale)
+
+    async def update_poll_option(
+        self,
+        option_id: str,
+        label_nl: str | None = None,
+        label_fr: str | None = None,
+        label_en: str | None = None,
+        dietary_tags: list[DietaryTag] | None = None,
+    ) -> dict:
+        """Partially update a meal poll option; omitted fields are left unchanged and volunteers keep
+        their quantities. An empty string clears a translation (the Dutch label cannot be cleared);
+        ``dietary_tags`` replaces the whole list. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.update_poll_option(
+            self.session_factory,
+            self._actor(),
+            option_id,
+            label_nl=label_nl,
+            label_fr=label_fr,
+            label_en=label_en,
+            dietary_tags=dietary_tags,
+        )
+
+    async def delete_poll_option(self, option_id: str, confirm_selections: bool = False) -> dict:
+        """Delete a meal poll option. When volunteers already picked it, nothing is deleted unless
+        ``confirm_selections`` is true, which removes their picks; a closed question refuses the deletion
+        (reopen it first). Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.delete_poll_option(
+            self.session_factory, self._actor(), option_id, confirm_selections=confirm_selections
+        )
+
+    async def reorder_poll_options(self, question_id: str, ordered_ids: list[str]) -> dict:
+        """Set the display order of a meals question's options; ``ordered_ids`` must name every option of the
+        question exactly once. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.reorder_poll_options(
+            self.session_factory, self._actor(), question_id=question_id, ordered_ids=ordered_ids
+        )
+
+    async def list_poll_orders(self, edition_id: str, locale: Language | None = None) -> dict:
+        """Who answered what in an edition's volunteer poll: every active volunteer (also those who have not
+        answered yet) with their meal picks, yes/no answers (with number of people) and dietary note, next to
+        the questions in display order with counts. Contains volunteer names. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_poll.list_poll_orders(self.session_factory, edition_id, locale)
+
+    async def set_volunteer_poll_order(
+        self,
+        edition_id: str,
+        volunteer_id: str,
+        selections: list[PollSelectionItem] | None = None,
+        attendance: list[PollAttendanceItem] | None = None,
+        note: str | None = None,
+        confirm_closed: bool = False,
+    ) -> dict:
+        """Enter or correct a volunteer's answers (for example from an email they sent): ``selections``
+        (``option_id`` and ``quantity`` 1 to 20) replaces all their meal picks for the edition and ``attendance``
+        (``question_id``, ``attending`` and ``people`` including themselves) all their yes/no answers, so list
+        every answer they gave. ``note`` omitted keeps their dietary note, an empty string clears it. A change
+        to a closed question needs ``confirm_closed`` to be true. Audited with you as the actor. Requires the
         ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_poll_options.update_poll_option(
-            self.session_factory, self._actor(), option_id, label=label
+        return await mcp_admin_poll.set_volunteer_poll_order(
+            self.session_factory,
+            self._actor(),
+            edition_id=edition_id,
+            volunteer_id=volunteer_id,
+            selections=selections,
+            attendance=attendance,
+            note=note,
+            confirm_closed=confirm_closed,
         )
-
-    async def delete_poll_option(self, option_id: str) -> dict:
-        """Delete a meal poll option, along with any
-        volunteer's selection of it. Requires the ``admin`` role."""
-        self._require_admin()
-        return await mcp_admin_poll_options.delete_poll_option(self.session_factory, self._actor(), option_id)
 
     # -- FAQ -----------------------------------------------------------
 
     async def create_faq_item(
         self,
-        text_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         question_nl: str | None = None,
         question_fr: str | None = None,
         question_en: str | None = None,
@@ -1570,16 +1731,15 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Create an FAQ item, appended after the current last one. Requires the ``admin`` role.
 
-        Fill the question and the answer in ``text_language`` (default ``en``) and
+        Fill the question and the answer in Dutch and
         optionally in the other languages; a language is shown only when both its
-        question and answer are filled, otherwise visitors see the original.
+        question and answer are filled, otherwise visitors see Dutch.
         Display position isn't settable here — use ``reorder_faq_items`` to change it.
         """
         self._require_admin()
         return await mcp_admin_faq.create_faq_item(
             self.session_factory,
             self._actor(),
-            text_language=text_language,
             question_nl=question_nl,
             question_fr=question_fr,
             question_en=question_en,
@@ -1597,7 +1757,6 @@ class ChampagneFestivalMcpBackend:
     async def update_faq_item(
         self,
         faq_item_id: str,
-        text_language: Language | None = None,
         question_nl: str | None = None,
         question_fr: str | None = None,
         question_en: str | None = None,
@@ -1608,8 +1767,8 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update an FAQ item; omitted fields are left unchanged.
 
-        An explicit empty string clears a translation; the original language
-        (``text_language``) must keep its question and answer. Display position isn't
+        An explicit empty string clears a translation; the Dutch question
+        and answer must be kept. Display position isn't
         settable here — use ``reorder_faq_items`` to change it. Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1617,7 +1776,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             faq_item_id,
-            text_language=text_language,
             question_nl=question_nl,
             question_fr=question_fr,
             question_en=question_en,
@@ -1642,6 +1800,508 @@ class ChampagneFestivalMcpBackend:
         """
         self._require_admin()
         return await mcp_admin_faq.reorder_faq_items(self.session_factory, self._actor(), ordered_ids=ordered_ids)
+
+    # -- Announcements -------------------------------------------------
+
+    async def list_announcements(self) -> dict:
+        """List every site announcement, active or not, in display order (admin shape).
+        Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_announcements.list_announcements(self.session_factory)
+
+    async def create_announcement(
+        self,
+        text_nl: str | None = None,
+        text_fr: str | None = None,
+        text_en: str | None = None,
+        level: AnnouncementLevel = "info",
+        active: bool = False,
+        starts_at: datetime | None = None,
+        ends_at: datetime | None = None,
+        link_url: str | None = None,
+        link_label_nl: str | None = None,
+        link_label_fr: str | None = None,
+        link_label_en: str | None = None,
+    ) -> dict:
+        """Create a site announcement, appended after the current last one. Requires the ``admin`` role.
+
+        The Dutch text is required; other languages are
+        optional and visitors fall back to Dutch. A ``link_url`` needs a Dutch link label. It is shown to visitors only while ``active`` and inside
+        the ``starts_at``/``ends_at`` window (timestamps must carry a timezone).
+        """
+        self._require_admin()
+        return await mcp_admin_announcements.create_announcement(
+            self.session_factory,
+            self._actor(),
+            text_nl=text_nl,
+            text_fr=text_fr,
+            text_en=text_en,
+            level=level,
+            active=active,
+            starts_at=starts_at,
+            ends_at=ends_at,
+            link_url=link_url,
+            link_label_nl=link_label_nl,
+            link_label_fr=link_label_fr,
+            link_label_en=link_label_en,
+        )
+
+    async def update_announcement(
+        self,
+        announcement_id: str,
+        text_nl: str | None = None,
+        text_fr: str | None = None,
+        text_en: str | None = None,
+        level: AnnouncementLevel | None = None,
+        active: bool | None = None,
+        starts_at: datetime | None = None,
+        clear_starts_at: bool = False,
+        ends_at: datetime | None = None,
+        clear_ends_at: bool = False,
+        link_url: str | None = None,
+        clear_link_url: bool = False,
+        link_label_nl: str | None = None,
+        link_label_fr: str | None = None,
+        link_label_en: str | None = None,
+    ) -> dict:
+        """Partially update an announcement; omitted fields are left unchanged.
+
+        An explicit empty string clears a translation or a link label; ``clear_starts_at``,
+        ``clear_ends_at`` and ``clear_link_url`` remove the window ends and the link. The
+        Dutch text must be kept. Setting ``active`` publishes or unpublishes it.
+        Display position isn't settable here — use ``reorder_announcements``. Requires the
+        ``admin`` role.
+        """
+        self._require_admin()
+        return await mcp_admin_announcements.update_announcement(
+            self.session_factory,
+            self._actor(),
+            announcement_id,
+            text_nl=text_nl,
+            text_fr=text_fr,
+            text_en=text_en,
+            level=level,
+            active=active,
+            starts_at=starts_at,
+            clear_starts_at=clear_starts_at,
+            ends_at=ends_at,
+            clear_ends_at=clear_ends_at,
+            link_url=link_url,
+            clear_link_url=clear_link_url,
+            link_label_nl=link_label_nl,
+            link_label_fr=link_label_fr,
+            link_label_en=link_label_en,
+        )
+
+    async def reorder_announcements(self, ordered_ids: list[str]) -> dict:
+        """Reassign every announcement's display position to match ``ordered_ids``, which must
+        name every existing announcement exactly once. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_announcements.reorder_announcements(
+            self.session_factory, self._actor(), ordered_ids=ordered_ids
+        )
+
+    async def delete_announcement(self, announcement_id: str) -> dict:
+        """Delete an announcement. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_announcements.delete_announcement(self.session_factory, self._actor(), announcement_id)
+
+    # -- Composer ------------------------------------------------------
+
+    async def list_composed_messages(self) -> dict:
+        """List every composed message (announcement and/or push), newest first, with its state
+        and push delivery counts. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_composer.list_composed_messages(self.session_factory)
+
+    async def get_composed_message(self, message_id: str) -> dict:
+        """Get one composed message with its state and push delivery counts. Requires the
+        ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_composer.get_composed_message(self.session_factory, message_id)
+
+    async def create_composed_message(
+        self,
+        channels: list[ComposedMessageChannel],
+        title_nl: str | None = None,
+        title_fr: str | None = None,
+        title_en: str | None = None,
+        body_nl: str | None = None,
+        body_fr: str | None = None,
+        body_en: str | None = None,
+        level: AnnouncementLevel = "info",
+        link_url: str | None = None,
+    ) -> dict:
+        """Create a composed message as a draft; nothing is delivered until
+        ``schedule_composed_message``. Requires the ``admin`` role.
+
+        ``channels`` is ``announcement`` (site banner), ``push`` (notification to opted-in
+        subscribers) or both. A Dutch title and body are required; a language is used only when both its title and body are filled.
+        """
+        self._require_admin()
+        return await mcp_admin_composer.create_composed_message(
+            self.session_factory,
+            self._actor(),
+            channels=channels,
+            title_nl=title_nl,
+            title_fr=title_fr,
+            title_en=title_en,
+            body_nl=body_nl,
+            body_fr=body_fr,
+            body_en=body_en,
+            level=level,
+            link_url=link_url,
+        )
+
+    async def update_composed_message(
+        self,
+        message_id: str,
+        channels: list[ComposedMessageChannel] | None = None,
+        title_nl: str | None = None,
+        title_fr: str | None = None,
+        title_en: str | None = None,
+        body_nl: str | None = None,
+        body_fr: str | None = None,
+        body_en: str | None = None,
+        level: AnnouncementLevel | None = None,
+        link_url: str | None = None,
+        clear_link_url: bool = False,
+    ) -> dict:
+        """Partially update a composed message that is still a draft; omitted fields are left
+        unchanged, an explicit empty string clears a translation and ``clear_link_url`` removes the
+        link. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_composer.update_composed_message(
+            self.session_factory,
+            self._actor(),
+            message_id,
+            channels=channels,
+            title_nl=title_nl,
+            title_fr=title_fr,
+            title_en=title_en,
+            body_nl=body_nl,
+            body_fr=body_fr,
+            body_en=body_en,
+            level=level,
+            link_url=link_url,
+            clear_link_url=clear_link_url,
+        )
+
+    async def schedule_composed_message(self, message_id: str, scheduled_at: datetime | None = None) -> dict:
+        """Send a draft composed message to its channels, which is visible to visitors and cannot
+        be undone. Omit ``scheduled_at`` to send as soon as the worker next polls; otherwise give
+        a timestamp with a timezone. A message that is no longer a draft is rejected. Requires the
+        ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_composer.schedule_composed_message(
+            self.session_factory, self._actor(), message_id, scheduled_at=scheduled_at
+        )
+
+    # -- Policies ------------------------------------------------------
+
+    async def list_policies(self) -> dict:
+        """List every legal/policy document with its full version history (Markdown source per
+        language, newest version first). Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_policies.list_policies(self.session_factory)
+
+    async def get_policy(self, policy_key: str) -> dict:
+        """Get one policy with its full version history. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_policies.get_policy(self.session_factory, policy_key)
+
+    async def preview_policy_markdown(self, markdown: str) -> dict:
+        """Render unsaved Markdown to the sanitized HTML visitors would get. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_policies.preview_policy_markdown(markdown)
+
+    async def create_policy_draft(self, policy_key: str, source_version_number: int | None = None) -> dict:
+        """Open a draft of a policy, seeded from the published version or, with
+        ``source_version_number``, from an older version (publishing that draft is the rollback).
+        A policy can have only one open draft. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_policies.create_policy_draft(
+            self.session_factory, self._actor(), policy_key, source_version_number=source_version_number
+        )
+
+    async def update_policy_draft(
+        self,
+        policy_key: str,
+        content_nl: str | None = None,
+        content_fr: str | None = None,
+        content_en: str | None = None,
+        change_summary: str | None = None,
+    ) -> dict:
+        """Edit the open draft of a policy; omitted fields are left unchanged and an explicit empty
+        string clears a translation. Publishing needs Dutch text. Requires the
+        ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_policies.update_policy_draft(
+            self.session_factory,
+            self._actor(),
+            policy_key,
+            content_nl=content_nl,
+            content_fr=content_fr,
+            content_en=content_en,
+            change_summary=change_summary,
+        )
+
+    async def discard_policy_draft(self, policy_key: str) -> dict:
+        """Delete the open draft of a policy, leaving the published version as it is. Requires the
+        ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_policies.discard_policy_draft(self.session_factory, self._actor(), policy_key)
+
+    async def publish_policy_draft(self, policy_key: str) -> dict:
+        """Publish the open draft of a policy, which is visible to visitors immediately; the
+        previously published version becomes superseded. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_policies.publish_policy_draft(self.session_factory, self._actor(), policy_key)
+
+    # -- Signage -------------------------------------------------------
+
+    async def list_signage_channels(self) -> dict:
+        """List the signage channels (one per physical display group). Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.list_signage_channels(self.session_factory)
+
+    async def get_signage_channel(self, channel_id: str) -> dict:
+        """Get one signage channel. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.get_signage_channel(self.session_factory, channel_id)
+
+    async def create_signage_channel(self, slug: str, name: str, edition_id: str, active: bool = False) -> dict:
+        """Create a signage channel for an edition. ``slug`` is the lowercase-and-hyphens name its
+        displays request; it must be unique. Displays only receive an ``active`` channel. Requires
+        the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.create_signage_channel(
+            self.session_factory, self._actor(), slug=slug, name=name, edition_id=edition_id, active=active
+        )
+
+    async def update_signage_channel(
+        self,
+        channel_id: str,
+        slug: str | None = None,
+        name: str | None = None,
+        edition_id: str | None = None,
+        active: bool | None = None,
+    ) -> dict:
+        """Partially update a signage channel; omitted fields are left unchanged. Requires the
+        ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.update_signage_channel(
+            self.session_factory,
+            self._actor(),
+            channel_id,
+            slug=slug,
+            name=name,
+            edition_id=edition_id,
+            active=active,
+        )
+
+    async def delete_signage_channel(self, channel_id: str) -> dict:
+        """Delete a signage channel together with its slides. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.delete_signage_channel(self.session_factory, self._actor(), channel_id)
+
+    async def list_signage_templates(self) -> dict:
+        """List the signage slide templates (a background plus positioned layers). Requires the
+        ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.list_signage_templates(self.session_factory)
+
+    async def get_signage_template(self, template_id: str) -> dict:
+        """Get one signage template. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.get_signage_template(self.session_factory, template_id)
+
+    async def create_signage_template(
+        self,
+        name: str,
+        background: dict[str, Any] | None = None,
+        layers: list[dict[str, Any]] | None = None,
+    ) -> dict:
+        """Create a signage template. ``background`` is ``{kind: color|gradient|image, color, end_color,
+        image}``; each of ``layers`` has an ``id`` and a ``kind`` (``binding``, ``text``, ``image``,
+        ``icon`` or ``shape``) plus position (``x``, ``y``, ``width``, ``height`` in percent),
+        ``rotation``, ``color``, ``font_size`` and so on. A ``binding`` layer shows slide data
+        (``logo``, ``name``, ``description``, ``sponsor``, ``title``, ``text``, ``icon``); organization
+        slides need the ``logo``, ``name`` and ``sponsor`` bindings and notices ``title`` and ``text``.
+        Images must have been uploaded in the admin UI first. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.create_signage_template(
+            self.session_factory, self._actor(), name=name, background=background, layers=layers
+        )
+
+    async def update_signage_template(
+        self,
+        template_id: str,
+        name: str | None = None,
+        background: dict[str, Any] | None = None,
+        layers: list[dict[str, Any]] | None = None,
+    ) -> dict:
+        """Partially update a signage template; ``background`` and ``layers`` are replaced as a whole
+        when given. Rejected if it would drop a placeholder an existing slide needs. Requires the
+        ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.update_signage_template(
+            self.session_factory, self._actor(), template_id, name=name, background=background, layers=layers
+        )
+
+    async def delete_signage_template(self, template_id: str) -> dict:
+        """Delete a signage template that no slide uses. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.delete_signage_template(self.session_factory, self._actor(), template_id)
+
+    async def list_signage_slides(self) -> dict:
+        """List the signage slides of every channel. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.list_signage_slides(self.session_factory)
+
+    async def get_signage_slide(self, slide_id: str) -> dict:
+        """Get one signage slide. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.get_signage_slide(self.session_factory, slide_id)
+
+    async def create_signage_slide(
+        self,
+        channel_id: str,
+        template_id: str,
+        kind: SignageSlideKind,
+        duration: int = 10,
+        active: bool = False,
+        starts_at: datetime | None = None,
+        ends_at: datetime | None = None,
+        content: dict[str, Any] | None = None,
+    ) -> dict:
+        """Create a signage slide. ``kind`` is ``organizations`` (one slide per organization),
+        ``notice`` (needs ``content.text``) or ``image`` (needs an uploaded ``content.image``);
+        ``content`` also takes ``title``, ``icon`` and, for organizations, ``organization_type``.
+        ``duration`` is in seconds and ``starts_at``/``ends_at`` need a timezone. It is appended after
+        the channel's last slide. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.create_signage_slide(
+            self.session_factory,
+            self._actor(),
+            channel_id=channel_id,
+            template_id=template_id,
+            kind=kind,
+            duration=duration,
+            active=active,
+            starts_at=starts_at,
+            ends_at=ends_at,
+            content=content,
+        )
+
+    async def update_signage_slide(
+        self,
+        slide_id: str,
+        channel_id: str | None = None,
+        template_id: str | None = None,
+        kind: SignageSlideKind | None = None,
+        duration: int | None = None,
+        active: bool | None = None,
+        starts_at: datetime | None = None,
+        clear_starts_at: bool = False,
+        ends_at: datetime | None = None,
+        clear_ends_at: bool = False,
+        content: dict[str, Any] | None = None,
+    ) -> dict:
+        """Partially update a signage slide; omitted fields are left unchanged and ``content`` is
+        replaced as a whole when given. ``clear_starts_at`` / ``clear_ends_at`` remove that end of
+        the schedule window. Display position isn't settable here — use ``reorder_signage_slides``.
+        Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.update_signage_slide(
+            self.session_factory,
+            self._actor(),
+            slide_id,
+            channel_id=channel_id,
+            template_id=template_id,
+            kind=kind,
+            duration=duration,
+            active=active,
+            starts_at=starts_at,
+            clear_starts_at=clear_starts_at,
+            ends_at=ends_at,
+            clear_ends_at=clear_ends_at,
+            content=content,
+        )
+
+    async def delete_signage_slide(self, slide_id: str) -> dict:
+        """Delete a signage slide. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.delete_signage_slide(self.session_factory, self._actor(), slide_id)
+
+    async def reorder_signage_slides(self, channel_id: str, ordered_ids: list[str]) -> dict:
+        """Reassign the display order of a channel's slides; ``ordered_ids`` must name every slide of
+        that channel exactly once. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.reorder_signage_slides(
+            self.session_factory, self._actor(), channel_id, ordered_ids=ordered_ids
+        )
+
+    async def get_signage_playlist(self, channel_slug: str, locale: FaqLocale = "nl") -> dict:
+        """Get the playlist a display of an active channel receives right now, in ``locale``.
+        Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.get_signage_playlist(self.session_factory, channel_slug, locale=locale)
+
+    async def preview_signage_playlist(
+        self, channel: dict[str, Any], slides: list[dict[str, Any]], at: datetime, locale: FaqLocale = "nl"
+    ) -> dict:
+        """Preview the playlist that unsaved ``channel`` and ``slides`` documents (the same fields as
+        ``create_signage_channel`` / ``create_signage_slide``, with ``channel_id`` and ``template_id``
+        pointing at stored rows) would produce at the timestamp ``at`` (needs a timezone). Nothing is
+        saved. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage.preview_signage_playlist(
+            self.session_factory, channel=channel, slides=slides, at=at, locale=locale
+        )
+
+    async def get_signage_video_capability(self) -> dict:
+        """Whether signage video export is available (a media worker is configured) and the slide and
+        duration limits an export must stay within. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage_video.get_signage_video_capability()
+
+    async def list_signage_video_exports(self) -> dict:
+        """List your own signage video exports, live ones first. Exports are created and downloaded in
+        the admin UI, which renders and uploads the slide images. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage_video.list_signage_video_exports(self.session_factory, self._actor())
+
+    async def get_signage_video_export(self, job_id: str) -> dict:
+        """Get the state of one of your own signage video exports. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage_video.get_signage_video_export(self.session_factory, self._actor(), job_id)
+
+    async def cancel_signage_video_export(self, job_id: str) -> dict:
+        """Request cancellation of one of your own signage video exports. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_signage_video.cancel_signage_video_export(self.session_factory, self._actor(), job_id)
+
+    # -- Waitlist ------------------------------------------------------
+
+    async def list_waitlist_entries(self, product_id: str | None = None, event_id: str | None = None) -> dict:
+        """List sold-out waitlist entries (visitor name, email, phone), oldest first, optionally for one
+        product or event. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_waitlist.list_waitlist_entries(
+            self.session_factory, product_id=product_id, event_id=event_id
+        )
+
+    async def mark_waitlist_entry_handled(self, entry_id: str) -> dict:
+        """Mark a waitlist entry as handled (contacted); repeating keeps the original timestamp.
+        Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_waitlist.mark_waitlist_entry_handled(self.session_factory, entry_id)
+
+    async def delete_waitlist_entry(self, entry_id: str) -> dict:
+        """Delete a waitlist entry. Requires the ``admin`` role."""
+        self._require_admin()
+        return await mcp_admin_waitlist.delete_waitlist_entry(self.session_factory, entry_id)
 
     # -- Settings ------------------------------------------------------
 
@@ -1687,7 +2347,6 @@ class ChampagneFestivalMcpBackend:
         website: str = "",
         active: bool = True,
         type: str = "vendor",
-        description_language: str | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1703,7 +2362,6 @@ class ChampagneFestivalMcpBackend:
             website=website,
             active=active,
             type=type,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -1728,7 +2386,6 @@ class ChampagneFestivalMcpBackend:
         website: str | None = None,
         active: bool | None = None,
         type: str | None = None,
-        description_language: str | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1740,9 +2397,9 @@ class ChampagneFestivalMcpBackend:
         Retyping to ``"vendor"`` fails while any edition still lists this organization
         (vendors may not appear in an edition lineup). ``contact_person_id`` has no
         natural "clear" value, so pass ``clear_contact_person=True`` to unset it.
-        Descriptions are literal plain text (600 characters per language), with
-        original language nl/fr/en. Pass empty strings for each description text
-        and description_language to clear the description.
+        Descriptions are literal plain text (600 characters per language), in
+        nl/fr/en; the Dutch text is required whenever there is any description. Pass an empty
+        string for each description text to clear the description.
         Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1755,7 +2412,6 @@ class ChampagneFestivalMcpBackend:
             website=website,
             active=active,
             type=type,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -2422,11 +3078,62 @@ def create_mcp_server(
     register_tool(backend.list_poll_options)
     register_tool(backend.update_poll_option)
     register_tool(backend.delete_poll_option)
+    register_tool(backend.reorder_poll_options)
+    register_tool(backend.list_poll_questions)
+    register_tool(backend.create_poll_question)
+    register_tool(backend.update_poll_question)
+    register_tool(backend.delete_poll_question)
+    register_tool(backend.reorder_poll_questions)
+    register_tool(backend.copy_poll_questions)
+    register_tool(backend.list_poll_orders)
+    register_tool(backend.set_volunteer_poll_order)
     register_tool(backend.create_faq_item)
     register_tool(backend.list_faq_items)
     register_tool(backend.update_faq_item)
     register_tool(backend.delete_faq_item)
     register_tool(backend.reorder_faq_items)
+    register_tool(backend.list_announcements)
+    register_tool(backend.create_announcement)
+    register_tool(backend.update_announcement)
+    register_tool(backend.reorder_announcements)
+    register_tool(backend.delete_announcement)
+    register_tool(backend.list_composed_messages)
+    register_tool(backend.get_composed_message)
+    register_tool(backend.create_composed_message)
+    register_tool(backend.update_composed_message)
+    register_tool(backend.schedule_composed_message)
+    register_tool(backend.list_policies)
+    register_tool(backend.get_policy)
+    register_tool(backend.preview_policy_markdown)
+    register_tool(backend.create_policy_draft)
+    register_tool(backend.update_policy_draft)
+    register_tool(backend.discard_policy_draft)
+    register_tool(backend.publish_policy_draft)
+    register_tool(backend.list_signage_channels)
+    register_tool(backend.get_signage_channel)
+    register_tool(backend.create_signage_channel)
+    register_tool(backend.update_signage_channel)
+    register_tool(backend.delete_signage_channel)
+    register_tool(backend.list_signage_templates)
+    register_tool(backend.get_signage_template)
+    register_tool(backend.create_signage_template)
+    register_tool(backend.update_signage_template)
+    register_tool(backend.delete_signage_template)
+    register_tool(backend.list_signage_slides)
+    register_tool(backend.get_signage_slide)
+    register_tool(backend.create_signage_slide)
+    register_tool(backend.update_signage_slide)
+    register_tool(backend.delete_signage_slide)
+    register_tool(backend.reorder_signage_slides)
+    register_tool(backend.get_signage_playlist)
+    register_tool(backend.preview_signage_playlist)
+    register_tool(backend.get_signage_video_capability)
+    register_tool(backend.list_signage_video_exports)
+    register_tool(backend.get_signage_video_export)
+    register_tool(backend.cancel_signage_video_export)
+    register_tool(backend.list_waitlist_entries)
+    register_tool(backend.mark_waitlist_entry_handled)
+    register_tool(backend.delete_waitlist_entry)
     register_tool(backend.get_settings)
     register_tool(backend.set_maintenance_mode)
     register_tool(backend.list_organization_changes)

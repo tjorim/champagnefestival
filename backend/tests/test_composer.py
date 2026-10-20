@@ -32,7 +32,6 @@ def _stub_composer_push_endpoint_as_public(monkeypatch):
 
 def _draft_body(**overrides) -> dict:
     body = {
-        "text_language": "nl",
         "title_nl": "Belangrijke mededeling",
         "title_en": "Important notice",
         "title_fr": "Avis important",
@@ -471,34 +470,33 @@ async def test_announcement_allows_text_over_push_byte_limit(client):
 
 async def test_update_validates_merged_locale_pairs(client):
     created = await client.post(
-        "/api/composer", json={"title_en": "Title", "body_en": "Body", "channels": ["push"]}, headers=ADMIN_HEADERS
+        "/api/composer",
+        json={"title_nl": "Titel", "body_nl": "Inhoud", "channels": ["push"]},
+        headers=ADMIN_HEADERS,
     )
     message_id = created.json()["id"]
-    response = await client.put(f"/api/composer/{message_id}", json={"title_en": "Updated"}, headers=ADMIN_HEADERS)
+    response = await client.put(f"/api/composer/{message_id}", json={"title_nl": "Bijgewerkt"}, headers=ADMIN_HEADERS)
     assert response.status_code == 200
     response = await client.put(
-        f"/api/composer/{message_id}", json={"body_en": None, "body_nl": "Inhoud"}, headers=ADMIN_HEADERS
+        f"/api/composer/{message_id}", json={"body_nl": None, "body_en": "Body"}, headers=ADMIN_HEADERS
     )
     assert response.status_code == 400
     saved = await client.get(f"/api/composer/{message_id}", headers=ADMIN_HEADERS)
-    assert saved.json()["body_en"] == "Body"
+    assert saved.json()["body_nl"] == "Inhoud"
 
 
-@pytest.mark.parametrize("locale", ["nl", "fr", "en"])
-def test_locale_fallback_uses_the_original_complete_pair(locale):
+def test_locale_fallback_uses_the_dutch_pair():
     from app.composer_content import pick_locale_text
 
-    message = ComposedMessage(text_language=locale, **{f"title_{locale}": "Title", f"body_{locale}": "Body"})
+    message = ComposedMessage(title_nl="Titel", body_nl="Inhoud")
     for requested in ("nl", "fr", "en"):
-        assert pick_locale_text(message, requested) == ("Title", "Body")
+        assert pick_locale_text(message, requested) == ("Titel", "Inhoud")
 
 
 def test_locale_fallback_never_mixes_languages():
     from app.composer_content import pick_locale_text
 
-    message = ComposedMessage(
-        text_language="nl", title_nl="Titel", body_nl="Inhoud", title_en="Title", title_fr="Titre", body_fr="Corps"
-    )
+    message = ComposedMessage(title_nl="Titel", body_nl="Inhoud", title_en="Title", title_fr="Titre", body_fr="Corps")
     assert pick_locale_text(message, "nl") == ("Titel", "Inhoud")
     assert pick_locale_text(message, "en") == ("Titel", "Inhoud")  # English has a title but no body
     assert pick_locale_text(message, "fr") == ("Titre", "Corps")
@@ -518,20 +516,20 @@ async def test_schedule_revalidates_legacy_push_payload(client, db_session):
     assert jobs == []
 
 
-async def test_composed_message_requires_a_complete_pair_in_its_original_language(client):
-    only_dutch_title = _draft_body(text_language="nl", body_nl=None)
-    assert (await client.post("/api/composer", json=only_dutch_title, headers=ADMIN_HEADERS)).status_code == 422
-    english_default = _draft_body()
-    english_default.pop("text_language")
-    created = await client.post("/api/composer", json=english_default, headers=ADMIN_HEADERS)
+async def test_composed_message_requires_a_complete_dutch_pair(client):
+    no_dutch_body = _draft_body(body_nl=None)
+    assert (await client.post("/api/composer", json=no_dutch_body, headers=ADMIN_HEADERS)).status_code == 422
+    old_shape = _draft_body(text_language="nl")  # the original-language flag is gone
+    assert (await client.post("/api/composer", json=old_shape, headers=ADMIN_HEADERS)).status_code == 422
+    created = await client.post("/api/composer", json=_draft_body(), headers=ADMIN_HEADERS)
     assert created.status_code == 201
-    assert created.json()["text_language"] == "en"  # English is the default original language
+    assert "text_language" not in created.json()
 
     message_id = created.json()["id"]
     cleared = await client.put(
-        f"/api/composer/{message_id}", json={"body_en": "", "body_nl": "x"}, headers=ADMIN_HEADERS
+        f"/api/composer/{message_id}", json={"body_nl": "", "body_en": "x"}, headers=ADMIN_HEADERS
     )
     assert cleared.status_code == 400
-    switched = await client.put(f"/api/composer/{message_id}", json={"text_language": "fr"}, headers=ADMIN_HEADERS)
-    assert switched.status_code == 200
-    assert switched.json()["text_language"] == "fr"
+    translated = await client.put(f"/api/composer/{message_id}", json={"body_fr": "Corps"}, headers=ADMIN_HEADERS)
+    assert translated.status_code == 200
+    assert translated.json()["body_fr"] == "Corps"

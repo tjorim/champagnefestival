@@ -152,9 +152,9 @@ async def db_session(engine):
     async with factory() as session:
         # The categories every installation starts with (migration 006 seeds the same keys).
         for key, label in DEFAULT_TEST_CATEGORIES.items():
-            await session.merge(EventCategory(key=key, label_language="nl", label_nl=label))
+            await session.merge(EventCategory(key=key, label_nl=label))
         for key, label in DEFAULT_TEST_PRODUCT_CATEGORIES.items():
-            await session.merge(ProductCategory(key=key, label_language="en", label_en=label))
+            await session.merge(ProductCategory(key=key, label_nl=label))
         await session.commit()
         yield session
     async with engine.begin() as conn:

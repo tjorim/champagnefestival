@@ -67,6 +67,14 @@ export const exclusions = {
     titleEn: "form field key",
     descriptionEn: "form field key",
   },
+  "components/admin/PollQuestionCard.tsx": {
+    titleNl: "form field key",
+    descriptionNl: "form field key",
+    titleFr: "form field key",
+    descriptionFr: "form field key",
+    titleEn: "form field key",
+    descriptionEn: "form field key",
+  },
   "components/admin/LayoutEditor.tsx": {
     "border-color 0.15s, opacity 0.15s": "CSS transition",
     "border-color 0.15s": "CSS transition",

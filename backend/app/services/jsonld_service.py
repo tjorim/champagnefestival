@@ -49,7 +49,7 @@ def _festival_date_range(dates: list[date]) -> tuple[datetime, datetime]:
 
 def _sub_events(events: list[dict], locale: Locale) -> list[dict]:
     """The edition's events as schema.org ``subEvent`` entries, titled in *locale*
-    (original language when that translation is missing)."""
+    (Dutch when that translation is missing)."""
     entries = []
     for event in events:
         event_date = date.fromisoformat(event["date"]) if isinstance(event["date"], str) else event["date"]
@@ -59,19 +59,13 @@ def _sub_events(events: list[dict], locale: Locale) -> list[dict]:
 
         entry = {
             "@type": "Event",
-            "name": resolve_text(
-                {language: event.get(f"title_{language}") for language in ("nl", "fr", "en")},
-                event["title_language"],
-                locale,
-            ),
+            "name": resolve_text({language: event.get(f"title_{language}") for language in ("nl", "fr", "en")}, locale),
             "startDate": starting(event["start_time"]),
         }
         if event.get("end_time"):
             entry["endDate"] = starting(event["end_time"])
         description = resolve_text(
-            {language: event.get(f"description_{language}") for language in ("nl", "fr", "en")},
-            event.get("description_language"),
-            locale,
+            {language: event.get(f"description_{language}") for language in ("nl", "fr", "en")}, locale
         )
         if description:
             entry["description"] = description

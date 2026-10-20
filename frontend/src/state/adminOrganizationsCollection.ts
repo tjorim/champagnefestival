@@ -113,7 +113,6 @@ export function applyAdminOrganizationSaved(
     collection.utils.writeUpsert({
       id: organization.id,
       name: organization.name,
-      description_language: organization.description_language ?? null,
       description_nl: organization.description_nl ?? null,
       description_fr: organization.description_fr ?? null,
       description_en: organization.description_en ?? null,

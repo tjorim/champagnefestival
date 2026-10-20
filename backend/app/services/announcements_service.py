@@ -18,7 +18,6 @@ def to_dict(item: Announcement) -> dict:
         name: getattr(item, name)
         for name in (
             "id",
-            "text_language",
             "text_nl",
             "text_fr",
             "text_en",

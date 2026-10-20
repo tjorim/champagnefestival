@@ -1,19 +1,10 @@
 /**
- * Shared admin inputs for translated content: an "original language" picker and
- * one input per language. The original language must have text; the others are
- * optional translations, and visitors fall back to the original (same rule for
- * events, FAQ items, announcements, policies, products, ...).
+ * Shared admin inputs for translated content: one input per language. Dutch must
+ * have text; the others are optional translations, and visitors fall back to
+ * Dutch (same rule for events, FAQ items, announcements, policies, products, ...).
  */
 
-import type { ReactNode } from "react";
-import {
-  AdminField,
-  AdminInput,
-  AdminLabel,
-  AdminOption,
-  AdminSelect,
-  AdminTextarea,
-} from "@/components/admin/AdminFields";
+import { AdminField, AdminInput, AdminLabel, AdminTextarea } from "@/components/admin/AdminFields";
 import { m } from "@/paraglide/messages";
 import type { EventLanguage } from "@/types/event";
 
@@ -29,34 +20,9 @@ export type LocalizedText = Record<Language, string>;
 
 export const EMPTY_LOCALIZED_TEXT: LocalizedText = { nl: "", fr: "", en: "" };
 
-/** True when the original language has non-blank text. */
-export function hasOriginal(language: Language, text: LocalizedText): boolean {
-  return Boolean(text[language].trim());
-}
-
-export function OriginalLanguageSelect({
-  controlId,
-  label,
-  value,
-  onChange,
-}: {
-  controlId: string;
-  label: ReactNode;
-  value: Language;
-  onChange: (language: Language) => void;
-}) {
-  return (
-    <AdminField className="mb-4 max-w-60" controlId={controlId}>
-      <AdminLabel>{label}</AdminLabel>
-      <AdminSelect value={value} onValueChange={(next) => onChange(next as Language)}>
-        {LANGUAGES.map(({ language, name }) => (
-          <AdminOption key={language} value={language}>
-            {name()}
-          </AdminOption>
-        ))}
-      </AdminSelect>
-    </AdminField>
-  );
+/** True when the Dutch text is non-blank. */
+export function hasDutch(text: LocalizedText): boolean {
+  return Boolean(text.nl.trim());
 }
 
 /** One input (or textarea) per language, labelled with the language name. */

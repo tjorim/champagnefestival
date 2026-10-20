@@ -5,13 +5,12 @@ import { signOutVisitorSession, type GuestRegistration } from "@/utils/publicReg
 import { useForm } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { MinusIcon, PlusIcon } from "lucide-react";
-import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PublicField, PublicInput, PublicLabel } from "@/components/PublicFields";
+import MyPollSection from "@/components/MyPollSection";
 import { m } from "@/paraglide/messages";
 import { useAuth } from "@/contexts/AuthContext";
 import { deleteMyAccount } from "@/utils/meApi";
@@ -24,13 +23,9 @@ import {
   isValidNiss,
 } from "@/utils/belgianIdentityNumbers";
 import {
-  getMyPollOptions,
-  MAX_POLL_QUANTITY,
   getMyVolunteerIdentity,
   registerMyVolunteerIdentity,
-  replaceMyPollSelections,
   updateMyEidDocumentNumber,
-  type MyPollSelections,
 } from "@/utils/myVolunteerApi";
 
 /**
@@ -172,32 +167,6 @@ export default function MyAccountPage() {
   const identity =
     correctionMutation.data ?? registerMutation.data ?? identityMutation.data ?? null;
 
-  const pollOptionsMutation = useMutation({
-    mutationFn: () => getMyPollOptions(getAccessToken() ?? ""),
-    retry: false,
-  });
-
-  const pollSelectionsMutation = useMutation({
-    mutationFn: (selections: MyPollSelections) =>
-      replaceMyPollSelections(getAccessToken() ?? "", selections),
-    retry: false,
-  });
-
-  const poll = pollSelectionsMutation.data ?? pollOptionsMutation.data ?? null;
-
-  useEffect(() => {
-    // Same rationale as the identity effect above (#1037 review): without
-    // resetting, a previous account's saved poll picks would keep showing
-    // as this account's own until it explicitly resaves.
-    pollOptionsMutation.reset();
-    pollSelectionsMutation.reset();
-    if (!isVolunteer || !identity?.linked) return;
-    pollOptionsMutation.mutate();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isVolunteer, identity?.linked, getAccessToken]);
-
-  const savePollSelections = (next: MyPollSelections) => pollSelectionsMutation.mutate(next);
-
   const volunteerSection = (
     <>
       {identityMutation.isPending ? (
@@ -224,64 +193,7 @@ export default function MyAccountPage() {
             </dl>
           </Alert>
 
-          {pollOptionsMutation.isError && !poll && (
-            <Alert variant="danger">{m.my_poll_load_error()}</Alert>
-          )}
-
-          {!pollOptionsMutation.isPending && poll && poll.options.length > 0 && (
-            <Alert variant="secondary">
-              <h3 className="text-base font-medium leading-tight">{m.my_poll_heading()}</h3>
-              <p className="text-sm mb-4">{m.my_poll_description()}</p>
-              <ul className="list-none p-0 mb-2">
-                {poll.options.map((option) => {
-                  const quantity = poll.selections[option.id] ?? 0;
-                  const setQuantity = (next: number) =>
-                    savePollSelections({ ...poll.selections, [option.id]: next });
-                  return (
-                    <li key={option.id} className="flex items-center justify-between gap-2 mb-2">
-                      <span id={`my-poll-${option.id}-label`}>{option.label}</span>
-                      <div
-                        className="flex items-center gap-2"
-                        role="group"
-                        aria-labelledby={`my-poll-${option.id}-label`}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={quantity === 0 || pollSelectionsMutation.isPending}
-                          onClick={() => setQuantity(quantity - 1)}
-                          aria-label={m.my_poll_quantity_decrease({ label: option.label })}
-                        >
-                          <Icon icon={MinusIcon} />
-                        </Button>
-                        <span className="min-w-6 text-center" aria-live="polite">
-                          {quantity}
-                        </span>
-                        <Button
-                          variant="outline-warning"
-                          size="sm"
-                          disabled={
-                            quantity >= MAX_POLL_QUANTITY || pollSelectionsMutation.isPending
-                          }
-                          onClick={() => setQuantity(quantity + 1)}
-                          aria-label={m.my_poll_quantity_increase({ label: option.label })}
-                        >
-                          <Icon icon={PlusIcon} />
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              {pollSelectionsMutation.isError && (
-                <Alert variant="danger" className="py-2 text-sm mb-0">
-                  {pollSelectionsMutation.error instanceof Error
-                    ? pollSelectionsMutation.error.message
-                    : m.my_poll_save_error()}
-                </Alert>
-              )}
-            </Alert>
-          )}
+          <MyPollSection key={accountLabel} getAccessToken={getAccessToken} />
 
           <Alert variant="secondary">
             <h3 className="text-base font-medium leading-tight">{m.my_eid_correction_heading()}</h3>

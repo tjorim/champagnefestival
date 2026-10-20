@@ -424,17 +424,16 @@ Current gaps, dependencies, and preferred implementation order live in the
 ### Organization descriptions
 
 Admin `POST /api/organizations` and partial `PUT /api/organizations/{id}` accept
-`description_language` (`nl`, `fr`, or `en`) and nullable `description_nl`,
-`description_fr`, `description_en`. Each text is limited to 600 characters;
-leading/trailing whitespace is removed and blank text becomes null. Whenever
-any text exists, the selected original language must have non-empty text.
-Clear the description by setting all four fields to null. Updates validate the
+nullable `description_nl`, `description_fr`, `description_en`. Each text is limited to
+600 characters; leading/trailing whitespace is removed and blank text becomes null.
+Whenever a French or English text exists, the Dutch text must be non-empty.
+Clear the description by setting all three fields to null. Updates validate the
 merged stored/requested values, so translations can be edited independently.
 
 Descriptions are literal plain text: HTML and Markdown syntax is stored as text
 and escaped by the public UI, never interpreted. Admin collection responses and
 public edition organizations include all four fields. The visitor's language wins
-when non-empty, otherwise the original text is displayed. Descriptions appear
+when non-empty, otherwise the Dutch text is displayed. Descriptions appear
 under organization names in the public carousel, including a conditional vendor
 section when the edition payload contains vendors; floor plans and compact admin
 lists remain unchanged. The existing edition lineup restriction to producers
@@ -452,35 +451,30 @@ ordered by level (main first, untiered last) and then by lineup order, each with
 
 MCP `create_organization` and `update_organization` expose the same fields and validation.
 Omitted/null MCP arguments leave update fields unchanged; empty text strings
-clear individual translations, and an empty `description_language` clears the
-original-language selector. Clearing all text requires clearing that selector
-in the same update. Admin edits are immediately live. Manager proposals and
+clear individual translations. Clearing the Dutch text requires clearing the
+translations in the same update. Admin edits are immediately live. Manager proposals and
 supersession use the private review workflow below (#1193).
 
 ### Event titles, descriptions and categories (#1222)
 
 Events keep their text per language, following the organisation pattern.
-`title_language` (`nl`, `fr`, `en`; default `en` for API and MCP clients, the admin
-form preselects Dutch) names the original language and
-`title_nl`/`title_fr`/`title_en` hold the texts (each at most 200 characters). The
-description works the same way with `description_language` and
-`description_nl/fr/en` (each at most 10000 characters; all null means no
-description). Whitespace is trimmed and blank text becomes null. The original
-language must have text; the others are optional. Updates validate the merged
-stored/requested values, so one translation can be edited alone, an empty string
-clears a translation, and clearing every description text also drops
-`description_language`. Create and update take these fields only; there is no
-single-language `title`/`description` input.
+`title_nl`/`title_fr`/`title_en` hold the texts (each at most 200 characters; Dutch is
+required). The description works the same way with `description_nl/fr/en` (each at most
+10000 characters; all null means no description, and a French or English description needs
+a Dutch one). Whitespace is trimmed and blank text becomes null. Updates validate the merged
+stored/requested values, so one translation can be edited alone and an empty string
+clears a translation. Create and update take these fields only; there is no
+single-language `title`/`description` input and no original-language field.
 
 Every event response carries all stored languages plus `title`/`description`
 resolved for the `locale` query parameter (`nl`, `fr`, `en`) of the public
 `GET /api/editions/active` and `/upcoming` (MCP `get_event_schedule` takes the
-same `locale`). A missing translation falls back to the original language; with no
-`locale` the original is returned, so clients that predate translations keep
+same `locale`). A missing translation falls back to Dutch; with no
+`locale` the Dutch text is returned, so clients that predate translations keep
 working. The server-rendered home page (`/?lng=`) and its JSON-LD (`subEvent`
 entries) use the same resolved text, and registration confirmation emails title
 the event in the person's `preferred_language`. Admin lists, exports, audit
-entries and event-day screens keep showing the original-language title
+entries and event-day screens keep showing the Dutch title
 (`Event.title`).
 
 ### Organization stands
@@ -510,8 +504,8 @@ the same publication window as the stands and returns 404 for inactive editions.
 ### Event categories
 
 `Event.category` is the key of an admin-managed category (`event_categories`:
-`key`, `label_language`, `label_nl/fr/en`, `sort_order`). The labels follow the same
-pattern as event titles: the original language must have text, the others are
+`key`, `label_nl/fr/en`, `sort_order`). The labels follow the same
+pattern as event titles: Dutch must have text, the others are
 optional and fall back to it. The key (lowercase letters, digits, `-`, `_`; at most
 50 characters) is chosen on creation and cannot change, because events store it.
 Creating or moving an event to an unknown key is a 422; deleting a category that
@@ -522,7 +516,7 @@ events still use is a 409.
   stored labels; the frontend resolves labels client-side from them.
 - `POST`, `PUT /api/event-categories/{key}` and `DELETE` are admin-only and audited
   (`event_category_created|updated|deleted`). A `PUT` merges labels like an event
-  update: an empty string clears a translation, the original cannot be cleared.
+  update: an empty string clears a translation, the Dutch label cannot be cleared.
 - MCP: public `list_event_categories(locale)`; admin `create_event_category`,
   `update_event_category`, `delete_event_category`. `create_event` and
   `update_event` take a category key.
@@ -533,7 +527,7 @@ all three languages), normalises case/whitespace of existing values, and turns a
 other value events already use into a category of its own (key derived from the
 text, the text as Dutch label), logging each so its labels can be reviewed. It also
 moves existing `title`/`description` into the `nl` columns. Its downgrade keeps only
-the original-language text and drops the table.
+the Dutch text and drops the table.
 
 Admins can request editable machine drafts of a title or description with
 `GET`/`POST /api/events/translation` (same contract as the organisation drafts, text
@@ -543,10 +537,11 @@ limited to 2000 characters and a separate rate-limit bucket); see
 ### Translated content and product categories (#1222)
 
 Everything an administrator writes for visitors follows the organisation
-description pattern: an original language (`*_language`, default `en` for API and
-MCP clients; the admin forms preselect Dutch) that must have text, optional
-translations in `_nl`/`_fr`/`_en`, and a fallback to the original language, so a
-blank translation never hides content. Updates validate the merged stored and
+description pattern: Dutch (`*_nl`) always has text, French and English
+(`*_fr`, `*_en`) are optional translations, and a missing translation falls back to
+Dutch, so a blank translation never hides content. An optional description needs
+Dutch text as soon as it has any text. There is no original-language field: the vzw
+and the festival venue are in Flanders, so Dutch is the base language. Updates validate the merged stored and
 requested text; an empty string clears a translation; blank text is stored as null;
 database check constraints enforce the same rule.
 
@@ -554,11 +549,11 @@ database check constraints enforce the same rule.
 | --- | --- | --- |
 | Event | `title_*`, `description_*` | see above |
 | Event / product category | `label_*` | see below |
-| FAQ item | `text_language`, `question_*`, `answer_*` | a language is used only when its question and answer are both filled |
-| Announcement | `text_language`, `text_*`, `link_label_*` | a link needs a label in the original language |
-| Composed message | `text_language`, `title_*`, `body_*` | a language is used only when title and body are both filled |
-| Policy | `title_language`, `title_*`; version `content_language`, `content_*` | publishing needs the original language only (`required_locales` is gone) |
-| Product | `name_language`, `name_*`, `description_language`, `description_*` | an order line keeps the name in every language |
+| FAQ item | `question_*`, `answer_*` | a language is used only when its question and answer are both filled |
+| Announcement | `text_*`, `link_label_*` | a link needs a Dutch label |
+| Composed message | `title_*`, `body_*` | a language is used only when title and body are both filled |
+| Policy | `title_*`; version `content_*` | publishing needs Dutch content only (`required_locales` is gone) |
+| Product | `name_*`, `description_*` | an order line keeps the name in every language |
 
 Public reads (`/api/faq/active`, `/api/policies/{key}/current`, the edition
 endpoints) take `locale` and return the text
@@ -576,19 +571,83 @@ because delivery tracking counts bottles by it. `Product.category` references th
 (an unknown key is a 422); order lines copy the key when the order is placed.
 
 The same migration (`006`) moves existing FAQ items, announcements, composed messages, policies
-and products to Dutch (`nl`) as their original language, creates
+and products to Dutch (`nl`) as their original language (migration `009` later made Dutch the only
+required language and dropped the `*_language` columns, copying any French or English original into
+the Dutch column first and logging each table it did that for), creates
 `product_categories` with `champagne`, `food` and `other` (a value products already
 use is kept as a category of its own and logged), and drops `policies.required_locales`.
 Its downgrade keeps only the original-language text.
 
-Volunteer-only text is not translated. The meal poll (`edition_poll_options`) has a plain
-`label` per option and no kind: everything is delivered on the same day, so a volunteer
-just asks for a quantity of each option (`PUT /api/me/volunteer/poll-selections` with
-`{"selections": [{"option_id", "quantity"}]}`, quantity 1 to 20, an option left out means
-none, a full replace). The admin list (`GET /api/poll-options`, MCP `list_poll_options`) also
-returns each option's `total_quantity` and `volunteer_count`, the numbers to order from the
-caterer. It also turns an existing pick into a quantity of one and drops the kind;
-its downgrade makes every option a `dinner` (the kind that allows any number of picks).
+Volunteer-only text is not translated into other content tables, but the volunteer poll follows the
+same pattern for its question titles and option labels.
+
+#### Volunteer poll: questions (migration `009`)
+
+An edition's poll is a list of **questions** (`edition_poll_questions`), each of one `kind`:
+
+- `yes_no`: "will you join x on y" (dinner on Sunday, a play in December). A volunteer answers yes or no;
+  a yes also says how many people it stands for, themselves included (`people`, 1 to 10; a no stores 0).
+- `meals`: "choose your meals". The question owns a list of options (`edition_poll_options`, with a
+  `question_id`) and a volunteer asks for a quantity of each (1 to 20; an option left out means none),
+  so they can mix dishes or take several of one.
+
+Questions are translated like other content (`title_nl` required, `title_fr`/`title_en`, same for
+`description_*`), carry a `sort_order` (new ones go last) and their own `closes_at`. Options are `label_nl`
+(required), `label_fr`, `label_en` and a `dietary_tags` list (`vegetarian`, `vegan`, `gluten_free`,
+`lactose_free`, `contains_nuts`, replaced as a whole on update); only a meals question has options
+(422 `poll_question_not_meals` otherwise).
+
+- **Admin REST:** `GET/POST /api/poll-questions`, `PUT/DELETE /api/poll-questions/{id}`,
+  `POST /api/poll-questions/reorder` (`{edition_id, ordered_ids}`, every question exactly once) and
+  `POST /api/poll-questions/copy` (`{from_edition_id, to_edition_id}`: copies questions and their options,
+  never the answers, skipping questions whose kind and Dutch title already exist in the target).
+  Options: `POST/GET /api/poll-options`, `PUT/DELETE /api/poll-options/{id}`,
+  `POST /api/poll-options/reorder` (`{question_id, ordered_ids}`). Question reads include the counts to
+  order from: per option `total_quantity` and `volunteer_count`, per yes/no question `yes_count`,
+  `no_count` and `people_total`.
+- **Closing is per question:** `closes_at` is when volunteers can no longer change that answer.
+  `PUT /api/poll-questions/{id}` with `closes_at: null` reopens it and a past time closes it now. A
+  volunteer save on a closed question is a 409 with code `poll_question_closed`. The dietary note follows
+  the meals questions: it can be saved while at least one of them is open.
+- **Volunteer REST:** `GET /api/me/volunteer/poll?locale=` returns the active edition's questions in the
+  language asked for (Dutch fallback) with the volunteer's own answers; `PUT /api/me/volunteer/poll/questions/{id}`
+  replaces the answer to one question (`{selections: [{option_id, quantity}]}` for meals,
+  `{attending, people}` for yes/no); `PUT /api/me/volunteer/poll/note` sets the dietary note
+  (`{note}`, at most 500 characters, an empty string clears it; `volunteer_meal_notes`).
+- **Who answered what:** `GET /api/poll-questions/orders?edition_id=` lists every active volunteer (also
+  those who answered nothing) and anyone else holding an answer, with their answers in question order and
+  their note; MCP `list_poll_orders`. It contains volunteer names (admin only).
+- **Admin entry:** `PUT /api/poll-questions/orders/{volunteer_id}?edition_id=` (MCP `set_volunteer_poll_order`)
+  enters or corrects a volunteer's answers and note on their behalf, for example from an email. The body is
+  `{selections, attendance, note, confirm_closed}`; it replaces everything the volunteer answered for the
+  edition. A change to a question that has closed needs `confirm_closed: true` (otherwise 409
+  `poll_question_closed`). The volunteer must have the `volunteer` role (404 `volunteer_not_found`) and
+  every option and question must belong to the edition (404 `poll_option_not_found` /
+  `poll_question_not_found`). The audit entry `volunteer_poll_answers_set_by_admin` records the admin as
+  actor, the volunteer as subject and whether a closed question was changed. The admin dialog asks for a
+  confirmation first, with a stronger one when a question has closed.
+- **Deleting** an option volunteers picked is a 409 `poll_option_in_use` (with how many and how much) until
+  `?confirm_selections=true`; deleting a question volunteers answered is a 409 `poll_question_in_use` until
+  `?confirm_answers=true`. Confirming removes those answers and the audit entry lists them. On a closed
+  question both are a 409 `poll_question_closed` regardless: reopen it first.
+- MCP: `create_`/`update_`/`delete_poll_question`, `list_poll_questions`, `reorder_poll_questions`,
+  `copy_poll_questions`, `create_`/`update_`/`delete_poll_option`, `list_poll_options`,
+  `reorder_poll_options`, `list_poll_orders`, `set_volunteer_poll_order`. `update_poll_question` takes
+  `closes_at` or `reopen`.
+
+Everything that differs per kind (how answers are stored, counted, validated and shown) lives in one
+`PollKind` per kind in `app/services/poll_kinds.py`; `poll_questions_service` never branches on the kind. To
+add a kind, add a handler there and register it in `KINDS`, extend `POLL_QUESTION_KINDS` (and the check
+constraint with a migration) and `PollQuestionKind`; `tests/test_poll_kinds.py` fails until they agree. On the
+frontend the per-kind pieces are `Record<PollQuestionKind, ...>` maps (`utils/pollKinds.ts`,
+`components/MyPollAnswers.tsx`, `components/admin/pollAnswerFields.tsx`, `PollOrdersTable`), so a new kind
+fails type-checking until each says what to do with it. The REST shapes still carry kind-specific fields
+(`selections`, `attendance`), which a new kind would extend.
+
+Migration `009` turns the earlier option-only poll into this model: each edition that has options gets one
+"Maaltijden" meals question holding them (closing time and all), and its downgrade drops the questions and
+the yes/no answers. The poll was never released before `009`, so the API of the intermediate option-only
+shape (`/api/poll-options/settings|orders|copy`, `/api/me/volunteer/poll-options|poll-selections`) no longer exists.
 
 ### Organization manager self-service (#1192)
 
@@ -608,7 +667,7 @@ unification remains in #1209.
 | POST | `/api/visitor-sessions/redeem` | `{token}`; establishes the shared HttpOnly-cookie session and returns owned bookings; invalid/expired/replayed links return 401. |
 | GET | `/api/visitor-sessions/status` | `{authenticated, expires_at}`; absent/expired cookie returns false; no-store. |
 | POST | `/api/visitor-sessions/sign-out` | 204; revokes the shared email session and clears its cookie; safe to repeat. |
-| GET | `/api/me/organizations` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active, description_language, description_nl, description_fr, description_en}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
+| GET | `/api/me/organizations` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active, description_nl, description_fr, description_en}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
 
 Uses existing SMTP/frontend URL settings and visitor credential housekeeping.
 No new authentication migration is required.

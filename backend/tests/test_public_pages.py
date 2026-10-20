@@ -30,7 +30,6 @@ async def _seed_policy(db_session, *, key: str = "privacy") -> None:
     db_session.add(
         Policy(
             key=key,
-            title_language="nl",
             title_nl="Privacybeleid",
             title_en="Privacy Policy",
             title_fr="Politique de Confidentialité",
@@ -45,7 +44,6 @@ async def _publish_policy(client, *, content_nl: str = "## Titel\n\nInhoud.") ->
     await client.put(
         "/api/policies/privacy/draft",
         json={
-            "content_language": "nl",
             "content_nl": content_nl,
             "content_en": "## Title\n\nContent.",
             "content_fr": "## Titre\n\nContenu.",
@@ -84,7 +82,6 @@ async def test_home_page_renders_faq_and_schedule_and_json_ld(client):
     faq = await client.post(
         "/api/faq",
         json={
-            "text_language": "nl",
             "question_nl": "Wat is dit?",
             "answer_nl": "Een champagnefestival.",
             "active": True,
@@ -106,7 +103,6 @@ async def test_home_page_escapes_admin_authored_faq_content(client):
     r = await client.post(
         "/api/faq",
         json={
-            "text_language": "nl",
             "question_nl": "<script>alert('xss')</script>",
             "answer_nl": "Safe? <img src=x onerror=alert(1)>",
             "active": True,
@@ -126,7 +122,6 @@ async def test_home_page_respects_locale_query_param(client):
     faq = await client.post(
         "/api/faq",
         json={
-            "text_language": "nl",
             "question_nl": "NL vraag",
             "answer_nl": "NL antwoord",
             "question_en": "EN question",
@@ -225,7 +220,7 @@ async def test_faq_mutation_invalidates_the_cache_within_the_ttl(client):
 
     created = await client.post(
         "/api/faq",
-        json={"text_language": "nl", "question_nl": "Nieuwe FAQ vraag", "answer_nl": "Nieuw antwoord.", "active": True},
+        json={"question_nl": "Nieuwe FAQ vraag", "answer_nl": "Nieuw antwoord.", "active": True},
         headers=ADMIN_HEADERS,
     )
     assert created.status_code == 201

@@ -149,7 +149,6 @@ async def test_deactivate_member_keeps_role_person_and_registrations(db_session)
         Event(
             id="event-1",
             edition_id="edition-1",
-            title_language="nl",
             title_nl="Vrijdagavond",
             date=date(2099, 3, 21),
             start_time="18:00",

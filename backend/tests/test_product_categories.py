@@ -13,13 +13,19 @@ from tests.helpers import ADMIN_HEADERS, _create_event, mcp_session_factory
 
 
 async def _create(client, **body):
-    return await client.post("/api/product-categories", json={"label_language": "nl", **body}, headers=ADMIN_HEADERS)
+    return await client.post("/api/product-categories", json={**body}, headers=ADMIN_HEADERS)
 
 
 async def _product(client, event_id: str, category: str, **overrides):
     return await client.post(
         "/api/products",
-        json={"event_id": event_id, "price": "5.00", "category": category, "name_en": "Item", **overrides},
+        json={
+            "event_id": event_id,
+            "price": "5.00",
+            "category": category,
+            "name_nl": "Item",
+            **overrides,
+        },
         headers=ADMIN_HEADERS,
     )
 
@@ -34,12 +40,12 @@ async def test_list_is_public_ordered_and_resolves_labels_for_the_locale(client)
     assert keys.index("first") < keys.index("alpha") < keys.index("zeta")
     labels = {category["key"]: category["label"] for category in listed}
     assert labels["alpha"] == "Alpha"
-    assert labels["zeta"] == "Zeta"  # no French label: the original language
+    assert labels["zeta"] == "Zeta"  # no French label: falls back to Dutch
     assert (await client.get("/api/product-categories", params={"locale": "de"})).status_code == 422
 
 
 async def test_create_validates_the_key_and_the_original_label(client):
-    created = await _create(client, key="soft-drinks_2", label_language="en", label_en="Soft drinks", sort_order=3)
+    created = await _create(client, key="soft-drinks_2", label_nl="Soft drinks", sort_order=3)
     assert created.status_code == 201, created.text
     assert (created.json()["label"], created.json()["sort_order"]) == ("Soft drinks", 3)
 
@@ -48,7 +54,7 @@ async def test_create_validates_the_key_and_the_original_label(client):
         {"key": "Soft", "label_nl": "x"},
         {"key": "1soft", "label_nl": "x"},
         {"key": "nolabel"},
-        {"key": "wrong-original", "label_language": "fr", "label_nl": "Seulement"},
+        {"key": "old-shape", "label_language": "nl", "label_nl": "x"},  # the flag is gone
         {"key": "blank", "label_nl": "   "},
     ):
         assert (await _create(client, **bad)).status_code == 422, bad
@@ -146,9 +152,7 @@ async def test_mcp_tools_manage_categories_and_products_use_them(client, db_sess
     event = await _create_event(client, edition_id="edition-product-category-mcp")
     factory = mcp_session_factory(db_session)
 
-    created = await mcp_categories.create_product_category(
-        factory, "admin-1", key="soft", label_language="nl", label_nl="Frisdrank"
-    )
+    created = await mcp_categories.create_product_category(factory, "admin-1", key="soft", label_nl="Frisdrank")
     assert created["key"] == "soft"
     updated = await mcp_categories.update_product_category(factory, "admin-1", "soft", label_en="Soft drinks")
     assert updated["label_en"] == "Soft drinks"
@@ -156,12 +160,10 @@ async def test_mcp_tools_manage_categories_and_products_use_them(client, db_sess
     assert {c["key"]: c["label"] for c in english["product_categories"]}["soft"] == "Soft drinks"
 
     with pytest.raises(ValueError, match="already exists"):
-        await mcp_categories.create_product_category(
-            factory, "admin-1", key="soft", label_language="nl", label_nl="Nog eens"
-        )
+        await mcp_categories.create_product_category(factory, "admin-1", key="soft", label_nl="Nog eens")
 
     product = await mcp_products.create_product(
-        factory, "admin-1", event_id=event["id"], price=2.5, category="soft", name_en="Cola"
+        factory, "admin-1", event_id=event["id"], price=2.5, category="soft", name_nl="Cola"
     )
     with pytest.raises(ValueError, match="1 product"):
         await mcp_categories.delete_product_category(factory, "admin-1", "soft")

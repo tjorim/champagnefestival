@@ -31,7 +31,7 @@ import { categoryLabel, useEventCategories } from "@/hooks/useCategories";
 import { queryKeys } from "@/utils/queryKeys";
 import EditionArtwork from "./EditionArtwork";
 import EditionModal from "./EditionModal";
-import EditionPollOptionsModal from "./EditionPollOptionsModal";
+import EditionPollModal from "./EditionPollModal";
 import EventModal from "./EventModal";
 import EventProductsModal from "./EventProductsModal";
 import { parseEditionDate, type Edition } from "./editionTypes";
@@ -395,7 +395,7 @@ export default function EditionCard({
             queryClient.invalidateQueries({ queryKey: editionEventsQueryKey })
           }
         />
-        <EditionPollOptionsModal
+        <EditionPollModal
           show={pollOptionsModalOpen}
           edition={edition}
           authHeaders={authHeaders}

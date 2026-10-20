@@ -21,7 +21,7 @@ from app.services import organization_logos
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.utils import organization_to_dict
 
-DESCRIPTION_FIELDS = ("description_language", "description_nl", "description_fr", "description_en")
+DESCRIPTION_FIELDS = ("description_nl", "description_fr", "description_en")
 
 
 async def editions_linking(db: AsyncSession, organization_id: int) -> list[str]:
@@ -102,7 +102,7 @@ async def apply_organization_update(
     descriptions = {field: getattr(e, field) for field in DESCRIPTION_FIELDS}
     descriptions.update(body.model_dump(include=set(DESCRIPTION_FIELDS), exclude_unset=True))
     try:
-        validated = OrganizationDescription.model_validate(descriptions).validate_original()
+        validated = OrganizationDescription.model_validate(descriptions).validate_dutch()
     except ValueError as exc:
         raise ValidationFailedError(str(exc)) from exc
     for field in body.model_fields_set.intersection(DESCRIPTION_FIELDS):
