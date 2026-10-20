@@ -40,8 +40,7 @@ async def test_private_until_accept_and_retry(client, db_session, manager, monke
     body = {
         "submission_id": str(uuid4()),
         "website": "https://new.example",
-        "description_language": "fr",
-        "description_fr": "Bonjour",
+        "description_nl": "Hallo",
         "description_en": "Hello",
     }
     url = f"/api/me/organizations/{row.id}/changes"
@@ -51,7 +50,7 @@ async def test_private_until_accept_and_retry(client, db_session, manager, monke
     assert (await client.post(url, json=body)).json() == change
     assert len((await db_session.scalars(select(OutboxJob))).all()) == 1
     live = (await client.get("/api/organizations", headers=ADMIN_HEADERS)).json()[0]
-    assert live["website"] == "" and live["description_fr"] is None
+    assert live["website"] == "" and live["description_nl"] is None
     # Public edition payload is assembled exclusively from the live organization.
     from tests.helpers import _create_event
 
@@ -63,17 +62,17 @@ async def test_private_until_accept_and_retry(client, db_session, manager, monke
     public = await client.get("/api/editions/active")
     assert public.status_code == 200
     assert [item["id"] for item in public.json()["producers"]] == [row.id]
-    assert "Bonjour" not in public.text and "new.example" not in public.text
+    assert "Hallo" not in public.text and "new.example" not in public.text
     pending = (await client.get("/api/organizations/changes", headers=ADMIN_HEADERS)).json()
-    assert pending[0]["current"]["description_fr"] is None
-    assert pending[0]["proposed"]["description_fr"] == "Bonjour"
+    assert pending[0]["current"]["description_nl"] is None
+    assert pending[0]["proposed"]["description_nl"] == "Hallo"
     assert (await decision(client, change, "accepted")).status_code == 200
     assert (await decision(client, change, "accepted")).status_code == 200
     assert (await decision(client, change, "rejected")).status_code == 409
     await db_session.refresh(row)
-    assert row.website == body["website"] and row.description_fr == "Bonjour"
+    assert row.website == body["website"] and row.description_nl == "Hallo"
     published = await client.get("/api/editions/active")
-    assert "Bonjour" in published.text and "new.example" in published.text
+    assert "Hallo" in published.text and "new.example" in published.text
     actions = (
         await db_session.scalars(
             select(AuditEntry)
@@ -106,11 +105,7 @@ async def test_replacement_rejection_and_no_notification(client, db_session, man
 async def test_admin_edit_supersedes_only_matching_fields(client, db_session, manager):
     await login(client, manager)
     row = manager[1][0]
-    change = (
-        await propose(
-            client, row, website="https://proposal.example", description_language="nl", description_nl="Voorstel"
-        )
-    ).json()
+    change = (await propose(client, row, website="https://proposal.example", description_nl="Voorstel")).json()
     update = await client.put(
         f"/api/organizations/{row.id}", json={"website": "https://admin.example"}, headers=ADMIN_HEADERS
     )
@@ -236,13 +231,13 @@ async def test_original_clear_supersedes_dependent_translation(client, db_sessio
     row = manager[1][0]
     await client.put(
         f"/api/organizations/{row.id}",
-        json={"description_language": "nl", "description_nl": "Live"},
+        json={"description_nl": "Live"},
         headers=ADMIN_HEADERS,
     )
     change = (await propose(client, row, description_fr="Translation", website="https://proposal.example")).json()
     await client.put(
         f"/api/organizations/{row.id}",
-        json={"description_language": None, "description_nl": None},
+        json={"description_nl": None},
         headers=ADMIN_HEADERS,
     )
     pending = (await client.get(f"/api/me/organizations/{row.id}/changes")).json()[0]

@@ -9,7 +9,6 @@ import OrganizationChangeReview from "./admin/OrganizationChangeReview";
 
 const texts = {
   website: "https://old.example",
-  description_language: "nl",
   description_nl: "Live Dutch",
   description_fr: null,
   description_en: null,
@@ -23,7 +22,6 @@ const change = {
   current: texts,
   proposed: {
     website: "https://new.example",
-    description_language: "fr",
     description_fr: "Proposed French",
   },
   superseded_fields: [],

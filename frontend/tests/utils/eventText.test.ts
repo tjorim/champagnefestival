@@ -9,7 +9,6 @@ const event = {
   titleNl: "Openingsavond",
   titleEn: "Opening night",
   description: "Een glas om te starten",
-  descriptionLanguage: "nl" as const,
   descriptionNl: "Een glas om te starten",
 };
 
@@ -19,26 +18,25 @@ describe("eventTitle / eventDescription", () => {
     expect(eventTitle(event, "nl")).toBe("Openingsavond");
   });
 
-  it("falls back to the original language for a missing or blank translation", () => {
+  it("falls back to Dutch for a missing or blank translation", () => {
     expect(eventTitle(event, "fr")).toBe("Openingsavond");
     expect(eventTitle({ ...event, titleEn: "   " }, "en")).toBe("Openingsavond");
     expect(eventTitle(event, "de")).toBe("Openingsavond");
     expect(eventDescription(event, "en")).toBe("Een glas om te starten");
   });
 
-  it("uses the original language of the field, not the locale's neighbour", () => {
-    const french = {
+  it("uses the resolved text when Dutch is missing from the payload", () => {
+    const legacy = {
       ...noEventTranslations,
       title: "Dégustation",
-      titleLanguage: "fr" as const,
       titleFr: "Dégustation",
       description: "",
     };
-    expect(eventTitle(french, "nl")).toBe("Dégustation");
-    expect(eventDescription(french, "nl")).toBe("");
+    expect(eventTitle(legacy, "nl")).toBe("Dégustation");
+    expect(eventDescription(legacy, "nl")).toBe("");
   });
 
-  it("shows only the original when nothing is translated, in every locale", () => {
+  it("shows only the Dutch text when nothing is translated, in every locale", () => {
     const plain = { ...noEventTranslations, title: "Brunch", titleNl: "Brunch", description: "" };
     for (const locale of ["nl", "fr", "en"]) expect(eventTitle(plain, locale)).toBe("Brunch");
   });
@@ -55,7 +53,7 @@ describe("productName / productDescription", () => {
     descriptionNl: "Goed gekoeld",
   };
 
-  it("shows the visitor's language and falls back to the original", () => {
+  it("shows the visitor's language and falls back to Dutch", () => {
     expect(productName(product, "en")).toBe("Bottle");
     expect(productName(product, "fr")).toBe("Fles");
     expect(productName({ ...product, nameEn: " " }, "en")).toBe("Fles");
@@ -63,11 +61,6 @@ describe("productName / productDescription", () => {
   });
 
   it("uses an empty description when there is none", () => {
-    expect(
-      productDescription(
-        { ...product, description: "", descriptionLanguage: null, descriptionNl: null },
-        "fr",
-      ),
-    ).toBe("");
+    expect(productDescription({ ...product, description: "", descriptionNl: null }, "fr")).toBe("");
   });
 });

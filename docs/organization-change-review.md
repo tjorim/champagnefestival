@@ -18,7 +18,7 @@ audit entries remain.
 | --- | --- | --- |
 | `GET /api/me/organizations` | Verified signed-in identity | Managed organizations, including live description texts. |
 | `GET /api/me/organizations/{id}/changes` | Current manager | History newest first, with status, reason, superseded fields, proposed and current texts; `Cache-Control: no-store`. |
-| `POST /api/me/organizations/{id}/changes` | Current manager | Required UUID `submission_id`; optional `website`, `description_language`, `description_nl`, `description_fr`, `description_en`. At least one field required. Unknown fields rejected. |
+| `POST /api/me/organizations/{id}/changes` | Current manager | Required UUID `submission_id`; optional `website`, `description_nl`, `description_fr`, `description_en`. At least one field required. Unknown fields rejected. |
 | `GET /api/organizations/changes`; MCP `list_organization_changes` | Admin | Pending proposals with current values for review. |
 | `POST /api/organizations/changes/{id}/decision`; MCP `decide_organization_change` | Admin | `decision`: `accepted` or `rejected`; optional `reason` (2,000 characters). Repeats of the same decision converge; opposite decisions/replaced/superseded IDs return 409 (MCP error). |
 
@@ -39,7 +39,7 @@ Accept changes only fields still pending. Rejection preserves all live data.
 Submit, decisions and direct admin edits serialize on the same organization row
 lock, refreshing the row after acquiring the lock. An admin's direct REST/MCP
 edit removes matching fields from the pending proposal. If changing/clearing the
-original language makes remaining proposed translations invalid, those dependent
+Dutch text makes remaining proposed translations invalid, those dependent
 description fields are superseded too. Remaining unrelated fields stay pending;
 an empty proposal becomes `superseded`. History records the removed field names,
 and audit entries identify each submitting or reviewing actor. An accept or

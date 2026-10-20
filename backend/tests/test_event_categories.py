@@ -15,7 +15,7 @@ from tests.helpers import ADMIN_HEADERS, _create_event, mcp_session_factory
 
 
 async def _create(client, **body):
-    return await client.post("/api/event-categories", json={"label_language": "nl", **body}, headers=ADMIN_HEADERS)
+    return await client.post("/api/event-categories", json={**body}, headers=ADMIN_HEADERS)
 
 
 async def test_list_is_public_ordered_and_resolves_labels_for_the_locale(client):
@@ -29,13 +29,13 @@ async def test_list_is_public_ordered_and_resolves_labels_for_the_locale(client)
     assert keys.index("first") < keys.index("alpha") < keys.index("zeta")
     labels = {category["key"]: category["label"] for category in listed}
     assert labels["alpha"] == "Alpha"
-    assert labels["zeta"] == "Zeta"  # no French label: the original language
+    assert labels["zeta"] == "Zeta"  # no French label: falls back to Dutch
     assert (await client.get("/api/event-categories")).json()[0]["label"]
     assert (await client.get("/api/event-categories", params={"locale": "de"})).status_code == 422
 
 
 async def test_create_validates_the_key_and_the_original_label(client):
-    created = await _create(client, key="gala-night_2", label_language="en", label_en="Gala night", sort_order=3)
+    created = await _create(client, key="gala-night_2", label_nl="Gala night", sort_order=3)
     assert created.status_code == 201, created.text
     assert created.json()["label"] == "Gala night"
     assert created.json()["sort_order"] == 3
@@ -47,7 +47,7 @@ async def test_create_validates_the_key_and_the_original_label(client):
         {"key": "gala night", "label_nl": "x"},
         {"key": "a" * 51, "label_nl": "x"},
         {"key": "nolabel"},
-        {"key": "wrong-original", "label_language": "fr", "label_nl": "Seulement"},
+        {"key": "old-shape", "label_language": "nl", "label_nl": "x"},  # the flag is gone
         {"key": "blank", "label_nl": "   "},
         {"key": "long", "label_nl": "x" * 101},
         {"key": "negative", "label_nl": "x", "sort_order": -1},
@@ -70,12 +70,12 @@ async def test_update_edits_single_labels_and_keeps_the_key(client):
 
     no_original = await client.put("/api/event-categories/gala", json={"label_nl": ""}, headers=ADMIN_HEADERS)
     assert no_original.status_code == 400
-    assert "original language" in no_original.text
+    assert "Dutch" in no_original.text
 
-    switched = await client.put(
+    old_shape = await client.put(
         "/api/event-categories/gala", json={"label_language": "fr", "label_fr": "Gala"}, headers=ADMIN_HEADERS
     )
-    assert (switched.json()["label_language"], switched.json()["label"]) == ("fr", "Gala")
+    assert old_shape.status_code == 422
 
     assert (
         await client.put("/api/event-categories/gala", json={"key": "other"}, headers=ADMIN_HEADERS)
@@ -130,9 +130,7 @@ async def test_mcp_tools_manage_categories_and_events_use_them(db_session):
     from app.models import Edition, Venue
 
     factory = mcp_session_factory(db_session)
-    created = await mcp_categories.create_event_category(
-        factory, "admin-1", key="gala", label_language="nl", label_nl="Gala"
-    )
+    created = await mcp_categories.create_event_category(factory, "admin-1", key="gala", label_nl="Gala")
     assert created["key"] == "gala"
     updated = await mcp_categories.update_event_category(factory, "admin-1", "gala", label_en="Gala night")
     assert updated["label_en"] == "Gala night"
@@ -140,13 +138,9 @@ async def test_mcp_tools_manage_categories_and_events_use_them(db_session):
     assert {c["key"]: c["label"] for c in english["event_categories"]}["gala"] == "Gala night"
 
     with pytest.raises(ValueError, match="already exists"):
-        await mcp_categories.create_event_category(
-            factory, "admin-1", key="gala", label_language="nl", label_nl="Nog eens"
-        )
+        await mcp_categories.create_event_category(factory, "admin-1", key="gala", label_nl="Nog eens")
     with pytest.raises(ValueError, match="key"):
-        await mcp_categories.create_event_category(
-            factory, "admin-1", key="Not A Key", label_language="nl", label_nl="x"
-        )
+        await mcp_categories.create_event_category(factory, "admin-1", key="Not A Key", label_nl="x")
 
     db_session.add(Venue(id="venue-cat", name="Venue"))
     await db_session.flush()
@@ -156,8 +150,7 @@ async def test_mcp_tools_manage_categories_and_events_use_them(db_session):
         factory,
         "admin-1",
         edition_id="edition-cat",
-        title_language="en",
-        title_en="Gala-avond",
+        title_nl="Gala-avond",
         date=date(2099, 3, 21),
         start_time="19:00",
         category="gala",

@@ -31,7 +31,7 @@ async def list_active_faq_items(
     """Public: active FAQ items in display order, in `locale`.
 
     An item that is not fully translated (question and answer) into `locale`
-    is shown in its original language instead of being omitted.
+    is shown in Dutch instead of being omitted.
     """
     result = await db.execute(select(FaqItem).where(FaqItem.active.is_(True)).order_by(FaqItem.sort_order))
     return [faq_item_to_public_dict(f, locale) for f in result.scalars().all()]

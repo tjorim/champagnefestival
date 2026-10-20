@@ -37,7 +37,6 @@ export const SPONSOR_TIERS = ["main", "partner", "supporter"] as const;
 export type SponsorTier = (typeof SPONSOR_TIERS)[number];
 
 export interface SliderItem {
-  description_language?: "nl" | "fr" | "en" | null;
   description_nl?: string | null;
   description_fr?: string | null;
   description_en?: string | null;

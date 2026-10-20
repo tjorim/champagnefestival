@@ -90,7 +90,6 @@ export function apiFaqItemToFaqItem(d: Record<string, unknown>): FaqItem {
   const text = (value: unknown) => (typeof value === "string" && value.trim() ? value : null);
   return {
     id: d.id as string,
-    textLanguage: d.text_language === "fr" || d.text_language === "en" ? d.text_language : "nl",
     questionNl: text(d.question_nl),
     questionFr: text(d.question_fr),
     questionEn: text(d.question_en),

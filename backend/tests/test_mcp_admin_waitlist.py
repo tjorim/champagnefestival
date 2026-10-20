@@ -15,7 +15,6 @@ async def _entry(client, db_session, *, entry_id: str, event_id: str, product_id
             "/api/products",
             json={
                 "event_id": event_id,
-                "name_language": "nl",
                 "name_nl": "Champagneontbijt",
                 "price": "0",
                 "category": "other",

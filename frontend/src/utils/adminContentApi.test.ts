@@ -100,11 +100,9 @@ describe("saveEditionEvent", () => {
         editionId: "2026-march",
         formData: {
           editionId: "2026-march",
-          titleLanguage: "nl",
           titleNl: "Proeverij",
           titleFr: "",
           titleEn: "",
-          descriptionLanguage: "nl",
           descriptionNl: "",
           descriptionFr: "",
           descriptionEn: "",
@@ -127,16 +125,14 @@ describe("saveEditionEvent", () => {
     expect(body.registrations_close_at).toBe(new Date("2026-03-21T17:00").toISOString());
   });
 
-  it("sends the per-language text, with blank translations cleared and no stray description language", async () => {
+  it("sends the per-language text, with blank translations cleared", async () => {
     const fetchMock = mockFetchResponse({ id: "event-1", products: [] });
     vi.stubGlobal("fetch", fetchMock);
     const formData = {
       editionId: "2026-march",
-      titleLanguage: "fr" as const,
-      titleNl: " ",
+      titleNl: "Degustatie",
       titleFr: " Dégustation ",
       titleEn: "Tasting",
-      descriptionLanguage: "fr" as const,
       descriptionNl: "",
       descriptionFr: "",
       descriptionEn: "",
@@ -157,29 +153,28 @@ describe("saveEditionEvent", () => {
     );
 
     expect(sentBody(fetchMock)).toMatchObject({
-      title_language: "fr",
-      title_nl: null,
+      title_nl: "Degustatie",
       title_fr: "Dégustation",
       title_en: "Tasting",
-      description_language: null,
       description_nl: null,
       description_fr: null,
       description_en: null,
       category: "tasting",
     });
     expect(sentBody(fetchMock)).not.toHaveProperty("title");
+    expect(sentBody(fetchMock)).not.toHaveProperty("title_language");
 
     const withDescription = mockFetchResponse({ id: "event-1", products: [] });
     vi.stubGlobal("fetch", withDescription);
     await saveEditionEvent(
       {
         editionId: "2026-march",
-        formData: { ...formData, descriptionLanguage: "en", descriptionEn: "An evening" },
+        formData: { ...formData, descriptionNl: "Een avond", descriptionEn: "An evening" },
       },
       authHeaders,
     );
     expect(sentBody(withDescription)).toMatchObject({
-      description_language: "en",
+      description_nl: "Een avond",
       description_en: "An evening",
     });
   });

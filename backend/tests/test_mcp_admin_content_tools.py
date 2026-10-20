@@ -48,7 +48,7 @@ async def test_announcement_and_composer_wrappers(admin_backend):
 
 
 async def test_policy_wrappers(admin_backend, db_session):
-    db_session.add(Policy(key="privacy", title_language="nl", title_nl="Privacybeleid"))
+    db_session.add(Policy(key="privacy", title_nl="Privacybeleid"))
     await db_session.commit()
 
     assert (await admin_backend.create_policy_draft("privacy"))["status"] == "draft"

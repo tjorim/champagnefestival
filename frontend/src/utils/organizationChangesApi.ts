@@ -3,7 +3,6 @@ import { apiErrorFromResponse } from "@/utils/apiErrors";
 
 export const organizationTextFields = [
   "website",
-  "description_language",
   "description_nl",
   "description_fr",
   "description_en",
@@ -41,7 +40,6 @@ export function organizationFieldLabel(field: string): string {
     (
       {
         website: m.admin_item_website_url,
-        description_language: m.admin_item_description_language,
         description_nl: m.admin_item_description_nl,
         description_fr: m.admin_item_description_fr,
         description_en: m.admin_item_description_en,

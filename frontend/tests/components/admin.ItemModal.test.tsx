@@ -18,7 +18,7 @@ function setup() {
           id: 1,
           name: "Maison",
           image: "/logo.svg",
-          description_language: "fr",
+          description_nl: "Hallo",
           description_fr: "Bonjour",
           description_en: "Hello",
         }}
@@ -32,9 +32,9 @@ function setup() {
 }
 
 describe("organization description editor", () => {
-  it("loads and saves descriptions and their original language", async () => {
+  it("loads and saves descriptions in every language", async () => {
     const onSave = setup();
-    expect(screen.getByLabelText("admin_item_description_fr")).toHaveValue("Bonjour");
+    expect(screen.getByLabelText("admin_item_description_nl")).toHaveValue("Hallo");
     fireEvent.change(screen.getByLabelText("admin_item_description_en"), {
       target: { value: "Updated" },
     });
@@ -42,25 +42,26 @@ describe("organization description editor", () => {
     await waitFor(() =>
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({
-          description_language: "fr",
+          description_nl: "Hallo",
           description_fr: "Bonjour",
           description_en: "Updated",
         }),
       ),
     );
   });
-  it("rejects missing original text and allows clearing all texts", async () => {
+  it("rejects translations without Dutch text and allows clearing all texts", async () => {
     const onSave = setup();
-    fireEvent.change(screen.getByLabelText("admin_item_description_fr"), { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("admin_item_description_nl"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
     expect(await screen.findByText("admin_item_description_original_required")).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText("admin_item_description_fr"), { target: { value: "" } });
     fireEvent.change(screen.getByLabelText("admin_item_description_en"), { target: { value: "" } });
     fireEvent.click(screen.getByRole("button", { name: "admin_save" }));
     await waitFor(() =>
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({
-          description_language: null,
+          description_nl: null,
           description_fr: null,
           description_en: null,
         }),

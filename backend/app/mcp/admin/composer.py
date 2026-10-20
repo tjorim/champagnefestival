@@ -21,7 +21,6 @@ from app.schemas import (
 )
 from app.services import composer_service as service
 from app.services.errors import ServiceError
-from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 
 async def list_composed_messages(session_factory: Any) -> dict:
@@ -43,7 +42,6 @@ async def create_composed_message(
     actor: str,
     *,
     channels: list[ComposedMessageChannel],
-    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
     title_nl: str | None = None,
     title_fr: str | None = None,
     title_en: str | None = None,
@@ -56,7 +54,6 @@ async def create_composed_message(
     body = validate_with_schema(
         ComposedMessageCreate,
         channels=channels,
-        text_language=text_language,
         title_nl=title_nl,
         title_fr=title_fr,
         title_en=title_en,
@@ -79,7 +76,6 @@ async def update_composed_message(
     message_id: str,
     *,
     channels: list[ComposedMessageChannel] | None = None,
-    text_language: Language | None = None,
     title_nl: str | None = None,
     title_fr: str | None = None,
     title_en: str | None = None,
@@ -99,7 +95,6 @@ async def update_composed_message(
         k: v
         for k, v in {
             "channels": channels,
-            "text_language": text_language,
             "title_nl": title_nl,
             "title_fr": title_fr,
             "title_en": title_en,

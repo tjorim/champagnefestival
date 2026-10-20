@@ -41,7 +41,7 @@ async def get_current(
 ) -> dict:
     """Public: the latest published version, rendered for `locale`.
 
-    A locale without content gets the policy's original language instead, and
+    A locale without content gets Dutch instead, and
     `locale` in the response names the language the HTML is written in.
     """
     policy, version = await _call(service.get_published(db, policy_key=policy_key))

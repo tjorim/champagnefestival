@@ -94,7 +94,7 @@ from app.schemas import (
 )
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
 from app.signage_schemas import SlideKind as SignageSlideKind
-from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
+from app.translations import Language
 from app.version import APP_VERSION
 
 logger = logging.getLogger(__name__)
@@ -273,8 +273,7 @@ class ChampagneFestivalMcpBackend:
             capsule-exchange edition instead.
         locale:
             ``nl``, ``fr`` or ``en``. ``title`` and ``description`` are resolved for this
-            language and fall back to the event's original language; omit it for the
-            original. Every stored language is also returned (``title_nl`` and so on).
+            language and fall back to Dutch; omit it for Dutch. Every stored language is also returned (``title_nl`` and so on).
 
         Returns a list of events with date, times, title, and category.
         No PII is included.
@@ -285,7 +284,7 @@ class ChampagneFestivalMcpBackend:
         """List the event categories (the valid ``category`` values for events) in display order.
 
         ``label`` is resolved for ``locale`` (``nl``, ``fr`` or ``en``) and falls back to the
-        category's original language; every stored label is also returned.
+        category's Dutch label; every stored label is also returned.
         """
         return await mcp_admin_event_categories.list_event_categories(self.session_factory, locale)
 
@@ -293,7 +292,7 @@ class ChampagneFestivalMcpBackend:
         """List the product categories (the valid ``category`` values for products) in display order.
 
         ``label`` is resolved for ``locale`` (``nl``, ``fr`` or ``en``) and falls back to the
-        category's original language; every stored label is also returned.
+        category's Dutch label; every stored label is also returned.
         """
         return await mcp_admin_product_categories.list_product_categories(self.session_factory, locale)
 
@@ -1139,11 +1138,9 @@ class ChampagneFestivalMcpBackend:
         date: dt_date,
         start_time: str,
         category: str,
-        title_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
-        description_language: Language | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1158,8 +1155,8 @@ class ChampagneFestivalMcpBackend:
         ``category`` is the key of an existing event category (see
         ``list_event_categories``). The title (and optional description) is stored per
         language: fill ``title_nl``/``title_fr``/``title_en`` (and optionally
-        ``description_*``); the text in ``title_language`` (default ``nl``) is required.
-        Visitors see their language and fall back to the original.
+        ``description_*``); the Dutch title is required.
+        Visitors see their language and fall back to Dutch.
 
         Off-festival (bourse/capsule-exchange) editions may only contain events on
         a single date. ``registrations_open_from`` may only be set when
@@ -1173,11 +1170,9 @@ class ChampagneFestivalMcpBackend:
             date=date,
             start_time=start_time,
             category=category,
-            title_language=title_language,
             title_nl=title_nl,
             title_fr=title_fr,
             title_en=title_en,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -1197,11 +1192,9 @@ class ChampagneFestivalMcpBackend:
         self,
         event_id: str,
         edition_id: str | None = None,
-        title_language: Language | None = None,
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
-        description_language: Language | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1225,7 +1218,7 @@ class ChampagneFestivalMcpBackend:
         to unset them instead of providing a value.
 
         Titles and descriptions are per language (``title_nl``/``title_fr``/``title_en``,
-        ``description_*``); the original language must keep its text, and an empty
+        ``description_*``); the Dutch text must be kept, and an empty
         string clears a translation. Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1234,11 +1227,9 @@ class ChampagneFestivalMcpBackend:
             self._actor(),
             event_id,
             edition_id=edition_id,
-            title_language=title_language,
             title_nl=title_nl,
             title_fr=title_fr,
             title_en=title_en,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -1258,7 +1249,6 @@ class ChampagneFestivalMcpBackend:
     async def create_event_category(
         self,
         key: str,
-        label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         label_nl: str | None = None,
         label_fr: str | None = None,
         label_en: str | None = None,
@@ -1267,7 +1257,7 @@ class ChampagneFestivalMcpBackend:
         """Create an event category. Requires the ``admin`` role.
 
         ``key`` is the stable identifier events store (lowercase letters, digits, ``-`` and
-        ``_``) and cannot be changed later. The label in ``label_language`` is required; the
+        ``_``) and cannot be changed later. The Dutch label is required; the
         other languages are optional and fall back to it.
         """
         self._require_admin()
@@ -1275,7 +1265,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             key=key,
-            label_language=label_language,
             label_nl=label_nl,
             label_fr=label_fr,
             label_en=label_en,
@@ -1285,7 +1274,6 @@ class ChampagneFestivalMcpBackend:
     async def update_event_category(
         self,
         key: str,
-        label_language: Language | None = None,
         label_nl: str | None = None,
         label_fr: str | None = None,
         label_en: str | None = None,
@@ -1293,7 +1281,7 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update an event category; omitted fields are left unchanged.
 
-        An empty string clears a translation; the label in the original language cannot be
+        An empty string clears a translation; the Dutch label cannot be
         cleared. Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1301,7 +1289,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             key,
-            label_language=label_language,
             label_nl=label_nl,
             label_fr=label_fr,
             label_en=label_en,
@@ -1316,7 +1303,6 @@ class ChampagneFestivalMcpBackend:
     async def create_product_category(
         self,
         key: str,
-        label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         label_nl: str | None = None,
         label_fr: str | None = None,
         label_en: str | None = None,
@@ -1325,7 +1311,7 @@ class ChampagneFestivalMcpBackend:
         """Create a product category. Requires the ``admin`` role.
 
         ``key`` is the stable identifier products store (lowercase letters, digits, ``-`` and
-        ``_``) and cannot be changed later. The label in ``label_language`` is required; the
+        ``_``) and cannot be changed later. The Dutch label is required; the
         other languages are optional and fall back to it.
         """
         self._require_admin()
@@ -1333,7 +1319,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             key=key,
-            label_language=label_language,
             label_nl=label_nl,
             label_fr=label_fr,
             label_en=label_en,
@@ -1343,7 +1328,6 @@ class ChampagneFestivalMcpBackend:
     async def update_product_category(
         self,
         key: str,
-        label_language: Language | None = None,
         label_nl: str | None = None,
         label_fr: str | None = None,
         label_en: str | None = None,
@@ -1351,7 +1335,7 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update a product category; omitted fields are left unchanged.
 
-        An empty string clears a translation; the label in the original language cannot be
+        An empty string clears a translation; the Dutch label cannot be
         cleared. Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1359,7 +1343,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             key,
-            label_language=label_language,
             label_nl=label_nl,
             label_fr=label_fr,
             label_en=label_en,
@@ -1383,11 +1366,9 @@ class ChampagneFestivalMcpBackend:
         event_id: str,
         price: float,
         category: str,
-        name_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         name_nl: str | None = None,
         name_fr: str | None = None,
         name_en: str | None = None,
-        description_language: Language | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1403,9 +1384,9 @@ class ChampagneFestivalMcpBackend:
 
         ``category`` is the key of an existing product category (see
         ``list_product_categories``). The name (and optional description) is stored per language: fill
-        ``name_nl``/``name_fr``/``name_en`` — the one in ``name_language`` (default
-        ``en``) is required — and likewise ``description_*`` with
-        ``description_language``. Visitors see their language and fall back to the original.
+        ``name_nl``/``name_fr``/``name_en`` — the Dutch one is required — and likewise
+        ``description_*`` (Dutch required when any description is given). Visitors see their
+        language and fall back to Dutch.
 
         ``purchasable`` (default ``true``) decides both standalone order
         availability and visitor visibility: a purchasable product can be
@@ -1425,11 +1406,9 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             event_id=event_id,
-            name_language=name_language,
             name_nl=name_nl,
             name_fr=name_fr,
             name_en=name_en,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -1457,11 +1436,9 @@ class ChampagneFestivalMcpBackend:
     async def update_product(
         self,
         product_id: str,
-        name_language: Language | None = None,
         name_nl: str | None = None,
         name_fr: str | None = None,
         name_en: str | None = None,
-        description_language: Language | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -1486,7 +1463,7 @@ class ChampagneFestivalMcpBackend:
         """Partially update a product; omitted fields are left unchanged.
 
         Name and description are per language: an empty string clears a
-        translation, and the original language must keep its name.
+        translation, and the Dutch name must be kept.
         ``stock``/``inclusions``/``included_product_id``/``included_per_guests``
         have no natural "clear" value, so pass ``clear_stock=True`` /
         ``clear_inclusions=True`` / ``clear_included_product_id=True`` /
@@ -1502,11 +1479,9 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             product_id,
-            name_language=name_language,
             name_nl=name_nl,
             name_fr=name_fr,
             name_en=name_en,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -1569,7 +1544,6 @@ class ChampagneFestivalMcpBackend:
 
     async def create_faq_item(
         self,
-        text_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         question_nl: str | None = None,
         question_fr: str | None = None,
         question_en: str | None = None,
@@ -1580,16 +1554,15 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Create an FAQ item, appended after the current last one. Requires the ``admin`` role.
 
-        Fill the question and the answer in ``text_language`` (default ``nl``) and
+        Fill the question and the answer in Dutch and
         optionally in the other languages; a language is shown only when both its
-        question and answer are filled, otherwise visitors see the original.
+        question and answer are filled, otherwise visitors see Dutch.
         Display position isn't settable here — use ``reorder_faq_items`` to change it.
         """
         self._require_admin()
         return await mcp_admin_faq.create_faq_item(
             self.session_factory,
             self._actor(),
-            text_language=text_language,
             question_nl=question_nl,
             question_fr=question_fr,
             question_en=question_en,
@@ -1607,7 +1580,6 @@ class ChampagneFestivalMcpBackend:
     async def update_faq_item(
         self,
         faq_item_id: str,
-        text_language: Language | None = None,
         question_nl: str | None = None,
         question_fr: str | None = None,
         question_en: str | None = None,
@@ -1618,8 +1590,8 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Partially update an FAQ item; omitted fields are left unchanged.
 
-        An explicit empty string clears a translation; the original language
-        (``text_language``) must keep its question and answer. Display position isn't
+        An explicit empty string clears a translation; the Dutch question
+        and answer must be kept. Display position isn't
         settable here — use ``reorder_faq_items`` to change it. Requires the ``admin`` role.
         """
         self._require_admin()
@@ -1627,7 +1599,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             faq_item_id,
-            text_language=text_language,
             question_nl=question_nl,
             question_fr=question_fr,
             question_en=question_en,
@@ -1663,7 +1634,6 @@ class ChampagneFestivalMcpBackend:
 
     async def create_announcement(
         self,
-        text_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         text_nl: str | None = None,
         text_fr: str | None = None,
         text_en: str | None = None,
@@ -1678,16 +1648,14 @@ class ChampagneFestivalMcpBackend:
     ) -> dict:
         """Create a site announcement, appended after the current last one. Requires the ``admin`` role.
 
-        The text is required in ``text_language`` (default ``nl``); other languages are
-        optional and visitors fall back to the original. A ``link_url`` needs a link label
-        in the original language. It is shown to visitors only while ``active`` and inside
+        The Dutch text is required; other languages are
+        optional and visitors fall back to Dutch. A ``link_url`` needs a Dutch link label. It is shown to visitors only while ``active`` and inside
         the ``starts_at``/``ends_at`` window (timestamps must carry a timezone).
         """
         self._require_admin()
         return await mcp_admin_announcements.create_announcement(
             self.session_factory,
             self._actor(),
-            text_language=text_language,
             text_nl=text_nl,
             text_fr=text_fr,
             text_en=text_en,
@@ -1704,7 +1672,6 @@ class ChampagneFestivalMcpBackend:
     async def update_announcement(
         self,
         announcement_id: str,
-        text_language: Language | None = None,
         text_nl: str | None = None,
         text_fr: str | None = None,
         text_en: str | None = None,
@@ -1724,7 +1691,7 @@ class ChampagneFestivalMcpBackend:
 
         An explicit empty string clears a translation or a link label; ``clear_starts_at``,
         ``clear_ends_at`` and ``clear_link_url`` remove the window ends and the link. The
-        original language must keep its text. Setting ``active`` publishes or unpublishes it.
+        Dutch text must be kept. Setting ``active`` publishes or unpublishes it.
         Display position isn't settable here — use ``reorder_announcements``. Requires the
         ``admin`` role.
         """
@@ -1733,7 +1700,6 @@ class ChampagneFestivalMcpBackend:
             self.session_factory,
             self._actor(),
             announcement_id,
-            text_language=text_language,
             text_nl=text_nl,
             text_fr=text_fr,
             text_en=text_en,
@@ -1780,7 +1746,6 @@ class ChampagneFestivalMcpBackend:
     async def create_composed_message(
         self,
         channels: list[ComposedMessageChannel],
-        text_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
@@ -1794,15 +1759,13 @@ class ChampagneFestivalMcpBackend:
         ``schedule_composed_message``. Requires the ``admin`` role.
 
         ``channels`` is ``announcement`` (site banner), ``push`` (notification to opted-in
-        subscribers) or both. A title and a body are required in ``text_language`` (default
-        ``nl``); a language is used only when both its title and body are filled.
+        subscribers) or both. A Dutch title and body are required; a language is used only when both its title and body are filled.
         """
         self._require_admin()
         return await mcp_admin_composer.create_composed_message(
             self.session_factory,
             self._actor(),
             channels=channels,
-            text_language=text_language,
             title_nl=title_nl,
             title_fr=title_fr,
             title_en=title_en,
@@ -1817,7 +1780,6 @@ class ChampagneFestivalMcpBackend:
         self,
         message_id: str,
         channels: list[ComposedMessageChannel] | None = None,
-        text_language: Language | None = None,
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
@@ -1837,7 +1799,6 @@ class ChampagneFestivalMcpBackend:
             self._actor(),
             message_id,
             channels=channels,
-            text_language=text_language,
             title_nl=title_nl,
             title_fr=title_fr,
             title_en=title_en,
@@ -1889,21 +1850,19 @@ class ChampagneFestivalMcpBackend:
     async def update_policy_draft(
         self,
         policy_key: str,
-        content_language: Language | None = None,
         content_nl: str | None = None,
         content_fr: str | None = None,
         content_en: str | None = None,
         change_summary: str | None = None,
     ) -> dict:
         """Edit the open draft of a policy; omitted fields are left unchanged and an explicit empty
-        string clears a translation. Publishing needs text in ``content_language``. Requires the
+        string clears a translation. Publishing needs Dutch text. Requires the
         ``admin`` role."""
         self._require_admin()
         return await mcp_admin_policies.update_policy_draft(
             self.session_factory,
             self._actor(),
             policy_key,
-            content_language=content_language,
             content_nl=content_nl,
             content_fr=content_fr,
             content_en=content_en,
@@ -2211,7 +2170,6 @@ class ChampagneFestivalMcpBackend:
         website: str = "",
         active: bool = True,
         type: str = "vendor",
-        description_language: str | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -2227,7 +2185,6 @@ class ChampagneFestivalMcpBackend:
             website=website,
             active=active,
             type=type,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,
@@ -2252,7 +2209,6 @@ class ChampagneFestivalMcpBackend:
         website: str | None = None,
         active: bool | None = None,
         type: str | None = None,
-        description_language: str | None = None,
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
@@ -2264,9 +2220,9 @@ class ChampagneFestivalMcpBackend:
         Retyping to ``"vendor"`` fails while any edition still lists this organization
         (vendors may not appear in an edition lineup). ``contact_person_id`` has no
         natural "clear" value, so pass ``clear_contact_person=True`` to unset it.
-        Descriptions are literal plain text (600 characters per language), with
-        original language nl/fr/en. Pass empty strings for each description text
-        and description_language to clear the description.
+        Descriptions are literal plain text (600 characters per language), in
+        nl/fr/en; the Dutch text is required whenever there is any description. Pass an empty
+        string for each description text to clear the description.
         Requires the ``admin`` role.
         """
         self._require_admin()
@@ -2279,7 +2235,6 @@ class ChampagneFestivalMcpBackend:
             website=website,
             active=active,
             type=type,
-            description_language=description_language,
             description_nl=description_nl,
             description_fr=description_fr,
             description_en=description_en,

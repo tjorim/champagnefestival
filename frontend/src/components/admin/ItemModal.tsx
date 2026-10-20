@@ -61,7 +61,6 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
       name: initial?.name ?? "",
       image: initial?.image ?? "",
       website: initial?.website ?? "",
-      description_language: initial?.description_language ?? "nl",
       description_nl: initial?.description_nl ?? "",
       description_fr: initial?.description_fr ?? "",
       description_en: initial?.description_en ?? "",
@@ -82,12 +81,10 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const form = useForm({
     defaultValues,
     onSubmit: ({ value }) => {
-      const hasDescription = [
-        value.description_nl,
-        value.description_fr,
-        value.description_en,
-      ].some((text) => text.trim());
-      if (hasDescription && !value[`description_${value.description_language}`].trim()) {
+      const hasTranslatedDescription = Boolean(
+        value.description_fr.trim() || value.description_en.trim(),
+      );
+      if (hasTranslatedDescription && !value.description_nl.trim()) {
         setDescriptionError(true);
         return;
       }
@@ -100,7 +97,6 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
         name: value.name.trim(),
         image: value.image.trim(),
         website: value.website.trim(),
-        description_language: hasDescription ? value.description_language : null,
         description_nl: value.description_nl.trim() || null,
         description_fr: value.description_fr.trim() || null,
         description_en: value.description_en.trim() || null,
@@ -285,21 +281,6 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                 }}
               </form.Field>
             </AdminField>
-            <AdminField className="mb-4" controlId="item-description-language">
-              <AdminLabel>{m.admin_item_description_language()}</AdminLabel>
-              <form.Field name="description_language">
-                {(field) => (
-                  <AdminSelect
-                    value={field.value}
-                    onValueChange={(value) => field.handleChange(value as "nl" | "fr" | "en")}
-                  >
-                    <AdminOption value="nl">{m.admin_item_description_nl()}</AdminOption>
-                    <AdminOption value="fr">{m.admin_item_description_fr()}</AdminOption>
-                    <AdminOption value="en">{m.admin_item_description_en()}</AdminOption>
-                  </AdminSelect>
-                )}
-              </form.Field>
-            </AdminField>
             <p className="text-sm text-subtle mb-4">{m.admin_item_description_help()}</p>
             {descriptionError && (
               <AdminError>{m.admin_item_description_original_required()}</AdminError>
@@ -333,9 +314,9 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
                       key={`${show}-${initial?.id ?? "new"}-${language}`}
                       url="/api/organizations/translation"
                       headers={authHeaders}
-                      source={values.description_language}
+                      source="nl"
                       target={language}
-                      text={values[`description_${values.description_language}`]}
+                      text={values.description_nl}
                       targetText={values[`description_${language}`]}
                       onDraft={(text) => form.setFieldValue(`description_${language}`, text)}
                       admin

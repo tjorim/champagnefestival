@@ -352,13 +352,13 @@ this read does not change the write's retry safety or advertise a retry.
 ### Organization descriptions (#1191)
 
 The existing admin REST and MCP create/update operations now accept description
-texts and an original language. Retry decisions are unchanged: creates are **not
+texts (Dutch required). Retry decisions are unchanged: creates are **not
 retry safe** (server-generated IDs), and updates are **not retry safe** (no version
 precondition; replay may overwrite a newer edit). No automatic retry is added.
 Updates validate the merged description before changing any organization fields or
-writing an audit entry; an invalid original-language transition makes no change.
+writing an audit entry; an invalid description (a translation without Dutch text) makes no change.
 Clearing uses explicit nulls in REST, or empty strings for all populated texts and
-the original language in MCP. Tests cover partial updates, invalid transitions,
+the Dutch text in MCP. Tests cover partial updates, invalid transitions,
 and explicit clearing through both adapters.
 
 ## Shared emailed account login (#1192)
@@ -514,8 +514,8 @@ the other's image.
 ### Translated content and product categories (#1222)
 
 FAQ items, announcements, composed messages, policies and products keep
-the write contracts documented for them above; the per-language text fields (an
-original `*_language` plus `_nl`/`_fr`/`_en`) change **what** is sent, not how a repeat
+the write contracts documented for them above; the per-language text fields
+(required Dutch plus optional `_fr`/`_en`) change **what** is sent, not how a repeat
 behaves. Every update validates the merged stored/requested text and treats an empty
 string as "clear this translation", so a repeated update with the same values
 converges. Creates keep their server-generated identities and stay **not retry safe**;

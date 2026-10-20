@@ -15,7 +15,6 @@ from app.schemas import PolicyDraftCreate, PolicyDraftUpdate, PolicyRenderReques
 from app.services import policies_service as service
 from app.services.errors import ServiceError
 from app.services.policy_markdown import render_markdown
-from app.translations import Language
 
 
 async def list_policies(session_factory: Any) -> dict:
@@ -55,7 +54,6 @@ async def update_policy_draft(
     actor: str,
     policy_key: str,
     *,
-    content_language: Language | None = None,
     content_nl: str | None = None,
     content_fr: str | None = None,
     content_en: str | None = None,
@@ -66,7 +64,6 @@ async def update_policy_draft(
     provided = {
         k: v
         for k, v in {
-            "content_language": content_language,
             "content_nl": content_nl,
             "content_fr": content_fr,
             "content_en": content_en,

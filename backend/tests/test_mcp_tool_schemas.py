@@ -135,11 +135,10 @@ class TestContentAndSignageEnums:
         items = tool_schemas["create_composed_message"]["properties"]["channels"]["items"]
         assert items["enum"] == ["announcement", "push"]
 
-    async def test_announcement_level_and_language_are_constrained(self, tool_schemas):
+    async def test_announcement_level_is_constrained_and_has_no_language_flag(self, tool_schemas):
         props = tool_schemas["create_announcement"]["properties"]
         assert props["level"]["enum"] == ["info", "warning", "urgent"]
-        assert props["text_language"]["enum"] == ["nl", "fr", "en"]
-        assert props["text_language"]["default"] == "nl"
+        assert "text_language" not in props
 
     async def test_signage_slide_kind_is_constrained(self, tool_schemas):
         assert tool_schemas["create_signage_slide"]["properties"]["kind"]["enum"] == [

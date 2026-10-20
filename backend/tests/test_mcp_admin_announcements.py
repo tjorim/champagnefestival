@@ -14,22 +14,22 @@ from app.models import AuditEntry
 from tests.helpers import mcp_session_factory
 
 
-async def test_announcement_defaults_to_dutch_and_starts_inactive(db_session):
+async def test_announcement_is_created_in_dutch_and_starts_inactive(db_session):
     factory = mcp_session_factory(db_session)
 
     created = await mcp_announcements.create_announcement(factory, "admin-1", text_nl="Welkom")
 
-    assert created["text_language"] == "nl"
+    assert created["text_nl"] == "Welkom"
     assert created["active"] is False
     assert created["published_at"] is None
     listed = await mcp_announcements.list_announcements(factory)
     assert [item["id"] for item in listed["announcements"]] == [created["id"]]
 
 
-async def test_announcement_requires_text_in_its_original_language(db_session):
+async def test_announcement_requires_dutch_text(db_session):
     factory = mcp_session_factory(db_session)
 
-    with pytest.raises(ValueError, match="original language"):
+    with pytest.raises(ValueError, match="Dutch"):
         await mcp_announcements.create_announcement(factory, "admin-1", text_en="Welcome")
 
 
@@ -52,11 +52,11 @@ async def test_update_announcement_partially_updates_and_publishes(db_session):
     assert {"announcement_created", "announcement_updated", "announcement_published"} <= actions
 
 
-async def test_update_announcement_rejects_clearing_the_original_text(db_session):
+async def test_update_announcement_rejects_clearing_the_dutch_text(db_session):
     factory = mcp_session_factory(db_session)
     created = await mcp_announcements.create_announcement(factory, "admin-1", text_nl="Welkom")
 
-    with pytest.raises(ValueError, match="original language"):
+    with pytest.raises(ValueError, match="Dutch"):
         await mcp_announcements.update_announcement(factory, "admin-1", created["id"], text_nl="")
 
 
@@ -106,12 +106,12 @@ async def _draft(factory, **overrides: Any):
     return await mcp_composer.create_composed_message(factory, "admin-1", **{**fields, **overrides})
 
 
-async def test_composed_message_is_a_dutch_draft_that_can_be_listed_and_fetched(db_session):
+async def test_composed_message_is_a_draft_that_can_be_listed_and_fetched(db_session):
     factory = mcp_session_factory(db_session)
 
     created = await _draft(factory)
 
-    assert created["text_language"] == "nl"
+    assert created["title_nl"] == "Titel"
     assert created["state"] == "draft"
     assert (await mcp_composer.get_composed_message(factory, created["id"]))["id"] == created["id"]
     listed = await mcp_composer.list_composed_messages(factory)
@@ -120,10 +120,10 @@ async def test_composed_message_is_a_dutch_draft_that_can_be_listed_and_fetched(
         await mcp_composer.get_composed_message(factory, "missing")
 
 
-async def test_composed_message_needs_a_complete_pair_in_its_original_language(db_session):
+async def test_composed_message_needs_a_complete_dutch_pair(db_session):
     factory = mcp_session_factory(db_session)
 
-    with pytest.raises(ValueError, match="title and a body"):
+    with pytest.raises(ValueError, match="Dutch title"):
         await _draft(factory, body_nl=None, body_en="Message")
     with pytest.raises(ValueError, match="channels"):
         await _draft(factory, channels=[])

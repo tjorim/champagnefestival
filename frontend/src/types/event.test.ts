@@ -33,21 +33,21 @@ describe("apiToProduct", () => {
   it("maps the name and description in every stored language", () => {
     const mapped = apiToProduct({
       ...product,
-      name_language: "fr",
+      name_nl: "Tafel",
       name_fr: "Table",
       name_en: "  ",
-      description_language: "fr",
+      description_nl: "Voor twee",
       description_fr: "Pour deux",
     });
 
     expect(mapped).toMatchObject({
-      nameLanguage: "fr",
+      nameNl: "Tafel",
       nameFr: "Table",
       nameEn: null,
-      descriptionLanguage: "fr",
+      descriptionNl: "Voor twee",
       descriptionFr: "Pour deux",
-      descriptionNl: null,
     });
+    expect(mapped).not.toHaveProperty("nameLanguage");
   });
 
   it("keeps non-array inclusions as null", () => {
@@ -61,11 +61,9 @@ describe("apiToEvent", () => {
     edition_id: "edition-1",
     title: "Opening night",
     description: "",
-    title_language: "fr",
-    title_nl: null,
+    title_nl: "Openingsavond",
     title_fr: "Soirée d'ouverture",
     title_en: "Opening night",
-    description_language: null,
     description_nl: null,
     description_fr: null,
     description_en: null,
@@ -79,17 +77,15 @@ describe("apiToEvent", () => {
   it("maps the stored languages next to the resolved text", () => {
     expect(apiToEvent(event)).toMatchObject({
       title: "Opening night",
-      titleLanguage: "fr",
-      titleNl: null,
+      titleNl: "Openingsavond",
       titleFr: "Soirée d'ouverture",
       titleEn: "Opening night",
-      descriptionLanguage: null,
       descriptionEn: null,
     });
   });
 
-  it("defaults a payload without translations to a Dutch original with no translations", () => {
+  it("defaults a payload without translations to no translations", () => {
     const mapped = apiToEvent({ id: "e", title: "Brunch" });
-    expect(mapped).toMatchObject({ title: "Brunch", titleLanguage: "nl", titleNl: null });
+    expect(mapped).toMatchObject({ title: "Brunch", titleNl: null, titleFr: null, titleEn: null });
   });
 });

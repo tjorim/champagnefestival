@@ -15,8 +15,7 @@ async def _create_sold_out_product(client, *, event_id: str, name: str = "Champa
         "/api/products",
         json={
             "event_id": event_id,
-            "name_language": "en",
-            "name_en": name,
+            "name_nl": name,
             "price": "0",
             "category": "other",
             "unit": "person",
@@ -63,8 +62,7 @@ async def test_waitlist_submission_rejects_available_product(client):
         "/api/products",
         json={
             "event_id": event["id"],
-            "name_language": "en",
-            "name_en": "In-stock ticket",
+            "name_nl": "In-stock ticket",
             "price": "0",
             "category": "other",
             "unit": "person",

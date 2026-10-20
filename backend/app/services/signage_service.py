@@ -235,9 +235,7 @@ async def playlist(
                 selected_type = slide.content.get("organization_type")
                 if org.type not in ("producer", "vendor", "sponsor") or selected_type and org.type != selected_type:
                     continue
-                description = getattr(org, f"description_{locale}") or (
-                    getattr(org, f"description_{org.description_language}") if org.description_language else None
-                )
+                description = getattr(org, f"description_{locale}") or org.description_nl
                 append_slide(
                     PublicSlide(
                         id=f"{slide.id}:{org.id}",

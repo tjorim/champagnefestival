@@ -43,11 +43,9 @@ function renderModal(products: Record<string, unknown>[]) {
   server.use(
     http.get("/api/products", ({ request }) => {
       const eventId = new URL(request.url).searchParams.get("event_id");
-      // The API always returns the name in its original language (Dutch here).
+      // The API always returns the Dutch name next to the translations.
       return HttpResponse.json(
-        products
-          .filter((p) => p.event_id === eventId)
-          .map((p) => ({ name_language: "nl", name_nl: p.name, ...p })),
+        products.filter((p) => p.event_id === eventId).map((p) => ({ name_nl: p.name, ...p })),
       );
     }),
   );
@@ -180,7 +178,6 @@ describe("EventProductsModal", () => {
         id: "prod-bottle",
         event_id: "event-01",
         name: "Fles",
-        name_language: "nl",
         name_nl: "Fles",
         name_en: "Bottle",
         price: 65,
@@ -218,15 +215,13 @@ describe("EventProductsModal", () => {
 
     await waitFor(() => expect(saved).not.toBeNull());
     expect(saved).toMatchObject({
-      name_language: "nl",
       name_nl: "Fles",
       name_fr: "Bouteille",
       name_en: null,
-      description_language: null,
     });
   });
 
-  it("requires the name in the original language", async () => {
+  it("requires the Dutch name", async () => {
     renderModal([]);
     await screen.findByText("admin_products_empty");
     fireEvent.click(screen.getByRole("button", { name: "admin_products_add" }));
@@ -388,7 +383,6 @@ describe("EventProductsModal", () => {
             id: "prod-new",
             event_id: "event-01",
             name: capturedBody.name_nl,
-            name_language: capturedBody.name_language,
             name_nl: capturedBody.name_nl,
             price: capturedBody.price,
             category: capturedBody.category,
@@ -423,11 +417,9 @@ describe("EventProductsModal", () => {
       expect(capturedBody).not.toBeNull();
     });
     expect(capturedBody).toMatchObject({
-      name_language: "nl",
       name_nl: "VIP Table",
       name_fr: null,
       name_en: null,
-      description_language: null,
       price: 200,
       required: true,
       inclusions: [{ product_id: "prod-bottle", quantity: 1, per_quantity: 2, rounding: "down" }],

@@ -424,17 +424,16 @@ Current gaps, dependencies, and preferred implementation order live in the
 ### Organization descriptions
 
 Admin `POST /api/organizations` and partial `PUT /api/organizations/{id}` accept
-`description_language` (`nl`, `fr`, or `en`) and nullable `description_nl`,
-`description_fr`, `description_en`. Each text is limited to 600 characters;
-leading/trailing whitespace is removed and blank text becomes null. Whenever
-any text exists, the selected original language must have non-empty text.
-Clear the description by setting all four fields to null. Updates validate the
+nullable `description_nl`, `description_fr`, `description_en`. Each text is limited to
+600 characters; leading/trailing whitespace is removed and blank text becomes null.
+Whenever a French or English text exists, the Dutch text must be non-empty.
+Clear the description by setting all three fields to null. Updates validate the
 merged stored/requested values, so translations can be edited independently.
 
 Descriptions are literal plain text: HTML and Markdown syntax is stored as text
 and escaped by the public UI, never interpreted. Admin collection responses and
 public edition organizations include all four fields. The visitor's language wins
-when non-empty, otherwise the original text is displayed. Descriptions appear
+when non-empty, otherwise the Dutch text is displayed. Descriptions appear
 under organization names in the public carousel, including a conditional vendor
 section when the edition payload contains vendors; floor plans and compact admin
 lists remain unchanged. The existing edition lineup restriction to producers
@@ -452,34 +451,30 @@ ordered by level (main first, untiered last) and then by lineup order, each with
 
 MCP `create_organization` and `update_organization` expose the same fields and validation.
 Omitted/null MCP arguments leave update fields unchanged; empty text strings
-clear individual translations, and an empty `description_language` clears the
-original-language selector. Clearing all text requires clearing that selector
-in the same update. Admin edits are immediately live. Manager proposals and
+clear individual translations. Clearing the Dutch text requires clearing the
+translations in the same update. Admin edits are immediately live. Manager proposals and
 supersession use the private review workflow below (#1193).
 
 ### Event titles, descriptions and categories (#1222)
 
 Events keep their text per language, following the organisation pattern.
-`title_language` (`nl`, `fr`, `en`; default `nl`, matching the admin form) names the original language and
-`title_nl`/`title_fr`/`title_en` hold the texts (each at most 200 characters). The
-description works the same way with `description_language` and
-`description_nl/fr/en` (each at most 10000 characters; all null means no
-description). Whitespace is trimmed and blank text becomes null. The original
-language must have text; the others are optional. Updates validate the merged
-stored/requested values, so one translation can be edited alone, an empty string
-clears a translation, and clearing every description text also drops
-`description_language`. Create and update take these fields only; there is no
-single-language `title`/`description` input.
+`title_nl`/`title_fr`/`title_en` hold the texts (each at most 200 characters; Dutch is
+required). The description works the same way with `description_nl/fr/en` (each at most
+10000 characters; all null means no description, and a French or English description needs
+a Dutch one). Whitespace is trimmed and blank text becomes null. Updates validate the merged
+stored/requested values, so one translation can be edited alone and an empty string
+clears a translation. Create and update take these fields only; there is no
+single-language `title`/`description` input and no original-language field.
 
 Every event response carries all stored languages plus `title`/`description`
 resolved for the `locale` query parameter (`nl`, `fr`, `en`) of the public
 `GET /api/editions/active` and `/upcoming` (MCP `get_event_schedule` takes the
-same `locale`). A missing translation falls back to the original language; with no
-`locale` the original is returned, so clients that predate translations keep
+same `locale`). A missing translation falls back to Dutch; with no
+`locale` the Dutch text is returned, so clients that predate translations keep
 working. The server-rendered home page (`/?lng=`) and its JSON-LD (`subEvent`
 entries) use the same resolved text, and registration confirmation emails title
 the event in the person's `preferred_language`. Admin lists, exports, audit
-entries and event-day screens keep showing the original-language title
+entries and event-day screens keep showing the Dutch title
 (`Event.title`).
 
 ### Organization stands
@@ -509,8 +504,8 @@ the same publication window as the stands and returns 404 for inactive editions.
 ### Event categories
 
 `Event.category` is the key of an admin-managed category (`event_categories`:
-`key`, `label_language`, `label_nl/fr/en`, `sort_order`). The labels follow the same
-pattern as event titles: the original language must have text, the others are
+`key`, `label_nl/fr/en`, `sort_order`). The labels follow the same
+pattern as event titles: Dutch must have text, the others are
 optional and fall back to it. The key (lowercase letters, digits, `-`, `_`; at most
 50 characters) is chosen on creation and cannot change, because events store it.
 Creating or moving an event to an unknown key is a 422; deleting a category that
@@ -521,7 +516,7 @@ events still use is a 409.
   stored labels; the frontend resolves labels client-side from them.
 - `POST`, `PUT /api/event-categories/{key}` and `DELETE` are admin-only and audited
   (`event_category_created|updated|deleted`). A `PUT` merges labels like an event
-  update: an empty string clears a translation, the original cannot be cleared.
+  update: an empty string clears a translation, the Dutch label cannot be cleared.
 - MCP: public `list_event_categories(locale)`; admin `create_event_category`,
   `update_event_category`, `delete_event_category`. `create_event` and
   `update_event` take a category key.
@@ -532,7 +527,7 @@ all three languages), normalises case/whitespace of existing values, and turns a
 other value events already use into a category of its own (key derived from the
 text, the text as Dutch label), logging each so its labels can be reviewed. It also
 moves existing `title`/`description` into the `nl` columns. Its downgrade keeps only
-the original-language text and drops the table.
+the Dutch text and drops the table.
 
 Admins can request editable machine drafts of a title or description with
 `GET`/`POST /api/events/translation` (same contract as the organisation drafts, text
@@ -542,11 +537,11 @@ limited to 2000 characters and a separate rate-limit bucket); see
 ### Translated content and product categories (#1222)
 
 Everything an administrator writes for visitors follows the organisation
-description pattern: an original language (`*_language`) that must have text, optional
-translations in `_nl`/`_fr`/`_en`, and a fallback to the original language, so a
-blank translation never hides content. The language of a required text (a title, a
-name, a label, an FAQ question) defaults to `nl`; an optional description has no
-default, so text sent without its `description_language` is rejected. Updates validate the merged stored and
+description pattern: Dutch (`*_nl`) always has text, French and English
+(`*_fr`, `*_en`) are optional translations, and a missing translation falls back to
+Dutch, so a blank translation never hides content. An optional description needs
+Dutch text as soon as it has any text. There is no original-language field: the vzw
+and the festival venue are in Flanders, so Dutch is the base language. Updates validate the merged stored and
 requested text; an empty string clears a translation; blank text is stored as null;
 database check constraints enforce the same rule.
 
@@ -554,11 +549,11 @@ database check constraints enforce the same rule.
 | --- | --- | --- |
 | Event | `title_*`, `description_*` | see above |
 | Event / product category | `label_*` | see below |
-| FAQ item | `text_language`, `question_*`, `answer_*` | a language is used only when its question and answer are both filled |
-| Announcement | `text_language`, `text_*`, `link_label_*` | a link needs a label in the original language |
-| Composed message | `text_language`, `title_*`, `body_*` | a language is used only when title and body are both filled |
-| Policy | `title_language`, `title_*`; version `content_language`, `content_*` | publishing needs the original language only (`required_locales` is gone) |
-| Product | `name_language`, `name_*`, `description_language`, `description_*` | an order line keeps the name in every language |
+| FAQ item | `question_*`, `answer_*` | a language is used only when its question and answer are both filled |
+| Announcement | `text_*`, `link_label_*` | a link needs a Dutch label |
+| Composed message | `title_*`, `body_*` | a language is used only when title and body are both filled |
+| Policy | `title_*`; version `content_*` | publishing needs Dutch content only (`required_locales` is gone) |
+| Product | `name_*`, `description_*` | an order line keeps the name in every language |
 
 Public reads (`/api/faq/active`, `/api/policies/{key}/current`, the edition
 endpoints) take `locale` and return the text
@@ -576,7 +571,9 @@ because delivery tracking counts bottles by it. `Product.category` references th
 (an unknown key is a 422); order lines copy the key when the order is placed.
 
 The same migration (`006`) moves existing FAQ items, announcements, composed messages, policies
-and products to Dutch (`nl`) as their original language, creates
+and products to Dutch (`nl`) as their original language (migration `009` later made Dutch the only
+required language and dropped the `*_language` columns, copying any French or English original into
+the Dutch column first and logging each table it did that for), creates
 `product_categories` with `champagne`, `food` and `other` (a value products already
 use is kept as a category of its own and logged), and drops `policies.required_locales`.
 Its downgrade keeps only the original-language text.
@@ -608,7 +605,7 @@ unification remains in #1209.
 | POST | `/api/visitor-sessions/redeem` | `{token}`; establishes the shared HttpOnly-cookie session and returns owned bookings; invalid/expired/replayed links return 401. |
 | GET | `/api/visitor-sessions/status` | `{authenticated, expires_at}`; absent/expired cookie returns false; no-store. |
 | POST | `/api/visitor-sessions/sign-out` | 204; revokes the shared email session and clears its cookie; safe to repeat. |
-| GET | `/api/me/organizations` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active, description_language, description_nl, description_fr, description_en}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
+| GET | `/api/me/organizations` | Email-session cookie or OIDC bearer token required; list of `{id, name, type, website, active, description_nl, description_fr, description_en}` for current matching verified contact email (`email_verified: true` for OIDC); no verified email means an empty list; 401 without authentication; no-store. |
 
 Uses existing SMTP/frontend URL settings and visitor credential housekeeping.
 No new authentication migration is required.

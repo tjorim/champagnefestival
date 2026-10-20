@@ -53,7 +53,6 @@ function apiToItemDraft(d: Record<string, unknown>): ItemDraft {
     name: d.name as string,
     image: d.image as string,
     website: d.website as string | undefined,
-    description_language: (d.description_language as ItemDraft["description_language"]) ?? null,
     description_nl: (d.description_nl as ItemDraft["description_nl"]) ?? null,
     description_fr: (d.description_fr as ItemDraft["description_fr"]) ?? null,
     description_en: (d.description_en as ItemDraft["description_en"]) ?? null,
@@ -88,7 +87,6 @@ export async function saveContentSectionItem(
     name: draft.name,
     image: draft.image,
     website: draft.website ?? "",
-    description_language: draft.description_language || null,
     description_nl: draft.description_nl || null,
     description_fr: draft.description_fr || null,
     description_en: draft.description_en || null,
@@ -256,11 +254,6 @@ export async function fetchEditionEvents(
 }
 
 /**
- * Per-language title and description, as sent on both create and update. Blank
- * translations are sent as `null`, which clears them on update. The description
- * language is only sent with text, so clearing every description text clears it.
- */
-/**
  * `<field>_nl/_fr/_en` request fields for a per-language text; a blank
  * translation is sent as `null`, which clears it on update.
  */
@@ -273,23 +266,12 @@ function localizedBody<Field extends string>(field: Field, text: LocalizedText) 
   } as Record<`${Field}_${Language}`, string | null>;
 }
 
-function hasAnyText(text: LocalizedText): boolean {
-  return Object.values(text).some((value) => value.trim());
-}
-
 export function eventTextBody(formData: EventFormData) {
   const text = (value: string) => value.trim() || null;
-  const hasDescription = [
-    formData.descriptionNl,
-    formData.descriptionFr,
-    formData.descriptionEn,
-  ].some((value) => value.trim());
   return {
-    title_language: formData.titleLanguage,
     title_nl: text(formData.titleNl),
     title_fr: text(formData.titleFr),
     title_en: text(formData.titleEn),
-    description_language: hasDescription ? formData.descriptionLanguage : null,
     description_nl: text(formData.descriptionNl),
     description_fr: text(formData.descriptionFr),
     description_en: text(formData.descriptionEn),
@@ -361,10 +343,8 @@ export async function fetchEventProducts(
 export interface ProductWrite {
   id?: string;
   eventId: string;
-  nameLanguage: Language;
   /** Per-language product name; a blank translation is cleared. */
   name: LocalizedText;
-  descriptionLanguage: Language;
   description: LocalizedText;
   price: number;
   category: string;
@@ -398,12 +378,7 @@ export interface ProductChangePreview {
 function productWriteBody(payload: ProductWrite) {
   return {
     ...(!payload.id ? { event_id: payload.eventId } : {}),
-    name_language: payload.nameLanguage,
     ...localizedBody("name", payload.name),
-    // Without any description text there is no description language either.
-    ...(hasAnyText(payload.description)
-      ? { description_language: payload.descriptionLanguage }
-      : { description_language: null }),
     ...localizedBody("description", payload.description),
     price: payload.price,
     category: payload.category,

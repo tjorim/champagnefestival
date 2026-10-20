@@ -34,15 +34,9 @@ def test_edition_update_rejects_null_non_nullable_fields(field: str) -> None:
 @pytest.mark.parametrize(
     ("complete_name", "partial_name", "field"),
     [
-        ("CategoryCreate", "CategoryUpdate", "label_language"),
         ("CategoryCreate", "CategoryUpdate", "sort_order"),
-        ("EventCreate", "EventUpdate", "title_language"),
-        ("ProductCreate", "ProductUpdate", "name_language"),
-        ("FaqItemCreate", "FaqItemUpdate", "text_language"),
-        ("AnnouncementWrite", "AnnouncementUpdate", "text_language"),
         ("AnnouncementWrite", "AnnouncementUpdate", "level"),
         ("AnnouncementWrite", "AnnouncementUpdate", "active"),
-        ("ComposedMessageWrite", "ComposedMessageUpdate", "text_language"),
         ("ComposedMessageWrite", "ComposedMessageUpdate", "level"),
         ("ComposedMessageWrite", "ComposedMessageUpdate", "channels"),
     ],

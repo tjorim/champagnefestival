@@ -116,7 +116,7 @@ async def send_registration_confirmation(registration: Registration, person: Per
     language = person.preferred_language if person.preferred_language in _CONFIRMATION_COPY else "nl"
     text = _CONFIRMATION_COPY[language]
     # The event title is in the same language as the rest of the email; it falls
-    # back to the event's original language when that translation is missing.
+    # back to Dutch when that translation is missing.
     event_title = event.localized_title(language)
     order_lines = (
         "\n".join(

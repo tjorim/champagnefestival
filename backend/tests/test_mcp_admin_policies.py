@@ -10,7 +10,7 @@ from tests.helpers import mcp_session_factory
 
 
 async def _seed(db_session, key: str = "privacy") -> None:
-    db_session.add(Policy(key=key, title_language="nl", title_nl="Privacybeleid", title_en="Privacy Policy"))
+    db_session.add(Policy(key=key, title_nl="Privacybeleid", title_en="Privacy Policy"))
     await db_session.commit()
 
 
@@ -31,7 +31,7 @@ async def test_draft_edit_publish_and_rollback_workflow(db_session):
 
     draft = await mcp_policies.create_policy_draft(factory, "admin-1", "privacy")
     assert draft["status"] == "draft"
-    assert draft["content_language"] == "nl"
+    assert draft["content_nl"] is None
     with pytest.raises(ValueError, match="already has an open draft"):
         await mcp_policies.create_policy_draft(factory, "admin-1", "privacy")
 
@@ -57,13 +57,13 @@ async def test_draft_edit_publish_and_rollback_workflow(db_session):
     assert {v["version_number"]: v["status"] for v in versions} == {1: "superseded", 2: "published", 3: "draft"}
 
 
-async def test_publish_requires_text_in_the_original_language(db_session):
+async def test_publish_requires_dutch_content(db_session):
     await _seed(db_session)
     factory = mcp_session_factory(db_session)
     await mcp_policies.create_policy_draft(factory, "admin-1", "privacy")
     await mcp_policies.update_policy_draft(factory, "admin-1", "privacy", content_en="# English only")
 
-    with pytest.raises(ValueError, match="original language 'nl'"):
+    with pytest.raises(ValueError, match="no Dutch content"):
         await mcp_policies.publish_policy_draft(factory, "admin-1", "privacy")
 
 

@@ -20,7 +20,6 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
-    case,
     cast,
     func,
     select,
@@ -31,11 +30,16 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
-from app.translations import resolve_pair, resolve_text
+from app.translations import BASE_LANGUAGE, resolve_pair, resolve_text
 
 
 def _utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+def _optional_dutch_check(column: str) -> str:
+    """SQL that an optional per-language text has Dutch text whenever it has any text at all."""
+    return f"(({column}_fr IS NULL AND {column}_en IS NULL) OR length(trim({column}_nl)) > 0) IS TRUE"
 
 
 class User(Base):
@@ -395,17 +399,7 @@ class Organization(Base):
 
     __tablename__ = "organizations"
 
-    __table_args__ = (
-        CheckConstraint(
-            "(description_language IS NULL AND description_nl IS NULL AND description_fr IS NULL "
-            "AND description_en IS NULL) OR "
-            "(description_language IS NOT NULL AND ("
-            "(description_language = 'nl' AND length(trim(description_nl)) > 0) OR "
-            "(description_language = 'fr' AND length(trim(description_fr)) > 0) OR "
-            "(description_language = 'en' AND length(trim(description_en)) > 0)) IS TRUE)",
-            name="ck_organizations_description_original",
-        ),
-    )
+    __table_args__ = (CheckConstraint(_optional_dutch_check("description"), name="ck_organizations_description_nl"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(200))
@@ -418,7 +412,6 @@ class Organization(Base):
         String(64), ForeignKey("people.id", ondelete="SET NULL"), nullable=True
     )
 
-    description_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
     description_nl: Mapped[str | None] = mapped_column(String(600), nullable=True)
     description_fr: Mapped[str | None] = mapped_column(String(600), nullable=True)
     description_en: Mapped[str | None] = mapped_column(String(600), nullable=True)
@@ -767,25 +760,14 @@ class Edition(Base):
     )
 
 
-def _original_language_text(language_column, *text_columns):
-    """SQL for the original-language text, ``NULL`` when none is stored."""
-    return case(
-        (language_column == "nl", text_columns[0]),
-        (language_column == "fr", text_columns[1]),
-        (language_column == "en", text_columns[2]),
-        else_=None,
-    )
-
-
 class _CategoryColumns:
     """Columns shared by the admin-managed category tables: a stable key (what
     the events or products store) plus its label in each language, following the
-    organisation description pattern — the original language must have text, the
+    organisation description pattern — Dutch must have text, the
     others are optional and fall back to it. The key is immutable; a category
     that is still in use cannot be deleted."""
 
     key: Mapped[str] = mapped_column(String(50), primary_key=True)
-    label_language: Mapped[str] = mapped_column(String(2))
     label_nl: Mapped[str | None] = mapped_column(String(100), nullable=True)
     label_fr: Mapped[str | None] = mapped_column(String(100), nullable=True)
     label_en: Mapped[str | None] = mapped_column(String(100), nullable=True)
@@ -794,18 +776,11 @@ class _CategoryColumns:
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     def localized_label(self, locale: str | None) -> str:
-        return resolve_text(
-            {"nl": self.label_nl, "fr": self.label_fr, "en": self.label_en}, self.label_language, locale
-        )
+        return resolve_text({"nl": self.label_nl, "fr": self.label_fr, "en": self.label_en}, locale)
 
 
 def _category_label_check(table: str) -> CheckConstraint:
-    return CheckConstraint(
-        "((label_language = 'nl' AND length(trim(label_nl)) > 0) OR "
-        "(label_language = 'fr' AND length(trim(label_fr)) > 0) OR "
-        "(label_language = 'en' AND length(trim(label_en)) > 0)) IS TRUE",
-        name=f"ck_{table}_label_original",
-    )
+    return CheckConstraint("(length(trim(label_nl)) > 0) IS TRUE", name=f"ck_{table}_label_nl")
 
 
 class EventCategory(_CategoryColumns, Base):
@@ -827,78 +802,47 @@ class Event(Base):
     __tablename__ = "events"
 
     __table_args__ = (
-        CheckConstraint(
-            "((title_language = 'nl' AND length(trim(title_nl)) > 0) OR "
-            "(title_language = 'fr' AND length(trim(title_fr)) > 0) OR "
-            "(title_language = 'en' AND length(trim(title_en)) > 0)) IS TRUE",
-            name="ck_events_title_original",
-        ),
-        CheckConstraint(
-            "(description_language IS NULL AND description_nl IS NULL AND description_fr IS NULL "
-            "AND description_en IS NULL) OR "
-            "(description_language IS NOT NULL AND ("
-            "(description_language = 'nl' AND length(trim(description_nl)) > 0) OR "
-            "(description_language = 'fr' AND length(trim(description_fr)) > 0) OR "
-            "(description_language = 'en' AND length(trim(description_en)) > 0)) IS TRUE)",
-            name="ck_events_description_original",
-        ),
+        CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_events_title_nl"),
+        CheckConstraint(_optional_dutch_check("description"), name="ck_events_description_nl"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    title_language: Mapped[str] = mapped_column(String(2))
     title_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    description_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
     description_nl: Mapped[str | None] = mapped_column(Text, nullable=True)
     description_fr: Mapped[str | None] = mapped_column(Text, nullable=True)
     description_en: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     @hybrid_property
     def title(self) -> str:
-        """Original-language title: what admin lists, audit entries and
-        exports show. Visitors get ``localized_title`` instead. Read-only: write
-        ``title_language`` and ``title_nl/fr/en``."""
-        return resolve_text({"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, self.title_language, None)
+        """Dutch title: what admin lists, audit entries and exports show.
+        Visitors get ``localized_title`` instead. Read-only: write ``title_nl/fr/en``."""
+        return self.title_nl or ""
 
     @title.inplace.expression
     @classmethod
     def _title_expression(cls):
-        return func.coalesce(_original_language_text(cls.title_language, cls.title_nl, cls.title_fr, cls.title_en), "")
+        return func.coalesce(cls.title_nl, "")
 
     @hybrid_property
     def description(self) -> str:
-        """Original-language description, ``""`` when there is none (see ``title``)."""
-        return resolve_text(
-            {"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en},
-            self.description_language,
-            None,
-        )
+        """Dutch description, ``""`` when there is none (see ``title``)."""
+        return self.description_nl or ""
 
     @description.inplace.expression
     @classmethod
     def _description_expression(cls):
-        return func.coalesce(
-            _original_language_text(
-                cls.description_language, cls.description_nl, cls.description_fr, cls.description_en
-            ),
-            "",
-        )
+        return func.coalesce(cls.description_nl, "")
 
     def localized_title(self, locale: str | None) -> str:
-        return resolve_text(
-            {"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, self.title_language, locale
-        )
+        return resolve_text({"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, locale)
 
     def localized_description(self, locale: str | None) -> str:
-        return resolve_text(
-            {"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en},
-            self.description_language,
-            locale,
-        )
+        return resolve_text({"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en}, locale)
 
     date: Mapped[dt_date] = mapped_column(Date, index=True)
     start_time: Mapped[str] = mapped_column(String(10))
@@ -955,16 +899,14 @@ class Product(Base):
         .scalar_subquery()
     )
 
-    name_language: Mapped[str] = mapped_column(String(2))
     name_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
     name_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     name_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    description_language: Mapped[str | None] = mapped_column(String(2), nullable=True)
     description_nl: Mapped[str | None] = mapped_column(String(300), nullable=True)
     description_fr: Mapped[str | None] = mapped_column(String(300), nullable=True)
     description_en: Mapped[str | None] = mapped_column(String(300), nullable=True)
     """Short, optional blurb shown alongside the product name; per language like
-    the name, with the original language required whenever there is any text."""
+    the name, with Dutch required whenever there is any text."""
     price: Mapped[Decimal] = mapped_column(Numeric(10, 2))
     category: Mapped[str] = mapped_column(
         String(50), ForeignKey("product_categories.key", ondelete="RESTRICT"), index=True
@@ -986,21 +928,8 @@ class Product(Base):
         CheckConstraint("stock IS NULL OR stock >= 0", name="ck_product_stock"),
         CheckConstraint("unit IN ('item', 'table', 'person')", name="ck_product_unit"),
         CheckConstraint("NOT required OR purchasable", name="ck_products_required_implies_purchasable"),
-        CheckConstraint(
-            "((name_language = 'nl' AND length(trim(name_nl)) > 0) OR "
-            "(name_language = 'fr' AND length(trim(name_fr)) > 0) OR "
-            "(name_language = 'en' AND length(trim(name_en)) > 0)) IS TRUE",
-            name="ck_products_name_original",
-        ),
-        CheckConstraint(
-            "(description_language IS NULL AND description_nl IS NULL AND description_fr IS NULL "
-            "AND description_en IS NULL) OR "
-            "(description_language IS NOT NULL AND ("
-            "(description_language = 'nl' AND length(trim(description_nl)) > 0) OR "
-            "(description_language = 'fr' AND length(trim(description_fr)) > 0) OR "
-            "(description_language = 'en' AND length(trim(description_en)) > 0)) IS TRUE)",
-            name="ck_products_description_original",
-        ),
+        CheckConstraint("(length(trim(name_nl)) > 0) IS TRUE", name="ck_products_name_nl"),
+        CheckConstraint(_optional_dutch_check("description"), name="ck_products_description_nl"),
     )
 
     purchasable: Mapped[bool] = mapped_column(Boolean, default=True)
@@ -1039,24 +968,20 @@ class Product(Base):
 
     @property
     def name(self) -> str:
-        """Original-language name: what admin lists, exports and audit entries show.
-        Visitors get ``localized_name``. Read-only: write ``name_language`` and ``name_nl/fr/en``."""
+        """Dutch name: what admin lists, exports and audit entries show.
+        Visitors get ``localized_name``. Read-only: write ``name_nl/fr/en``."""
         return self.localized_name(None)
 
     @property
     def description(self) -> str:
-        """Original-language description, ``""`` when there is none."""
+        """Dutch description, ``""`` when there is none."""
         return self.localized_description(None)
 
     def localized_name(self, locale: str | None) -> str:
-        return resolve_text({"nl": self.name_nl, "fr": self.name_fr, "en": self.name_en}, self.name_language, locale)
+        return resolve_text({"nl": self.name_nl, "fr": self.name_fr, "en": self.name_en}, locale)
 
     def localized_description(self, locale: str | None) -> str:
-        return resolve_text(
-            {"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en},
-            self.description_language,
-            locale,
-        )
+        return resolve_text({"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en}, locale)
 
 
 class Person(Base):
@@ -1359,9 +1284,9 @@ class AppSettings(Base):
 class FaqItem(Base):
     """A single question/answer pair shown on the public FAQ section.
 
-    The original language (`text_language`) must have both; other languages are
-    optional translations. A language is shown only when its question *and*
-    answer both have text, otherwise the original is shown.
+    Dutch must have both; other languages are optional translations. A language
+    is shown only when its question *and* answer both have text, otherwise the
+    Dutch text is shown.
     """
 
     __tablename__ = "faq_items"
@@ -1371,16 +1296,12 @@ class FaqItem(Base):
         # only the state at commit has to be unique (#836).
         UniqueConstraint("sort_order", name="uq_faq_items_sort_order", deferrable=True, initially="DEFERRED"),
         CheckConstraint(
-            "((text_language = 'nl' AND length(trim(question_nl)) > 0 AND length(trim(answer_nl)) > 0) OR "
-            "(text_language = 'fr' AND length(trim(question_fr)) > 0 AND length(trim(answer_fr)) > 0) OR "
-            "(text_language = 'en' AND length(trim(question_en)) > 0 AND length(trim(answer_en)) > 0)) IS TRUE",
-            name="ck_faq_items_original",
+            "(length(trim(question_nl)) > 0 AND length(trim(answer_nl)) > 0) IS TRUE",
+            name="ck_faq_items_nl",
         ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    text_language: Mapped[str] = mapped_column(String(2))
-    """Original language of the question and its answer: both must have text there."""
     question_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
     question_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
     question_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -1394,11 +1315,10 @@ class FaqItem(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     def localized(self, locale: str | None) -> tuple[str, str]:
-        """The (question, answer) for *locale*, falling back to the original language."""
+        """The (question, answer) for *locale*, falling back to Dutch."""
         return resolve_pair(
             {"nl": self.question_nl, "fr": self.question_fr, "en": self.question_en},
             {"nl": self.answer_nl, "fr": self.answer_fr, "en": self.answer_en},
-            self.text_language,
             locale,
         )
 
@@ -1411,23 +1331,14 @@ class Announcement(Base):
         UniqueConstraint("sort_order", name="uq_announcements_sort_order", deferrable=True, initially="DEFERRED"),
         CheckConstraint("level IN ('info', 'warning', 'urgent')", name="ck_announcements_level"),
         CheckConstraint("ends_at IS NULL OR starts_at IS NULL OR ends_at > starts_at", name="ck_announcements_window"),
+        CheckConstraint("(length(trim(text_nl)) > 0) IS TRUE", name="ck_announcements_text_nl"),
         CheckConstraint(
-            "((text_language = 'nl' AND length(trim(text_nl)) > 0) OR "
-            "(text_language = 'fr' AND length(trim(text_fr)) > 0) OR "
-            "(text_language = 'en' AND length(trim(text_en)) > 0)) IS TRUE",
-            name="ck_announcements_text_original",
-        ),
-        CheckConstraint(
-            "link_url IS NULL OR ((text_language = 'nl' AND length(trim(link_label_nl)) > 0) OR "
-            "(text_language = 'fr' AND length(trim(link_label_fr)) > 0) OR "
-            "(text_language = 'en' AND length(trim(link_label_en)) > 0)) IS TRUE",
-            name="ck_announcements_link_label_original",
+            "(link_url IS NULL OR length(trim(link_label_nl)) > 0) IS TRUE",
+            name="ck_announcements_link_label_nl",
         ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    text_language: Mapped[str] = mapped_column(String(2))
-    """Original language of the text and link label: both must have text there."""
     text_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
     text_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
     text_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -1446,7 +1357,7 @@ class Announcement(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
     def localized_text(self, locale: str | None) -> str:
-        return resolve_text({"nl": self.text_nl, "fr": self.text_fr, "en": self.text_en}, self.text_language, locale)
+        return resolve_text({"nl": self.text_nl, "fr": self.text_fr, "en": self.text_en}, locale)
 
     def localized_link_label(self, locale: str | None) -> str | None:
         if not self.link_url:
@@ -1454,7 +1365,6 @@ class Announcement(Base):
         return (
             resolve_text(
                 {"nl": self.link_label_nl, "fr": self.link_label_fr, "en": self.link_label_en},
-                self.text_language,
                 locale,
             )
             or None
@@ -1477,16 +1387,12 @@ class ComposedMessage(Base):
         CheckConstraint("level IN ('info', 'warning', 'urgent')", name="ck_composed_messages_level"),
         CheckConstraint("state IN ('draft', 'scheduled', 'sent')", name="ck_composed_messages_state"),
         CheckConstraint(
-            "((text_language = 'nl' AND length(trim(title_nl)) > 0 AND length(trim(body_nl)) > 0) OR "
-            "(text_language = 'fr' AND length(trim(title_fr)) > 0 AND length(trim(body_fr)) > 0) OR "
-            "(text_language = 'en' AND length(trim(title_en)) > 0 AND length(trim(body_en)) > 0)) IS TRUE",
-            name="ck_composed_messages_original",
+            "(length(trim(title_nl)) > 0 AND length(trim(body_nl)) > 0) IS TRUE",
+            name="ck_composed_messages_nl",
         ),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    text_language: Mapped[str] = mapped_column(String(2))
-    """Original language of the title and body: both must have text there."""
     title_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
     title_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
     title_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
@@ -1520,32 +1426,21 @@ class Policy(Base):
 
     The title is mutable chrome, not content — it lives here rather than on
     ``PolicyVersion`` because only published *content* needs to be immutable.
-    Like other translated content it has an original language
-    (``title_language``) that must have a title; the other languages are
-    optional and visitors fall back to the original.
+    Like other translated content it must have a Dutch title; the other languages
+    are optional and visitors fall back to Dutch.
     """
 
     __tablename__ = "policies"
-    __table_args__ = (
-        CheckConstraint(
-            "((title_language = 'nl' AND length(trim(title_nl)) > 0) OR "
-            "(title_language = 'fr' AND length(trim(title_fr)) > 0) OR "
-            "(title_language = 'en' AND length(trim(title_en)) > 0)) IS TRUE",
-            name="ck_policies_title_original",
-        ),
-    )
+    __table_args__ = (CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_policies_title_nl"),)
 
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
-    title_language: Mapped[str] = mapped_column(String(2))
     title_nl: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
     def localized_title(self, locale: str | None) -> str:
-        return resolve_text(
-            {"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, self.title_language, locale
-        )
+        return resolve_text({"nl": self.title_nl, "fr": self.title_fr, "en": self.title_en}, locale)
 
     versions: Mapped[list[PolicyVersion]] = relationship(
         back_populates="policy", order_by="PolicyVersion.version_number"
@@ -1570,10 +1465,8 @@ class PolicyVersion(Base):
         UniqueConstraint("policy_key", "version_number", name="uq_policy_versions_number"),
         CheckConstraint("status IN ('draft', 'published', 'superseded')", name="ck_policy_versions_status"),
         CheckConstraint(
-            "status = 'draft' OR ((content_language = 'nl' AND length(trim(content_nl)) > 0) OR "
-            "(content_language = 'fr' AND length(trim(content_fr)) > 0) OR "
-            "(content_language = 'en' AND length(trim(content_en)) > 0)) IS TRUE",
-            name="ck_policy_versions_original",
+            "(status = 'draft' OR length(trim(content_nl)) > 0) IS TRUE",
+            name="ck_policy_versions_nl",
         ),
         Index(
             "uq_policy_versions_one_draft",
@@ -1593,8 +1486,6 @@ class PolicyVersion(Base):
     policy_key: Mapped[str] = mapped_column(String(64), ForeignKey("policies.key"))
     version_number: Mapped[int] = mapped_column(Integer)
     status: Mapped[str] = mapped_column(String(12), default="draft")
-    content_language: Mapped[str] = mapped_column(String(2))
-    """Original language of this version's content; a published version must have text there."""
     content_nl: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_en: Mapped[str | None] = mapped_column(Text, nullable=True)
     content_fr: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -1608,12 +1499,12 @@ class PolicyVersion(Base):
     policy: Mapped[Policy] = relationship(back_populates="versions")
 
     def localized_content(self, locale: str | None) -> tuple[str, str]:
-        """The (content, language it is written in) for *locale*, falling back to the original."""
+        """The (content, language it is written in) for *locale*, falling back to Dutch."""
         values = {"nl": self.content_nl, "fr": self.content_fr, "en": self.content_en}
-        for language in (locale, self.content_language):
+        for language in (locale, BASE_LANGUAGE):
             if language and (values.get(language) or "").strip():
                 return values[language] or "", language
-        return "", self.content_language
+        return "", BASE_LANGUAGE
 
 
 class SignageChannel(Base):

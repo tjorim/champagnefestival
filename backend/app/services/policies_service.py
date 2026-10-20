@@ -8,9 +8,8 @@ Publication rules (see #944):
   a row lock on the parent ``Policy`` so two concurrent publish requests for
   the same policy serialize rather than racing (the loser sees a clean
   `ConflictError`/`NotFoundError` instead of a corrupted double-publish).
-- A version has an original language (``content_language``): publish is refused
-  unless it has non-blank content there. Other languages are optional and
-  visitors get the original when their language has no content.
+- Publish is refused unless the version has non-blank Dutch content. Other
+  languages are optional and visitors get Dutch when their language has no content.
 - Rollback is not a separate code path — it creates a new draft seeded from an
   older version's content, which is then published like any other draft. That
   gives the restored content a new version number, actor, and timestamp
@@ -29,13 +28,12 @@ from app.models import Policy, PolicyVersion
 from app.schemas import PolicyDraftCreate, PolicyDraftUpdate
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 from app.services.public_render_cache import notify_render_cache_invalidate
-from app.translations import DEFAULT_ORIGINAL_LANGUAGE
 from app.utils import make_id
 
 
 def resolve_published(policy: Policy, version: PolicyVersion, locale: str | None) -> tuple[str, str, str]:
     """(title, content, language the content is written in) for *locale*, falling
-    back to the policy's original language."""
+    back to Dutch."""
     content, language = version.localized_content(locale)
     return policy.localized_title(locale), content, language
 
@@ -46,7 +44,6 @@ def _version_to_dict(item: PolicyVersion) -> dict:
         "policy_key": item.policy_key,
         "version_number": item.version_number,
         "status": item.status,
-        "content_language": item.content_language,
         "content_nl": item.content_nl,
         "content_fr": item.content_fr,
         "content_en": item.content_en,
@@ -62,7 +59,6 @@ def _version_to_dict(item: PolicyVersion) -> dict:
 def _policy_to_dict(policy: Policy, versions: list[PolicyVersion]) -> dict:
     return {
         "key": policy.key,
-        "title_language": policy.title_language,
         "title_nl": policy.title_nl,
         "title_fr": policy.title_fr,
         "title_en": policy.title_en,
@@ -157,7 +153,6 @@ async def create_draft(
         policy_key=policy.key,
         version_number=1 if highest is None else highest + 1,
         status="draft",
-        content_language=source.content_language if source else DEFAULT_ORIGINAL_LANGUAGE,
         content_nl=source.content_nl if source else None,
         content_fr=source.content_fr if source else None,
         content_en=source.content_en if source else None,
@@ -236,11 +231,8 @@ async def publish_draft(db: AsyncSession, *, actor: str, policy_key: str, reques
     await _get_policy_locked(db, policy_key)
     draft = await _get_draft_locked(db, policy_key)
 
-    if not (getattr(draft, f"content_{draft.content_language}") or "").strip():
-        raise ValidationFailedError(
-            f"Policy '{policy_key}' cannot be published: it has no content in its original language "
-            f"'{draft.content_language}'."
-        )
+    if not (draft.content_nl or "").strip():
+        raise ValidationFailedError(f"Policy '{policy_key}' cannot be published: it has no Dutch content.")
 
     current_published = (
         await db.execute(

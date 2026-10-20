@@ -13,7 +13,6 @@ from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import AnnouncementCreate, AnnouncementLevel, AnnouncementReorder, AnnouncementUpdate
 from app.services import announcements_service as service
 from app.services.errors import ServiceError
-from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 
 async def list_announcements(session_factory: Any) -> dict:
@@ -26,7 +25,6 @@ async def create_announcement(
     session_factory: Any,
     actor: str,
     *,
-    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
     text_nl: str | None = None,
     text_fr: str | None = None,
     text_en: str | None = None,
@@ -41,7 +39,6 @@ async def create_announcement(
 ) -> dict:
     body = validate_with_schema(
         AnnouncementCreate,
-        text_language=text_language,
         text_nl=text_nl,
         text_fr=text_fr,
         text_en=text_en,
@@ -66,7 +63,6 @@ async def update_announcement(
     actor: str,
     announcement_id: str,
     *,
-    text_language: Language | None = None,
     text_nl: str | None = None,
     text_fr: str | None = None,
     text_en: str | None = None,
@@ -86,13 +82,12 @@ async def update_announcement(
 
     Omitted (``None``) leaves a field untouched; an explicit empty string clears a
     translation or a link label, and the ``clear_*`` flags remove the schedule window ends
-    and the link. The merged result is validated, so the original language must keep its text
+    and the link. The merged result is validated, so Dutch must keep its text
     (and its link label while there is a link).
     """
     provided: dict[str, Any] = {
         k: v
         for k, v in {
-            "text_language": text_language,
             "text_nl": text_nl,
             "text_fr": text_fr,
             "text_en": text_en,

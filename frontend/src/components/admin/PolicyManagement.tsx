@@ -27,8 +27,6 @@ import { queryKeys } from "@/utils/queryKeys";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
-import { OriginalLanguageSelect } from "@/components/admin/LocalizedFields";
-
 type Locale = "nl" | "en" | "fr";
 const LOCALES: Locale[] = ["nl", "en", "fr"];
 
@@ -37,8 +35,6 @@ interface PolicyVersion {
   policy_key: string;
   version_number: number;
   status: "draft" | "published" | "superseded";
-  /** Original language: a published version has text here, other languages fall back to it. */
-  content_language: Locale;
   content_nl: string | null;
   content_en: string | null;
   content_fr: string | null;
@@ -147,15 +143,11 @@ export default function PolicyManagement({
   // Derived rather than a static template: `useForm` re-applies `defaultValues`
   // on every render, so a template that disagrees with what `form.reset(record)`
   // stored gets re-applied and blanks the form. See EditionModal for the details.
-  const emptyDraftForm = useMemo(
-    () => ({ contentLanguage: "nl" as Locale, nl: "", en: "", fr: "", changeSummary: "" }),
-    [],
-  );
+  const emptyDraftForm = useMemo(() => ({ nl: "", en: "", fr: "", changeSummary: "" }), []);
   const draftDefaultValues = useMemo(
     () =>
       draft
         ? {
-            contentLanguage: draft.content_language,
             nl: draft.content_nl ?? "",
             en: draft.content_en ?? "",
             fr: draft.content_fr ?? "",
@@ -236,7 +228,6 @@ export default function PolicyManagement({
           method: "PUT",
           headers: authHeaders(),
           body: JSON.stringify({
-            content_language: payload.contentLanguage,
             content_nl: payload.nl || null,
             content_en: payload.en || null,
             content_fr: payload.fr || null,
@@ -409,16 +400,6 @@ export default function PolicyManagement({
 
             {draft ? (
               <>
-                <form.Field name="contentLanguage">
-                  {(field) => (
-                    <OriginalLanguageSelect
-                      controlId="policy-content-language"
-                      label={m.admin_policy_original_language()}
-                      value={field.value}
-                      onChange={(language) => field.handleChange(language)}
-                    />
-                  )}
-                </form.Field>
                 <p className="text-sm text-subtle mb-2">{m.admin_policy_original_help()}</p>
                 <div className="mb-2 text-subtle text-sm">
                   {m.admin_policy_editing_draft_label({ version: draft.version_number })}{" "}

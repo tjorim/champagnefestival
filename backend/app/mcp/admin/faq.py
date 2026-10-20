@@ -12,14 +12,12 @@ from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import FaqItemCreate, FaqItemReorder, FaqItemUpdate
 from app.services import faq_service
 from app.services.errors import ServiceError
-from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 
 async def create_faq_item(
     session_factory: Any,
     actor: str,
     *,
-    text_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
     question_nl: str | None = None,
     question_fr: str | None = None,
     question_en: str | None = None,
@@ -30,7 +28,6 @@ async def create_faq_item(
 ) -> dict:
     body = validate_with_schema(
         FaqItemCreate,
-        text_language=text_language,
         question_nl=question_nl,
         question_fr=question_fr,
         question_en=question_en,
@@ -57,7 +54,6 @@ async def update_faq_item(
     actor: str,
     faq_item_id: str,
     *,
-    text_language: Language | None = None,
     question_nl: str | None = None,
     question_fr: str | None = None,
     question_en: str | None = None,
@@ -69,13 +65,11 @@ async def update_faq_item(
     """Update an FAQ item.
 
     Omitted (``None``) leaves a field untouched; an explicit empty string clears a
-    translation (the original language keeps its question and answer, so it cannot
-    be cleared).
+    translation (Dutch keeps its question and answer, so it cannot be cleared).
     """
     provided = {
         k: v
         for k, v in {
-            "text_language": text_language,
             "question_nl": question_nl,
             "question_fr": question_fr,
             "question_en": question_en,

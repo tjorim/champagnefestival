@@ -12,7 +12,6 @@ from app.mcp.utils import MCPToolError, validate_with_schema
 from app.schemas import CategoryCreate, CategoryUpdate
 from app.services import product_categories_service
 from app.services.errors import ServiceError
-from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 
 
 async def list_product_categories(session_factory: Any, locale: str | None = None) -> dict:
@@ -25,7 +24,6 @@ async def create_product_category(
     actor: str,
     *,
     key: str,
-    label_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
     label_nl: str | None = None,
     label_fr: str | None = None,
     label_en: str | None = None,
@@ -34,7 +32,6 @@ async def create_product_category(
     body = validate_with_schema(
         CategoryCreate,
         key=key,
-        label_language=label_language,
         label_nl=label_nl,
         label_fr=label_fr,
         label_en=label_en,
@@ -52,18 +49,16 @@ async def update_product_category(
     actor: str,
     key: str,
     *,
-    label_language: Language | None = None,
     label_nl: str | None = None,
     label_fr: str | None = None,
     label_en: str | None = None,
     sort_order: int | None = None,
 ) -> dict:
     """Partially update a category; omitted fields are left unchanged and an empty
-    string clears a translation (the original-language label cannot be cleared)."""
+    string clears a translation (the Dutch label cannot be cleared)."""
     provided = {
         name: value
         for name, value in {
-            "label_language": label_language,
             "label_nl": label_nl,
             "label_fr": label_fr,
             "label_en": label_en,

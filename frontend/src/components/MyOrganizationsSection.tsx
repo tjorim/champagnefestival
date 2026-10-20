@@ -7,14 +7,7 @@ import { m } from "@/paraglide/messages";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import {
-  PublicField,
-  PublicLabel,
-  PublicInput,
-  PublicTextarea,
-  PublicSelect,
-  PublicOption,
-} from "@/components/PublicFields";
+import { PublicField, PublicLabel, PublicInput, PublicTextarea } from "@/components/PublicFields";
 import {
   organizationChangesRequest,
   organizationFieldLabel,
@@ -30,7 +23,6 @@ export interface ManagedOrganization {
   type: string;
   website: string;
   active: boolean;
-  description_language?: string | null;
   description_nl?: string | null;
   description_fr?: string | null;
   description_en?: string | null;
@@ -82,15 +74,10 @@ function ProposalForm({
         field === "website" ? website : values[field]?.trim() || null,
       ]),
     ) as OrganizationTexts;
-    if (texts.description_nl || texts.description_fr || texts.description_en) {
-      if (
-        !texts.description_language ||
-        !texts[`description_${texts.description_language}` as keyof OrganizationTexts]
-      ) {
-        setValidation(m.admin_item_description_original_required());
-        return;
-      }
-    } else texts.description_language = null;
+    if ((texts.description_fr || texts.description_en) && !texts.description_nl) {
+      setValidation(m.admin_item_description_original_required());
+      return;
+    }
     const proposed = Object.fromEntries(
       organizationTextFields
         .filter((field) => texts[field] !== (row[field] ?? (field === "website" ? "" : null)))
@@ -117,17 +104,6 @@ function ProposalForm({
           onChange={(event) => setValues({ ...values, website: event.target.value })}
         />
       </PublicField>
-      <PublicField>
-        <PublicLabel>{m.admin_item_description_language()}</PublicLabel>
-        <PublicSelect
-          value={values.description_language ?? "nl"}
-          onValueChange={(value) => setValues({ ...values, description_language: value })}
-        >
-          <PublicOption value="nl">{m.admin_item_description_nl()}</PublicOption>
-          <PublicOption value="fr">{m.admin_item_description_fr()}</PublicOption>
-          <PublicOption value="en">{m.admin_item_description_en()}</PublicOption>
-        </PublicSelect>
-      </PublicField>
       <p className="text-sm text-subtle">{m.admin_item_description_help()}</p>
       {(["nl", "fr", "en"] as const).map((language) => {
         const field = `description_${language}` as const;
@@ -137,32 +113,16 @@ function ProposalForm({
             <PublicTextarea
               maxLength={600}
               value={values[field] ?? ""}
-              onChange={(event) =>
-                setValues({
-                  ...values,
-                  [field]: event.target.value,
-                  description_language: values.description_language ?? "nl",
-                })
-              }
+              onChange={(event) => setValues({ ...values, [field]: event.target.value })}
             />
             <OrganizationTranslationSuggestion
               url={`/api/me/organizations/${row.id}/translation`}
               headers={headers}
-              source={values.description_language ?? "nl"}
+              source="nl"
               target={language}
-              text={
-                values[
-                  `description_${values.description_language ?? "nl"}` as keyof OrganizationTexts
-                ] ?? ""
-              }
+              text={values.description_nl ?? ""}
               targetText={values[field] ?? ""}
-              onDraft={(text) =>
-                setValues((current) => ({
-                  ...current,
-                  [field]: text,
-                  description_language: current.description_language ?? "nl",
-                }))
-              }
+              onDraft={(text) => setValues((current) => ({ ...current, [field]: text }))}
             />
           </PublicField>
         );

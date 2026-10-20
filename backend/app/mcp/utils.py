@@ -145,7 +145,7 @@ def edition_discovery_dict(edition: Edition, dates: list[date] | None = None) ->
 
 
 def event_dict(event: Any, locale: str | None = None) -> dict:
-    """``title``/``description`` resolve for *locale* (the original language when
+    """``title``/``description`` resolve for *locale* (Dutch when
     omitted); every stored language is included for admin-style consumers."""
     return {
         "id": event.id,

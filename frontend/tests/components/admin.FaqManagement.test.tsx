@@ -10,7 +10,6 @@ const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
 const item = {
   id: "faq-1",
-  text_language: "en",
   question_nl: "Wanneer?",
   question_fr: null,
   question_en: "When?",
@@ -36,16 +35,16 @@ afterEach(() => {
 });
 
 describe("FaqManagement", () => {
-  it("lists an item in its original language and marks which languages are translated", async () => {
+  it("lists an item in Dutch and marks which languages are translated", async () => {
     mount();
 
-    expect(await screen.findByText("When?")).toBeInTheDocument();
-    expect(screen.getByText("On 2 October.")).toBeInTheDocument();
+    expect(await screen.findByText("Wanneer?")).toBeInTheDocument();
+    expect(screen.getByText("Op 2 oktober.")).toBeInTheDocument();
     expect(screen.getByText("NL")).not.toHaveClass("opacity-50");
     expect(screen.getByText("FR")).toHaveClass("opacity-50");
   });
 
-  it("requires the question and answer in the original language", async () => {
+  it("requires the Dutch question and answer", async () => {
     const post = vi.fn();
     server.use(
       http.post("/api/faq", () => {
@@ -54,10 +53,10 @@ describe("FaqManagement", () => {
       }),
     );
     mount();
-    await screen.findByText("When?");
+    await screen.findByText("Wanneer?");
 
     fireEvent.click(screen.getByRole("button", { name: "Add question" }));
-    // The original language defaults to Dutch; only English is filled in.
+    // Dutch stays empty; only English is filled in.
     fireEvent.change(await screen.findByLabelText("Question (English)"), {
       target: { value: "Where?" },
     });
@@ -89,7 +88,6 @@ describe("FaqManagement", () => {
 
     await waitFor(() => expect(sent).toBeDefined());
     expect(sent).toEqual({
-      text_language: "en",
       question_nl: "Wanneer?",
       question_fr: "Quand ?",
       question_en: "When?",
