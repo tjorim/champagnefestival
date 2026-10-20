@@ -1,5 +1,8 @@
 """Dutch is the one required language of translated content, and the volunteer meal poll grows up.
 
+Also stores durable email snapshots of deleted volunteer poll answers in
+``poll_deletion_notifications`` for delivery after the deletion commits.
+
 Part 1 - Dutch base language.
 
 Migration 006 gave every translated text an *original language* (``title_language``,
@@ -28,7 +31,13 @@ Part 2 - meal poll.
   creation order) and ``dietary_tags``.
 - ``volunteer_meal_notes`` holds a volunteer's free-text dietary note for one edition.
 
-The downgrade drops the questions and the yes/no answers (the meals options and picks stay).
+Part 3 - additional question kinds and visitor order questions.
+
+- Single choice, free text and 1–5 ratings use typed volunteer answer tables.
+- Optional event questions use typed answers belonging to visitor orders.
+
+The downgrade drops question definitions and typed answers (the meals options and picks stay).
+Registrations and products are preserved.
 
 Revision ID: 009
 Revises: 008
@@ -367,8 +376,152 @@ def _downgrade_meal_poll() -> None:
     op.drop_table("edition_poll_questions")
 
 
+def _upgrade_poll_kinds() -> None:
+    op.drop_constraint("ck_edition_poll_questions_kind", "edition_poll_questions")
+    op.alter_column("edition_poll_questions", "kind", type_=sa.String(32), existing_type=sa.String(10))
+    op.create_check_constraint(
+        "ck_edition_poll_questions_kind",
+        "edition_poll_questions",
+        "kind IN ('yes_no', 'meals', 'single_choice', 'free_text', 'rating')",
+    )
+    op.create_unique_constraint("uq_poll_option_question", "edition_poll_options", ["id", "question_id"])
+    for suffix, column, constraints in (
+        (
+            "choices",
+            sa.Column("option_id", sa.String(64), nullable=False),
+            [
+                sa.ForeignKeyConstraint(
+                    ["option_id", "question_id"],
+                    ["edition_poll_options.id", "edition_poll_options.question_id"],
+                    ondelete="CASCADE",
+                )
+            ],
+        ),
+        (
+            "texts",
+            sa.Column("text", sa.String(500), nullable=False),
+            [sa.CheckConstraint("length(trim(text)) BETWEEN 1 AND 500", name="ck_poll_texts_value")],
+        ),
+        (
+            "ratings",
+            sa.Column("rating", sa.Integer(), nullable=False),
+            [sa.CheckConstraint("rating BETWEEN 1 AND 5", name="ck_poll_ratings_value")],
+        ),
+    ):
+        op.create_table(
+            f"volunteer_poll_{suffix}",
+            sa.Column("volunteer_id", sa.String(64), sa.ForeignKey("people.id", ondelete="CASCADE"), primary_key=True),
+            sa.Column(
+                "question_id",
+                sa.String(64),
+                sa.ForeignKey("edition_poll_questions.id", ondelete="CASCADE"),
+                primary_key=True,
+            ),
+            column,
+            *constraints,
+        )
+
+    op.create_index("ix_volunteer_poll_choices_option_id", "volunteer_poll_choices", ["option_id"])
+
+
+def _downgrade_poll_kinds() -> None:
+    # The old app cannot represent the new questions. Remove them (and their options)
+    # explicitly; existing yes/no and meals questions and answers remain untouched.
+    for suffix in ("choices", "texts", "ratings"):
+        op.drop_table(f"volunteer_poll_{suffix}")
+    op.execute("DELETE FROM edition_poll_questions WHERE kind IN ('single_choice', 'free_text', 'rating')")
+    op.drop_constraint("uq_poll_option_question", "edition_poll_options")
+    op.drop_constraint("ck_edition_poll_questions_kind", "edition_poll_questions")
+    op.alter_column("edition_poll_questions", "kind", type_=sa.String(10), existing_type=sa.String(32))
+    op.create_check_constraint(
+        "ck_edition_poll_questions_kind", "edition_poll_questions", "kind IN ('yes_no', 'meals')"
+    )
+
+
+def _upgrade_order_questions() -> None:
+    op.create_table(
+        "event_order_questions",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("event_id", sa.String(64), sa.ForeignKey("events.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("kind", sa.String(32), nullable=False),
+        sa.Column("title_nl", sa.String(200), nullable=False),
+        sa.Column("title_fr", sa.String(200)),
+        sa.Column("title_en", sa.String(200)),
+        sa.Column("description_nl", sa.String(500)),
+        sa.Column("description_fr", sa.String(500)),
+        sa.Column("description_en", sa.String(500)),
+        sa.Column("active", sa.Boolean(), nullable=False),
+        sa.Column("sort_order", sa.Integer(), nullable=False),
+        sa.CheckConstraint("kind IN ('single_choice', 'free_text', 'rating')", name="ck_order_question_kind"),
+        sa.CheckConstraint("length(trim(title_nl)) > 0", name="ck_order_question_title"),
+        sa.CheckConstraint(
+            "((description_fr IS NULL AND description_en IS NULL) OR length(trim(description_nl)) > 0) IS TRUE",
+            name="ck_order_question_description",
+        ),
+        sa.UniqueConstraint("id", "kind", name="uq_order_question_kind"),
+    )
+    op.create_index("ix_event_order_questions_event_id", "event_order_questions", ["event_id"])
+    op.create_table(
+        "event_order_options",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column(
+            "question_id", sa.String(64), sa.ForeignKey("event_order_questions.id", ondelete="CASCADE"), nullable=False
+        ),
+        sa.Column("label_nl", sa.String(200), nullable=False),
+        sa.Column("label_fr", sa.String(200)),
+        sa.Column("label_en", sa.String(200)),
+        sa.Column("sort_order", sa.Integer(), nullable=False),
+        sa.UniqueConstraint("id", "question_id", name="uq_order_option_question"),
+        sa.CheckConstraint("length(trim(label_nl)) > 0", name="ck_order_option_label"),
+    )
+    op.create_index("ix_event_order_options_question_id", "event_order_options", ["question_id"])
+    op.create_table(
+        "registration_order_answers",
+        sa.Column(
+            "registration_id", sa.String(64), sa.ForeignKey("registrations.id", ondelete="CASCADE"), primary_key=True
+        ),
+        sa.Column("question_id", sa.String(64), primary_key=True),
+        sa.Column("kind", sa.String(32), nullable=False),
+        sa.Column("option_id", sa.String(64)),
+        sa.Column("text", sa.String(500)),
+        sa.Column("rating", sa.Integer()),
+        sa.ForeignKeyConstraint(
+            ["question_id", "kind"], ["event_order_questions.id", "event_order_questions.kind"], ondelete="RESTRICT"
+        ),
+        sa.ForeignKeyConstraint(
+            ["option_id", "question_id"],
+            ["event_order_options.id", "event_order_options.question_id"],
+            ondelete="RESTRICT",
+        ),
+        sa.CheckConstraint(
+            "(kind = 'single_choice' AND option_id IS NOT NULL AND text IS NULL AND rating IS NULL) OR (kind = 'free_text' AND option_id IS NULL AND text IS NOT NULL AND length(trim(text)) BETWEEN 1 AND 500 AND rating IS NULL) OR (kind = 'rating' AND option_id IS NULL AND text IS NULL AND rating IS NOT NULL AND rating BETWEEN 1 AND 5)",
+            name="ck_order_answer_value",
+        ),
+    )
+    op.create_index("ix_registration_order_answers_option_id", "registration_order_answers", ["option_id"])
+
+
+def _downgrade_order_questions() -> None:
+    op.drop_table("registration_order_answers")
+    op.drop_table("event_order_options")
+    op.drop_table("event_order_questions")
+
+
+def _upgrade_poll_deletion_notifications() -> None:
+    op.create_table(
+        "poll_deletion_notifications",
+        sa.Column("id", sa.String(64), primary_key=True),
+        sa.Column("recipient", sa.String(320), nullable=False),
+        sa.Column("subject", sa.String(200), nullable=False),
+        sa.Column("body", sa.Text(), nullable=False),
+    )
+
+
 def upgrade() -> None:
     _upgrade_meal_poll()
+    _upgrade_poll_kinds()
+    _upgrade_order_questions()
+    _upgrade_poll_deletion_notifications()
     _copy_original_into_dutch()
     _carry_pending_changes()
     for table, old_name, _old_sql, _new_name, _new_sql in CONSTRAINTS:
@@ -380,6 +533,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    op.drop_table("poll_deletion_notifications")
+    _downgrade_order_questions()
+    _downgrade_poll_kinds()
     for table, _old_name, _old_sql, new_name, _new_sql in CONSTRAINTS:
         op.drop_constraint(new_name, table, type_="check")
     for table, column, kind in COLUMNS:

@@ -12,6 +12,7 @@ from app.database import async_session_factory
 from app.email import (
     deliver_contact_notification,
     deliver_organization_change_notification,
+    deliver_poll_deletion_notification,
     deliver_registration_confirmation,
 )
 from app.push import WEB_PUSH_TEST, deliver_web_push_test
@@ -22,6 +23,7 @@ from app.services.outbox_service import (
     REGISTRATION_CONFIRMATION,
     process_one_job,
 )
+from app.services.poll_notifications import POLL_DELETION
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +38,7 @@ async def run() -> None:
     handlers = {
         REGISTRATION_CONFIRMATION: deliver_registration_confirmation,
         CONTACT_NOTIFICATION: deliver_contact_notification,
+        POLL_DELETION: deliver_poll_deletion_notification,
         NOTIFICATION: deliver_organization_change_notification,
         WEB_PUSH_TEST: deliver_web_push_test,
         COMPOSER_MESSAGE_DISPATCH: deliver_composer_message_dispatch,

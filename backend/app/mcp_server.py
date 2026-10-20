@@ -89,8 +89,11 @@ from app.schemas import (
     FaqLocale,
     LayoutCreate,
     PollAttendanceItem,
+    PollChoiceItem,
     PollQuestionKind,
+    PollRatingItem,
     PollSelectionItem,
+    PollTextItem,
     RoomCreate,
     SponsorTier,
     TableCreate,
@@ -1536,7 +1539,9 @@ class ChampagneFestivalMcpBackend:
         description_en: str | None = None,
         closes_at: datetime | None = None,
     ) -> dict:
-        """Add a question to an edition's volunteer poll, after the existing ones. ``kind`` is ``yes_no`` (for
+        """Add a question to an edition's volunteer poll, after the existing ones. ``kind`` supports
+        ``single_choice`` (one configured option), ``free_text`` (up to 500 characters),
+        ``rating`` (integer 1–5), ``yes_no`` (for
         example "Will you join the dinner on Sunday?"; volunteers answer yes with a number of people, or no) or
         ``meals`` (add options afterwards with ``create_poll_option``). The Dutch title is required; French and
         English are optional translations. ``closes_at`` (with a timezone) is when volunteers can no longer
@@ -1587,13 +1592,14 @@ class ChampagneFestivalMcpBackend:
             reopen=reopen,
         )
 
-    async def delete_poll_question(self, question_id: str, confirm_answers: bool = False) -> dict:
+    async def delete_poll_question(self, question_id: str, confirm_answers: bool = False, notify: bool = True) -> dict:
         """Delete a poll question with its options and answers. When volunteers answered it, nothing is deleted
-        unless ``confirm_answers`` is true; a closed question refuses the deletion (reopen it first). Requires
+        unless ``confirm_answers`` is true; ``notify`` emails affected volunteers by default.
+        A closed question refuses the deletion (reopen it first). Requires
         the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.delete_poll_question(
-            self.session_factory, self._actor(), question_id, confirm_answers=confirm_answers
+            self.session_factory, self._actor(), question_id, confirm_answers=confirm_answers, notify=notify
         )
 
     async def reorder_poll_questions(self, edition_id: str, ordered_ids: list[str]) -> dict:
@@ -1666,17 +1672,18 @@ class ChampagneFestivalMcpBackend:
             dietary_tags=dietary_tags,
         )
 
-    async def delete_poll_option(self, option_id: str, confirm_selections: bool = False) -> dict:
+    async def delete_poll_option(self, option_id: str, confirm_selections: bool = False, notify: bool = True) -> dict:
         """Delete a meal poll option. When volunteers already picked it, nothing is deleted unless
-        ``confirm_selections`` is true, which removes their picks; a closed question refuses the deletion
+        ``confirm_selections`` is true, which removes their picks. ``notify`` emails affected volunteers
+        by default; a closed question refuses the deletion
         (reopen it first). Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.delete_poll_option(
-            self.session_factory, self._actor(), option_id, confirm_selections=confirm_selections
+            self.session_factory, self._actor(), option_id, confirm_selections=confirm_selections, notify=notify
         )
 
     async def reorder_poll_options(self, question_id: str, ordered_ids: list[str]) -> dict:
-        """Set the display order of a meals question's options; ``ordered_ids`` must name every option of the
+        """Set the display order of a question's options; ``ordered_ids`` must name every option of the
         question exactly once. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.reorder_poll_options(
@@ -1685,7 +1692,8 @@ class ChampagneFestivalMcpBackend:
 
     async def list_poll_orders(self, edition_id: str, locale: Language | None = None) -> dict:
         """Who answered what in an edition's volunteer poll: every active volunteer (also those who have not
-        answered yet) with their meal picks, yes/no answers (with number of people) and dietary note, next to
+        answered yet) with their meal picks, yes/no answers (with number of people), choices, text, ratings
+        and dietary note, next to
         the questions in display order with counts. Contains volunteer names. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.list_poll_orders(self.session_factory, edition_id, locale)
@@ -1696,13 +1704,18 @@ class ChampagneFestivalMcpBackend:
         volunteer_id: str,
         selections: list[PollSelectionItem] | None = None,
         attendance: list[PollAttendanceItem] | None = None,
+        choices: list[PollChoiceItem] | None = None,
+        texts: list[PollTextItem] | None = None,
+        ratings: list[PollRatingItem] | None = None,
         note: str | None = None,
         confirm_closed: bool = False,
     ) -> dict:
         """Enter or correct a volunteer's answers (for example from an email they sent): ``selections``
         (``option_id`` and ``quantity`` 1 to 20) replaces all their meal picks for the edition and ``attendance``
         (``question_id``, ``attending`` and ``people`` including themselves) all their yes/no answers, so list
-        every answer they gave. ``note`` omitted keeps their dietary note, an empty string clears it. A change
+        every answer they gave. ``choices`` contains question_id/option_id, ``texts`` question_id/text
+        (up to 500 characters), and ``ratings`` question_id/rating (1–5). These also fully replace the
+        edition's answers. ``note`` omitted keeps their dietary note, an empty string clears it. A change
         to a closed question needs ``confirm_closed`` to be true. Audited with you as the actor. Requires the
         ``admin`` role."""
         self._require_admin()
@@ -1713,6 +1726,9 @@ class ChampagneFestivalMcpBackend:
             volunteer_id=volunteer_id,
             selections=selections,
             attendance=attendance,
+            choices=choices,
+            texts=texts,
+            ratings=ratings,
             note=note,
             confirm_closed=confirm_closed,
         )
@@ -2722,6 +2738,7 @@ class ChampagneFestivalMcpBackend:
         event_id: str,
         guest_count: int,
         order_items: list[dict] | None = None,
+        order_answers: list[dict] | None = None,
         notes: str = "",
         accessibility_note: str = "",
         status: str = "confirmed",
@@ -2739,6 +2756,7 @@ class ChampagneFestivalMcpBackend:
             event_id=event_id,
             guest_count=guest_count,
             order_items=order_items,
+            order_answers=order_answers,
             notes=notes,
             accessibility_note=accessibility_note,
             status=status,
@@ -2754,6 +2772,7 @@ class ChampagneFestivalMcpBackend:
         allocations: list[dict] | None = None,
         confirm_over_capacity: bool = False,
         order_items: list[dict] | None = None,
+        order_answers: list[dict] | None = None,
         notes: str | None = None,
         accessibility_note: str | None = None,
         person_id: str | None = None,
@@ -2782,6 +2801,7 @@ class ChampagneFestivalMcpBackend:
             allocations=allocations,
             confirm_over_capacity=confirm_over_capacity,
             order_items=order_items,
+            order_answers=order_answers,
             notes=notes,
             accessibility_note=accessibility_note,
             person_id=person_id,

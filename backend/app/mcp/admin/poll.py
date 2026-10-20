@@ -18,6 +18,7 @@ from app.schemas import (
     AdminPollOrderIn,
     DietaryTag,
     PollAttendanceItem,
+    PollChoiceItem,
     PollOptionCreate,
     PollOptionReorder,
     PollOptionUpdate,
@@ -26,7 +27,9 @@ from app.schemas import (
     PollQuestionKind,
     PollQuestionReorder,
     PollQuestionUpdate,
+    PollRatingItem,
     PollSelectionItem,
+    PollTextItem,
 )
 from app.services import poll_options_service, poll_questions_service
 from app.translations import Language
@@ -119,12 +122,12 @@ async def update_poll_question(
 
 
 async def delete_poll_question(
-    session_factory: Any, actor: str, question_id: str, *, confirm_answers: bool = False
+    session_factory: Any, actor: str, question_id: str, *, confirm_answers: bool = False, notify: bool = True
 ) -> dict:
     async with session_factory() as db:
         try:
             await poll_questions_service.delete_poll_question(
-                db, question_id, actor=actor, confirm_answers=confirm_answers
+                db, question_id, actor=actor, confirm_answers=confirm_answers, notify=notify
             )
         except HTTPException as exc:
             raise as_value_error(exc) from exc
@@ -218,12 +221,12 @@ async def update_poll_option(
 
 
 async def delete_poll_option(
-    session_factory: Any, actor: str, option_id: str, *, confirm_selections: bool = False
+    session_factory: Any, actor: str, option_id: str, *, confirm_selections: bool = False, notify: bool = True
 ) -> dict:
     async with session_factory() as db:
         try:
             await poll_options_service.delete_poll_option(
-                db, option_id, actor=actor, confirm_selections=confirm_selections
+                db, option_id, actor=actor, confirm_selections=confirm_selections, notify=notify
             )
         except HTTPException as exc:
             raise as_value_error(exc) from exc
@@ -258,16 +261,23 @@ async def set_volunteer_poll_order(
     volunteer_id: str,
     selections: list[PollSelectionItem] | None = None,
     attendance: list[PollAttendanceItem] | None = None,
+    choices: list[PollChoiceItem] | None = None,
+    texts: list[PollTextItem] | None = None,
+    ratings: list[PollRatingItem] | None = None,
     note: str | None = None,
     confirm_closed: bool = False,
 ) -> dict:
     """Enter or correct a volunteer's answers. ``selections`` and ``attendance`` replace all their picks and
-    yes/no answers for the edition; ``note`` omitted keeps their note and an empty string clears it. A change
+    yes/no answers for the edition. ``choices``, ``texts`` and ``ratings`` also replace the corresponding
+    answers (omitted lists clear them); ``note`` omitted keeps their note and an empty string clears it. A change
     to a closed question needs ``confirm_closed``."""
     body = validate_with_schema(
         AdminPollOrderIn,
         selections=selections or [],
         attendance=attendance or [],
+        choices=choices or [],
+        texts=texts or [],
+        ratings=ratings or [],
         note=note,
         confirm_closed=confirm_closed,
     )

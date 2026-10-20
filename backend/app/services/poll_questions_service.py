@@ -1,7 +1,6 @@
 """The volunteer poll: questions per edition, who answered what, admin entry and the volunteer's own answers.
 
-A question is ``yes_no`` (will you join this, and with how many people) or ``meals`` (pick a quantity of
-each option, see ``app.services.poll_options_service``). Each question has its own optional closing time.
+Questions support attendance, meals, single choice, free text and ratings. Each has its own optional closing time.
 Everything specific to a kind lives in ``app.services.poll_kinds``; this module never branches on it.
 
 Used by ``app.routers.poll_questions`` and ``app.routers.volunteer_self`` (REST) and
@@ -42,6 +41,7 @@ from app.services.poll_common import (
     lock_edition,
 )
 from app.services.poll_kinds import KINDS, kind_of
+from app.services.poll_notifications import queue_removed_answers
 from app.utils import make_id, roles_contains
 
 TEXT_FIELDS = ("title_nl", "title_fr", "title_en", "description_nl", "description_fr", "description_en")
@@ -198,6 +198,7 @@ async def delete_poll_question(
     actor: str,
     request_id: str | None = None,
     confirm_answers: bool = False,
+    notify: bool = True,
 ) -> None:
     """Delete a question with its options and answers. When volunteers answered it, the caller must confirm
     that their answers are removed, and a closed question refuses the deletion outright: its answers are final."""
@@ -216,6 +217,8 @@ async def delete_poll_question(
                 "poll_question_in_use",
                 f"{answered} volunteer(s) answered this question; confirm to remove their answers.",
             )
+    if notify:
+        await queue_removed_answers(db, question, actor=actor, request_id=request_id)
     await kind_of(question).delete_question_data(db, question)
     await db.delete(question)
     await write_audit_entry(
@@ -492,6 +495,9 @@ async def set_volunteer_poll_order(
             "option_count": len(body.selections),
             "total_quantity": sum(s.quantity for s in body.selections),
             "attendance_count": len(body.attendance),
+            "choice_count": len(body.choices),
+            "text_count": len(body.texts),
+            "rating_count": len(body.ratings),
             "note_changed": body.note is not None,
             "closed_questions_changed": closed_changes,
         },

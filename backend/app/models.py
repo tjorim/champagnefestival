@@ -14,6 +14,7 @@ from sqlalchemy import (
     DateTime,
     Float,
     ForeignKey,
+    ForeignKeyConstraint,
     Index,
     Integer,
     Numeric,
@@ -130,6 +131,7 @@ class Registration(Base):
         String(64), ForeignKey("events.id", ondelete="RESTRICT"), index=True, nullable=False
     )
     guest_count: Mapped[int] = mapped_column(Integer)
+    order_answers: Mapped[list[RegistrationOrderAnswer]] = relationship(cascade="all, delete-orphan", lazy="selectin")
     order_items: Mapped[list[dict]] = mapped_column(JSON, default=list)
     allocations: Mapped[list[RegistrationAllocation]] = relationship(
         cascade="all, delete-orphan", lazy="selectin", order_by="RegistrationAllocation.table_id"
@@ -855,6 +857,10 @@ class Event(Base):
     this event sells anything is answered by whether it *has* products (see
     `Product`), not by a separate flag on the event."""
 
+    order_questions: Mapped[list[EventOrderQuestion]] = relationship(
+        cascade="all, delete-orphan", lazy="selectin", order_by="EventOrderQuestion.sort_order, EventOrderQuestion.id"
+    )
+
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     registrations_close_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -1110,9 +1116,8 @@ class VolunteerPeriod(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
 
 
-POLL_QUESTION_KINDS = ("yes_no", "meals")
-"""``yes_no``: will you join this (dinner on Sunday, a play in December)? ``meals``: pick dishes, several
-of one if you like."""
+POLL_QUESTION_KINDS = ("yes_no", "meals", "single_choice", "free_text", "rating")
+"""Attendance, meal quantities, one configured choice, free text and fixed 1–5 ratings."""
 
 MAX_POLL_PEOPLE = 10
 """The most people one "yes" can stand for (the volunteer plus guests)."""
@@ -1142,7 +1147,7 @@ class EditionPollQuestion(Base):
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    kind: Mapped[str] = mapped_column(String(10), nullable=False)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
     title_nl: Mapped[str] = mapped_column(String(200), nullable=False)
     title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -1163,10 +1168,10 @@ class EditionPollQuestion(Base):
 
 
 class EditionPollOption(Base):
-    """A food choice offered to volunteers for one edition (a dish, a soup, ...).
+    """An option offered to volunteers for a meals or single-choice question.
     The choices are catering-dependent and change every edition, so they are
     admin-configured content rather than a fixed list, mirroring how `Product`
-    holds one event's orderable items. It belongs to a ``meals`` question
+    holds one event's orderable items. It belongs to an option-bearing question
     (`EditionPollQuestion`); a volunteer simply picks how many of each they want
     (`VolunteerPollSelection.quantity`).
 
@@ -1176,7 +1181,10 @@ class EditionPollOption(Base):
     """
 
     __tablename__ = "edition_poll_options"
-    __table_args__ = (CheckConstraint("(length(trim(label_nl)) > 0) IS TRUE", name="ck_edition_poll_options_label_nl"),)
+    __table_args__ = (
+        CheckConstraint("(length(trim(label_nl)) > 0) IS TRUE", name="ck_edition_poll_options_label_nl"),
+        UniqueConstraint("id", "question_id", name="uq_poll_option_question"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     edition_id: Mapped[str] = mapped_column(
@@ -1185,7 +1193,7 @@ class EditionPollOption(Base):
     question_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), index=True, nullable=False
     )
-    """The ``meals`` question this option belongs to; ``edition_id`` is that question's edition."""
+    """The question this option belongs to; ``edition_id`` is that question's edition."""
     label_nl: Mapped[str] = mapped_column(String(200), nullable=False)
     label_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
     label_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -1246,6 +1254,51 @@ class VolunteerPollAnswer(Base):
     attending: Mapped[bool] = mapped_column(Boolean, nullable=False)
     people: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class VolunteerPollChoice(Base):
+    """One typed answer per volunteer and question; absence means unanswered."""
+
+    __tablename__ = "volunteer_poll_choices"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["option_id", "question_id"],
+            ["edition_poll_options.id", "edition_poll_options.question_id"],
+            ondelete="CASCADE",
+        ),
+    )
+
+    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
+    question_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), primary_key=True
+    )
+    option_id: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+
+
+class VolunteerPollText(Base):
+    """One typed answer per volunteer and question; absence means unanswered."""
+
+    __tablename__ = "volunteer_poll_texts"
+    __table_args__ = (CheckConstraint("length(trim(text)) BETWEEN 1 AND 500", name="ck_poll_texts_value"),)
+
+    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
+    question_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), primary_key=True
+    )
+    text: Mapped[str] = mapped_column(String(500), nullable=False)
+
+
+class VolunteerPollRating(Base):
+    """One typed answer per volunteer and question; absence means unanswered."""
+
+    __tablename__ = "volunteer_poll_ratings"
+    __table_args__ = (CheckConstraint("rating BETWEEN 1 AND 5", name="ck_poll_ratings_value"),)
+
+    volunteer_id: Mapped[str] = mapped_column(String(64), ForeignKey("people.id", ondelete="CASCADE"), primary_key=True)
+    question_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("edition_poll_questions.id", ondelete="CASCADE"), primary_key=True
+    )
+    rating: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
 class VolunteerMealNote(Base):
@@ -1682,3 +1735,107 @@ class SignageVideoExport(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, index=True)
+
+
+class EventOrderQuestion(Base):
+    """Optional information collected once per visitor order, separately from priced products."""
+
+    __tablename__ = "event_order_questions"
+    __table_args__ = (
+        CheckConstraint("kind IN ('single_choice', 'free_text', 'rating')", name="ck_order_question_kind"),
+        CheckConstraint("length(trim(title_nl)) > 0", name="ck_order_question_title"),
+        CheckConstraint(_optional_dutch_check("description"), name="ck_order_question_description"),
+        UniqueConstraint("id", "kind", name="uq_order_question_kind"),
+    )
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    event_id: Mapped[str] = mapped_column(String(64), ForeignKey("events.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    title_nl: Mapped[str] = mapped_column(String(200), nullable=False)
+    title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    title_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    description_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    description_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    description_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    options: Mapped[list[EventOrderOption]] = relationship(
+        cascade="all, delete-orphan", lazy="selectin", order_by="EventOrderOption.sort_order, EventOrderOption.id"
+    )
+
+    def as_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "kind": self.kind,
+            "active": self.active,
+            **{
+                key: getattr(self, key)
+                for key in ("title_nl", "title_fr", "title_en", "description_nl", "description_fr", "description_en")
+            },
+            "options": [
+                {"id": o.id, "label_nl": o.label_nl, "label_fr": o.label_fr, "label_en": o.label_en}
+                for o in self.options
+            ],
+        }
+
+
+class EventOrderOption(Base):
+    __tablename__ = "event_order_options"
+    __table_args__ = (
+        UniqueConstraint("id", "question_id", name="uq_order_option_question"),
+        CheckConstraint("length(trim(label_nl)) > 0", name="ck_order_option_label"),
+    )
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    question_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("event_order_questions.id", ondelete="CASCADE"), index=True
+    )
+    label_nl: Mapped[str] = mapped_column(String(200), nullable=False)
+    label_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    label_en: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+
+
+class RegistrationOrderAnswer(Base):
+    __tablename__ = "registration_order_answers"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ["question_id", "kind"], ["event_order_questions.id", "event_order_questions.kind"], ondelete="RESTRICT"
+        ),
+        ForeignKeyConstraint(
+            ["option_id", "question_id"],
+            ["event_order_options.id", "event_order_options.question_id"],
+            ondelete="RESTRICT",
+        ),
+        CheckConstraint(
+            "(kind = 'single_choice' AND option_id IS NOT NULL AND text IS NULL AND rating IS NULL) OR (kind = 'free_text' AND option_id IS NULL AND text IS NOT NULL AND length(trim(text)) BETWEEN 1 AND 500 AND rating IS NULL) OR (kind = 'rating' AND option_id IS NULL AND text IS NULL AND rating IS NOT NULL AND rating BETWEEN 1 AND 5)",
+            name="ck_order_answer_value",
+        ),
+    )
+    registration_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("registrations.id", ondelete="CASCADE"), primary_key=True
+    )
+    question_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    option_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    text: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    question: Mapped[EventOrderQuestion] = relationship(foreign_keys=[question_id, kind], lazy="joined")
+
+    def as_dict(self) -> dict:
+        return {
+            "question_id": self.question_id,
+            "option_id": self.option_id,
+            "text": self.text,
+            "rating": self.rating,
+            "question": self.question.as_dict(),
+        }
+
+
+class PollDeletionNotification(Base):
+    """Immutable email snapshot; survives deletion of the question and its answers."""
+
+    __tablename__ = "poll_deletion_notifications"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    recipient: Mapped[str] = mapped_column(String(320), nullable=False)
+    subject: Mapped[str] = mapped_column(String(200), nullable=False)
+    body: Mapped[str] = mapped_column(Text, nullable=False)

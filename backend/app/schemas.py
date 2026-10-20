@@ -341,6 +341,101 @@ class CategoryOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PollQuestionTexts(RequestModel):
+    """A poll question's title and description per language: Dutch is required for the title (and for the
+    description once it has any text), French and English are optional translations, and volunteers fall
+    back to Dutch. A blank text is stored as `None`."""
+
+    title_nl: Text200 | None = None
+    title_fr: Text200 | None = None
+    title_en: Text200 | None = None
+    description_nl: Text500 | None = None
+    description_fr: Text500 | None = None
+    description_en: Text500 | None = None
+
+    @field_validator(
+        "title_nl", "title_fr", "title_en", "description_nl", "description_fr", "description_en", mode="before"
+    )
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_dutch(self) -> Self:
+        if not self.title_nl:
+            raise ValueError("A poll question requires a non-empty Dutch title.")
+        if any((self.description_fr, self.description_en)) and not self.description_nl:
+            raise ValueError("A description requires non-empty Dutch text.")
+        return self
+
+
+class PollOptionLabels(RequestModel):
+    """A poll option's label per language: Dutch is required, French and English are optional
+    translations, and volunteers fall back to Dutch. A blank text is stored as `None`."""
+
+    label_nl: Text200 | None = None
+    label_fr: Text200 | None = None
+    label_en: Text200 | None = None
+
+    @field_validator("label_nl", "label_fr", "label_en", mode="before")
+    @classmethod
+    def normalize_label(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_dutch(self) -> Self:
+        if not self.label_nl:
+            raise ValueError("A poll option requires a non-empty Dutch label.")
+        return self
+
+
+OrderQuestionKind = Literal["single_choice", "free_text", "rating"]
+
+
+class OrderOptionWrite(PollOptionLabels):
+    id: ResourceId
+
+    @model_validator(mode="after")
+    def check_label(self) -> Self:
+        return self.validate_dutch()
+
+
+class OrderQuestionWrite(PollQuestionTexts):
+    id: ResourceId
+    kind: OrderQuestionKind
+    active: bool = True
+    options: list[OrderOptionWrite] = Field(default_factory=list, max_length=200)
+
+    @model_validator(mode="after")
+    def check_question(self) -> Self:
+        self.validate_dutch()
+        ids = [o.id for o in self.options]
+        if len(ids) != len(set(ids)):
+            raise ValueError("Duplicate options.")
+        return self
+
+
+class OrderQuestionList(RequestModel):
+    questions: list[OrderQuestionWrite] = Field(default_factory=list, max_length=50)
+
+    @model_validator(mode="after")
+    def unique_questions(self) -> Self:
+        ids = [q.id for q in self.questions]
+        options = [o.id for q in self.questions for o in q.options]
+        if len(ids) != len(set(ids)) or len(options) != len(set(options)):
+            raise ValueError("Question and option IDs must be unique.")
+        return self
+
+
+class OrderAnswerIn(RequestModel):
+    question_id: ResourceId
+    option_id: ResourceId | None = None
+    text: Text500 | None = None
+    rating: int | None = Field(default=None, ge=1, le=5, strict=True)
+
+
+class OrderAnswerOut(OrderAnswerIn):
+    question: OrderQuestionWrite
+
+
 class EventTextFields(RequestModel):
     """Per-language event title and description (#1222).
 
@@ -435,6 +530,7 @@ class EventOut(EventTextOut):
     registrations_close_at: datetime | None
     active: bool
     edition: EditionSummaryOut | None = None
+    order_questions: list[OrderQuestionWrite] = Field(default_factory=list)
     products: list[ProductOut] = Field(default_factory=list)
     """Purchasable products only — see ProductOut. Empty means nothing to order."""
     created_at: datetime
@@ -457,6 +553,7 @@ class EventPublicOut(EventTextOut):
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None
     active: bool
+    order_questions: list[OrderQuestionWrite] = Field(default_factory=list)
     products: list[ProductPublicOut] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
@@ -638,6 +735,8 @@ internally (see app.services.product_inventory.purchased_requests)."""
 
 
 class RegistrationNotesRequest(RequestModel):
+    order_answers: list[OrderAnswerIn] | None = Field(default=None, max_length=50)
+
     @model_validator(mode="before")
     @classmethod
     def merge_legacy_accessibility_note(cls, value):
@@ -719,6 +818,7 @@ class RegistrationVolunteerAssignment(RequestModel):
 
 
 class RegistrationOut(BaseModel):
+    order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)
     id: str
@@ -745,6 +845,7 @@ class RegistrationOut(BaseModel):
 
 
 class RegistrationPublicOut(BaseModel):
+    order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     """Returned by the unauthenticated POST /api/registrations endpoint — the
     visitor's own just-created booking, but with `event` carrying the public
     product shape rather than the admin one RegistrationOut exposes."""
@@ -850,6 +951,7 @@ class PaymentTransactionLedgerEnvelope(BaseModel):
 
 
 class RegistrationListOut(BaseModel):
+    order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)
     """Registration item returned in the list endpoint.
@@ -894,6 +996,7 @@ class RegistrationListEnvelope(BaseModel):
 
 
 class RegistrationGuestOut(BaseModel):
+    order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     """Registration data returned to visitors via the self-lookup endpoint."""
 
     id: str
@@ -1087,41 +1190,14 @@ class VolunteerListEnvelope(BaseModel):
 DietaryTag = Literal["vegetarian", "vegan", "gluten_free", "lactose_free", "contains_nuts"]
 """What a meal suits or contains; the labels are translated in the admin UI and the volunteer page."""
 
-PollQuestionKind = Literal["yes_no", "meals"]
-"""``yes_no``: will you join this, and with how many people? ``meals``: pick dishes, several of one if you like."""
+PollQuestionKind = Literal["yes_no", "meals", "single_choice", "free_text", "rating"]
+"""Attendance, meal quantities, one configured choice, free text, or a fixed 1–5 rating."""
 
 
 def _timezone_required(value: datetime | None) -> datetime | None:
     if value and value.utcoffset() is None:
         raise ValueError("closes_at must include a timezone")
     return value
-
-
-class PollQuestionTexts(RequestModel):
-    """A poll question's title and description per language: Dutch is required for the title (and for the
-    description once it has any text), French and English are optional translations, and volunteers fall
-    back to Dutch. A blank text is stored as `None`."""
-
-    title_nl: Text200 | None = None
-    title_fr: Text200 | None = None
-    title_en: Text200 | None = None
-    description_nl: Text500 | None = None
-    description_fr: Text500 | None = None
-    description_en: Text500 | None = None
-
-    @field_validator(
-        "title_nl", "title_fr", "title_en", "description_nl", "description_fr", "description_en", mode="before"
-    )
-    @classmethod
-    def normalize_text(cls, value: str | None) -> str | None:
-        return value.strip() or None if isinstance(value, str) else value
-
-    def validate_dutch(self) -> Self:
-        if not self.title_nl:
-            raise ValueError("A poll question requires a non-empty Dutch title.")
-        if any((self.description_fr, self.description_en)) and not self.description_nl:
-            raise ValueError("A description requires non-empty Dutch text.")
-        return self
 
 
 class PollQuestionCreate(PollQuestionTexts):
@@ -1166,25 +1242,6 @@ class PollQuestionCopy(RequestModel):
         return self
 
 
-class PollOptionLabels(RequestModel):
-    """A meal option's label per language: Dutch is required, French and English are optional
-    translations, and volunteers fall back to Dutch. A blank text is stored as `None`."""
-
-    label_nl: Text200 | None = None
-    label_fr: Text200 | None = None
-    label_en: Text200 | None = None
-
-    @field_validator("label_nl", "label_fr", "label_en", mode="before")
-    @classmethod
-    def normalize_label(cls, value: str | None) -> str | None:
-        return value.strip() or None if isinstance(value, str) else value
-
-    def validate_dutch(self) -> Self:
-        if not self.label_nl:
-            raise ValueError("A meal option requires a non-empty Dutch label.")
-        return self
-
-
 def _unique_dietary_tags(value: list[DietaryTag] | None) -> list[DietaryTag] | None:
     if value is not None and len(set(value)) != len(value):
         raise ValueError("dietary_tags must not contain duplicates")
@@ -1211,7 +1268,7 @@ class PollOptionUpdate(PollOptionLabels):
 
 
 class PollOptionReorder(RequestModel):
-    """Every option of a meals question, in the order volunteers should see them."""
+    """Every option of an option-bearing question, in the order volunteers should see them."""
 
     question_id: ResourceId
     ordered_ids: list[str] = Field(min_length=1, max_length=200)
@@ -1238,7 +1295,7 @@ class PollOptionOut(BaseModel):
 
 
 class PollQuestionOut(BaseModel):
-    """A question as the admin sees it: every translation, the closing state, its options (meals) and what
+    """A question as the admin sees it: every translation, the closing state, its options (meals/single choice) and what
     volunteers answered so far."""
 
     id: str
@@ -1289,6 +1346,28 @@ class PollAttendanceItem(RequestModel):
         return self
 
 
+class PollChoiceItem(RequestModel):
+    question_id: ResourceId
+    option_id: ResourceId
+
+
+class PollTextItem(RequestModel):
+    question_id: ResourceId
+    text: Text500
+
+    @field_validator("text")
+    @classmethod
+    def nonempty_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Text must not be blank.")
+        return value.strip()
+
+
+class PollRatingItem(RequestModel):
+    question_id: ResourceId
+    rating: int = Field(ge=1, le=5, strict=True)
+
+
 class PollOrderOptionOut(BaseModel):
     id: str
     label: str
@@ -1314,6 +1393,9 @@ class PollVolunteerOrderOut(BaseModel):
     answered_question_ids: list[str]
     selections: list[PollSelectionItem]
     attendance: list[PollAttendanceItem]
+    choices: list[PollChoiceItem] = Field(default_factory=list)
+    texts: list[PollTextItem] = Field(default_factory=list)
+    ratings: list[PollRatingItem] = Field(default_factory=list)
 
 
 class PollOrdersOut(BaseModel):
@@ -1328,19 +1410,24 @@ class PollOrdersOut(BaseModel):
 
 class AdminPollOrderIn(RequestModel):
     """An admin entering or correcting a volunteer's answers (for example from an email): a full replace of
-    their picks (`selections`, across all meals questions) and yes/no answers (`attendance`) for the edition.
+    their meal picks (`selections`), yes/no answers (`attendance`), `choices`, `texts` and `ratings` for the edition.
     `note` omitted keeps their dietary note, an empty string clears it. `confirm_closed` must be true when
     the change touches a question that has closed."""
 
     selections: list[PollSelectionItem] = Field(default_factory=list, max_length=100)
     attendance: list[PollAttendanceItem] = Field(default_factory=list, max_length=100)
+    choices: list[PollChoiceItem] = Field(default_factory=list, max_length=100)
+    texts: list[PollTextItem] = Field(default_factory=list, max_length=100)
+    ratings: list[PollRatingItem] = Field(default_factory=list, max_length=100)
     note: Text500 | None = None
     confirm_closed: bool = False
 
     @model_validator(mode="after")
     def reject_duplicates(self) -> Self:
         option_ids = [selection.option_id for selection in self.selections]
-        question_ids = [item.question_id for item in self.attendance]
+        question_ids = [
+            item.question_id for items in (self.attendance, self.choices, self.texts, self.ratings) for item in items
+        ]
         if len(option_ids) != len(set(option_ids)) or len(question_ids) != len(set(question_ids)):
             raise ValueError("Each option and each question can be listed only once.")
         return self
@@ -1348,8 +1435,12 @@ class AdminPollOrderIn(RequestModel):
 
 class VolunteerPollAnswerIn(RequestModel):
     """A volunteer's answer to one question: `selections` (quantity per option, replacing their picks for
-    that question) for a meals question, `attending` (and `people`, default 1) for a yes/no question."""
+    that question) for meals, `attending` (and `people`, default 1) for yes/no, `option_id` for single choice,
+    `text` (at most 500 characters) for free text, or `rating` (integer 1–5). Explicit null clears a scalar answer."""
 
+    option_id: ResourceId | None = None
+    text: Text500 | None = None
+    rating: int | None = Field(default=None, ge=1, le=5, strict=True)
     selections: list[PollSelectionItem] | None = Field(default=None, max_length=100)
     attending: bool | None = None
     people: int | None = Field(default=None, ge=0, le=MAX_POLL_PEOPLE)
@@ -1387,6 +1478,9 @@ class VolunteerPollQuestionOut(BaseModel):
     attending: bool | None = None
     """The answer to a yes/no question; `None` while unanswered."""
     people: int = 0
+    option_id: str | None = None
+    text: str | None = None
+    rating: int | None = None
 
 
 class VolunteerPollOut(BaseModel):

@@ -1,3 +1,4 @@
+import { parseOrderQuestions, type OrderQuestion } from "@/utils/orderQuestions";
 export interface EventEditionSummary {
   id: string;
   year: number;
@@ -96,6 +97,7 @@ export interface EventTranslations {
 }
 
 export interface Event extends EventTranslations {
+  orderQuestions?: OrderQuestion[];
   id: string;
   editionId: string;
   /** Dutch title (what the admin lists show). Visitors use `eventTitle`. */
@@ -188,6 +190,7 @@ export function apiToEvent(data: Record<string, unknown>): Event {
   return {
     id: String(data.id ?? ""),
     editionId: String(data.edition_id ?? ""),
+    orderQuestions: parseOrderQuestions(data.order_questions),
     title: String(data.title ?? ""),
     description: String(data.description ?? ""),
     // Responses always carry the stored languages; `title` is the resolved text.

@@ -1,3 +1,5 @@
+import { OrderAnswerInputs } from "@/components/OrderAnswers";
+import type { OrderAnswer } from "@/utils/orderQuestions";
 import {
   AdminField,
   AdminLabel,
@@ -68,6 +70,7 @@ export default function RegistrationCreateModal({
   onHide,
 }: RegistrationCreateModalProps) {
   const queryClient = useQueryClient();
+  const [orderAnswers, setOrderAnswers] = useState<OrderAnswer[]>([]);
   const [personQuery, setPersonQuery] = useState("");
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
@@ -87,6 +90,11 @@ export default function RegistrationCreateModal({
           eventId: value.eventId,
           guestCount: value.guestCount,
           notes: value.notes.trim(),
+          orderAnswers: orderAnswers.filter((a) =>
+            events
+              .find((e) => e.id === value.eventId)
+              ?.orderQuestions?.some((q) => q.id === a.question_id && q.active),
+          ),
         });
       } catch {
         // Error is surfaced via createRegistrationMutation.isError
@@ -94,6 +102,7 @@ export default function RegistrationCreateModal({
     },
   });
 
+  const selectedEventId = useSelector(form.atom, (s) => s.values.eventId);
   const createRegistrationMutation = useMutation({
     mutationFn: (payload: CreateRegistrationPayload) =>
       createAdminRegistration(payload, authHeaders),
@@ -121,6 +130,7 @@ export default function RegistrationCreateModal({
     if (show) {
       form.reset({ eventId: "", guestCount: 1, notes: "", personOption: null });
       setPersonQuery("");
+      setOrderAnswers([]);
       setDebouncedPersonQuery("");
       resetCreateRegistrationMutation();
     }
@@ -321,6 +331,15 @@ export default function RegistrationCreateModal({
               )}
             </form.Field>
 
+            <OrderAnswerInputs
+              admin
+              questions={(
+                events.find((e) => e.id === selectedEventId)?.orderQuestions ?? []
+              ).filter((q) => q.active)}
+              answers={orderAnswers}
+              onChange={setOrderAnswers}
+              disabled={createRegistrationMutation.isPending}
+            />
             <form.Field name="notes">
               {(field) => (
                 <AdminField controlId="registration-notes">

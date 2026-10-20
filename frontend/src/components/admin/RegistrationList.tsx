@@ -1,3 +1,4 @@
+import { orderAnswerText, questionText } from "@/utils/orderQuestions";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -920,6 +921,9 @@ export default function RegistrationList({
         [m.admin_payment_label()]: reg.paymentStatus,
         [m.admin_check_in_title()]: reg.checkedIn ? m.admin_value_yes() : m.admin_value_no(),
         [m.admin_created_at()]: reg.createdAt,
+        [m.order_questions_heading()]: (reg.orderAnswers ?? [])
+          .map((a) => `${questionText(a.question ?? {}, "title")}: ${orderAnswerText(a)}`)
+          .join("\n"),
       }));
       exportToCsv("registrations.csv", rows);
     } catch (err) {

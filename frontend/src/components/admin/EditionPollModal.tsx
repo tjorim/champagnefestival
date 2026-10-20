@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { AdminEmptyState } from "./AdminEmptyState";
@@ -116,8 +117,8 @@ export default function EditionPollModal({
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (question: PollQuestion) =>
-      deletePollQuestion(question.id, authHeaders, question.answeredCount > 0),
+    mutationFn: ({ question, notify }: { question: PollQuestion; notify: boolean }) =>
+      deletePollQuestion(question.id, authHeaders, question.answeredCount > 0, notify),
     retry: false,
   });
   const reorderMutation = useMutation({
@@ -151,21 +152,38 @@ export default function EditionPollModal({
   }
 
   async function handleDelete(question: PollQuestion) {
+    let notify = true;
     const confirmed = await confirm({
       title: m.admin_poll_question_delete_title(),
-      body:
-        question.answeredCount > 0
-          ? m.admin_poll_question_delete_body_in_use({
-              title: question.title,
-              answered: question.answeredCount,
-            })
-          : m.admin_poll_question_delete_body({ title: question.title }),
+      body: (
+        <>
+          <p>
+            {question.answeredCount > 0
+              ? m.admin_poll_question_delete_body_in_use({
+                  title: question.title,
+                  answered: question.answeredCount,
+                })
+              : m.admin_poll_question_delete_body({ title: question.title })}
+          </p>
+          {question.answeredCount > 0 && (
+            <label className="mt-3 flex items-center gap-2">
+              <Checkbox
+                defaultChecked
+                onCheckedChange={(checked) => {
+                  notify = checked;
+                }}
+              />
+              {m.admin_poll_notify_removed({ count: question.answeredCount })}
+            </label>
+          )}
+        </>
+      ),
       errorFallback: m.admin_content_error_save(),
       variant: "danger",
     });
     if (!confirmed) return;
     await run(async () => {
-      await deleteMutation.mutateAsync(question);
+      await deleteMutation.mutateAsync({ question, notify });
       replaceQuestions(questions.filter((q) => q.id !== question.id));
       refreshOrders();
     });

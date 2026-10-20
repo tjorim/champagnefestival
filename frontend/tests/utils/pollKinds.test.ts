@@ -3,6 +3,7 @@ import {
   parsePollKind,
   pollCountsSummary,
   POLL_KIND_HAS_NOTE,
+  POLL_KIND_HAS_DIETARY_TAGS,
   POLL_KIND_HAS_OPTIONS,
   POLL_QUESTION_KINDS,
 } from "@/utils/pollKinds";
@@ -19,7 +20,10 @@ describe("poll question kinds", () => {
   it("reads a known kind and falls back to meals for an unknown one", () => {
     expect(parsePollKind("yes_no")).toBe("yes_no");
     expect(parsePollKind("meals")).toBe("meals");
-    expect(parsePollKind("rating")).toBe("meals");
+    expect(parsePollKind("rating")).toBe("rating");
+    expect(parsePollKind("single_choice")).toBe("single_choice");
+    expect(parsePollKind("free_text")).toBe("free_text");
+    expect(parsePollKind("unknown")).toBe("meals");
     expect(parsePollKind(undefined)).toBe("meals");
   });
 
@@ -31,6 +35,7 @@ describe("poll question kinds", () => {
 
   it("declares every kind's capabilities", () => {
     expect(Object.keys(POLL_KIND_HAS_OPTIONS).sort()).toEqual([...POLL_QUESTION_KINDS].sort());
+    expect(Object.keys(POLL_KIND_HAS_DIETARY_TAGS).sort()).toEqual([...POLL_QUESTION_KINDS].sort());
     expect(Object.keys(POLL_KIND_HAS_NOTE).sort()).toEqual([...POLL_QUESTION_KINDS].sort());
   });
 });

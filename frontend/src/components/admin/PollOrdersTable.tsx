@@ -40,6 +40,29 @@ const COLUMNS: Record<PollQuestionKind, (question: Question) => Column[]> = {
       cell: (volunteer) => answerText(volunteer, question.id),
     },
   ],
+  single_choice: (question) => [
+    {
+      key: question.id,
+      header: question.title,
+      cell: (volunteer) =>
+        question.options.find((option) => option.id === volunteer.choices[question.id])?.label ??
+        "",
+    },
+  ],
+  free_text: (question) => [
+    {
+      key: question.id,
+      header: question.title,
+      cell: (volunteer) => volunteer.texts[question.id] ?? "",
+    },
+  ],
+  rating: (question) => [
+    {
+      key: question.id,
+      header: question.title,
+      cell: (volunteer) => String(volunteer.ratings[question.id] ?? ""),
+    },
+  ],
   meals: (question) =>
     question.options.map((option) => ({
       key: option.id,

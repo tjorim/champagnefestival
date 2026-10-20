@@ -1,3 +1,4 @@
+import { Checkbox } from "@/components/ui/checkbox";
 import { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
@@ -22,6 +23,7 @@ import {
 } from "@/utils/adminContentApi";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import { dietaryTagLabel } from "@/utils/dietaryTags";
+import { POLL_KIND_HAS_DIETARY_TAGS } from "@/utils/pollKinds";
 
 const EMPTY_WRITE: PollOptionWrite = { labelNl: "", labelFr: "", labelEn: "", dietaryTags: [] };
 
@@ -45,7 +47,9 @@ function OptionFields({
   idPrefix,
   value,
   onChange,
+  dietary,
 }: {
+  dietary: boolean;
   idPrefix: string;
   value: PollOptionWrite;
   onChange: (next: PollOptionWrite) => void;
@@ -68,25 +72,27 @@ function OptionFields({
           </AdminField>
         ))}
       </div>
-      <fieldset className="flex gap-4 flex-wrap items-center border-0 p-0 m-0">
-        <legend className="text-sm text-subtle">{m.admin_poll_dietary_label()}</legend>
-        {DIETARY_TAGS.map((tag) => (
-          <AdminCheck
-            key={tag}
-            id={`${idPrefix}-tag-${tag}`}
-            label={dietaryTagLabel(tag)}
-            checked={value.dietaryTags.includes(tag)}
-            onCheckedChange={(checked) =>
-              onChange({
-                ...value,
-                dietaryTags: checked
-                  ? [...value.dietaryTags, tag]
-                  : value.dietaryTags.filter((existing) => existing !== tag),
-              })
-            }
-          />
-        ))}
-      </fieldset>
+      {dietary && (
+        <fieldset className="flex gap-4 flex-wrap items-center border-0 p-0 m-0">
+          <legend className="text-sm text-subtle">{m.admin_poll_dietary_label()}</legend>
+          {DIETARY_TAGS.map((tag) => (
+            <AdminCheck
+              key={tag}
+              id={`${idPrefix}-tag-${tag}`}
+              label={dietaryTagLabel(tag)}
+              checked={value.dietaryTags.includes(tag)}
+              onCheckedChange={(checked) =>
+                onChange({
+                  ...value,
+                  dietaryTags: checked
+                    ? [...value.dietaryTags, tag]
+                    : value.dietaryTags.filter((existing) => existing !== tag),
+                })
+              }
+            />
+          ))}
+        </fieldset>
+      )}
     </div>
   );
 }
@@ -138,8 +144,8 @@ export default function PollOptionsEditor({
     },
   });
   const deleteMutation = useMutation({
-    mutationFn: (option: PollOption) =>
-      deletePollOption(option.id, authHeaders, option.volunteerCount > 0),
+    mutationFn: ({ option, notify }: { option: PollOption; notify: boolean }) =>
+      deletePollOption(option.id, authHeaders, option.volunteerCount > 0, notify),
     retry: false,
   });
   const reorderMutation = useMutation({
@@ -171,22 +177,39 @@ export default function PollOptionsEditor({
   }
 
   async function handleDelete(option: PollOption) {
+    let notify = true;
     const confirmed = await confirm({
       title: m.admin_poll_delete_title(),
-      body:
-        option.volunteerCount > 0
-          ? m.admin_poll_delete_body_in_use({
-              label: option.label,
-              volunteers: option.volunteerCount,
-              quantity: option.totalQuantity,
-            })
-          : m.admin_poll_delete_body({ label: option.label }),
+      body: (
+        <>
+          <p>
+            {option.volunteerCount > 0
+              ? m.admin_poll_delete_body_in_use({
+                  label: option.label,
+                  volunteers: option.volunteerCount,
+                  quantity: option.totalQuantity,
+                })
+              : m.admin_poll_delete_body({ label: option.label })}
+          </p>
+          {option.volunteerCount > 0 && (
+            <label className="mt-3 flex items-center gap-2">
+              <Checkbox
+                defaultChecked
+                onCheckedChange={(checked) => {
+                  notify = checked;
+                }}
+              />
+              {m.admin_poll_notify_removed({ count: option.volunteerCount })}
+            </label>
+          )}
+        </>
+      ),
       errorFallback: m.admin_content_error_save(),
       variant: "danger",
     });
     if (!confirmed) return;
     await run(async () => {
-      await deleteMutation.mutateAsync(option);
+      await deleteMutation.mutateAsync({ option, notify });
       onOptionsChange(options.filter((o) => o.id !== option.id));
     });
   }
@@ -214,6 +237,7 @@ export default function PollOptionsEditor({
                 {editing?.id === option.id ? (
                   <>
                     <OptionFields
+                      dietary={POLL_KIND_HAS_DIETARY_TAGS[question.kind]}
                       idPrefix={`poll-edit-${option.id}`}
                       value={editing.write}
                       onChange={(write) => setEditing({ id: option.id, write })}
@@ -306,7 +330,12 @@ export default function PollOptionsEditor({
         }}
         className="flex gap-2 items-end flex-wrap border-t border-input pt-4"
       >
-        <OptionFields idPrefix={`poll-add-${question.id}`} value={draft} onChange={setDraft} />
+        <OptionFields
+          dietary={POLL_KIND_HAS_DIETARY_TAGS[question.kind]}
+          idPrefix={`poll-add-${question.id}`}
+          value={draft}
+          onChange={setDraft}
+        />
         <Button
           type="submit"
           size="sm"

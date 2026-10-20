@@ -702,9 +702,10 @@ export async function deletePollQuestion(
   questionId: string,
   authHeaders: () => Record<string, string>,
   confirmAnswers = false,
+  notify = true,
 ): Promise<void> {
   await safeFetch(
-    `/api/poll-questions/${questionId}${confirmAnswers ? "?confirm_answers=true" : ""}`,
+    `/api/poll-questions/${questionId}?notify=${notify}${confirmAnswers ? "&confirm_answers=true" : ""}`,
     { method: "DELETE", headers: authHeaders() },
     m.admin_content_error_save(),
   );
@@ -777,9 +778,10 @@ export async function deletePollOption(
   optionId: string,
   authHeaders: () => Record<string, string>,
   confirmSelections = false,
+  notify = true,
 ): Promise<void> {
   await safeFetch(
-    `/api/poll-options/${optionId}${confirmSelections ? "?confirm_selections=true" : ""}`,
+    `/api/poll-options/${optionId}?notify=${notify}${confirmSelections ? "&confirm_selections=true" : ""}`,
     { method: "DELETE", headers: authHeaders() },
     m.admin_content_error_save(),
   );
@@ -827,6 +829,9 @@ export interface PollOrders {
     quantities: Record<string, number>;
     /** Yes/no answer per question id. */
     attendance: Record<string, PollAttendance>;
+    choices: Record<string, string>;
+    texts: Record<string, string>;
+    ratings: Record<string, number>;
   }[];
   volunteerCount: number;
 }
@@ -842,6 +847,9 @@ export async function setVolunteerPollOrder(
   payload: {
     quantities: Record<string, number>;
     attendance: Record<string, PollAttendance>;
+    choices: Record<string, string>;
+    texts: Record<string, string>;
+    ratings: Record<string, number>;
     note: string;
     confirmClosed: boolean;
   },
@@ -862,6 +870,17 @@ export async function setVolunteerPollOrder(
             attending: answer.attending,
             people: answer.attending ? answer.people : 0,
           })),
+        choices: Object.entries(payload.choices).map(([question_id, option_id]) => ({
+          question_id,
+          option_id,
+        })),
+        texts: Object.entries(payload.texts)
+          .filter(([, text]) => text.trim())
+          .map(([question_id, text]) => ({ question_id, text: text.trim() })),
+        ratings: Object.entries(payload.ratings).map(([question_id, rating]) => ({
+          question_id,
+          rating,
+        })),
         note: payload.note.trim(),
         confirm_closed: payload.confirmClosed,
       },
@@ -907,6 +926,15 @@ export async function fetchPollOrders(
       answeredQuestionIds: Array.isArray(v.answered_question_ids)
         ? v.answered_question_ids.map(String)
         : [],
+      choices: Object.fromEntries(
+        records(v.choices).map((item) => [String(item.question_id), String(item.option_id)]),
+      ),
+      texts: Object.fromEntries(
+        records(v.texts).map((item) => [String(item.question_id), String(item.text)]),
+      ),
+      ratings: Object.fromEntries(
+        records(v.ratings).map((item) => [String(item.question_id), Number(item.rating)]),
+      ),
       quantities: Object.fromEntries(
         records(v.selections).map((selection) => [
           String(selection.option_id ?? ""),

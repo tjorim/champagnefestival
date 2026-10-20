@@ -1,3 +1,4 @@
+import type { OrderAnswer } from "@/utils/orderQuestions";
 export interface TableAllocation {
   tableId: string;
   guestCount: number;
@@ -5,6 +6,7 @@ export interface TableAllocation {
 }
 
 export interface BookingUpdate {
+  orderAnswers?: OrderAnswer[];
   guestCount: number;
   quantities: Record<string, number>;
   allocations: TableAllocation[];
@@ -88,6 +90,7 @@ export interface PersonSummary {
 }
 
 export interface Registration {
+  orderAnswers?: OrderAnswer[];
   allocations?: TableAllocation[];
   bookedTableQuantity?: number;
   id: string;
@@ -125,6 +128,7 @@ export interface Registration {
 }
 
 export interface RegistrationFormData {
+  orderAnswers?: OrderAnswer[];
   name: string;
   email: string;
   phone: string;

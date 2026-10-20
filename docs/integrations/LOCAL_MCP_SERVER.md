@@ -91,7 +91,7 @@ complete regardless of which surface made the change. All are `admin`-only excep
 | Signage | `list_`/`get_`/`create_`/`update_`/`delete_` `signage_channel`, `signage_template` and `signage_slide` (`list_` uses the plural), `reorder_signage_slides`, `get_signage_playlist`, `preview_signage_playlist`. Image uploads stay in the admin UI, so image backgrounds, layers and slides can only reference an image uploaded there. |
 | Signage video | `get_signage_video_capability`, `list_signage_video_exports`, `get_signage_video_export`, `cancel_signage_video_export` (your own jobs only; creating, uploading and downloading an export stays in the admin UI) |
 | Waitlist | `list_waitlist_entries` (`product_id`/`event_id` filters), `mark_waitlist_entry_handled`, `delete_waitlist_entry` (visitors join through the public form only) |
-| Volunteer poll (yes/no and meal questions) | `create_poll_question` (`kind` `yes_no` or `meals`), `list_poll_questions`, `update_poll_question` (`closes_at` or `reopen`, per question), `delete_poll_question` (`confirm_answers` when volunteers answered), `reorder_poll_questions`, `copy_poll_questions`, `create_poll_option` (meals questions only), `list_poll_options` (`question_id`/`edition_id`/`locale`), `update_poll_option`, `delete_poll_option` (`confirm_selections` when volunteers picked it), `reorder_poll_options`, `list_poll_orders` (who answered what, with names and notes), `set_volunteer_poll_order` (enter or correct a volunteer's meal picks, yes/no answers with a number of people and note, also after a question closed with `confirm_closed`) |
+| Volunteer poll (yes/no, meals, single choice, free text and rating) | `create_poll_question` (`kind` `yes_no`, `meals`, `single_choice`, `free_text` or `rating`), `list_poll_questions`, `update_poll_question` (`closes_at` or `reopen`, per question), `delete_poll_question` (`confirm_answers` when volunteers answered), `reorder_poll_questions`, `copy_poll_questions`, `create_poll_option` (meals and single-choice questions), `list_poll_options` (`question_id`/`edition_id`/`locale`), `update_poll_option`, `delete_poll_option` (`confirm_selections` when volunteers picked it), `reorder_poll_options`, `list_poll_orders` (who answered what, with names and notes), `set_volunteer_poll_order` (replace a volunteer's meal picks, yes/no attendance, `choices` (`question_id`, `option_id`), `texts` (`question_id`, `text`, at most 500 characters), `ratings` (`question_id`, `rating`, integer 1–5) and note, also after a question closed with `confirm_closed`) |
 | Settings | `get_settings` (public), `set_maintenance_mode` |
 | Organizations | `create_organization`, `get_organization`, `list_organizations`, `update_organization`, `delete_organization` |
 | People | `create_person`, `get_person`, `update_person`, `delete_person`, `merge_people` |
@@ -346,3 +346,11 @@ uv run pytest tests/test_mcp_admin_venues.py tests/test_mcp_admin_registrations.
 4. Add tests in `backend/tests/test_mcp_admin_<module>.py` against a real database, and a
    role-gating/delegation spot-check in `backend/tests/test_mcp_server.py`'s
    `TestAdminToolWiring`.
+
+Visitor order questions are configured per event through admin REST
+`PUT /api/events/{event_id}/order-questions` and the event editor's **Order questions** panel.
+They support single choice, free text (500 characters) and rating (1–5), once per order.
+MCP `create_registration` and `update_registration` accept optional `order_answers` entries with
+`question_id` and one of `option_id`, `text` or `rating`. Updating with an omitted/null list preserves answers;
+`[]` clears them and a provided list replaces them. Used question definitions are preserved, and an admin
+can correct answers even after a question is deactivated. This information never changes product prices or stock.

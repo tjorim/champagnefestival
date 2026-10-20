@@ -1,3 +1,4 @@
+import { parseOrderAnswers } from "@/utils/orderQuestions";
 import { apiToEvent } from "./event";
 import type {
   LedgerTransaction,
@@ -97,6 +98,7 @@ export function apiToRegistration(d: Record<string, unknown>): Registration {
       : [],
     bookedTableQuantity: Number(d.booked_table_quantity ?? 0),
     notes: (d.notes ?? "") as string,
+    orderAnswers: parseOrderAnswers(d.order_answers),
     tableId: (d.table_id as string | undefined) ?? undefined,
     status: (d.status ?? "pending") as RegistrationStatus,
     paymentStatus: (d.payment_status ?? "unpaid") as PaymentStatus,

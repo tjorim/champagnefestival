@@ -1,3 +1,4 @@
+import OrderQuestionsEditor from "@/components/admin/OrderQuestionsEditor";
 import {
   AdminField,
   AdminLabel,
@@ -467,6 +468,13 @@ export default function EventModal({
 
             {!isFestival && (
               <div className="text-subtle text-sm mt-2">{m.admin_event_standalone_help()}</div>
+            )}
+            {initial?.id && (
+              <OrderQuestionsEditor
+                key={initial.id}
+                eventId={initial.id}
+                authHeaders={authHeaders}
+              />
             )}
           </DialogBody>
           <DialogFooter>

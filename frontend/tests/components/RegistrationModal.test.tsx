@@ -57,6 +57,9 @@ vi.mock("@/paraglide/messages", () => ({
     registration_errors_guests_required: () => "Please enter the number of guests",
     registration_errors_guests_min: () => "Minimum 1 guest required",
     registration_errors_guests_max: () => "Maximum 20 guests per registration",
+    order_questions_heading: () => "Order questions",
+    order_questions_help: () => "Optional answers per order",
+    poll_answer_none: () => "No answer",
     close: () => "Close",
     registration_increase_quantity: ({ name }: { name: string }) => `Increase quantity of ${name}`,
     registration_decrease_quantity: ({ name }: { name: string }) => `Decrease quantity of ${name}`,
@@ -98,18 +101,18 @@ const vipEvent: Event = {
   products: [champagneProduct],
 };
 
+function renderModal(props?: Partial<React.ComponentProps<typeof RegistrationModal>>) {
+  const wrapper = createTestQueryClientWrapper();
+
+  return render(<RegistrationModal show={true} onHide={() => {}} event={vipEvent} {...props} />, {
+    wrapper,
+  });
+}
+
 describe("RegistrationModal component", () => {
   beforeEach(() => {
     authState.accessToken = null;
   });
-
-  function renderModal(props?: Partial<React.ComponentProps<typeof RegistrationModal>>) {
-    const wrapper = createTestQueryClientWrapper();
-
-    return render(<RegistrationModal show={true} onHide={() => {}} event={vipEvent} {...props} />, {
-      wrapper,
-    });
-  }
 
   it("does not render when show=false", () => {
     const wrapper = createTestQueryClientWrapper();
@@ -363,7 +366,8 @@ describe("RegistrationModal component", () => {
     fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
 
     await waitFor(() => {
-      expect(screen.getByText("Internal server error")).toBeInTheDocument();
+      expect(screen.getByText("An error occurred. Please try again.")).toBeInTheDocument();
+      expect(screen.queryByText("Internal server error")).not.toBeInTheDocument();
     });
   });
 
@@ -553,4 +557,55 @@ describe("RegistrationModal component", () => {
       });
     });
   });
+});
+
+it("submits optional event answers with the order using translated labels", async () => {
+  let body: Record<string, unknown> | null = null;
+  server.use(
+    http.post("/api/registrations", async ({ request }) => {
+      body = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({ id: "with-answers" }, { status: 201 });
+    }),
+  );
+  const base = {
+    active: true,
+    title_fr: null,
+    description_nl: null,
+    description_fr: null,
+    description_en: null,
+    options: [],
+  };
+  renderModal({
+    event: {
+      ...vipEvent,
+      products: [],
+      orderQuestions: [
+        { ...base, id: "text", kind: "free_text", title_nl: "Opmerking", title_en: "Comment" },
+        { ...base, id: "rating", kind: "rating", title_nl: "Score", title_en: null },
+        {
+          ...base,
+          id: "choice",
+          kind: "single_choice",
+          title_nl: "Vervoer",
+          title_en: "Transport",
+          options: [{ id: "bike", label_nl: "Fiets", label_fr: null, label_en: "Bike" }],
+        },
+      ],
+    },
+  });
+  fireEvent.change(screen.getByLabelText(/Name \*/i), { target: { value: "Jane Doe" } });
+  fireEvent.change(screen.getByLabelText(/Email \*/i), { target: { value: "jane@example.com" } });
+  fireEvent.change(screen.getByLabelText(/Phone Number \*/i), {
+    target: { value: "+32 123 456 789" },
+  });
+  fireEvent.change(screen.getByLabelText("Comment"), { target: { value: "Extra chairs" } });
+  await selectAdminOption(screen.getByLabelText("Score"), "4");
+  await selectAdminOption(screen.getByLabelText("Transport"), "bike");
+  fireEvent.click(screen.getByRole("button", { name: /Place Registration/i }));
+  await waitFor(() => expect(body).not.toBeNull());
+  expect(body!.order_answers).toEqual([
+    { question_id: "text", text: "Extra chairs" },
+    { question_id: "rating", rating: 4 },
+    { question_id: "choice", option_id: "bike" },
+  ]);
 });

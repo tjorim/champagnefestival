@@ -1,3 +1,4 @@
+import { orderAnswersBody, type OrderAnswer } from "@/utils/orderQuestions";
 import { m } from "@/paraglide/messages";
 import { apiErrorFromResponse } from "@/utils/apiErrors";
 import { apiToEvent, type Event } from "@/types/event";
@@ -23,6 +24,7 @@ interface PersonSearchResult {
 export type EditionEvent = Event;
 
 export interface CreateRegistrationPayload {
+  orderAnswers?: OrderAnswer[];
   personId: string;
   eventId: string;
   guestCount: number;
@@ -201,6 +203,7 @@ export async function createAdminRegistration(
       guest_count: payload.guestCount,
       order_items: [],
       notes: payload.notes,
+      ...(payload.orderAnswers ? { order_answers: orderAnswersBody(payload.orderAnswers) } : {}),
       status: "confirmed",
     }),
   });

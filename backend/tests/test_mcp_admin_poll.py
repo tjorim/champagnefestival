@@ -119,7 +119,7 @@ async def test_meal_options_with_translations_tags_and_order(db_session):
         await mcp_poll.update_poll_option(factory, "admin-1", soup["id"], label_nl="")
     with pytest.raises(ValueError, match="Dutch label"):
         await mcp_poll.create_poll_option(factory, "admin-1", question_id=meals["id"], label_en="x")
-    with pytest.raises(ValueError, match="Only a meals question"):
+    with pytest.raises(ValueError, match="does not have options"):
         await mcp_poll.create_poll_option(factory, "admin-1", question_id=dinner["id"], label_nl="Soep")
     with pytest.raises(ValueError, match="dietary_tags"):
         await mcp_poll.create_poll_option(
@@ -234,3 +234,32 @@ async def test_admin_enters_answers_also_for_closed_questions(db_session):
     orders = await mcp_poll.list_poll_orders(factory, edition_id)
     assert [q["title"] for q in orders["questions"]] == ["Maaltijden", "Eten?"]
     assert orders["volunteer_count"] == 1
+
+
+async def test_all_new_kinds_can_be_created_and_answered_through_mcp(db_session):
+    from app.schemas import PollChoiceItem, PollRatingItem, PollTextItem
+
+    factory = mcp_session_factory(db_session)
+    edition = await _create_edition(db_session)
+    questions = {}
+    for kind in ("single_choice", "free_text", "rating"):
+        questions[kind] = await mcp_poll.create_poll_question(
+            factory, "admin", edition_id=edition, kind=kind, title_nl=kind
+        )
+    option = await mcp_poll.create_poll_option(
+        factory, "admin", question_id=questions["single_choice"]["id"], label_nl="Keuze"
+    )
+    db_session.add(Person(id="new-volunteer", name="Volunteer", roles=["volunteer"]))
+    await db_session.commit()
+    row = await mcp_poll.set_volunteer_poll_order(
+        factory,
+        "admin",
+        edition_id=edition,
+        volunteer_id="new-volunteer",
+        choices=[PollChoiceItem(question_id=questions["single_choice"]["id"], option_id=option["id"])],
+        texts=[PollTextItem(question_id=questions["free_text"]["id"], text="Tekst")],
+        ratings=[PollRatingItem(question_id=questions["rating"]["id"], rating=4)],
+    )
+    assert row["choices"][0]["option_id"] == option["id"]
+    assert row["texts"][0]["text"] == "Tekst"
+    assert row["ratings"][0]["rating"] == 4

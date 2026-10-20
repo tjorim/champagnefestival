@@ -1,3 +1,4 @@
+import { OrderAnswerSummary } from "@/components/OrderAnswers";
 import {
   AdminField,
   AdminLabel,
@@ -316,6 +317,7 @@ export default function RegistrationDetail({
                 />
               </PresentationListItem>
             )}
+            {!onSaveBooking && <OrderAnswerSummary answers={registration.orderAnswers} />}
             {!onSaveBooking && registration.notes && (
               <PresentationListItem className="border-border">
                 <span className="text-subtle block mb-1">{m.admin_notes()}</span>

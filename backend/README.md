@@ -590,11 +590,14 @@ An edition's poll is a list of **questions** (`edition_poll_questions`), each of
 - `meals`: "choose your meals". The question owns a list of options (`edition_poll_options`, with a
   `question_id`) and a volunteer asks for a quantity of each (1 to 20; an option left out means none),
   so they can mix dishes or take several of one.
+- `single_choice`: pick exactly one admin-configured option (`option_id`); `null` clears it.
+- `free_text`: a trimmed answer of up to 500 characters (`text`); blank or `null` clears it.
+- `rating`: an integer from 1 (lowest) to 5 (highest), inclusive (`rating`); `null` clears it.
 
 Questions are translated like other content (`title_nl` required, `title_fr`/`title_en`, same for
 `description_*`), carry a `sort_order` (new ones go last) and their own `closes_at`. Options are `label_nl`
 (required), `label_fr`, `label_en` and a `dietary_tags` list (`vegetarian`, `vegan`, `gluten_free`,
-`lactose_free`, `contains_nuts`, replaced as a whole on update); only a meals question has options
+`lactose_free`, `contains_nuts`, replaced as a whole on update); meals and single-choice questions have options
 (422 `poll_question_not_meals` otherwise).
 
 - **Admin REST:** `GET/POST /api/poll-questions`, `PUT/DELETE /api/poll-questions/{id}`,
@@ -612,14 +615,14 @@ Questions are translated like other content (`title_nl` required, `title_fr`/`ti
 - **Volunteer REST:** `GET /api/me/volunteer/poll?locale=` returns the active edition's questions in the
   language asked for (Dutch fallback) with the volunteer's own answers; `PUT /api/me/volunteer/poll/questions/{id}`
   replaces the answer to one question (`{selections: [{option_id, quantity}]}` for meals,
-  `{attending, people}` for yes/no); `PUT /api/me/volunteer/poll/note` sets the dietary note
+  `{attending, people}` for yes/no, `{option_id}`, `{text}` or `{rating}` for the new kinds); `PUT /api/me/volunteer/poll/note` sets the dietary note
   (`{note}`, at most 500 characters, an empty string clears it; `volunteer_meal_notes`).
 - **Who answered what:** `GET /api/poll-questions/orders?edition_id=` lists every active volunteer (also
   those who answered nothing) and anyone else holding an answer, with their answers in question order and
   their note; MCP `list_poll_orders`. It contains volunteer names (admin only).
 - **Admin entry:** `PUT /api/poll-questions/orders/{volunteer_id}?edition_id=` (MCP `set_volunteer_poll_order`)
   enters or corrects a volunteer's answers and note on their behalf, for example from an email. The body is
-  `{selections, attendance, note, confirm_closed}`; it replaces everything the volunteer answered for the
+  `{selections, attendance, choices, texts, ratings, note, confirm_closed}`; it replaces everything the volunteer answered for the
   edition. A change to a question that has closed needs `confirm_closed: true` (otherwise 409
   `poll_question_closed`). The volunteer must have the `volunteer` role (404 `volunteer_not_found`) and
   every option and question must belong to the edition (404 `poll_option_not_found` /
@@ -630,6 +633,10 @@ Questions are translated like other content (`title_nl` required, `title_fr`/`ti
   `?confirm_selections=true`; deleting a question volunteers answered is a 409 `poll_question_in_use` until
   `?confirm_answers=true`. Confirming removes those answers and the audit entry lists them. On a closed
   question both are a 409 `poll_question_closed` regardless: reopen it first.
+- Confirmed poll deletes email affected volunteers through the durable outbox by default (#1361).
+  Revision `009` includes the durable `poll_deletion_notifications` snapshot table.
+  REST and MCP accept `notify=false` to skip email. Each volunteer receives one translated
+  snapshot of the removed answer; delivery failures do not undo deletion.
 - MCP: `create_`/`update_`/`delete_poll_question`, `list_poll_questions`, `reorder_poll_questions`,
   `copy_poll_questions`, `create_`/`update_`/`delete_poll_option`, `list_poll_options`,
   `reorder_poll_options`, `list_poll_orders`, `set_volunteer_poll_order`. `update_poll_question` takes
@@ -642,7 +649,23 @@ constraint with a migration) and `PollQuestionKind`; `tests/test_poll_kinds.py` 
 frontend the per-kind pieces are `Record<PollQuestionKind, ...>` maps (`utils/pollKinds.ts`,
 `components/MyPollAnswers.tsx`, `components/admin/pollAnswerFields.tsx`, `PollOrdersTable`), so a new kind
 fails type-checking until each says what to do with it. The REST shapes still carry kind-specific fields
-(`selections`, `attendance`), which a new kind would extend.
+(`selections`, `attendance`, `choices`, `texts`, `ratings`).
+
+**Wire-shape decision (#1360): Option A, additive typed fields.** Existing REST/MCP readers retain
+`selections`, `attendance`, `attending`, `people` and the yes/no counts without a breaking tagged-answer
+migration. Each additional kind needs only one scalar on the volunteer view/request and one list on admin
+entry/orders: `choices: [{question_id, option_id}]`, `texts: [{question_id, text}]`, and
+`ratings: [{question_id, rating}]`. Lists default to empty, scalar reads to null. Admin entry is still a
+full replacement of **all five kinds**; clients editing an edition must round-trip every answer list.
+An old admin writer that omits the new lists clears those answers, so update such writers before using
+new kinds. Volunteer requests must contain their kind's field (explicit null clears); mixed-kind
+payloads with non-null fields from another kind are rejected. Every question reports `answered_count`; single-choice option totals count picks.
+
+Migration `009` widens the kind constraint and stores the new answers in `volunteer_poll_choices`,
+`volunteer_poll_texts` and `volunteer_poll_ratings`, each keyed by volunteer/question with cascading
+foreign keys. A composite option/question foreign key prevents a choice from using another question's
+option; database checks enforce nonblank text and the 1–5 scale. Free-text content is excluded from audit
+details. Downgrading to `008` drops all typed poll answers and question definitions; export answers before rolling back.
 
 Migration `009` turns the earlier option-only poll into this model: each edition that has options gets one
 "Maaltijden" meals question holding them (closing time and all), and its downgrade drops the questions and
@@ -759,3 +782,54 @@ disabled. Never mount this volume into Caddy or a public upload directory.
 See [API, limits and lifecycle](../docs/signage-api.md#private-mp4-exports-1349),
 [setup/activation](../docs/signage-setup.md#one-cycle-mp4-exports-1349) and
 [retry safety](../docs/retry-safety.md#private-signage-video-exports-1349).
+
+#### Visitor order questions (migration `009`)
+
+Events can collect optional **single choice**, **free text** (500 characters) and **rating** (integer 1–5)
+answers once per registration/order, regardless of guest count. These reuse the volunteer poll's scalar
+validation and shared frontend fields. Questions never create product lines, reserve stock or change prices.
+Meals and other priced choices remain products; there are no per-guest or required questions in this version.
+
+An administrator opens **Order questions** in an existing event's editor. This configuration saves separately
+from the event. `PUT /api/events/{event_id}/order-questions` accepts `{questions: [...]}`: each question has a
+client-generated stable `id`, `kind`, Dutch-required `title_nl` (optional `title_fr`/`title_en`), optional
+`description_*` with Dutch fallback, `active`, and ordered `options` with their own stable IDs and translated
+`label_*`. The array sets question order; options are only valid for single choice. IDs belonging to another
+event/question are rejected. The response and admin event reads include inactive questions; public event
+reads include active questions only. Limit: 50 submitted definitions and 200 options per question.
+
+Definitions live in `event_order_questions` and `event_order_options`; `registration_order_answers` stores
+one typed row per registration/question, with an option foreign key, bounded text or a bounded integer.
+A composite question/kind foreign key and check constraint prevent mixing kinds or answer fields; a composite
+option/question foreign key prevents selecting another question's option. Application validation also checks
+that each question belongs to the registration's event. Used definitions are immutable, including translations
+and options; changing them returns `order_question_in_use`. Deactivate the old question and add a new one.
+Removing a used definition from configuration deactivates it and retains its answers; unused omitted definitions
+are deleted. This preserves the meaning of answers on historical orders without storing an unvalidated JSON payload.
+
+`RegistrationCreate`, `RegistrationAdminCreate` and `RegistrationUpdate` accept `order_answers`, for example:
+
+```json
+[
+  {"question_id": "transport", "option_id": "bike"},
+  {"question_id": "comment", "text": "Extra chairs, please"},
+  {"question_id": "score", "rating": 5}
+]
+```
+
+Every question is optional; null clears a scalar value and whitespace-only text also clears. Mixed fields,
+duplicate questions, invalid values and wrong-event questions/options are rejected. Public checkout rejects
+inactive questions (`order_question_unavailable`); admin corrections can still answer inactive questions.
+On an admin update, omitted/null `order_answers` preserves answers, `[]` clears them, and a nonempty list
+replaces all answers for that order. Existing callers therefore preserve answers when editing unrelated fields.
+MCP `create_registration` and `update_registration` accept the same optional list. Question configuration is
+currently REST/admin UI only.
+
+Order reads include `order_answers` with the question definition for translated display, including inactive
+questions. Visitor account reads expose answers only alongside the caller's own existing order access.
+The admin booking editor can enter/correct answers; admin lists/CSV and visitor order details show them.
+Event guest-list CSV adds an `Order answers` column with Dutch question/value pairs. The all-matching admin
+CSV uses the interface locale. Existing CSV formula escaping applies to answer text too. Audit records include
+answer counts, never answer contents. Configuration and order writes serialize under the existing event lock.
+
+Downgrading `009` to `008` drops the new definitions and answers while preserving registrations and products. Export visitor answers before rolling back. Retry decisions are in `docs/retry-safety.md`.

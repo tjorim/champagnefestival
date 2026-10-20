@@ -1,5 +1,12 @@
 import type { ComponentType } from "react";
-import { AdminField, AdminInput, AdminLabel, AdminOption, AdminSelect } from "./AdminFields";
+import {
+  AdminField,
+  AdminInput,
+  AdminLabel,
+  AdminOption,
+  AdminSelect,
+  AdminTextarea,
+} from "./AdminFields";
 import { m } from "@/paraglide/messages";
 import type { PollAttendance, PollOrders } from "@/utils/adminContentApi";
 import { MAX_POLL_PEOPLE, MAX_POLL_QUANTITY } from "@/utils/myVolunteerApi";
@@ -12,6 +19,9 @@ type Volunteer = PollOrders["volunteers"][number];
 export interface AnswerPayload {
   quantities: Record<string, number>;
   attendance: Record<string, PollAttendance>;
+  choices: Record<string, string>;
+  texts: Record<string, string>;
+  ratings: Record<string, number>;
 }
 
 interface FieldsProps<Draft> {
@@ -121,6 +131,64 @@ const meals: AnswerKind<MealsDraft> = {
   },
 };
 
+const singleChoice: AnswerKind<string> = {
+  initial: (question, volunteer) => volunteer.choices[question.id] ?? "",
+  Fields: ({ question, draft, onChange }) => (
+    <AdminField controlId={`poll-choice-${question.id}`}>
+      <AdminLabel>{m.admin_poll_order_answer_label()}</AdminLabel>
+      <AdminSelect value={draft} onValueChange={(value) => onChange(value ?? "")}>
+        <AdminOption value="">{m.poll_answer_none()}</AdminOption>
+        {question.options.map((option) => (
+          <AdminOption key={option.id} value={option.id}>
+            {option.label}
+          </AdminOption>
+        ))}
+      </AdminSelect>
+    </AdminField>
+  ),
+  contribute: (question, draft, payload) => {
+    if (draft) payload.choices[question.id] = draft;
+  },
+};
+
+const freeText: AnswerKind<string> = {
+  initial: (question, volunteer) => volunteer.texts[question.id] ?? "",
+  Fields: ({ question, draft, onChange }) => (
+    <AdminField controlId={`poll-text-${question.id}`}>
+      <AdminLabel>{m.admin_poll_order_answer_label()}</AdminLabel>
+      <AdminTextarea
+        maxLength={500}
+        rows={3}
+        value={draft}
+        onChange={(event) => onChange(event.target.value)}
+      />
+    </AdminField>
+  ),
+  contribute: (question, draft, payload) => {
+    if (draft.trim()) payload.texts[question.id] = draft.trim();
+  },
+};
+
+const rating: AnswerKind<string> = {
+  initial: (question, volunteer) => String(volunteer.ratings[question.id] ?? ""),
+  Fields: ({ question, draft, onChange }) => (
+    <AdminField controlId={`poll-rating-${question.id}`}>
+      <AdminLabel>{m.poll_rating_label()}</AdminLabel>
+      <AdminSelect value={draft} onValueChange={(value) => onChange(value ?? "")}>
+        <AdminOption value="">{m.poll_answer_none()}</AdminOption>
+        {[1, 2, 3, 4, 5].map((value) => (
+          <AdminOption key={value} value={String(value)}>
+            {value}
+          </AdminOption>
+        ))}
+      </AdminSelect>
+    </AdminField>
+  ),
+  contribute: (question, draft, payload) => {
+    if (draft) payload.ratings[question.id] = Number(draft);
+  },
+};
+
 /** The draft of one question's answer; its shape belongs to the question's kind. */
 export type AnswerDraft = unknown;
 
@@ -146,4 +214,7 @@ function erase<Draft>(kind: AnswerKind<Draft>): AnswerFields {
 export const ANSWER_FIELDS: Record<PollQuestionKind, AnswerFields> = {
   yes_no: erase(yesNo),
   meals: erase(meals),
+  single_choice: erase(singleChoice),
+  free_text: erase(freeText),
+  rating: erase(rating),
 };

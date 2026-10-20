@@ -1,4 +1,6 @@
-import type { ComponentType } from "react";
+import { useState, type ComponentType } from "react";
+import ScalarAnswerFields from "@/components/ScalarAnswerFields";
+import { answerMyScalarQuestion } from "@/utils/myVolunteerApi";
 import { MinusIcon, PlusIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Badge } from "@/components/ui/badge";
@@ -158,8 +160,81 @@ function MealsAnswer({ question, saving, save }: AnswerInputProps) {
   );
 }
 
+function SingleChoiceAnswer({ question, saving, save }: AnswerInputProps) {
+  return (
+    <ScalarAnswerFields
+      id={`my-poll-choice-${question.id}`}
+      kind="single_choice"
+      label={m.admin_poll_order_answer_label()}
+      options={question.options}
+      value={{ option_id: question.optionId }}
+      disabled={question.closed || saving}
+      onChange={(value) =>
+        save((token, locale) =>
+          answerMyScalarQuestion(token, locale, question.id, {
+            option_id: value.option_id ?? null,
+          }),
+        )
+      }
+    />
+  );
+}
+
+function FreeTextAnswer({ question, saving, save }: AnswerInputProps) {
+  const saved = question.text ?? "";
+  const [draft, setDraft] = useState<{ saved: string; text: string } | null>(null);
+  const text = draft?.saved === saved ? draft.text : saved;
+  return (
+    <>
+      <ScalarAnswerFields
+        id={`my-poll-text-${question.id}`}
+        kind="free_text"
+        label={m.admin_poll_order_answer_label()}
+        options={[]}
+        value={{ text }}
+        disabled={question.closed || saving}
+        onChange={(value) => setDraft({ saved, text: value.text ?? "" })}
+      />
+      <Button
+        className="mt-2"
+        size="sm"
+        variant="outline"
+        disabled={question.closed || saving || text.trim() === saved}
+        onClick={() =>
+          save((token, locale) =>
+            answerMyScalarQuestion(token, locale, question.id, { text: text.trim() || null }),
+          )
+        }
+      >
+        {m.poll_answer_save()}
+      </Button>
+    </>
+  );
+}
+
+function RatingAnswer({ question, saving, save }: AnswerInputProps) {
+  return (
+    <ScalarAnswerFields
+      id={`my-poll-rating-${question.id}`}
+      kind="rating"
+      label={m.poll_rating_label()}
+      options={[]}
+      value={{ rating: question.rating }}
+      disabled={question.closed || saving}
+      onChange={(value) =>
+        save((token, locale) =>
+          answerMyScalarQuestion(token, locale, question.id, { rating: value.rating ?? null }),
+        )
+      }
+    />
+  );
+}
+
 /** How a volunteer answers each kind of question. */
 export const ANSWER_INPUTS: Record<PollQuestionKind, ComponentType<AnswerInputProps>> = {
   yes_no: YesNoAnswer,
   meals: MealsAnswer,
+  single_choice: SingleChoiceAnswer,
+  free_text: FreeTextAnswer,
+  rating: RatingAnswer,
 };
