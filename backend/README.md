@@ -581,7 +581,7 @@ Its downgrade keeps only the original-language text.
 Volunteer-only text is not translated into other content tables, but the volunteer poll follows the
 same pattern for its question titles and option labels.
 
-#### Volunteer poll: questions (migrations `009`, `010`)
+#### Volunteer poll: questions (migration `009`)
 
 An edition's poll is a list of **questions** (`edition_poll_questions`), each of one `kind`:
 
@@ -657,12 +657,11 @@ An old admin writer that omits the new lists clears those answers, so update suc
 new kinds. Volunteer requests must contain their kind's field (explicit null clears); mixed-kind
 payloads with non-null fields from another kind are rejected. Every question reports `answered_count`; single-choice option totals count picks.
 
-Migration `010` widens the kind constraint and stores the new answers in `volunteer_poll_choices`,
+Migration `009` widens the kind constraint and stores the new answers in `volunteer_poll_choices`,
 `volunteer_poll_texts` and `volunteer_poll_ratings`, each keyed by volunteer/question with cascading
 foreign keys. A composite option/question foreign key prevents a choice from using another question's
 option; database checks enforce nonblank text and the 1–5 scale. Free-text content is excluded from audit
-details. Downgrading to `009` **deletes the new question kinds, their options and answers** while retaining
-existing yes/no and meals data; export new answers before rolling back.
+details. Downgrading to `008` drops all typed poll answers and question definitions; export answers before rolling back.
 
 Migration `009` turns the earlier option-only poll into this model: each edition that has options gets one
 "Maaltijden" meals question holding them (closing time and all), and its downgrade drops the questions and
@@ -780,7 +779,7 @@ See [API, limits and lifecycle](../docs/signage-api.md#private-mp4-exports-1349)
 [setup/activation](../docs/signage-setup.md#one-cycle-mp4-exports-1349) and
 [retry safety](../docs/retry-safety.md#private-signage-video-exports-1349).
 
-#### Visitor order questions (migration `011`)
+#### Visitor order questions (migration `009`)
 
 Events can collect optional **single choice**, **free text** (500 characters) and **rating** (integer 1–5)
 answers once per registration/order, regardless of guest count. These reuse the volunteer poll's scalar
@@ -829,5 +828,4 @@ Event guest-list CSV adds an `Order answers` column with Dutch question/value pa
 CSV uses the interface locale. Existing CSV formula escaping applies to answer text too. Audit records include
 answer counts, never answer contents. Configuration and order writes serialize under the existing event lock.
 
-Downgrading `011` drops the new definitions and answers while preserving registrations, products and volunteer
-polls. Export visitor answers before rolling back. Retry decisions are in `docs/retry-safety.md`.
+Downgrading `009` to `008` drops the new definitions and answers while preserving registrations and products. Export visitor answers before rolling back. Retry decisions are in `docs/retry-safety.md`.

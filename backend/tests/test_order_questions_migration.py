@@ -1,4 +1,4 @@
-"""Migration 011 preserves orders and enforces typed answer constraints."""
+"""Migration 009 preserves orders and enforces typed answer constraints."""
 
 import os
 from pathlib import Path
@@ -30,7 +30,7 @@ def test_order_question_upgrade_constraints_and_downgrade(monkeypatch):
     config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "alembic"))
     database = create_engine(migration_url)
     try:
-        command.upgrade(config, "010")
+        command.upgrade(config, "009")
         with Session(database) as db:
             from datetime import date
 
@@ -54,7 +54,6 @@ def test_order_question_upgrade_constraints_and_downgrade(monkeypatch):
                 Registration(id="order", event_id="event", person_id="person", guest_count=1, check_in_token="token")
             )
             db.commit()
-        command.upgrade(config, "011")
         with database.begin() as conn:
             for qid, kind in [
                 ("choice", "single_choice"),
@@ -98,11 +97,11 @@ def test_order_question_upgrade_constraints_and_downgrade(monkeypatch):
         ]:
             with pytest.raises(IntegrityError), database.begin() as conn:
                 conn.execute(text(sql))
-        command.downgrade(config, "010")
+        command.downgrade(config, "008")
         assert "registration_order_answers" not in inspect(database).get_table_names(schema=schema)
         with database.begin() as conn:
             assert conn.execute(text("SELECT id FROM registrations")).scalar_one() == "order"
-        command.upgrade(config, "011")
+        command.upgrade(config, "009")
     finally:
         database.dispose()
         with admin.begin() as conn:

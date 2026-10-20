@@ -1,4 +1,4 @@
-"""Migration 010 preserves old answers and constrains the new typed storage."""
+"""Migration 009 preserves old answers and constrains the new typed storage."""
 
 import os
 from pathlib import Path
@@ -51,7 +51,6 @@ def test_upgrade_constraints_and_downgrade(monkeypatch):
                     "INSERT INTO volunteer_poll_answers (volunteer_id,question_id,attending,people) VALUES ('p','old',true,2)"
                 )
             )
-        command.upgrade(config, "010")
         with database.begin() as conn:
             for kind in ("single_choice", "free_text", "rating"):
                 conn.execute(
@@ -83,14 +82,18 @@ def test_upgrade_constraints_and_downgrade(monkeypatch):
         with database.begin() as conn:
             conn.execute(text("DELETE FROM edition_poll_options WHERE id='o'"))
             assert conn.execute(text("SELECT count(*) FROM volunteer_poll_choices")).scalar_one() == 0
-        command.downgrade(config, "009")
+        with database.begin() as conn:
+            assert (
+                conn.execute(text("SELECT people FROM volunteer_poll_answers WHERE question_id='old'")).scalar_one()
+                == 2
+            )
+        command.downgrade(config, "008")
         assert not {"volunteer_poll_choices", "volunteer_poll_texts", "volunteer_poll_ratings"} & set(
             inspect(database).get_table_names(schema=schema)
         )
         with database.begin() as conn:
-            assert conn.execute(text("SELECT id FROM edition_poll_questions")).scalars().all() == ["old"]
-            assert conn.execute(text("SELECT people FROM volunteer_poll_answers")).scalar_one() == 2
-        command.upgrade(config, "010")
+            assert conn.execute(text("SELECT name FROM people WHERE id='p'")).scalar_one() == "Volunteer"
+        command.upgrade(config, "009")
     finally:
         database.dispose()
         with admin.begin() as conn:
