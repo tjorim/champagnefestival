@@ -1,16 +1,20 @@
+import asyncio
 import logging
 import re
+from contextlib import suppress
 
 import pytest
 from fastapi import Depends, FastAPI
 from fastapi.responses import StreamingResponse
 from fastapi.testclient import TestClient
 from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 from starlette.applications import Starlette
 from starlette.responses import PlainTextResponse
 from starlette.routing import Route
+from starlette.types import Message, Receive, Scope, Send
 
 from app import request_timing
 from app.main import app as champagnefestival_app
@@ -38,6 +42,13 @@ def build_app() -> FastAPI:
             await connection.execute(text("SELECT 1"))
             await connection.execute(text("SELECT 2"))
         return {"item_id": item_id}
+
+    @application.get("/failing")
+    async def failing() -> None:
+        # A caller may catch a failed query and carry on.
+        async with engine.connect() as connection:
+            with suppress(DBAPIError):
+                await connection.execute(text("SELECT * FROM missing_table"))
 
     @application.get("/stream")
     def stream() -> StreamingResponse:
@@ -77,6 +88,13 @@ def test_server_timing_counts_queries_from_endpoints_and_dependencies(client) ->
     assert queries(client.get("/stream")) == 0
 
 
+def test_failed_queries_are_counted(client) -> None:
+    response = client.get("/failing")
+
+    assert response.status_code == 200
+    assert queries(response) == 1
+
+
 def test_fast_requests_are_not_logged(client, caplog) -> None:
     with caplog.at_level(logging.WARNING, logger=request_timing.__name__):
         client.get("/items/42")
@@ -105,11 +123,30 @@ def test_slow_requests_log_the_route_template_never_the_raw_path(client, slow, c
     assert not any("42" in message.split("duration_ms")[0] or "secret" in message for message in messages)
 
 
-def test_streamed_responses_are_passed_through(client) -> None:
-    response = client.get("/stream")
+def test_streamed_chunks_are_forwarded_before_the_response_ends() -> None:
+    # A buffering middleware would hold back a long-lived event stream.
+    first_chunk_forwarded = asyncio.Event()
+    sent: list[Message] = []
 
-    assert response.text == "ab"
-    assert "server-timing" in response.headers
+    async def streaming_app(scope: Scope, receive: Receive, send: Send) -> None:
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await send({"type": "http.response.body", "body": b"a", "more_body": True})
+        await asyncio.wait_for(first_chunk_forwarded.wait(), timeout=5)
+        await send({"type": "http.response.body", "body": b"b"})
+
+    async def receive() -> Message:
+        return {"type": "http.disconnect"}
+
+    async def record(message: Message) -> None:
+        sent.append(message)
+        if message.get("body") == b"a":
+            first_chunk_forwarded.set()
+
+    scope = {"type": "http", "method": "GET", "path": "/stream", "root_path": "", "headers": []}
+    asyncio.run(RequestTimingMiddleware(streaming_app)(scope, receive, record))
+
+    assert [message.get("body") for message in sent[1:]] == [b"a", b"b"]
+    assert any(name == b"server-timing" for name, _ in sent[0]["headers"])
 
 
 def test_lifespan_and_other_scopes_pass_through() -> None:

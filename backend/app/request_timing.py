@@ -1,13 +1,18 @@
 """Per-request timing: a ``Server-Timing`` header and a slow-request warning.
 
-Every HTTP response gets ``Server-Timing: app;dur=<ms>, db;desc="<n> queries";dur=<ms>``,
-which the browser devtools show in the Network tab, and a request slower than
+Every response the app sends gets
+``Server-Timing: app;dur=<ms>, db;desc="<n> queries";dur=<ms>``, which the
+browser devtools show in the Network tab, and a request slower than
 ``SLOW_REQUEST_MS`` is logged as a warning with its route template, never the
 raw path, which can carry ids or tokens.  Queries are counted through
-SQLAlchemy engine events, so an N+1 pattern shows up as a high count.
+SQLAlchemy engine events, failed ones included, so an N+1 pattern shows up as
+a high count.
 
 Durations run until the response headers are sent: for a streamed response
 (MCP over SSE) that is the time to the first byte, not the stream's length.
+The 500 for an unhandled exception is sent by Starlette's outermost
+``ServerErrorMiddleware`` after this middleware has unwound, so it carries no
+header; the request is still logged when slow.
 
 The same module lives in Travel, Daynest, Worktime and Champagnefestival
 (tjorim/apps#246); keep the copies identical.
@@ -50,9 +55,23 @@ def _query_started(conn: Any, cursor: Any, statement: Any, parameters: Any, cont
 
 @event.listens_for(Engine, "after_cursor_execute")
 def _query_finished(conn: Any, cursor: Any, statement: Any, parameters: Any, context: Any, executemany: Any) -> None:
-    usage = _usage.get()
+    _record_query(context)
+
+
+@event.listens_for(Engine, "handle_error")
+def _query_failed(exception_context: Any) -> None:
+    # A failed statement skips after_cursor_execute but still took time.
+    _record_query(exception_context.execution_context)
+
+
+def _record_query(context: Any) -> None:
     started = getattr(context, "request_timing_started", None)
-    if usage is not None and started is not None:
+    if started is None:
+        return
+    # Cleared so an error while fetching the rows does not count it again.
+    context.request_timing_started = None
+    usage = _usage.get()
+    if usage is not None:
         usage.queries += 1
         usage.seconds += time.perf_counter() - started
 
