@@ -49,7 +49,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { getLocale } from "@/paraglide/runtime";
 
-interface RegistrationModalProps {
+export interface RegistrationModalProps {
   show: boolean;
   onHide: () => void;
   event: Event | null;

@@ -84,6 +84,7 @@
   "error_faq": "Fout bij het laden van de FAQ",
   "error_contact": "Fout bij het laden van het contactformulier",
   "error_loading_map": "Fout bij het laden van de kaart",
+  "error_loading_registration": "Het inschrijvingsformulier kon niet worden geopend. Herlaad de pagina en probeer opnieuw.",
   "error_loading_producers": "Fout bij het laden van de producenten",
   "error_loading_sponsors": "Fout bij het laden van de sponsors",
   "error_loading_privacy": "Fout bij het laden van het privacybeleid",
