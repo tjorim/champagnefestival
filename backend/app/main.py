@@ -19,6 +19,7 @@ from app.mcp.capabilities import MCP_CAPABILITY_CONTRACT_VERSION, get_mcp_capabi
 from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
 from app.observability import request_metrics_middleware
+from app.request_timing import RequestTimingMiddleware
 from app.routers import (
     announcements,
     areas,
@@ -167,6 +168,10 @@ add_rate_limit_middleware(
 # captures every request, including those short-circuited by CORS, rate
 # limiting, or OIDC auth.
 app.add_middleware(BaseHTTPMiddleware, dispatch=request_metrics_middleware)
+
+# Sets Server-Timing and logs slow requests by route template (apps#246); it
+# wraps everything except the Host header validation below.
+app.add_middleware(RequestTimingMiddleware)
 
 # Host header validation is registered last so it is outermost and rejects
 # requests with an unrecognised Host before any other middleware runs.
