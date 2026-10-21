@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import SectionHeading from "@/components/SectionHeading";
-import RegistrationModal from "@/components/RegistrationModal";
+import LazyRegistrationModal from "@/components/LazyRegistrationModal";
 import type { Event } from "@/types/event";
 import { type ApiUpcomingEdition, useOtherEventItems } from "@/hooks/useOtherEvents";
 import { m } from "@/paraglide/messages";
@@ -155,7 +155,7 @@ export default function OtherEvents() {
         </div>
       </section>
 
-      <RegistrationModal
+      <LazyRegistrationModal
         show={Boolean(selectedEvent)}
         onHide={() => setSelectedEvent(null)}
         event={selectedEvent}

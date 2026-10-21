@@ -45,9 +45,8 @@ import FestivalMascot from "./components/FestivalMascot";
 import ContactInfo from "./components/ContactInfo";
 import SectionHeading from "./components/SectionHeading";
 import SuspenseWithBoundary from "./components/SuspenseWithBoundary";
-import RegistrationModal from "./components/RegistrationModal";
+import LazyRegistrationModal from "./components/LazyRegistrationModal";
 import AnnouncementBanner from "./components/AnnouncementBanner";
-import PushOptIn from "./components/PushOptIn";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import MaintenancePage from "./components/MaintenancePage";
@@ -82,6 +81,7 @@ const BubbleBackground = lazy(() => import("./components/BubbleBackground"));
 const Countdown = lazy(() => import("./components/Countdown"));
 const FAQ = lazy(() => import("./components/FAQ"));
 const ContactForm = lazy(() => import("./components/ContactForm"));
+const PushOptIn = lazy(() => import("./components/PushOptIn"));
 const Schedule = lazy(() => import("./components/Schedule"));
 const OtherEvents = lazy(() => import("./components/OtherEvents"));
 const AdminDashboard = lazy(() => import("./components/admin/AdminDashboard"));
@@ -791,7 +791,9 @@ function App() {
                 {/* Web Push opt-in (#941) — self-contained, renders nothing when
                     unsupported or VAPID isn't configured server-side. */}
                 <div id="notifications" className="mt-8 scroll-mt-24">
-                  <PushOptIn />
+                  <SuspenseWithBoundary fallback={null} errorFallback={null}>
+                    <PushOptIn />
+                  </SuspenseWithBoundary>
                 </div>
               </div>
             </div>
@@ -832,7 +834,7 @@ function App() {
       <Footer />
 
       {/* VIP Registration Modal */}
-      <RegistrationModal
+      <LazyRegistrationModal
         show={showRegistrationModal}
         onHide={() => setShowRegistrationModal(false)}
         event={registrableEvents[0] ?? null}

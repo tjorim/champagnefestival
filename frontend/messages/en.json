@@ -84,6 +84,7 @@
   "error_faq": "Error loading FAQ",
   "error_contact": "Error loading contact form",
   "error_loading_map": "Error loading map",
+  "error_loading_registration": "Could not open the registration form. Reload the page and try again.",
   "error_loading_producers": "Error loading producers",
   "error_loading_sponsors": "Error loading sponsors",
   "error_loading_privacy": "Error loading privacy policy",

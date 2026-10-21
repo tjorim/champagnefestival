@@ -84,6 +84,7 @@
   "error_faq": "Erreur lors du chargement de la FAQ",
   "error_contact": "Erreur lors du chargement du formulaire de contact",
   "error_loading_map": "Erreur lors du chargement de la carte",
+  "error_loading_registration": "Impossible d'ouvrir le formulaire d'inscription. Rechargez la page et réessayez.",
   "error_loading_producers": "Erreur lors du chargement des producteurs",
   "error_loading_sponsors": "Erreur lors du chargement des sponsors",
   "error_loading_privacy": "Erreur lors du chargement de la politique de confidentialité",
