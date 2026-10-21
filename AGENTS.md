@@ -8,6 +8,14 @@
 - Production hosting for `champagnefestival.tjor.im` is handled by the separate infra stack in `/opt/apps/infra`
 - Frontend builds write to `frontend/dist`; in production, Caddy serves this content from `/srv/champagnefestival`
 
+## Uploaded files
+
+Logos, edition artwork and signage images follow
+`docs/file-storage-contract.md`: fresh names, write before commit and delete
+after commit, every change under its feature's advisory lock (1194, 1224,
+1261), and no dot-entries. The apps backup depends on these rules and lock
+keys; keep new file-backed features inside them.
+
 ## Commands
 
 ### Frontend (`cd frontend`)
