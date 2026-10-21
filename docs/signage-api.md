@@ -108,7 +108,8 @@ Files live in `EDITION_ARTWORK_PUBLIC_ROOT/signage/` and are served at
 serves these routes itself; production must proxy `/uploads/signage/*` to the
 backend or map this URL prefix to that directory in Caddy. Edition artwork's
 reconciler ignores the signage subdirectory. Database backups alone do not
-include uploaded files; preserve the artwork storage volume too.
+include uploaded files; preserve the artwork storage volume too. Signage
+uploads follow `file-storage-contract.md`.
 
 ## Private MP4 exports (#1349)
 

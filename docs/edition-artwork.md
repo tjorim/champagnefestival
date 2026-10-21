@@ -50,7 +50,8 @@ uv run python -m app.services.edition_artwork
 
 removes unreferenced files. It takes the same PostgreSQL advisory lock as every
 artwork writer (`pg_advisory_xact_lock(1224)`), so it cannot race an in-flight
-upload. Back up the database and the artwork root together.
+upload. Back up the database and the artwork root together; the backup
+relies on the rules in `file-storage-contract.md`.
 
 ## API
 
