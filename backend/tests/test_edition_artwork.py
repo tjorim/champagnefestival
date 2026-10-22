@@ -190,7 +190,7 @@ async def test_artwork_requires_admin_role(forbidden_client, storage):
 async def test_public_route_rejects_other_names(client, storage):
     for name in ("../secret.jpg", "plain.jpg", "a" * 32 + "-" + "b" * 64 + ".png"):
         assert (await client.get(edition_artwork.PREFIX + name)).status_code == 404
-    (storage / "readme.txt").write_text("private")
+    (storage / "readme.txt").write_text("private", encoding="utf-8")
     assert (await client.get(edition_artwork.PREFIX + "readme.txt")).status_code == 404
 
 
@@ -213,7 +213,7 @@ async def test_reconcile_removes_only_unreferenced_files(client, db_session, edi
     leftover = storage / f"{'a' * 32}-{'b' * 64}.jpg"
     leftover.write_bytes(b"orphan")
     unrelated = storage / "keep.txt"
-    unrelated.write_text("not managed")
+    unrelated.write_text("not managed", encoding="utf-8")
     assert await edition_artwork.reconcile(db_session) == 1
     assert not leftover.exists() and unrelated.exists() and (storage / kept).exists()
     assert await edition_artwork.reconcile(db_session) == 0

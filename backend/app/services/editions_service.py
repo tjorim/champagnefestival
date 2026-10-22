@@ -363,7 +363,7 @@ async def edition_payloads(
     venues = await _load_venues_by_ids(db, {edition.venue_id for edition in editions})
     organization_map = await _load_organizations_by_ids(
         db,
-        {eid for edition in editions for eid in edition.organizations}
+        {*edition.organizations for edition in editions}
         | {edition.co_organizer_organization_id for edition in editions if edition.co_organizer_organization_id},
     )
     payloads = []

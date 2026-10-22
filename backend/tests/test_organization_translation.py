@@ -25,7 +25,7 @@ def service(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "translation_service_url", "http://translation.local")
     monkeypatch.setattr(settings, "translation_languages", "nl,en")
     key_file = tmp_path / "translation-key"
-    key_file.write_text("c" * 64)
+    key_file.write_text("c" * 64, encoding="utf-8")
     monkeypatch.setattr(settings, "translation_api_key_file", str(key_file))
     monkeypatch.setattr(translation, "_worker", asyncio.Lock())
     calls = []
