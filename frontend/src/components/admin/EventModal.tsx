@@ -470,11 +470,20 @@ export default function EventModal({
               <div className="text-subtle text-sm mt-2">{m.admin_event_standalone_help()}</div>
             )}
             {initial?.id && (
-              <OrderQuestionsEditor
-                key={initial.id}
-                eventId={initial.id}
-                authHeaders={authHeaders}
-              />
+              // The editor saves through its own button; Enter must not submit the event form.
+              <div
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+                    event.preventDefault();
+                  }
+                }}
+              >
+                <OrderQuestionsEditor
+                  key={initial.id}
+                  eventId={initial.id}
+                  authHeaders={authHeaders}
+                />
+              </div>
             )}
           </DialogBody>
           <DialogFooter>
