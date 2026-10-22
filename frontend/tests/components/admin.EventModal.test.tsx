@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { http, HttpResponse } from "msw";
@@ -174,5 +175,20 @@ describe("EventModal translations", () => {
       expect(screen.getByLabelText("Title (English)")).toHaveValue("Opening evening"),
     );
     expect(screen.getByLabelText("Title (French)")).toHaveValue("");
+  });
+
+  it("does not submit the event form when Enter is pressed in an order question field", async () => {
+    server.use(http.get("/api/events/event-01", () => HttpResponse.json({ order_questions: [] })));
+    const onSave = mount(existingEvent);
+
+    fireEvent.click(screen.getByRole("button", { name: "Order questions" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Add question" }));
+    const title = screen.getAllByLabelText("Title (Dutch)").at(-1)!;
+    fireEvent.change(title, { target: { value: "Opmerking" } });
+    // fireEvent.keyDown does not trigger implicit submission; userEvent does.
+    await userEvent.type(title, "{Enter}");
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(title).toHaveValue("Opmerking");
   });
 });
