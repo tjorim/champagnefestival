@@ -83,8 +83,8 @@ const SERIES_COLOR_VARS: Record<AttendanceSeries, string> = {
 /** Dim every bar outside the series hovered or focused in the legend. */
 const LEGEND_EMPHASIS_STATES: ChartMarkState<AttendanceRow, ChartBarStateStyle<AttendanceRow>>[] = [
   {
-    when: ({ focus, matches }) => focus.source === "legend" && !matches("series"),
-    style: { opacity: 0.3 },
+    when: { focus: "unmatched", source: "legend" },
+    style: { opacity: 0.25 },
     transition: { type: "tween", duration: 120, easing: "ease-out" },
   },
 ];
@@ -262,7 +262,6 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         background: "transparent",
       },
       focus: "group-x",
-      keyboard: true,
       tooltip,
     });
   }, [editions, visibleSeries]);
@@ -315,7 +314,6 @@ export default function AnalyticsDashboard({ authHeaders }: AnalyticsDashboardPr
         background: "transparent",
       },
       focus: "group-x",
-      keyboard: true,
       tooltip,
     });
   }, [editions]);
