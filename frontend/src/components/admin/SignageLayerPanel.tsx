@@ -6,12 +6,12 @@ import {
   ArrowUpIcon,
   EyeIcon,
   EyeOffIcon,
+  FaceSlightlySmilingIcon,
   GripVerticalIcon,
   ImageIcon,
   LockIcon,
   LockOpenIcon,
   ShapesIcon,
-  SmileIcon,
   TypeIcon,
 } from "lucide-react";
 import { Icon } from "@/components/Icon";
@@ -60,7 +60,7 @@ function LayerRow({
       : item.kind === "shape"
         ? ShapesIcon
         : item.kind === "icon" || (item.kind === "binding" && item.binding === "icon")
-          ? SmileIcon
+          ? FaceSlightlySmilingIcon
           : TypeIcon;
   return (
     <li

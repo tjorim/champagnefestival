@@ -11,14 +11,14 @@ import {
   CircleCheckIcon,
   ContactRoundIcon,
   DownloadIcon,
-  Ellipsis,
-  Euro,
+  EllipsisIcon,
+  EuroIcon,
   FileSpreadsheetIcon,
   LogInIcon,
   PlusIcon,
   QrCodeIcon,
   ShoppingCartIcon,
-  X,
+  XIcon,
 } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -761,7 +761,7 @@ export default function RegistrationList({
                       id={`reg-more-${reg.id}`}
                       aria-label={m.admin_more_actions_for({ name: reg.person.name })}
                     >
-                      <Ellipsis className="size-4" aria-hidden="true" />
+                      <EllipsisIcon className="size-4" aria-hidden="true" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {reg.status !== "cancelled" && (
@@ -769,7 +769,7 @@ export default function RegistrationList({
                           className="text-destructive"
                           onClick={() => onUpdateStatus(reg.id, "cancelled")}
                         >
-                          <X className="size-4" aria-hidden="true" />
+                          <XIcon className="size-4" aria-hidden="true" />
                           {m.admin_action_cancel()}
                         </DropdownMenuItem>
                       )}
@@ -778,7 +778,7 @@ export default function RegistrationList({
                           disabled={processingIds.has(reg.id)}
                           onClick={() => void handleRecordPayment(reg.id)}
                         >
-                          <Euro className="size-4" aria-hidden="true" />
+                          <EuroIcon className="size-4" aria-hidden="true" />
                           {m.admin_action_mark_paid()}
                         </DropdownMenuItem>
                       )}

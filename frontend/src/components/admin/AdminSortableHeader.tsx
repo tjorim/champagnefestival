@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Column, RowData } from "@tanstack/react-table";
 import type { AdminTableFeatures } from "@/hooks/useAdminTable";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDownIcon, ArrowUpDownIcon, ArrowUpIcon } from "lucide-react";
 import { TableHead } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 
@@ -14,7 +14,7 @@ export function AdminSortableHeader<T extends RowData>({
 }) {
   const canSort = column.getCanSort();
   const sorted = column.getIsSorted();
-  const Icon = sorted === "asc" ? ArrowUp : sorted === "desc" ? ArrowDown : ArrowUpDown;
+  const Icon = sorted === "asc" ? ArrowUpIcon : sorted === "desc" ? ArrowDownIcon : ArrowUpDownIcon;
   return (
     <TableHead
       className={column.columnDef.meta?.tdClassName}

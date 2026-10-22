@@ -1,4 +1,4 @@
-import { HistoryIcon, ShieldIcon } from "lucide-react";
+import { RotateCcwClockIcon, ShieldIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
 import { useEffect, useState } from "react";
@@ -28,7 +28,7 @@ export default function AdminLoginForm() {
         <div className="w-full site-sm:w-8/12 site-md:w-6/12 site-lg:w-4/12 text-center">
           {signOutReason === "session-expired" && !auth.authError ? (
             <Alert variant="info">
-              <Icon icon={HistoryIcon} className="me-2" />
+              <Icon icon={RotateCcwClockIcon} className="me-2" />
               {m.auth_session_expired_notice()}
             </Alert>
           ) : null}

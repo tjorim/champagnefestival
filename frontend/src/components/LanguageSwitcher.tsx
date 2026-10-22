@@ -1,4 +1,4 @@
-import { Globe, ChevronDown, Check } from "lucide-react";
+import { CheckIcon, ChevronDownIcon, GlobeIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -52,9 +52,9 @@ const LanguageSwitcher = () => {
         aria-label={m.language_select()}
         title={m.language_select()}
       >
-        <Globe aria-hidden="true" className="size-4" />
+        <GlobeIcon aria-hidden="true" className="size-4" />
         <span className="hidden sm:inline">{currentLanguage.code.toUpperCase()}</span>
-        <ChevronDown aria-hidden="true" className="size-3" />
+        <ChevronDownIcon aria-hidden="true" className="size-3" />
       </DropdownMenuTrigger>
       <DropdownMenuContent admin={false} align="end" className="min-w-56">
         {languages.map((lang) => (
@@ -75,7 +75,7 @@ const LanguageSwitcher = () => {
               </div>
             </div>
             {currentLang === lang.code && (
-              <Check
+              <CheckIcon
                 aria-hidden="true"
                 className="ml-auto size-4 text-primary group-data-highlighted/dropdown-menu-item:text-accent-foreground"
               />
