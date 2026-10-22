@@ -793,5 +793,8 @@ Deletes are not replayable successes: repeating a successful delete returns 404 
 queues no further mail. Jobs use `poll-deletion:{resource_id}:{volunteer_id}` unique
 keys. Delivery is at-least-once: an ambiguous SMTP success or lost worker lease can
 result in another email, with the same Message-ID. Clients must not automatically
-retry the delete. Notification snapshots currently remain stored alongside delivery
-history; they include the recipient and removed answer.
+retry the delete. Notification snapshots include the recipient and removed answer, so
+they are kept only while delivery can still be retried or inspected: housekeeping
+deletes each snapshot in the same transaction as its terminal (`delivered` or
+`failed`) outbox job once `OUTBOX_RETENTION_DAYS` has passed. Pending jobs keep
+their snapshot.

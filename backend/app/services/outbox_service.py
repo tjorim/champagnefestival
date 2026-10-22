@@ -10,7 +10,7 @@ from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.audit import write_audit_entry
-from app.models import DeliveryAttempt, OutboxJob
+from app.models import DeliveryAttempt, OutboxJob, PollDeletionNotification
 from app.utils import make_id
 
 REGISTRATION_CONFIRMATION = "registration_confirmation"
@@ -207,17 +207,26 @@ async def process_one_job(
 
 
 async def cleanup_completed_jobs(db: AsyncSession, *, retention_days: int) -> int:
-    """Delete terminal jobs (and cascading attempts) after the retention window."""
+    """Delete terminal jobs (and cascading attempts) after the retention window.
+
+    Poll deletion email snapshots (recipient and removed answer) are removed in the same transaction
+    as their job, so they live exactly as long as delivery can still be retried or inspected.
+    """
     cutoff = datetime.now(UTC) - timedelta(days=retention_days)
-    deleted_ids = (
-        await db.scalars(
+    deleted = (
+        await db.execute(
             delete(OutboxJob)
             .where(
                 OutboxJob.state.in_(("delivered", "failed")),
                 OutboxJob.completed_at < cutoff,
             )
-            .returning(OutboxJob.id)
+            .returning(OutboxJob.id, OutboxJob.resource_type, OutboxJob.resource_id)
         )
     ).all()
+    snapshot_ids = [
+        resource_id for _, resource_type, resource_id in deleted if resource_type == "poll_deletion_notification"
+    ]
+    if snapshot_ids:
+        await db.execute(delete(PollDeletionNotification).where(PollDeletionNotification.id.in_(snapshot_ids)))
     await db.commit()
-    return len(deleted_ids)
+    return len(deleted)
