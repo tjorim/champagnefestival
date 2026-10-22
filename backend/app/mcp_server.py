@@ -77,7 +77,7 @@ from app.mcp.capabilities import (
     tool_annotations,
     tool_auth,
 )
-from app.mcp.middleware import ToolFailureMiddleware
+from app.mcp.middleware import ToolFailureMiddleware, without_body_validation_payload
 from app.schemas import (
     ROTATION_DESCRIPTION,
     X_POSITION_DESCRIPTION,
@@ -3010,7 +3010,7 @@ def create_mcp_server(
 
     def register_tool(fn: Any) -> None:
         mcp.tool(
-            fn,
+            without_body_validation_payload(fn),
             annotations=tool_annotations(fn.__name__),
             auth=tool_auth(fn.__name__),
         )
