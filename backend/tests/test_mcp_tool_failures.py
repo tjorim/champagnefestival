@@ -141,6 +141,19 @@ class TestInvalidArguments:
         assert "notes" in text  # the missing field
         assert secret not in caplog.text
 
+    async def test_proxied_bad_arguments_are_not_logged_as_server_errors(self, caplog):
+        # A caller mistake is logged at warning level, without the traceback that would carry the value.
+        # (FastMCP itself still logs a proxied *unknown* tool name at error level before middleware runs.)
+        def book_table(guest_count: int) -> str:
+            return "ok"
+
+        mcp = _server_with_proxy(book_table=book_table)
+
+        with caplog.at_level(logging.DEBUG):
+            await _failure(mcp, "call_tool", {"name": "book_table", "arguments": {"guest_count": "many"}})
+
+        assert not [record for record in caplog.records if record.levelno >= logging.ERROR]
+
     async def test_missing_required_argument_via_proxy(self):
         mcp = create_mcp_server(session_factory=MagicMock())
 

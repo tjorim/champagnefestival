@@ -140,7 +140,8 @@ class ToolFailureMiddleware(Middleware):
         return CorrelatedToolError(
             f"Unknown tool {target!r}. Use {self._search_tool_name} to find a tool for your task, "
             f"then run it with {self._call_tool_name}. Only tools your role may use are listed. "
-            f"(request id {request_id})"
+            f"(request id {request_id})",
+            log_level=logging.WARNING,
         )
 
     async def on_call_tool(
@@ -162,7 +163,8 @@ class ToolFailureMiddleware(Middleware):
             raise CorrelatedToolError(
                 f"{target!r} cannot be run through {self._call_tool_name}. Call {self._search_tool_name} "
                 f"directly to discover tools, then pass the tool it returns to {self._call_tool_name}. "
-                f"(request id {request_id})"
+                f"(request id {request_id})",
+                log_level=logging.WARNING,
             )
 
         try:
@@ -206,12 +208,14 @@ class ToolFailureMiddleware(Middleware):
                     detail += f"; and {len(messages) - _MAX_FIELD_ERRORS} more"
                 raise CorrelatedToolError(
                     f"Invalid arguments for {target!r}: {detail}. "
-                    f"Check the tool's input_schema from search_tools. (request id {request_id})"
+                    f"Check the tool's input_schema from search_tools. (request id {request_id})",
+                    log_level=logging.WARNING,
                 ) from exc
             logger.warning("MCP tool %r rejected arguments (request %s)", target, request_id)
             raise CorrelatedToolError(
                 f"Invalid arguments for {target!r}. Check the tool's input_schema from "
-                f"{self._search_tool_name}. (request id {request_id})"
+                f"{self._search_tool_name}. (request id {request_id})",
+                log_level=logging.WARNING,
             ) from exc
         except ToolError as exc:
             cause = exc.__cause__
