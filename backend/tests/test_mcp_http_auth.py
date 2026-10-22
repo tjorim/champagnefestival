@@ -106,6 +106,35 @@ async def test_admin_write_is_audited_with_each_credentials_own_identity(db_sess
 
 
 @pytest.mark.anyio
+async def test_transport_stays_stateless(db_session):
+    # Stateless HTTP keeps no MCP session, so the SDK's 30-minute idle expiry has nothing to expire.
+    _client, key = await ics.create_integration_client(
+        db_session, actor="admin-1", creator_role="admin", name="Stateless", allowed_role="volunteer"
+    )
+    app = _build_app(db_session)
+    initialize = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "test", "version": "0"}},
+    }
+    headers = {
+        "Accept": "application/json, text/event-stream",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {key}",
+    }
+
+    async with (
+        app.router.lifespan_context(app),
+        httpx2.AsyncClient(transport=httpx2.ASGITransport(app=app), base_url=BASE_URL) as http,
+    ):
+        response = await http.post("/", headers=headers, json=initialize)
+
+    assert response.status_code == 200
+    assert "mcp-session-id" not in response.headers
+
+
+@pytest.mark.anyio
 @pytest.mark.parametrize("credential", [None, "not-a-valid-token", "revoked"])
 async def test_missing_invalid_and_revoked_credentials_are_refused(db_session, credential):
     if credential == "revoked":
