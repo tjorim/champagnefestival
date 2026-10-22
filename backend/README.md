@@ -108,14 +108,16 @@ uv run ty check .
 uv run pytest
 ```
 
-Tests use a separate database by default:
+Tests run on a throwaway SQLite file by default, so they need no container. CI also runs them on
+PostgreSQL, the production database. To do the same locally, create a separate test database:
 
 ```bash
 psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE test_champagne;"
+export TEST_DATABASE_URL=postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne
 ```
 
-They connect to `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`
-unless `TEST_DATABASE_URL` overrides it.
+Tests that exercise PostgreSQL behaviour (concurrent sessions, the Alembic migrations, the ledger
+trigger, LISTEN reconnects) are marked `requires_postgres` and skip on SQLite.
 
 ---
 
