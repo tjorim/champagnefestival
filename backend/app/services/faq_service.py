@@ -20,6 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.dialect_functions import assign_positions
 from app.models import FaqItem
 from app.schemas import FaqItemCreate, FaqItemUpdate, FaqTextFields
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
@@ -154,8 +155,7 @@ async def reorder_faq_items(
             "ordered_ids must name every existing FAQ item exactly once; the list is stale — reload and retry."
         )
 
-    for index, item_id in enumerate(ordered_ids):
-        items[item_id].sort_order = index
+    await assign_positions(db, items, ordered_ids)
 
     await write_audit_entry(
         db,

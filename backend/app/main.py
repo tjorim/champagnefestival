@@ -115,14 +115,20 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None]:
         logger.error(f"❌ Database initialisation failed: {exc}")
         raise
 
+    # LISTEN/NOTIFY is PostgreSQL only. A SQLite dev instance (see app.sqlite_compat) has no
+    # live-update stream and no proactive render-cache invalidation.
+    listen = not settings.database_url.startswith("sqlite")
+
     # Cross-worker live-update fan-out. start() logs connection failures; a failed
     # LISTEN connection degrades to no live-update delivery, not a startup crash.
-    await pg_live_listener.start(settings.database_url)
+    if listen:
+        await pg_live_listener.start(settings.database_url)
 
     # Proactive render-cache invalidation for GET / and GET /privacy
     # uses a separate
     # channel/connection from the live bus above, not a second consumer of it.
-    await pg_render_cache_listener.start(settings.database_url)
+    if listen:
+        await pg_render_cache_listener.start(settings.database_url)
 
     logger.info("=" * 60)
     logger.info("Startup complete — server ready to accept connections")
@@ -141,8 +147,9 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None]:
 
     # Shutdown
     logger.info("Champagnefestival API shutting down...")
-    await pg_live_listener.stop()
-    await pg_render_cache_listener.stop()
+    if listen:
+        await pg_live_listener.stop()
+        await pg_render_cache_listener.stop()
 
 
 lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is not None else _app_lifespan

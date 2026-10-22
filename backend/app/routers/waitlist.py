@@ -12,11 +12,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, EmailStr
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
+from app.dialect_functions import dialect_insert
 from app.models import Product, WaitlistEntry
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schema_types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
@@ -84,7 +84,7 @@ async def submit_waitlist_entry(
 
     entry_id = str(body.submission_id)
     await db.execute(
-        insert(WaitlistEntry)
+        dialect_insert(db)(WaitlistEntry)
         .values(
             id=entry_id,
             product_id=body.product_id,

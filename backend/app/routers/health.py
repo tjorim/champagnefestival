@@ -107,7 +107,8 @@ async def readiness_check(
     Suitable for load-balancer readiness probes.
     """
     try:
-        await db.execute(text("SET LOCAL statement_timeout = '2000'"))
+        if db.get_bind().dialect.name != "sqlite":
+            await db.execute(text("SET LOCAL statement_timeout = '2000'"))
         await db.execute(text("SELECT 1"))
     except Exception:
         logger.exception("Readiness check failed: database connectivity error")

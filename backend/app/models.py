@@ -31,6 +31,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
+from app.dialect_functions import json_array_elements
 from app.translations import BASE_LANGUAGE, resolve_pair, resolve_text
 
 
@@ -432,6 +433,7 @@ class OrganizationChange(Base):
             "organization_id",
             unique=True,
             postgresql_where=text("status = 'pending'"),
+            sqlite_where=text("status = 'pending'"),
         ),
         CheckConstraint(
             "status IN ('pending', 'accepted', 'rejected', 'superseded', 'replaced')",
@@ -695,6 +697,7 @@ class Edition(Base):
             "edition_type",
             unique=True,
             postgresql_where=text("active = true"),
+            sqlite_where=text("active = true"),
         ),
     )
 
@@ -873,7 +876,7 @@ class Event(Base):
     products: Mapped[list[Product]] = relationship(back_populates="event", cascade="all, delete-orphan")
 
 
-_product_lines = func.json_array_elements(Registration.order_items).table_valued("value").alias("product_line")
+_product_lines = json_array_elements(Registration.order_items).table_valued("value").alias("product_line")
 
 
 class Product(Base):
@@ -1634,12 +1637,14 @@ class PolicyVersion(Base):
             "policy_key",
             unique=True,
             postgresql_where=text("status = 'draft'"),
+            sqlite_where=text("status = 'draft'"),
         ),
         Index(
             "uq_policy_versions_one_published",
             "policy_key",
             unique=True,
             postgresql_where=text("status = 'published'"),
+            sqlite_where=text("status = 'published'"),
         ),
     )
 

@@ -270,10 +270,10 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
-        """Validate database_url uses the postgresql+asyncpg async driver."""
+        """Validate database_url uses an async driver: asyncpg, or aiosqlite for local development."""
         if not v or not v.strip():
             raise ValueError("DATABASE_URL cannot be empty")
-        if not v.startswith("postgresql+asyncpg://"):
+        if not v.startswith(("postgresql+asyncpg://", "sqlite+aiosqlite://")):
             raise ValueError("DATABASE_URL must use the asyncpg driver: postgresql+asyncpg://...")
         return v
 
@@ -393,6 +393,13 @@ class Settings(BaseSettings):
         """
         if self.dev_auth_bypass_token and self.environment != "development":
             raise ValueError("DEV_AUTH_BYPASS_TOKEN must not be set outside environment=development.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_sqlite_only_in_development(self) -> Settings:
+        """SQLite is for local development and tests; production runs on PostgreSQL."""
+        if self.database_url.startswith("sqlite") and self.environment != "development":
+            raise ValueError("A sqlite+aiosqlite DATABASE_URL is only allowed with environment=development.")
         return self
 
     # ------------------------------------------------------------------

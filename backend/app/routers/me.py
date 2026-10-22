@@ -9,13 +9,13 @@ from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
 from app.auth import get_current_claims
 from app.database import get_db
+from app.dialect_functions import dialect_insert
 from app.models import ContactMessage, Event, Person, Registration, User
 from app.ratelimit import get_client_ip
 from app.schemas import (
@@ -201,7 +201,7 @@ async def request_registration_change(
     message_id = str(body.submission_id)
     request_id = getattr(request.state, "request_id", None)
     inserted = await db.scalar(
-        insert(ContactMessage)
+        dialect_insert(db)(ContactMessage)
         .values(
             id=message_id,
             name=person.name,
