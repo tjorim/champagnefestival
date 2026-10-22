@@ -1,7 +1,11 @@
+# uv comes from its own FROM stage, not `COPY --from=<image>`: Dependabot's docker updater only reads
+# FROM lines (dependabot/dependabot-core#5103), so this is what lets it propose uv bumps.
+FROM ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff AS uv
+
 # ── build stage ──────────────────────────────────────────────────────────────
 FROM python:3.15-slim AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff /uv /usr/local/bin/uv
+COPY --from=uv /uv /usr/local/bin/uv
 
 WORKDIR /app
 COPY backend/pyproject.toml backend/uv.lock ./
