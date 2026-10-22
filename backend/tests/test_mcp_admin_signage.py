@@ -183,7 +183,7 @@ async def test_playlist_and_preview_follow_the_stored_and_unsaved_documents(clie
 @pytest.fixture
 async def configured_video(client, monkeypatch, tmp_path):
     secret = tmp_path / "token"
-    secret.write_text("x" * 64)
+    secret.write_text("x" * 64, encoding="utf-8")
     monkeypatch.setattr(settings, "media_worker_url", "http://media-worker:8090")
     monkeypatch.setattr(settings, "media_worker_token_file", str(secret))
     monkeypatch.setattr(settings, "signage_video_storage", str(tmp_path / "private"))

@@ -85,7 +85,7 @@ async def suggest(
         try:
             payload = {"q": body.text, "source": body.source, "target": body.target, "format": "text"}
             if settings.translation_api_key_file:
-                key = Path(settings.translation_api_key_file).read_text().strip()
+                key = Path(settings.translation_api_key_file).read_text(encoding="utf-8").strip()
                 if not re.fullmatch(r"[A-Za-z0-9_-]{32,128}", key):
                     raise ValueError("Invalid credential")
                 payload["api_key"] = key

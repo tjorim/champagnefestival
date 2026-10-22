@@ -22,7 +22,7 @@ from tests.test_signage import setup, slide
 @pytest.fixture
 async def configured(client, monkeypatch, tmp_path):
     secret = tmp_path / "token"
-    secret.write_text("x" * 64)
+    secret.write_text("x" * 64, encoding="utf-8")
     monkeypatch.setattr(settings, "media_worker_url", "http://media-worker:8090")
     monkeypatch.setattr(settings, "media_worker_token_file", str(secret))
     monkeypatch.setattr(settings, "signage_video_storage", str(tmp_path / "private"))

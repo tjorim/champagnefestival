@@ -1,7 +1,7 @@
 # ── build stage ──────────────────────────────────────────────────────────────
-FROM python:3.14-slim AS builder
+FROM python:3.15-slim AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.10.12@sha256:72ab0aeb448090480ccabb99fb5f52b0dc3c71923bffb5e2e26517a1c27b7fec /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff /uv /usr/local/bin/uv
 
 WORKDIR /app
 COPY backend/pyproject.toml backend/uv.lock ./
@@ -10,7 +10,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 # ── runtime stage ─────────────────────────────────────────────────────────────
 # Shared base for the api and worker targets below — neither the HTTP
 # healthcheck nor a command belongs here since only api exposes a port.
-FROM python:3.14-slim AS runtime
+FROM python:3.15-slim AS runtime
 
 WORKDIR /app
 COPY --from=builder /app/.venv /app/.venv
@@ -34,7 +34,7 @@ FROM runtime AS api
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 

@@ -50,7 +50,7 @@ def fail(status: int, code: str) -> NoReturn:
 
 def token() -> str:
     try:
-        value = Path(settings.media_worker_token_file).read_text().strip()
+        value = Path(settings.media_worker_token_file).read_text(encoding="utf-8").strip()
     except OSError:
         return ""
     return value if len(value) >= 32 and value.isascii() and not any(c.isspace() for c in value) else ""
