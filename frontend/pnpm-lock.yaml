@@ -91,14 +91,14 @@ importers:
         specifier: ^4.13.0
         version: 4.13.0(playwright-core@1.63.0)
       '@inlang/paraglide-js':
-        specifier: ^2.27.0
-        version: 2.27.0(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0))
+        specifier: ^2.29.1
+        version: 2.29.1(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0))
       '@inlang/plugin-m-function-matcher':
-        specifier: ^2.3.3
-        version: 2.3.3
+        specifier: ^2.3.4
+        version: 2.3.4
       '@inlang/plugin-message-format':
-        specifier: ^4.5.3
-        version: 4.5.3
+        specifier: ^4.5.4
+        version: 4.5.4
       '@playwright/test':
         specifier: ^1.63.0
         version: 1.63.0
@@ -358,29 +358,32 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@inlang/paraglide-js@2.27.0':
-    resolution: {integrity: sha512-KAAwRbg/h3oi2D4nB0cUCKG2ntOLpcSOmwwjm+SL2a316NhdypXWGeElJenCwK2piPz7vQTn7yOYOwCjqIEP5g==}
+  '@inlang/paraglide-js@2.29.1':
+    resolution: {integrity: sha512-rE1AH0Uc86WEb+0HUKAdrfOfu1aqpGkvHebEK3PEIFYC2VJj0asF2BI8QYKSalNHTqrctsrImm647NBBg2QzSw==}
     hasBin: true
     peerDependencies:
+      eslint: ^9.0.0 || ^10.0.0
       typescript: '>=5.6'
       vite: '>=5.0.0'
     peerDependenciesMeta:
+      eslint:
+        optional: true
       typescript:
         optional: true
       vite:
         optional: true
 
-  '@inlang/plugin-m-function-matcher@2.3.3':
-    resolution: {integrity: sha512-WoMECm09zxlBOE4AxPGzaIQHz4KfSw7qH7akvSoP6K3gJ0WuNQf/wEH1FQPyZ0UFaeG4rycjNgKcopLcjaj8tw==}
+  '@inlang/plugin-m-function-matcher@2.3.4':
+    resolution: {integrity: sha512-Jd2ccLjEqyUAj+y54fb/8O1bEREsaHcPOw6PBercVjDMTvcUqAQZ8V/1t5Z0ZmSCuWgof7XxnmBcwgMuf0Xk+A==}
 
-  '@inlang/plugin-message-format@4.5.3':
-    resolution: {integrity: sha512-6rEkx02uEbnOtCTzFS6pCWqD1KXZyPJbsxK+D3pbDWMViAM54rG8HbQjBKQ2o06vyLgRqOyWPDQjddWGGIvZJA==}
+  '@inlang/plugin-message-format@4.5.4':
+    resolution: {integrity: sha512-rpNQgDvL723tvUM9VWu6uwXnRzIGSTBN7M7QJbQmpPk0SROMXjXPEafVteEZ1RAeeETcYsUG8OJes6nCcnYu6A==}
 
   '@inlang/recommend-sherlock@0.2.1':
     resolution: {integrity: sha512-ckv8HvHy/iTqaVAEKrr+gnl+p3XFNwe5D2+6w6wJk2ORV2XkcRkKOJ/XsTUJbPSiyi4PI+p+T3bqbmNx/rDUlg==}
 
-  '@inlang/sdk@4.0.3':
-    resolution: {integrity: sha512-ajOudqasLcSU1AI00oDhL2zd3u5I4cq5vwn3yu4nnFqEM1sZDgAFK5AY8jID7sh5Lomk+obrCiwpPR3omKPITw==}
+  '@inlang/sdk@4.0.4':
+    resolution: {integrity: sha512-OJhVSGJa/Ak52WncgqIPHr9TyVJ1DuoublcmtNo9H8apoVn4Dr1DJNxUxawCCc01QmMSg8qoY8GrTV8SVIu1lg==}
     engines: {node: '>=20.0.0'}
 
   '@inquirer/ansi@2.0.7':
@@ -458,8 +461,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@lix-js/sdk@0.19.0':
-    resolution: {integrity: sha512-ks7hKZdJGH0APlSLWtFYCXDO3yIoleoPqzLgkZYtMbaiWRN2Ih772tNGGBZFLKbutq6DuNRwcjNkG94KqWRbBA==}
+  '@lix-js/sdk@0.20.1':
+    resolution: {integrity: sha512-oscOFP8Cr1My6Wh2KVYC9+aJ1mHs+d7vnD+7PPJaA4L+Y1FR37Sm99SrFGfvUizaj/XtRi2GlDF2IOFt9iXMNQ==}
 
   '@mswjs/interceptors@0.41.9':
     resolution: {integrity: sha512-VVPPgHyQ6ShqnrmDWuxjmUIsO9gWyOZFmuOfLd9LfBGQJwZfy0gvv9pbHSJuoFNIYC7ZDX9aoFwowjcdSC4E8w==}
@@ -2203,6 +2206,9 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
+  jsonc-parser@3.3.1:
+    resolution: {integrity: sha512-HUgH65KyejrUFPvHFPbqOY0rsFip3Bo5wb4ngvdi1EpCYWUQDC5V+Y7mZws+DLkr4M//zQJoanu1SP+87Dv1oQ==}
+
   jsqr@1.4.0:
     resolution: {integrity: sha512-dxLob7q65Xg2DvstYkRpkYtmKm2sPJ9oFhrhmudT1dZvNFFTlroai3AWSpLey/w5vMcLBXRgOJsbXpdN9HzU/A==}
 
@@ -2210,8 +2216,8 @@ packages:
     resolution: {integrity: sha512-+KJGIyHgkGuIq3IEBNftfhW/LfWhXUIY6OmyVWjliu5KH1y0fw7VQ8YndE2O4qZdMSd9SqbnC8GOcZEy0Om7sA==}
     engines: {node: '>=18'}
 
-  kysely@0.28.17:
-    resolution: {integrity: sha512-nbD8lB9EB3wNdMhOCdx5Li8DxnLbvKByylRLcJ1h+4SkrowVeECAyZlyiKMThF7xFdRz0jSQ2MoJr+wXux2y0Q==}
+  kysely@0.28.18:
+    resolution: {integrity: sha512-lf6nEHwPlaWbUDw5rycPSkEVGVC7sF7hzY7kH0OryleqK8Ym0zZ+RjI8o+RpHHlxpbKVC1d+UoQSW8GFxGQf4Q==}
     engines: {node: '>=20.0.0'}
 
   leaflet@1.9.4:
@@ -3043,14 +3049,15 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@inlang/paraglide-js@2.27.0(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0))':
+  '@inlang/paraglide-js@2.29.1(typescript@7.0.2)(vite@8.3.4(@types/node@26.6.5)(jiti@2.7.0))':
     dependencies:
       '@inlang/recommend-sherlock': 0.2.1
-      '@inlang/sdk': 4.0.3
+      '@inlang/sdk': 4.0.4
       commander: 11.1.0
       consola: 3.4.0
       jiti: 2.7.0
       json5: 2.2.3
+      jsonc-parser: 3.3.1
       unplugin: 2.3.11
       urlpattern-polyfill: 10.1.0
       valibot: 1.5.0(typescript@7.0.2)
@@ -3058,28 +3065,28 @@ snapshots:
       typescript: 7.0.2
       vite: 8.3.4(@types/node@26.6.5)(jiti@2.7.0)
 
-  '@inlang/plugin-m-function-matcher@2.3.3':
+  '@inlang/plugin-m-function-matcher@2.3.4':
     dependencies:
       '@babel/parser': 7.29.9
-      '@inlang/sdk': 4.0.3
+      '@inlang/sdk': 4.0.4
       svelte: 5.57.2
     transitivePeerDependencies:
       - '@typescript-eslint/types'
 
-  '@inlang/plugin-message-format@4.5.3':
+  '@inlang/plugin-message-format@4.5.4':
     dependencies:
-      '@inlang/sdk': 4.0.3
+      '@inlang/sdk': 4.0.4
       '@sinclair/typebox': 0.31.30
 
   '@inlang/recommend-sherlock@0.2.1':
     dependencies:
       comment-json: 4.6.2
 
-  '@inlang/sdk@4.0.3':
+  '@inlang/sdk@4.0.4':
     dependencies:
-      '@lix-js/sdk': 0.19.0
+      '@lix-js/sdk': 0.20.1
       '@sinclair/typebox': 0.31.30
-      kysely: 0.28.17
+      kysely: 0.28.18
       uuid: 14.0.3
 
   '@inquirer/ansi@2.0.7': {}
@@ -3155,7 +3162,7 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@lix-js/sdk@0.19.0':
+  '@lix-js/sdk@0.20.1':
     dependencies:
       '@bytecodealliance/jco-transpile': 0.13.0
       binaryen: 130.0.0
@@ -4370,11 +4377,13 @@ snapshots:
 
   json5@2.2.3: {}
 
+  jsonc-parser@3.3.1: {}
+
   jsqr@1.4.0: {}
 
   jwt-decode@4.0.0: {}
 
-  kysely@0.28.17: {}
+  kysely@0.28.18: {}
 
   leaflet@1.9.4: {}
 
