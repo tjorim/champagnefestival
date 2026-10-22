@@ -1,4 +1,4 @@
-import { Columns3 } from "lucide-react";
+import { Columns3Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -29,7 +29,7 @@ export function ColumnVisibilityDropdown<TData extends RowData>({
         render={<Button variant="outline" size="sm" />}
         id={`col-vis-toggle-${tableId}`}
       >
-        <Columns3 aria-hidden="true" className="size-4" />
+        <Columns3Icon aria-hidden="true" className="size-4" />
         {m.admin_columns()}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

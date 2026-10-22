@@ -7,18 +7,18 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   CircleCheckIcon,
-  CircleHelpIcon,
-  Grid3X3Icon,
+  CircleQuestionMarkIcon,
+  Grid3x3Icon,
   HourglassIcon,
   LayersIcon,
   LogOutIcon,
   MailIcon,
   MapPinIcon,
   MegaphoneIcon,
-  HistoryIcon,
   NotebookTextIcon,
-  PhoneIcon,
   PackageIcon,
+  PhoneIcon,
+  RotateCcwClockIcon,
   RotateCwIcon,
   ShieldIcon,
   SlidersHorizontalIcon,
@@ -270,7 +270,7 @@ export default function AdminSidebar({
                   >
                     <SidebarItem
                       itemKey="faq"
-                      icon={CircleHelpIcon}
+                      icon={CircleQuestionMarkIcon}
                       label={m.admin_content_faq_section()}
                       {...itemProps}
                     />
@@ -315,7 +315,7 @@ export default function AdminSidebar({
                     />
                     <SidebarItem
                       itemKey="floor-plans"
-                      icon={Grid3X3Icon}
+                      icon={Grid3x3Icon}
                       label={m.admin_floor_plans_tab()}
                       {...itemProps}
                     />
@@ -355,7 +355,7 @@ export default function AdminSidebar({
                     />
                     <SidebarItem
                       itemKey="audit-log"
-                      icon={HistoryIcon}
+                      icon={RotateCcwClockIcon}
                       label={m.admin_audit_log_tab()}
                       {...itemProps}
                     />

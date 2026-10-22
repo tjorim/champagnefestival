@@ -1,6 +1,6 @@
 import {
-  ChevronDown,
-  ChevronUp,
+  ChevronDownIcon,
+  ChevronUpIcon,
   CircleAlertIcon,
   CircleCheckIcon,
   ContactRoundIcon,
@@ -10,7 +10,7 @@ import {
   OctagonXIcon,
   PlusIcon,
   ScanQrCodeIcon,
-  Search,
+  SearchIcon,
   ShoppingCartIcon,
   TriangleAlertIcon,
   UserCheckIcon,
@@ -646,13 +646,13 @@ export default function CheckInPage() {
                           aria-controls="manual-checkin-search"
                         >
                           <span>
-                            <Search className="mr-2 inline size-4" aria-hidden="true" />
+                            <SearchIcon className="mr-2 inline size-4" aria-hidden="true" />
                             {m.checkin_manual_search_title()}
                           </span>
                           {searchOpen ? (
-                            <ChevronUp aria-hidden="true" className="size-4" />
+                            <ChevronUpIcon aria-hidden="true" className="size-4" />
                           ) : (
-                            <ChevronDown aria-hidden="true" className="size-4" />
+                            <ChevronDownIcon aria-hidden="true" className="size-4" />
                           )}
                         </CollapsibleTrigger>
                       </CardHeader>
