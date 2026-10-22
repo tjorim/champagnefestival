@@ -1,7 +1,7 @@
 # ── build stage ──────────────────────────────────────────────────────────────
 FROM python:3.15-slim AS builder
 
-COPY --from=ghcr.io/astral-sh/uv:0.10.12@sha256:72ab0aeb448090480ccabb99fb5f52b0dc3c71923bffb5e2e26517a1c27b7fec /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.13.5@sha256:32a7bb39b496babbd997b0a39a4d66c126bdaf5661b302bf6f06abda8deca6ff /uv /usr/local/bin/uv
 
 WORKDIR /app
 COPY backend/pyproject.toml backend/uv.lock ./
