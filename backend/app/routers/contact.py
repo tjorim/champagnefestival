@@ -6,11 +6,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
+from app.dialect_functions import dialect_insert
 from app.email import send_contact_notification
 from app.models import ContactMessage
 from app.ratelimit import check_rate_limit, get_client_ip
@@ -54,7 +54,7 @@ async def submit_contact(
 
     message_id = str(body.submission_id)
     inserted = await db.scalar(
-        insert(ContactMessage)
+        dialect_insert(db)(ContactMessage)
         .values(
             id=message_id,
             name=body.name,

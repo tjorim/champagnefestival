@@ -27,7 +27,7 @@ from decimal import Decimal
 from typing import Any, Literal
 
 from fastapi import status
-from sqlalchemy import Select, func, select
+from sqlalchemy import Numeric, Select, func, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -202,13 +202,17 @@ async def person_payment_summary(db: AsyncSession, person_id: str) -> dict:
         # overpaid one's excess can't both cancel out in a single group SUM,
         # so each is clamped with GREATEST(..., 0) before being summed —
         # mirrors the edition stats query in app.routers.editions.
-        func.coalesce(
-            func.sum(func.greatest(func.coalesce(Registration.amount_due, 0) - Registration.amount_paid, 0)),
-            0,
+        type_coerce(
+            func.coalesce(
+                func.sum(func.greatest(func.coalesce(Registration.amount_due, 0) - Registration.amount_paid, 0)), 0
+            ),
+            Numeric(10, 2),
         ).label("outstanding"),
-        func.coalesce(
-            func.sum(func.greatest(Registration.amount_paid - func.coalesce(Registration.amount_due, 0), 0)),
-            0,
+        type_coerce(
+            func.coalesce(
+                func.sum(func.greatest(Registration.amount_paid - func.coalesce(Registration.amount_due, 0), 0)), 0
+            ),
+            Numeric(10, 2),
         ).label("refund_liability"),
     ).where(Registration.person_id == person_id, Registration.status != "cancelled")
     totals = (await db.execute(totals_stmt)).one()

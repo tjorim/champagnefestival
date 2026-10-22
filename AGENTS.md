@@ -41,10 +41,22 @@ uv run pytest
 uv run alembic upgrade head
 ```
 
-> **Prerequisites:** Backend development and tests require a running PostgreSQL instance.
-> Start one with `docker compose up db -d` from the repo root (uses `docker-compose.yml`).
-> Tests default to `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`;
-> override via the `TEST_DATABASE_URL` environment variable.
+> **Prerequisites:** none. Tests and a local dev instance both run on SQLite by default, so no
+> container is needed. The suite takes under two minutes that way (about four on PostgreSQL).
+> Production runs on PostgreSQL and CI runs the whole suite against it too. What SQLite cannot
+> do, `app/sqlite_compat.py` and `app/sqlite_functions.py` stand in for: UTC datetimes, foreign
+> keys, the `pg_trgm`/`unaccent` search functions and their triggers, and an in-process
+> `pg_notify` that reaches the live-update stream on commit. Tests that exercise real
+> PostgreSQL behaviour (concurrent sessions and locks, the Alembic migrations, the ledger
+> trigger, LISTEN reconnects) are marked `requires_postgres` and skip on SQLite. SQLite cannot
+> relay across processes, so a SQLite dev instance is single-process.
+>
+> For a dev instance set `DATABASE_URL=sqlite+aiosqlite:///./dev.db`; the schema is created at
+> startup. `create_all` never alters an existing table, so delete the file after a model change.
+>
+> To run against PostgreSQL instead, start one with `docker compose up db -d` from the repo root
+> (uses `docker-compose.yml`) and set `DATABASE_URL` and `TEST_DATABASE_URL` to
+> `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`.
 >
 > Auth doesn't require a local Keycloak/IdP — set `DEV_AUTH_BYPASS_TOKEN` to any
 > string and pass it as `Authorization: Bearer <value>`; it's treated as a fixed

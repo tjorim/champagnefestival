@@ -25,7 +25,7 @@ from app.visitor_session import (
     cleanup_expired_magic_links,
     cleanup_expired_sessions,
 )
-from tests.helpers import _post_registration
+from tests.helpers import _post_registration, requires_postgres
 
 
 def _capture_sent_token(monkeypatch) -> list[str]:
@@ -131,6 +131,7 @@ async def test_redeem_rejects_unknown_token(client):
     assert r.status_code == 401
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 async def test_concurrent_redemption_only_one_succeeds(client, db_session, engine, monkeypatch):
     """Two concurrent redemptions of the same link: exactly one wins the row lock."""
     captured = _capture_sent_token(monkeypatch)

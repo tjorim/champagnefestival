@@ -13,7 +13,7 @@ from app.config import settings
 from app.models import AuditEntry
 from app.services import edition_artwork, editions_service
 from app.services.public_render_cache import public_render_cache
-from tests.helpers import ADMIN_HEADERS, _create_event
+from tests.helpers import ADMIN_HEADERS, _create_event, requires_postgres
 
 SIZES = {"flyer": (700, 990), "hero": (1900, 1000), "share": (1280, 670)}
 
@@ -219,6 +219,7 @@ async def test_reconcile_removes_only_unreferenced_files(client, db_session, edi
     assert await edition_artwork.reconcile(db_session) == 0
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 async def test_concurrent_uploads_leave_one_file_per_slot(client, engine, edition, storage):
     factory = async_sessionmaker(engine, expire_on_commit=False)
 

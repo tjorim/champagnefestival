@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from app.models import Announcement, AuditEntry
 from app.schemas import AnnouncementCreate
 from app.services.announcements_service import create
-from tests.helpers import ADMIN_HEADERS
+from tests.helpers import ADMIN_HEADERS, requires_postgres
 
 
 @pytest.mark.anyio
@@ -145,6 +145,7 @@ async def test_update_rejects_credential_bearing_link(client):
     assert response.status_code == 422
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_concurrent_creates_allocate_distinct_sequential_positions(engine):
     sessions = async_sessionmaker(engine, expire_on_commit=False)

@@ -17,6 +17,7 @@ from app.services.outbox_service import (
     finish_attempt,
     process_one_job,
 )
+from tests.helpers import requires_postgres
 
 
 async def _enqueue(db, resource_id: str, *, max_attempts: int = 5) -> OutboxJob:
@@ -33,6 +34,7 @@ async def _enqueue(db, resource_id: str, *, max_attempts: int = 5) -> OutboxJob:
     return job
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_two_workers_claim_one_job_once(engine, db_session):
     await _enqueue(db_session, "reg-concurrent")

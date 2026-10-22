@@ -8,7 +8,7 @@ create/update/delete/merge transitions — lives in
 from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import func, select
+from sqlalchemy import func, select, true
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.responses import StreamingResponse
@@ -16,6 +16,7 @@ from starlette.responses import StreamingResponse
 from app.auth import get_actor_id, require_admin
 from app.database import get_db
 from app.dependencies import ListQuery, get_request_id
+from app.dialect_functions import json_array_elements_text
 from app.models import Event, Person, Registration
 from app.schemas import (
     PeopleCountsOut,
@@ -108,9 +109,12 @@ async def people_counts(
     total, active_count = (
         await db.execute(select(func.count(), func.count().filter(active_expr)).select_from(matching))
     ).one()
-    expanded = select(
-        matching.c.id, func.lower(func.json_array_elements_text(matching.c.roles)).label("role")
-    ).subquery()
+    role_values = json_array_elements_text(matching.c.roles).table_valued("value").alias("role_value")
+    expanded = (
+        select(matching.c.id, func.lower(role_values.c.value).label("role"))
+        .select_from(matching.join(role_values, true()))
+        .subquery()
+    )
     roles = (
         await db.execute(select(expanded.c.role, func.count(func.distinct(expanded.c.id))).group_by(expanded.c.role))
     ).all()

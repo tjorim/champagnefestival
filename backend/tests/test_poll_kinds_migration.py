@@ -11,6 +11,9 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import DataError, IntegrityError
 
 from alembic import command
+from tests.helpers import requires_postgres
+
+pytestmark = requires_postgres("the Alembic migrations target PostgreSQL")
 
 
 def test_upgrade_constraints_and_downgrade(monkeypatch):

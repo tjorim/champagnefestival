@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 
 from app.live.render_cache_listener import PgRenderCacheListener
+from tests.helpers import requires_postgres
 
 
 async def test_start_failure_schedules_reconnect_instead_of_stopping():
@@ -40,6 +41,7 @@ async def test_stop_before_any_successful_connect_cancels_the_reconnect_task():
     assert reconnect_task.done()
 
 
+@requires_postgres("LISTEN/NOTIFY is PostgreSQL only")
 async def test_reconnect_succeeds_once_the_database_becomes_reachable(engine):
     from app.live.render_cache_listener import _to_asyncpg_dsn
     from tests.conftest import TEST_DATABASE_URL

@@ -18,6 +18,7 @@ from tests.helpers import (
     _create_event,
     _post_registration,
     _registration_body,
+    requires_postgres,
 )
 
 # ---------------------------------------------------------------------------
@@ -187,6 +188,7 @@ async def test_admin_must_uncheck_registration_before_canceling(client):
     assert cancelled_and_unchecked.json()["checked_in"] is False
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_concurrent_cancel_and_check_in_preserve_registration_invariant(client, engine):
     created = await _post_registration(client)
@@ -718,6 +720,7 @@ async def test_admin_assign_is_idempotent_for_a_repeated_same_target_call(client
     assert len(audits) == 1
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_concurrent_assign_to_different_volunteers_yields_exactly_one_winner(client, engine, db_session):
     """Two admins racing to assign the same unowned registration to two

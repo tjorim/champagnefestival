@@ -16,6 +16,7 @@ from app.services import organization_changes
 from app.services.errors import ConflictError
 from tests import test_my_organizations
 from tests.conftest import ADMIN_HEADERS
+from tests.helpers import requires_postgres
 
 manager = test_my_organizations.manager
 login = test_my_organizations.login
@@ -159,6 +160,7 @@ async def test_authorization_and_validation(client, db_session, manager, monkeyp
     assert accepted_audit is not None and accepted_audit.actor == "reviewer"
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 async def test_concurrent_decisions(engine, db_session, manager):
     row = manager[1][0]
     factory = async_sessionmaker(engine, expire_on_commit=False)

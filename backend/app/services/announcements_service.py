@@ -7,6 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.dialect_functions import assign_positions
 from app.models import Announcement
 from app.schemas import AnnouncementCreate, AnnouncementUpdate, AnnouncementWrite
 from app.services.errors import NotFoundError, ValidationFailedError
@@ -143,8 +144,7 @@ async def reorder(db: AsyncSession, *, actor: str, ordered_ids: list[str], reque
     if len(set(ordered_ids)) != len(ordered_ids) or set(ordered_ids) != {item.id for item in items}:
         raise ValidationFailedError("ordered_ids must contain every announcement ID exactly once.")
     by_id = {item.id: item for item in items}
-    for position, item_id in enumerate(ordered_ids):
-        by_id[item_id].sort_order = position
+    await assign_positions(db, by_id, ordered_ids)
     await write_audit_entry(
         db,
         actor=actor,

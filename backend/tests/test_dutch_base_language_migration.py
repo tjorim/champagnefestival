@@ -13,8 +13,11 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
 
 from alembic import command
+from tests.helpers import requires_postgres
 
 NOW = "2026-01-01T00:00:00+00"
+
+pytestmark = requires_postgres("the Alembic migrations target PostgreSQL")
 
 
 def _insert(connection, table: str, **values) -> None:
