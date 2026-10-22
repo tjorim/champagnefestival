@@ -16,6 +16,7 @@ from app.config import settings
 from app.main import app
 from app.models import SignageVideoExport
 from app.services import signage_video as service
+from tests.helpers import requires_postgres
 from tests.test_signage import setup, slide
 
 
@@ -369,6 +370,7 @@ async def test_expired_uncertain_submission_only_looks_up_never_reencodes(client
     assert row.payload_digest is not None
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 async def test_reconciler_election_and_missing_remote_artifact(client, db_session, engine, configured):
     from sqlalchemy import text
 

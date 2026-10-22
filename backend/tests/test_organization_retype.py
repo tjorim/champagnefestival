@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import Organization
-from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD
+from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, requires_postgres
 
 
 async def _linked_producer(client) -> int:
@@ -76,6 +76,7 @@ async def test_other_retypes_are_unaffected(client):
     assert len(r.json()["sponsors"]) == 1
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_retyping_an_organization_locks_it_against_concurrent_edition_linking(client, engine):
     """update_organization and validate_organization_ids both take a row lock on the

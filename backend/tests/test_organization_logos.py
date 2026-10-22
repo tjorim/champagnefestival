@@ -15,6 +15,7 @@ from app.services import organization_changes, organization_logos
 from app.services.errors import ServiceError
 from tests import test_my_organizations
 from tests.conftest import ADMIN_HEADERS
+from tests.helpers import requires_postgres
 from tests.test_organization_changes import decision, login, propose
 
 manager = test_my_organizations.manager
@@ -249,6 +250,7 @@ async def test_public_logo_rejects_directory_and_public_symlink(client, storage)
     assert (await client.get(organization_logos.PREFIX + target.name)).status_code == 200
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.parametrize("admin", [False, True])
 async def test_encoding_does_not_hold_storage_lock(client, engine, manager, storage, monkeypatch, admin):
     await login(client, manager)

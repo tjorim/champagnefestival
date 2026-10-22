@@ -13,6 +13,9 @@ from sqlalchemy.orm import Session
 
 from alembic import command
 from app.models import Edition, Event, Person, Registration, Venue
+from tests.helpers import requires_postgres
+
+pytestmark = requires_postgres("the Alembic migrations target PostgreSQL")
 
 
 def test_order_question_upgrade_constraints_and_downgrade(monkeypatch):

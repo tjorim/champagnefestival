@@ -10,6 +10,9 @@ from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 
 from alembic import command
+from tests.helpers import requires_postgres
+
+pytestmark = requires_postgres("the Alembic migrations target PostgreSQL")
 
 
 def test_organization_rename_preserves_data_and_reverses(monkeypatch):

@@ -11,7 +11,7 @@ from app.schemas import PolicyDraftCreate, PolicyDraftUpdate
 from app.services.errors import ServiceError
 from app.services.policies_service import create_draft, publish_draft, update_draft
 from app.services.policy_markdown import render_markdown
-from tests.helpers import ADMIN_HEADERS
+from tests.helpers import ADMIN_HEADERS, requires_postgres
 
 
 async def _seed_policy(db_session, *, key: str = "privacy") -> None:
@@ -298,6 +298,7 @@ async def test_preview_endpoint_matches_public_rendering(client, db_session):
 # ---------------------------------------------------------------------------
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_concurrent_publish_attempts_do_not_double_publish(engine):
     sessions = async_sessionmaker(engine, expire_on_commit=False)

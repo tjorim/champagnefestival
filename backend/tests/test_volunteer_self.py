@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import AuditEntry, Person
 from app.services import volunteer_self_service
-from tests.helpers import ADMIN_HEADERS
+from tests.helpers import ADMIN_HEADERS, requires_postgres
 
 NISS_A = "91010112319"
 EID_A = "123456789002"
@@ -208,6 +208,7 @@ async def test_register_conflicts_on_a_partial_match_the_other_direction(client,
         assert r.status_code == 409
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_concurrent_registration_for_the_same_exact_match_yields_exactly_one_winner(client, engine, db_session):
     """Two OIDC subjects racing to self-register against the same

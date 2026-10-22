@@ -11,6 +11,9 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
 
 from alembic import command
+from tests.helpers import requires_postgres
+
+pytestmark = requires_postgres("the Alembic migrations target PostgreSQL")
 
 
 def test_existing_options_keep_their_label_and_creation_order(monkeypatch):
