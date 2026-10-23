@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
+import { pathToFileURL } from "node:url";
 
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const source = {
@@ -52,16 +53,20 @@ async function fixture(t, registry = false) {
   await write("components.json", { style: "base-nova" });
   await write("ui-maintenance.json", inventory);
   await write("ui-upstream.json", registry ? { button: source } : {});
-  const run = (args, response) => {
-    const prelude = response
-      ? [
-          "--import",
-          `data:text/javascript,${encodeURIComponent(`globalThis.fetch = async () => Response.json(${JSON.stringify(response)});`)}`,
-        ]
-      : [];
-    return spawnSync(process.execPath, [...prelude, "scripts/ui-maintenance.mjs", ...args], {
+  await copyFile(
+    new URL("./fixtures/ui-maintenance-fetch-mock.mjs", import.meta.url),
+    join(root, "fetch-mock.mjs"),
+  );
+  const run = (args, response, entryPoint = "scripts/ui-maintenance.mjs") => {
+    const env = { ...process.env };
+    delete env.UI_MAINTENANCE_TEST_RESPONSE;
+    const prelude =
+      response !== undefined ? ["--import", pathToFileURL(join(root, "fetch-mock.mjs")).href] : [];
+    if (response !== undefined) env.UI_MAINTENANCE_TEST_RESPONSE = JSON.stringify(response);
+    return spawnSync(process.execPath, [...prelude, entryPoint, ...args], {
       cwd: root,
       encoding: "utf8",
+      env,
     });
   };
   return { root, write, run, inventory };
@@ -152,4 +157,31 @@ test("unexpected registry responses fail without modifying committed baselines",
     2,
   );
   assert.equal(await readFile(join(f.root, "ui-upstream.json"), "utf8"), previous);
+});
+
+test("mock response JSON stays inert, preserves own prototype keys, and is isolated per child", async (t) => {
+  const f = await fixture(t, true);
+  await f.write(
+    "fetch-probe.mjs",
+    `
+    const response = await (await fetch("https://example.invalid/fixture")).json();
+    process.stdout.write(JSON.stringify({
+      response,
+      fixtureEnvCleared: !Object.hasOwn(process.env, "UI_MAINTENANCE_TEST_RESPONSE"),
+      injected: Object.hasOwn(globalThis, "uiMaintenanceInjected"),
+    }));
+  `,
+  );
+  const payload = JSON.parse('{"__proto__":{"polluted":true}}');
+  payload.content = '"; globalThis.uiMaintenanceInjected = true; // </script>\\\n\u2028\u2029';
+  const first = f.run([], payload, "fetch-probe.mjs");
+  assert.equal(first.status, 0, first.stderr);
+  const observed = JSON.parse(first.stdout);
+  assert.deepEqual(observed.response, payload);
+  assert.equal(Object.hasOwn(observed.response, "__proto__"), true);
+  assert.equal(observed.injected, false);
+  assert.equal(observed.fixtureEnvCleared, true);
+  const second = f.run([], { content: "ordinary second response" }, "fetch-probe.mjs");
+  assert.equal(second.status, 0, second.stderr);
+  assert.deepEqual(JSON.parse(second.stdout).response, { content: "ordinary second response" });
 });
