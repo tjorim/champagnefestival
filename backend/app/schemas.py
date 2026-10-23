@@ -10,7 +10,7 @@ from typing import Any, Literal, Self
 from urllib.parse import urlsplit
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.composer_content import LOCALES, build_composer_payload, pick_locale_text
 from app.models import MAX_POLL_PEOPLE, MAX_POLL_QUANTITY
@@ -69,7 +69,7 @@ AnnouncementLevel = Literal["info", "warning", "urgent"]
 class RequestModel(BaseModel):
     """Base for external request bodies; reject misspelled or stale fields."""
 
-    model_config = {"extra": "forbid"}
+    model_config = ConfigDict(extra="forbid")
 
 
 def _validate_safe_announcement_url(value: str | None) -> str | None:
@@ -168,7 +168,7 @@ class PersonSummaryOut(BaseModel):
     phone: str
     preferred_language: Literal["nl", "fr", "en"] | None = None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RoleStretchOut(BaseModel):
@@ -198,7 +198,7 @@ class PersonOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PersonAdminSummaryOut(BaseModel):
@@ -230,7 +230,7 @@ class PersonAdminSummaryOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PersonPaymentSummary(BaseModel):
@@ -285,7 +285,7 @@ class EditionSummaryOut(BaseModel):
     edition_type: EditionType
     active: bool
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 CATEGORY_KEY_PATTERN = r"^[a-z][a-z0-9_-]{0,49}$"
@@ -338,7 +338,7 @@ class CategoryOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PollQuestionTexts(RequestModel):
@@ -536,7 +536,7 @@ class EventOut(EventTextOut):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EventPublicOut(EventTextOut):
@@ -558,7 +558,7 @@ class EventPublicOut(EventTextOut):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProductInclusion(RequestModel):
@@ -677,7 +677,7 @@ class ProductOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProductPublicOut(BaseModel):
@@ -707,7 +707,7 @@ class ProductPublicOut(BaseModel):
     included_product_id: str | None = None
     included_per_guests: int | None = None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EventCheckInStats(BaseModel):
@@ -841,7 +841,7 @@ class RegistrationOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RegistrationPublicOut(BaseModel):
@@ -872,7 +872,7 @@ class RegistrationPublicOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RegistrationOutWithToken(RegistrationOut):
@@ -924,7 +924,7 @@ class PaymentTransactionOut(BaseModel):
     note: str | None
     reversed_transaction_id: str | None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PaymentTransactionLedgerRow(PaymentTransactionOut):
@@ -977,7 +977,7 @@ class RegistrationListOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RegistrationListEnvelope(BaseModel):
@@ -1017,7 +1017,7 @@ class RegistrationGuestOut(BaseModel):
     strap_issued: bool
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MyRegistrationOut(BaseModel):
@@ -1153,7 +1153,7 @@ class VolunteerPeriodOut(BaseModel):
     last_help_day: dt_date | None
     notes: str
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VolunteerOut(BaseModel):
@@ -1170,7 +1170,7 @@ class VolunteerOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class VolunteerListEnvelope(BaseModel):
@@ -1521,7 +1521,7 @@ class CheckInGuestOut(BaseModel):
     checked_in_at: datetime | None
     strap_issued: bool
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CheckInLookupRequest(RequestModel):
@@ -1644,7 +1644,7 @@ class OrganizationOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ---------------------------------------------------------------------------
@@ -1674,7 +1674,7 @@ class LayoutOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LayoutBulkCreate(RequestModel):
@@ -1745,7 +1745,7 @@ class TableTypeOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TableTypeBulkCreate(RequestModel):
@@ -1819,7 +1819,7 @@ class TableOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TableBulkCreate(RequestModel):
@@ -1881,7 +1881,7 @@ class AreaOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LayoutWithTablesOut(LayoutOut):
@@ -1972,7 +1972,7 @@ class LayoutRevisionOut(BaseModel):
     created_at: datetime
     snapshot: LayoutRevisionSnapshot
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LayoutRevisionSummaryOut(BaseModel):
@@ -1986,7 +1986,7 @@ class LayoutRevisionSummaryOut(BaseModel):
     created_by: str
     created_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LayoutRevisionSaveRequest(RequestModel):
@@ -2159,7 +2159,7 @@ class VenueOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ---------------------------------------------------------------------------
@@ -2199,7 +2199,7 @@ class RoomOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class RoomBulkCreate(RequestModel):
@@ -2279,7 +2279,7 @@ class EditionItemOut(BaseModel):
         default=None, description="Sponsor level for this edition; null for non-sponsors and untiered sponsors."
     )
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EditionOut(BaseModel):
@@ -2308,7 +2308,7 @@ class EditionOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EditionPublicOut(BaseModel):
@@ -2337,7 +2337,7 @@ class EditionPublicOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class StandOut(BaseModel):
@@ -2421,7 +2421,7 @@ class EditionScratchpadOut(BaseModel):
     content: str
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AuditEntryOut(BaseModel):
@@ -2437,7 +2437,7 @@ class AuditEntryOut(BaseModel):
     request_id: str | None
     details: dict
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class IntegrationClientCreate(RequestModel):
@@ -2462,7 +2462,7 @@ class IntegrationClientOut(BaseModel):
     last_used_at: datetime | None
     revoked_at: datetime | None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class IntegrationClientCreatedOut(IntegrationClientOut):
@@ -2515,7 +2515,7 @@ class AppSettingsOut(BaseModel):
     facebook_url: str
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FaqTextFields(RequestModel):
@@ -2581,7 +2581,7 @@ class FaqItemOut(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class FaqItemPublicOut(BaseModel):
@@ -2714,7 +2714,7 @@ class PolicyVersionOut(BaseModel):
     published_at: datetime | None
     published_by: str | None
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PolicyOut(BaseModel):
@@ -2956,7 +2956,7 @@ class ComposedMessageOut(BaseModel):
     or keys, only counts (acceptance criterion: "per-channel results are
     visible without exposing secrets")."""
 
-    model_config = {"from_attributes": True}
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ComposedMessageScheduleRequest(RequestModel):
