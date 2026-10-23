@@ -307,3 +307,7 @@ Kept as they are:
 | `ThemeSwitcher` native `<select>` | A preview-only control with fixed styling that deliberately does not follow the theme being previewed; the generated `Select` would restyle itself with the theme. |
 | Canvas hit targets in `LayoutEditor` and `SignageTemplates` | Domain rendering: elements are positioned from floor-plan or layer coordinates, support pointer dragging/resizing and rotate with the item. They are not general-purpose buttons. |
 | `aria-pressed` selection in `SignageChannels`, sort buttons in `AdminDataTable` | These are already `Button`s. They represent a selected list item or the active sort column, not an independent on/off setting, so `Toggle`/`ToggleGroup` semantics would misdescribe them. |
+
+## Dependency and upstream source maintenance
+
+Use the pinned CLI and review workflow in [ui-maintenance.md](ui-maintenance.md). Existing generator/version examples above describe the original adoption; current maintenance commands and captured revisions live in that workflow and the frontend inventory.

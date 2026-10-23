@@ -114,3 +114,7 @@ page, the Refresh hero and the home page's `og:image`/JSON-LD image. See
 Organisation editors can request editable description drafts from the optional
 self-hosted translation service. Nothing is saved until a person saves or submits
 it. See [configuration and API contract](docs/organization-description-translation.md).
+
+## UI maintenance
+
+See [UI dependency and component maintenance](docs/ui-maintenance.md) for package updates, component provenance, upstream review commands and validation.
