@@ -13,25 +13,19 @@ from sqlalchemy.pool import NullPool
 
 import app.ratelimit as ratelimit_module
 import app.routers.public_pages as public_pages_module
+from app import sqlite_compat
 from app.auth import get_actor_id, get_current_claims, require_admin, require_volunteer
 from app.database import Base, get_db
 from app.main import app
 from app.models import EventCategory, ProductCategory
-from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS
+from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS, OPERATIONAL_SEARCH_SQLITE_STATEMENTS
 from app.payment_ledger_schema import PAYMENT_LEDGER_SCHEMA_STATEMENTS
 from app.services.public_render_cache import public_render_cache
 from app.services.users_service import get_or_create_user
 from app.visitor_session import get_current_user, get_current_user_with_claims
 
-TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL",
-    # Default targets a *separate* test database (test_champagne) so the dev
-    # database (champagne, provisioned by docker-compose) is never touched.
-    # Create it once with:
-    #   psql -h localhost -p 5432 -U postgres -c "CREATE DATABASE test_champagne;"
-    # Override via TEST_DATABASE_URL env var in CI or custom environments.
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne",
-)
+TEST_DATABASE_URL = os.environ["TEST_DATABASE_URL"]  # set by backend/conftest.py
+IS_SQLITE = TEST_DATABASE_URL.startswith("sqlite")
 
 # Fake claims injected by the `volunteer_client` and `me_client` fixtures.
 VOLUNTEER_CLAIMS = {"sub": "vol-sub", "realm_access": {"roles": ["volunteer"]}}
@@ -95,13 +89,20 @@ async def engine():
     """Session-scoped engine: create schema once, drop after all tests."""
     _assert_test_database_url(TEST_DATABASE_URL)
     _engine = create_async_engine(TEST_DATABASE_URL, poolclass=NullPool)
+    if IS_SQLITE:
+        sqlite_compat.configure_engine(_engine)
+        sqlite_compat.prepare_metadata(Base.metadata)
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
-        for statement in OPERATIONAL_SEARCH_SCHEMA_STATEMENTS:
-            await conn.execute(text(statement))
-        for statement in PAYMENT_LEDGER_SCHEMA_STATEMENTS:
-            await conn.execute(text(statement))
+        if IS_SQLITE:
+            for statement in OPERATIONAL_SEARCH_SQLITE_STATEMENTS:
+                await conn.execute(text(statement))
+        else:
+            for statement in OPERATIONAL_SEARCH_SCHEMA_STATEMENTS:
+                await conn.execute(text(statement))
+            for statement in PAYMENT_LEDGER_SCHEMA_STATEMENTS:
+                await conn.execute(text(statement))
     yield _engine
     async with _engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
@@ -119,6 +120,9 @@ async def pg_live_listener(engine):
     ``ASGITransport`` (used by the ``client`` fixture) never invokes that
     lifespan, so it's started here instead, once per test session.
     """
+    if IS_SQLITE:  # LISTEN/NOTIFY is PostgreSQL only
+        yield
+        return
     from app.live.listener import pg_live_listener as listener
 
     await listener.start(TEST_DATABASE_URL)
@@ -130,6 +134,9 @@ async def pg_live_listener(engine):
 async def pg_render_cache_listener(engine):
     """Run the real #992 render-cache invalidation LISTEN relay for the whole
     test session — same rationale as ``pg_live_listener`` above."""
+    if IS_SQLITE:
+        yield
+        return
     from app.live.render_cache_listener import pg_render_cache_listener as listener
 
     await listener.start(TEST_DATABASE_URL)
@@ -152,16 +159,17 @@ async def db_session(engine):
     async with factory() as session:
         # The categories every installation starts with (migration 006 seeds the same keys).
         for key, label in DEFAULT_TEST_CATEGORIES.items():
-            await session.merge(EventCategory(key=key, label_language="nl", label_nl=label))
+            await session.merge(EventCategory(key=key, label_nl=label))
         for key, label in DEFAULT_TEST_PRODUCT_CATEGORIES.items():
-            await session.merge(ProductCategory(key=key, label_language="en", label_en=label))
+            await session.merge(ProductCategory(key=key, label_nl=label))
         await session.commit()
         yield session
     async with engine.begin() as conn:
         # Opt this transaction out of the payment_transactions append-only
         # trigger (#1019) — this blanket between-test cleanup is exactly the
         # administrative exception that trigger's bypass exists for.
-        await conn.execute(text("SET LOCAL champagnefestival.allow_ledger_mutation = 'on'"))
+        if not IS_SQLITE:
+            await conn.execute(text("SET LOCAL champagnefestival.allow_ledger_mutation = 'on'"))
         for table in reversed(Base.metadata.sorted_tables):
             await conn.execute(table.delete())
 

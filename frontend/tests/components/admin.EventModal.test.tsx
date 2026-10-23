@@ -1,7 +1,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import EventModal from "@/components/admin/EventModal";
 import type { Edition } from "@/components/admin/editionTypes";
 import { server } from "@/mocks/server";
@@ -27,7 +28,6 @@ const existingEvent: Event = {
   title: "Openingsavond",
   titleNl: "Openingsavond",
   description: "Een glas om te starten",
-  descriptionLanguage: "nl",
   descriptionNl: "Een glas om te starten",
   date: "2027-03-06",
   startTime: "18:00",
@@ -73,7 +73,7 @@ afterEach(() => {
 });
 
 describe("EventModal translations", () => {
-  it("fills each language from the event and keeps the original language", () => {
+  it("fills each language from the event", () => {
     mount(existingEvent);
 
     expect(screen.getByLabelText("Title (Dutch)")).toHaveValue("Openingsavond");
@@ -82,7 +82,7 @@ describe("EventModal translations", () => {
     expect(screen.getByLabelText("Description (Dutch)")).toHaveValue("Een glas om te starten");
   });
 
-  it("requires a title in the original language before saving", async () => {
+  it("requires a Dutch title before saving", async () => {
     const onSave = mount(null);
 
     fillRequiredScheduleFields();
@@ -90,12 +90,12 @@ describe("EventModal translations", () => {
     fireEvent.change(screen.getByLabelText("Title (English)"), { target: { value: "Opening" } });
     save();
 
-    // The original language defaults to Dutch, which is still empty.
-    expect(await screen.findByText("Enter a title in its original language.")).toBeInTheDocument();
+    // Dutch is still empty.
+    expect(await screen.findByText("Enter a title in Dutch.")).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("requires description text in its original language when any description exists", async () => {
+  it("requires Dutch description text when a translated description exists", async () => {
     const onSave = mount(null);
 
     fillRequiredScheduleFields();
@@ -107,14 +107,12 @@ describe("EventModal translations", () => {
     save();
 
     expect(
-      await screen.findByText(
-        "Enter a description in its original language, or clear all description texts.",
-      ),
+      await screen.findByText("Enter a description in Dutch, or clear all description texts."),
     ).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
   });
 
-  it("saves every language and the chosen original languages", async () => {
+  it("saves every language", async () => {
     const onSave = mount(existingEvent);
 
     fireEvent.change(screen.getByLabelText("Title (French)"), {
@@ -127,11 +125,9 @@ describe("EventModal translations", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledTimes(1));
     expect(onSave.mock.calls[0]?.[0]).toMatchObject({
-      titleLanguage: "nl",
       titleNl: "Openingsavond",
       titleFr: "Soirée d'ouverture",
       titleEn: "Opening night",
-      descriptionLanguage: "nl",
       descriptionNl: "Een glas om te starten",
       category: "ceremony",
     });
@@ -179,5 +175,20 @@ describe("EventModal translations", () => {
       expect(screen.getByLabelText("Title (English)")).toHaveValue("Opening evening"),
     );
     expect(screen.getByLabelText("Title (French)")).toHaveValue("");
+  });
+
+  it("does not submit the event form when Enter is pressed in an order question field", async () => {
+    server.use(http.get("/api/events/event-01", () => HttpResponse.json({ order_questions: [] })));
+    const onSave = mount(existingEvent);
+
+    fireEvent.click(screen.getByRole("button", { name: "Order questions" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Add question" }));
+    const title = screen.getAllByLabelText("Title (Dutch)").at(-1)!;
+    fireEvent.change(title, { target: { value: "Opmerking" } });
+    // fireEvent.keyDown does not trigger implicit submission; userEvent does.
+    await userEvent.type(title, "{Enter}");
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(title).toHaveValue("Opmerking");
   });
 });

@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminField,
   AdminLabel,
@@ -26,18 +27,17 @@ import {
 
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
+import AdminEditorDialog from "./AdminEditorDialog";
+import { apiErrorMessage } from "@/utils/apiErrors";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
-import { OriginalLanguageSelect } from "@/components/admin/LocalizedFields";
 
 type ComposedMessageChannel = "announcement" | "push";
 type ComposedMessageState = "draft" | "scheduled" | "sent";
 
 interface ComposedMessage {
   id: string;
-  /** Original language: the title and body must both have text there. */
-  text_language: "nl" | "fr" | "en";
   title_nl: string | null;
   title_en: string | null;
   title_fr: string | null;
@@ -61,7 +61,6 @@ interface ComposedMessage {
 
 type Draft = Pick<
   ComposedMessage,
-  | "text_language"
   | "title_nl"
   | "title_en"
   | "title_fr"
@@ -74,7 +73,6 @@ type Draft = Pick<
 >;
 
 const emptyDraft: Draft = {
-  text_language: "nl",
   title_nl: "",
   title_en: "",
   title_fr: "",
@@ -88,7 +86,6 @@ const emptyDraft: Draft = {
 
 function writePayload(draft: Draft) {
   return {
-    text_language: draft.text_language,
     title_nl: draft.title_nl || null,
     title_en: draft.title_en || null,
     title_fr: draft.title_fr || null,
@@ -132,7 +129,10 @@ export default function ComposerManagement({
     refetchInterval: 10_000,
   });
   const items = query.data ?? [];
-  const [editing, setEditing] = useState<string | null>(null);
+  // Keep the editor baseline independent of list refetches while it is open.
+  const [editor, setEditor] = useState<{ id: string | null; initial: Draft } | null>(null);
+  const editing = editor?.id ?? null;
+  const [editorError, setEditorError] = useState("");
   const [preview, setPreview] = useState<"nl" | "en" | "fr">("nl");
   const [error, setError] = useState("");
   const { confirm, confirmDialog } = useConfirmDialog({ admin: true });
@@ -150,58 +150,52 @@ export default function ComposerManagement({
         m.admin_composer_error_save(),
       ),
     onSuccess: () => {
-      form.reset(emptyDraft);
-      setEditing(null);
+      closeEditor();
       void refresh();
     },
     retry: false,
   });
 
-  const editingItem = editing ? (items.find((i) => i.id === editing) ?? null) : null;
-
-  // Derived rather than a static template: `useForm` re-applies `defaultValues`
-  // on every render, so a template that disagrees with what `form.reset(record)`
-  // stored gets re-applied and blanks the form. See EditionModal for the details.
-  const formDefaultValues = useMemo(
-    (): Draft =>
-      editingItem
-        ? {
-            text_language: editingItem.text_language,
-            title_nl: editingItem.title_nl,
-            title_en: editingItem.title_en,
-            title_fr: editingItem.title_fr,
-            body_nl: editingItem.body_nl,
-            body_en: editingItem.body_en,
-            body_fr: editingItem.body_fr,
-            level: editingItem.level,
-            channels: editingItem.channels,
-            link_url: editingItem.link_url,
-          }
-        : emptyDraft,
-    [editingItem],
-  );
-
   const form = useForm({
-    defaultValues: formDefaultValues,
+    defaultValues: editor?.initial ?? emptyDraft,
     onSubmit: async ({ value }) => {
       if (save.isPending) return;
-      setError("");
+      setEditorError("");
       try {
         await save.mutateAsync(value);
       } catch (reason) {
-        setError(String(reason));
+        setEditorError(apiErrorMessage(reason, m.admin_composer_error_save()));
       }
     },
   });
   const channels = useSelector(form.atom, (s) => s.values.channels);
 
-  // Seed the form when entering edit mode. Reset during render (the
-  // "adjusting state when a prop changes" pattern) since this only needs to
-  // react to `editing` changing to a specific item, not to every render.
-  const [lastEditing, setLastEditing] = useState(editing);
-  if (editing !== lastEditing) {
-    setLastEditing(editing);
-    if (editing) form.reset(formDefaultValues);
+  const dirty = useSelector(form.atom, (state) => !state.isDefaultValue);
+  const openEditor = useCallback(
+    (item?: ComposedMessage) => {
+      const initial: Draft = item
+        ? {
+            title_nl: item.title_nl,
+            title_en: item.title_en,
+            title_fr: item.title_fr,
+            body_nl: item.body_nl,
+            body_en: item.body_en,
+            body_fr: item.body_fr,
+            level: item.level,
+            channels: item.channels,
+            link_url: item.link_url,
+          }
+        : emptyDraft;
+      setEditor({ id: item?.id ?? null, initial });
+      setEditorError("");
+      form.reset(initial);
+    },
+    [form],
+  );
+  function closeEditor() {
+    setEditor(null);
+    setEditorError("");
+    form.reset(emptyDraft);
   }
 
   const scheduleSend = useMutation({
@@ -216,11 +210,13 @@ export default function ComposerManagement({
         m.admin_composer_error_send(),
       ),
     onMutate: () => setError(""),
-    onError: (reason) => setError(String(reason)),
+    onError: (reason) => setError(apiErrorMessage(reason, m.admin_composer_error_send())),
     onSuccess: () => void refresh(),
     retry: false,
   });
 
+  // Stable mutation callbacks keep table action buttons mounted for focus return.
+  const scheduleMessage = scheduleSend.mutate;
   const handleSend = useCallback(
     async (item: ComposedMessage) => {
       const confirmed = await confirm({
@@ -232,14 +228,10 @@ export default function ComposerManagement({
         errorFallback: m.admin_composer_error_send(),
         variant: "primary",
       });
-      if (confirmed) scheduleSend.mutate(item.id);
+      if (confirmed) scheduleMessage(item.id);
     },
-    [confirm, scheduleSend],
+    [confirm, scheduleMessage],
   );
-
-  const startEdit = useCallback((item: ComposedMessage) => {
-    setEditing(item.id);
-  }, []);
 
   const columns = useMemo(
     () =>
@@ -248,7 +240,7 @@ export default function ComposerManagement({
           id: "title",
           header: m.admin_composer_column_title(),
           enableSorting: false,
-          cell: ({ row }) => row.original[`title_${row.original.text_language}`],
+          cell: ({ row }) => row.original.title_nl,
         }),
         columnHelper.display({
           id: "channels",
@@ -302,7 +294,7 @@ export default function ComposerManagement({
             return (
               item.state === "draft" && (
                 <div className="flex gap-2 justify-end">
-                  <Button size="sm" variant="outline" onClick={() => startEdit(item)}>
+                  <Button size="sm" variant="outline" onClick={() => openEditor(item)}>
                     {m.admin_composer_edit_button()}
                   </Button>
                   <Button size="sm" variant="warning" onClick={() => void handleSend(item)}>
@@ -314,174 +306,177 @@ export default function ComposerManagement({
           },
         }),
       ]),
-    [startEdit, handleSend],
+    [openEditor, handleSend],
   );
 
   const table = useAppTable({ data: items, columns, getRowId: (row) => row.id }, () => ({}));
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-medium leading-tight mb-0">{m.admin_composer_section()}</h2>
+        <Button onClick={() => openEditor()}>{m.admin_composer_new()}</Button>
       </CardHeader>
       <CardContent>
-        {error && <Alert variant="danger">{error}</Alert>}
+        {(error || query.error) && (
+          <Alert variant="danger" role="alert">
+            {error || apiErrorMessage(query.error, m.admin_composer_error_load())}
+          </Alert>
+        )}
         {confirmDialog}
 
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void form.handleSubmit();
-          }}
-        >
-          <form.Field name="text_language">
-            {(field) => (
-              <OriginalLanguageSelect
-                controlId="composer-text-language"
-                label={m.admin_composer_original_language()}
-                value={field.value}
-                onChange={(language) => field.handleChange(language)}
-              />
-            )}
-          </form.Field>
-          <p className="text-sm text-subtle mb-2">{m.admin_composer_text_help()}</p>
-          <div className="flex gap-2 mb-2">
-            {(["nl", "en", "fr"] as const).map((locale) => (
+        {editor && (
+          <AdminEditorDialog
+            title={editing ? m.admin_composer_edit() : m.admin_composer_new()}
+            busy={save.isPending}
+            dirty={dirty}
+            onClose={closeEditor}
+            footer={
               <Button
-                key={locale}
-                type="button"
-                size="sm"
-                variant={preview === locale ? "warning" : "outline"}
-                onClick={() => setPreview(locale)}
+                type="submit"
+                form="composer-form"
+                disabled={save.isPending || channels.length === 0}
               >
-                {locale.toUpperCase()}
+                {editing ? m.admin_composer_save_button() : m.admin_composer_create_button()}
               </Button>
-            ))}
-          </div>
-          <AdminField className="mb-2" controlId="composer-title">
-            <AdminLabel>{m.admin_composer_title_label()}</AdminLabel>
-            <form.Field name={`title_${preview}`}>
-              {(field) => (
-                <AdminInput
-                  maxLength={500}
-                  value={field.value ?? ""}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              )}
-            </form.Field>
-          </AdminField>
-          <AdminField className="mb-2" controlId="composer-body">
-            <AdminLabel>{m.admin_composer_body_label()}</AdminLabel>
-            <form.Field name={`body_${preview}`}>
-              {(field) => (
-                <AdminTextarea
-                  rows={3}
-                  maxLength={500}
-                  value={field.value ?? ""}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  onBlur={field.handleBlur}
-                />
-              )}
-            </form.Field>
-          </AdminField>
-
-          <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mb-2">
-            <AdminField className="site-md:w-4/12" controlId="composer-level">
-              <AdminLabel>{m.admin_composer_level_label()}</AdminLabel>
-              <form.Field name="level">
-                {(field) => (
-                  <AdminSelect
-                    value={field.value}
-                    onValueChange={(event) => field.handleChange(event as Draft["level"])}
-                    onBlur={field.handleBlur}
-                  >
-                    <AdminOption value="info">{m.admin_announcement_level_info()}</AdminOption>
-                    <AdminOption value="warning">
-                      {m.admin_announcement_level_warning()}
-                    </AdminOption>
-                    <AdminOption value="urgent">{m.admin_announcement_level_urgent()}</AdminOption>
-                  </AdminSelect>
-                )}
-              </form.Field>
-            </AdminField>
-            <AdminField className="site-md:w-8/12" controlId="composer-link-url">
-              <AdminLabel>{m.admin_composer_link_url_label()}</AdminLabel>
-              <form.Field name="link_url">
-                {(field) => (
-                  <AdminInput
-                    type="url"
-                    value={field.value ?? ""}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    onBlur={field.handleBlur}
-                    placeholder="https://…"
-                  />
-                )}
-              </form.Field>
-            </AdminField>
-          </div>
-
-          <form.Field name="channels">
-            {(field) => (
-              <div className="mb-4">
-                <AdminLabel className="block">{m.admin_composer_channels_label()}</AdminLabel>
-                <AdminCheck
-                  inline
-                  type="checkbox"
-                  id="composer-channel-announcement"
-                  label={m.admin_composer_channel_announcement()}
-                  checked={field.value.includes("announcement")}
-                  onCheckedChange={() =>
-                    field.handleChange(
-                      field.value.includes("announcement")
-                        ? field.value.filter((c) => c !== "announcement")
-                        : [...field.value, "announcement"],
-                    )
-                  }
-                />
-                <AdminCheck
-                  inline
-                  type="checkbox"
-                  id="composer-channel-push"
-                  label={m.admin_composer_channel_push()}
-                  checked={field.value.includes("push")}
-                  onCheckedChange={() =>
-                    field.handleChange(
-                      field.value.includes("push")
-                        ? field.value.filter((c) => c !== "push")
-                        : [...field.value, "push"],
-                    )
-                  }
-                />
-              </div>
+            }
+          >
+            {editorError && (
+              <Alert variant="danger" role="alert">
+                {editorError}
+              </Alert>
             )}
-          </form.Field>
-
-          <div className="flex gap-2">
-            <Button
-              type="submit"
-              variant="warning"
-              disabled={channels.length === 0 || save.isPending}
-            >
-              {editing ? m.admin_composer_save_button() : m.admin_composer_create_button()}
-            </Button>
-            {editing && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setEditing(null);
-                  form.reset(emptyDraft);
+            <fieldset disabled={save.isPending}>
+              <form
+                id="composer-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!save.isPending) void form.handleSubmit();
                 }}
               >
-                {m.admin_composer_cancel_edit_button()}
-              </Button>
-            )}
-          </div>
-        </form>
+                <p className="text-sm text-subtle mb-2">{m.admin_composer_text_help()}</p>
+                <div className="flex gap-2 mb-2">
+                  {(["nl", "en", "fr"] as const).map((locale) => (
+                    <Button
+                      key={locale}
+                      type="button"
+                      size="sm"
+                      variant={preview === locale ? "warning" : "outline"}
+                      onClick={() => setPreview(locale)}
+                    >
+                      {locale.toUpperCase()}
+                    </Button>
+                  ))}
+                </div>
+                <AdminField className="mb-2" controlId="composer-title">
+                  <AdminLabel>{m.admin_composer_title_label()}</AdminLabel>
+                  <form.Field name={`title_${preview}`}>
+                    {(field) => (
+                      <AdminInput
+                        maxLength={500}
+                        value={field.value ?? ""}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                    )}
+                  </form.Field>
+                </AdminField>
+                <AdminField className="mb-2" controlId="composer-body">
+                  <AdminLabel>{m.admin_composer_body_label()}</AdminLabel>
+                  <form.Field name={`body_${preview}`}>
+                    {(field) => (
+                      <AdminTextarea
+                        rows={3}
+                        maxLength={500}
+                        value={field.value ?? ""}
+                        onChange={(event) => field.handleChange(event.target.value)}
+                        onBlur={field.handleBlur}
+                      />
+                    )}
+                  </form.Field>
+                </AdminField>
+
+                <div className="flex flex-wrap -mx-1 *:w-full *:px-1 gap-y-2 mb-2">
+                  <AdminField className="site-md:w-4/12" controlId="composer-level">
+                    <AdminLabel>{m.admin_composer_level_label()}</AdminLabel>
+                    <form.Field name="level">
+                      {(field) => (
+                        <AdminSelect
+                          value={field.value}
+                          onValueChange={(event) => field.handleChange(event as Draft["level"])}
+                          onBlur={field.handleBlur}
+                        >
+                          <AdminOption value="info">
+                            {m.admin_announcement_level_info()}
+                          </AdminOption>
+                          <AdminOption value="warning">
+                            {m.admin_announcement_level_warning()}
+                          </AdminOption>
+                          <AdminOption value="urgent">
+                            {m.admin_announcement_level_urgent()}
+                          </AdminOption>
+                        </AdminSelect>
+                      )}
+                    </form.Field>
+                  </AdminField>
+                  <AdminField className="site-md:w-8/12" controlId="composer-link-url">
+                    <AdminLabel>{m.admin_composer_link_url_label()}</AdminLabel>
+                    <form.Field name="link_url">
+                      {(field) => (
+                        <AdminInput
+                          type="url"
+                          value={field.value ?? ""}
+                          onChange={(event) => field.handleChange(event.target.value)}
+                          onBlur={field.handleBlur}
+                          placeholder="https://…"
+                        />
+                      )}
+                    </form.Field>
+                  </AdminField>
+                </div>
+
+                <form.Field name="channels">
+                  {(field) => (
+                    <div className="mb-4">
+                      <AdminLabel className="block">{m.admin_composer_channels_label()}</AdminLabel>
+                      <AdminCheck
+                        inline
+                        type="checkbox"
+                        id="composer-channel-announcement"
+                        label={m.admin_composer_channel_announcement()}
+                        checked={field.value.includes("announcement")}
+                        onCheckedChange={() =>
+                          field.handleChange(
+                            field.value.includes("announcement")
+                              ? field.value.filter((c) => c !== "announcement")
+                              : [...field.value, "announcement"],
+                          )
+                        }
+                      />
+                      <AdminCheck
+                        inline
+                        type="checkbox"
+                        id="composer-channel-push"
+                        label={m.admin_composer_channel_push()}
+                        checked={field.value.includes("push")}
+                        onCheckedChange={() =>
+                          field.handleChange(
+                            field.value.includes("push")
+                              ? field.value.filter((c) => c !== "push")
+                              : [...field.value, "push"],
+                          )
+                        }
+                      />
+                    </div>
+                  )}
+                </form.Field>
+              </form>
+            </fieldset>
+          </AdminEditorDialog>
+        )}
 
         {items.length === 0 ? (
-          <p className="text-center text-subtle mt-6 mb-0">{m.admin_composer_empty()}</p>
+          <AdminEmptyState>{m.admin_composer_empty()}</AdminEmptyState>
         ) : (
           <div className="w-full">
             <Table>

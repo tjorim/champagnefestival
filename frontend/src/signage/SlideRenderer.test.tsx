@@ -43,6 +43,15 @@ function slide(binding: Layer["binding"]): PublicSlide {
   };
 }
 describe("shared signage renderer", () => {
+  it("renders the notice text exactly as the organiser typed it", () => {
+    const content = slide("text");
+    content.kind = "notice";
+    content.text = "Geen honden\nNo dogs";
+    const { container } = render(<SlideRenderer slide={content} />);
+    expect(container.querySelector(".site-signage-layer")?.textContent).toBe(
+      "Geen honden\nNo dogs",
+    );
+  });
   it("uses top-left percentage coordinates and clockwise rotation", () => {
     render(<SlideRenderer slide={slide("name")} />);
     expect(screen.getByText("Producer")).toHaveStyle({

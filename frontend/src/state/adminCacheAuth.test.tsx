@@ -2,7 +2,7 @@ import "fake-indexeddb/auto";
 import { act, render, screen, cleanup } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useAuth as useOidcAuth } from "react-oidc-context";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";

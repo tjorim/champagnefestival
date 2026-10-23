@@ -1,8 +1,9 @@
 """FastAPI application entry point."""
 
+import asyncio
 import logging
 from collections.abc import AsyncGenerator
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
@@ -18,6 +19,7 @@ from app.mcp.capabilities import MCP_CAPABILITY_CONTRACT_VERSION, get_mcp_capabi
 from app.mcp_server import build_keycloak_auth, create_mcp_server
 from app.middleware import add_cors_middleware, add_rate_limit_middleware, add_trusted_host_middleware
 from app.observability import request_metrics_middleware
+from app.request_timing import RequestTimingMiddleware
 from app.routers import (
     announcements,
     areas,
@@ -44,6 +46,7 @@ from app.routers import (
     people,
     policies,
     poll_options,
+    poll_questions,
     product_categories,
     products,
     public_pages,
@@ -51,6 +54,7 @@ from app.routers import (
     registrations,
     rooms,
     signage,
+    signage_video,
     table_types,
     tables,
     venue_plan,
@@ -111,25 +115,41 @@ async def _app_lifespan(app: FastAPI) -> AsyncGenerator[None]:
         logger.error(f"❌ Database initialisation failed: {exc}")
         raise
 
+    # LISTEN/NOTIFY is PostgreSQL only. A SQLite dev instance (see app.sqlite_compat) has no
+    # live-update stream and no proactive render-cache invalidation.
+    listen = not settings.database_url.startswith("sqlite")
+
     # Cross-worker live-update fan-out. start() logs connection failures; a failed
     # LISTEN connection degrades to no live-update delivery, not a startup crash.
-    await pg_live_listener.start(settings.database_url)
+    if listen:
+        await pg_live_listener.start(settings.database_url)
 
     # Proactive render-cache invalidation for GET / and GET /privacy
     # uses a separate
     # channel/connection from the live bus above, not a second consumer of it.
-    await pg_render_cache_listener.start(settings.database_url)
+    if listen:
+        await pg_render_cache_listener.start(settings.database_url)
 
     logger.info("=" * 60)
     logger.info("Startup complete — server ready to accept connections")
     logger.info("=" * 60)
 
-    yield
+    from app.database import async_session_factory
+    from app.services.signage_video import run as reconcile_video
+
+    video_task = asyncio.create_task(reconcile_video(async_session_factory))
+    try:
+        yield
+    finally:
+        video_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await video_task
 
     # Shutdown
     logger.info("Champagnefestival API shutting down...")
-    await pg_live_listener.stop()
-    await pg_render_cache_listener.stop()
+    if listen:
+        await pg_live_listener.stop()
+        await pg_render_cache_listener.stop()
 
 
 lifespan = combine_lifespans(_app_lifespan, _mcp_app.lifespan) if _mcp_app is not None else _app_lifespan
@@ -155,6 +175,10 @@ add_rate_limit_middleware(
 # captures every request, including those short-circuited by CORS, rate
 # limiting, or OIDC auth.
 app.add_middleware(BaseHTTPMiddleware, dispatch=request_metrics_middleware)
+
+# Sets Server-Timing and logs slow requests by route template (apps#246); it
+# wraps everything except the Host header validation below.
+app.add_middleware(RequestTimingMiddleware)
 
 # Host header validation is registered last so it is outermost and rejects
 # requests with an unrecognised Host before any other middleware runs.
@@ -197,6 +221,7 @@ async def api_http_exception_handler(request: Request, exc: ApiHTTPException) ->
 
 app.include_router(registrations.router)
 app.include_router(announcements.router)
+app.include_router(signage_video.router)
 app.include_router(signage.router)
 app.include_router(signage.assets_router)
 app.include_router(auth.router)
@@ -222,6 +247,7 @@ app.include_router(editions.router)
 app.include_router(people.router)
 app.include_router(products.router)
 app.include_router(poll_options.router)
+app.include_router(poll_questions.router)
 app.include_router(push.router)
 app.include_router(volunteers.router)
 app.include_router(volunteer_ops.router)

@@ -1,24 +1,23 @@
+import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/mocks/server";
 import { saveEdition, saveEditionEvent } from "./adminContentApi";
 
 const authHeaders = () => ({ Authorization: "Bearer test-token" });
 
-function mockFetchResponse(body: Record<string, unknown>) {
-  return vi.fn().mockResolvedValue(
-    new Response(JSON.stringify(body), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+/** Answers every API write with `body` and returns the JSON bodies it received, in order. */
+function serveJson(body: Record<string, unknown>): Record<string, unknown>[] {
+  const sent: Record<string, unknown>[] = [];
+  server.use(
+    http.all("/api/*", async ({ request }) => {
+      sent.push((await request.json()) as Record<string, unknown>);
+      return HttpResponse.json(body);
     }),
   );
-}
-
-function sentBody(fetchMock: ReturnType<typeof mockFetchResponse>): Record<string, unknown> {
-  const options = fetchMock.mock.calls[0]?.[1] as RequestInit | undefined;
-  return JSON.parse(options?.body as string) as Record<string, unknown>;
+  return sent;
 }
 
 afterEach(() => {
-  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
@@ -32,8 +31,7 @@ describe("saveEdition", () => {
   };
 
   it("sends the selected organization ids for a festival edition", async () => {
-    const fetchMock = mockFetchResponse({ id: "2026-march" });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = serveJson({ id: "2026-march" });
 
     await saveEdition(
       { ...basePayload, editionType: "festival", organizationIds: [1, 2] },
@@ -41,13 +39,12 @@ describe("saveEdition", () => {
       "2026-march",
     );
 
-    const body = sentBody(fetchMock);
+    const body = fetchMock[0]!;
     expect(body.organizations).toEqual([1, 2]);
   });
 
   it("sends the lineup order and sponsor levels, and none for off-festival editions", async () => {
-    const festivalFetch = mockFetchResponse({ id: "2026-march" });
-    vi.stubGlobal("fetch", festivalFetch);
+    const festivalFetch = serveJson({ id: "2026-march" });
     await saveEdition(
       {
         ...basePayload,
@@ -58,24 +55,22 @@ describe("saveEdition", () => {
       authHeaders,
       "2026-march",
     );
-    expect(sentBody(festivalFetch).organizations).toEqual([3, 1, 2]);
-    expect(sentBody(festivalFetch).sponsor_tiers).toEqual({ 3: "main", 2: "supporter" });
+    expect(festivalFetch[0]!.organizations).toEqual([3, 1, 2]);
+    expect(festivalFetch[0]!.sponsor_tiers).toEqual({ 3: "main", 2: "supporter" });
 
-    const bourseFetch = mockFetchResponse({ id: "2026-march" });
-    vi.stubGlobal("fetch", bourseFetch);
+    const bourseFetch = serveJson({ id: "2026-march" });
     await saveEdition(
       { ...basePayload, editionType: "bourse", organizationIds: [3], sponsorTiers: { 3: "main" } },
       authHeaders,
       "2026-march",
     );
-    expect(sentBody(bourseFetch).sponsor_tiers).toEqual({});
+    expect(bourseFetch[0]!.sponsor_tiers).toEqual({});
   });
 
   it.each(["bourse", "capsule_exchange"] as const)(
     "explicitly sends an empty organizations list when converting to %s",
     async (editionType) => {
-      const fetchMock = mockFetchResponse({ id: "2026-march" });
-      vi.stubGlobal("fetch", fetchMock);
+      const fetchMock = serveJson({ id: "2026-march" });
 
       await saveEdition(
         { ...basePayload, editionType, organizationIds: [1, 2] },
@@ -83,7 +78,7 @@ describe("saveEdition", () => {
         "2026-march",
       );
 
-      const body = sentBody(fetchMock);
+      const body = fetchMock[0]!;
       expect(body).toHaveProperty("organizations");
       expect(body.organizations).toEqual([]);
     },
@@ -92,19 +87,16 @@ describe("saveEdition", () => {
 
 describe("saveEditionEvent", () => {
   it("converts datetime-local registration bounds to ISO datetimes", async () => {
-    const fetchMock = mockFetchResponse({ id: "event-1", products: [] });
-    vi.stubGlobal("fetch", fetchMock);
+    const fetchMock = serveJson({ id: "event-1", products: [] });
 
     await saveEditionEvent(
       {
         editionId: "2026-march",
         formData: {
           editionId: "2026-march",
-          titleLanguage: "nl",
           titleNl: "Proeverij",
           titleFr: "",
           titleEn: "",
-          descriptionLanguage: "nl",
           descriptionNl: "",
           descriptionFr: "",
           descriptionEn: "",
@@ -122,21 +114,18 @@ describe("saveEditionEvent", () => {
       authHeaders,
     );
 
-    const body = sentBody(fetchMock);
+    const body = fetchMock[0]!;
     expect(body.registrations_open_from).toBe(new Date("2026-03-20T18:00").toISOString());
     expect(body.registrations_close_at).toBe(new Date("2026-03-21T17:00").toISOString());
   });
 
-  it("sends the per-language text, with blank translations cleared and no stray description language", async () => {
-    const fetchMock = mockFetchResponse({ id: "event-1", products: [] });
-    vi.stubGlobal("fetch", fetchMock);
+  it("sends the per-language text, with blank translations cleared", async () => {
+    const fetchMock = serveJson({ id: "event-1", products: [] });
     const formData = {
       editionId: "2026-march",
-      titleLanguage: "fr" as const,
-      titleNl: " ",
+      titleNl: "Degustatie",
       titleFr: " Dégustation ",
       titleEn: "Tasting",
-      descriptionLanguage: "fr" as const,
       descriptionNl: "",
       descriptionFr: "",
       descriptionEn: "",
@@ -156,47 +145,46 @@ describe("saveEditionEvent", () => {
       authHeaders,
     );
 
-    expect(sentBody(fetchMock)).toMatchObject({
-      title_language: "fr",
-      title_nl: null,
+    expect(fetchMock[0]!).toMatchObject({
+      title_nl: "Degustatie",
       title_fr: "Dégustation",
       title_en: "Tasting",
-      description_language: null,
       description_nl: null,
       description_fr: null,
       description_en: null,
       category: "tasting",
     });
-    expect(sentBody(fetchMock)).not.toHaveProperty("title");
+    expect(fetchMock[0]!).not.toHaveProperty("title");
+    expect(fetchMock[0]!).not.toHaveProperty("title_language");
 
-    const withDescription = mockFetchResponse({ id: "event-1", products: [] });
-    vi.stubGlobal("fetch", withDescription);
+    const withDescription = serveJson({ id: "event-1", products: [] });
     await saveEditionEvent(
       {
         editionId: "2026-march",
-        formData: { ...formData, descriptionLanguage: "en", descriptionEn: "An evening" },
+        formData: { ...formData, descriptionNl: "Een avond", descriptionEn: "An evening" },
       },
       authHeaders,
     );
-    expect(sentBody(withDescription)).toMatchObject({
-      description_language: "en",
+    expect(withDescription[0]!).toMatchObject({
+      description_nl: "Een avond",
       description_en: "An evening",
     });
   });
 });
 
 describe("error handling", () => {
-  function mockErrorResponse(body: string) {
-    return vi.fn().mockResolvedValue(
-      new Response(body, {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      }),
+  function serveError(body: string) {
+    server.use(
+      http.all(
+        "/api/*",
+        () =>
+          new HttpResponse(body, { status: 404, headers: { "Content-Type": "application/json" } }),
+      ),
     );
   }
 
   it("surfaces the server's detail message", async () => {
-    vi.stubGlobal("fetch", mockErrorResponse(JSON.stringify({ detail: "Edition not found." })));
+    serveError(JSON.stringify({ detail: "Edition not found." }));
 
     await expect(
       saveEdition(
@@ -218,7 +206,7 @@ describe("error handling", () => {
   it("falls back to the operation message when the error body is JSON null", async () => {
     // `null` parses successfully, so reading `.detail` off it used to throw a
     // TypeError that replaced the real failure in the admin's error alert.
-    vi.stubGlobal("fetch", mockErrorResponse("null"));
+    serveError("null");
 
     await expect(
       saveEdition(

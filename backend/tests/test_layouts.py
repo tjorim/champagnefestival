@@ -20,6 +20,7 @@ from tests.helpers import (
     _create_event,
     _create_layout_prerequisites,
     event_for_room,
+    requires_postgres,
     seed_layout_event,
 )
 
@@ -777,6 +778,7 @@ async def test_revision_snapshot_excludes_allocations(client):
         assert "registration_ids" not in table_snapshot
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_concurrent_revision_saves_do_not_reuse_a_revision_number(engine):
     """Two concurrent save-revision calls for the same layout must not compute

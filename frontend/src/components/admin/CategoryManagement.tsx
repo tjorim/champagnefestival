@@ -1,9 +1,10 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 /**
  * CategoryManagement — CRUD for the categories events or products are filed under.
  *
  * Self-contained like FaqManagement. The key is chosen once and stays (events
- * and products store it); labels follow the organisation pattern: the original
- * language is required, the other languages are optional and fall back to it. A
+ * and products store it); labels follow the organisation pattern: Dutch is
+ * required, the other languages are optional and fall back to it. A
  * category that is still in use cannot be deleted, which the server enforces.
  */
 
@@ -30,19 +31,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  AdminField,
-  AdminInput,
-  AdminLabel,
-  AdminOption,
-  AdminSelect,
-} from "@/components/admin/AdminFields";
+import { AdminField, AdminInput, AdminLabel } from "@/components/admin/AdminFields";
 import { Icon } from "@/components/Icon";
 import { eventCategoriesQueryOptions, productCategoriesQueryOptions } from "@/hooks/useCategories";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
-import type { EventLanguage } from "@/types/event";
 import type { Category } from "@/types/category";
 import {
   fetchJsonOrThrowWithUnauthorized,
@@ -82,7 +76,6 @@ const LANGUAGES = [
 
 interface CategoryForm {
   key: string;
-  labelLanguage: EventLanguage;
   labelNl: string;
   labelFr: string;
   labelEn: string;
@@ -91,7 +84,6 @@ interface CategoryForm {
 
 const EMPTY_FORM: CategoryForm = {
   key: "",
-  labelLanguage: "nl",
   labelNl: "",
   labelFr: "",
   labelEn: "",
@@ -101,7 +93,6 @@ const EMPTY_FORM: CategoryForm = {
 function toForm(category: Category): CategoryForm {
   return {
     key: category.key,
-    labelLanguage: category.labelLanguage,
     labelNl: category.labelNl ?? "",
     labelFr: category.labelFr ?? "",
     labelEn: category.labelEn ?? "",
@@ -112,7 +103,6 @@ function toForm(category: Category): CategoryForm {
 /** Blank translations are sent as `null`, which clears them on update. */
 function labelBody(form: CategoryForm) {
   return {
-    label_language: form.labelLanguage,
     label_nl: form.labelNl.trim() || null,
     label_fr: form.labelFr.trim() || null,
     label_en: form.labelEn.trim() || null,
@@ -180,12 +170,11 @@ export default function CategoryManagement({
   }, []);
 
   const handleSave = useCallback(async () => {
-    const original = LANGUAGES.find(({ language }) => language === form.labelLanguage);
     if (!editingKey && !KEY_PATTERN.test(form.key)) {
       setError(m.admin_category_key_invalid());
       return;
     }
-    if (!original || !form[original.field].trim()) {
+    if (!form.labelNl.trim()) {
       setError(m.admin_category_label_required());
       return;
     }
@@ -245,7 +234,7 @@ export default function CategoryManagement({
               </Spinner>
             </div>
           ) : categories.length === 0 ? (
-            <p className="text-subtle text-center py-6 mb-0">{config.empty()}</p>
+            <AdminEmptyState>{config.empty()}</AdminEmptyState>
           ) : (
             <Table>
               <TableHeader>
@@ -327,21 +316,6 @@ export default function CategoryManagement({
                 className="bg-muted text-content border-input"
               />
               <p className="text-sm text-subtle mt-1 mb-0">{config.keyHelp()}</p>
-            </AdminField>
-            <AdminField className="mb-4 max-w-60" controlId={`${kind}-category-label-language`}>
-              <AdminLabel>{m.admin_category_label_language()}</AdminLabel>
-              <AdminSelect
-                value={form.labelLanguage}
-                onValueChange={(value) =>
-                  setForm((previous) => ({ ...previous, labelLanguage: value as EventLanguage }))
-                }
-              >
-                {LANGUAGES.map(({ language, name }) => (
-                  <AdminOption key={language} value={language}>
-                    {name()}
-                  </AdminOption>
-                ))}
-              </AdminSelect>
             </AdminField>
             {LANGUAGES.map(({ language, field, name }) => (
               <AdminField

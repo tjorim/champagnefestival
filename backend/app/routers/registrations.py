@@ -58,6 +58,7 @@ from app.spam import check_form_timing, check_honeypot
 from app.utils import (
     csv_safe,
     make_id,
+    order_answer_text,
     registration_to_dict,
     registration_to_dict_with_token,
     registration_to_list_dict,
@@ -102,6 +103,9 @@ async def create_registration(
 
     event = await inventory.lock_event(db, body.event_id)
     await _ensure_public_registration_allowed(db, event)
+    from app.services.order_questions_service import validate_answers
+
+    order_answers = await validate_answers(db, event.id, body.order_answers)
     resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
     await inventory.check_stock(db, event, resolved_order_items)
 
@@ -151,6 +155,7 @@ async def create_registration(
         user_id=user.id if user else None,
         check_in_token=secrets.token_urlsafe(32),
     )
+    registration.order_answers = order_answers
     registration.order_items = resolved_order_items
     registration.product_snapshot = snapshot
     registration.amount_due = inventory.order_total(resolved_order_items) if resolved_order_items else None
@@ -325,6 +330,7 @@ async def export_registrations_csv(
                 "Checked In",
                 "Strap Issued",
                 "Notes",
+                "Order answers",
             ],
         )
     )
@@ -344,6 +350,7 @@ async def export_registrations_csv(
                     "yes" if row.checked_in else "no",
                     "yes" if row.strap_issued else "no",
                     row.notes or "",
+                    "\n".join(order_answer_text(a) for a in row.order_answers),
                 ],
             )
         )

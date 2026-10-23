@@ -8,6 +8,14 @@
 - Production hosting for `champagnefestival.tjor.im` is handled by the separate infra stack in `/opt/apps/infra`
 - Frontend builds write to `frontend/dist`; in production, Caddy serves this content from `/srv/champagnefestival`
 
+## Uploaded files
+
+Logos, edition artwork and signage images follow
+`docs/file-storage-contract.md`: fresh names, write before commit and delete
+after commit, every change under its feature's advisory lock (1194, 1224,
+1261), and no dot-entries. The apps backup depends on these rules and lock
+keys; keep new file-backed features inside them.
+
 ## Commands
 
 ### Frontend (`cd frontend`)
@@ -33,20 +41,37 @@ uv run pytest
 uv run alembic upgrade head
 ```
 
-> **Prerequisites:** Backend development and tests require a running PostgreSQL instance.
-> Start one with `docker compose up db -d` from the repo root (uses `docker-compose.yml`).
-> Tests default to `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`;
-> override via the `TEST_DATABASE_URL` environment variable.
+> **Prerequisites:** none. Tests and a local dev instance both run on SQLite by default, so no
+> container is needed. The suite takes under two minutes that way (about four on PostgreSQL).
+> Production runs on PostgreSQL and CI runs the whole suite against it too. What SQLite cannot
+> do, `app/sqlite_compat.py` and `app/sqlite_functions.py` stand in for: UTC datetimes, foreign
+> keys, the `pg_trgm`/`unaccent` search functions and their triggers, and an in-process
+> `pg_notify` that reaches the live-update stream on commit. Tests that exercise real
+> PostgreSQL behaviour (concurrent sessions and locks, the Alembic migrations, the ledger
+> trigger, LISTEN reconnects) are marked `requires_postgres` and skip on SQLite. SQLite cannot
+> relay across processes, so a SQLite dev instance is single-process.
+>
+> For a dev instance set `DATABASE_URL=sqlite+aiosqlite:///./dev.db`; the schema is created at
+> startup. `create_all` never alters an existing table, so delete the file after a model change.
+>
+> To run against PostgreSQL instead, start one with `docker compose up db -d` from the repo root
+> (uses `docker-compose.yml`) and set `DATABASE_URL` and `TEST_DATABASE_URL` to
+> `postgresql+asyncpg://postgres:postgres@localhost:5432/test_champagne`.
 >
 > Auth doesn't require a local Keycloak/IdP — set `DEV_AUTH_BYPASS_TOKEN` to any
 > string and pass it as `Authorization: Bearer <value>`; it's treated as a fixed
 > dev user with the admin and volunteer realm roles. Refuses to start if set
 > outside `ENVIRONMENT=development`.
 >
-> The frontend has the matching piece for local UI work: `frontend/e2e/auth.setup.ts`
-> seeds a browser session as that same dev-bypass user (Playwright's standard
-> `storageState` auth pattern — https://playwright.dev/docs/auth — nothing in
-> application code changes). See `frontend/e2e/README.md`.
+> For manual UI work, start Vite with the same `DEV_AUTH_BYPASS_TOKEN`; opening
+> `http://localhost:5173/admin` in any browser is then already signed in as that
+> dev user. The Vite dev server seeds the session and authenticates proxied API
+> calls; production builds and `pnpm preview` do not enable it. See the root
+> README's "Local admin sign-in without Keycloak" section.
+>
+> Authenticated browser tests retain `frontend/e2e/auth.setup.ts` and Playwright's
+> standard `storageState` pattern (https://playwright.dev/docs/auth), with no
+> application-code bypass. See `frontend/e2e/README.md`.
 
 ## Versioning
 
@@ -102,8 +127,9 @@ Future workflow additions should follow these conventions:
 ## Conventions
 
 - Use American English in code, comments, and identifiers; use British English in user-facing UI text and translations (`frontend/messages/`)
-- Content written for visitors (events, FAQ, announcements, policies, products, categories, ...) stores an original language plus optional `_nl`/`_fr`/`_en` translations and falls back to the original; follow the pattern in `backend/README.md` ("Translated content and product categories") instead of adding single-language text columns
+- Content written for visitors (events, FAQ, announcements, policies, products, categories, ...) stores required Dutch text (`_nl`) plus optional `_fr`/`_en` translations and falls back to Dutch (there is no original-language field); follow the pattern in `backend/README.md` ("Translated content and product categories") instead of adding single-language text columns
 - Never render `error.message` (or a backend `detail`) in the interface: it is English diagnostics. Show `apiErrorMessage(error, m.<translated operation fallback>())` from `frontend/src/utils/apiErrors.ts`, and give errors the interface can explain a stable `code` in the backend (`ApiHTTPException`; see `backend/README.md`, "Error codes")
+- Follow `backend/README.md` ("Request schema conventions") for create/update schemas; reuse `backend/app/schema_types.py` constraints and keep defaults and nullability explicit.
 - Prefer targeted tests first, then broader checks before handoff
 - For every new or changed write operation, document its retry-safety decision in `docs/retry-safety.md`; do not advertise or automatically retry a write unless its documented strategy is implemented and tested
 - When a change implements, closes, splits, supersedes, or materially changes an issue tracked in `docs/product-audit-2026-08.md`, update that document in the same change. For completed or superseded items, remove the row from the active phase, renumber the remaining preferred order, and add a row to **Completed or superseded work** with the date, issue/PR or commit, outcome, and a concise implementation note. Update affected dependencies, index/specification text, and acceptance-criteria checkboxes. Partial work stays in the active phase with revised notes; do not record completion until the documented acceptance criteria are satisfied. Preserve the original finding/specification as historical context.
@@ -130,6 +156,11 @@ Tailwind v4 and Base UI are the frontend stack; Bootstrap was removed in #1111
   inline styles. Dynamic positioning needs a deliberate, narrow lint exception
   (a scoped `oxlint-disable` comment with a justification; floor-plan
   coordinates, saved colours and data-derived ratios are the existing cases).
+- Before implementing or restyling UI, inspect existing shared components and
+  check the configured shadcn/Base UI registry and official documentation for
+  an existing component, variant or behaviour. Reuse or generate the supported
+  implementation first; add custom code only for requirements it does not cover.
+  Apply shared improvements consistently to the relevant consumers.
 - Generate Base UI primitives on demand with `cd frontend && pnpm dlx shadcn@latest
   add <component>` using the committed `components.json` (`base-vega`, Lucide,
   Tailwind v4). Own and restyle the generated source; never run `init` over the

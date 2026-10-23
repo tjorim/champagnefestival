@@ -1,5 +1,5 @@
 import { act, renderHook } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { expect, it, vi } from "vitest";
 import { useAdminPeopleActions } from "@/hooks/useAdminPeopleActions";
 import type { AdminOrganizationsCollection } from "@/state/adminOrganizationsCollection";

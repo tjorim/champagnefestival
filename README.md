@@ -17,7 +17,7 @@ champagnefestival/
 | Tool | Purpose | Install |
 |---|---|---|
 | Node.js 24+ + pnpm | Frontend | [nodejs.org](https://nodejs.org) / [pnpm.io](https://pnpm.io) |
-| Python 3.14+ + uv | Backend | [uv install](https://docs.astral.sh/uv/getting-started/installation/) |
+| Python 3.15+ + uv | Backend | [uv install](https://docs.astral.sh/uv/getting-started/installation/) |
 | Docker (optional) | Containerised backend | [docs.docker.com](https://docs.docker.com) |
 
 ## Releases
@@ -48,6 +48,29 @@ pnpm dev
 - Backend API + docs: <http://localhost:8000/docs>
 
 The frontend dev server proxies `/api/*` to the backend automatically.
+
+### Local admin sign-in without Keycloak
+
+Set the same `DEV_AUTH_BYPASS_TOKEN` for both processes (the value below is a
+local development example):
+
+```bash
+# backend/ — Terminal 1, after configuring the database and running migrations
+ENVIRONMENT=development DEV_AUTH_BYPASS_TOKEN=dev-token uv run uvicorn app.main:app --reload
+
+# frontend/ — Terminal 2
+DEV_AUTH_BYPASS_TOKEN=dev-token pnpm dev
+```
+
+Open <http://localhost:5173/admin> in your own browser; it is already signed in
+as the fixed development user with admin and volunteer roles. No special login
+URL, Playwright window or local Keycloak is needed. Restart Vite after changing
+the variable. Omit it from both processes to use normal Keycloak sign-in.
+
+This runs only in the Vite development server: it seeds the browser session and
+adds the real bypass token to proxied API requests on the server. Production
+builds and `pnpm preview` do not enable it, and the real token is not injected
+into HTML. The backend refuses bypass authentication outside development.
 
 ## More details
 

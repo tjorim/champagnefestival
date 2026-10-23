@@ -16,22 +16,16 @@
     background: rgb(20 18 15 / 0.92);
     box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
     font-family: system-ui, sans-serif;
-  }
-
-  .theme-switcher .theme-switcher__option {
-    padding: 0.4rem 0.9rem;
-    font-size: 0.78rem;
-    font-weight: 700;
-    color: #fbf6ec;
-    background: transparent;
-    border: 1px solid rgb(255 255 255 / 0.18);
-    border-radius: 999px;
-    cursor: pointer;
-  }
-
-  .theme-switcher .theme-switcher__option[aria-pressed="true"] {
-    color: #18130c;
-    background: #d8ad56;
+    /* The toggles are generated primitives that read the semantic surface tokens. Pin
+       those to this dark pill, as the admin scope does, so labels keep their contrast
+       whichever runtime theme or color scheme is active. */
+    color-scheme: dark;
+    color: var(--surface-foreground);
+    --surface-foreground: #fbf6ec;
+    --surface-primary: #fbf6ec;
+    --surface-primary-foreground: #201d18;
+    --surface-muted: rgb(255 255 255 / 0.16);
+    --surface-border: rgb(255 255 255 / 0.32);
   }
 
   .theme-switcher .theme-switcher__select {
@@ -48,10 +42,6 @@
       flex-wrap: nowrap;
       padding: 0.3rem;
       border-radius: 12px;
-    }
-
-    .theme-switcher .theme-switcher__option {
-      display: none;
     }
 
     .theme-switcher .theme-switcher__select {

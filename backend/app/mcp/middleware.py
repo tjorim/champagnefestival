@@ -7,17 +7,25 @@ Without this, a failed call reaches the agent as one of three unhelpful shapes:
 * bad arguments surface FastMCP's raw validation text (JSON-RPC ``-32602``),
   which embeds the offending input values;
 * any unexpected exception is masked to a bare message with nothing to quote
-  when someone asks the operator "what happened?".
+  when someone asks the operator "what happened?";
+* a Pydantic error raised by a tool's *body* (a stored row or generated result
+  that no longer fits its model) is logged by FastMCP, with the offending
+  values, before any middleware runs.
 
 :class:`ToolFailureMiddleware` turns each into a tool error the agent can act
 on. Domain errors (:class:`~app.mcp.utils.MCPToolError`) are already sanitized
-and pass through untouched.
+and pass through untouched. The last case is closed at the tool itself, by
+:func:`without_body_validation_payload`, because it is the only place that runs
+before FastMCP sees the raw error.
 """
 
 from __future__ import annotations
 
+import functools
+import inspect
 import logging
 import uuid
+from collections.abc import Callable
 from typing import Any
 
 import mcp.types as mt
@@ -42,6 +50,41 @@ class CorrelatedToolError(ToolError):
     which runs the middleware twice, never translates (and re-numbers) the same
     failure a second time.
     """
+
+
+class ToolResultValidationError(ToolError):
+    """Pydantic rejected data a tool body built or loaded — not the caller's arguments.
+
+    FastMCP validates arguments before the body runs, so this is a server-side
+    problem (a stored row or generated result that no longer fits its model).
+    Carries only field paths and Pydantic error types: ``str()`` of the original
+    error embeds the rejected input, which may be guest PII.
+    """
+
+    def __init__(self, error: PydanticValidationError) -> None:
+        self.fields = _field_errors(error)
+        super().__init__("Tool produced invalid data")
+
+
+def without_body_validation_payload[F: Callable[..., Any]](fn: F) -> F:
+    """Wrap an async tool so a Pydantic error from its body never carries input values.
+
+    FastMCP 4.1 wraps such an error (message included) and logs it with its
+    traceback before outer middleware runs, so the values would reach the server
+    log; sanitize here, where the raw error is still ours. Argument failures are
+    raised before the body and are unaffected, which keeps the two distinguishable.
+    """
+    if not inspect.iscoroutinefunction(fn):
+        raise TypeError(f"{getattr(fn, '__name__', fn)!r} must be an async function")
+
+    @functools.wraps(fn)
+    async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return await fn(*args, **kwargs)
+        except PydanticValidationError as exc:
+            raise ToolResultValidationError(exc) from None
+
+    return wrapper  # ty: ignore[invalid-return-type]
 
 
 def _new_request_id() -> str:
@@ -97,7 +140,8 @@ class ToolFailureMiddleware(Middleware):
         return CorrelatedToolError(
             f"Unknown tool {target!r}. Use {self._search_tool_name} to find a tool for your task, "
             f"then run it with {self._call_tool_name}. Only tools your role may use are listed. "
-            f"(request id {request_id})"
+            f"(request id {request_id})",
+            log_level=logging.WARNING,
         )
 
     async def on_call_tool(
@@ -119,7 +163,8 @@ class ToolFailureMiddleware(Middleware):
             raise CorrelatedToolError(
                 f"{target!r} cannot be run through {self._call_tool_name}. Call {self._search_tool_name} "
                 f"directly to discover tools, then pass the tool it returns to {self._call_tool_name}. "
-                f"(request id {request_id})"
+                f"(request id {request_id})",
+                log_level=logging.WARNING,
             )
 
         try:
@@ -133,6 +178,17 @@ class ToolFailureMiddleware(Middleware):
             raise
         except (NotFoundError, DisabledError) as exc:
             raise self._unknown_tool(target, _new_request_id()) from exc
+        except ToolResultValidationError as exc:
+            request_id = _new_request_id()
+            fields = "; ".join(f"{path} [{kind}]" for path, kind in exc.fields[:_MAX_FIELD_ERRORS])
+            if len(exc.fields) > _MAX_FIELD_ERRORS:
+                fields += f"; and {len(exc.fields) - _MAX_FIELD_ERRORS} more"
+            # The traceback shows where, the fields show what; neither holds a value.
+            logger.error("MCP tool %r produced invalid data (request %s): %s", target, request_id, fields, exc_info=exc)
+            raise CorrelatedToolError(
+                f"Tool {target!r} produced invalid data ({fields}). Your arguments were accepted; "
+                f"the problem is in stored or generated data. Quote request id {request_id} to the operator."
+            ) from exc
         except FastMCPValidationError as exc:
             request_id = _new_request_id()
             cause = exc.__cause__
@@ -152,12 +208,14 @@ class ToolFailureMiddleware(Middleware):
                     detail += f"; and {len(messages) - _MAX_FIELD_ERRORS} more"
                 raise CorrelatedToolError(
                     f"Invalid arguments for {target!r}: {detail}. "
-                    f"Check the tool's input_schema from search_tools. (request id {request_id})"
+                    f"Check the tool's input_schema from search_tools. (request id {request_id})",
+                    log_level=logging.WARNING,
                 ) from exc
             logger.warning("MCP tool %r rejected arguments (request %s)", target, request_id)
             raise CorrelatedToolError(
                 f"Invalid arguments for {target!r}. Check the tool's input_schema from "
-                f"{self._search_tool_name}. (request id {request_id})"
+                f"{self._search_tool_name}. (request id {request_id})",
+                log_level=logging.WARNING,
             ) from exc
         except ToolError as exc:
             cause = exc.__cause__

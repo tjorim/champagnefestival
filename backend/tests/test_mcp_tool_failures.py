@@ -8,6 +8,7 @@ contract, not an implementation detail.
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 import logging
 import re
@@ -18,10 +19,11 @@ import pytest
 from fastmcp import Client, FastMCP
 from fastmcp.exceptions import DisabledError, ToolError
 from fastmcp.server.transforms.search import BM25SearchTransform
-from sqlalchemy import select
+from pydantic import BaseModel
+from sqlalchemy import func, select
 
 import app.mcp_server as mcp_module
-from app.mcp.middleware import CorrelatedToolError, ToolFailureMiddleware
+from app.mcp.middleware import CorrelatedToolError, ToolFailureMiddleware, without_body_validation_payload
 from app.mcp.utils import MCPToolError
 from app.mcp_server import ALWAYS_VISIBLE_TOOLS, ChampagneFestivalMcpBackend, create_mcp_server
 from app.models import AuditEntry
@@ -139,6 +141,19 @@ class TestInvalidArguments:
         assert "notes" in text  # the missing field
         assert secret not in caplog.text
 
+    async def test_proxied_bad_arguments_are_not_logged_as_server_errors(self, caplog):
+        # A caller mistake is logged at warning level, without the traceback that would carry the value.
+        # (FastMCP itself still logs a proxied *unknown* tool name at error level before middleware runs.)
+        def book_table(guest_count: int) -> str:
+            return "ok"
+
+        mcp = _server_with_proxy(book_table=book_table)
+
+        with caplog.at_level(logging.DEBUG):
+            await _failure(mcp, "call_tool", {"name": "book_table", "arguments": {"guest_count": "many"}})
+
+        assert not [record for record in caplog.records if record.levelno >= logging.ERROR]
+
     async def test_missing_required_argument_via_proxy(self):
         mcp = create_mcp_server(session_factory=MagicMock())
 
@@ -155,6 +170,95 @@ class TestInvalidArguments:
 
         assert "Invalid arguments for 'call_tool'" in message
         assert "name" in message
+
+
+class _StoredRow(BaseModel):
+    guest_count: int
+
+
+PRIVATE_NOTE = "SECRET-PRIVATE-NOTE"
+
+
+class TestToolBodyValidationFailure:
+    """A Pydantic error from a tool *body* is a bad stored/generated result, not a bad call.
+
+    FastMCP 4.1 wraps it and logs the raw error (input values included) before
+    any middleware runs, so the tool itself is where the values must be dropped.
+    """
+
+    @staticmethod
+    def _server() -> FastMCP:
+        async def load_row() -> dict:
+            return _StoredRow(guest_count=PRIVATE_NOTE).model_dump()
+
+        return _server_with_proxy(load_row=without_body_validation_payload(load_row))
+
+    @pytest.mark.parametrize("via_proxy", [False, True])
+    async def test_failure_is_correlated_and_value_free_in_result_and_logs(self, via_proxy, caplog):
+        mcp = self._server()
+        name, arguments = ("call_tool", {"name": "load_row", "arguments": {}}) if via_proxy else ("load_row", {})
+
+        with caplog.at_level(logging.DEBUG):
+            async with Client(mcp) as client:
+                result = await client.call_tool(name, arguments, raise_on_error=False)
+
+        assert result.is_error
+        text = result.content[0].text
+        assert "Tool 'load_row' produced invalid data (guest_count [int_parsing])" in text
+        assert "Your arguments were accepted" in text
+        assert "Invalid arguments" not in text
+        assert len(REQUEST_ID.findall(text)) == 1
+        record = next(r for r in caplog.records if _request_id(text) in r.getMessage())
+        assert "guest_count [int_parsing]" in record.getMessage()
+        assert PRIVATE_NOTE not in text
+        assert PRIVATE_NOTE not in caplog.text
+        assert "input_value" not in caplog.text
+
+    async def test_invalid_arguments_stay_distinguishable(self):
+        async def book_table(guest_count: int) -> str:
+            return "ok"
+
+        mcp = _server_with_proxy(book_table=without_body_validation_payload(book_table))
+
+        message = str(await _failure(mcp, "book_table", {"guest_count": PRIVATE_NOTE}))
+
+        assert "Invalid arguments for 'book_table'" in message
+        assert "produced invalid data" not in message
+        assert PRIVATE_NOTE not in message
+
+    async def test_real_server_failure_writes_no_audit_row(self, db_session, caplog):
+        async def get_active_edition(self) -> dict:
+            return _StoredRow(guest_count=PRIVATE_NOTE).model_dump()
+
+        before = await db_session.scalar(select(func.count()).select_from(AuditEntry))
+        with patch.object(ChampagneFestivalMcpBackend, "get_active_edition", get_active_edition):
+            mcp = create_mcp_server(session_factory=mcp_session_factory(db_session))
+
+        with caplog.at_level(logging.DEBUG):
+            direct = str(await _failure(mcp, "get_active_edition", {}))
+            proxied = str(await _failure(mcp, "call_tool", {"name": "get_active_edition", "arguments": {}}))
+
+        for message in (direct, proxied):
+            assert "Tool 'get_active_edition' produced invalid data (guest_count [int_parsing])" in message
+        assert PRIVATE_NOTE not in caplog.text
+        # This server records audit rows for executed writes only; a rejected call adds none.
+        assert await db_session.scalar(select(func.count()).select_from(AuditEntry)) == before
+
+    async def test_wrapper_keeps_the_tool_signature(self):
+        async def find(guest_count: int, note: str | None = None) -> dict:
+            return {}
+
+        wrapped = without_body_validation_payload(find)
+
+        assert wrapped.__name__ == "find"
+        assert list(inspect.signature(wrapped).parameters) == ["guest_count", "note"]
+
+    def test_sync_tools_are_refused(self):
+        def find() -> dict:
+            return {}
+
+        with pytest.raises(TypeError, match="async"):
+            without_body_validation_payload(find)
 
 
 class TestUnexpectedFailure:
@@ -365,6 +469,30 @@ class TestSearchCatalog:
                 missing.append(tool.name)
 
         assert not missing, f"not retrievable by their own name: {missing}"
+
+    async def test_repeated_searches_follow_the_current_catalog(self):
+        # FastMCP 4.1 caches the search index; a tool registered after the first
+        # search must still be found, and an unchanged catalog must answer identically.
+        def book_table() -> str:
+            return "ok"
+
+        def cancel_booking() -> str:
+            return "ok"
+
+        mcp = _server_with_proxy(book_table=book_table)
+
+        async def names(query: str) -> list[str]:
+            return [
+                item["name"] for item in _structured(await mcp.call_tool("search_tools", {"query": query}))["result"]
+            ]
+
+        first = await names("booking")
+        assert await names("booking") == first
+        assert "cancel_booking" not in first
+
+        mcp.tool(cancel_booking)
+
+        assert "cancel_booking" in await names("cancel booking")
 
     async def test_search_results_stay_small_enough_to_return_ten(self):
         # max_results is 10 because the schemas are small; revisit it (Travel uses 5)

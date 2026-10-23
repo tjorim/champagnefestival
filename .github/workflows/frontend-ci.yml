@@ -1,23 +1,8 @@
 name: Frontend CI
 
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - "frontend/**"
-      - "VERSION"
-      - ".github/workflows/frontend-ci.yml"
-  push:
-    branches: [main]
-    paths:
-      - "frontend/**"
-      - "VERSION"
-      - ".github/workflows/frontend-ci.yml"
+  workflow_call:
   workflow_dispatch:
-
-concurrency:
-  group: "${{ github.workflow }}-${{ github.head_ref || github.ref }}"
-  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -120,9 +105,27 @@ jobs:
           # template editor. Same-dependency builds against 023d958 before/after:
           # total 2587 -> 2609 KiB, admin 1025 -> 1046, index unchanged at 728.
           # No new dependencies; retain the public and admin chunk ceilings.
-          TOTAL_MAX_KB=2650
-          INDEX_MAX_KB=1050
-          ADMIN_MAX_KB=1050
+          # Secondary admin sections now load on selection (PR #1301 follow-up).
+          # Compared with eager loading: admin 1065 -> 374 KiB; the admin chunk
+          # plus its static dependencies falls from 2201 -> 1481 KiB. Splitting
+          # adds shared/module overhead: total 2629 -> 2653 KiB. No new dependencies.
+          # Lower the admin ceiling and allow modest headroom for chunk overhead;
+          # retain the public entry ceiling.
+          # Total raised 2700 -> 2750 for PR #1356's guarded admin editor
+          # dialogs. Same-dependency builds against parent 710d002d: total
+          # 2698 -> 2702 KiB (+4.6 KiB); index stays 676 and admin stays 375.
+          # No new dependencies; retain the public entry and admin ceilings.
+          # Total raised 2750 -> 2800 for the volunteer poll questions (yes/no and
+          # meal questions, admin answer entry, who-answered-what table). Same
+          # dependencies, parent 163ccf4a: total 2723 -> 2762 KiB (+39); index stays
+          # 683 and admin stays 396. No new dependencies; retain the other ceilings.
+          # Public entry lowered 1050 -> 520 for apps#247: the registration form,
+          # Web Push opt-in and admin live-update stream (TanStack DB) load on
+          # demand, so index fell 683 -> 465 KiB (first visit 347 -> 235 KiB
+          # gzipped). Total 2783 KiB, admin 397. Keep this ceiling tight.
+          TOTAL_MAX_KB=2800
+          INDEX_MAX_KB=520
+          ADMIN_MAX_KB=450
 
           total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
           index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
@@ -151,7 +154,7 @@ jobs:
   e2e:
     name: E2E Tests (Chromium)
     runs-on: ubuntu-latest
-    needs: frontend
+    # Self-contained: start alongside lint/unit tests/build to shorten CI latency.
     defaults:
       run:
         working-directory: frontend

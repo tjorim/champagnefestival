@@ -9,6 +9,9 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 
 from alembic import command
+from tests.helpers import requires_postgres
+
+pytestmark = requires_postgres("the Alembic migrations target PostgreSQL")
 
 
 def test_existing_lineups_keep_their_order_and_start_untiered(monkeypatch):

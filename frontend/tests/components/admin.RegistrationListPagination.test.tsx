@@ -9,7 +9,7 @@
 import userEvent from "@testing-library/user-event";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
 import RegistrationList from "@/components/admin/RegistrationList";
 import type { ActiveEdition } from "@/hooks/useActiveEdition";
@@ -157,11 +157,11 @@ describe("RegistrationList — server-side pagination", () => {
 
     await waitFor(() => expect(screen.getByText("Guest 01")).toBeInTheDocument());
     expect(screen.getByText("Guest 30")).toBeInTheDocument();
-    expect(screen.getByText(/admin_registrations_page_summary/)).toHaveTextContent(
+    expect(screen.getByText(/admin_table_page_summary/)).toHaveTextContent(
       `"from":1,"to":${TOTAL_REGISTRATIONS},"total":${TOTAL_REGISTRATIONS}`,
     );
-    expect(screen.getByText("admin_registrations_page_previous")).toBeDisabled();
-    expect(screen.getByText("admin_registrations_page_next")).toBeDisabled();
+    expect(screen.getByRole("button", { name: "admin_table_page_previous" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "admin_table_page_next" })).toBeDisabled();
   });
 
   it("paginates and navigates between pages once the page size is reduced below the total", async () => {
@@ -170,28 +170,28 @@ describe("RegistrationList — server-side pagination", () => {
     await waitFor(() => expect(screen.getByText("Guest 01")).toBeInTheDocument());
 
     const user = userEvent.setup();
-    await user.click(screen.getByRole("combobox", { name: "admin_registrations_page_size_aria" }));
+    await user.click(screen.getByRole("combobox", { name: "admin_table_page_size_aria" }));
     await user.click(await screen.findByRole("option", { name: /^25$/ }));
 
     await waitFor(() =>
-      expect(screen.getByText(/admin_registrations_page_summary/)).toHaveTextContent(
+      expect(screen.getByText(/admin_table_page_summary/)).toHaveTextContent(
         `"from":1,"to":25,"total":${TOTAL_REGISTRATIONS}`,
       ),
     );
     await waitFor(() => expect(screen.queryByText("Guest 26")).not.toBeInTheDocument());
     expect(screen.getByText("Guest 25")).toBeInTheDocument();
-    expect(screen.getByText("admin_registrations_page_previous")).toBeDisabled();
-    const nextButton = screen.getByText("admin_registrations_page_next");
+    expect(screen.getByRole("button", { name: "admin_table_page_previous" })).toBeDisabled();
+    const nextButton = screen.getByRole("button", { name: "admin_table_page_next" });
     expect(nextButton).not.toBeDisabled();
 
     fireEvent.click(nextButton);
 
     await waitFor(() => expect(screen.getByText("Guest 30")).toBeInTheDocument());
     await waitFor(() => expect(screen.queryByText("Guest 01")).not.toBeInTheDocument());
-    expect(screen.getByText(/admin_registrations_page_summary/)).toHaveTextContent(
+    expect(screen.getByText(/admin_table_page_summary/)).toHaveTextContent(
       `"from":26,"to":${TOTAL_REGISTRATIONS},"total":${TOTAL_REGISTRATIONS}`,
     );
-    expect(screen.getByText("admin_registrations_page_next")).toBeDisabled();
-    expect(screen.getByText("admin_registrations_page_previous")).not.toBeDisabled();
+    expect(screen.getByRole("button", { name: "admin_table_page_next" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "admin_table_page_previous" })).not.toBeDisabled();
   });
 });

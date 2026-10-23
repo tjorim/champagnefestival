@@ -2,7 +2,7 @@
 
 import pytest
 
-from tests.helpers import VALID_RESERVATION, _create_event
+from tests.helpers import VALID_RESERVATION, _create_event, requires_postgres
 from tests.test_products import _create_product
 
 
@@ -127,6 +127,7 @@ async def test_legacy_accessibility_input_merges_into_notes(client):
     assert "accessibility_note" not in response.json()
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_concurrent_bookings_cannot_sell_last_stock_twice(client, engine):
     import asyncio

@@ -9,7 +9,7 @@ import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models import DeliveryAttempt, OutboxJob
+from app.models import DeliveryAttempt, OutboxJob, PollDeletionNotification
 from app.services.outbox_service import (
     claim_next_job,
     cleanup_completed_jobs,
@@ -17,6 +17,7 @@ from app.services.outbox_service import (
     finish_attempt,
     process_one_job,
 )
+from tests.helpers import requires_postgres
 
 
 async def _enqueue(db, resource_id: str, *, max_attempts: int = 5) -> OutboxJob:
@@ -33,6 +34,7 @@ async def _enqueue(db, resource_id: str, *, max_attempts: int = 5) -> OutboxJob:
     return job
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_two_workers_claim_one_job_once(engine, db_session):
     await _enqueue(db_session, "reg-concurrent")
@@ -168,3 +170,28 @@ async def test_cleanup_only_removes_old_terminal_jobs(db_session):
     assert await cleanup_completed_jobs(db_session, retention_days=90) == 1
     assert await db_session.get(OutboxJob, old.id) is None
     assert await db_session.get(OutboxJob, pending.id) is not None
+
+
+@pytest.mark.anyio
+async def test_cleanup_removes_poll_deletion_snapshot_with_its_terminal_job(db_session):
+    snapshots = {
+        key: PollDeletionNotification(id=f"pnot-{key}", recipient=f"{key}@example.test", subject="s", body="b")
+        for key in ("old", "pending")
+    }
+    db_session.add_all(snapshots.values())
+    jobs = {}
+    for key, snapshot in snapshots.items():
+        jobs[key] = await enqueue_job(
+            db_session,
+            job_type="poll_deletion_notification",
+            resource_type="poll_deletion_notification",
+            resource_id=snapshot.id,
+            deduplication_key=f"poll-deletion:{key}",
+            actor="test-admin",
+        )
+    jobs["old"].state = "delivered"
+    jobs["old"].completed_at = datetime.now(UTC) - timedelta(days=91)
+    await db_session.commit()
+    assert await cleanup_completed_jobs(db_session, retention_days=90) == 1
+    assert await db_session.get(PollDeletionNotification, "pnot-old") is None
+    assert await db_session.get(PollDeletionNotification, "pnot-pending") is not None

@@ -87,7 +87,7 @@ async def _registration_with_product(client) -> tuple[str, str]:
         "/api/products",
         json={
             "event_id": event["id"],
-            "name_en": "Bottle",
+            "name_nl": "Bottle",
             "price": "65.00",
             "category": "champagne",
         },

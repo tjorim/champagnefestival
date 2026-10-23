@@ -53,6 +53,46 @@ export function emptyTemplate(): TemplateDraft {
   };
 }
 
+/** Restore existing slots before adding new ones, preserving IDs and artwork. */
+export function addMissingBindings(draft: TemplateDraft, kind: TemplateKind): TemplateDraft {
+  const layers = [...draft.layers];
+  for (const binding of missingBindings(draft, kind)) {
+    const hidden = layers.findIndex(
+      (layer) => layer.kind === "binding" && layer.binding === binding && !layer.locked,
+    );
+    if (hidden !== -1) {
+      layers[hidden] = { ...layers[hidden]!, visible: true };
+    } else if (layers.length < 100) {
+      // Keep the starter slots separate; all geometry remains editable.
+      const position: Partial<Layer> = {
+        logo: { x: 10, y: 15, width: 25, height: 45 },
+        name: { x: 40, y: 20, width: 50, height: 20 },
+        sponsor: { x: 40, y: 50, width: 50, height: 15 },
+        title: { x: 10, y: 15, width: 80, height: 20 },
+        text: { x: 10, y: 40, width: 80, height: 45 },
+      }[binding];
+      layers.push({ ...newLayer("binding", binding), ...position });
+    }
+  }
+  return { ...draft, layers };
+}
+
+/** Array order is back to front; the layer panel displays the reverse. */
+export function moveLayer(layers: Layer[], from: number, to: number): Layer[] {
+  if (
+    from === to ||
+    from < 0 ||
+    to < 0 ||
+    from >= layers.length ||
+    to >= layers.length ||
+    layers[from]?.locked
+  )
+    return layers;
+  const next = [...layers];
+  next.splice(to, 0, next.splice(from, 1)[0]!);
+  return next;
+}
+
 /** Pointer deltas are canvas pixels; resize follows the layer's rotated axes. */
 export function resizeLayer(layer: Layer, dx: number, dy: number): Partial<Layer> {
   const angle = (layer.rotation * Math.PI) / 180;

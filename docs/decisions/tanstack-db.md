@@ -348,7 +348,7 @@ lives in the Query cache keyed by the table state.
 Proof: `frontend/tests/spikes/membersListOnDemand.spike.test.tsx` runs the
 Members list (page, sort, search, filter, cancellation, sign-out, optimistic
 edit) both ways against one fake paged server on the installed
-`@tanstack/db` 0.11.3, `@tanstack/query-db-collection` 1.3.4 and
+`@tanstack/db` 0.14.0, `@tanstack/query-db-collection` 1.4.4 and
 `@tanstack/react-query` 5.104. The assertions pin the observations below; a
 version bump that changes one is a prompt to re-read this decision.
 
@@ -368,11 +368,13 @@ It works, and it is the wrong fit for our list contract.
 
 ### Write interplay, sign-out and live events on a partial cache
 
-- **Direct writes refetch active subsets.** `writeUpsert` triggers a refetch of
-  every active subset query and the server result replaces the written row
-  (verified: a local rename is overwritten by the refetch). The write is only a
-  momentary overlay, so the #1164 approach (apply the server's response, then
-  refetch) gains nothing from the collection in on-demand mode.
+- **Direct writes persist until explicit reconciliation.** Rechecked for #1291
+  with query-db-collection 1.4.4: `writeUpsert` updates the loaded row without
+  refetching active subsets. An explicit `collection.utils.refetch()` restores
+  the server result. The earlier 1.3.4 observation (an automatic refetch after
+  the write) no longer applies. This removes that write-interplay limitation;
+  the pagination, search and total-count constraints above still rule out
+  on-demand collections for this list.
 - **The shared reset does not empty an on-demand collection.**
   `createAdminCollectionLifecycle().reset` deletes every key in a `writeBatch`;
   on an on-demand collection the rows stay (verified: size 5 before and after).

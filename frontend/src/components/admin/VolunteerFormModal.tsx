@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { AdminField, AdminLabel, AdminInput, AdminTextarea } from "@/components/admin/AdminFields";
 import { CirclePlusIcon, SaveIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -72,17 +73,14 @@ export default function VolunteerFormModal({
             address: volunteer.address ?? "",
             nationalRegisterNumber: volunteer.nationalRegisterNumber ?? "",
             eidDocumentNumber: volunteer.eidDocumentNumber ?? "",
-            helpPeriods:
-              volunteer.helpPeriods.length > 0
-                ? volunteer.helpPeriods.map(mapPeriod)
-                : [emptyPeriod()],
+            helpPeriods: volunteer.helpPeriods.map(mapPeriod),
           }
         : {
             name: "",
             address: "",
             nationalRegisterNumber: "",
             eidDocumentNumber: "",
-            helpPeriods: [emptyPeriod()],
+            helpPeriods: [],
           },
     [volunteer],
   );
@@ -96,7 +94,7 @@ export default function VolunteerFormModal({
         notes: period.notes.trim(),
       }));
 
-      if (normalized.length === 0 || normalized.some((period) => !period.firstHelpDay)) {
+      if (normalized.some((period) => !period.firstHelpDay)) {
         setError(m.admin_volunteers_validation_help_period_required());
         return;
       }
@@ -145,11 +143,6 @@ export default function VolunteerFormModal({
   }
 
   const nameValue = useSelector(form.atom, (s) => s.values.name);
-  const nationalRegisterNumberValue = useSelector(
-    form.atom,
-    (s) => s.values.nationalRegisterNumber,
-  );
-  const eidDocumentNumberValue = useSelector(form.atom, (s) => s.values.eidDocumentNumber);
   const helpPeriods = useSelector(form.atom, (s) => s.values.helpPeriods);
   const isSubmitting = useSelector(form.atom, (s) => s.isSubmitting);
 
@@ -181,6 +174,7 @@ export default function VolunteerFormModal({
               </Alert>
             )}
 
+            <p className="mb-4 text-sm text-subtle">{m.admin_volunteers_optional_details()}</p>
             <form.Field name="name">
               {(field) => (
                 <AdminField className="mb-4" controlId="volunteer-name">
@@ -222,7 +216,7 @@ export default function VolunteerFormModal({
                   {(field) => (
                     <AdminField controlId="volunteer-national-register-number">
                       <AdminLabel className="text-subtle text-sm">
-                        {m.admin_people_national_register_number_label()} *
+                        {m.admin_people_national_register_number_label()}
                       </AdminLabel>
                       <AdminInput
                         type="text"
@@ -230,7 +224,6 @@ export default function VolunteerFormModal({
                         onChange={(e) => field.handleChange(e.target.value.slice(0, 20))}
                         onBlur={field.handleBlur}
                         className="bg-muted text-content border-input"
-                        required
                         maxLength={20}
                       />
                     </AdminField>
@@ -242,7 +235,7 @@ export default function VolunteerFormModal({
                   {(field) => (
                     <AdminField controlId="volunteer-eid-document-number">
                       <AdminLabel className="text-subtle text-sm">
-                        {m.admin_people_eid_document_number_label()} *
+                        {m.admin_people_eid_document_number_label()}
                       </AdminLabel>
                       <AdminInput
                         type="text"
@@ -250,7 +243,6 @@ export default function VolunteerFormModal({
                         onChange={(e) => field.handleChange(e.target.value)}
                         onBlur={field.handleBlur}
                         className="bg-muted text-content border-input"
-                        required
                         maxLength={50}
                       />
                     </AdminField>
@@ -262,7 +254,7 @@ export default function VolunteerFormModal({
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
                 <AdminLabel className="text-subtle text-sm mb-0">
-                  {m.admin_volunteers_help_periods_label()} *
+                  {m.admin_volunteers_help_periods_label()}
                 </AdminLabel>
                 <Button
                   type="button"
@@ -276,7 +268,7 @@ export default function VolunteerFormModal({
               </div>
 
               {helpPeriods.length === 0 ? (
-                <div className="text-subtle text-sm">{m.admin_volunteers_no_help_periods()}</div>
+                <AdminEmptyState>{m.admin_volunteers_no_help_periods()}</AdminEmptyState>
               ) : (
                 <div className="flex flex-col gap-2">
                   {helpPeriods.map((period, index) => (
@@ -288,7 +280,6 @@ export default function VolunteerFormModal({
                           variant="outline-danger"
                           size="sm"
                           onClick={() => void form.removeFieldValue("helpPeriods", index)}
-                          disabled={helpPeriods.length === 1}
                         >
                           <Icon icon={TrashIcon} />
                           {m.admin_volunteers_remove_help_period()}
@@ -367,12 +358,7 @@ export default function VolunteerFormModal({
               type="submit"
               variant="warning"
               size="sm"
-              disabled={
-                isSubmitting ||
-                !nameValue.trim() ||
-                !nationalRegisterNumberValue.trim() ||
-                !eidDocumentNumberValue.trim()
-              }
+              disabled={isSubmitting || !nameValue.trim()}
             >
               {isSubmitting ? <Spinner size="sm" /> : <Icon icon={SaveIcon} />}
               {m.admin_people_save()}

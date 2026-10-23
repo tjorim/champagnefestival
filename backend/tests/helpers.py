@@ -2,7 +2,18 @@
 
 from __future__ import annotations
 
+import os
 from typing import Any
+
+import pytest
+
+#: True when the suite runs on the SQLite default; see ``backend/conftest.py``.
+IS_SQLITE = os.environ["TEST_DATABASE_URL"].startswith("sqlite")
+
+
+def requires_postgres(reason: str) -> Any:
+    """Skip on SQLite for a test that exercises PostgreSQL behaviour. CI runs it on PostgreSQL."""
+    return pytest.mark.skipif(IS_SQLITE, reason=f"needs PostgreSQL: {reason}")
 
 
 def mcp_session_factory(db_session: Any) -> Any:
@@ -103,7 +114,7 @@ async def _create_event(
 
     event_payload: dict[str, object] = {
         "edition_id": edition_id,
-        "title_en": title,
+        "title_nl": title,
         "date": date,
         "start_time": "18:00",
         "end_time": "22:00",
@@ -190,7 +201,7 @@ async def event_for_room(client, room_id: str, number: int = 1, edition_id: str 
         "/api/events",
         json={
             "edition_id": edition_id,
-            "title_en": title,
+            "title_nl": title,
             "date": f"2099-03-{20 + number:02d}",
             "start_time": "10:00",
             "category": "other",
@@ -217,13 +228,12 @@ async def seed_layout_event(db, room_id: str = "room-1", number: int = 1) -> str
         db.add(Edition(id=edition_id, year=2099, month="march", venue_id=room.venue_id, active=False))
         await db.flush()
     if await db.get(EventCategory, "other") is None:
-        db.add(EventCategory(key="other", label_language="nl", label_nl="Overig"))
+        db.add(EventCategory(key="other", label_nl="Overig"))
         await db.flush()
     db.add(
         Event(
             id=event_id,
             edition_id=edition_id,
-            title_language="nl",
             title_nl=f"Event {number}",
             date=date(2099, 3, 20 + number),
             start_time="10:00",

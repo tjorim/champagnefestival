@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import Room
-from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, VENUE_PAYLOAD
+from tests.helpers import ADMIN_HEADERS, ROOM_PAYLOAD, VENUE_PAYLOAD, requires_postgres
 
 
 @pytest.mark.anyio
@@ -171,6 +171,7 @@ async def test_room_invalid_color(client):
     assert r.status_code == 422
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_deleting_a_room_locks_it_against_concurrent_layout_creation(client, engine):
     """delete_room and create_layout both take a row lock on the room, so one

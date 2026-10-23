@@ -5,6 +5,21 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator, model_validator
 
+from app.schema_types import (
+    NonEmptyText200,
+    NonNegativeQuantity,
+    ResourceId,
+    ResourceKey,
+    SignageColor,
+    SignageIconName,
+    SignageImagePath,
+    SignagePosition,
+    SignageSize,
+    Text100,
+    Text120,
+    Text500,
+)
+
 
 class Document(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -12,9 +27,9 @@ class Document(BaseModel):
 
 class Background(Document):
     kind: Literal["color", "gradient", "image"] = "color"
-    color: str = Field(default="#000000", pattern=r"^#[0-9a-fA-F]{6}$")
-    end_color: str = Field(default="#000000", pattern=r"^#[0-9a-fA-F]{6}$")
-    image: str | None = Field(default=None, pattern=r"^/uploads/signage/[a-f0-9]{32}-[a-f0-9]{64}\.jpg$")
+    color: SignageColor = "#000000"
+    end_color: SignageColor = "#000000"
+    image: SignageImagePath | None = None
 
     @model_validator(mode="after")
     def image_required(self):
@@ -24,21 +39,21 @@ class Background(Document):
 
 
 class Layer(Document):
-    id: str = Field(min_length=1, max_length=64)
+    id: ResourceId
     kind: Literal["binding", "text", "image", "icon", "shape"]
     binding: Literal["logo", "name", "description", "sponsor", "title", "text", "icon"] | None = None
-    text: str = Field(default="", max_length=500)
-    image: str | None = Field(default=None, pattern=r"^/uploads/signage/[a-f0-9]{32}-[a-f0-9]{64}\.jpg$")
-    icon: str | None = Field(default=None, max_length=80, pattern=r"^[a-z0-9-]+$")
+    text: Text500 = ""
+    image: SignageImagePath | None = None
+    icon: SignageIconName | None = None
     shape: Literal["rectangle", "ellipse"] = "rectangle"
-    x: float = Field(default=50, ge=0, le=100, allow_inf_nan=False)
-    y: float = Field(default=50, ge=0, le=100, allow_inf_nan=False)
-    width: float = Field(default=50, gt=0, le=100, allow_inf_nan=False)
-    height: float = Field(default=20, gt=0, le=100, allow_inf_nan=False)
+    x: SignagePosition = 50
+    y: SignagePosition = 50
+    width: SignageSize = 50
+    height: SignageSize = 20
     rotation: float = Field(default=0, ge=-360, le=360, allow_inf_nan=False)
-    color: str = Field(default="#ffffff", pattern=r"^#[0-9a-fA-F]{6}$")
+    color: SignageColor = "#ffffff"
     font_size: int = Field(default=48, ge=8, le=300)
-    name: str = Field(default="", max_length=100)
+    name: Text100 = ""
     visible: bool = True
     locked: bool = False
     font: Literal["sans", "serif", "mono"] = "sans"
@@ -53,7 +68,7 @@ class Layer(Document):
 
 
 class TemplateWrite(Document):
-    name: str = Field(min_length=1, max_length=200)
+    name: NonEmptyText200
     background: Background = Field(default_factory=Background)
     layers: list[Layer] = Field(default_factory=list, max_length=100)
 
@@ -71,8 +86,8 @@ class TemplateOut(TemplateWrite):
 
 class ChannelWrite(Document):
     slug: str = Field(min_length=1, max_length=100, pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
-    name: str = Field(min_length=1, max_length=200)
-    edition_id: str = Field(min_length=1, max_length=100)
+    name: NonEmptyText200
+    edition_id: ResourceKey
     active: bool = False
 
 
@@ -84,27 +99,26 @@ class ChannelOut(ChannelWrite):
 
 
 class Content(Document):
-    text_language: Literal["nl", "fr", "en"] = "en"
-    text_nl: str | None = Field(default=None, max_length=500)
-    text_fr: str | None = Field(default=None, max_length=500)
-    text_en: str | None = Field(default=None, max_length=500)
-    title_nl: str | None = Field(default=None, max_length=120)
-    title_fr: str | None = Field(default=None, max_length=120)
-    title_en: str | None = Field(default=None, max_length=120)
-    icon: str | None = Field(default=None, max_length=80, pattern=r"^[a-z0-9-]+$")
-    image: str | None = Field(default=None, pattern=r"^/uploads/signage/[a-f0-9]{32}-[a-f0-9]{64}\.jpg$")
+    organization_type: Literal["producer", "vendor", "sponsor"] | None = None
+    title: Text120 | None = None
+    text: Text500 | None = None
+    icon: SignageIconName | None = None
+    image: SignageImagePath | None = None
 
-    @field_validator("text_nl", "text_fr", "text_en", "title_nl", "title_fr", "title_en")
+    @field_validator("title", "text")
     @classmethod
     def strip_text(cls, value):
         return value.strip() or None if isinstance(value, str) else value
 
 
+SlideKind = Literal["organizations", "notice", "image"]
+
+
 class SlideWrite(Document):
     channel_id: str
     template_id: str
-    sort_order: int = Field(default=0, ge=0)
-    kind: Literal["organizations", "notice", "image"]
+    sort_order: NonNegativeQuantity = 0
+    kind: SlideKind
     duration: int = Field(default=10, ge=1, le=3600)
     active: bool = False
     starts_at: datetime | None = None
@@ -118,20 +132,29 @@ class SlideWrite(Document):
                 raise ValueError("schedule timestamps require a timezone")
         if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
             raise ValueError("ends_at must be later than starts_at")
-        if self.kind == "notice" and not getattr(self.content, f"text_{self.content.text_language}"):
-            raise ValueError("notice requires original-language text")
+        if self.kind == "notice" and not self.content.text:
+            raise ValueError("notice requires text")
         if self.kind == "image" and not self.content.image:
             raise ValueError("image slide requires an uploaded image")
-        if any(getattr(self.content, f"title_{lang}") for lang in ("nl", "fr", "en")) and not getattr(
-            self.content, f"title_{self.content.text_language}"
-        ):
-            raise ValueError("title requires original-language text")
         return self
 
 
 class SlideOut(SlideWrite):
     id: str
     model_config = ConfigDict(from_attributes=True)
+
+
+class PlaylistPreview(Document):
+    channel: ChannelWrite
+    slides: list[SlideWrite] = Field(max_length=1000)
+    at: datetime
+
+    @field_validator("at")
+    @classmethod
+    def timezone_required(cls, value):
+        if value.utcoffset() is None:
+            raise ValueError("preview time requires a timezone")
+        return value
 
 
 class Reorder(Document):
@@ -159,7 +182,6 @@ class PublicSlide(Document):
     template: DisplayTemplate
     text: str | None = None
     title: str | None = None
-    translations: Content | None = None
     image: str | None = None
     icon: str | None = None
     organization: DisplayOrganization | None = None

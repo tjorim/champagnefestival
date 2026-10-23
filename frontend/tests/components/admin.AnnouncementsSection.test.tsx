@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import AnnouncementsSection from "@/components/admin/AnnouncementsSection";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";

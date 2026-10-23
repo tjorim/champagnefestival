@@ -16,7 +16,7 @@ import ipaddress
 from datetime import UTC, datetime, timedelta
 
 from fastapi import Request
-from sqlalchemy import delete, text
+from sqlalchemy import DateTime, bindparam, delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import RateLimitBucket
@@ -60,6 +60,21 @@ _UPSERT_BUCKET_SQL = text(
     RETURNING count
     """
 )
+
+
+# SQLite twin of the statement above (local development and tests): SQLite has neither now()
+# arithmetic with make_interval nor a transaction-start clock, so the caller passes both instants.
+_UPSERT_BUCKET_SQLITE_SQL = text(
+    """
+    INSERT INTO rate_limit_buckets (key, window_start, count)
+    VALUES (:key, :now, 1)
+    ON CONFLICT (key) DO UPDATE SET
+        count = CASE WHEN rate_limit_buckets.window_start <= :cutoff THEN 1 ELSE rate_limit_buckets.count + 1 END,
+        window_start = CASE WHEN rate_limit_buckets.window_start <= :cutoff THEN :now
+                        ELSE rate_limit_buckets.window_start END
+    RETURNING count
+    """
+).bindparams(bindparam("now", type_=DateTime(timezone=True)), bindparam("cutoff", type_=DateTime(timezone=True)))
 
 
 def _evict_expired_or_oldest_bucket(now: datetime) -> None:
@@ -156,10 +171,17 @@ async def check_rate_limit_pg(
     packed_key = f"{scope}{_BUCKET_KEY_SEPARATOR}{key}"
     if len(packed_key) > _BUCKET_KEY_MAX_LENGTH:
         return False
-    result = await db.execute(
-        _UPSERT_BUCKET_SQL,
-        {"key": packed_key, "window_seconds": window_seconds},
-    )
+    if db.get_bind().dialect.name == "sqlite":
+        now = datetime.now(UTC)
+        result = await db.execute(
+            _UPSERT_BUCKET_SQLITE_SQL,
+            {"key": packed_key, "now": now, "cutoff": now - timedelta(seconds=window_seconds)},
+        )
+    else:
+        result = await db.execute(
+            _UPSERT_BUCKET_SQL,
+            {"key": packed_key, "window_seconds": window_seconds},
+        )
     count = result.scalar_one()
     return count <= max_requests
 

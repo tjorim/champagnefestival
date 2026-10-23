@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import AnnouncementManagement from "@/components/admin/AnnouncementManagement";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
@@ -10,10 +10,9 @@ const authHeaders = () => ({ Authorization: "Bearer mock-access-token" });
 
 const announcement = {
   id: "ann-1",
-  text_language: "en",
-  text_nl: null,
+  text_nl: "Deuren open om zes",
   text_fr: null,
-  text_en: "Doors open at six",
+  text_en: null,
   level: "info",
   active: true,
   sort_order: 0,
@@ -36,17 +35,16 @@ afterEach(() => {
 });
 
 describe("AnnouncementManagement", () => {
-  it("previews an untranslated announcement with its original text", async () => {
+  it("shows the Dutch text of an announcement without translations", async () => {
     render(<AnnouncementManagement authHeaders={authHeaders} />, {
       wrapper: createTestQueryClientWrapper(),
     });
 
-    // The Dutch preview has no Dutch text: the original English text is shown instead.
-    expect(await screen.findByText("Doors open at six")).toBeInTheDocument();
+    expect(await screen.findByText("Deuren open om zes")).toBeInTheDocument();
     expect(screen.queryByText(/no translation/i)).not.toBeInTheDocument();
   });
 
-  it("sends the original language with the text", async () => {
+  it("sends the Dutch text without an original-language flag", async () => {
     let sent: Record<string, unknown> | undefined;
     server.use(
       http.post("/api/announcements", async ({ request }) => {
@@ -57,12 +55,14 @@ describe("AnnouncementManagement", () => {
     render(<AnnouncementManagement authHeaders={authHeaders} />, {
       wrapper: createTestQueryClientWrapper(),
     });
-    await screen.findByText("Doors open at six");
+    await screen.findByText("Deuren open om zes");
 
+    fireEvent.click(screen.getByRole("button", { name: "New announcement" }));
     fireEvent.change(screen.getByLabelText(/Text.*NL/i), { target: { value: "Deuren open" } });
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(sent).toBeDefined());
-    expect(sent).toMatchObject({ text_language: "nl", text_nl: "Deuren open" });
+    expect(sent).toMatchObject({ text_nl: "Deuren open" });
+    expect(sent).not.toHaveProperty("text_language");
   });
 });

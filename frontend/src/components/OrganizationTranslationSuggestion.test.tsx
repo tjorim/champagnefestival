@@ -1,7 +1,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
 import OrganizationTranslationSuggestion from "./OrganizationTranslationSuggestion";
@@ -142,7 +142,6 @@ it("fills the manager form but submits only after review and editing", async () 
           type: "producer",
           active: true,
           website: "",
-          description_language: "nl",
           description_nl: "Hallo",
         },
       ]}
@@ -174,7 +173,6 @@ it("fills the admin form and saves only after manual review", async () => {
         id: 42,
         name: "House",
         image: "/logos/house.png",
-        description_language: "nl",
         description_nl: "Hallo",
       }}
       authHeaders={() => ({})}

@@ -13,7 +13,7 @@ from app.config import settings
 from app.models import AuditEntry
 from app.services import edition_artwork, editions_service
 from app.services.public_render_cache import public_render_cache
-from tests.helpers import ADMIN_HEADERS, _create_event
+from tests.helpers import ADMIN_HEADERS, _create_event, requires_postgres
 
 SIZES = {"flyer": (700, 990), "hero": (1900, 1000), "share": (1280, 670)}
 
@@ -190,7 +190,7 @@ async def test_artwork_requires_admin_role(forbidden_client, storage):
 async def test_public_route_rejects_other_names(client, storage):
     for name in ("../secret.jpg", "plain.jpg", "a" * 32 + "-" + "b" * 64 + ".png"):
         assert (await client.get(edition_artwork.PREFIX + name)).status_code == 404
-    (storage / "readme.txt").write_text("private")
+    (storage / "readme.txt").write_text("private", encoding="utf-8")
     assert (await client.get(edition_artwork.PREFIX + "readme.txt")).status_code == 404
 
 
@@ -213,12 +213,13 @@ async def test_reconcile_removes_only_unreferenced_files(client, db_session, edi
     leftover = storage / f"{'a' * 32}-{'b' * 64}.jpg"
     leftover.write_bytes(b"orphan")
     unrelated = storage / "keep.txt"
-    unrelated.write_text("not managed")
+    unrelated.write_text("not managed", encoding="utf-8")
     assert await edition_artwork.reconcile(db_session) == 1
     assert not leftover.exists() and unrelated.exists() and (storage / kept).exists()
     assert await edition_artwork.reconcile(db_session) == 0
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 async def test_concurrent_uploads_leave_one_file_per_slot(client, engine, edition, storage):
     factory = async_sessionmaker(engine, expire_on_commit=False)
 

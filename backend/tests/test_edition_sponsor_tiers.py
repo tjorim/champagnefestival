@@ -99,7 +99,7 @@ async def test_public_endpoint_returns_the_tiered_order(client):
         "/api/events",
         json={
             "edition_id": "tiers-public",
-            "title_en": "Sunday",
+            "title_nl": "Sunday",
             "date": "2099-03-22",
             "start_time": "14:00",
             "end_time": "18:00",

@@ -658,3 +658,39 @@ it("offers all registration email templates and previews the selected registrati
   );
   expect(preview.queryByText(/Please seat|Wheelchair|token-abc/)).not.toBeInTheDocument();
 });
+
+it("prefills and saves order answers alongside the booking", async () => {
+  const onSaveBooking = vi.fn().mockResolvedValue(undefined);
+  const registration = buildRegistration();
+  registration.event!.orderQuestions = [
+    {
+      id: "question",
+      kind: "free_text",
+      active: true,
+      title_nl: "Opmerking",
+      title_en: null,
+      title_fr: null,
+      description_nl: null,
+      description_en: null,
+      description_fr: null,
+      options: [],
+    },
+  ];
+  registration.orderAnswers = [
+    {
+      question_id: "question",
+      text: "Old answer",
+      question: registration.event!.orderQuestions[0],
+    },
+  ];
+  renderDetail({ registration, onSaveBooking });
+  expect(screen.getByLabelText("Opmerking")).toHaveValue("Old answer");
+  fireEvent.change(screen.getByLabelText("Opmerking"), { target: { value: "New answer" } });
+  fireEvent.click(screen.getByRole("button", { name: "admin_booking_save_all" }));
+  await waitFor(() =>
+    expect(onSaveBooking).toHaveBeenCalledWith(
+      "reg-1",
+      expect.objectContaining({ orderAnswers: [{ question_id: "question", text: "New answer" }] }),
+    ),
+  );
+});

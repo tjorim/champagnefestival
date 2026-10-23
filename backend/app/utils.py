@@ -26,6 +26,7 @@ from app.models import (
     Person,
     Product,
     Registration,
+    RegistrationOrderAnswer,
     Room,
     Table,
     TableType,
@@ -107,15 +108,13 @@ def make_id(prefix: str) -> str:
 
 def event_text_dict(event: Event, locale: str | None = None) -> dict:
     """Event title/description for *locale* (``title``/``description``, falling
-    back to the original language) plus every stored language."""
+    back to Dutch) plus every stored language."""
     return {
         "title": event.localized_title(locale),
         "description": event.localized_description(locale),
-        "title_language": event.title_language,
         "title_nl": event.title_nl,
         "title_fr": event.title_fr,
         "title_en": event.title_en,
-        "description_language": event.description_language,
         "description_nl": event.description_nl,
         "description_fr": event.description_fr,
         "description_en": event.description_en,
@@ -125,8 +124,8 @@ def event_text_dict(event: Event, locale: str | None = None) -> dict:
 def event_to_summary_dict(
     event: Event, include_edition: bool = False, *, public: bool = False, locale: str | None = None
 ) -> dict:
-    """``locale`` resolves ``title``/``description`` for that language (original
-    language when ``None``); the per-language fields are always included."""
+    """``locale`` resolves ``title``/``description`` for that language (Dutch
+    when ``None``); the per-language fields are always included."""
     data = {
         "id": event.id,
         "edition_id": event.edition_id,
@@ -150,6 +149,7 @@ def event_to_summary_dict(
         # edge pointing at a hidden (non-purchasable) product — a hidden
         # product's id/name/stock/etc. must never reach an unauthenticated
         # caller, not even indirectly as a bundle-target reference.
+        "order_questions": [q.as_dict() for q in event.order_questions if not public or q.active],
         "products": (
             _public_products(event.products, locale)
             if public
@@ -169,15 +169,13 @@ def _public_products(products: Sequence[Product], locale: str | None = None) -> 
 
 def product_text_dict(p: Product, locale: str | None = None) -> dict:
     """Product name/description for *locale* (``name``/``description``, falling back
-    to the original language) plus every stored language."""
+    to Dutch) plus every stored language."""
     return {
         "name": p.localized_name(locale),
         "description": p.localized_description(locale),
-        "name_language": p.name_language,
         "name_nl": p.name_nl,
         "name_fr": p.name_fr,
         "name_en": p.name_en,
-        "description_language": p.description_language,
         "description_nl": p.description_nl,
         "description_fr": p.description_fr,
         "description_en": p.description_en,
@@ -185,23 +183,24 @@ def product_text_dict(p: Product, locale: str | None = None) -> dict:
 
 
 def order_item_name(item: dict, locale: str | None) -> str:
-    """An order line's product name in *locale*, falling back to the original-language
+    """An order line's product name in *locale*, falling back to the Dutch
     name stored with the order (older orders carry only that)."""
-    return (
-        resolve_text(
-            {code: item.get(f"name_{code}") for code in ("nl", "fr", "en")},
-            item.get("name_language"),
-            locale,
-        )
-        or item["name"]
-    )
+    return resolve_text({code: item.get(f"name_{code}") for code in ("nl", "fr", "en")}, locale) or item["name"]
 
 
-def poll_option_to_dict(option: EditionPollOption, *, total_quantity: int = 0, volunteer_count: int = 0) -> dict:
+def poll_option_to_dict(
+    option: EditionPollOption, *, total_quantity: int = 0, volunteer_count: int = 0, locale: str | None = None
+) -> dict:
     return {
         "id": option.id,
+        "question_id": option.question_id,
         "edition_id": option.edition_id,
-        "label": option.label,
+        "label": option.localized_label(locale),
+        "label_nl": option.label_nl,
+        "label_fr": option.label_fr,
+        "label_en": option.label_en,
+        "dietary_tags": list(option.dietary_tags or []),
+        "sort_order": option.sort_order,
         "total_quantity": total_quantity,
         "volunteer_count": volunteer_count,
         "created_at": option.created_at,
@@ -298,6 +297,7 @@ def registration_to_dict(r: Registration, person: Person, event: Event, *, publi
         "edition_id": event.edition_id,
         "event": event_to_summary_dict(event, include_edition=True, public=public),
         "guest_count": r.guest_count,
+        "order_answers": [a.as_dict() for a in r.order_answers],
         "order_items": _visible_order_items(r.order_items) if public else r.order_items,
         "notes": r.notes,
         "table_id": (r.allocations[0].table_id if r.allocations else None),
@@ -379,6 +379,7 @@ def registration_to_guest_dict(r: Registration, person: Person, event: Event) ->
         "event_date": event.date,
         "check_in_token": r.check_in_token,
         "guest_count": r.guest_count,
+        "order_answers": [a.as_dict() for a in r.order_answers],
         "order_items": _visible_order_items(r.order_items),
         "status": r.status,
         "payment_status": r.payment_status,
@@ -398,7 +399,6 @@ def organization_to_dict(e: Organization, contact_person: Person | None = None) 
         "name": e.name,
         "image": e.image,
         "website": e.website,
-        "description_language": e.description_language,
         "description_nl": e.description_nl,
         "description_fr": e.description_fr,
         "description_en": e.description_en,
@@ -573,7 +573,6 @@ def faq_item_to_dict(f: FaqItem) -> dict:
     """Admin shape: every language's content, for the FAQ editor."""
     return {
         "id": f.id,
-        "text_language": f.text_language,
         "question_nl": f.question_nl,
         "question_fr": f.question_fr,
         "question_en": f.question_en,
@@ -588,7 +587,7 @@ def faq_item_to_dict(f: FaqItem) -> dict:
 
 
 def faq_item_to_public_dict(f: FaqItem, locale: str) -> dict:
-    """Public shape: the question/answer for *locale*, or the original language
+    """Public shape: the question/answer for *locale*, or Dutch
     when that locale is not fully translated."""
     question, answer = f.localized(locale)
     return {"id": f.id, "question": question, "answer": answer}
@@ -631,3 +630,11 @@ def person_summary_dict(p: Person) -> dict:
     explicitly rather than relying on schema validation to drop the keys.
     """
     return {k: v for k, v in person_to_dict(p).items() if k not in _IDENTITY_FIELDS}
+
+
+def order_answer_text(answer: RegistrationOrderAnswer) -> str:
+    """Dutch question/value for admin exports; CSV escaping happens at the boundary."""
+    value = answer.text if answer.text is not None else answer.rating
+    if answer.option_id is not None:
+        value = next((o.label_nl for o in answer.question.options if o.id == answer.option_id), "")
+    return f"{answer.question.title_nl}: {value}"

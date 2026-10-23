@@ -1,4 +1,6 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { axe } from "jest-axe";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import MaintenancePage from "@/components/MaintenancePage";
 
@@ -10,7 +12,9 @@ vi.mock("@/hooks/useMaintenanceMode", () => ({
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    close: () => "Close",
     festival_name: () => "Champagnefestival",
+    language_select: () => "Select language",
     maintenance_title: () => "We will be back soon",
     maintenance_message: () => "Maintenance in progress",
     maintenance_facebook_cta: () => "Follow us on Facebook",
@@ -42,6 +46,11 @@ describe("MaintenancePage", () => {
     expect(container.querySelector(".maintenance-page__title")).toBeInTheDocument();
   });
 
+  it("offers the language switcher so visitors can leave the detected language", async () => {
+    render(<MaintenancePage />);
+    expect(await screen.findByRole("button", { name: "Select language" })).toBeInTheDocument();
+  });
+
   it("hides the Facebook action when the setting is empty", () => {
     facebookUrl = "";
     render(<MaintenancePage />);
@@ -68,5 +77,32 @@ describe("MaintenancePage", () => {
       "src",
       "/images/flyer.jpg",
     );
+  });
+
+  it("opens the flyer in a modal dialog, closes on Escape and returns focus to the flyer", async () => {
+    const user = userEvent.setup();
+    render(<MaintenancePage />);
+
+    const trigger = screen.getByRole("button", { name: "Festival flyer" });
+    await user.click(trigger);
+
+    const dialog = await screen.findByRole("dialog", { name: "Festival flyer" });
+    expect(await axe(dialog)).toHaveNoViolations();
+
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
+  });
+
+  it("closes the flyer dialog from its close button and returns focus", async () => {
+    const user = userEvent.setup();
+    render(<MaintenancePage />);
+
+    const trigger = screen.getByRole("button", { name: "Festival flyer" });
+    await user.click(trigger);
+    await user.click(await screen.findByRole("button", { name: "Close" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(trigger).toHaveFocus();
   });
 });

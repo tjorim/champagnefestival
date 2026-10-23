@@ -1,22 +1,10 @@
+import type { DetachedWindowAPI } from "happy-dom";
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initializeVisualTheme, useVisualTheme } from "@/hooks/useVisualTheme";
 
-function mockColorScheme(isLight: boolean): void {
-  vi.spyOn(window, "matchMedia").mockImplementation(
-    (query: string) =>
-      ({
-        matches: query === "(prefers-color-scheme: light)" ? isLight : false,
-        media: query,
-        onchange: null,
-        addListener: vi.fn(),
-        removeListener: vi.fn(),
-        addEventListener: vi.fn(),
-        removeEventListener: vi.fn(),
-        dispatchEvent: vi.fn(),
-      }) as MediaQueryList,
-  );
-}
+const { happyDOM } = window as unknown as { happyDOM: DetachedWindowAPI };
+const originalColorScheme = happyDOM.settings.device.prefersColorScheme;
 
 function getThemeColor(mode: "dark" | "light"): string | null {
   return (
@@ -48,6 +36,7 @@ describe("useVisualTheme", () => {
     document.querySelectorAll('meta[data-testid^="theme-"]').forEach((meta) => meta.remove());
     document.getElementById("visual-theme-stylesheet")?.remove();
     vi.restoreAllMocks();
+    happyDOM.settings.device.prefersColorScheme = originalColorScheme;
   });
 
   it("initializes a stored Remuage selection", () => {
@@ -64,17 +53,20 @@ describe("useVisualTheme", () => {
     expect(getThemeColor("light")).toBe("#edf1f5");
   });
 
-  it("falls back to the Refresh system theme for invalid storage", () => {
-    window.localStorage.setItem("champagnefestival:visualTheme", "unknown");
-    mockColorScheme(true);
+  it.each(["light", "dark"] as const)(
+    "falls back to the %s system theme for invalid storage",
+    (scheme) => {
+      window.localStorage.setItem("champagnefestival:visualTheme", "unknown");
+      happyDOM.settings.device.prefersColorScheme = scheme;
 
-    initializeVisualTheme();
+      initializeVisualTheme();
 
-    expect(document.documentElement.dataset.visualTheme).toBe("refresh");
-    expect(document.documentElement.dataset.themeMode).toBe("light");
-    expect(getThemeColor("dark")).toBe("#100f0d");
-    expect(getThemeColor("light")).toBe("#fbf4e6");
-  });
+      expect(document.documentElement.dataset.visualTheme).toBe("refresh");
+      expect(document.documentElement.dataset.themeMode).toBe(scheme);
+      expect(getThemeColor("dark")).toBe("#100f0d");
+      expect(getThemeColor("light")).toBe("#fbf4e6");
+    },
+  );
 
   it("prefers the valid pre-paint dataset over local storage", () => {
     document.documentElement.dataset.visualTheme = "remuage";
@@ -86,7 +78,7 @@ describe("useVisualTheme", () => {
   });
 
   it("updates state, DOM, stylesheet, browser color, and persistence", () => {
-    mockColorScheme(false);
+    happyDOM.settings.device.prefersColorScheme = "dark";
     const { result } = renderHook(() => useVisualTheme());
 
     act(() => result.current.setVariant("remuage"));

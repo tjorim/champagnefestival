@@ -1,11 +1,8 @@
-import type { EventLanguage } from "@/types/event";
-
 /** An admin-managed event or product category; `Event.category` / `Product.category` hold its `key`. */
 export interface Category {
   key: string;
-  /** Label in the original language (the list is fetched without a locale). */
+  /** Dutch label (the list is fetched without a locale). */
   label: string;
-  labelLanguage: EventLanguage;
   labelNl: string | null;
   labelFr: string | null;
   labelEn: string | null;
@@ -20,8 +17,6 @@ export function apiToCategory(data: Record<string, unknown>): Category {
   return {
     key: String(data.key ?? ""),
     label: String(data.label ?? ""),
-    labelLanguage:
-      data.label_language === "fr" || data.label_language === "en" ? data.label_language : "nl",
     labelNl: nullableText(data.label_nl),
     labelFr: nullableText(data.label_fr),
     labelEn: nullableText(data.label_en),

@@ -157,3 +157,6 @@ frontend/playwright-report/
 frontend/e2e/.auth/
 
 # Generated CSS-backed migration lint configuration (pnpm lint).
+
+# Private disposable video export storage (never served as static assets).
+backend/private/

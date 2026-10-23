@@ -16,7 +16,6 @@ from fastapi import HTTPException
 from app.mcp.utils import as_value_error, validate_with_schema
 from app.schemas import ProductCreate, ProductUpdate
 from app.services import products_service
-from app.translations import DEFAULT_ORIGINAL_LANGUAGE, Language
 from app.utils import product_to_dict
 
 
@@ -27,11 +26,9 @@ async def create_product(
     event_id: str,
     price: float,
     category: str,
-    name_language: Language = DEFAULT_ORIGINAL_LANGUAGE,
     name_nl: str | None = None,
     name_fr: str | None = None,
     name_en: str | None = None,
-    description_language: Language | None = None,
     description_nl: str | None = None,
     description_fr: str | None = None,
     description_en: str | None = None,
@@ -46,11 +43,9 @@ async def create_product(
     body = validate_with_schema(
         ProductCreate,
         event_id=event_id,
-        name_language=name_language,
         name_nl=name_nl,
         name_fr=name_fr,
         name_en=name_en,
-        description_language=description_language,
         description_nl=description_nl,
         description_fr=description_fr,
         description_en=description_en,
@@ -92,11 +87,9 @@ async def update_product(
     actor: str,
     product_id: str,
     *,
-    name_language: Language | None = None,
     name_nl: str | None = None,
     name_fr: str | None = None,
     name_en: str | None = None,
-    description_language: Language | None = None,
     description_nl: str | None = None,
     description_fr: str | None = None,
     description_en: str | None = None,
@@ -132,18 +125,16 @@ async def update_product(
     tool once to preview (its result includes ``preview_token``), then again
     with that token to save; see ``app.services.product_changes.change_product``.
 
-    Name and description are per language: the original language
-    (``name_language``/``description_language``) must have text, an empty string
-    clears a translation, and clearing every description text drops its language.
+    Name and description are per language: the Dutch name must be kept, a
+    description needs Dutch text whenever it has any, and an empty string clears a
+    translation.
     """
     provided: dict[str, Any] = {
         k: v
         for k, v in {
-            "name_language": name_language,
             "name_nl": name_nl,
             "name_fr": name_fr,
             "name_en": name_en,
-            "description_language": description_language,
             "description_nl": description_nl,
             "description_fr": description_fr,
             "description_en": description_en,

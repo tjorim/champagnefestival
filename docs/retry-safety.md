@@ -43,7 +43,7 @@ deliberate decision, not an implicit idempotency guarantee.
 | Waitlist submission (`POST /api/waitlist`) | Public browser | **Client-generated resource ID**, same shape as contact submission above — one UUID per attempt, `ON CONFLICT DO NOTHING` on `id` so a retry after an ambiguous result never creates a second queue entry. |
 | Mark waitlist entry handled (`PUT /api/waitlist/{id}/handled`) | Admin browser | **Natural-key upsert.** Same shape as marking a contact message handled — the first call records `handled_at`, repeats preserve it. |
 | Delete a waitlist entry (`DELETE /api/waitlist/{id}`) | Admin browser | **Natural resource key, convergent state only.** Repeating reaches the same absent state; a retry after the entry is already gone 404s rather than erroring. |
-| Replace a volunteer's own meal quantities (`PUT /api/me/volunteer/poll-selections`) | Volunteer browser (self-service) | **Convergent replace, safe to retry.** The write deletes then re-inserts only rows keyed by the caller's own `volunteer_id`, so repeating the same body after an ambiguous result always lands on the identical selection set — it can never touch another volunteer's picks or duplicate a selection (each option appears once with an absolute quantity, so a repeat never adds up), the same full-list-replace pattern as `replace_help_periods` and registration `allocations` (see below). |
+| Replace a volunteer's own answer to one poll question (`PUT /api/me/volunteer/poll/questions/{id}`) and dietary note (`PUT /api/me/volunteer/poll/note`) | Volunteer browser (self-service) | **Convergent replace, safe to retry.** Each write replaces only rows keyed by the caller's own `volunteer_id` and that one question (the meal picks of a meals question, or the single yes/no answer with an absolute `people` count), so repeating the same body after an ambiguous result always lands on the identical state — it can never touch another volunteer's answers or duplicate one (each option appears once with an absolute quantity, so a repeat never adds up). After the question closes a retry gets the 409 `poll_question_closed` instead of changing anything. The same full-replace pattern as `replace_help_periods` and registration `allocations` (see below). |
 | Claim by verified OIDC email (`POST /api/me/registrations/claim-verified-email`) | Signed-in browser | **Convergent, safe to blindly retry.** Every booking always collects an email regardless of sign-in state, so an unowned registration under an OIDC account's own `email_verified: true` claim is almost always the same person, not a separate identity to prove — but never linked without the caller explicitly confirming first (`GET /api/me/registrations/claimable` previews the match; nothing is written until the caller clicks confirm). Reuses the same existing-owner-protected `claim_unowned_registrations_for_email` the manual claim uses: a repeated call with the same email links nothing new once already claimed. No dedup needed. |
 | Admin assigns a registration to a volunteer (`POST /api/registrations/{id}/assign-volunteer`) | Admin browser | **Convergent, safe to blindly retry.** Same existing-owner-protected `claim_unowned_registrations_for_email`-style write, admin-triggered instead of self-service: 409s if the registration is already linked to anyone, no-ops on a repeated call once linked. The ownership check and the write itself happen under a `SELECT ... FOR UPDATE` lock on the registration row (`populate_existing=True` so the already-loaded router object is refreshed rather than read stale from the identity map) — closes a race where two concurrent assignments to different volunteers could both observe `user_id IS NULL` and the later commit would silently win; now exactly one of two concurrent callers gets 409. |
 | Visitor magic-link request (`POST /api/visitor-sessions/request`) | Public browser | **Not retry safe with the same requested email.** Same shape as the guest-access-token request above: a new request for the same email overwrites (not appends to) the one outstanding link — a deliberate replace, not append-only replay storage — and the response is generic regardless of match, so a caller cannot distinguish "already had a link" from "sent a new one." A deliberate repeat is harmless (the visitor just gets a fresh link and the old one stops working), but that is a product property of this specific write, not a general idempotency guarantee. |
@@ -352,13 +352,13 @@ this read does not change the write's retry safety or advertise a retry.
 ### Organization descriptions (#1191)
 
 The existing admin REST and MCP create/update operations now accept description
-texts and an original language. Retry decisions are unchanged: creates are **not
+texts (Dutch required). Retry decisions are unchanged: creates are **not
 retry safe** (server-generated IDs), and updates are **not retry safe** (no version
 precondition; replay may overwrite a newer edit). No automatic retry is added.
 Updates validate the merged description before changing any organization fields or
-writing an audit entry; an invalid original-language transition makes no change.
+writing an audit entry; an invalid description (a translation without Dutch text) makes no change.
 Clearing uses explicit nulls in REST, or empty strings for all populated texts and
-the original language in MCP. Tests cover partial updates, invalid transitions,
+the Dutch text in MCP. Tests cover partial updates, invalid transitions,
 and explicit clearing through both adapters.
 
 ## Shared emailed account login (#1192)
@@ -466,6 +466,11 @@ identity rate limit and service CPU, and may return a different draft. The clien
 never automatically retries; the user can explicitly request another draft.
 A process-wide single-flight limit rejects bursts instead of queuing them. Saving
 or submitting the resulting text retains the existing organization write contracts.
+The backend uses a five-second connection timeout and 90-second total deadline.
+Redirects, ambient proxies and automatic retries are disabled. An unavailable
+configured credential file or an engine authentication failure becomes a sanitized
+failure; it never triggers an anonymous retry. The key is sent only in the native
+JSON body to the configured private engine.
 See [API, configuration and limits](organization-description-translation.md).
 
 ### Event translations and categories (#1222)
@@ -509,8 +514,8 @@ the other's image.
 ### Translated content and product categories (#1222)
 
 FAQ items, announcements, composed messages, policies and products keep
-the write contracts documented for them above; the per-language text fields (an
-original `*_language` plus `_nl`/`_fr`/`_en`) change **what** is sent, not how a repeat
+the write contracts documented for them above; the per-language text fields
+(required Dutch plus optional `_fr`/`_en`) change **what** is sent, not how a repeat
 behaves. Every update validates the merged stored/requested text and treats an empty
 string as "clear this translation", so a repeated update with the same values
 converges. Creates keep their server-generated identities and stay **not retry safe**;
@@ -537,7 +542,8 @@ at-least-once, including across Message-ID changes. See [upgrade guidance](organ
 All writes require `require_admin` and create transactional audit entries with
 unchanged actor/request attribution on every execution. A PostgreSQL advisory
 transaction lock serialises signage writes. No REST or other shared surface
-advertises automatic retries; signage currently has no MCP/mobile write adapter.
+advertises automatic retries. The MCP tools listed below (2026-10-20) call the same service functions, so every
+row here applies to them unchanged; there is still no mobile write adapter.
 
 | Operation | Retry decision |
 | --- | --- |
@@ -553,6 +559,52 @@ replacement/reorder calls are deliberately last-writer-wins under the database
 lock, rather than safe for unattended replay. Audit rows participate in the same
 transaction as state changes, including failed reference/conflict rollbacks.
 
+### MCP parity for content, signage and the waitlist (2026-10-20)
+
+Admin MCP tools now cover the REST admin endpoints for announcements
+(`create_|update_|reorder_|delete_announcement`), the composer
+(`create_|update_|schedule_composed_message`), policies
+(`create_|update_|discard_|publish_policy_draft`), signage
+(`create_|update_|delete_signage_{channel,template,slide}`, `reorder_signage_slides`,
+`cancel_signage_video_export`) and the waitlist queue
+(`mark_waitlist_entry_handled`, `delete_waitlist_entry`). They call the same service
+functions as the REST routes, so each keeps the retry decision documented for its REST
+operation: no tool is advertised as retryable and none retries on its own. Differences
+worth knowing:
+
+- `update_signage_{channel,template,slide}` read the stored document, merge the provided
+  fields and save it as a whole, so the read-merge-write is **not** version-guarded:
+  a concurrent edit between the read and the write is overwritten (last writer wins).
+  Reconcile with the matching `get_` tool before repeating an uncertain update.
+- `update_announcement` and `update_composed_message` merge inside the service under the
+  same rules as REST; the `clear_*` flags send an explicit `null`, so repeating one converges.
+- `schedule_composed_message` shares the REST route's in-process rate limit
+  (`composer-schedule`, 10 per window per actor) and its row-lock plus outbox protection;
+  a repeat after success is rejected because the message is no longer a draft.
+- Signage image uploads and video-export creation, slide upload, submission and download
+  need file bytes and stay browser-only; `cancel_signage_video_export` converges on the
+  job being cancelled and is scoped to the job's creator, like the REST route.
+- The waitlist tools do not write audit entries, matching the REST routes.
+
+### Volunteer poll management (2026-10-20)
+
+Admin writes on the volunteer poll (REST `/api/poll-questions...` and `/api/poll-options...`, MCP
+`*_poll_question`, `*_poll_option`, `reorder_*`, `copy_poll_questions`) have no version precondition and no
+automatic retry.
+
+| Operation | Retry decision |
+| --- | --- |
+| `POST /api/poll-questions` (create) | **Not retry safe.** Server-generated ID and next `sort_order`; a repeat adds a second, identical question. Read the list before retrying. |
+| `PUT /api/poll-questions/{id}` (texts and `closes_at`) | Whole-value merge: repeating the same body converges; a concurrent edit between is overwritten (last writer wins). Closing is an absolute `closes_at` (or `null` to reopen): "close now" sends the current time, so a repeat re-closes at a later instant and the question is closed either way. |
+| `DELETE /api/poll-questions/{id}[?confirm_answers=true]` | **Natural resource key, convergent state only.** Repeating 404s once it is gone. Without confirmation an answered question is refused with 409 `poll_question_in_use`, and a closed one with 409 `poll_question_closed`, so a retry can never remove volunteers' answers that the first call did not name. |
+| `POST /api/poll-questions/reorder` | Complete ordered ID list assigned under a lock on the edition row: identical repeats converge, concurrent calls serialize (last writer wins). A stale list that misses a newly added question is rejected (400), not applied. |
+| `POST /api/poll-questions/copy` | **Convergent, safe to retry.** Questions whose kind and Dutch title already exist in the target are skipped, so a repeat creates nothing (an empty list is returned). Serialized with other writes by the same edition row lock. |
+| `POST /api/poll-options` (create) | **Not retry safe.** Server-generated ID and next `sort_order` within the question; a repeat adds a second, identical option. Read the list before retrying. |
+| `PUT /api/poll-options/{id}` | Whole-value merge: repeating the same body converges; a concurrent edit between is overwritten (last writer wins). `dietary_tags` replaces the list. |
+| `DELETE /api/poll-options/{id}[?confirm_selections=true]` | **Natural resource key, convergent state only.** Repeating 404s once it is gone. Without confirmation a picked option is refused with 409 `poll_option_in_use`, and a closed question refuses it with 409 `poll_question_closed`, so a retry can never remove picks that the first call did not name. |
+| `POST /api/poll-options/reorder` | Same as question reorder, scoped to one question's options. |
+| `PUT /api/poll-questions/orders/{volunteer_id}` (admin enters a volunteer's answers; MCP `set_volunteer_poll_order`) | **Convergent replace, safe to retry.** Same full-replace as the volunteer's own saves, keyed by the one volunteer under a row lock, so repeating the same body lands on the same picks, yes/no answers and note. It overwrites whatever the volunteer or another admin saved in between (last writer wins). A change to a closed question needs `confirm_closed: true`, so a retry cannot slip a change into a closed question without that explicit flag; each execution adds an audit entry naming the admin and the volunteer. |
+
 ### Signage template editor (#1263)
 
 The editor uses the existing signage writes without automatic retries. Creating a
@@ -563,3 +615,186 @@ existing template (`PUT /api/signage/templates/{id}`) replaces the document;
 repeating the same payload preserves its content but creates another audit entry
 and advances affected channel revisions. The editor disables writes while a
 request is pending. No write is advertised as automatically retryable.
+
+Layer drag/arrow ordering, row visibility/locking, direct layer additions and
+**Add missing placeholders** only change the local draft and its undo history.
+They make no API write until the existing explicit template save; reordering does
+not call the channel playlist reorder endpoint. The save and upload retry decisions
+above therefore also cover the revised layer panel (2026-10-19).
+
+### Channels and playlist editor (#1264)
+
+Channel and slide creation, replacement, deletion, reorder and uploads use the
+operations above with no automatic write retries or offline queue. Controls are
+disabled while requests are pending. After an uncertain response, reload and
+reconcile saved state before retrying. Reorder sends complete saved membership.
+
+`POST /api/signage/preview` is an authenticated, read-only projection of submitted
+channel and slide drafts at a timezone-aware instant. It uses the public playlist
+expansion and scheduling rules, allocates no persisted identities, writes no audit
+entries and never publishes changes. It returns `Cache-Control: no-store`.
+Repeating it is safe; the editor requests it explicitly without automatic retries.
+
+### Signage exports (#1265)
+
+Offline bundles and slide-image ZIPs read the public playlist and render/download
+files entirely in the browser. They make no server writes and do not publish editor
+drafts. There is no automatic retry; repeating the action is safe and creates a
+new snapshot/download, which may reflect newer published content.
+
+## Shared request field constraints (2026-10-17)
+
+Create and update request schemas reuse constrained value types without changing
+write retry strategies, defaults, or omission/null semantics. Table and room name
+updates now enforce the same 1–200 character limit as creation; invalid names fail
+request validation before a write. This does not introduce automatic retries or
+change the existing retry-safety decisions for those operations.
+
+### Private signage video exports (#1349)
+
+- Snapshot creation persists a creator-scoped `Idempotency-Key` and frozen
+  playlist under the signage transaction lock. Same channel/locale/key replays
+  the same job; a changed selection conflicts. Tombstones never allocate new
+  worker jobs. No browser write is automatically retried; after uncertainty,
+  inspect the export list. The mounted UI retains its key for another attempt.
+- Preparations have a fixed 45-minute creation-based deadline. Expired
+  preparations are excluded from admission immediately, reject upload/submit,
+  and are cancelled/cleaned automatically. Retries never renew that deadline;
+  submitting before it passes preserves the existing 24-hour artifact lifecycle.
+- PNG `PUT` slots accept the same byte hash while preparing and reject changed
+  pixels or a closed job. The immutable index determines order and the recorded
+  playlist determines durations. Files fsync before upload metadata commits;
+  resending the same bytes repairs an interrupted file/metadata commit without
+  another slot. All slots must be committed before submit is accepted.
+- Submit persists the payload digest/state once under a row lock. Repeated
+  submit (including after completion/expiry) returns the same job and never
+  creates another encode. The background dispatcher alone retries worker
+  submission with its persisted app-job ID/digest. Lost acknowledgements and
+  restarts resolve to the same worker ID; 409 admission-in-progress/temporary
+  failures back off. Malformed worker response shapes also commit backoff and
+  yield to other jobs instead of rolling back the scheduling update. Explicit
+  remote rejection fails the job. There is no local
+  fallback after an uncertain remote request.
+- Worker ID commits before result use. App bytes are downloaded with finite
+  size/time limits and a verified hash, then readiness commits; only a later
+  pass ACKs worker outputs. Polling, download and ACK retries cannot duplicate
+  readiness or publish drafts/content. Artifact expiry/missing files give a
+  recoverable expired job, never an automatic fresh encode. After 24 hours only
+  bodyless uncertain-submission lookup is allowed, stopping before the worker's
+  seven-day tombstones can disappear. App identity tombstones are retained.
+- Local cleanup has its own elected batch loop, independent of remote outage
+  backoff. A durable `local_cleaned` flag and row locks keep failed cleanup
+  retryable without racing an in-flight capture or artifact download.
+- Cancellation is a monotonic flag; repeating it is harmless, including on
+  terminal jobs. It revokes downloads and queues remote cancel/ACK. Channel
+  deletion nulls the job FK, giving the same denial/cleanup behavior. Role and
+  creator checks run on every request. A revoked admin's job still expires.
+- Snapshot/upload/submit/cancel retry behavior, restart/lost-ACK recovery,
+  reconciler contention, private download, expiry, deletion and revoked access
+  are exercised in `backend/tests/test_signage_video.py`; browser capture and
+  rediscovery are in `frontend/e2e/signage-video.authenticated.spec.ts`.
+
+### Signage editor dialogs (2026-10-19)
+
+Channel, slide and template create/edit dialogs retain the existing endpoint and
+retry decisions above. Each Save makes one POST (new) or PUT (existing), with
+no automatic retry; pending saves block dismissal and additional submission.
+Cancel, Escape and backdrop dismissal make no write request and ask before
+discarding changed fields. Artwork uploads remain immediate, separate writes;
+cancelling an editor does not remove an already uploaded asset. Browser coverage
+checks create/edit requests, closing after save and discarding unsaved edits.
+
+### Announcement and composer editor dialogs (2026-10-19)
+
+The announcement and composer dialogs keep the POST/PUT retry decisions above:
+creates and updates have no idempotency key and are never retried automatically.
+Save disables submission, field editing and dismissal until the request completes.
+A failure keeps the draft and a translated error in the dialog; a successful
+response closes it and refreshes the list. Cancel, Escape, close and backdrop
+dismissal make no write request and ask before discarding dirty fields. The
+editor snapshots its target and initial values, so a list refetch cannot silently
+change them. Publishing, reordering, deletion and confirmed composer scheduling
+retain their existing endpoint semantics. Targeted tests cover correct create
+and update requests, overlapping-submit prevention, pending dismissal, failed
+saves without retries and draft preservation during refetch. Browser tests cover
+guarded dismissal, focus return, translated fields and desktop/mobile layouts.
+
+### Optional admin volunteer details (2026-10-19)
+
+`POST /api/volunteers` (including MCP `create_volunteer`) now permits omitted/null
+identity numbers and omitted/empty help periods, matching the People volunteer
+role flow. It still creates a new person with a generated ID and audit entry, so
+creates remain non-optimistic and must not be automatically retried. `PUT` and MCP
+updates retain their partial semantics: omitted identity fields are preserved;
+explicit null/blank identity values clear them (MCP uses blank strings to clear).
+Omitted/null periods are preserved; `help_periods: []` explicitly removes all
+periods. The full-list replacement converges sequentially, but lacks a version
+precondition and writes an audit entry; client retry remains disabled and callers
+must reconcile after uncertain responses. Clearing periods does not retire the
+volunteer role or erase its role history. REST/MCP regressions cover adding, preserving
+and clearing optional details. Self-service identity contracts are unchanged.
+
+### Shared shadcn controls (2026-10-19, PR #1356)
+
+Sidebar navigation, toggle-group filters, loading skeletons, empty-state layout
+and pagination change presentation, local selection and read queries. Their
+migration adds no API write or automatic retry. Existing empty-state actions
+keep their domain handlers, and all create/update/delete operations keep their
+existing pending guards and retry decisions.
+
+
+### Additional volunteer poll kinds (#1360, 2026-10-20)
+
+The existing question/option create, update, reorder, copy and delete decisions above also apply to
+single choice, free text and rating. Creating a question or option still allocates an ID and is not
+retry-safe; the UI does not automatically retry any poll write.
+
+Volunteer `PUT /api/me/volunteer/poll/questions/{id}` replaces one scalar value (`option_id`, `text`,
+or `rating`) under the same Person row lock. Explicit null clears; whitespace-only text also clears.
+Repeating the same request converges without duplicate answers (volunteer/question primary keys), and a
+closed question rejects the write. Admin `PUT /api/poll-questions/orders/{volunteer_id}` and MCP
+`set_volunteer_poll_order` fully replace `choices`, `texts`, and `ratings` alongside the existing lists;
+omitted lists clear those answers. Repeating converges, last writer wins, each execution adds an audit
+entry, and changing a closed question requires `confirm_closed`. Single-choice option deletion uses the
+same in-use/closed guards and confirmation as meals. Lifecycle tests cover repeated writes, clearing,
+closed-question correction and wrong-question options; migration tests cover uniqueness and constraints.
+
+### Visitor order questions (2026-10-20)
+
+- `PUT /api/events/{event_id}/order-questions` is a **convergent full configuration replace** under the event
+  row lock shared with checkout. The browser creates question/option UUIDs once in its draft and retains them
+  on failure, so replaying the same body updates the same rows rather than creating duplicates. Array order is
+  absolute. Omitted unused definitions are deleted; omitted used definitions are deactivated, and used wording,
+  kinds and options cannot change. Each execution records an audit entry and invalidates public rendering.
+  Concurrent edits are last writer wins; there is no version precondition or automatic retry. Reload before
+  replacing another administrator's changes. Tests repeat configuration and verify stable IDs and retained answers.
+- Public `POST /api/registrations` and admin/MCP registration creation retain their existing **not retry-safe**
+  decision. Optional `order_answers` are validated and inserted atomically with the booking; they do not add
+  idempotency to order creation. After an ambiguous result, look up the order before submitting another one.
+- Admin `PUT /api/registrations/{id}` / MCP `update_registration` replaces `order_answers` only when a list is
+  provided; omitted/null keeps them, `[]` clears. Repeating the same list converges under the existing event/
+  registration locks and primary key `(registration_id, question_id)`. Concurrent corrections are last writer
+  wins and each execution is audited (answer counts only). There is no automatic retry. Tests cover replacement,
+  omission, clearing, inactive-question correction, event scope and typed constraints. Monetary and inventory
+  calculations do not use question answers.
+
+### Volunteer poll deletion notifications (#1361)
+
+REST and MCP question/option deletes accept `notify` (default `true`), independently
+of the required confirmation for existing answers. A confirmed delete snapshots one
+translated email per affected volunteer with an email address and enqueues it in the
+same transaction as deletion. The worker sends only after commit; SMTP failure leaves
+the deletion committed and retries through the durable outbox. `notify=false` and
+unanswered items enqueue nothing. Each snapshot contains the removed answer and labels,
+with the person's preferred language and Dutch content fallback. Snapshots have no
+foreign key to the deleted poll records.
+
+Deletes are not replayable successes: repeating a successful delete returns 404 and
+queues no further mail. Jobs use `poll-deletion:{resource_id}:{volunteer_id}` unique
+keys. Delivery is at-least-once: an ambiguous SMTP success or lost worker lease can
+result in another email, with the same Message-ID. Clients must not automatically
+retry the delete. Notification snapshots include the recipient and removed answer, so
+they are kept only while delivery can still be retried or inspected: housekeeping
+deletes each snapshot in the same transaction as its terminal (`delivered` or
+`failed`) outbox job once `OUTBOX_RETENTION_DAYS` has passed. Pending jobs keep
+their snapshot.

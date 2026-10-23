@@ -1,30 +1,27 @@
+import { orderAnswerText, questionText } from "@/utils/orderQuestions";
+import { AdminEmptyState } from "./AdminEmptyState";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Toggle } from "@/components/ui/toggle";
+import { AdminTablePagination } from "./AdminTablePagination";
 import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import {
   CheckIcon,
   CircleCheckIcon,
   ContactRoundIcon,
   DownloadIcon,
-  Ellipsis,
-  Euro,
+  EllipsisIcon,
+  EuroIcon,
   FileSpreadsheetIcon,
   LogInIcon,
   PlusIcon,
   QrCodeIcon,
   ShoppingCartIcon,
-  X,
+  XIcon,
 } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
 import { AdminDataTable } from "./AdminDataTable";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -437,8 +434,6 @@ export default function RegistrationList({
   const total = pageQuery.data?.total ?? 0;
   const effectivePageSize = pageQuery.data?.limit ?? pageSize;
   const totalPages = Math.max(1, Math.ceil(total / effectivePageSize));
-  const rangeFrom = total === 0 ? 0 : (page - 1) * effectivePageSize + 1;
-  const rangeTo = Math.min(page * effectivePageSize, total);
 
   // Gmail-style expansion offer: the whole visible page is selected, but the
   // filters match more than fits on one page, and the user hasn't already
@@ -766,7 +761,7 @@ export default function RegistrationList({
                       id={`reg-more-${reg.id}`}
                       aria-label={m.admin_more_actions_for({ name: reg.person.name })}
                     >
-                      <Ellipsis className="size-4" aria-hidden="true" />
+                      <EllipsisIcon className="size-4" aria-hidden="true" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {reg.status !== "cancelled" && (
@@ -774,7 +769,7 @@ export default function RegistrationList({
                           className="text-destructive"
                           onClick={() => onUpdateStatus(reg.id, "cancelled")}
                         >
-                          <X className="size-4" aria-hidden="true" />
+                          <XIcon className="size-4" aria-hidden="true" />
                           {m.admin_action_cancel()}
                         </DropdownMenuItem>
                       )}
@@ -783,7 +778,7 @@ export default function RegistrationList({
                           disabled={processingIds.has(reg.id)}
                           onClick={() => void handleRecordPayment(reg.id)}
                         >
-                          <Euro className="size-4" aria-hidden="true" />
+                          <EuroIcon className="size-4" aria-hidden="true" />
                           {m.admin_action_mark_paid()}
                         </DropdownMenuItem>
                       )}
@@ -926,6 +921,9 @@ export default function RegistrationList({
         [m.admin_payment_label()]: reg.paymentStatus,
         [m.admin_check_in_title()]: reg.checkedIn ? m.admin_value_yes() : m.admin_value_no(),
         [m.admin_created_at()]: reg.createdAt,
+        [m.order_questions_heading()]: (reg.orderAnswers ?? [])
+          .map((a) => `${questionText(a.question ?? {}, "title")}: ${orderAnswerText(a)}`)
+          .join("\n"),
       }));
       exportToCsv("registrations.csv", rows);
     } catch (err) {
@@ -1043,40 +1041,38 @@ export default function RegistrationList({
               <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
                 {m.admin_filter_edition_caption()}
               </span>
-              <ButtonGroup aria-label={m.admin_filter_edition_aria()}>
-                <Button
+              <div className="flex flex-wrap gap-1">
+                <ToggleGroup
+                  aria-label={m.admin_filter_edition_aria()}
+                  variant="outline"
                   size="sm"
-                  variant={editionFilter === "all" ? "default" : "outline"}
-                  aria-pressed={editionFilter === "all"}
-                  onClick={() => changeEditionFilter("all")}
+                  spacing={1}
+                  value={[editionFilter]}
+                  onValueChange={(values) => {
+                    const value = values[0];
+                    if (value === "all" || value === "festival" || value === "standalone")
+                      changeEditionFilter(value);
+                  }}
                 >
-                  {m.admin_filter_edition_all()} ({editionCounts.all})
-                </Button>
-                <Button
+                  <ToggleGroupItem value="all">
+                    {m.admin_filter_edition_all()} ({editionCounts.all})
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="festival">
+                    {m.admin_filter_edition_festivals()} ({editionCounts.festival})
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="standalone">
+                    {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
+                  </ToggleGroupItem>
+                </ToggleGroup>
+                <Toggle
+                  variant="outline"
                   size="sm"
-                  variant={editionFilter === "festival" ? "default" : "outline"}
-                  aria-pressed={editionFilter === "festival"}
-                  onClick={() => changeEditionFilter("festival")}
-                >
-                  {m.admin_filter_edition_festivals()} ({editionCounts.festival})
-                </Button>
-                <Button
-                  size="sm"
-                  variant={editionFilter === "standalone" ? "default" : "outline"}
-                  aria-pressed={editionFilter === "standalone"}
-                  onClick={() => changeEditionFilter("standalone")}
-                >
-                  {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
-                </Button>
-                <Button
-                  size="sm"
-                  variant={activeEditionOnly ? "default" : "outline"}
-                  aria-pressed={activeEditionOnly}
-                  onClick={toggleActiveEditionOnly}
+                  pressed={activeEditionOnly}
+                  onPressedChange={toggleActiveEditionOnly}
                 >
                   {m.admin_filter_active_edition()} ({editionCounts.active})
-                </Button>
-              </ButtonGroup>
+                </Toggle>
+              </div>
               {allocationOptions.length > 0 && (
                 <AdminSelect
                   size="sm"
@@ -1099,47 +1095,43 @@ export default function RegistrationList({
               <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
                 {m.admin_filter_date_caption()}
               </span>
-              <ButtonGroup aria-label={m.admin_filter_date_aria()}>
-                <Button
-                  size="sm"
-                  variant={dateFilter === "today" ? "default" : "outline"}
-                  aria-pressed={dateFilter === "today"}
-                  onClick={toggleDateFilter}
-                >
+              <ToggleGroup
+                aria-label={m.admin_filter_date_aria()}
+                variant="outline"
+                size="sm"
+                value={dateFilter === "today" ? ["today"] : []}
+                onValueChange={toggleDateFilter}
+              >
+                <ToggleGroupItem value="today">
                   {m.admin_filter_today()} ({todayCount})
-                </Button>
-              </ButtonGroup>
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
                 {m.admin_filter_status_caption()}
               </span>
-              <ButtonGroup aria-label={m.admin_filter_status_aria()}>
-                <Button
-                  size="sm"
-                  variant={filter === "all" ? "default" : "outline"}
-                  aria-pressed={filter === "all"}
-                  onClick={() => changeStatusFilter("all")}
-                >
+              <ToggleGroup
+                aria-label={m.admin_filter_status_aria()}
+                variant="outline"
+                size="sm"
+                value={[filter]}
+                onValueChange={(values) => {
+                  const value = values[0];
+                  if (value === "all" || value === "pending" || value === "confirmed")
+                    changeStatusFilter(value);
+                }}
+              >
+                <ToggleGroupItem value="all">
                   {m.admin_filter_all()} ({statusCounts.all})
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filter === "pending" ? "default" : "outline"}
-                  aria-pressed={filter === "pending"}
-                  onClick={() => changeStatusFilter("pending")}
-                >
+                </ToggleGroupItem>
+                <ToggleGroupItem value="pending">
                   {m.admin_filter_pending()} ({statusCounts.pending})
-                </Button>
-                <Button
-                  size="sm"
-                  variant={filter === "confirmed" ? "default" : "outline"}
-                  aria-pressed={filter === "confirmed"}
-                  onClick={() => changeStatusFilter("confirmed")}
-                >
+                </ToggleGroupItem>
+                <ToggleGroupItem value="confirmed">
                   {m.admin_filter_confirmed()} ({statusCounts.confirmed})
-                </Button>
-              </ButtonGroup>
+                </ToggleGroupItem>
+              </ToggleGroup>
             </div>
             <AdminInput
               size="sm"
@@ -1312,14 +1304,17 @@ export default function RegistrationList({
             <p className="text-destructive text-center py-6 mb-0">{m.admin_error_load_data()}</p>
           ) : table.getRowModel().rows.length === 0 ? (
             hasActiveRegistrationFilters ? (
-              <div className="text-subtle text-center py-6 px-4">
-                <p className="mb-2">{m.admin_no_registration_filter_matches()}</p>
-                <Button variant="outline" size="sm" onClick={handleClearRegistrationFilters}>
-                  {m.admin_content_clear_filters()}
-                </Button>
-              </div>
+              <AdminEmptyState
+                action={
+                  <Button variant="outline" size="sm" onClick={handleClearRegistrationFilters}>
+                    {m.admin_content_clear_filters()}
+                  </Button>
+                }
+              >
+                {m.admin_no_registration_filter_matches()}
+              </AdminEmptyState>
             ) : (
-              <p className="text-subtle text-center py-6 mb-0">{m.admin_no_registrations()}</p>
+              <AdminEmptyState>{m.admin_no_registrations()}</AdminEmptyState>
             )
           ) : (
             <div className="w-full">
@@ -1327,49 +1322,17 @@ export default function RegistrationList({
             </div>
           )}
           {!pageQuery.isLoading && !pageQuery.isError && total > 0 && (
-            <div className="flex flex-wrap items-center justify-between gap-2 p-2 border-t border-border">
-              <span className="text-muted-foreground text-sm">
-                {m.admin_registrations_page_summary({ from: rangeFrom, to: rangeTo, total })}
-              </span>
-              <div className="flex items-center gap-2">
-                <Select
-                  value={String(pageSize)}
-                  onValueChange={(value) => {
-                    if (value) changePageSize(Number(value));
-                  }}
-                >
-                  <SelectTrigger size="sm" aria-label={m.admin_registrations_page_size_aria()}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAGE_SIZE_OPTIONS.map((size) => (
-                      <SelectItem key={size} value={String(size)}>
-                        {size}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1 || pageQuery.isFetching}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  {m.admin_registrations_page_previous()}
-                </Button>
-                <span className="text-muted-foreground text-sm">
-                  {page} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages || pageQuery.isFetching}
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                >
-                  {m.admin_registrations_page_next()}
-                </Button>
-              </div>
-            </div>
+            <AdminTablePagination
+              total={total}
+              pageIndex={page - 1}
+              pageSize={effectivePageSize}
+              canPreviousPage={page > 1 && !pageQuery.isFetching}
+              canNextPage={page < totalPages && !pageQuery.isFetching}
+              onPreviousPage={() => setPage((p) => Math.max(1, p - 1))}
+              onNextPage={() => setPage((p) => Math.min(totalPages, p + 1))}
+              onPageSizeChange={changePageSize}
+              pageSizeOptions={PAGE_SIZE_OPTIONS}
+            />
           )}
         </CardContent>
       </Card>

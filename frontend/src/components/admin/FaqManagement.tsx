@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import { Button } from "@/components/ui/button";
 import {
   ChevronDownIcon,
@@ -12,9 +13,7 @@ import { Icon } from "@/components/Icon";
 import {
   EMPTY_LOCALIZED_TEXT,
   LocalizedInputs,
-  OriginalLanguageSelect,
-  hasOriginal,
-  type Language,
+  hasDutch,
   type LocalizedText,
 } from "@/components/admin/LocalizedFields";
 /**
@@ -24,10 +23,10 @@ import {
  * rather than wired through the central useAdminQueries/useAdminVenueActions
  * stack, since it's a single flat resource with no cross-entity dependencies.
  *
- * Each item has an original language whose question and answer are required;
- * the other languages are optional translations. A language is shown to visitors
- * only when both its question and answer are filled, otherwise they see the
- * original (same rule as event titles).
+ * Each item needs its Dutch question and answer; the other languages are
+ * optional translations. A language is shown to visitors only when both its
+ * question and answer are filled, otherwise they see Dutch (same rule as event
+ * titles).
  */
 
 import { useCallback, useMemo, useState } from "react";
@@ -64,13 +63,11 @@ interface FaqManagementProps {
 }
 
 interface FaqFormState {
-  textLanguage: Language;
   question: LocalizedText;
   answer: LocalizedText;
 }
 
 const emptyForm: FaqFormState = {
-  textLanguage: "nl",
   question: EMPTY_LOCALIZED_TEXT,
   answer: EMPTY_LOCALIZED_TEXT,
 };
@@ -81,7 +78,6 @@ const columnHelper = createAppColumnHelper<FaqItem>();
 function faqPayload(form: FaqFormState) {
   const text = (value: string) => value.trim() || null;
   return {
-    text_language: form.textLanguage,
     question_nl: text(form.question.nl),
     question_fr: text(form.question.fr),
     question_en: text(form.question.en),
@@ -93,21 +89,14 @@ function faqPayload(form: FaqFormState) {
 
 function toForm(item: FaqItem): FaqFormState {
   return {
-    textLanguage: item.textLanguage,
     question: { nl: item.questionNl ?? "", fr: item.questionFr ?? "", en: item.questionEn ?? "" },
     answer: { nl: item.answerNl ?? "", fr: item.answerFr ?? "", en: item.answerEn ?? "" },
   };
 }
 
-/** The item's text in its original language, for the list. */
-function originalText(item: FaqItem) {
-  const byLanguage = {
-    nl: [item.questionNl, item.answerNl],
-    fr: [item.questionFr, item.answerFr],
-    en: [item.questionEn, item.answerEn],
-  } as const;
-  const [question, answer] = byLanguage[item.textLanguage];
-  return { question: question ?? "", answer: answer ?? "" };
+/** The item's Dutch text, for the list. */
+function dutchText(item: FaqItem) {
+  return { question: item.questionNl ?? "", answer: item.answerNl ?? "" };
 }
 
 export default function FaqManagement({ authHeaders }: FaqManagementProps) {
@@ -183,11 +172,11 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
   }, []);
 
   const handleSave = useCallback(async () => {
-    if (!hasOriginal(form.textLanguage, form.question)) {
+    if (!hasDutch(form.question)) {
       setError(m.admin_faq_question_required());
       return;
     }
-    if (!hasOriginal(form.textLanguage, form.answer)) {
+    if (!hasDutch(form.answer)) {
       setError(m.admin_faq_answer_required());
       return;
     }
@@ -313,7 +302,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
           enableSorting: false,
           cell: ({ row }) => {
             const item = row.original;
-            const original = originalText(item);
+            const original = dutchText(item);
             return (
               <>
                 <div className="font-semibold">
@@ -407,7 +396,7 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               </Spinner>
             </div>
           ) : sortedItems.length === 0 ? (
-            <p className="text-subtle text-center py-6 mb-0">{m.admin_no_faq_items()}</p>
+            <AdminEmptyState>{m.admin_no_faq_items()}</AdminEmptyState>
           ) : (
             <div className="w-full">
               <Table>
@@ -457,12 +446,6 @@ export default function FaqManagement({ authHeaders }: FaqManagementProps) {
               </Alert>
             )}
 
-            <OriginalLanguageSelect
-              controlId="faq-text-language"
-              label={m.admin_faq_original_language()}
-              value={form.textLanguage}
-              onChange={(textLanguage) => setForm((previous) => ({ ...previous, textLanguage }))}
-            />
             <p className="text-sm text-subtle mb-4">{m.admin_faq_text_help()}</p>
             <LocalizedInputs
               idPrefix="faq-question"

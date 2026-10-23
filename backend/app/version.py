@@ -24,7 +24,7 @@ def _read_app_version() -> str:
     for directory in Path(__file__).resolve().parents:
         candidate = directory / "VERSION"
         if candidate.is_file():
-            return candidate.read_text().strip()
+            return candidate.read_text(encoding="utf-8").strip()
     return "unknown"
 
 

@@ -94,3 +94,22 @@ navigation/timeouts passed on a serial rerun. The remaining legacy people-table
 test was updated for the required mobile cards and passes, together with all
 three new authenticated people-screen flows (six cases including setup and the
 shared-table test). Production build passes. No backend code changed.
+
+### Optional admin volunteer details (2026-10-19)
+
+The dedicated Add volunteer dialog and REST/MCP create operations accept a name
+alone, matching Add person with the volunteer role. NRN, eID document number and
+help periods can be added later. The form starts with no period rows; explicitly
+added rows still require a first help day and a valid date range, and the final row
+can be removed. Editing a volunteer created through People no longer forces
+missing identity or help-period data. Empty identity fields are stored as null;
+replacing help periods with an empty list clears them without retiring the role
+or changing its history. The role starts today when no period supplies a start
+date. Existing identity uniqueness and separate self-service identity checks remain.
+The insurance CSV contains one row per recorded help period; volunteers without
+periods retain a row with blank identity/date fields rather than invented dates.
+
+Validation: 133 targeted backend tests and all 1,190 frontend unit tests pass,
+along with lint, formatting, type checks and the production build. Authenticated
+browser checks cover both creation paths and adding/removing periods at 1366px
+and 390px; the existing Members, Volunteers and People filter/edit flows also pass.

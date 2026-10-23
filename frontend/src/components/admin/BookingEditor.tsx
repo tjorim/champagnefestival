@@ -1,3 +1,5 @@
+import { OrderAnswerInputs } from "@/components/OrderAnswers";
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminField,
   AdminLabel,
@@ -103,6 +105,7 @@ export default function BookingEditor({
       quantities: purchased,
       allocations: registration.allocations ?? ([] as TableAllocation[]),
       notes: registration.notes,
+      orderAnswers: registration.orderAnswers ?? [],
       status: registration.status,
     },
     onSubmit: async ({ value }) => {
@@ -113,6 +116,7 @@ export default function BookingEditor({
           quantities: value.quantities,
           allocations: value.allocations,
           notes: value.notes,
+          orderAnswers: value.orderAnswers,
           status: value.status,
         });
       } finally {
@@ -120,6 +124,7 @@ export default function BookingEditor({
       }
     },
   });
+  const orderAnswers = useSelector(form.atom, (s) => s.values.orderAnswers);
   const guestCount = useSelector(form.atom, (s) => s.values.guestCount);
   const quantities = useSelector(form.atom, (s) => s.values.quantities);
   const allocations = useSelector(form.atom, (s) => s.values.allocations);
@@ -311,6 +316,13 @@ export default function BookingEditor({
         </AdminField>
       </div>
 
+      <OrderAnswerInputs
+        admin
+        questions={registration.event?.orderQuestions ?? []}
+        answers={orderAnswers}
+        onChange={(answers) => form.setFieldValue("orderAnswers", answers)}
+        disabled={pending}
+      />
       <fieldset className="mt-4">
         <legend className="text-base">{m.admin_action_assign_table()}</legend>
         <p className="text-sm">
@@ -411,7 +423,7 @@ export default function BookingEditor({
               </Alert>
             )}
             {ledgerQuery.data && ledgerQuery.data.length === 0 && (
-              <p className="text-sm text-subtle">{m.admin_payment_history_empty()}</p>
+              <AdminEmptyState>{m.admin_payment_history_empty()}</AdminEmptyState>
             )}
             {ledgerQuery.data && ledgerQuery.data.length > 0 && (
               <PresentationList flush className="mb-4">

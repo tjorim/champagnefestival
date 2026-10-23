@@ -468,8 +468,6 @@ export async function fetchOrganizations(
     ? payload.map((organization: Record<string, unknown>) => ({
         id: Number(organization.id),
         name: String(organization.name ?? ""),
-        description_language:
-          (organization.description_language as Organization["description_language"]) ?? null,
         description_nl: (organization.description_nl as Organization["description_nl"]) ?? null,
         description_fr: (organization.description_fr as Organization["description_fr"]) ?? null,
         description_en: (organization.description_en as Organization["description_en"]) ?? null,
@@ -613,17 +611,6 @@ export async function downloadRegistrationsCsv(
     { headers: authHeaders() },
     m.admin_error_load_data(),
     "guest-list.csv",
-  );
-}
-
-export async function downloadVolunteersCsv(
-  authHeaders: () => Record<string, string>,
-): Promise<void> {
-  await downloadFileOrThrow(
-    "/api/volunteers/export",
-    { headers: authHeaders() },
-    m.admin_error_load_data(),
-    "volunteers-insurance-list.csv",
   );
 }
 

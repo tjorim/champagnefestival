@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AreaIcon } from "@/components/AreaIcon";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
   Dialog,
   DialogBody,
@@ -145,36 +144,38 @@ function PlanViewer({
   return (
     <div className="flex flex-col gap-3">
       {days.length > 1 && (
-        <ButtonGroup aria-label={m.floor_plan_day()}>
+        <ToggleGroup
+          variant="outline"
+          size="sm"
+          aria-label={m.floor_plan_day()}
+          value={[day.event_id]}
+          onValueChange={(values) => {
+            if (values[0]) selectDay(values[0]);
+          }}
+        >
           {days.map((candidate) => (
-            <Button
-              key={candidate.event_id}
-              type="button"
-              size="sm"
-              variant={candidate.event_id === day.event_id ? "default" : "outline"}
-              aria-pressed={candidate.event_id === day.event_id}
-              onClick={() => selectDay(candidate.event_id)}
-            >
+            <ToggleGroupItem key={candidate.event_id} value={candidate.event_id}>
               {formatStandDay(candidate.date, locale)}
-            </Button>
+            </ToggleGroupItem>
           ))}
-        </ButtonGroup>
+        </ToggleGroup>
       )}
       {day.rooms.length > 1 && (
-        <ButtonGroup aria-label={m.floor_plan_room()}>
+        <ToggleGroup
+          variant="outline"
+          size="sm"
+          aria-label={m.floor_plan_room()}
+          value={[room.id]}
+          onValueChange={(values) => {
+            if (values[0]) setSelection({ eventId: day.event_id, roomId: values[0] });
+          }}
+        >
           {day.rooms.map((candidate) => (
-            <Button
-              key={candidate.id}
-              type="button"
-              size="sm"
-              variant={candidate.id === room.id ? "default" : "outline"}
-              aria-pressed={candidate.id === room.id}
-              onClick={() => setSelection({ eventId: day.event_id, roomId: candidate.id })}
-            >
+            <ToggleGroupItem key={candidate.id} value={candidate.id}>
               {candidate.name}
-            </Button>
+            </ToggleGroupItem>
           ))}
-        </ButtonGroup>
+        </ToggleGroup>
       )}
       <RoomCanvas room={room} organizationId={target.organizationId} />
       <p role="status" className="m-0 text-sm font-medium">

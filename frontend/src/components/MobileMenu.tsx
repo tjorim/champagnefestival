@@ -1,6 +1,6 @@
 import { Dialog } from "@base-ui/react/dialog";
 import { Link } from "@tanstack/react-router";
-import { Menu, ShieldCheck, X } from "lucide-react";
+import { MenuIcon, ShieldCheckIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { useNavigationItems } from "@/hooks/useNavigationItems";
 import { cn } from "@/lib/utils";
@@ -27,7 +27,7 @@ const MobileMenu = ({ triggerClassName }: MobileMenuProps) => {
         className={cn("icon-link site-menu-button gap-1.5", triggerClassName)}
         aria-label={m.admin_toggle_navigation()}
       >
-        <Menu aria-hidden="true" className="size-5" />
+        <MenuIcon aria-hidden="true" className="size-5" />
       </Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-dialog bg-foreground/50 transition-opacity duration-300 data-ending-style:opacity-0 data-starting-style:opacity-0 motion-reduce:transition-none" />
@@ -37,7 +37,7 @@ const MobileMenu = ({ triggerClassName }: MobileMenuProps) => {
               <BrandWordmark />
             </Dialog.Title>
             <Dialog.Close className="icon-link text-inherit" aria-label={m.close()}>
-              <X aria-hidden="true" />
+              <XIcon aria-hidden="true" />
             </Dialog.Close>
           </div>
           <nav aria-label={m.admin_toggle_navigation()} className="flex flex-col gap-1">
@@ -57,7 +57,7 @@ const MobileMenu = ({ triggerClassName }: MobileMenuProps) => {
             className="site-mobile-link inline-flex items-center gap-2 text-sm"
             onClick={close}
           >
-            <ShieldCheck aria-hidden="true" className="size-4" />
+            <ShieldCheckIcon aria-hidden="true" className="size-4" />
             {m.admin_title()}
           </Link>
         </Dialog.Popup>

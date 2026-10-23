@@ -253,7 +253,7 @@ def test_settings_reject_invalid_rate_limit_default():
 
 def test_settings_builds_database_url_from_parts(tmp_path):
     password_file = tmp_path / "db_password"
-    password_file.write_text("s3cr3t/p@ss\n")
+    password_file.write_text("s3cr3t/p@ss\n", encoding="utf-8")
 
     settings = Settings(
         database_url="",
@@ -271,7 +271,7 @@ def test_settings_builds_database_url_from_parts(tmp_path):
 
 def test_settings_database_url_override_wins_over_db_parts(tmp_path):
     password_file = tmp_path / "db_password"
-    password_file.write_text("unused")
+    password_file.write_text("unused", encoding="utf-8")
 
     settings = Settings(
         database_url="postgresql+asyncpg://explicit:pw@localhost:5432/explicit_db",

@@ -20,6 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
+from app.dialect_functions import assign_positions
 from app.models import FaqItem
 from app.schemas import FaqItemCreate, FaqItemUpdate, FaqTextFields
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
@@ -27,7 +28,6 @@ from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import faq_item_to_dict, make_id
 
 TEXT_FIELDS = (
-    "text_language",
     "question_nl",
     "question_fr",
     "question_en",
@@ -65,7 +65,7 @@ async def create_faq_item(db: AsyncSession, *, actor: str, body: FaqItemCreate, 
             resource_type="faq_item",
             resource_id=f.id,
             request_id=request_id,
-            details={"question": f.localized(f.text_language)[0], "text_language": f.text_language},
+            details={"question": f.question_nl},
         )
         try:
             await notify_render_cache_invalidate(db)
@@ -89,7 +89,7 @@ async def update_faq_item(
     texts = {field: getattr(f, field) for field in TEXT_FIELDS}
     texts.update(body.model_dump(include=set(TEXT_FIELDS), exclude_unset=True))
     try:
-        validated = FaqTextFields.model_validate(texts).validate_original()
+        validated = FaqTextFields.model_validate(texts).validate_dutch()
     except ValueError as exc:
         raise ValidationFailedError(str(exc)) from exc
     for field in TEXT_FIELDS:
@@ -155,8 +155,7 @@ async def reorder_faq_items(
             "ordered_ids must name every existing FAQ item exactly once; the list is stale — reload and retry."
         )
 
-    for index, item_id in enumerate(ordered_ids):
-        items[item_id].sort_order = index
+    await assign_positions(db, items, ordered_ids)
 
     await write_audit_entry(
         db,

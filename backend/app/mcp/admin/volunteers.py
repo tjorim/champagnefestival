@@ -21,10 +21,10 @@ async def create_volunteer(
     actor: str,
     *,
     name: str,
-    national_register_number: str,
-    eid_document_number: str,
+    national_register_number: str | None = None,
+    eid_document_number: str | None = None,
     address: str = "",
-    help_periods: list[dict],
+    help_periods: list[dict] | None = None,
 ) -> dict:
     body = validate_with_schema(
         VolunteerCreate,
@@ -32,7 +32,7 @@ async def create_volunteer(
         address=address,
         national_register_number=national_register_number,
         eid_document_number=eid_document_number,
-        help_periods=help_periods,
+        help_periods=help_periods if help_periods is not None else [],
     )
     async with session_factory() as db:
         try:

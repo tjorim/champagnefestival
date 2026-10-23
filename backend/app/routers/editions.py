@@ -13,7 +13,7 @@ import logging
 from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import Numeric, func, select, type_coerce
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import get_actor_id, require_admin
@@ -48,7 +48,7 @@ async def get_active_edition(
     """Return the current or next upcoming active edition, optionally filtered by type.
 
     `locale` resolves each event's `title`/`description` for that language, falling
-    back to the event's original language; every stored language is returned too.
+    back to Dutch; every stored language is returned too.
 
     Only the edition's *active* events are considered: an inactive (draft/cancelled)
     event neither keeps an otherwise-finished edition classified as upcoming, nor
@@ -167,13 +167,17 @@ async def list_edition_attendance_stats(
             # partly-paid booking's shortfall and an overpaid one's excess
             # can't both cancel out in a single group SUM), so each is
             # clamped with GREATEST(..., 0) before being summed.
-            func.coalesce(
-                func.sum(func.greatest(func.coalesce(Registration.amount_due, 0) - Registration.amount_paid, 0)),
-                0,
+            type_coerce(
+                func.coalesce(
+                    func.sum(func.greatest(func.coalesce(Registration.amount_due, 0) - Registration.amount_paid, 0)), 0
+                ),
+                Numeric(10, 2),
             ).label("total_outstanding"),
-            func.coalesce(
-                func.sum(func.greatest(Registration.amount_paid - func.coalesce(Registration.amount_due, 0), 0)),
-                0,
+            type_coerce(
+                func.coalesce(
+                    func.sum(func.greatest(Registration.amount_paid - func.coalesce(Registration.amount_due, 0), 0)), 0
+                ),
+                Numeric(10, 2),
             ).label("total_refund_liability"),
         )
         .join(Event, Event.id == Registration.event_id)

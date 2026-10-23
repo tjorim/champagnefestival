@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import type { QueryClient } from "@tanstack/react-query";
 import type { RouteComponent } from "@tanstack/react-router";
 import {
@@ -10,9 +11,14 @@ import {
 
 import { validateAdminSearch } from "./utils/adminTableState";
 
-import { LiveUpdatesProvider } from "./state/LiveUpdatesProvider";
 import { getStoredAccessToken } from "./config/oidc";
 import { venuePlanQueryOptions } from "./utils/venuePlanApi";
+
+// The live stream patches the admin collections, which pull in TanStack DB:
+// load it with the admin routes, not on every public visit.
+const LiveUpdatesProvider = lazy(() =>
+  import("./state/LiveUpdatesProvider").then((module) => ({ default: module.LiveUpdatesProvider })),
+);
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -79,7 +85,9 @@ export function createAppRouter({
     id: "admin-layout",
     component: () => (
       <>
-        <LiveUpdatesProvider />
+        <Suspense fallback={null}>
+          <LiveUpdatesProvider />
+        </Suspense>
         <Outlet />
       </>
     ),

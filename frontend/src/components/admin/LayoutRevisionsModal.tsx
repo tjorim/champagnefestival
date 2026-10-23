@@ -1,3 +1,4 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import {
   AdminInput,
   AdminField,
@@ -392,7 +393,7 @@ export default function LayoutRevisionsModal({
               {loadError}
             </Alert>
           ) : revisions.length === 0 ? (
-            <p className="text-subtle text-sm">{m.admin_layout_revisions_empty()}</p>
+            <AdminEmptyState>{m.admin_layout_revisions_empty()}</AdminEmptyState>
           ) : (
             <PresentationList flush className="mb-4">
               {revisionOptions.map((revision) => (
@@ -478,9 +479,7 @@ export default function LayoutRevisionsModal({
               ) : compareFrom === compareTo ? null : diff &&
                 tableDiffRows.length === 0 &&
                 areaDiffRows.length === 0 ? (
-                <p className="text-subtle text-sm">
-                  {m.admin_layout_revisions_compare_no_changes()}
-                </p>
+                <AdminEmptyState>{m.admin_layout_revisions_compare_no_changes()}</AdminEmptyState>
               ) : (
                 diff && (
                   <>
@@ -522,9 +521,9 @@ export default function LayoutRevisionsModal({
                 preview && (
                   <>
                     {previewTableRows.length === 0 && previewAreaRows.length === 0 ? (
-                      <p className="text-subtle text-sm">
+                      <AdminEmptyState>
                         {m.admin_layout_revisions_restore_no_changes()}
-                      </p>
+                      </AdminEmptyState>
                     ) : (
                       <>
                         {previewTableRows.length > 0 && (

@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import { useRegistrationCountsQuery } from "@/hooks/useRegistrationListQuery";

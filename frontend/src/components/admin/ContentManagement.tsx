@@ -1,6 +1,7 @@
+import { AdminEmptyState } from "./AdminEmptyState";
 import OrganizationChangeReview from "@/components/admin/OrganizationChangeReview";
 import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { AdminInput } from "@/components/admin/AdminFields";
 import {
   ArchiveIcon,
@@ -499,19 +500,22 @@ export function ContentSection({
         </Button>
       </div>
       <div className="flex flex-wrap gap-2 items-center mb-2">
-        <ButtonGroup aria-label={m.admin_content_type_filter_aria()}>
+        <ToggleGroup
+          size="sm"
+          variant="outline"
+          value={[typeFilter]}
+          onValueChange={(values) => {
+            const value = values[0];
+            if (value) setTypeFilter(value as typeof typeFilter);
+          }}
+          aria-label={m.admin_content_type_filter_aria()}
+        >
           {(["all", "producer", "sponsor", "vendor"] as const).map((type) => (
-            <Button
-              size="sm"
-              key={type}
-              variant={typeFilter === type ? "default" : "outline"}
-              aria-pressed={typeFilter === type}
-              onClick={() => setTypeFilter(type)}
-            >
+            <ToggleGroupItem key={type} value={type}>
               {typeLabels[type]}
-            </Button>
+            </ToggleGroupItem>
           ))}
-        </ButtonGroup>
+        </ToggleGroup>
         <AdminInput
           size="sm"
           type="search"
@@ -555,12 +559,15 @@ export function ContentSection({
         {activeItems.map((item) => renderItemRow(item, false))}
       </PresentationList>
       {activeItems.length === 0 && archivedItems.length === 0 && (q || typeFilter !== "all") && (
-        <div className="text-center py-6 text-subtle">
-          <p className="mb-2 text-sm">{m.admin_content_no_results()}</p>
-          <Button variant="outline" size="sm" onClick={handleClearFilters}>
-            {m.admin_content_clear_filters()}
-          </Button>
-        </div>
+        <AdminEmptyState
+          action={
+            <Button variant="outline" size="sm" onClick={handleClearFilters}>
+              {m.admin_content_clear_filters()}
+            </Button>
+          }
+        >
+          {m.admin_content_no_results()}
+        </AdminEmptyState>
       )}
       {archivedItems.length > 0 && (
         <div className="mt-2">
@@ -710,19 +717,22 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
           <h2 className="mb-1 text-base font-semibold leading-tight text-primary">
             {m.admin_content_editions_section()}
           </h2>
-          <ButtonGroup aria-label={m.admin_content_edition_type_filter_aria()}>
+          <ToggleGroup
+            size="sm"
+            variant="outline"
+            value={[editionTypeFilter]}
+            onValueChange={(values) => {
+              const value = values[0];
+              if (value) setEditionTypeFilter(value as typeof editionTypeFilter);
+            }}
+            aria-label={m.admin_content_edition_type_filter_aria()}
+          >
             {(["all", "festival", "bourse", "capsule_exchange"] as const).map((type) => (
-              <Button
-                size="sm"
-                key={type}
-                variant={editionTypeFilter === type ? "default" : "outline"}
-                aria-pressed={editionTypeFilter === type}
-                onClick={() => setEditionTypeFilter(type)}
-              >
+              <ToggleGroupItem key={type} value={type}>
                 {editionTypeLabel(type)}
-              </Button>
+              </ToggleGroupItem>
             ))}
-          </ButtonGroup>
+          </ToggleGroup>
         </div>
         <Button size="sm" variant="outline-primary" onClick={() => setAddModalOpen(true)}>
           <Icon icon={PlusIcon} />
@@ -744,7 +754,7 @@ export function EditionsSection({ authHeaders, venues, onEditionMutated }: Editi
       {!editionsQuery.isPending &&
         !editionsQuery.isError &&
         (editionsQuery.data ?? []).length === 0 && (
-          <p className="text-subtle italic text-sm">{m.admin_content_no_editions()}</p>
+          <AdminEmptyState>{m.admin_content_no_editions()}</AdminEmptyState>
         )}
       {!editionsQuery.isPending && !editionsQuery.isError && (
         <div className="flex flex-col gap-4">

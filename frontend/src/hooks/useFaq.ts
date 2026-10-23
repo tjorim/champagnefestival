@@ -3,7 +3,7 @@
  * admin-editable /api/faq/active endpoint rather than hardcoded per-locale
  * translation strings. Each item is resolved server-side to the current
  * locale; an item that is not fully translated into this locale comes back in
- * its original language rather than being omitted.
+ * Dutch rather than being omitted.
  */
 
 import { useQuery } from "@tanstack/react-query";

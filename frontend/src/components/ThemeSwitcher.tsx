@@ -3,6 +3,7 @@ import {
   isVisualThemeVariant,
   type VisualThemeVariant,
 } from "@/config/visualThemes";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import "./ThemeSwitcher.css";
 import { m } from "@/paraglide/messages";
 
@@ -12,12 +13,12 @@ interface ThemeSwitcherProps {
 }
 
 /**
- * Preview-only toggle between the full visual designs. Styled by its own fixed-color
- * stylesheet (not the theme stylesheets) so it looks the same regardless of which design is active.
+ * Preview-only selector between the visual designs. Shared toggles use the active
+ * theme; the compact mobile select keeps its existing fixed preview styling.
  */
 const ThemeSwitcher = ({ variant, onChange }: ThemeSwitcherProps) => {
   return (
-    <div className="theme-switcher" role="group" aria-label={m.theme_switcher_group_label()}>
+    <div className="theme-switcher">
       <select
         className="theme-switcher__select"
         aria-label={m.theme_switcher_select_label()}
@@ -32,17 +33,22 @@ const ThemeSwitcher = ({ variant, onChange }: ThemeSwitcherProps) => {
           </option>
         ))}
       </select>
-      {VISUAL_THEMES.map((option) => (
-        <button
-          key={option.value}
-          className="theme-switcher__option"
-          type="button"
-          onClick={() => onChange(option.value)}
-          aria-pressed={option.value === variant}
-        >
-          {option.label}
-        </button>
-      ))}
+      <ToggleGroup
+        variant="outline"
+        size="sm"
+        className="hidden site-sm:flex"
+        aria-label={m.theme_switcher_group_label()}
+        value={[variant]}
+        onValueChange={(values) => {
+          if (isVisualThemeVariant(values[0])) onChange(values[0]);
+        }}
+      >
+        {VISUAL_THEMES.map((option) => (
+          <ToggleGroupItem key={option.value} value={option.value}>
+            {option.label}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
     </div>
   );
 };

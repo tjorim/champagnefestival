@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import CategoryManagement from "@/components/admin/CategoryManagement";
 import { server } from "@/mocks/server";
 import { setLocale } from "@/paraglide/runtime";
@@ -12,7 +12,6 @@ function category(key: string, nl: string, order: number) {
   return {
     key,
     label: nl,
-    label_language: "nl",
     label_nl: nl,
     label_fr: null,
     label_en: null,
@@ -58,7 +57,7 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     expect(screen.getByText("tasting")).toBeInTheDocument();
   });
 
-  it("creates a category with a key and a label in its original language", async () => {
+  it("creates a category with a key and a Dutch label", async () => {
     let sent: unknown;
     server.use(
       http.post(path(), async ({ request }) => {
@@ -78,7 +77,6 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     await waitFor(() => expect(sent).toBeDefined());
     expect(sent).toEqual({
       key: "workshop",
-      label_language: "nl",
       label_nl: "Workshop",
       label_fr: null,
       label_en: "Workshop!",
@@ -86,7 +84,7 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
     });
   });
 
-  it("rejects an invalid key and a missing original label before calling the API", async () => {
+  it("rejects an invalid key and a missing Dutch label before calling the API", async () => {
     const post = vi.fn();
     server.use(
       http.post(path(), () => {
@@ -104,7 +102,7 @@ describe.each<Kind>(["event", "product"])("CategoryManagement (%s)", (current) =
 
     fireEvent.change(screen.getByLabelText("Key"), { target: { value: "good-key" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
-    expect(await screen.findByText("Enter a label in its original language.")).toBeInTheDocument();
+    expect(await screen.findByText("Enter a label in Dutch.")).toBeInTheDocument();
     expect(post).not.toHaveBeenCalled();
   });
 

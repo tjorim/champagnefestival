@@ -52,7 +52,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 
 // Start the MSW Node server before all tests so the same handlers and seed
 // data used by the browser dev worker are also used in Vitest.
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
 
 // After each test:
 //  1. Remove any per-test handler overrides added via server.use(…).
@@ -64,22 +64,7 @@ afterEach(() => {
 
 afterAll(() => server.close());
 
-// Mock objects that are not available in jsdom
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => {},
-  }),
-});
-
-// Mock leaflet since it doesn't work well in jsdom
+// Mock Leaflet's map rendering in the test DOM
 vi.mock("leaflet", () => ({
   icon: vi.fn().mockReturnValue({}),
   latLng: vi.fn().mockReturnValue({}),

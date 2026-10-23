@@ -1,4 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render as renderBase, screen, within } from "@testing-library/react";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import type { ReactElement } from "react";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
 import AdminSidebar from "@/components/admin/AdminSidebar";
@@ -16,6 +18,7 @@ vi.mock("@/paraglide/messages", () => ({
     admin_content_tab: () => "Content",
     admin_content_organizations_section: () => "Organisations",
     admin_content_faq_section: () => "FAQ",
+    signage_channels_heading: () => "Screen channels",
     admin_announcements_section: () => "Announcements",
     admin_policies_section: () => "Legal Policies",
     admin_contact_messages_section: () => "Contact messages",
@@ -39,6 +42,10 @@ vi.mock("@/paraglide/messages", () => ({
   },
 }));
 
+function render(ui: ReactElement) {
+  return renderBase(<SidebarProvider>{ui}</SidebarProvider>);
+}
+
 const expandedGroups = new Set(["events", "content", "venue"]);
 
 function renderSidebar(setActiveKey = vi.fn(), canManageAdminSections = true) {
@@ -48,8 +55,6 @@ function renderSidebar(setActiveKey = vi.fn(), canManageAdminSections = true) {
       setActiveKey={setActiveKey}
       expandedGroups={expandedGroups}
       toggleGroup={vi.fn()}
-      sidebarOpen={false}
-      setSidebarOpen={vi.fn()}
       navRef={createRef<HTMLElement>()}
       handleNavKeyDown={vi.fn()}
       registrationCount={2}
@@ -85,6 +90,7 @@ describe("AdminSidebar", () => {
       "Product categories",
       "Content",
       "FAQ",
+      "Screen channels",
       "Announcements",
       "Legal Policies",
       "Contact details",
@@ -104,8 +110,6 @@ describe("AdminSidebar", () => {
         setActiveKey={vi.fn()}
         expandedGroups={new Set(["system"])}
         toggleGroup={vi.fn()}
-        sidebarOpen={false}
-        setSidebarOpen={vi.fn()}
         navRef={createRef<HTMLElement>()}
         handleNavKeyDown={vi.fn()}
         registrationCount={0}

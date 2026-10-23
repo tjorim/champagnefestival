@@ -30,11 +30,9 @@ from app.services.public_render_cache import notify_render_cache_invalidate
 from app.utils import event_to_summary_dict, get_or_404, make_id
 
 TEXT_FIELDS = (
-    "title_language",
     "title_nl",
     "title_fr",
     "title_en",
-    "description_language",
     "description_nl",
     "description_fr",
     "description_en",
@@ -178,7 +176,7 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
         resource_type="event",
         resource_id=event.id,
         request_id=request_id,
-        details={"title": event.title, "title_language": event.title_language, "edition_id": event.edition_id},
+        details={"title": event.title, "edition_id": event.edition_id},
     )
     await notify_render_cache_invalidate(db)
     await db.commit()
@@ -244,19 +242,11 @@ async def apply_event_update(
     # Validate the merged text before mutating: a partial update may change a single translation.
     texts = {field: getattr(event, field) for field in TEXT_FIELDS}
     texts.update(body.model_dump(include=set(TEXT_FIELDS), exclude_unset=True))
-    if not any(texts[f"description_{language}"] for language in ("nl", "fr", "en")) and (
-        "description_language" not in fields_set
-    ):
-        # Clearing every description text drops the language with it, so a caller
-        # that can only send texts (MCP) does not need to send an explicit null.
-        texts["description_language"] = None
     try:
-        validated = EventTextFields.model_validate(texts).validate_original()
+        validated = EventTextFields.model_validate(texts).validate_dutch()
     except ValueError as exc:
         raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, str(exc)) from exc
     text_fields_changed = set(TEXT_FIELDS) & fields_set
-    if validated.description_language != event.description_language:
-        text_fields_changed.add("description_language")
     for field in TEXT_FIELDS:
         setattr(event, field, getattr(validated, field))
 

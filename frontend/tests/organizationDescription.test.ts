@@ -6,18 +6,18 @@ describe("organization descriptions", () => {
     id: 1,
     name: "Maison",
     image: "",
-    description_language: "fr" as const,
+    description_nl: "Hallo",
     description_fr: "Bonjour",
     description_en: "Hello",
   };
-  it("uses the visitor language before the original", () => {
+  it("uses the visitor language before Dutch", () => {
     expect(organizationDescription(item, "en")).toBe("Hello");
     expect(organizationDescription(item, "fr")).toBe("Bonjour");
   });
-  it("falls back to the original, including for blank translations and unsupported locales", () => {
-    expect(organizationDescription(item, "nl")).toBe("Bonjour");
-    expect(organizationDescription({ ...item, description_en: " " }, "en")).toBe("Bonjour");
-    expect(organizationDescription(item, "de")).toBe("Bonjour");
+  it("falls back to Dutch, including for blank translations and unsupported locales", () => {
+    expect(organizationDescription(item, "nl")).toBe("Hallo");
+    expect(organizationDescription({ ...item, description_en: " " }, "en")).toBe("Hallo");
+    expect(organizationDescription(item, "de")).toBe("Hallo");
   });
   it("omits descriptions when absent", () => {
     expect(organizationDescription({ id: 2, name: "Empty", image: "" }, "en")).toBeNull();

@@ -37,3 +37,80 @@ for (const screen of ["Members", "Volunteers", "People"] as const) {
     await expect(filteredRow).toBeVisible();
   });
 }
+
+for (const width of [1366, 390]) {
+  test(`both volunteer creation paths accept missing identity and help periods at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 900 });
+    if (width < 768)
+      await page.getByRole("button", { name: "Toggle navigation", exact: true }).click();
+    await page.getByRole("button", { name: /^People(?:\s|\d|$)/ }).click();
+    const volunteers = page.getByRole("tab", { name: /^Volunteers\s/ });
+    await volunteers.click();
+    await page.getByRole("button", { name: "Add volunteer", exact: true }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(
+      dialog.getByText("Identity details and help periods are optional and can be added later."),
+    ).toBeVisible();
+    const name = `Name-only volunteer ${width}`;
+    await dialog.getByLabel(/^Name/).fill(name);
+    await expect(dialog.getByLabel("National register number")).not.toHaveAttribute("required", "");
+    await expect(dialog.getByLabel("eID document number")).not.toHaveAttribute("required", "");
+    await expect(dialog.getByLabel("First help day", { exact: false })).toHaveCount(0);
+    const created = page.waitForRequest(
+      (request) => request.url().endsWith("/api/volunteers") && request.method() === "POST",
+    );
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    expect((await created).postDataJSON()).toMatchObject({
+      name,
+      national_register_number: null,
+      eid_document_number: null,
+      help_periods: [],
+    });
+    await expect(dialog).toHaveCount(0);
+    const search = page.getByRole("textbox", { name: "Search by name, email, phone…" });
+    await search.fill(name);
+    async function editVolunteer(label: string) {
+      await page
+        .getByRole("button", {
+          name: `Edit volunteer: ${label}`,
+          exact: true,
+        })
+        .click();
+      await expect(dialog).toBeVisible();
+    }
+    await editVolunteer(name);
+    await dialog.getByRole("button", { name: "Add help period", exact: true }).click();
+    await dialog.getByLabel("First help day", { exact: false }).fill("2026-10-19");
+    const addPeriod = page.waitForRequest(
+      (request) => request.url().includes("/api/volunteers/") && request.method() === "PUT",
+    );
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    expect((await addPeriod).postDataJSON().help_periods).toEqual([
+      { first_help_day: "2026-10-19", last_help_day: null, notes: "" },
+    ]);
+    await expect(dialog).toHaveCount(0);
+    await editVolunteer(name);
+    await dialog.getByRole("button", { name: "Remove period", exact: true }).click();
+    const clearPeriods = page.waitForRequest(
+      (request) => request.url().includes("/api/volunteers/") && request.method() === "PUT",
+    );
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    expect((await clearPeriods).postDataJSON().help_periods).toEqual([]);
+    await expect(dialog).toHaveCount(0);
+    await page.getByRole("tab", { name: /^All people\s/ }).click();
+    await page.getByRole("button", { name: "Add person", exact: true }).click();
+    const personName = `Volunteer via People ${width}`;
+    await dialog.getByLabel(/^Name/).fill(personName);
+    await dialog.getByRole("button", { name: "Volunteer", exact: true }).click();
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await volunteers.click();
+    await search.fill(personName);
+    await editVolunteer(personName);
+    await expect(dialog.getByLabel("First help day", { exact: false })).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+  });
+}

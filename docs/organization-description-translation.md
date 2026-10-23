@@ -9,7 +9,7 @@ admin. No machine-origin flag is stored.
 ## Configuration and production gate
 
 - `TRANSLATION_SERVICE_URL`: trusted, self-hosted LibreTranslate base URL. Empty
-  (the default) disables the action. Example: `http://172.18.0.1:5001`.
+  (the default) disables the action. Example: `http://172.30.50.1:5001`.
 - `TRANSLATION_LANGUAGES`: comma-separated loaded site languages; defaults to
   `nl,en`. At least two of `nl,fr,en` are required. Enable French only after the
   service has the relevant models and supported pairs verified.
@@ -21,6 +21,13 @@ with Travel and the French decision remain in
 not run or change the translation service. The infra checkout is separate: set
 these variables in `infra/champagnefestival.env.example` and the Ansible-rendered
 env file there after verifying a cold-start request from `champagnefestival-api`.
+
+`TRANSLATION_API_KEY_FILE` configures this backend's mounted credential.
+Production uses `/run/secrets/translation_champagnefestival_token`; a missing or
+invalid configured file fails closed without an anonymous engine request.
+Empty is for an explicitly unauthenticated local development engine. The native
+JSON `api_key` stays backend-only and never enters URLs, browser responses or
+error bodies. Release this caller before Apps activates required engine keys.
 
 ## API
 
@@ -57,11 +64,15 @@ accepted one-API-worker production boundary (#932). A burst is rejected rather
 than queued. Travel has its own caller, so this lock does not coordinate both
 applications; infra owns their shared-worker contention decision.
 
-The client uses a 90-second timeout and sends one bounded plain-text request per
+The client uses a 90-second total deadline, a five-second connection timeout,
+and sends one bounded plain-text request per
 target, without automatic retries or redirects. Ambient HTTP proxy variables are
 ignored, so the configured service receives the text directly. Text and service
 error bodies are neither logged nor returned in errors. The service URL is an
 operator setting, never a caller-supplied URL.
+
+API logs emit fixed `translation_failed code=…` events and optional INFO
+`translation_completed duration_ms=…` timing, with no source/draft content or key.
 
 ## Editing and retries
 

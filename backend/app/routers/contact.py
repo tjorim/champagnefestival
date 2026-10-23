@@ -6,14 +6,15 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import select
-from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import require_admin
 from app.database import get_db
+from app.dialect_functions import dialect_insert
 from app.email import send_contact_notification
 from app.models import ContactMessage
 from app.ratelimit import check_rate_limit, get_client_ip
+from app.schema_types import NonEmptyText200
 from app.schemas import RequestModel
 from app.spam import check_form_timing, check_honeypot
 
@@ -22,7 +23,7 @@ router = APIRouter(prefix="/api/contact", tags=["contact"])
 
 class ContactRequest(RequestModel):
     submission_id: UUID
-    name: str = Field(min_length=1, max_length=200)
+    name: NonEmptyText200
     email: EmailStr
     message: str = Field(min_length=1, max_length=5000)
     honeypot: str | None = None
@@ -53,7 +54,7 @@ async def submit_contact(
 
     message_id = str(body.submission_id)
     inserted = await db.scalar(
-        insert(ContactMessage)
+        dialect_insert(db)(ContactMessage)
         .values(
             id=message_id,
             name=body.name,

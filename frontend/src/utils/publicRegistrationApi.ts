@@ -1,3 +1,5 @@
+import { apiErrorFromResponse, apiErrorMessage } from "@/utils/apiErrors";
+import { parseOrderAnswers, orderAnswersBody, type OrderAnswer } from "@/utils/orderQuestions";
 import { m } from "@/paraglide/messages";
 import type { PaymentStatus, RegistrationFormData, RegistrationStatus } from "@/types/registration";
 
@@ -155,6 +157,7 @@ export async function submitCheckIn(
 }
 
 export interface GuestRegistration {
+  orderAnswers?: OrderAnswer[];
   id: string;
   eventTitle: string;
   eventDate?: string;
@@ -191,6 +194,7 @@ interface GuestOrderItemResponse {
 }
 
 interface GuestRegistrationResponse {
+  order_answers?: unknown;
   id: string;
   event_title: string;
   event_date?: string | null;
@@ -303,6 +307,7 @@ function mapGuestRegistrations(data: GuestRegistrationResponse[]): GuestRegistra
   return data.map((registration) => ({
     id: registration.id,
     eventTitle: registration.event_title,
+    orderAnswers: parseOrderAnswers(registration.order_answers),
     eventDate: registration.event_date ?? undefined,
     checkInToken: registration.check_in_token,
     guestCount: registration.guest_count,
@@ -495,6 +500,7 @@ export async function submitRegistration(
         quantity: order.quantity,
       })),
       notes: payload.notes,
+      ...(payload.orderAnswers ? { order_answers: orderAnswersBody(payload.orderAnswers) } : {}),
       marketing_opt_in: payload.marketingOptIn,
       honeypot: payload.honeypot ?? "",
       form_start_time: payload.formStartTime,
@@ -502,8 +508,12 @@ export async function submitRegistration(
   });
 
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new RegistrationSubmitError((data as { error?: string }).error ?? m.registration_error());
+    throw new RegistrationSubmitError(
+      apiErrorMessage(
+        await apiErrorFromResponse(response, m.registration_error()),
+        m.registration_error(),
+      ),
+    );
   }
   const data = (await response.json()) as { id?: unknown };
   if (typeof data.id !== "string") throw new RegistrationSubmitError(m.registration_error());

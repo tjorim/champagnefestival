@@ -1,6 +1,8 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
+    allow:
+      - dependency-type: all
     directory: "/frontend"
     schedule:
       interval: "weekly"
@@ -37,6 +39,7 @@ updates:
         patterns:
           - "oxlint"
           - "oxfmt"
+          - "oxc-parser"
       i18n:
         patterns:
           - "@inlang/*"
@@ -88,6 +91,8 @@ updates:
 
   # Monitor uv-managed Python dependencies for backend API
   - package-ecosystem: "uv"
+    allow:
+      - dependency-type: all
     directory: "/backend"
     schedule:
       interval: "weekly"
@@ -106,6 +111,19 @@ updates:
       - "python"
     versioning-strategy: "increase"
     groups:
+      # fastmcp pulls in mcp and mcp-types; keep them moving together
+      fastmcp:
+        patterns:
+          - "fastmcp"
+          - "fastmcp-slim"
+          - "mcp"
+          - "mcp-types"
+      # Keep Pydantic, its validation core, and settings integration together
+      pydantic:
+        patterns:
+          - "pydantic"
+          - "pydantic-core"
+          - "pydantic-settings"
       python-quality:
         patterns:
           - "ruff"

@@ -1,9 +1,8 @@
-import OrganizationChangeReview from "./OrganizationChangeReview";
 import { useSyncExternalStore } from "react";
 import { adminCachePersistence } from "@/state/adminCachePersistence";
 import { AdminCacheStatus } from "./AdminCacheStatus";
 import { usePersonDuplicates } from "./PersonDuplicates";
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import React, { useState, useCallback, useMemo, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,22 +12,8 @@ import { apiErrorMessage } from "@/utils/apiErrors";
 import "./admin.css";
 import RegistrationList from "./RegistrationList";
 import RegistrationDetail from "./RegistrationDetail";
-import LayoutEditor from "./LayoutEditor";
-import VenueManagement from "./VenueManagement";
-import { ContentSection, EditionsSection } from "./ContentManagement";
-import CategoryManagement from "./CategoryManagement";
-import FaqManagement from "./FaqManagement";
-import AnnouncementsSection from "./AnnouncementsSection";
-import PolicyManagement from "./PolicyManagement";
-import PushOptIn from "@/components/PushOptIn";
-import SettingsManagement from "./SettingsManagement";
-import ContactMessagesManagement from "./ContactMessagesManagement";
-import ScratchpadManagement from "./ScratchpadManagement";
-import WaitlistManagement from "./WaitlistManagement";
 import type { ItemDraft } from "./itemTypes";
-import PeopleSection from "./PeopleSection";
-import AnalyticsDashboard from "./AnalyticsDashboard";
-import AuditLogViewer from "./AuditLogViewer";
+import { SidebarProvider } from "@/components/ui/sidebar";
 import AdminSidebar from "./AdminSidebar";
 import AdminLoginForm from "./AdminLoginForm";
 import AdminSkeleton, { skeletonVariantForSection } from "./AdminSkeleton";
@@ -52,6 +37,31 @@ import { invalidateAdmin } from "@/utils/queryInvalidation";
 import { devError } from "@/utils/devLog";
 import { recordSignOutReason } from "@/utils/signOutReason";
 import { Card, CardContent } from "@/components/ui/card";
+import AdminSectionPane from "./AdminSectionPane";
+
+// Keep secondary tools out of the initial registrations download.
+const OrganizationChangeReview = React.lazy(() => import("./OrganizationChangeReview"));
+const LayoutEditor = React.lazy(() => import("./LayoutEditor"));
+const VenueManagement = React.lazy(() => import("./VenueManagement"));
+const CategoryManagement = React.lazy(() => import("./CategoryManagement"));
+const FaqManagement = React.lazy(() => import("./FaqManagement"));
+const AnnouncementsSection = React.lazy(() => import("./AnnouncementsSection"));
+const SignageSection = React.lazy(() => import("./SignageSection"));
+const PolicyManagement = React.lazy(() => import("./PolicyManagement"));
+const SettingsManagement = React.lazy(() => import("./SettingsManagement"));
+const ContactMessagesManagement = React.lazy(() => import("./ContactMessagesManagement"));
+const ScratchpadManagement = React.lazy(() => import("./ScratchpadManagement"));
+const WaitlistManagement = React.lazy(() => import("./WaitlistManagement"));
+const PeopleSection = React.lazy(() => import("./PeopleSection"));
+const AnalyticsDashboard = React.lazy(() => import("./AnalyticsDashboard"));
+const AuditLogViewer = React.lazy(() => import("./AuditLogViewer"));
+const PushOptIn = React.lazy(() => import("@/components/PushOptIn"));
+const ContentSection = React.lazy(() =>
+  import("./ContentManagement").then((module) => ({ default: module.ContentSection })),
+);
+const EditionsSection = React.lazy(() =>
+  import("./ContentManagement").then((module) => ({ default: module.EditionsSection })),
+);
 
 /** Sections that are about the running edition; the active-edition strip is shown on these only. */
 const ACTIVE_EDITION_SECTIONS: ReadonlySet<string> = new Set([
@@ -104,7 +114,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(
     () => new Set(["events", "content", "venue", "system"]),
   );
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // A non-admin who lands on a restricted section (stale state, a role
   // downgrade) has nothing to show there — derive the fallback for render
@@ -360,9 +369,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
   const handleNavKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
     if (!navRef.current) return;
     const buttons = Array.from(
-      navRef.current.querySelectorAll<HTMLButtonElement>(
-        "button.admin-nav-item, button.admin-nav-group-header",
-      ),
+      navRef.current.querySelectorAll<HTMLButtonElement>('[data-sidebar="menu-button"]'),
     );
     const focused = document.activeElement;
     const idx = buttons.indexOf(focused as HTMLButtonElement);
@@ -381,16 +388,6 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       buttons[buttons.length - 1]?.focus();
     }
   }, []);
-
-  // Close mobile sidebar on Escape key
-  useEffect(() => {
-    if (!sidebarOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSidebarOpen(false);
-    };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [sidebarOpen]);
 
   if (!visible) return null;
 
@@ -412,28 +409,23 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
       aria-labelledby="admin-title"
       className={isAuthenticated ? "admin-authenticated" : "py-12"}
     >
+      {/* The signed-out login form renders its own visible #admin-title heading. */}
+      {isAuthenticated && (
+        <h2 id="admin-title" className="sr-only">
+          {m.admin_title()}
+        </h2>
+      )}
       {!isAuthenticated ? (
         /* ---- Login (OIDC redirect) ---- */
         <AdminLoginForm />
       ) : (
         /* ---- Authenticated: sidebar layout ---- */
-        <div className="admin-layout">
-          {/* Mobile overlay */}
-          {sidebarOpen && (
-            <div
-              className="admin-sidebar-overlay"
-              onClick={() => setSidebarOpen(false)}
-              aria-hidden="true"
-            />
-          )}
-
+        <SidebarProvider belowHeader className="admin-layout">
           <AdminSidebar
             activeKey={effectiveActiveKey}
             setActiveKey={setActiveKey}
             expandedGroups={expandedGroups}
             toggleGroup={toggleGroup}
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
             navRef={navRef}
             handleNavKeyDown={handleNavKeyDown}
             registrationCount={registrationCountsQuery.data?.all ?? 0}
@@ -505,7 +497,7 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
             {isAnyPending && !cacheStatus.warmStart ? (
               <AdminSkeleton variant={skeletonVariantForSection(effectiveActiveKey)} />
             ) : (
-              <div className="admin-content-pane" key={effectiveActiveKey}>
+              <AdminSectionPane key={effectiveActiveKey} section={effectiveActiveKey}>
                 {effectiveActiveKey === "registrations" && (
                   <RegistrationList
                     registrations={registrations}
@@ -675,6 +667,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 {canManageAdminSections && activeKey === "faq" && (
                   <FaqManagement authHeaders={authHeaders} />
                 )}
+                {canManageAdminSections && activeKey === "signage-channels" && (
+                  <SignageSection authHeaders={authHeaders} />
+                )}
                 {canManageAdminSections && activeKey === "announcements" && (
                   <AnnouncementsSection authHeaders={authHeaders} />
                 )}
@@ -693,10 +688,10 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 {canManageAdminSections && activeKey === "contact-messages" && (
                   <ContactMessagesManagement authHeaders={authHeaders} />
                 )}
-              </div>
+              </AdminSectionPane>
             )}
           </div>
-        </div>
+        </SidebarProvider>
       )}
 
       {/* Registration detail modal */}

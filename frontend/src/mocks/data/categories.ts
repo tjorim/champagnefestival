@@ -3,7 +3,6 @@
 export type SeedCategory = {
   key: string;
   label: string;
-  label_language: "nl" | "fr" | "en";
   label_nl: string | null;
   label_fr: string | null;
   label_en: string | null;
@@ -16,7 +15,6 @@ function category(key: string, order: number, nl: string, fr: string, en: string
   return {
     key,
     label: nl,
-    label_language: "nl",
     label_nl: nl,
     label_fr: fr,
     label_en: en,

@@ -2,7 +2,7 @@
 
 import pytest
 
-from tests.helpers import ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VALID_RESERVATION, _create_event
+from tests.helpers import ROOM_PAYLOAD, TABLE_TYPE_PAYLOAD, VALID_RESERVATION, _create_event, requires_postgres
 from tests.test_product_inventory import book
 from tests.test_products import _create_product
 
@@ -41,7 +41,7 @@ async def test_event_can_use_multiple_rooms_and_same_room_can_have_same_day_even
         "/api/events",
         json={
             "edition_id": morning["edition_id"],
-            "title_en": "Evening",
+            "title_nl": "Evening",
             "date": morning["date"],
             "start_time": "20:00",
             "category": "other",
@@ -161,7 +161,7 @@ async def test_wrong_event_rejected_and_copy_does_not_copy_allocations(client):
             "/api/events",
             json={
                 "edition_id": event["edition_id"],
-                "title_en": "Evening",
+                "title_nl": "Evening",
                 "date": event["date"],
                 "start_time": "20:00",
                 "category": "other",
@@ -185,6 +185,7 @@ async def test_wrong_event_rejected_and_copy_does_not_copy_allocations(client):
     assert response.status_code == 200 and response.json()["allocations"] == []
 
 
+@requires_postgres("two sessions racing on row locks or advisory locks; SQLite has one writer lock")
 @pytest.mark.anyio
 async def test_concurrent_allocations_cannot_overfill_a_table(client, engine):
     import asyncio

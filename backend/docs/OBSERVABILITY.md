@@ -119,3 +119,9 @@ This lets operators correlate a UI error directly with a backend log line withou
 - [ ] If the route accepts credentials in a query parameter, verify that `request.url.path` (not `request.url`) is what gets logged.
 - [ ] If the route introduces a new auth mechanism, ensure it sets `request.state.user_id` and `request.state.auth_type`.
 - [ ] Event-day mutation routes write an `AuditEntry` via `write_audit_entry()` — see `app/audit.py`.
+
+---
+
+## Profiling
+
+To find out *why* a request identified by `X-Request-ID` and `latency_ms` is slow, profile it locally with the standard-library sampling profiler. See [PROFILING.md](PROFILING.md).

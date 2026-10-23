@@ -44,7 +44,6 @@ from app.push import (
 from app.schemas import AnnouncementCreate, AnnouncementLevel
 from app.services import announcements_service
 from app.services.outbox_service import enqueue_job
-from app.translations import Language
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +73,6 @@ async def deliver_composer_message_dispatch(resource_id: str) -> bool:
                 db,
                 actor=actor,
                 body=AnnouncementCreate(
-                    text_language=cast(Language, message.text_language),
                     text_nl=message.body_nl,
                     text_fr=message.body_fr,
                     text_en=message.body_en,

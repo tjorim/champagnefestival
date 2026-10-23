@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import MyAccountPage from "@/components/MyAccountPage";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,12 +58,26 @@ vi.mock("@/paraglide/messages", () => ({
     my_eid_correction_success: () => "Your eID document number has been updated.",
     my_eid_correction_error: () => "Could not update your eID document number.",
     my_eid_submitting: () => "Submitting…",
-    my_poll_heading: () => "Meal choices",
-    my_poll_description: () => "Choose how many of each you'd like.",
+    my_poll_heading: () => "Your answers",
+    my_poll_description: () => "Answer the questions below.",
+    my_poll_meals_hint: () => "Choose how many of each you'd like.",
+    my_poll_people_label: () => "Number of people (including you)",
+    my_poll_people_decrease: ({ title }: { title: string }) => `Fewer people for ${title}`,
+    my_poll_people_increase: ({ title }: { title: string }) => `More people for ${title}`,
+    poll_answer_yes: () => "Yes",
+    poll_answer_no: () => "No",
     my_poll_quantity_decrease: ({ label }: { label: string }) => `Fewer ${label}`,
     my_poll_quantity_increase: ({ label }: { label: string }) => `More ${label}`,
     my_poll_load_error: () => "Could not load the meal choices. Please try again.",
     my_poll_save_error: () => "Could not save your choice. Please try again.",
+    my_poll_closed: () => "This question has closed.",
+    my_poll_closes_at: ({ time }: { time: string }) => `Change your choices until ${time}.`,
+    my_poll_note_label: () => "Allergies or dietary requirements",
+    my_poll_note_save: () => "Save note",
+    my_poll_note_saved: () => "Note saved.",
+    poll_dietary_vegan: () => "Vegan",
+    api_error_poll_question_closed: () =>
+      "This question has closed, so this can no longer be changed.",
   },
 }));
 
@@ -398,79 +412,281 @@ describe("MyAccountPage", () => {
     expect(registrationsTab).toHaveAttribute("aria-selected", "false");
   });
 
-  it("lets a linked volunteer pick meal quantities and saves them", async () => {
-    vi.mocked(useAuth).mockReturnValue({
-      isAuthenticated: true,
-      isLoading: false,
-      isSigningIn: false,
-      isSigningOut: false,
-      accountLabel: "mock-volunteer",
-      roles: ["volunteer"],
-      hasRole: vi.fn((role: string) => role === "volunteer"),
-      getAccessToken: vi.fn().mockReturnValue("oidc-access-token"),
-      authError: null,
-      clearAuthError: vi.fn(),
-      login: vi.fn(),
-      logout: vi.fn(),
-      renewSession: vi.fn().mockResolvedValue(false),
+  describe("volunteer poll", () => {
+    function mockVolunteer() {
+      vi.mocked(useAuth).mockReturnValue({
+        isAuthenticated: true,
+        isLoading: false,
+        isSigningIn: false,
+        isSigningOut: false,
+        accountLabel: "mock-volunteer",
+        roles: ["volunteer"],
+        hasRole: vi.fn((role: string) => role === "volunteer"),
+        getAccessToken: vi.fn().mockReturnValue("oidc-access-token"),
+        authError: null,
+        clearAuthError: vi.fn(),
+        login: vi.fn(),
+        logout: vi.fn(),
+        renewSession: vi.fn().mockResolvedValue(false),
+      });
+      server.use(
+        http.get("/api/me/volunteer", () =>
+          HttpResponse.json({
+            linked: true,
+            name: "Sofie De Smet",
+            national_register_number: "91010112319",
+            eid_document_number: "123456789002",
+          }),
+        ),
+      );
+    }
+
+    const dinner = (extra: Record<string, unknown> = {}) => ({
+      id: "q-dinner",
+      kind: "yes_no",
+      title: "Dinner on Sunday?",
+      description: "",
+      closes_at: null,
+      closed: false,
+      options: [],
+      selections: [],
+      attending: null,
+      people: 0,
+      ...extra,
     });
-    const saved: unknown[] = [];
-    const options = [
-      { id: "poll-dish-1", label: "Vol-au-vent" },
-      { id: "poll-soup-1", label: "Tomatensoep" },
-    ];
-    server.use(
-      http.get("/api/me/volunteer", () =>
-        HttpResponse.json({
-          linked: true,
-          name: "Sofie De Smet",
-          national_register_number: "91010112319",
-          eid_document_number: "123456789002",
-        }),
-      ),
-      http.get("/api/me/volunteer/poll-options", () =>
-        HttpResponse.json({ edition_id: "2026-october", options, selections: [] }),
-      ),
-      http.put("/api/me/volunteer/poll-selections", async ({ request }) => {
-        const body = (await request.json()) as { selections: unknown[] };
-        saved.push(body);
-        return HttpResponse.json({
-          edition_id: "2026-october",
-          options,
-          selections: body.selections,
-        });
-      }),
-    );
-
-    const user = userEvent.setup();
-    render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
-
-    await user.click(screen.getByRole("tab", { name: "My eID" }));
-    const moreSoup = await screen.findByRole("button", { name: "More Tomatensoep" });
-    expect(screen.getByRole("button", { name: "Fewer Tomatensoep" })).toBeDisabled();
-
-    // Two soups and a vol-au-vent: each click saves the whole set of quantities.
-    await user.click(moreSoup);
-    await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Fewer Tomatensoep" })).toBeEnabled(),
-    );
-    await user.click(screen.getByRole("button", { name: "More Tomatensoep" }));
-    await waitFor(() => expect(saved).toHaveLength(2));
-    await user.click(await screen.findByRole("button", { name: "More Vol-au-vent" }));
-    await waitFor(() => expect(saved).toHaveLength(3));
-
-    expect(saved[1]).toEqual({ selections: [{ option_id: "poll-soup-1", quantity: 2 }] });
-    expect(saved[2]).toEqual({
-      selections: [
-        { option_id: "poll-soup-1", quantity: 2 },
-        { option_id: "poll-dish-1", quantity: 1 },
+    const meals = (extra: Record<string, unknown> = {}) => ({
+      id: "q-meals",
+      kind: "meals",
+      title: "Meals",
+      description: "",
+      closes_at: null,
+      closed: false,
+      options: [
+        { id: "poll-dish-1", label: "Vol-au-vent", dietary_tags: [] },
+        { id: "poll-soup-1", label: "Tomatensoep", dietary_tags: ["vegan"] },
       ],
+      selections: [],
+      attending: null,
+      people: 0,
+      ...extra,
+    });
+    const poll = (questions: Record<string, unknown>[], note: string | null = null) => ({
+      edition_id: "2026-october",
+      questions,
+      note,
     });
 
-    // Going back down to none drops the option from the saved set.
-    await user.click(screen.getByRole("button", { name: "Fewer Vol-au-vent" }));
-    await waitFor(() => expect(saved).toHaveLength(4));
-    expect(saved[3]).toEqual({ selections: [{ option_id: "poll-soup-1", quantity: 2 }] });
+    async function openPoll() {
+      const user = userEvent.setup();
+      render(<MyAccountPage />, { wrapper: createTestQueryClientWrapper() });
+      await user.click(screen.getByRole("tab", { name: "My eID" }));
+      return user;
+    }
+
+    it("lets a volunteer pick meal quantities, saving the whole set each time", async () => {
+      mockVolunteer();
+      const saved: unknown[] = [];
+      const requestedLocales: (string | null)[] = [];
+      let current = meals();
+      server.use(
+        http.get("/api/me/volunteer/poll", ({ request }) => {
+          requestedLocales.push(new URL(request.url).searchParams.get("locale"));
+          return HttpResponse.json(poll([current]));
+        }),
+        http.put("/api/me/volunteer/poll/questions/q-meals", async ({ request }) => {
+          requestedLocales.push(new URL(request.url).searchParams.get("locale"));
+          const body = (await request.json()) as { selections: unknown[] };
+          saved.push(body);
+          current = meals({ selections: body.selections });
+          return HttpResponse.json(poll([current]));
+        }),
+      );
+
+      const user = await openPoll();
+      const moreSoup = await screen.findByRole("button", { name: "More Tomatensoep" });
+      expect(screen.getByRole("button", { name: "Fewer Tomatensoep" })).toBeDisabled();
+      expect(screen.getByText("Vegan")).toBeInTheDocument();
+      // The questions are asked for in the interface language.
+      expect(requestedLocales[0]).toMatch(/^(nl|fr|en)$/);
+
+      await user.click(moreSoup);
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Fewer Tomatensoep" })).toBeEnabled(),
+      );
+      await user.click(screen.getByRole("button", { name: "More Tomatensoep" }));
+      await waitFor(() => expect(saved).toHaveLength(2));
+      await user.click(await screen.findByRole("button", { name: "More Vol-au-vent" }));
+      await waitFor(() => expect(saved).toHaveLength(3));
+
+      expect(saved[0]).toEqual({ selections: [{ option_id: "poll-soup-1", quantity: 1 }] });
+      expect(saved[1]).toEqual({ selections: [{ option_id: "poll-soup-1", quantity: 2 }] });
+      expect(saved[2]).toEqual({
+        selections: [
+          { option_id: "poll-soup-1", quantity: 2 },
+          { option_id: "poll-dish-1", quantity: 1 },
+        ],
+      });
+
+      // Going back down to none drops the option from the saved set.
+      await user.click(screen.getByRole("button", { name: "Fewer Vol-au-vent" }));
+      await waitFor(() => expect(saved).toHaveLength(4));
+      expect(saved[3]).toEqual({ selections: [{ option_id: "poll-soup-1", quantity: 2 }] });
+    });
+
+    it("answers a yes/no question with a number of people", async () => {
+      mockVolunteer();
+      const saved: Record<string, unknown>[] = [];
+      let current = dinner();
+      server.use(
+        http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([current]))),
+        http.put("/api/me/volunteer/poll/questions/q-dinner", async ({ request }) => {
+          const body = (await request.json()) as { attending: boolean; people?: number };
+          saved.push(body);
+          current = dinner({ attending: body.attending, people: body.people ?? 0 });
+          return HttpResponse.json(poll([current]));
+        }),
+      );
+
+      const user = await openPoll();
+      const yes = await screen.findByRole("button", { name: "Yes" });
+      const no = screen.getByRole("button", { name: "No" });
+      expect(yes).toHaveAttribute("aria-pressed", "false");
+      expect(no).toHaveAttribute("aria-pressed", "false");
+      // The people stepper only shows once the answer is yes.
+      expect(screen.queryByText("Number of people (including you)")).not.toBeInTheDocument();
+
+      await user.click(yes);
+      await waitFor(() =>
+        expect(screen.getByRole("button", { name: "Yes" })).toHaveAttribute("aria-pressed", "true"),
+      );
+      expect(saved[0]).toEqual({ attending: true, people: 1 });
+      expect(screen.getByText("Number of people (including you)")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Fewer people for Dinner on Sunday?" }),
+      ).toBeDisabled();
+
+      await user.click(screen.getByRole("button", { name: "More people for Dinner on Sunday?" }));
+      await waitFor(() => expect(saved).toHaveLength(2));
+      expect(saved[1]).toEqual({ attending: true, people: 2 });
+
+      // A no sends no head count and hides the stepper again.
+      await user.click(screen.getByRole("button", { name: "No" }));
+      await waitFor(() => expect(saved).toHaveLength(3));
+      expect(saved[2]).toEqual({ attending: false });
+      await waitFor(() =>
+        expect(screen.queryByText("Number of people (including you)")).not.toBeInTheDocument(),
+      );
+      expect(screen.getByRole("button", { name: "No" })).toHaveAttribute("aria-pressed", "true");
+    });
+
+    it("saves the dietary note on its own", async () => {
+      mockVolunteer();
+      const saved: Record<string, unknown>[] = [];
+      server.use(
+        http.get("/api/me/volunteer/poll", () =>
+          HttpResponse.json(
+            poll(
+              [meals({ selections: [{ option_id: "poll-soup-1", quantity: 1 }] })],
+              "Geen noten",
+            ),
+          ),
+        ),
+        http.put("/api/me/volunteer/poll/note", async ({ request }) => {
+          const body = (await request.json()) as { note: string };
+          saved.push(body);
+          return HttpResponse.json(poll([meals()], body.note || null));
+        }),
+      );
+
+      const user = await openPoll();
+      const note = await screen.findByLabelText("Allergies or dietary requirements");
+      expect(note).toHaveValue("Geen noten");
+      const save = screen.getByRole("button", { name: "Save note" });
+      expect(save).toBeDisabled();
+
+      await user.clear(note);
+      await user.type(note, "Glutenvrij");
+      await user.click(save);
+
+      await waitFor(() => expect(saved).toHaveLength(1));
+      expect(saved[0]).toEqual({ note: "Glutenvrij" });
+      expect(await screen.findByText("Note saved.")).toBeInTheDocument();
+
+      // Editing the note again takes the confirmation away until it is saved.
+      await user.type(note, "!");
+      expect(screen.queryByText("Note saved.")).not.toBeInTheDocument();
+    });
+
+    it("shows a closed question as read-only while the other stays open", async () => {
+      mockVolunteer();
+      server.use(
+        http.get("/api/me/volunteer/poll", () =>
+          HttpResponse.json(
+            poll([
+              dinner({
+                closed: true,
+                closes_at: "2026-10-01T10:00:00Z",
+                attending: true,
+                people: 2,
+              }),
+              meals(),
+            ]),
+          ),
+        ),
+      );
+
+      await openPoll();
+      expect(await screen.findByText("This question has closed.")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Yes" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "No" })).toBeDisabled();
+      expect(
+        screen.getByRole("button", { name: "More people for Dinner on Sunday?" }),
+      ).toBeDisabled();
+      // The meals question has no deadline, so its steppers stay usable.
+      expect(screen.getByRole("button", { name: "More Tomatensoep" })).toBeEnabled();
+      expect(screen.getByLabelText("Allergies or dietary requirements")).toBeEnabled();
+    });
+
+    it("locks the note once every meals question has closed", async () => {
+      mockVolunteer();
+      server.use(
+        http.get("/api/me/volunteer/poll", () =>
+          HttpResponse.json(poll([meals({ closed: true, closes_at: "2026-10-01T10:00:00Z" })])),
+        ),
+      );
+
+      await openPoll();
+      expect(await screen.findByLabelText("Allergies or dietary requirements")).toBeDisabled();
+      expect(screen.getByRole("button", { name: "More Tomatensoep" })).toBeDisabled();
+    });
+
+    it("shows nothing when the edition has no questions", async () => {
+      mockVolunteer();
+      server.use(http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([]))));
+
+      await openPoll();
+      await screen.findByText("Your identity on file");
+      expect(screen.queryByText("Your answers")).not.toBeInTheDocument();
+    });
+
+    it("explains a rejected save from its error code", async () => {
+      mockVolunteer();
+      server.use(
+        http.get("/api/me/volunteer/poll", () => HttpResponse.json(poll([meals()]))),
+        http.put("/api/me/volunteer/poll/questions/q-meals", () =>
+          HttpResponse.json(
+            { detail: "This question has closed.", code: "poll_question_closed" },
+            { status: 409 },
+          ),
+        ),
+      );
+
+      const user = await openPoll();
+      await user.click(await screen.findByRole("button", { name: "More Tomatensoep" }));
+      expect(
+        await screen.findByText("This question has closed, so this can no longer be changed."),
+      ).toBeInTheDocument();
+    });
   });
 
   it("signs out an OIDC account through one button that also ends the emailed session", async () => {

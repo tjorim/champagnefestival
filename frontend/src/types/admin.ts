@@ -77,7 +77,6 @@ export interface Layout {
 
 /** An organization as the admin dashboard reads it from `GET /api/organizations`. */
 export interface Organization {
-  description_language?: "nl" | "fr" | "en" | null;
   description_nl?: string | null;
   description_fr?: string | null;
   description_en?: string | null;
@@ -117,14 +116,12 @@ export interface Room {
 }
 
 /**
- * A FAQ item's admin-facing shape: every language's content. The original
- * language must have a question and an answer; a language is shown to visitors
- * only when both are filled there, otherwise they see the original.
+ * A FAQ item's admin-facing shape: every language's content. Dutch must have a
+ * question and an answer; a language is shown to visitors only when both are
+ * filled there, otherwise they see Dutch.
  */
 export interface FaqItem {
   id: string;
-  /** Original language: the question and answer must both have text there. */
-  textLanguage: "nl" | "fr" | "en";
   questionNl: string | null;
   questionFr: string | null;
   questionEn: string | null;

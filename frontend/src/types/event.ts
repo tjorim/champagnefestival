@@ -1,3 +1,4 @@
+import { parseOrderQuestions, type OrderQuestion } from "@/utils/orderQuestions";
 export interface EventEditionSummary {
   id: string;
   year: number;
@@ -21,23 +22,19 @@ export interface ProductInclusion {
 
 /** A product's stored name/description in every language (see `EventTranslations`). */
 export interface ProductTranslations {
-  nameLanguage: EventLanguage;
   nameNl: string | null;
   nameFr: string | null;
   nameEn: string | null;
-  descriptionLanguage: EventLanguage | null;
   descriptionNl: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;
 }
 
-/** Translation fields of a product whose text exists only in its original language. */
+/** Translation fields of a product whose text exists only in Dutch. */
 export const NO_PRODUCT_TRANSLATIONS: ProductTranslations = {
-  nameLanguage: "nl",
   nameNl: null,
   nameFr: null,
   nameEn: null,
-  descriptionLanguage: null,
   descriptionNl: null,
   descriptionFr: null,
   descriptionEn: null,
@@ -54,9 +51,9 @@ export interface Product extends ProductTranslations {
   inclusions?: ProductInclusion[] | null;
   id: string;
   eventId: string;
-  /** Original-language name (what the admin lists show). Visitors use `productName`. */
+  /** Dutch name (what the admin lists show). Visitors use `productName`. */
   name: string;
-  /** Short, optional blurb in the original language, or "". Visitors use `productDescription`. */
+  /** Short, optional blurb in Dutch, or "". Visitors use `productDescription`. */
   description: string;
   price: number;
   /** Key of a product category (see `useProductCategories`). */
@@ -89,26 +86,23 @@ export interface Product extends ProductTranslations {
 
 export type EventLanguage = "nl" | "fr" | "en";
 
-export const EVENT_LANGUAGES: readonly EventLanguage[] = ["nl", "fr", "en"];
-
 /** Stored text in every language; mirrors the organisation description fields. */
 export interface EventTranslations {
-  titleLanguage: EventLanguage;
   titleNl: string | null;
   titleFr: string | null;
   titleEn: string | null;
-  descriptionLanguage: EventLanguage | null;
   descriptionNl: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;
 }
 
 export interface Event extends EventTranslations {
+  orderQuestions?: OrderQuestion[];
   id: string;
   editionId: string;
-  /** Original-language title (what the admin lists show). Visitors use `eventTitle`. */
+  /** Dutch title (what the admin lists show). Visitors use `eventTitle`. */
   title: string;
-  /** Original-language description, or "". Visitors use `eventDescription`. */
+  /** Dutch description, or "". Visitors use `eventDescription`. */
   description: string;
   date: string;
   startTime: string;
@@ -133,11 +127,9 @@ export interface Event extends EventTranslations {
 
 export interface EventFormData {
   editionId: string;
-  titleLanguage: EventLanguage;
   titleNl: string;
   titleFr: string;
   titleEn: string;
-  descriptionLanguage: EventLanguage;
   descriptionNl: string;
   descriptionFr: string;
   descriptionEn: string;
@@ -152,10 +144,6 @@ export interface EventFormData {
   active: boolean;
 }
 
-function isEventLanguage(value: unknown): value is EventLanguage {
-  return value === "nl" || value === "fr" || value === "en";
-}
-
 function nullableText(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
@@ -166,13 +154,9 @@ export function apiToProduct(data: Record<string, unknown>): Product {
     eventId: String(data.event_id ?? ""),
     name: String(data.name ?? ""),
     description: String(data.description ?? ""),
-    nameLanguage: isEventLanguage(data.name_language) ? data.name_language : "nl",
     nameNl: nullableText(data.name_nl),
     nameFr: nullableText(data.name_fr),
     nameEn: nullableText(data.name_en),
-    descriptionLanguage: isEventLanguage(data.description_language)
-      ? data.description_language
-      : null,
     descriptionNl: nullableText(data.description_nl),
     descriptionFr: nullableText(data.description_fr),
     descriptionEn: nullableText(data.description_en),
@@ -206,16 +190,13 @@ export function apiToEvent(data: Record<string, unknown>): Event {
   return {
     id: String(data.id ?? ""),
     editionId: String(data.edition_id ?? ""),
+    orderQuestions: parseOrderQuestions(data.order_questions),
     title: String(data.title ?? ""),
     description: String(data.description ?? ""),
     // Responses always carry the stored languages; `title` is the resolved text.
-    titleLanguage: isEventLanguage(data.title_language) ? data.title_language : "nl",
     titleNl: nullableText(data.title_nl),
     titleFr: nullableText(data.title_fr),
     titleEn: nullableText(data.title_en),
-    descriptionLanguage: isEventLanguage(data.description_language)
-      ? data.description_language
-      : null,
     descriptionNl: nullableText(data.description_nl),
     descriptionFr: nullableText(data.description_fr),
     descriptionEn: nullableText(data.description_en),

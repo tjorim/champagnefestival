@@ -5,7 +5,7 @@
  * Call pushLiveEvent() from tests or browser devtools to simulate server
  * broadcasts without a real backend.
  */
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import type { LiveEnvelope } from "@/utils/liveStream";
 
 const encoder = new TextEncoder();

@@ -33,7 +33,7 @@ from app.mcp.admin import payments as mcp_payments
 from app.mcp.utils import MCPToolError
 from app.models import IdempotencyKey, PaymentTransaction
 from app.services import payments_service, registrations_service
-from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, mcp_session_factory
+from tests.helpers import ADMIN_HEADERS, VENUE_PAYLOAD, mcp_session_factory, requires_postgres
 
 
 def _normalize(value: Any) -> Any:
@@ -80,7 +80,7 @@ async def _registration(client, *, amount_due: str | None = None, person_id: str
         "/api/events",
         json={
             "edition_id": edition_id,
-            "title_en": "Ledger Bourse",
+            "title_nl": "Ledger Bourse",
             "date": "2026-11-21",
             "start_time": "09:00",
             "end_time": "15:30",
@@ -224,6 +224,7 @@ async def test_deleting_a_booking_with_ledger_entries_is_rejected(client):
     assert "payment transactions" in r.json()["detail"]
 
 
+@requires_postgres("the append-only ledger trigger is a PostgreSQL trigger")
 @pytest.mark.anyio
 async def test_append_only_trigger_rejects_direct_update_and_delete(client, db_session):
     """The application never issues UPDATE/DELETE against payment_transactions,

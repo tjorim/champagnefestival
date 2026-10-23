@@ -31,12 +31,13 @@ for (const theme of THEMES) {
         await expect(page.locator(".maintenance-page__title")).toHaveCSS("font-weight", "900");
         await expect(page.locator(".maintenance-page__cta")).toBeVisible();
 
-        const switcher = page.getByRole("group", { name: /visual design preview switcher/i });
+        const switcher = page.locator(".theme-switcher");
         await expect(switcher).toBeVisible();
         await expect(switcher).toHaveCSS("position", "fixed");
         await expect(switcher).not.toHaveAttribute("style", /.+/);
         if (width > 575) {
-          await expect(switcher.getByRole("button", { name: /remuage/i })).toBeVisible();
+          const group = switcher.getByRole("group", { name: /visual design preview switcher/i });
+          await expect(group.getByRole("button", { name: /remuage/i })).toBeVisible();
         } else {
           await expect(switcher.getByRole("combobox")).toBeVisible();
         }

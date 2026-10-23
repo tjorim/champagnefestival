@@ -16,11 +16,14 @@ function TooltipTrigger(props: Primitive.Trigger.Props) {
 }
 function TooltipContent({
   admin = false,
+  side = "top",
+  align = "center",
   className,
   ...props
-}: Primitive.Popup.Props & { admin?: boolean }) {
+}: Primitive.Popup.Props &
+  Pick<Primitive.Positioner.Props, "side" | "align"> & { admin?: boolean }) {
   const content = (
-    <Primitive.Positioner side="top" sideOffset={4} className="z-popup">
+    <Primitive.Positioner side={side} align={align} sideOffset={4} className="z-popup">
       <Primitive.Popup
         role="tooltip"
         data-slot="tooltip-content"

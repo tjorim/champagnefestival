@@ -1,5 +1,5 @@
 import { renderHook, waitFor } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
+import { HttpResponse, http } from "msw/http";
 import { describe, expect, it } from "vitest";
 import {
   FALLBACK_APP_SETTINGS,

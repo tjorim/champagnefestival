@@ -2,14 +2,13 @@ import { useState } from "react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { m } from "@/paraglide/messages";
 import AnnouncementManagement from "./AnnouncementManagement";
-import SignageTemplates from "./SignageTemplates";
 import ComposerManagement from "./ComposerManagement";
 
 interface AnnouncementsSectionProps {
   authHeaders: () => Record<string, string>;
 }
 
-type AnnouncementsTab = "announcements" | "compose" | "signage";
+type AnnouncementsTab = "announcements" | "compose";
 
 /**
  * One home for everything visitors are told: the in-app announcements, and the composer that
@@ -19,16 +18,12 @@ export default function AnnouncementsSection({ authHeaders }: AnnouncementsSecti
   const [tab, setTab] = useState<AnnouncementsTab>("announcements");
   return (
     <Tabs value={tab} onValueChange={(value) => setTab(value as AnnouncementsTab)}>
-      <TabsList variant="pills" className="mb-4">
+      <TabsList variant="line" className="mb-5" aria-label={m.admin_announcements_section()}>
         <TabsTrigger value="announcements">{m.admin_announcements_section()}</TabsTrigger>
         <TabsTrigger value="compose">{m.admin_composer_section()}</TabsTrigger>
-        <TabsTrigger value="signage">{m.signage_editor_heading()}</TabsTrigger>
       </TabsList>
       <TabsContent value="announcements">
         <AnnouncementManagement authHeaders={authHeaders} />
-      </TabsContent>
-      <TabsContent value="signage">
-        <SignageTemplates authHeaders={authHeaders} />
       </TabsContent>
       <TabsContent value="compose">
         <ComposerManagement authHeaders={authHeaders} />

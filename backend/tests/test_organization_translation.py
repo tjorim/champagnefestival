@@ -21,9 +21,12 @@ BODY = {"text": "Hallo", "source": "nl", "target": "en"}
 
 
 @pytest.fixture
-def service(monkeypatch):
+def service(monkeypatch, tmp_path):
     monkeypatch.setattr(settings, "translation_service_url", "http://translation.local")
     monkeypatch.setattr(settings, "translation_languages", "nl,en")
+    key_file = tmp_path / "translation-key"
+    key_file.write_text("c" * 64, encoding="utf-8")
+    monkeypatch.setattr(settings, "translation_api_key_file", str(key_file))
     monkeypatch.setattr(translation, "_worker", asyncio.Lock())
     calls = []
     real_client = httpx.AsyncClient
@@ -34,8 +37,10 @@ def service(monkeypatch):
 
     def use_handler(callback):
         def factory(**kwargs):
-            assert kwargs["timeout"] >= 60
+            assert kwargs["timeout"].read == 90
+            assert kwargs["timeout"].connect == 5
             assert kwargs["trust_env"] is False
+            assert kwargs["follow_redirects"] is False
             return real_client(**kwargs, transport=httpx.MockTransport(callback))
 
         monkeypatch.setattr(translation.httpx, "AsyncClient", factory)
@@ -54,7 +59,13 @@ async def test_admin_draft_is_stateless_and_repeatable(client, db_session, servi
     for model in (OrganizationChange, AuditEntry, OutboxJob):
         assert await db_session.scalar(select(func.count()).select_from(model)) == 0
     assert str(service[0][0].url) == "http://translation.local/translate"
-    assert json.loads(service[0][0].content) == {"q": "Hallo", "source": "nl", "target": "en", "format": "text"}
+    assert json.loads(service[0][0].content) == {
+        "q": "Hallo",
+        "source": "nl",
+        "target": "en",
+        "format": "text",
+        "api_key": "c" * 64,
+    }
 
 
 async def test_manager_draft_checks_live_ownership(client, db_session, manager, service):
@@ -112,6 +123,43 @@ async def test_failure_is_sanitized_and_worker_released(client, service, failure
     assert response.status_code == expected
     assert "secret description" not in response.text
     assert not translation._worker.locked()
+
+
+async def test_missing_configured_key_fails_closed(client, service, monkeypatch):
+    monkeypatch.setattr(settings, "translation_api_key_file", "/missing/private-translation-key")
+    response = await client.post("/api/organizations/translation", json=BODY)
+    assert response.status_code == 503
+    assert not service[0]
+    assert "/missing/" not in response.text
+
+
+async def test_redirect_and_auth_errors_are_not_retried_or_exposed(client, service, caplog):
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(307, headers={"Location": "https://untrusted.invalid/secret"}, text="c" * 64)
+
+    service[1](handler)
+    response = await client.post("/api/organizations/translation", json=BODY)
+    assert response.status_code == 503
+    assert len(calls) == 1
+    assert "c" * 64 not in response.text + caplog.text
+
+
+async def test_total_deadline_releases_slot_without_retry(client, service, monkeypatch):
+    monkeypatch.setattr(translation, "TRANSLATION_TOTAL_TIMEOUT_SECONDS", 0.02)
+    calls = []
+
+    async def handler(request):
+        calls.append(request)
+        await asyncio.sleep(10)
+        return httpx.Response(200, json={"translatedText": "Hello"})
+
+    service[1](handler)
+    response = await client.post("/api/organizations/translation", json=BODY)
+    assert response.status_code == 504
+    assert len(calls) == 1 and not translation._worker.locked()
 
 
 async def test_rate_limit(client, service):

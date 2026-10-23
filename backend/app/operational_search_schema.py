@@ -1,5 +1,25 @@
 """Database bootstrap statements for indexed operational person lookup."""
 
+# SQLite twin (local development and tests): the same derived columns, kept current by triggers that
+# call the Python functions of app.sqlite_functions. SQLite has no BEFORE-trigger assignment, so the
+# trigger updates the row after it is written; UPDATE OF name, email keeps it from re-firing itself.
+_SQLITE_SET_SEARCH_VALUES = """
+    UPDATE people SET
+        search_name = champagne_search_name(NEW.name),
+        search_name_alt = champagne_search_name_alt(NEW.name),
+        search_email = lower(NEW.email)
+    WHERE id = NEW.id;
+"""
+OPERATIONAL_SEARCH_SQLITE_STATEMENTS = (
+    "DROP TRIGGER IF EXISTS people_operational_search_values_insert",
+    "DROP TRIGGER IF EXISTS people_operational_search_values_update",
+    f"CREATE TRIGGER people_operational_search_values_insert AFTER INSERT ON people BEGIN {_SQLITE_SET_SEARCH_VALUES} END",
+    "CREATE TRIGGER people_operational_search_values_update AFTER UPDATE OF name, email ON people "
+    f"BEGIN {_SQLITE_SET_SEARCH_VALUES} END",
+    "UPDATE people SET name = name, email = email WHERE search_name = ''",
+    "CREATE INDEX IF NOT EXISTS ix_people_search_email ON people (search_email)",
+)
+
 OPERATIONAL_SEARCH_SCHEMA_STATEMENTS = (
     "CREATE EXTENSION IF NOT EXISTS unaccent",
     "CREATE EXTENSION IF NOT EXISTS pg_trgm",

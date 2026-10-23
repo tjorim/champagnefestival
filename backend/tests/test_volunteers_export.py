@@ -90,3 +90,14 @@ async def test_volunteers_export_prefixes_formula_injection_cells(client):
     rows = list(csv.reader(io.StringIO(response.text)))
     formula_row = next(row for row in rows[1:] if row[0] == "'=1+1")
     assert formula_row[0] == "'=1+1"
+
+
+@pytest.mark.anyio
+async def test_volunteers_without_periods_keep_blank_identity_and_dates(client):
+    created = await client.post("/api/volunteers", json={"name": "No help dates yet"}, headers=ADMIN_HEADERS)
+    assert created.status_code == 201
+    response = await client.get("/api/volunteers/export", headers=ADMIN_HEADERS)
+    assert response.status_code == 200
+    rows = list(csv.reader(io.StringIO(response.text)))
+    matching = [row for row in rows[1:] if row[0] == "No help dates yet"]
+    assert matching == [["No help dates yet", "", "", "", ""]]

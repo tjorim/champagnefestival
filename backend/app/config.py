@@ -145,6 +145,8 @@ class Settings(BaseSettings):
     """Self-hosted LibreTranslate base URL; empty disables description drafts."""
     translation_languages: str = "nl,en"
     """Comma-separated loaded site languages; French requires infra approval."""
+    translation_api_key_file: str = ""
+    """Backend-only credential file; configured files must be readable and valid."""
 
     organization_review_recipient: str = ""
     organization_logo_public_root: str = "./uploads/public/organizations"
@@ -224,6 +226,32 @@ class Settings(BaseSettings):
     # Validators
     # ------------------------------------------------------------------
 
+    # Private media adapter is explicitly opt-in; no browser receives these values.
+    media_worker_url: str = ""
+    media_worker_token_file: str = "/run/secrets/media_champagnefestival_token"
+    signage_video_storage: str = "./private/signage-video"
+
+    @field_validator("media_worker_url")
+    @classmethod
+    def validate_media_worker_url(cls, value: str) -> str:
+        from urllib.parse import urlsplit
+
+        if value:
+            parsed = urlsplit(value)
+            # Accessing port also validates numeric range and malformed authorities.
+            _ = parsed.port
+            if (
+                parsed.scheme not in {"http", "https"}
+                or not parsed.hostname
+                or parsed.username
+                or parsed.password
+                or parsed.query
+                or parsed.fragment
+                or parsed.path not in {"", "/"}
+            ):
+                raise ValueError("MEDIA_WORKER_URL must be an HTTP(S) origin without credentials or a path.")
+        return value.rstrip("/")
+
     @field_validator("translation_languages")
     @classmethod
     def validate_translation_languages(cls, value: str) -> str:
@@ -242,10 +270,10 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def validate_database_url(cls, v: str) -> str:
-        """Validate database_url uses the postgresql+asyncpg async driver."""
+        """Validate database_url uses an async driver: asyncpg, or aiosqlite for local development."""
         if not v or not v.strip():
             raise ValueError("DATABASE_URL cannot be empty")
-        if not v.startswith("postgresql+asyncpg://"):
+        if not v.startswith(("postgresql+asyncpg://", "sqlite+aiosqlite://")):
             raise ValueError("DATABASE_URL must use the asyncpg driver: postgresql+asyncpg://...")
         return v
 
@@ -365,6 +393,13 @@ class Settings(BaseSettings):
         """
         if self.dev_auth_bypass_token and self.environment != "development":
             raise ValueError("DEV_AUTH_BYPASS_TOKEN must not be set outside environment=development.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_sqlite_only_in_development(self) -> Settings:
+        """SQLite is for local development and tests; production runs on PostgreSQL."""
+        if self.database_url.startswith("sqlite") and self.environment != "development":
+            raise ValueError("A sqlite+aiosqlite DATABASE_URL is only allowed with environment=development.")
         return self
 
     # ------------------------------------------------------------------

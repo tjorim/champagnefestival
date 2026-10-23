@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 
 import { useActiveEdition } from "@/hooks/useActiveEdition";
 import { server } from "@/mocks/server";
@@ -59,7 +59,7 @@ describe("useActiveEdition", () => {
       id: 1,
       name: "Maison",
       image: "/logo.svg",
-      description_language: "fr",
+      description_nl: "Hallo",
       description_fr: "Bonjour",
       description_en: "Hello",
     };

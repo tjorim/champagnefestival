@@ -41,7 +41,7 @@ async def test_active_edition_returns_404_when_only_past_editions_exist(client):
         "/api/events",
         json={
             "edition_id": "edition-past-only",
-            "title_en": "Past Event",
+            "title_nl": "Past Event",
             "date": "2020-03-20",
             "start_time": "18:00",
             "end_time": "22:00",
@@ -71,7 +71,7 @@ async def test_active_edition_returns_embedded_venue_and_organizations(client):
         json={
             "name": "Bollinger",
             "type": "producer",
-            "description_language": "fr",
+            "description_nl": "Champagnehuis",
             "description_fr": "Maison de champagne",
             "description_en": "Champagne house",
         },
@@ -105,7 +105,7 @@ async def test_active_edition_returns_embedded_venue_and_organizations(client):
         "/api/events",
         json={
             "edition_id": "2026",
-            "title_en": "Sunday",
+            "title_nl": "Sunday",
             "date": "2099-03-22",
             "start_time": "14:00",
             "end_time": "18:00",
@@ -126,7 +126,7 @@ async def test_active_edition_returns_embedded_venue_and_organizations(client):
     assert data["venue"]["name"] == "Test Venue"
     assert len(data["producers"]) == 1
     assert data["producers"][0]["name"] == "Bollinger"
-    assert data["producers"][0]["description_language"] == "fr"
+    assert data["producers"][0]["description_nl"] == "Champagnehuis"
     assert data["producers"][0]["description_fr"] == "Maison de champagne"
     assert data["producers"][0]["description_en"] == "Champagne house"
     assert len(data["sponsors"]) == 1
@@ -166,7 +166,7 @@ async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(
     for payload in [
         {
             "edition_id": "edition-multi-day",
-            "title_en": "Friday Tasting",
+            "title_nl": "Friday Tasting",
             "date": "2099-03-21",
             "start_time": "17:00",
             "end_time": "18:00",
@@ -176,7 +176,7 @@ async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(
         },
         {
             "edition_id": "edition-multi-day",
-            "title_en": "Friday VIP",
+            "title_nl": "Friday VIP",
             "date": "2099-03-21",
             "start_time": "19:00",
             "end_time": "20:00",
@@ -186,7 +186,7 @@ async def test_active_edition_dates_are_unique_when_multiple_events_share_a_day(
         },
         {
             "edition_id": "edition-multi-day",
-            "title_en": "Saturday Party",
+            "title_nl": "Saturday Party",
             "date": "2099-03-22",
             "start_time": "20:00",
             "end_time": "22:00",
@@ -243,7 +243,7 @@ async def test_active_edition_type_filter_excludes_nearer_community_editions(cli
             "/api/events",
             json={
                 "edition_id": edition_id,
-                "title_en": f"{edition_type} event",
+                "title_nl": f"{edition_type} event",
                 "date": event_date,
                 "start_time": "18:00",
                 "end_time": "22:00",
@@ -300,7 +300,7 @@ async def test_standalone_event_can_move_within_same_single_day(client):
         "/api/events",
         json={
             "edition_id": "edition-bourse-single-day",
-            "title_en": "Bourse Opening",
+            "title_nl": "Bourse Opening",
             "date": "2099-03-21",
             "start_time": "10:00",
             "end_time": "11:00",
@@ -351,7 +351,7 @@ async def test_community_edition_upcoming_lists_every_active_event_in_time_order
     for payload in [
         {
             "edition_id": "edition-bourse-multi-event",
-            "title_en": "Bourse Auction",
+            "title_nl": "Bourse Auction",
             "date": "2099-03-21",
             "start_time": "15:00",
             "category": "exchange",
@@ -360,7 +360,7 @@ async def test_community_edition_upcoming_lists_every_active_event_in_time_order
         },
         {
             "edition_id": "edition-bourse-multi-event",
-            "title_en": "Bourse Opening",
+            "title_nl": "Bourse Opening",
             "date": "2099-03-21",
             "start_time": "10:00",
             "category": "exchange",
@@ -369,7 +369,7 @@ async def test_community_edition_upcoming_lists_every_active_event_in_time_order
         },
         {
             "edition_id": "edition-bourse-multi-event",
-            "title_en": "Draft Tasting",
+            "title_nl": "Draft Tasting",
             "date": "2099-03-21",
             "start_time": "12:00",
             "category": "exchange",
@@ -413,7 +413,7 @@ async def test_inactive_event_does_not_keep_finished_edition_upcoming(client):
         "/api/events",
         json={
             "edition_id": "edition-only-inactive-future",
-            "title_en": "Draft Sunday",
+            "title_nl": "Draft Sunday",
             "date": "2099-03-22",
             "start_time": "14:00",
             "category": "general",
@@ -455,7 +455,7 @@ async def test_inactive_events_excluded_from_active_edition_response(client):
     for payload in [
         {
             "edition_id": "edition-mixed-active",
-            "title_en": "Draft Preview",
+            "title_nl": "Draft Preview",
             "date": "2099-03-20",
             "start_time": "10:00",
             "category": "general",
@@ -464,7 +464,7 @@ async def test_inactive_events_excluded_from_active_edition_response(client):
         },
         {
             "edition_id": "edition-mixed-active",
-            "title_en": "Published Gala",
+            "title_nl": "Published Gala",
             "date": "2099-03-21",
             "start_time": "18:00",
             "category": "general",
@@ -503,12 +503,11 @@ async def test_active_edition_product_disclosure_by_purchasable(client):
         "/api/products",
         json={
             "event_id": event["id"],
-            "name_en": "Hidden Supply",
+            "name_nl": "Hidden Supply",
             "price": "10.00",
             "category": "champagne",
             "purchasable": False,
-            "description_language": "en",
-            "description_en": "Hidden Supply description",
+            "description_nl": "Hidden Supply description",
         },
         headers=ADMIN_HEADERS,
     )
@@ -519,12 +518,11 @@ async def test_active_edition_product_disclosure_by_purchasable(client):
         "/api/products",
         json={
             "event_id": event["id"],
-            "name_en": "Purchasable Bottle",
+            "name_nl": "Purchasable Bottle",
             "price": "10.00",
             "category": "champagne",
             "purchasable": True,
-            "description_language": "en",
-            "description_en": "Purchasable Bottle description",
+            "description_nl": "Purchasable Bottle description",
             "inclusions": [{"product_id": hidden["id"], "quantity": 1, "per_quantity": 1, "rounding": "down"}],
         },
         headers=ADMIN_HEADERS,
@@ -586,7 +584,7 @@ async def _create_upcoming_event(
         "/api/events",
         json={
             "edition_id": edition_id,
-            "title_en": title,
+            "title_nl": title,
             "date": date,
             "start_time": start_time,
             "category": "exchange",
@@ -767,7 +765,7 @@ async def test_standalone_event_rejects_a_second_date(client):
         "/api/events",
         json={
             "edition_id": "edition-bourse-two-dates",
-            "title_en": "Bourse Opening",
+            "title_nl": "Bourse Opening",
             "date": "2099-03-21",
             "start_time": "10:00",
             "category": "exchange",
@@ -782,7 +780,7 @@ async def test_standalone_event_rejects_a_second_date(client):
         "/api/events",
         json={
             "edition_id": "edition-bourse-two-dates",
-            "title_en": "Bourse Auction",
+            "title_nl": "Bourse Auction",
             "date": "2099-03-22",
             "start_time": "10:00",
             "category": "exchange",

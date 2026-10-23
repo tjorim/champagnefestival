@@ -14,37 +14,33 @@ async def _product(client, event_id: str, **overrides) -> dict:
     return response.json()
 
 
-async def test_a_product_has_a_name_per_language_with_an_original(client):
+async def test_a_product_has_a_name_per_language_with_dutch_required(client):
     event = await _create_event(client, edition_id="edition-product-text")
     product = await _product(
         client,
         event["id"],
-        name_language="nl",
         name_nl="Champagnefles",
         name_en="Champagne bottle",
-        description_language="nl",
         description_nl="Goed gekoeld",
     )
 
-    assert (product["name"], product["name_language"], product["name_fr"]) == ("Champagnefles", "nl", None)
+    assert (product["name"], product["name_en"], product["name_fr"]) == ("Champagnefles", "Champagne bottle", None)
     assert (product["description"], product["description_en"]) == ("Goed gekoeld", None)
-
-    default = await _product(client, event["id"], name_en="Plain")
-    assert default["name_language"] == "en"  # English is the default original language
+    assert "name_language" not in product
 
 
 @pytest.mark.parametrize(
     "overrides",
     [
         {},  # no name at all
-        {"name_language": "fr", "name_nl": "Alleen Nederlands"},
-        {"name_en": "   "},
-        {"name_en": "Bottle", "description_nl": "Tekst"},  # description text but no description language
-        {"name_en": "Bottle", "description_language": "en"},  # a description language without text
+        {"name_fr": "Alleen Frans"},  # no Dutch name
+        {"name_nl": "   "},
+        {"name_nl": "Fles", "description_fr": "Texte"},  # a translated description without Dutch
+        {"name_nl": "Fles", "name_language": "nl"},  # the original-language flag is gone
         {"name": "Old shape"},
     ],
 )
-async def test_a_product_needs_its_name_in_the_original_language(client, overrides):
+async def test_a_product_needs_its_dutch_name(client, overrides):
     event = await _create_event(client, edition_id="edition-product-text-invalid")
     response = await client.post(
         "/api/products",
@@ -56,7 +52,9 @@ async def test_a_product_needs_its_name_in_the_original_language(client, overrid
 
 async def test_updating_one_translation_keeps_the_rest_and_validates_the_result(client):
     event = await _create_event(client, edition_id="edition-product-text-update")
-    product = await _product(client, event["id"], name_en="Bottle", description_language="en", description_en="Chilled")
+    product = await _product(
+        client, event["id"], name_nl="Fles", name_en="Bottle", description_nl="Gekoeld", description_en="Chilled"
+    )
 
     translated = await client.put(
         f"/api/products/{product['id']}", json={"name_fr": "Bouteille"}, headers=ADMIN_HEADERS
@@ -66,20 +64,24 @@ async def test_updating_one_translation_keeps_the_rest_and_validates_the_result(
 
     cleared = await client.put(f"/api/products/{product['id']}", json={"name_fr": ""}, headers=ADMIN_HEADERS)
     assert cleared.json()["name_fr"] is None
-    no_original = await client.put(f"/api/products/{product['id']}", json={"name_en": ""}, headers=ADMIN_HEADERS)
-    assert no_original.status_code == 422
-    assert "original language" in no_original.text
+    no_dutch = await client.put(f"/api/products/{product['id']}", json={"name_nl": ""}, headers=ADMIN_HEADERS)
+    assert no_dutch.status_code == 422
+    assert "Dutch" in no_dutch.text
 
-    # Clearing every description text drops its language too.
-    dropped = await client.put(f"/api/products/{product['id']}", json={"description_en": ""}, headers=ADMIN_HEADERS)
+    # The Dutch description stays while a translation remains; clearing every description text is allowed.
+    keeps_dutch = await client.put(f"/api/products/{product['id']}", json={"description_nl": ""}, headers=ADMIN_HEADERS)
+    assert keeps_dutch.status_code == 422
+    dropped = await client.put(
+        f"/api/products/{product['id']}", json={"description_nl": "", "description_en": ""}, headers=ADMIN_HEADERS
+    )
     assert dropped.status_code == 200
-    assert (dropped.json()["description"], dropped.json()["description_language"]) == ("", None)
+    assert dropped.json()["description"] == ""
 
 
 async def test_public_products_resolve_the_visitors_language_with_fallback(client):
     event = await _create_event(client, edition_id="edition-product-text-public")
-    await _product(client, event["id"], name_language="nl", name_nl="Fles", name_fr="Bouteille")
-    await _product(client, event["id"], name_en="Only English")
+    await _product(client, event["id"], name_nl="Fles", name_fr="Bouteille")
+    await _product(client, event["id"], name_nl="Only English")
 
     def names(payload):
         edition_events = [e for edition in payload for e in edition["events"]]
@@ -88,7 +90,7 @@ async def test_public_products_resolve_the_visitors_language_with_fallback(clien
     for locale, expected in (
         ("nl", ["Fles", "Only English"]),
         ("fr", ["Bouteille", "Only English"]),
-        ("en", ["Fles", "Only English"]),  # no English name on the first: its original is shown
+        ("en", ["Fles", "Only English"]),  # no English name: Dutch is shown
     ):
         response = await client.get("/api/editions/upcoming", params={"locale": locale})
         assert response.status_code == 200
@@ -97,18 +99,16 @@ async def test_public_products_resolve_the_visitors_language_with_fallback(clien
 
 async def test_an_order_keeps_the_names_in_every_language(client):
     event = await _create_event(client, edition_id="edition-product-text-order")
-    product = await _product(
-        client, event["id"], name_language="nl", name_nl="Fles", name_en="Bottle", name_fr="Bouteille"
-    )
+    product = await _product(client, event["id"], name_nl="Fles", name_en="Bottle", name_fr="Bouteille")
 
     registration = await _post_registration(
         client, event=event, order_items=[{"product_id": product["id"], "quantity": 2}]
     )
     assert registration.status_code == 201, registration.text
     item = registration.json()["order_items"][0]
-    assert (item["name"], item["name_language"], item["name_en"], item["name_fr"]) == (
+    assert (item["name"], item["name_nl"], item["name_en"], item["name_fr"]) == (
         "Fles",
-        "nl",
+        "Fles",
         "Bottle",
         "Bouteille",
     )
