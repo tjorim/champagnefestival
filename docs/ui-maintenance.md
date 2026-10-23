@@ -44,8 +44,8 @@ or raise bundle budgets just to make an update pass.
 Compare a selected component with the owned source:
 
 ```sh
-pnpm ui:upstream popover
-pnpm ui:diff popover
+pnpm ui:upstream checkbox
+pnpm ui:diff checkbox
 ```
 
 `ui:diff` invokes the pinned CLI with component names before
@@ -61,7 +61,7 @@ After reviewing a component, applying relevant fixes and completing validation,
 record the exact upstream snapshot and decision:
 
 ```sh
-pnpm ui:record popover --note "Keep local tokens; reviewed upstream focus fix; keyboard and browser checks passed."
+pnpm ui:record checkbox --note "Describe the upstream changes reviewed, keep/apply decision, and validation actually run."
 pnpm ui:check
 ```
 
@@ -104,7 +104,7 @@ real authentication or point tests at production data. At least exercise:
   results, clearing, disabled options and selected values outside results.
 - Fields/radio/checkbox/switch: label association, validation, keyboard changes
   and submitted values; calendar/date input: locale and selected dates.
-- Menus/popovers/tabs/accordions actually used: focus navigation, dismissal,
+- Menus/checkboxs/tabs/accordions actually used: focus navigation, dismissal,
   disabled controls and kept-mounted content.
 - Light and dark, desktop and narrow mobile; both supported locales where
   applicable; accessible names, axe checks and no horizontal overflow.
