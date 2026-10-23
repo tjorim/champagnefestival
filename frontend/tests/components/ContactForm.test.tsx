@@ -1,5 +1,7 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from "vitest";
+import { http, HttpResponse } from "msw/http";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { server } from "@/mocks/server";
 import ContactForm from "@/components/ContactForm";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 
@@ -23,6 +25,18 @@ vi.mock("@/paraglide/messages", () => ({
   },
 }));
 
+/** Answers POST /api/contact and returns what the form sent, in order. */
+function serveContact(respond: () => Response | Promise<Response>) {
+  const sent: { request: Request; body: Record<string, unknown> }[] = [];
+  server.use(
+    http.post("/api/contact", async ({ request }) => {
+      sent.push({ request, body: (await request.clone().json()) as Record<string, unknown> });
+      return respond();
+    }),
+  );
+  return sent;
+}
+
 describe("ContactForm component", () => {
   function renderForm() {
     const wrapper = createTestQueryClientWrapper();
@@ -34,7 +48,6 @@ describe("ContactForm component", () => {
   });
 
   afterEach(() => {
-    vi.unstubAllGlobals();
     vi.restoreAllMocks();
   });
 
@@ -84,11 +97,7 @@ describe("ContactForm component", () => {
   });
 
   it("shows success message after successful submission", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: "success" }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const sent = serveContact(() => HttpResponse.json({ message: "success" }));
     renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), {
       target: { name: "name", value: "John Doe" },
@@ -104,17 +113,9 @@ describe("ContactForm component", () => {
       expect(screen.getByText("Message sent successfully!")).toBeInTheDocument();
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, options] = (fetchMock as Mock).mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/contact");
-    expect(options).toMatchObject({
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    const requestBody = JSON.parse(options.body as string);
-    expect(requestBody).toMatchObject({
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.request.headers.get("content-type")).toBe("application/json");
+    expect(sent[0]!.body).toMatchObject({
       submission_id: expect.any(String),
       name: "John Doe",
       email: "john@example.com",
@@ -123,11 +124,7 @@ describe("ContactForm component", () => {
   });
 
   it("shows error message when submission fails", async () => {
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: false,
-      json: async () => ({ detail: "Server error" }),
-    });
-    vi.stubGlobal("fetch", fetchMock);
+    const sent = serveContact(() => HttpResponse.json({ detail: "Server error" }, { status: 500 }));
     renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -141,17 +138,9 @@ describe("ContactForm component", () => {
       expect(screen.getByText("Server error")).toBeInTheDocument();
     });
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [url, options] = (fetchMock as Mock).mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("/api/contact");
-    expect(options).toMatchObject({
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    const requestBody = JSON.parse(options.body as string);
-    expect(requestBody).toMatchObject({
+    expect(sent).toHaveLength(1);
+    expect(sent[0]!.request.headers.get("content-type")).toBe("application/json");
+    expect(sent[0]!.body).toMatchObject({
       submission_id: expect.any(String),
       name: "John",
       email: "john@example.com",
@@ -160,12 +149,11 @@ describe("ContactForm component", () => {
   });
 
   it("shows a FastAPI validation message when detail is an array", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        ok: false,
-        json: async () => ({ detail: [{ loc: ["body", "email"], msg: "Invalid email" }] }),
-      }),
+    serveContact(() =>
+      HttpResponse.json(
+        { detail: [{ loc: ["body", "email"], msg: "Invalid email" }] },
+        { status: 422 },
+      ),
     );
     renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
@@ -180,10 +168,7 @@ describe("ContactForm component", () => {
   });
 
   it("falls back when FastAPI detail is not textual", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({ ok: false, json: async () => ({ detail: { reason: "bad" } }) }),
-    );
+    serveContact(() => HttpResponse.json({ detail: { reason: "bad" } }, { status: 400 }));
     renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
     fireEvent.change(screen.getByLabelText(/email/i), {
@@ -197,14 +182,12 @@ describe("ContactForm component", () => {
   });
 
   it("shows spinner while submitting", async () => {
-    let resolvePromise: (value: unknown) => void = () => {};
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockReturnValue(
-        new Promise((resolve) => {
+    let resolvePromise: (value: Response) => void = () => {};
+    serveContact(
+      () =>
+        new Promise<Response>((resolve) => {
           resolvePromise = resolve;
         }),
-      ),
     );
     renderForm();
     fireEvent.change(screen.getByLabelText(/name/i), { target: { name: "name", value: "John" } });
@@ -218,7 +201,7 @@ describe("ContactForm component", () => {
     await waitFor(() => {
       expect(screen.getByText("Sending...")).toBeInTheDocument();
     });
-    resolvePromise!({ ok: true, json: async () => ({}) });
+    resolvePromise(HttpResponse.json({}));
 
     await waitFor(() => {
       expect(screen.queryByText("Sending...")).toBeNull();

@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { http, HttpResponse } from "msw/http";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
+import { server } from "@/mocks/server";
 import { useMaintenanceMode } from "./useMaintenanceMode";
 
 function setup() {
@@ -14,39 +16,49 @@ function setup() {
   return { client, ...renderHook(() => useMaintenanceMode(), { wrapper }) };
 }
 
-afterEach(() => vi.unstubAllGlobals());
+/** Answers the settings endpoint with the given responses in turn (the last one repeats) and counts the requests. */
+function serveMaintenance(...responses: (() => Response)[]) {
+  let calls = 0;
+  server.use(
+    http.get("/api/settings", () => {
+      const respond = responses[Math.min(calls, responses.length - 1)]!;
+      calls += 1;
+      return respond();
+    }),
+  );
+  return { calls: () => calls };
+}
 
 describe("useMaintenanceMode", () => {
   it("does not enable maintenance mode for a 429 response", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 429 })));
+    const api = serveMaintenance(() => new HttpResponse(null, { status: 429 }));
     const { result } = setup();
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
     expect(result.current.isMaintenanceMode).toBe(false);
-    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(api.calls()).toBe(1);
   });
 
   it("fails closed for a 500 response on a cold load", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+    const api = serveMaintenance(() => new HttpResponse(null, { status: 500 }));
     const { result } = setup();
 
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
     expect(result.current.isMaintenanceMode).toBe(true);
-    expect(fetch).toHaveBeenCalledTimes(3);
+    expect(api.calls()).toBe(3);
   });
 
   it("keeps the last good value when a refetch fails", async () => {
-    const mockedFetch = vi
-      .fn()
-      .mockResolvedValueOnce(new Response(JSON.stringify({ maintenance_mode: false })))
-      .mockResolvedValue(new Response(null, { status: 500 }));
-    vi.stubGlobal("fetch", mockedFetch);
+    const api = serveMaintenance(
+      () => HttpResponse.json({ maintenance_mode: false }),
+      () => new HttpResponse(null, { status: 500 }),
+    );
     const { client, result } = setup();
     await waitFor(() => expect(result.current.isLoaded).toBe(true));
 
     await act(() => client.refetchQueries({ queryKey: ["maintenance-mode"] }));
 
     expect(result.current.isMaintenanceMode).toBe(false);
-    expect(mockedFetch).toHaveBeenCalledTimes(4);
+    expect(api.calls()).toBe(4);
   });
 });

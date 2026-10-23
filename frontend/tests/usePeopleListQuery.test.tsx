@@ -1,5 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { http, HttpResponse } from "msw/http";
+import { describe, expect, it } from "vitest";
+import { server } from "@/mocks/server";
 import { usePeopleCountsQuery, usePeopleListQuery } from "@/hooks/usePeopleListQuery";
 import { peopleListSearchParams, type PeopleListParams } from "@/utils/adminPeopleQueries";
 import { queryKeys } from "@/utils/queryKeys";
@@ -13,16 +15,26 @@ const page = (name: string, params: PeopleListParams) => ({
   limit: params.limit,
 });
 
-afterEach(() => vi.unstubAllGlobals());
+/** Path and query of a request, the way the hooks build it. */
+const target = (request: Request) => {
+  const url = new URL(request.url);
+  return url.pathname + url.search;
+};
 
 describe("people server pages", () => {
   it("reads full-set counts and hides cached data when disabled", async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        Response.json({ total: 200, active: 180, inactive: 20, by_role: { member: 150 } }),
-      );
-    vi.stubGlobal("fetch", fetch);
+    const requested: string[] = [];
+    server.use(
+      http.get("/api/people/counts", ({ request }) => {
+        requested.push(target(request));
+        return HttpResponse.json({
+          total: 200,
+          active: 180,
+          inactive: 20,
+          by_role: { member: 150 },
+        });
+      }),
+    );
     const { Wrapper } = createTestQueryClientHarness();
     const { result, rerender } = renderHook(
       (enabled: boolean) =>
@@ -30,23 +42,24 @@ describe("people server pages", () => {
       { wrapper: Wrapper, initialProps: true },
     );
     await waitFor(() => expect(result.current.data?.total).toBe(200));
-    expect(fetch.mock.calls[0]?.[0]).toBe("/api/people/counts?q=club&role=member&active=false");
+    expect(requested[0]).toBe("/api/people/counts?q=club&role=member&active=false");
     rerender(false);
     expect(result.current.data).toBeUndefined();
   });
 
   it("loads paging, sort and combined filters, preserving the previous page", async () => {
     let finish: (value: Response) => void = () => {};
-    const fetch = vi
-      .fn()
-      .mockResolvedValueOnce(Response.json(page("first", { page: 1, limit: 5 })))
-      .mockImplementationOnce(
-        () =>
-          new Promise<Response>((resolve) => {
-            finish = resolve;
-          }),
-      );
-    vi.stubGlobal("fetch", fetch);
+    const requested: string[] = [];
+    server.use(
+      http.get("/api/people", ({ request }) => {
+        requested.push(target(request));
+        // The first page answers at once; the second stays pending until the test releases it.
+        if (requested.length === 1) return HttpResponse.json(page("first", { page: 1, limit: 5 }));
+        return new Promise<Response>((resolve) => {
+          finish = resolve;
+        });
+      }),
+    );
     const { Wrapper } = createTestQueryClientHarness();
     const { result, rerender } = renderHook(
       (params: PeopleListParams) => usePeopleListQuery(params, headers),
@@ -64,24 +77,24 @@ describe("people server pages", () => {
       active: false,
     };
     rerender(params);
-    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
-    expect(fetch.mock.calls[1]?.[0]).toBe(
+    await waitFor(() => expect(requested).toHaveLength(2));
+    expect(requested[1]).toBe(
       "/api/people?page=3&limit=5&q=phone&sort=registration_count&sort_dir=desc&role=member&active=false",
     );
     expect(result.current.isPlaceholderData).toBe(true);
     expect(result.current.data?.items[0]?.name).toBe("first");
-    await act(async () => finish(Response.json(page("third", params))));
+    await act(async () => finish(HttpResponse.json(page("third", params))));
     await waitFor(() => expect(result.current.data?.page).toBe(3));
   });
 
   it("aborts superseded requests and removes pages and in-flight writes on sign-out", async () => {
     const requests: { signal: AbortSignal; resolve: (value: Response) => void }[] = [];
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(
-        (_url, options) =>
+    server.use(
+      http.get(
+        "/api/people",
+        ({ request }) =>
           new Promise<Response>((resolve) => {
-            requests.push({ signal: options.signal, resolve });
+            requests.push({ signal: request.signal, resolve });
           }),
       ),
     );
@@ -94,34 +107,39 @@ describe("people server pages", () => {
     rerender("new");
     await waitFor(() => expect(requests).toHaveLength(2));
     expect(requests[0]?.signal.aborted).toBe(true);
-    await act(async () => requests[1]?.resolve(Response.json(page("new", { page: 1, limit: 5 }))));
+    await act(async () =>
+      requests[1]?.resolve(HttpResponse.json(page("new", { page: 1, limit: 5 }))),
+    );
     await waitFor(() => expect(result.current.data?.items[0]?.name).toBe("new"));
     rerender("pending");
     await waitFor(() => expect(requests).toHaveLength(3));
     act(() => queryClient.removeQueries({ queryKey: queryKeys.admin.people }));
     expect(requests[2]?.signal.aborted).toBe(true);
     await act(async () => {
-      requests[0]?.resolve(Response.json(page("stale", { page: 1, limit: 5 })));
-      requests[2]?.resolve(Response.json(page("signed-out", { page: 1, limit: 5 })));
+      requests[0]?.resolve(HttpResponse.json(page("stale", { page: 1, limit: 5 })));
+      requests[2]?.resolve(HttpResponse.json(page("signed-out", { page: 1, limit: 5 })));
     });
     expect(queryClient.getQueriesData({ queryKey: queryKeys.admin.people })).toEqual([]);
   });
 
   it("loads volunteer help periods from one bounded page and rejects unsupported predicates", async () => {
-    const fetch = vi.fn().mockResolvedValue(
-      Response.json({
-        ...page("volunteer", { page: 2, limit: 10 }),
-        items: [{ id: "v", name: "V", help_periods: [{ id: 1, first_help_day: "2026-10-06" }] }],
+    const requested: string[] = [];
+    server.use(
+      http.get("/api/volunteers", ({ request }) => {
+        requested.push(target(request));
+        return HttpResponse.json({
+          ...page("volunteer", { page: 2, limit: 10 }),
+          items: [{ id: "v", name: "V", help_periods: [{ id: 1, first_help_day: "2026-10-06" }] }],
+        });
       }),
     );
-    vi.stubGlobal("fetch", fetch);
     const { Wrapper } = createTestQueryClientHarness();
     const { result } = renderHook(
       () => usePeopleListQuery({ page: 2, limit: 10, role: "volunteer", active: true }, headers),
       { wrapper: Wrapper },
     );
     await waitFor(() => expect(result.current.data?.items[0]?.helpPeriods).toHaveLength(1));
-    expect(fetch.mock.calls[0]?.[0]).toBe("/api/volunteers?page=2&limit=10&active=true");
+    expect(requested[0]).toBe("/api/volunteers?page=2&limit=10&active=true");
     expect(() =>
       peopleListSearchParams({ page: 1, limit: 5, unsupported: true } as PeopleListParams),
     ).toThrow("Unsupported people list parameter");
