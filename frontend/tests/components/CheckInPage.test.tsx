@@ -9,7 +9,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import CheckInPage from "@/components/CheckInPage";
 import { useAuth } from "@/contexts/AuthContext";
 import { server } from "@/mocks/server";

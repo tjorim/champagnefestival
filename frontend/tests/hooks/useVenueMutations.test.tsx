@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
 import { useVenueMutations } from "@/hooks/useVenueMutations";
 import { server } from "@/mocks/server";

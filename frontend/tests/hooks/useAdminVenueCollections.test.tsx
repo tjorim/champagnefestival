@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { delay, http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
+import { delay } from "msw/utils/delay";
 import { describe, expect, it, vi } from "vitest";
 import { useAdminQueries } from "@/hooks/useAdminQueries";
 import { useAdminVenueActions } from "@/hooks/useAdminVenueActions";

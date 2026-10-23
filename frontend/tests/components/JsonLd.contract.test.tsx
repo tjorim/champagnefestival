@@ -15,7 +15,7 @@
  */
 import { render } from "@testing-library/react";
 import { beforeAll, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 
 import EventStructuredData from "@/components/JsonLd";
 import { getLocale } from "@/paraglide/runtime";

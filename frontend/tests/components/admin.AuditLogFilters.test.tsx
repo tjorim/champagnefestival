@@ -7,7 +7,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import AuditLogViewer from "@/components/admin/AuditLogViewer";
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";

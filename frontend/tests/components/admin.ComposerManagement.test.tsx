@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { axe } from "jest-axe";
-import { HttpResponse, http } from "msw";
+import { HttpResponse, http } from "msw/http";
 import { describe, expect, it } from "vitest";
 import ComposerManagement from "@/components/admin/ComposerManagement";
 import { server } from "@/mocks/server";

@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { editions, events, type SeedEdition } from "../data/editionStore";
 import { sharedStore, resetSharedStore } from "../data/registrations";
 import { seedTables } from "../data/venue";
@@ -268,6 +268,18 @@ export const publicHandlers = [
    * default in tests (#1044); override with server.use for tests that
    * exercise the confirm-first claim card. */
   http.get("/api/me/registrations/claimable", () => HttpResponse.json([])),
+
+  /** GET /api/me/communication-preference — no saved preference by default;
+   * override with server.use to exercise a stored language. */
+  http.get("/api/me/communication-preference", () =>
+    HttpResponse.json({ preferred_language: null }),
+  ),
+
+  /** GET /api/me/volunteer/poll — an edition with no poll questions by
+   * default; override with server.use for tests that exercise the poll. */
+  http.get("/api/me/volunteer/poll", () =>
+    HttpResponse.json({ edition_id: null, questions: [], note: null }),
+  ),
 
   /** POST /api/visitor-sessions/sign-out — always succeeds (#953). */
   http.post("/api/visitor-sessions/sign-out", () => new HttpResponse(null, { status: 204 })),

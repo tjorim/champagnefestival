@@ -6,7 +6,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
 import MembersManagement from "@/components/admin/MembersManagement";

@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { describe, expect, it } from "vitest";
 import { fetchVolunteer } from "@/utils/adminFetch";
 import { server } from "@/mocks/server";
