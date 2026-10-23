@@ -118,6 +118,12 @@ updates:
           - "fastmcp-slim"
           - "mcp"
           - "mcp-types"
+      # Keep Pydantic, its validation core, and settings integration together
+      pydantic:
+        patterns:
+          - "pydantic"
+          - "pydantic-core"
+          - "pydantic-settings"
       python-quality:
         patterns:
           - "ruff"
