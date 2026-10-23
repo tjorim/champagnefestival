@@ -1,6 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse } from "msw/http";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { server } from "@/mocks/server";
 import { usePeopleCountsQuery, usePeopleListQuery } from "@/hooks/usePeopleListQuery";
 import { peopleListSearchParams, type PeopleListParams } from "@/utils/adminPeopleQueries";
@@ -20,6 +20,8 @@ const target = (request: Request) => {
   const url = new URL(request.url);
   return url.pathname + url.search;
 };
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe("people server pages", () => {
   it("reads full-set counts and hides cached data when disabled", async () => {
@@ -87,14 +89,17 @@ describe("people server pages", () => {
     await waitFor(() => expect(result.current.data?.page).toBe(3));
   });
 
+  // A fetch stub rather than MSW: the point is that responses arriving *after* a request was aborted
+  // are discarded. A real aborted request can never deliver one, so only a stub that ignores the signal
+  // exercises that guard.
   it("aborts superseded requests and removes pages and in-flight writes on sign-out", async () => {
     const requests: { signal: AbortSignal; resolve: (value: Response) => void }[] = [];
-    server.use(
-      http.get(
-        "/api/people",
-        ({ request }) =>
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        (_url, options) =>
           new Promise<Response>((resolve) => {
-            requests.push({ signal: request.signal, resolve });
+            requests.push({ signal: options.signal, resolve });
           }),
       ),
     );
@@ -107,17 +112,15 @@ describe("people server pages", () => {
     rerender("new");
     await waitFor(() => expect(requests).toHaveLength(2));
     expect(requests[0]?.signal.aborted).toBe(true);
-    await act(async () =>
-      requests[1]?.resolve(HttpResponse.json(page("new", { page: 1, limit: 5 }))),
-    );
+    await act(async () => requests[1]?.resolve(Response.json(page("new", { page: 1, limit: 5 }))));
     await waitFor(() => expect(result.current.data?.items[0]?.name).toBe("new"));
     rerender("pending");
     await waitFor(() => expect(requests).toHaveLength(3));
     act(() => queryClient.removeQueries({ queryKey: queryKeys.admin.people }));
     expect(requests[2]?.signal.aborted).toBe(true);
     await act(async () => {
-      requests[0]?.resolve(HttpResponse.json(page("stale", { page: 1, limit: 5 })));
-      requests[2]?.resolve(HttpResponse.json(page("signed-out", { page: 1, limit: 5 })));
+      requests[0]?.resolve(Response.json(page("stale", { page: 1, limit: 5 })));
+      requests[2]?.resolve(Response.json(page("signed-out", { page: 1, limit: 5 })));
     });
     expect(queryClient.getQueriesData({ queryKey: queryKeys.admin.people })).toEqual([]);
   });
