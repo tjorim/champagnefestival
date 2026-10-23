@@ -28,7 +28,7 @@
     "ui:test": "node --test scripts/ui-maintenance.verify.mjs"
   },
   "dependencies": {
-    "@base-ui/react": "^1.8.0",
+    "@base-ui/react": "^1.9.0",
     "@dnd-kit/dom": "^0.5.1",
     "@dnd-kit/react": "^0.5.1",
     "@tanstack/charts": "^1.1.0",
