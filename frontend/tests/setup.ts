@@ -64,22 +64,7 @@ afterEach(() => {
 
 afterAll(() => server.close());
 
-// Mock objects that are not available in jsdom
-Object.defineProperty(window, "matchMedia", {
-  writable: true,
-  value: (query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: () => {},
-    removeListener: () => {},
-    addEventListener: () => {},
-    removeEventListener: () => {},
-    dispatchEvent: () => {},
-  }),
-});
-
-// Mock leaflet since it doesn't work well in jsdom
+// Mock Leaflet's map rendering in the test DOM
 vi.mock("leaflet", () => ({
   icon: vi.fn().mockReturnValue({}),
   latLng: vi.fn().mockReturnValue({}),

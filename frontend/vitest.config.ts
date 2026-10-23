@@ -20,6 +20,11 @@ export default defineConfig({
   },
   test: {
     environment: "happy-dom",
+    environmentOptions: {
+      happyDOM: {
+        settings: { device: { prefersColorScheme: "dark" } },
+      },
+    },
     globals: true,
     setupFiles: ["./tests/setup.ts"],
     exclude: ["**/node_modules/**", "**/dist/**", "**/e2e/**"],
