@@ -65,6 +65,7 @@ record the exact upstream snapshot and decision:
 
 ```sh
 pnpm ui:record checkbox --note "Describe the upstream changes reviewed, keep/apply decision, and validation actually run."
+pnpm exec oxfmt ui-maintenance.json ui-upstream.json
 pnpm ui:check
 ```
 
@@ -164,3 +165,47 @@ Run it after `pnpm build`; CI also runs its graph/budget regression tests.
 - [Base UI releases](https://base-ui.com/react/overview/releases)
 - [shadcn CLI dry-run/diff](https://ui.shadcn.com/docs/cli)
 - [shadcn changelog](https://ui.shadcn.com/docs/changelog)
+
+## Cross-app import and tooling conventions
+
+Application screens import shared controls from the app's local UI boundary:
+`@/components/ui/<component>`. Keep the configured alias; physical folders and existing
+visual presets need not match between applications. Use the same rule for type
+imports. Cross-directory relative paths into shared UI are rejected.
+
+Only files in the inventoried shared UI directories import Base UI primitives
+normally. Use explicit component subpaths, never the `@base-ui/react` barrel.
+Local adapters can re-export an existing primitive API unchanged where an app
+intentionally owns styling outside the component. Do not generate a second
+styled implementation just to create an import boundary.
+
+A composition outside the UI directory may import exact primitive modules only
+when its file is inventoried and `importPolicy.baseUiExceptions` records the
+owning component, allowed modules and reason. This covers genuine shared
+compositions such as guarded dialogs, pointer-anchored menus and chart tooltips;
+it is not a blanket exception for screens. New primitive imports require a
+local adapter or an explicit reviewed exception. Do not add Radix or the retired
+`@base-ui-components` package alongside the Base UI stack.
+
+UI code imports `cn` through `@/lib/utils` where that helper is used. Keep
+app-specific variants, classes, locale behaviour, labels and semantics.
+Daynest's existing native/Bootstrap controls remain supported; this convention
+does not initialise shadcn or introduce a visual migration there.
+
+```sh
+pnpm ui:usage  # Parse owned application imports and re-exports with Oxc
+pnpm ui:check  # Inventory plus import policy
+pnpm ui:test  # Tooling and import-policy regression tests
+```
+
+The import check covers static imports/re-exports, literal dynamic imports,
+require calls and TypeScript import types. Test files and generated Paraglide
+output are excluded; normal lint/type checking still covers application syntax.
+It does not execute fetched registry code or replace interaction testing.
+
+Use each package's exact `packageManager` declaration and committed
+`.node-version` as the frontend tooling sources of truth. The app packages use
+pnpm 10.33.0; CI must read the package declaration rather than keeping a second
+hard-coded pnpm version. Frontend Node setup reads `.node-version`. Keep tool
+changes in reviewable PRs and preserve runtime-version/bundle investigations as
+separate work.

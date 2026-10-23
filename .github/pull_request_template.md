@@ -22,3 +22,5 @@ For Base UI/shadcn updates, follow [the UI maintenance workflow](https://github.
 - [ ] Review runtime release notes and affected direct primitive consumers.
 - [ ] Compare captured upstream changes and local registry diffs where applicable; record keep/apply decisions without overwriting app customisations.
 - [ ] Record interaction, theme/mobile/localisation and bundle validation, including any independently reproduced baseline failures. Update reviewed snapshots only after the corresponding source review.
+
+- [ ] UI imports use the configured local boundary; any direct primitive composition is inventoried with exact allowed modules and a reason.

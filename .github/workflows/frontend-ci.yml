@@ -37,8 +37,9 @@ jobs:
       - name: Validate UI maintenance inventory
         working-directory: frontend
         run: |
-          node --test scripts/ui-maintenance.verify.mjs
+          node --test scripts/ui-maintenance.verify.mjs scripts/ui-imports.verify.mjs
           node scripts/ui-maintenance.mjs check
+          node scripts/ui-imports.mjs
 
       - name: Audit interface strings and catalogues
         run: pnpm run locale:audit

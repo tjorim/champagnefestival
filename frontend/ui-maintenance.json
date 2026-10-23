@@ -338,5 +338,15 @@
       "reviewedAt": null,
       "reviewNote": null
     }
+  },
+  "importPolicy": {
+    "uiAlias": "@/components/ui",
+    "baseUiExceptions": {
+      "src/components/MobileMenu.tsx": {
+        "component": "MobileMenu",
+        "modules": ["@base-ui/react/dialog"],
+        "reason": "Public responsive navigation composition with site-specific sheet and navigation behaviour."
+      }
+    }
   }
 }
