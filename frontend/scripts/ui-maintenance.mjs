@@ -3,6 +3,8 @@ import { readFile, writeFile, readdir, mkdir } from "node:fs/promises";
 import { resolve, relative, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
+import { recoverRecord, saveRecord } from "./ui-record-store.mjs";
 
 const log = (message) => process.stdout.write(`${message}\n`);
 
@@ -59,9 +61,12 @@ async function upstream(style, name) {
 
 async function run() {
   const [command = "check", ...args] = process.argv.slice(2);
-  const inventory = await readJson("ui-maintenance.json");
+  if (await recoverRecord(root)) log("Recovered an interrupted UI review record.");
+  const inventoryText = await readFile(resolve(root, "ui-maintenance.json"), "utf8");
+  const baselinesText = await readFile(resolve(root, "ui-upstream.json"), "utf8");
+  const inventory = JSON.parse(inventoryText);
   const pkg = await readJson("package.json");
-  const baselines = await readJson("ui-upstream.json");
+  const baselines = JSON.parse(baselinesText);
   if (inventory.version !== 1) fail("Unsupported UI inventory version");
   if (!pkg.dependencies?.["@base-ui/react"]) fail("Missing Base UI runtime dependency");
   const entries = inventory.components;
@@ -146,8 +151,8 @@ async function run() {
   const selected = names.length ? names : registry.map(([name]) => name);
   if (command === "diff") {
     const result = spawnSync(
-      process.platform === "win32" ? "pnpm.cmd" : "pnpm",
-      ["exec", "shadcn", "add", ...selected, "--dry-run", "--diff"],
+      process.execPath,
+      [createRequire(import.meta.url).resolve("shadcn"), "add", ...selected, "--dry-run", "--diff"],
       { cwd: root, stdio: "inherit" },
     );
     if (result.error) throw result.error;
@@ -182,8 +187,11 @@ async function run() {
         ),
       ),
     });
-    await writeFile(resolve(root, "ui-upstream.json"), json(baselines));
-    await writeFile(resolve(root, "ui-maintenance.json"), json(inventory));
+    await saveRecord(
+      root,
+      { "ui-upstream.json": baselinesText, "ui-maintenance.json": inventoryText },
+      { "ui-upstream.json": json(baselines), "ui-maintenance.json": json(inventory) },
+    );
     log(`Recorded ${name}. Review and commit the metadata diff with the associated change.`);
     return;
   }

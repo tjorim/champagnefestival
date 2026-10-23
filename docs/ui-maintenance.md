@@ -35,7 +35,8 @@ pnpm ui:upstream
 ```
 
 Run the upstream comparison monthly, and whenever a Base UI or shadcn update
-PR is reviewed. It writes only ignored `.ui-maintenance/` reports. Exit code 0
+PR is reviewed. With no pending record to recover, it writes only ignored
+`.ui-maintenance/` reports. Exit code 0
 means no captured upstream definitions changed, 1 means review is needed, and
 2 means validation/network/tooling failed. None of these means a UI change is
 safe to merge. Package installation is frozen; never overwrite all components
@@ -48,7 +49,9 @@ pnpm ui:upstream checkbox
 pnpm ui:diff checkbox
 ```
 
-`ui:diff` invokes the pinned CLI with component names before
+`ui:diff` resolves the locally installed, pinned shadcn entry and launches it
+with the current Node executable, avoiding Windows batch-file launchers or a
+shell. It passes component names before
 `--dry-run --diff`. It never installs or overwrites application components.
 The upstream snapshot comparison detects changes since our captured revision;
 the CLI diff compares today's registry with our customised local component.
@@ -78,6 +81,28 @@ Initial registration with `ui:record` captures the snapshot and hash for that
 new inventory entry; `ui:check` requires them on subsequent runs.
 For a local composition, set `registry: null`, `origin: "local"` and explain
 why the custom implementation stays.
+
+## Interrupted review-record saves
+
+`ui:record` publishes a complete exclusive `.ui-maintenance-record.json` journal
+before replacing either metadata file. Each file is staged and atomically
+replaced. The journal stores the exact before/after contents of both files and
+stays in place if a replacement fails or the process stops.
+
+The next maintenance command finishes that saved update **before** reading and
+validating the snapshot hashes, without fetching another registry revision.
+After fixing any filesystem permission problem, run `pnpm ui:check` first to
+recover, then format the metadata and retry the review command if needed.
+Successful completion removes the journal. Staging files and the journal are
+ignored by Git; never commit them.
+
+Run metadata commands serially in a checkout. A live journal owner is refused
+rather than taken over. If either file differs from both its recorded before
+and after contents, recovery stops to preserve the independent edit. Keep the
+current files and journal, reconcile those edits with the saved update, then
+retry; do not delete the journal merely to silence validation. This recovery
+plan addresses process interruption, not conflicting concurrent edits or a
+blanket approval of the saved source.
 
 ## Validation before merging
 

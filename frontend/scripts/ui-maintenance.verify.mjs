@@ -20,10 +20,9 @@ async function fixture(t, registry = false) {
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(root, "scripts"));
   await mkdir(join(root, "src/ui"), { recursive: true });
-  await copyFile(
-    new URL("./ui-maintenance.mjs", import.meta.url),
-    join(root, "scripts/ui-maintenance.mjs"),
-  );
+  for (const file of ["ui-maintenance.mjs", "ui-record-store.mjs"]) {
+    await copyFile(new URL(`./${file}`, import.meta.url), join(root, "scripts", file));
+  }
   const write = (path, value) =>
     writeFile(join(root, path), typeof value === "string" ? value : json(value));
   const item = {
@@ -57,11 +56,16 @@ async function fixture(t, registry = false) {
     new URL("./fixtures/ui-maintenance-fetch-mock.mjs", import.meta.url),
     join(root, "fetch-mock.mjs"),
   );
-  const run = (args, response, entryPoint = "scripts/ui-maintenance.mjs") => {
-    const env = { ...process.env };
+  await copyFile(
+    new URL("./fixtures/ui-maintenance-record-failure.mjs", import.meta.url),
+    join(root, "record-failure.mjs"),
+  );
+  const run = (args, response, entryPoint = "scripts/ui-maintenance.mjs", options = {}) => {
+    const env = { ...process.env, ...options.env };
     delete env.UI_MAINTENANCE_TEST_RESPONSE;
     const prelude =
       response !== undefined ? ["--import", pathToFileURL(join(root, "fetch-mock.mjs")).href] : [];
+    if (options.preload) prelude.push("--import", pathToFileURL(join(root, options.preload)).href);
     if (response !== undefined) env.UI_MAINTENANCE_TEST_RESPONSE = JSON.stringify(response);
     return spawnSync(process.execPath, [...prelude, entryPoint, ...args], {
       cwd: root,
@@ -184,4 +188,107 @@ test("mock response JSON stays inert, preserves own prototype keys, and is isola
   const second = f.run([], { content: "ordinary second response" }, "fetch-probe.mjs");
   assert.equal(second.status, 0, second.stderr);
   assert.deepEqual(JSON.parse(second.stdout).response, { content: "ordinary second response" });
+});
+
+test("diff launches the installed CLI with Node, preserves arguments and propagates its exit status", async (t) => {
+  const f = await fixture(t, true);
+  const cliDirectory = join(f.root, "node_modules", "shadcn");
+  await mkdir(cliDirectory, { recursive: true });
+  await f.write("node_modules/shadcn/package.json", {
+    name: "shadcn",
+    type: "module",
+    exports: "./cli with spaces.mjs",
+  });
+  await f.write(
+    "node_modules/shadcn/cli with spaces.mjs",
+    `
+    process.stdout.write(JSON.stringify({ executable: process.execPath, args: process.argv.slice(2) }));
+    process.exitCode = Number(process.env.UI_MAINTENANCE_CLI_EXIT ?? 0);
+  `,
+  );
+  const result = f.run(["diff", "button"]);
+  assert.equal(result.status, 0, result.stderr);
+  const observed = JSON.parse(result.stdout);
+  assert.equal(observed.executable, process.execPath);
+  assert.deepEqual(observed.args, ["add", "button", "--dry-run", "--diff"]);
+  assert.equal(
+    f.run(["diff", "button"], undefined, undefined, { env: { UI_MAINTENANCE_CLI_EXIT: "19" } })
+      .status,
+    19,
+  );
+});
+
+for (const failure of ["throw", "exit"]) {
+  test(`record recovers before validation after a second-file ${failure}`, async (t) => {
+    const f = await fixture(t, true);
+    const response = {
+      name: "button",
+      ...source,
+      files: [{ ...source.files[0], content: "reviewed update" }],
+    };
+    const result = f.run(["record", "button", "--note", "Reviewed update"], response, undefined, {
+      preload: "record-failure.mjs",
+      env: { UI_MAINTENANCE_RECORD_FAILURE: failure },
+    });
+    assert.equal(result.status, failure === "exit" ? 77 : 2, result.stderr);
+    const saved = JSON.parse(await readFile(join(f.root, "ui-upstream.json"), "utf8"));
+    const oldInventory = JSON.parse(await readFile(join(f.root, "ui-maintenance.json"), "utf8"));
+    assert.equal(saved.button.files[0].content, "reviewed update");
+    assert.equal(oldInventory.components.button.reviewedAt, null);
+    await readFile(join(f.root, ".ui-maintenance-record.json"));
+    const recovered =
+      failure === "exit"
+        ? f.run(["record", "button", "--note", "Reviewed retry"], response)
+        : f.run(["check"]);
+    assert.equal(recovered.status, 0, recovered.stderr);
+    assert.match(recovered.stdout, /Recovered an interrupted/);
+    const inventory = JSON.parse(await readFile(join(f.root, "ui-maintenance.json"), "utf8"));
+    assert.equal(
+      inventory.components.button.reviewNote,
+      failure === "exit" ? "Reviewed retry" : "Reviewed update",
+    );
+    await assert.rejects(readFile(join(f.root, ".ui-maintenance-record.json")), { code: "ENOENT" });
+    assert.equal(f.run(["record", "button", "--note", "Reviewed retry"], response).status, 0);
+    assert.equal(f.run(["check"]).status, 0);
+  });
+}
+
+test("record recovery preserves edits made outside the pending transaction", async (t) => {
+  const f = await fixture(t, true);
+  const result = f.run(
+    ["record", "button", "--note", "Interrupted"],
+    { name: "button", ...source },
+    undefined,
+    {
+      preload: "record-failure.mjs",
+      env: { UI_MAINTENANCE_RECORD_FAILURE: "exit" },
+    },
+  );
+  assert.equal(result.status, 77);
+  f.inventory.components.button.reason = "An independent edit to preserve";
+  await f.write("ui-maintenance.json", f.inventory);
+  const before = await readFile(join(f.root, "ui-maintenance.json"), "utf8");
+  const recovery = f.run(["check"]);
+  assert.equal(recovery.status, 2);
+  assert.match(recovery.stderr, /changed outside the pending record/);
+  assert.equal(await readFile(join(f.root, "ui-maintenance.json"), "utf8"), before);
+  await readFile(join(f.root, ".ui-maintenance-record.json"));
+});
+
+test("a live record owner blocks recovery without changing metadata", async (t) => {
+  const f = await fixture(t, true);
+  const inventory = await readFile(join(f.root, "ui-maintenance.json"), "utf8");
+  const baseline = await readFile(join(f.root, "ui-upstream.json"), "utf8");
+  await f.write(".ui-maintenance-record.json", {
+    version: 1,
+    pid: process.pid,
+    files: {
+      "ui-maintenance.json": { before: inventory, after: inventory },
+      "ui-upstream.json": { before: baseline, after: baseline },
+    },
+  });
+  const result = f.run(["check"]);
+  assert.equal(result.status, 2);
+  assert.match(result.stderr, /still running/);
+  assert.equal(await readFile(join(f.root, "ui-maintenance.json"), "utf8"), inventory);
 });
