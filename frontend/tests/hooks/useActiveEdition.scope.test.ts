@@ -7,8 +7,10 @@
  * floor plans and the event-day views work for a bourse too.
  */
 
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { http, HttpResponse } from "msw/http";
+import { describe, expect, it } from "vitest";
 import { activeEditionQueryOptions, fetchActiveEdition } from "@/hooks/useActiveEdition";
+import { server } from "@/mocks/server";
 import { queryKeys } from "@/utils/queryKeys";
 
 const EDITION = {
@@ -31,41 +33,38 @@ const EDITION = {
   sponsors: [],
 };
 
-function stubFetch() {
-  const fetchMock = vi.fn().mockResolvedValue(
-    new Response(JSON.stringify(EDITION), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
+/** Serves the active edition and returns the path and query of each request it receives. */
+function serveActiveEdition() {
+  const requested: string[] = [];
+  server.use(
+    http.get("/api/editions/active", ({ request }) => {
+      const url = new URL(request.url);
+      requested.push(url.pathname + url.search);
+      return HttpResponse.json(EDITION);
     }),
   );
-  vi.stubGlobal("fetch", fetchMock);
-  return fetchMock;
+  return requested;
 }
-
-afterEach(() => {
-  vi.unstubAllGlobals();
-  vi.restoreAllMocks();
-});
 
 describe("fetchActiveEdition", () => {
   it("pins the public scope to festivals", async () => {
-    const fetchMock = stubFetch();
+    const requested = serveActiveEdition();
 
     await fetchActiveEdition();
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/editions/active?edition_type=festival");
+    expect(requested).toEqual(["/api/editions/active?edition_type=festival"]);
   });
 
   it("does not filter by type for the admin scope", async () => {
-    const fetchMock = stubFetch();
+    const requested = serveActiveEdition();
 
     await fetchActiveEdition("any");
 
-    expect(fetchMock).toHaveBeenCalledWith("/api/editions/active");
+    expect(requested).toEqual(["/api/editions/active"]);
   });
 
   it("carries the edition type through, so admin views can label a bourse", async () => {
-    stubFetch();
+    serveActiveEdition();
 
     const edition = await fetchActiveEdition("any");
 

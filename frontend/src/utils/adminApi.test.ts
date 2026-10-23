@@ -1,4 +1,6 @@
+import { http, HttpResponse } from "msw/http";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { server } from "@/mocks/server";
 import { ApiError } from "./apiErrors";
 import { m } from "@/paraglide/messages";
 import { fetchJsonOrThrow, requestApi, signageOperationErrorMessage } from "./adminApi";
@@ -8,33 +10,29 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
 
 describe("adminApi", () => {
   it("shows a friendly offline message when fetch fails", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    server.use(http.all("/api/admin/check-in", () => HttpResponse.error()));
 
     await expect(requestApi("/api/admin/check-in", {})).rejects.toThrow(
       "We could not reach the server. Check your internet connection and try again.",
     );
     expect(console.error).toHaveBeenCalledWith("Admin API network request failed", {
       url: "/api/admin/check-in",
-      error: expect.any(TypeError),
+      // The DOM implementation decides the error class (happy-dom reports a NetworkError DOMException).
+      error: expect.anything(),
     });
   });
 
   it("keeps request IDs out of user-facing API errors and logs them instead", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation(() =>
-        Promise.resolve(
-          new Response(JSON.stringify({ detail: "Registration not found" }), {
-            status: 404,
-            statusText: "Not Found",
-            headers: { "Content-Type": "application/json", "X-Request-ID": "req-123" },
-          }),
+    server.use(
+      http.get("/api/admin/registrations/missing", () =>
+        HttpResponse.json(
+          { detail: "Registration not found" },
+          { status: 404, statusText: "Not Found", headers: { "X-Request-ID": "req-123" } },
         ),
       ),
     );
@@ -58,14 +56,9 @@ describe("adminApi", () => {
   });
 
   it("logs failed API responses even when no request ID is present", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ detail: "Bad request" }), {
-          status: 400,
-          statusText: "Bad Request",
-          headers: { "Content-Type": "application/json" },
-        }),
+    server.use(
+      http.get("/api/admin/registrations", () =>
+        HttpResponse.json({ detail: "Bad request" }, { status: 400, statusText: "Bad Request" }),
       ),
     );
 
@@ -81,17 +74,11 @@ describe("adminApi", () => {
   });
 
   it("throws an ApiError carrying the stable code next to the English detail", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation(() =>
-        Promise.resolve(
-          new Response(
-            JSON.stringify({ detail: "Registration not found.", code: "registration_not_found" }),
-            {
-              status: 404,
-              headers: { "Content-Type": "application/json" },
-            },
-          ),
+    server.use(
+      http.get("/api/registrations/x", () =>
+        HttpResponse.json(
+          { detail: "Registration not found.", code: "registration_not_found" },
+          { status: 404 },
         ),
       ),
     );
@@ -109,7 +96,7 @@ describe("adminApi", () => {
   });
 
   it("marks a network failure with its own code so it can be translated", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    server.use(http.get("/api/x", () => HttpResponse.error()));
 
     const error = await requestApi("/api/x", {}).catch((caught: unknown) => caught);
 
