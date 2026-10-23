@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { server } from "@/mocks/server";
 import { createTestQueryClientWrapper } from "../utils/queryClient";
 import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";

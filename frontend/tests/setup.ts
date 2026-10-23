@@ -52,7 +52,7 @@ vi.mock("@/contexts/AuthContext", () => ({
 
 // Start the MSW Node server before all tests so the same handlers and seed
 // data used by the browser dev worker are also used in Vitest.
-beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
+beforeAll(() => server.listen({ onUnhandledFrame: "error" }));
 
 // After each test:
 //  1. Remove any per-test handler overrides added via server.use(…).

@@ -8,7 +8,7 @@ import {
   createRouter,
   RouterProvider,
 } from "@tanstack/react-router";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import MyRegistrationsPage, { buildCheckInQrUrl } from "@/components/MyRegistrationsPage";
 import { server } from "@/mocks/server";
 import { validateMyRegistrationsSearch } from "@/router";

@@ -2,7 +2,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import EventModal from "@/components/admin/EventModal";
 import type { Edition } from "@/components/admin/editionTypes";
 import { server } from "@/mocks/server";

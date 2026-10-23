@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import { afterEach, describe, expect, it } from "vitest";
 import { server } from "@/mocks/server";
 import { seedRegistrations } from "@/mocks/data/registrations";

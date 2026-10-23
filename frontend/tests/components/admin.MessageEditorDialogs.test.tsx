@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { HttpResponse, http } from "msw";
+import { HttpResponse, http } from "msw/http";
 import { beforeEach, describe, expect, it } from "vitest";
 import AnnouncementManagement from "@/components/admin/AnnouncementManagement";
 import ComposerManagement from "@/components/admin/ComposerManagement";

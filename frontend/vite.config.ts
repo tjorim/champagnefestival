@@ -1,6 +1,7 @@
 import { paraglideVitePlugin } from "@inlang/paraglide-js";
 import tailwindcss from "@tailwindcss/vite";
 import reactPlugin from "@vitejs/plugin-react";
+import { msw } from "msw/vite";
 import { resolve } from "node:path";
 import visualThemes from "./src/config/visualThemes.json" with { type: "json" };
 import { defineConfig, loadEnv } from "vite";
@@ -30,6 +31,9 @@ export default defineConfig(({ command, mode, isPreview }) => {
         strategy: ["localStorage", "preferredLanguage", "baseLocale"],
       }),
       reactPlugin(),
+      // Serves /mockServiceWorker.js from the msw package in dev. Nothing imports `virtual:msw`,
+      // so the worker script is never emitted into dist.
+      msw(),
       tailwindcss(),
       ...(session.plugin ? [session.plugin] : []),
     ],

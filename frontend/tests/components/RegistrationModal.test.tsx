@@ -1,6 +1,6 @@
 import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, it, expect, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import RegistrationModal from "@/components/RegistrationModal";
 import { server } from "@/mocks/server";
 import { NO_PRODUCT_TRANSLATIONS, type Event, type Product } from "@/types/event";

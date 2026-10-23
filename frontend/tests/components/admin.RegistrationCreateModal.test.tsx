@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import RegistrationCreateModal from "@/components/admin/RegistrationCreateModal";
 import { server } from "@/mocks/server";
 import { createTestQueryClient } from "../utils/queryClient";

@@ -3,7 +3,7 @@ import { selectAdminOption } from "../helpers/adminSelect";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { describe, it, expect, vi } from "vitest";
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse } from "msw/http";
 import EventProductsModal from "@/components/admin/EventProductsModal";
 import { server } from "@/mocks/server";
 import type { Event } from "@/types/event";
