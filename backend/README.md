@@ -899,7 +899,11 @@ Admin REST operations (also available as admin-only MCP tools):
   hand-out or undoes it. MCP: `set_stamp_reward_handed_out`.
 - MCP `list_stamp_card_types` and `save_stamp_card_type` mirror type operations.
 
-QR check-in, MCP `check_in` and registration updates returning `checked_in`
+Admin people lists, counts and CSV export accept `reward_due=true|false`; list
+rows include a `reward_due` boolean derived from outstanding rewards across all
+cards. Filtering happens before pagination and does not duplicate people.
+
+QR and manual volunteer check-in, MCP `check_in` and registration updates returning `checked_in`
 include nullable `stamp_progress` (`card_id`, `stamps`, `box_count`,
 `reward_earned`). Only check-ins in `capsule_exchange` editions earn stamps.
 The member gate belongs to #1404; stamping does not add a second membership

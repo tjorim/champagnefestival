@@ -26,6 +26,9 @@ const SEED_EVENT_TITLE = seedReg.event.title;
 
 vi.mock("@/paraglide/messages", () => ({
   m: {
+    stamp_progress: ({ count, total }: { count: number; total: number }) =>
+      `Stamps: ${count}/${total}`,
+    stamp_reward_earned: () => "Reward earned!",
     checkin_title: () => "Check-in",
     checkin_scan_prompt: () => "Scan a QR code to begin.",
     checkin_not_found: () => "Registration not found.",
@@ -120,6 +123,26 @@ describe("CheckInPage", () => {
 
     return render(<RouterProvider router={router} />, { wrapper: Wrapper });
   }
+
+  it("keeps reward feedback after the lookup refresh", async () => {
+    server.use(
+      http.post(`/api/check-in/${SEED_REG_ID}`, () =>
+        HttpResponse.json({
+          registration: {
+            id: SEED_REG_ID,
+            name: SEED_REG_NAME,
+            checked_in: true,
+            status: "confirmed",
+          },
+          stamp_progress: { card_id: "card", stamps: 10, box_count: 10, reward_earned: true },
+        }),
+      ),
+    );
+    await renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Check in now" }));
+    expect(await screen.findByText("Stamps: 10/10")).toBeInTheDocument();
+    expect(screen.getByText("Reward earned!")).toBeInTheDocument();
+  });
 
   it("loads the registration via the lookup query", async () => {
     await renderPage();
