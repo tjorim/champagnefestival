@@ -4,6 +4,7 @@ import {
   CalendarPlusIcon,
   CircleArrowDownIcon,
   CircleUserRoundIcon,
+  MailCheckIcon,
   CupSodaIcon,
   ExternalLinkIcon,
   MapIcon,
@@ -90,6 +91,7 @@ const VenuePlanPage = lazy(() => import("./components/VenuePlanPage"));
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
 const MyAccountPage = lazy(() => import("./components/MyAccountPage"));
+const EmailConsentConfirmPage = lazy(() => import("./components/EmailConsentConfirmPage"));
 // Below-the-fold components
 const LogoWall = lazy(() => import("./components/LogoWall"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -279,6 +281,24 @@ function MyAccountRoute() {
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.my_account_delete_error()}>
           <MyAccountPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+/** Route component for /email-consent, the target of the emailed consent confirmation link (#1408). */
+function EmailConsentRoute() {
+  useNoIndex();
+  return (
+    <div className="App standalone-app">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar icon={MailCheckIcon} title={m.email_consent_confirm_title()} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={m.email_consent_confirm_error()}>
+          <EmailConsentConfirmPage />
         </AppSuspense>
       </main>
     </div>
@@ -862,6 +882,7 @@ const router = createAppRouter({
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,
+  EmailConsentRoute,
   VenuePlanRoute,
   queryClient,
 });

@@ -30,6 +30,8 @@ from app.routers import (
     contact,
     edition_artwork,
     editions,
+    email_categories,
+    email_consent,
     event_categories,
     events,
     faq,
@@ -228,6 +230,8 @@ app.include_router(signage.assets_router)
 app.include_router(auth.router)
 app.include_router(audit.router)
 app.include_router(members.router)
+app.include_router(email_categories.router)
+app.include_router(email_consent.router)
 app.include_router(event_categories.router)
 app.include_router(product_categories.router)
 app.include_router(events.router)

@@ -617,8 +617,6 @@ def person_to_dict(p: Person) -> dict:
         "visits_per_month": p.visits_per_month,
         "notes": p.notes,
         "anonymised": p.anonymised,
-        "marketing_opt_in": p.marketing_opt_in,
-        "marketing_opt_in_at": p.marketing_opt_in_at,
         "created_at": p.created_at,
         "updated_at": p.updated_at,
     }

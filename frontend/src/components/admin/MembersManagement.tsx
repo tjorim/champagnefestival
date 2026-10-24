@@ -1,4 +1,5 @@
 import MemberStampCards from "./MemberStampCards";
+import PersonEmailConsents from "./PersonEmailConsents";
 import StampCardTypes from "./StampCardTypes";
 import { useQuery } from "@tanstack/react-query";
 import { usePeopleCountsQuery } from "@/hooks/usePeopleListQuery";
@@ -6,7 +7,7 @@ import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { MailIcon, PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
+import { MailCheckIcon, MailIcon, PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useCallback, useState, useMemo } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -54,6 +55,7 @@ export default function MembersManagement({
   authHeaders,
 }: MembersManagementProps) {
   const [stampMember, setStampMember] = useState<Person | null>(null);
+  const [consentPerson, setConsentPerson] = useState<Person | null>(null);
   const counts = usePeopleCountsQuery({ role: "member" }, authHeaders);
   const settings = useQuery({
     queryKey: queryKeys.admin.settings,
@@ -198,6 +200,15 @@ export default function MembersManagement({
                 >
                   {m.stamp_cards()}
                 </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConsentPerson(member)}
+                  title={m.admin_email_consents()}
+                  aria-label={`${m.admin_email_consents()}: ${member.name}`}
+                >
+                  <Icon icon={MailCheckIcon} />
+                </Button>
                 {member.email && (
                   <Button
                     size="sm"
@@ -263,6 +274,13 @@ export default function MembersManagement({
 
   return (
     <>
+      {consentPerson && (
+        <PersonEmailConsents
+          person={consentPerson}
+          authHeaders={authHeaders}
+          onClose={() => setConsentPerson(null)}
+        />
+      )}
       {stampMember && (
         <MemberStampCards
           person={stampMember}

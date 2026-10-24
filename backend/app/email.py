@@ -315,6 +315,74 @@ async def send_account_sign_in_email(email: str, request_id: str) -> bool:
     return True
 
 
+_CONSENT_CONFIRMATION_COPY = {
+    "nl": {
+        "subject": "Bevestig je e-mailvoorkeur voor het Champagnefestival",
+        "body": (
+            "Hallo,\n\n"
+            "Bij je inschrijving gaf je aan dat je e-mails wilt ontvangen over: {category}.\n"
+            "Bevestig dat dit je e-mailadres is en dat je deze berichten wilt, via de volgende link:\n\n"
+            "{link}\n\n"
+            "De link is {days} dagen geldig en kan één keer gebruikt worden. "
+            "Heb je dit niet gevraagd? Negeer dan deze e-mail: je ontvangt dan niets.\n"
+        ),
+    },
+    "fr": {
+        "subject": "Confirmez votre préférence d’e-mail pour le Champagnefestival",
+        "body": (
+            "Bonjour,\n\n"
+            "Lors de votre inscription, vous avez indiqué vouloir recevoir des e-mails concernant : {category}.\n"
+            "Confirmez qu’il s’agit bien de votre adresse et que vous souhaitez ces messages via le lien suivant :\n\n"
+            "{link}\n\n"
+            "Le lien est valable {days} jours et ne peut être utilisé qu’une seule fois. "
+            "Vous n’êtes pas à l’origine de cette demande ? Ignorez cet e-mail : vous ne recevrez rien.\n"
+        ),
+    },
+    "en": {
+        "subject": "Confirm your email preference for the Champagne Festival",
+        "body": (
+            "Hello,\n\n"
+            "When you registered you said you want to receive emails about: {category}.\n"
+            "Confirm that this is your address and that you want these messages using the link below:\n\n"
+            "{link}\n\n"
+            "The link is valid for {days} days and can be used once. "
+            "If you did not ask for this, ignore this email and you will receive nothing.\n"
+        ),
+    },
+}
+
+
+async def send_email_consent_confirmation(email: str, token: str, category_name: str, language: str | None) -> bool:
+    """Ask a registrant to confirm an address before updates consent becomes active (#1408).
+
+    Sent directly, like the sign-in link, because only the token's hash is stored. A failure is logged
+    without the address and does not undo the registration; the person can ask again later.
+    """
+    from app.services.email_consent_service import CONFIRMATION_TTL
+
+    if not settings.smtp_host or not settings.smtp_from:
+        logger.warning("Email consent confirmation not sent because SMTP is not configured.")
+        return False
+    copy = _CONSENT_CONFIRMATION_COPY.get(language or "nl", _CONSENT_CONFIRMATION_COPY["nl"])
+    message = EmailMessage()
+    message["Subject"] = copy["subject"]
+    message["From"] = settings.smtp_from
+    message["To"] = email
+    message.set_content(
+        copy["body"].format(
+            category=category_name,
+            link=f"{settings.frontend_url.rstrip('/')}/email-consent?token={token}",
+            days=CONFIRMATION_TTL.days,
+        )
+    )
+    try:
+        await asyncio.to_thread(_send_message_sync, message)
+    except Exception:
+        logger.exception("Failed to send an email consent confirmation.")
+        return False
+    return True
+
+
 def _send_message_sync(message: EmailMessage) -> None:
     with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=10) as smtp:
         smtp.ehlo()

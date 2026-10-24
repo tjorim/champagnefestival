@@ -513,7 +513,7 @@ export async function submitRegistration(
       })),
       notes: payload.notes,
       ...(payload.orderAnswers ? { order_answers: orderAnswersBody(payload.orderAnswers) } : {}),
-      marketing_opt_in: payload.marketingOptIn,
+      new_editions_opt_in: payload.newEditionsOptIn,
       honeypot: payload.honeypot ?? "",
       form_start_time: payload.formStartTime,
     }),
