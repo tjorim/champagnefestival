@@ -26,7 +26,7 @@ from datetime import UTC, date, datetime
 from typing import get_args
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -623,7 +623,8 @@ async def delete_edition(db: AsyncSession, edition: Edition, *, actor: str, requ
 
     if await db.scalar(
         select(EditionPollQuestion.id)
-        .where(EditionPollQuestion.edition_id == edition_id, EditionPollQuestion.event_id.is_not(None))
+        .join(Event, Event.id == EditionPollQuestion.event_id)
+        .where(or_(EditionPollQuestion.edition_id == edition_id, Event.edition_id == edition_id))
         .limit(1)
     ):
         raise ApiHTTPException(

@@ -924,7 +924,9 @@ the existing session idle-time refresh. It introduces no automatic retries.
 - Confirmed poll deletion cancels its bookings, detaches their poll reference,
   and preserves the booking history. A protected booking prevents the entire
   deletion. Event/edition deletion or removing volunteer-only access requires
-  linked polls to be removed/unlinked first (`event_linked_to_poll`). Existing
+  linked polls to be removed/unlinked first (`event_linked_to_poll`), including
+  polls owned by another edition that reference an event in the deleted edition.
+  This guard rejects before any deletion; retry guidance is unchanged. Existing
   question-deletion confirmation and closed-question rules still apply. Deletion
   has no response replay: after an ambiguous timeout read state; do not retry
   the old confirmation against changed state.

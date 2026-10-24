@@ -405,10 +405,13 @@ describe("CheckInPage", () => {
     });
   });
 
-  it("shows an expired-session message when volunteer check-in returns 401", async () => {
+  it.each([
+    [401, "Volunteer session expired for entrance actions."],
+    [500, "Something went wrong."],
+  ])("shows the action error when volunteer check-in returns %s", async (status, message) => {
     server.use(
       http.post("/api/volunteer/registrations/:id/check-in", () =>
-        HttpResponse.json(null, { status: 401 }),
+        HttpResponse.json(null, { status }),
       ),
     );
 
@@ -426,9 +429,7 @@ describe("CheckInPage", () => {
     fireEvent.click(screen.getByRole("button", { name: /check in now/i }));
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Volunteer session expired for entrance actions."),
-      ).toBeInTheDocument();
+      expect(screen.getByText(message)).toBeInTheDocument();
     });
   });
 

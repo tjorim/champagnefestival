@@ -57,7 +57,7 @@ import {
 
 const AUTO_RETURN_TO_SCANNER_MS = 4000;
 
-function formatEntranceActionError(error: Error): string {
+function formatEntranceActionError(error: Error, fallback: string): string {
   const message = error.message;
   if (message === SESSION_EXPIRED_ERROR) {
     return m.checkin_actions_session_expired();
@@ -65,7 +65,7 @@ function formatEntranceActionError(error: Error): string {
   if (message === UNAUTHORIZED_ERROR) {
     return m.checkin_actions_unauthorized();
   }
-  return apiErrorMessage(error, m.admin_error_update_registration());
+  return apiErrorMessage(error, fallback);
 }
 
 interface CheckInCardProps {
@@ -510,9 +510,12 @@ export default function CheckInPage() {
       ? checkInMutation.error.message
       : m.checkin_error()
     : volunteerCheckInMutation.isError
-      ? formatEntranceActionError(volunteerCheckInMutation.error)
+      ? formatEntranceActionError(volunteerCheckInMutation.error, m.checkin_error())
       : updateRegistrationMutation.isError
-        ? formatEntranceActionError(updateRegistrationMutation.error)
+        ? formatEntranceActionError(
+            updateRegistrationMutation.error,
+            m.admin_error_update_registration(),
+          )
         : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
   const searchResults = debouncedSearchTerm.length >= 2 ? (volunteerSearchQuery.data ?? []) : [];

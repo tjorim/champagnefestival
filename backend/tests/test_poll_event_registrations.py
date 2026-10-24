@@ -231,3 +231,26 @@ async def test_paid_registration_refuses_attendance_change(client, volunteer_cli
     refused = await answer(volunteers, question, False)
     assert refused.json()["code"] == "poll_registration_locked"
     assert (await booking(db_session, question)).status == "confirmed"
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("cross_edition", [False, True])
+async def test_edition_deletion_preserves_linked_poll_event(client, volunteer_client_as, db_session, cross_edition):
+    from app.mcp.utils import event_dict
+    from app.models import EditionPollQuestion, Event
+
+    event, question, _, _ = await setup(client, volunteer_client_as, db_session)
+    linked_event = await db_session.get(Event, event["id"])
+    assert linked_event is not None
+    assert event_dict(linked_event)["volunteers_only"] is True
+    if cross_edition:
+        other = await _create_event(client, edition_id="other", edition_active=False)
+        poll = await db_session.get(EditionPollQuestion, question["id"])
+        assert poll is not None
+        poll.edition_id = other["edition_id"]
+        await db_session.commit()
+    response = await client.delete(f"/api/editions/{event['edition_id']}")
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "event_linked_to_poll"
+    assert await db_session.get(Event, event["id"]) is not None
+    assert await db_session.get(EditionPollQuestion, question["id"]) is not None
