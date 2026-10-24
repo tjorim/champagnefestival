@@ -143,6 +143,31 @@ function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) 
   );
 }
 
+/** The shared shell of the standalone pages: skip link, navigation bar and a suspended, error-bounded main area. */
+function StandaloneRoute({
+  icon,
+  title,
+  errorFallbackText,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  errorFallbackText: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="App standalone-app">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar icon={icon} title={title} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={errorFallbackText}>{children}</AppSuspense>
+      </main>
+    </div>
+  );
+}
+
 // Helper component for LogoWall with Suspense and ErrorBoundary
 function SuspendedLogoWall({
   itemsType,
@@ -184,17 +209,13 @@ function SuspendedLogoWall({
 function AdminPage() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={ShieldIcon} title={m.admin_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.admin_error_load_dashboard()}>
-          <AdminDashboard visible={true} />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={ShieldIcon}
+      title={m.admin_title()}
+      errorFallbackText={m.admin_error_load_dashboard()}
+    >
+      <AdminDashboard visible={true} />
+    </StandaloneRoute>
   );
 }
 
@@ -202,17 +223,13 @@ function AdminPage() {
 function CheckInRoute() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={ScanQrCodeIcon} title={m.checkin_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.admin_error_load_checkin()}>
-          <CheckInPage />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={ScanQrCodeIcon}
+      title={m.checkin_title()}
+      errorFallbackText={m.admin_error_load_checkin()}
+    >
+      <CheckInPage />
+    </StandaloneRoute>
   );
 }
 
@@ -251,17 +268,13 @@ function PrivacyPolicyRoute() {
 function PebblePairRoute() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={WatchIcon} title={m.pebble_pair_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.pebble_pair_error()}>
-          <PebblePairPage />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={WatchIcon}
+      title={m.pebble_pair_title()}
+      errorFallbackText={m.pebble_pair_error()}
+    >
+      <PebblePairPage />
+    </StandaloneRoute>
   );
 }
 
@@ -274,17 +287,13 @@ function PebblePairRoute() {
 function MyAccountRoute() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={CircleUserRoundIcon} title={m.my_account_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.my_account_delete_error()}>
-          <MyAccountPage />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={CircleUserRoundIcon}
+      title={m.my_account_title()}
+      errorFallbackText={m.my_account_delete_error()}
+    >
+      <MyAccountPage />
+    </StandaloneRoute>
   );
 }
 
@@ -292,17 +301,13 @@ function MyAccountRoute() {
 function EmailUnsubscribeRoute() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={MailCheckIcon} title={m.email_unsubscribe_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.email_unsubscribe_error()}>
-          <EmailUnsubscribePage />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={MailCheckIcon}
+      title={m.email_unsubscribe_title()}
+      errorFallbackText={m.email_unsubscribe_error()}
+    >
+      <EmailUnsubscribePage />
+    </StandaloneRoute>
   );
 }
 
@@ -310,17 +315,13 @@ function EmailUnsubscribeRoute() {
 function EmailConsentRoute() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={MailCheckIcon} title={m.email_consent_confirm_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.email_consent_confirm_error()}>
-          <EmailConsentConfirmPage />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={MailCheckIcon}
+      title={m.email_consent_confirm_title()}
+      errorFallbackText={m.email_consent_confirm_error()}
+    >
+      <EmailConsentConfirmPage />
+    </StandaloneRoute>
   );
 }
 
