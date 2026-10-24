@@ -23,6 +23,16 @@ If none is implemented, the operation is **not retry safe**. Clients must first
 reconcile state with a read and must not blindly retry it. Calling this out is a
 deliberate decision, not an implicit idempotency guarantee.
 
+## Member-mail transport foundation (#1407)
+
+`MemberMailProvider.send` is **not retry safe** by contract and performs no
+automatic retries. Only the disabled adapter ships; it returns `disabled`
+without any side effect. The delivery key is an integration requirement, not
+implemented provider deduplication. A future adapter must document and test
+provider replay/reconciliation before durable outbox retries are enabled.
+`accepted` does not mean delivered; `unknown` must be reconciled rather than
+blindly resubmitted. See the [foundation boundaries](decisions/1407-member-mail-foundation.md).
+
 ## Inventory
 
 | Operations | Callers | Decision |

@@ -187,3 +187,13 @@ existing audit policy. Anonymisation leaves these records attached to the
 anonymised person. Hard deletion is refused for a person with cards; use the
 anonymisation operation. Merging people transfers cards to the surviving person
 alongside registrations, preserving stamps, rewards and type snapshots.
+
+## Member-mail foundation (#1407, 2026-10-24)
+
+A [provider-neutral transport boundary](1407-member-mail-foundation.md) now
+exists, with only a disabled adapter. It sends nothing and stores no new
+personal data. Existing marketing consent does not authorize category mail.
+Category consent (#1408), signed unsubscribe handling, suppression, and explicit
+retention/erasure rules for sent-mail logs and person-id audience snapshots
+remain prerequisites for enabling member mail. The existing retention policy
+and anonymisation behavior are unchanged by this increment.
