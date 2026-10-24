@@ -54,7 +54,7 @@ scheduling an `email` message returns `409 member_mail_unavailable`.
   (`hard_bounce`, `complaint`); entries are never removed automatically and are not erased with a
   person (a hash is not the address). `email_suppression_service.suppress` exists; the feedback
   receiver that calls it needs the chosen service.
-- Migration `014`.
+- Part of migration `010` (the former 011–014 were folded into it before release).
 
 ## Implemented increment — 2026-10-25 (2): reward-ready mail, composer UI, count confirmation
 

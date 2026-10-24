@@ -11,7 +11,7 @@ Implemented 2026-10-24. Sending is #1407; this is only who may be mailed, and wh
   can be created only as non-automatic: editing never adds a sending capability, which stays tied
   to implemented triggers. `new_editions` (the registration form feeds it) and `reward_ready`
   (the automatic reward mail) cannot be deleted; a category with consent history cannot either.
-- Seeded by migration `013`: **Club news** (members), **New festival editions** (everyone),
+- Seeded by migration `010`: **Club news** (members), **New festival editions** (everyone),
   **Volunteer news** (volunteers), **Reward ready** (members, automatic), each in nl/fr/en.
   Everyone starts unsubscribed; nothing was migrated from `Person.marketing_opt_in`, which is gone.
 - `email_consents`: one row per grant — `person_id`, `category_key`, `granted_at`, `source`

@@ -52,8 +52,8 @@ async def test_default_categories_are_seeded_with_roles(client):
 
 
 def test_migration_seeds_the_same_categories_as_the_test_defaults():
-    path = Path(__file__).parents[1] / "alembic" / "versions" / "013_email_categories_and_consent.py"
-    spec = importlib.util.spec_from_file_location("migration_013", path)
+    path = Path(__file__).parents[1] / "alembic" / "versions" / "010_membership_and_mailings.py"
+    spec = importlib.util.spec_from_file_location("migration_010", path)
     assert spec is not None and spec.loader is not None
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

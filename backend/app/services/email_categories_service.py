@@ -81,7 +81,7 @@ DEFAULT_EMAIL_CATEGORIES: list[dict[str, Any]] = [
         "sort_order": 40,
     },
 ]
-"""The categories every installation starts with. Migration 013 seeds the same rows (a migration must
+"""The categories every installation starts with. Migration 010 seeds the same rows (a migration must
 not import application code); a test keeps the two in step. Test databases are seeded from this list."""
 
 

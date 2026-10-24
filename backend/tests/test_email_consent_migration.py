@@ -1,4 +1,4 @@
-"""Migration 013 seeds the email categories, enforces one open consent and drops the old flag."""
+"""Migration 010 (its email consent part) seeds the email categories, enforces one open consent and drops the old flag."""
 
 import os
 from pathlib import Path
@@ -29,7 +29,7 @@ def test_email_consent_migration(monkeypatch):
     config.set_main_option("script_location", str(Path(__file__).resolve().parents[1] / "alembic"))
     database = create_engine(migration_url)
     try:
-        command.upgrade(config, "012")
+        command.upgrade(config, "009")
         with database.begin() as conn:
             conn.execute(
                 text(
@@ -37,7 +37,7 @@ def test_email_consent_migration(monkeypatch):
                     "VALUES ('opted', 'Opted In', 'opted@example.com', '[]', '{}', '{}', false, true)"
                 )
             )
-        command.upgrade(config, "013")
+        command.upgrade(config, "010")
         with database.begin() as conn:
             categories = conn.execute(
                 text("SELECT key, allowed_roles, automatic FROM email_categories ORDER BY sort_order")
@@ -89,7 +89,7 @@ def test_email_consent_migration(monkeypatch):
         # A category that has consent cannot be dropped.
         with pytest.raises(IntegrityError), database.begin() as conn:
             conn.execute(text("DELETE FROM email_categories WHERE key = 'new_editions'"))
-        command.downgrade(config, "012")
+        command.downgrade(config, "009")
         with database.begin() as conn:
             assert conn.execute(text("SELECT marketing_opt_in FROM people WHERE id = 'opted'")).scalar_one() is False
         command.upgrade(config, "head")

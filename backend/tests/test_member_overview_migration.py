@@ -1,4 +1,4 @@
-"""Migration 010 preserves people, enforces member uniqueness and adds the event gate."""
+"""Migration 010 (its member overview part) preserves people, enforces member uniqueness and adds the event gate."""
 
 import os
 from pathlib import Path
