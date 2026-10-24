@@ -1,3 +1,4 @@
+import { Badge } from "@/components/ui/badge";
 import { CalendarCheckIcon, CalendarDaysIcon, MapPinIcon, UsersIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
@@ -122,6 +123,16 @@ export default function OtherEvents() {
                               item.coOrganizerName
                             )}
                           </p>
+                        )}
+                        {item.event.volunteersOnly && (
+                          <Badge variant="info" className="mb-2">
+                            {m.event_volunteers_only()}
+                          </Badge>
+                        )}
+                        {item.event.membersOnly && (
+                          <Badge variant="info" className="mb-2">
+                            {m.event_members_only()}
+                          </Badge>
                         )}
                         <p className="mb-2">{eventDescription(item.event, locale)}</p>
                       </div>

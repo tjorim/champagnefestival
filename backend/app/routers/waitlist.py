@@ -17,12 +17,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth import require_admin
 from app.database import get_db
 from app.dialect_functions import dialect_insert
-from app.models import Product, WaitlistEntry
+from app.models import Event, Product, WaitlistEntry
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schema_types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
 from app.schemas import RequestModel
 from app.services import waitlist_service as service
-from app.services.errors import ServiceError, to_http_exception
+from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.spam import check_form_timing, check_honeypot
 from app.utils import product_available_quantity, product_sold_out
 
@@ -79,6 +79,16 @@ async def submit_waitlist_entry(
     product = (await db.execute(select(Product).where(Product.id == body.product_id))).scalar_one_or_none()
     if product is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
+    event = await db.get(Event, product.event_id)
+    if event is not None and event.volunteers_only:
+        raise ApiHTTPException(
+            403, "volunteer_event_poll_required", "Use the volunteer attendance poll to register for this event."
+        )
+    member = None
+    if event is not None and event.members_only:
+        from app.services.member_registration import verified_member, visitor_user
+
+        member, _user = await verified_member(db, await visitor_user(db, request))
     if not product_sold_out(product, product_available_quantity(product)):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This item isn't sold out.")
 
@@ -88,9 +98,9 @@ async def submit_waitlist_entry(
         .values(
             id=entry_id,
             product_id=body.product_id,
-            name=body.name,
-            email=str(body.email),
-            phone=body.phone,
+            name=member.name if member else body.name,
+            email=member.email if member else str(body.email),
+            phone=member.phone if member else body.phone,
             guest_count=body.guest_count,
             notes=body.notes,
             client_ip=client_ip,

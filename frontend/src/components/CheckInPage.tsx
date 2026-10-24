@@ -1,3 +1,5 @@
+import { apiErrorMessage } from "@/utils/apiErrors";
+import type { StampProgress } from "@/utils/stampCards";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -55,14 +57,15 @@ import {
 
 const AUTO_RETURN_TO_SCANNER_MS = 4000;
 
-function formatEntranceActionError(message: string): string {
+function formatEntranceActionError(error: Error, fallback: string): string {
+  const message = error.message;
   if (message === SESSION_EXPIRED_ERROR) {
     return m.checkin_actions_session_expired();
   }
   if (message === UNAUTHORIZED_ERROR) {
     return m.checkin_actions_unauthorized();
   }
-  return message;
+  return apiErrorMessage(error, fallback);
 }
 
 interface CheckInCardProps {
@@ -348,6 +351,7 @@ export default function CheckInPage() {
   const registrationId = scannedCredentials?.id ?? urlRegistrationId;
   const checkInToken = scannedCredentials?.token ?? fragmentCheckInToken;
   const [success, setSuccess] = useState(false);
+  const [stampProgress, setStampProgress] = useState<StampProgress | null>(null);
   const [alreadyCheckedIn, setAlreadyCheckedIn] = useState(false);
   const [searchOpen, setSearchOpen] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -390,6 +394,7 @@ export default function CheckInPage() {
     if (hasQrCredentials) {
       setManualRegistration(null);
       setSuccess(false);
+      setStampProgress(null);
       setAlreadyCheckedIn(false);
       setSearchTerm("");
       setDebouncedSearchTerm("");
@@ -417,6 +422,7 @@ export default function CheckInPage() {
     retry: false,
     onMutate: () => {
       setSuccess(false);
+      setStampProgress(null);
       setAlreadyCheckedIn(false);
     },
     onSuccess: ({
@@ -425,6 +431,7 @@ export default function CheckInPage() {
     }) => {
       queryClient.setQueryData(checkInQueryKey, updatedRegistration);
       setSuccess(true);
+      setStampProgress(updatedRegistration.stampProgress ?? null);
       setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checkedIn);
     },
     onSettled: async () => {
@@ -437,6 +444,7 @@ export default function CheckInPage() {
     retry: false,
     onMutate: () => {
       setSuccess(false);
+      setStampProgress(null);
       setAlreadyCheckedIn(false);
     },
     onSuccess: ({
@@ -445,6 +453,7 @@ export default function CheckInPage() {
     }) => {
       setManualRegistration(updatedRegistration);
       setSuccess(true);
+      setStampProgress(updatedRegistration.stampProgress ?? null);
       setAlreadyCheckedIn(mutationAlreadyCheckedIn || updatedRegistration.checkedIn);
     },
     onSettled: async () => {
@@ -501,9 +510,12 @@ export default function CheckInPage() {
       ? checkInMutation.error.message
       : m.checkin_error()
     : volunteerCheckInMutation.isError
-      ? formatEntranceActionError(volunteerCheckInMutation.error.message)
+      ? formatEntranceActionError(volunteerCheckInMutation.error, m.checkin_error())
       : updateRegistrationMutation.isError
-        ? formatEntranceActionError(updateRegistrationMutation.error.message)
+        ? formatEntranceActionError(
+            updateRegistrationMutation.error,
+            m.admin_error_update_registration(),
+          )
         : "";
   const isAlreadyCheckedIn = success ? alreadyCheckedIn : (registration?.checkedIn ?? false);
   const searchResults = debouncedSearchTerm.length >= 2 ? (volunteerSearchQuery.data ?? []) : [];
@@ -559,6 +571,7 @@ export default function CheckInPage() {
   const handleSelectManualRegistration = useCallback((selected: CheckInData) => {
     setManualRegistration(selected);
     setSuccess(false);
+    setStampProgress(null);
     setAlreadyCheckedIn(selected.checkedIn);
     setSearchOpen(false);
   }, []);
@@ -572,6 +585,7 @@ export default function CheckInPage() {
     setFragmentCheckInToken(undefined);
     setManualRegistration(null);
     setSuccess(false);
+    setStampProgress(null);
     setAlreadyCheckedIn(false);
     if (urlRegistrationId) {
       void navigate({ search: {}, replace: true });
@@ -584,6 +598,7 @@ export default function CheckInPage() {
   // pressed explicitly) so entrance actions are never skipped silently.
   const canAutoReturnToScanner =
     success &&
+    !stampProgress?.reward_earned &&
     (!canManageEntranceActions ||
       registration?.status === "cancelled" ||
       (registration?.strapIssued ?? false));
@@ -601,6 +616,14 @@ export default function CheckInPage() {
           {m.checkin_title()}
         </h2>
 
+        {stampProgress && (
+          <Alert variant={stampProgress.reward_earned ? "success" : "info"} role="status">
+            {m.stamp_progress({ count: stampProgress.stamps, total: stampProgress.box_count })}
+            {stampProgress.reward_earned && (
+              <strong className="ms-2">{m.stamp_reward_earned()}</strong>
+            )}
+          </Alert>
+        )}
         {!isOnline && (
           <Alert variant="danger" className="w-20 text-center" role="status">
             <Icon icon={WifiOffIcon} className="me-2" />
@@ -696,6 +719,7 @@ export default function CheckInPage() {
                                 setSearchTerm(event.currentTarget.value);
                                 setManualRegistration(null);
                                 setSuccess(false);
+                                setStampProgress(null);
                                 setAlreadyCheckedIn(false);
                               }}
                               placeholder={m.checkin_manual_search_placeholder()}

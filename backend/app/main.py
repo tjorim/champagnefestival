@@ -55,6 +55,7 @@ from app.routers import (
     rooms,
     signage,
     signage_video,
+    stamp_cards,
     table_types,
     tables,
     venue_plan,
@@ -230,6 +231,7 @@ app.include_router(members.router)
 app.include_router(event_categories.router)
 app.include_router(product_categories.router)
 app.include_router(events.router)
+app.include_router(stamp_cards.router)
 app.include_router(check_in.router)
 app.include_router(composer.router)
 app.include_router(contact.router)

@@ -94,6 +94,7 @@ const meals = (options: Record<string, unknown>[] = []) =>
   question("q-meals", "meals", "Maaltijden", { options });
 
 interface Backdrop {
+  events?: Record<string, unknown>[];
   orders?: Record<string, unknown>;
   editions?: Record<string, unknown>[];
 }
@@ -114,6 +115,7 @@ function renderModal(questions: Record<string, unknown>[], backdrop: Backdrop = 
         },
       ),
     ),
+    http.get("/api/events", () => HttpResponse.json(backdrop.events ?? [])),
     http.get("/api/editions", () => HttpResponse.json(backdrop.editions ?? [])),
   );
   const queryClient = createTestQueryClient();
@@ -177,6 +179,7 @@ describe("EditionPollModal questions", () => {
     await user.click(screen.getByRole("button", { name: "admin_poll_question_add_button" }));
     await screen.findByRole("region", { name: "Toneel in december?" });
     expect(created[0]).toEqual({
+      event_id: null,
       edition_id: "2026-october",
       kind: "yes_no",
       title_nl: "Toneel in december?",
@@ -820,4 +823,43 @@ describe("additional poll kinds", () => {
       ratings: [{ question_id: "rating", rating: 4 }],
     });
   });
+});
+
+it("links attendance to a volunteer event and locks the event selector after answers", async () => {
+  const user = userEvent.setup();
+  const event = {
+    id: "volunteer-dinner",
+    edition_id: edition.id,
+    title_nl: "Vrijwilligersdiner",
+    date: "2026-10-25",
+    volunteers_only: true,
+    products: [],
+  };
+  let submitted: Record<string, unknown> | null = null;
+  server.use(
+    http.post("/api/poll-questions", async ({ request }) => {
+      submitted = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json(
+        question("q-linked", "yes_no", "Eet je mee?", {
+          event_id: "volunteer-dinner",
+          answered_count: 1,
+        }),
+        { status: 201 },
+      );
+    }),
+  );
+  renderModal([], {
+    events: [event, { ...event, id: "public", title_nl: "Public event", volunteers_only: false }],
+  });
+  const selector = await screen.findByLabelText("admin_poll_event_label");
+  await waitFor(() => expect(selector).not.toBeDisabled());
+  await user.click(selector);
+  expect(screen.queryByRole("option", { name: /Public event/ })).not.toBeInTheDocument();
+  await user.click(await screen.findByRole("option", { name: /Vrijwilligersdiner/ }));
+  await user.type(titleInput("nl"), "Eet je mee?");
+  await user.click(screen.getByRole("button", { name: "admin_poll_question_add_button" }));
+  const section = await screen.findByRole("region", { name: "Eet je mee?" });
+  expect(submitted).toMatchObject({ event_id: "volunteer-dinner", kind: "yes_no" });
+  await user.click(within(section).getByRole("button", { name: "admin_edit" }));
+  expect(within(section).getByLabelText("admin_poll_event_label")).toBeDisabled();
 });

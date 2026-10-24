@@ -26,7 +26,7 @@ from datetime import UTC, date, datetime
 from typing import get_args
 
 from fastapi import HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -618,6 +618,18 @@ async def delete_edition(db: AsyncSession, edition: Edition, *, actor: str, requ
     # Re-read under the lock: an upload that committed after the caller loaded `edition` must have
     # its new file retired too, not the stale URL.
     edition = await _lock_edition(db, edition_id)
+    from app.models import EditionPollQuestion
+    from app.services.errors import ApiHTTPException
+
+    if await db.scalar(
+        select(EditionPollQuestion.id)
+        .join(Event, Event.id == EditionPollQuestion.event_id)
+        .where(or_(EditionPollQuestion.edition_id == edition_id, Event.edition_id == edition_id))
+        .limit(1)
+    ):
+        raise ApiHTTPException(
+            409, "event_linked_to_poll", "Remove linked attendance polls before deleting their edition."
+        )
     artwork = [getattr(edition, column) for column in edition_artwork.COLUMNS.values()]
     await db.delete(edition)
     for url in artwork:

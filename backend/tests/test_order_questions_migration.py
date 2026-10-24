@@ -9,10 +9,8 @@ from alembic.config import Config
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
 
 from alembic import command
-from app.models import Edition, Event, Person, Registration, Venue
 from tests.helpers import requires_postgres
 
 pytestmark = requires_postgres("the Alembic migrations target PostgreSQL")
@@ -34,29 +32,19 @@ def test_order_question_upgrade_constraints_and_downgrade(monkeypatch):
     database = create_engine(migration_url)
     try:
         command.upgrade(config, "009")
-        with Session(database) as db:
-            from datetime import date
-
-            db.add(Venue(id="venue", name="Venue"))
-            db.flush()
-            db.add(Edition(id="edition", year=2026, month="october", venue_id="venue"))
-            db.add(Person(id="person", name="Visitor"))
-            db.flush()
-            db.add(
-                Event(
-                    id="event",
-                    edition_id="edition",
-                    title_nl="Festival",
-                    date=date(2026, 10, 24),
-                    start_time="18:00",
-                    category="general",
-                )
-            )
-            db.flush()
-            db.add(
-                Registration(id="order", event_id="event", person_id="person", guest_count=1, check_in_token="token")
-            )
-            db.commit()
+        # Seed the revision-009 schema directly: current ORM models include
+        # columns added by later migrations and cannot represent this snapshot.
+        with database.begin() as conn:
+            for statement in (
+                "INSERT INTO venues (id, name) VALUES ('venue', 'Venue')",
+                "INSERT INTO editions (id, year, month, venue_id, sponsor_tiers) VALUES ('edition', 2026, 'october', 'venue', '{}')",
+                "INSERT INTO people (id, name, retired_roles, role_history, anonymised) VALUES ('person', 'Visitor', '{}', '{}', false)",
+                "INSERT INTO events (id, edition_id, title_nl, date, start_time, category) "
+                "VALUES ('event', 'edition', 'Festival', '2026-10-24', '18:00', 'general')",
+                "INSERT INTO registrations (id, event_id, person_id, guest_count, check_in_token) "
+                "VALUES ('order', 'event', 'person', 1, 'token')",
+            ):
+                conn.execute(text(statement))
         with database.begin() as conn:
             for qid, kind in [
                 ("choice", "single_choice"),

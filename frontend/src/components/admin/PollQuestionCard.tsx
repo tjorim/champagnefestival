@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import { AdminField, AdminInput, AdminLabel } from "@/components/admin/AdminFields";
+import {
+  AdminField,
+  AdminInput,
+  AdminLabel,
+  AdminSelect,
+  AdminOption,
+} from "@/components/admin/AdminFields";
+import type { Event } from "@/types/event";
+import { eventTitle } from "@/utils/eventText";
 import { Icon } from "@/components/Icon";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +36,7 @@ const TEXT_FIELDS = [
 
 function toQuestionWrite(question: PollQuestion): PollQuestionWrite {
   return {
+    eventId: question.eventId ?? null,
     titleNl: question.titleNl,
     titleFr: question.titleFr ?? "",
     titleEn: question.titleEn ?? "",
@@ -81,7 +90,44 @@ export function QuestionTextFields({
   );
 }
 
+export function PollEventField({
+  id,
+  events,
+  value,
+  disabled,
+  onChange,
+}: {
+  id: string;
+  events: Event[];
+  value: string | null | undefined;
+  disabled?: boolean;
+  onChange: (eventId: string | null) => void;
+}) {
+  return (
+    <AdminField controlId={id}>
+      <AdminLabel>{m.admin_poll_event_label()}</AdminLabel>
+      <AdminSelect
+        value={value ?? ""}
+        disabled={disabled}
+        onValueChange={(id) => onChange(id || null)}
+      >
+        <AdminOption value="">{m.admin_poll_event_none()}</AdminOption>
+        {value && !events.some((event) => event.id === value) && (
+          <AdminOption value={value}>{value}</AdminOption>
+        )}
+        {events.map((event) => (
+          <AdminOption key={event.id} value={event.id}>
+            {eventTitle(event, getLocale())} · {event.date}
+          </AdminOption>
+        ))}
+      </AdminSelect>
+      <p className="text-sm text-subtle">{m.admin_poll_event_help()}</p>
+    </AdminField>
+  );
+}
+
 interface PollQuestionCardProps {
+  events?: Event[];
   question: PollQuestion;
   index: number;
   count: number;
@@ -95,6 +141,7 @@ interface PollQuestionCardProps {
 
 /** One poll question: its texts, its own closing time and, for a meals question, its options. */
 export default function PollQuestionCard({
+  events = [],
   question,
   index,
   count,
@@ -192,11 +239,22 @@ export default function PollQuestionCard({
         </div>
         <div className="grow">
           {editing ? (
-            <QuestionTextFields
-              idPrefix={`poll-question-${question.id}`}
-              value={editing}
-              onChange={setEditing}
-            />
+            <div className="grow flex flex-col gap-2">
+              <QuestionTextFields
+                idPrefix={`poll-question-${question.id}`}
+                value={editing}
+                onChange={setEditing}
+              />
+              {question.kind === "yes_no" && (
+                <PollEventField
+                  id={`poll-event-${question.id}`}
+                  events={events}
+                  value={editing.eventId}
+                  disabled={question.answeredCount > 0}
+                  onChange={(eventId) => setEditing({ ...editing, eventId })}
+                />
+              )}
+            </div>
           ) : (
             <>
               <h3 className="text-base font-medium leading-tight mb-1">
@@ -207,6 +265,13 @@ export default function PollQuestionCard({
                 <div className="text-sm text-subtle">
                   {[question.titleFr, question.titleEn].filter(Boolean).join(" · ")}
                 </div>
+              )}
+              {question.eventId && (
+                <p className="text-sm text-subtle">
+                  {m.admin_poll_event_label()}:{" "}
+                  {events.find((event) => event.id === question.eventId)?.titleNl ??
+                    question.eventId}
+                </p>
               )}
               {question.descriptionNl && (
                 <p className="text-sm text-subtle mb-0">{question.descriptionNl}</p>

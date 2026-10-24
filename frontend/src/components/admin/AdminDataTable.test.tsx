@@ -186,3 +186,16 @@ it("round-trips table state through Router JSON search serialisation", async () 
   };
   expect(defaultParseSearch(defaultStringifySearch(original))).toEqual(original);
 });
+
+it("applies a domain status highlight to desktop rows and mobile cards", () => {
+  mount({ getRowClassName: (row: Person) => (row.id === "2" ? "bg-warning/10" : undefined) });
+  expect(screen.getByRole("row", { name: "Zoe" }).className).toContain("bg-warning/10");
+  expect(
+    screen
+      .getAllByRole("listitem")
+      .some(
+        (item) => item.textContent?.includes("Zoe") && item.className.includes("bg-warning/10"),
+      ),
+  ).toBe(true);
+  expect(screen.getByRole("row", { name: "Ada" }).className).not.toContain("bg-warning/10");
+});

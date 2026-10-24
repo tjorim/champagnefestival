@@ -1,3 +1,4 @@
+import type { StampCard, StampCardType } from "@/utils/stampCards";
 import { http, HttpResponse } from "msw/http";
 import {
   editions,
@@ -39,6 +40,13 @@ let tables: Record<string, unknown>[] = structuredClone(seedTables);
 let layouts: Record<string, unknown>[] = structuredClone(seedLayouts);
 let areas: Record<string, unknown>[] = structuredClone(seedAreas);
 
+let stampTypes: StampCardType[] = [];
+let stampCards: StampCard[] = [];
+function hasRewardDue(id: unknown) {
+  return stampCards.some(
+    (card) => card.person_id === id && card.reward && !card.reward.handed_out_at,
+  );
+}
 const validAdminTokens = new Set(["dev-token", "mock-access-token"]);
 type AuthScenario = "signed-out" | "forbidden" | "expired" | "invalid";
 type ForcedAuthScenario = "default" | AuthScenario;
@@ -285,6 +293,8 @@ function filteredPeople(url: URL, role?: string) {
   const q = url.searchParams.get("q")?.toLowerCase().trim();
   return people.filter(
     (person) =>
+      (!url.searchParams.has("reward_due") ||
+        hasRewardDue(person.id) === (url.searchParams.get("reward_due") === "true")) &&
       (active === null || isActiveIn(person, requestedRole) === (active === "true")) &&
       (!requestedRole || (person.roles as string[]).includes(requestedRole)) &&
       (!q ||
@@ -320,6 +330,7 @@ function reactivateMockRole(
 function peopleEnvelope(url: URL, role?: string) {
   const rows: Record<string, unknown>[] = filteredPeople(url, role).map((person) => ({
     ...person,
+    reward_due: hasRewardDue(person.id),
     registration_count: sharedStore.registrations.filter(
       (registration) => registration.person_id === person.id,
     ).length,
@@ -345,6 +356,45 @@ function peopleEnvelope(url: URL, role?: string) {
 }
 
 export const adminHandlers = [
+  http.get(
+    "/api/stamp-cards/types",
+    ({ request }) => requireAuth(request) ?? HttpResponse.json(stampTypes),
+  ),
+  http.post("/api/stamp-cards/types", async ({ request }) => {
+    const denied = requireAuth(request);
+    if (denied) return denied;
+    const type = { ...((await request.json()) as StampCardType), id: crypto.randomUUID() };
+    stampTypes.push(type);
+    return HttpResponse.json(type, { status: 201 });
+  }),
+  http.put("/api/stamp-cards/types/:id", async ({ request, params }) => {
+    const denied = requireAuth(request);
+    if (denied) return denied;
+    const type = { ...((await request.json()) as StampCardType), id: String(params.id) };
+    stampTypes = stampTypes.map((current) => (current.id === params.id ? type : current));
+    return HttpResponse.json(type);
+  }),
+  http.get("/api/stamp-cards/people/:id", ({ request, params }) => {
+    const denied = requireAuth(request);
+    if (denied) return denied;
+    return HttpResponse.json(stampCards.filter((card) => card.person_id === params.id));
+  }),
+  http.put("/api/stamp-cards/rewards/:id", async ({ request, params }) => {
+    const denied = requireAuth(request);
+    if (denied) return denied;
+    const body = (await request.json()) as { handed_out: boolean };
+    const reward = stampCards.find((card) => card.reward?.id === params.id)?.reward;
+    if (!reward) return HttpResponse.json({}, { status: 404 });
+    reward.handed_out_at = body.handed_out ? new Date().toISOString() : null;
+    return HttpResponse.json(reward);
+  }),
+  // Browser tests seed card history explicitly; normal mock lists remain unchanged.
+  http.post("/api/mock/stamp-cards", async ({ request }) => {
+    const denied = requireAuth(request);
+    if (denied) return denied;
+    stampCards = (await request.json()) as StampCard[];
+    return HttpResponse.json({ ok: true });
+  }),
   // The announcements panel mounts before the signage editor tab is selected.
   http.get("/api/announcements", ({ request }) => {
     const authError = requireAuth(request);
@@ -1755,6 +1805,8 @@ export function resetAdminStore(): void {
   productCategories.items = structuredClone(seedProductCategories);
   resetSharedStore();
   resetEditionStore();
+  stampTypes = [];
+  stampCards = [];
   people = structuredClone(seedPeople);
   organizations = structuredClone(seedOrganizations);
   venues = structuredClone(seedVenues);

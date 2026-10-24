@@ -83,3 +83,18 @@ test.describe("Guest registration", () => {
     await expect(trigger).toBeFocused();
   });
 });
+
+test("members-only booking shows an email sign-in prompt", async ({ page }) => {
+  await page.clock.setFixedTime(new Date("2027-02-01T12:00:00Z"));
+  await page.addInitScript(() => localStorage.setItem("msw:members-only", "true"));
+  await page.goto("/");
+  await page
+    .locator("#registrations")
+    .getByRole("button", { name: /register now|registreer nu/i })
+    .click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText(/membership|lidmaatschap/i);
+  await expect(
+    dialog.getByRole("link", { name: /sign in by email|aanmelden via e-mail/i }),
+  ).toHaveAttribute("href", "/me");
+});

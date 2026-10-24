@@ -6,10 +6,11 @@ export interface PeopleListParams {
   page: number;
   limit: number;
   q?: string;
-  sort?: "name" | "email" | "created" | "updated" | "registration_count";
+  sort?: "name" | "email" | "created" | "updated" | "registration_count" | "last_attended";
   sort_dir?: "asc" | "desc";
   role?: string;
   active?: boolean;
+  reward_due?: boolean;
 }
 
 export interface PeoplePage {
@@ -21,7 +22,7 @@ export interface PeoplePage {
 
 /** Only the list contract is accepted: unsupported predicates must not be ignored. */
 export function peopleListSearchParams(params: PeopleListParams): URLSearchParams {
-  const allowed = ["page", "limit", "q", "sort", "sort_dir", "role", "active"];
+  const allowed = ["page", "limit", "q", "sort", "sort_dir", "role", "active", "reward_due"];
   for (const key of Object.keys(params)) {
     if (!allowed.includes(key)) throw new Error(`Unsupported people list parameter: ${key}`);
   }
@@ -71,7 +72,7 @@ export async function fetchPeoplePage(
   };
 }
 
-export type PeopleCountParams = Pick<PeopleListParams, "q" | "role" | "active">;
+export type PeopleCountParams = Pick<PeopleListParams, "q" | "role" | "active" | "reward_due">;
 export interface PeopleCounts {
   total: number;
   active: number;
@@ -87,7 +88,7 @@ export function fetchPeopleCounts(
 ): Promise<PeopleCounts> {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (!["q", "role", "active"].includes(key)) {
+    if (!["q", "role", "active", "reward_due"].includes(key)) {
       throw new Error(`Unsupported people counts parameter: ${key}`);
     }
     if (value !== undefined) search.set(key, String(value));

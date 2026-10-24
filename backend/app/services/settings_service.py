@@ -73,6 +73,16 @@ async def update_settings(
     db: AsyncSession, *, actor: str, body: AppSettingsUpdate, request_id: str | None = None
 ) -> dict:
     settings = await get_or_create_settings(db)
+    for field in ("member_limit", "member_inactivity_months"):
+        if field in body.model_fields_set:
+            setattr(settings, field, getattr(body, field))
+
+    if "stamp_card_type_id" in body.model_fields_set:
+        from app.services.stamp_cards_service import require_active_type
+
+        if body.stamp_card_type_id is not None:
+            await require_active_type(db, body.stamp_card_type_id)
+        settings.stamp_card_type_id = body.stamp_card_type_id
     if body.maintenance_mode is not None:
         settings.maintenance_mode = body.maintenance_mode
     for field in ("public_email", "public_phone", "facebook_url"):

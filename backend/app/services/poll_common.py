@@ -34,7 +34,7 @@ async def lock_edition(db: AsyncSession, edition_id: str) -> Edition:
 async def get_question_or_404(db: AsyncSession, question_id: str, *, lock: bool = False) -> EditionPollQuestion:
     stmt = select(EditionPollQuestion).where(EditionPollQuestion.id == question_id)
     if lock:
-        stmt = stmt.with_for_update()
+        stmt = stmt.with_for_update().execution_options(populate_existing=True)
     question = (await db.execute(stmt)).scalar_one_or_none()
     if question is None:
         raise ApiHTTPException(404, "poll_question_not_found", "Poll question not found.")

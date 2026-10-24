@@ -36,8 +36,14 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
-from app.models import Organization, Person, Registration, VolunteerPeriod
+from app.models import Organization, Person, Registration, StampCard, VolunteerPeriod
 from app.schemas import PersonCreate, PersonUpdate
+from app.services.member_email import (
+    check_email_integrity,
+    commit_member_changes,
+    ensure_member_email,
+    flush_member_changes,
+)
 from app.services.role_history import sync_roles
 from app.utils import get_or_404, make_id, person_to_dict
 
@@ -110,7 +116,8 @@ async def ensure_unique_identity_fields(
         stmt = select(Person).where(Person.national_register_number == national_register_number)
         if exclude_id:
             stmt = stmt.where(Person.id != exclude_id)
-        existing = (await db.execute(stmt)).scalar_one_or_none()
+        with db.no_autoflush:
+            existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing is not None:
             raise_identity_conflict()
 
@@ -118,7 +125,8 @@ async def ensure_unique_identity_fields(
         stmt = select(Person).where(Person.eid_document_number == eid_document_number)
         if exclude_id:
             stmt = stmt.where(Person.id != exclude_id)
-        existing = (await db.execute(stmt)).scalar_one_or_none()
+        with db.no_autoflush:
+            existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing is not None:
             raise_identity_conflict()
 
@@ -127,7 +135,7 @@ async def get_person_or_404(db: AsyncSession, person_id: str) -> Person:
     return await get_or_404(db, Person, person_id, "Person not found.")
 
 
-def reject_member_since(body: PersonCreate | PersonUpdate) -> None:
+def reject_member_fields(body: PersonCreate | PersonUpdate) -> None:
     """``member_since`` belongs to the member endpoints; ignoring it here would hide a mistake."""
     if body.member_since is not None:
         raise HTTPException(
@@ -135,9 +143,14 @@ def reject_member_since(body: PersonCreate | PersonUpdate) -> None:
             detail="member_since can only be set through the member endpoints.",
         )
 
+    if {"inactivity_exempt", "inactivity_exempt_note"} & body.model_fields_set:
+        raise HTTPException(
+            status_code=422, detail="Inactivity exemptions can only be set through the member endpoints."
+        )
+
 
 async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, request_id: str | None = None) -> dict:
-    reject_member_since(body)
+    reject_member_fields(body)
     national_register_number = normalise_optional_identity(body.national_register_number)
     eid_document_number = normalise_optional_identity(body.eid_document_number)
     await ensure_unique_identity_fields(
@@ -161,6 +174,7 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
     sync_roles(person, normalise_roles(body.roles))
 
     db.add(person)
+    await ensure_member_email(db, person)
     await write_audit_entry(
         db,
         actor=actor,
@@ -172,8 +186,9 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
     )
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         await db.rollback()
+        check_email_integrity(exc)
         raise_identity_conflict()
     await db.refresh(person)
     return person_to_dict(person)
@@ -182,7 +197,7 @@ async def create_person(db: AsyncSession, *, body: PersonCreate, actor: str, req
 async def apply_person_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
-    reject_member_since(body)
+    reject_member_fields(body)
     for field in ("name", "address", "preferred_language", "visits_per_month", "notes"):
         if field in body.model_fields_set:
             setattr(person, field, getattr(body, field))
@@ -230,6 +245,7 @@ async def apply_person_update(
             person.marketing_opt_in = False
             person.marketing_opt_in_at = None
 
+    await ensure_member_email(db, person)
     await write_audit_entry(
         db,
         actor=actor,
@@ -241,8 +257,9 @@ async def apply_person_update(
     )
     try:
         await db.commit()
-    except IntegrityError:
+    except IntegrityError as exc:
         await db.rollback()
+        check_email_integrity(exc)
         raise_identity_conflict()
     await db.refresh(person)
     return person_to_dict(person)
@@ -309,6 +326,10 @@ async def delete_person(db: AsyncSession, person: Person, *, actor: str, request
         }
         for registration in registrations
     ]
+    from app.services.errors import ApiHTTPException
+
+    if await db.scalar(select(StampCard.id).where(StampCard.person_id == person_id).limit(1)):
+        raise ApiHTTPException(409, "person_has_stamp_cards", "Anonymise this person to retain stamp card history.")
     for registration in registrations:
         await db.delete(registration)
     await db.delete(person)
@@ -382,6 +403,11 @@ async def merge_people(
         if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
             setattr(canonical, field, getattr(duplicate, field))
 
+    # Keep an exemption attached to the person when an exempt duplicate is merged.
+    if duplicate.inactivity_exempt and not canonical.inactivity_exempt:
+        canonical.inactivity_exempt = True
+        canonical.inactivity_exempt_note = duplicate.inactivity_exempt_note
+
     # Preserve existing marketing consent during a merge:
     # adopt the duplicate's opt-in if canonical hasn't already given it, so
     # deleting the duplicate below can never silently discard a consent
@@ -391,7 +417,8 @@ async def merge_people(
         canonical.marketing_opt_in_at = duplicate.marketing_opt_in_at
 
     # Merge roles (union).
-    gained = set(duplicate.roles) - set(canonical.roles)
+    original_roles = set(canonical.roles)
+    gained = set(duplicate.roles) - original_roles
     canonical.roles = sorted(set(canonical.roles) | set(duplicate.roles))
     # A role gained from the duplicate brings its history along.
     canonical.role_history = {
@@ -406,8 +433,13 @@ async def merge_people(
     } | {
         role: day
         for role, day in (duplicate.retired_roles or {}).items()
-        if role not in canonical.roles or role in (canonical.retired_roles or {})
+        if role not in original_roles or role in (canonical.retired_roles or {})
     }
+
+    await ensure_member_email(db, canonical, exclude_ids=(duplicate.id,))
+    # Release the duplicate email before an adopted active membership is flushed.
+    with db.no_autoflush:
+        await db.execute(update(Person).where(Person.id == duplicate.id).values(email=""))
 
     # Adopt unique identity fields from duplicate if canonical lacks them.
     # Normalise the value from the duplicate before storing so the canonical
@@ -425,16 +457,17 @@ async def merge_people(
         # the duplicate still holds it. Clear and flush separately.
         for field in adopted:
             setattr(duplicate, field, None)
-        await db.flush()
+        await flush_member_changes(db)
         for field, value in adopted.items():
             setattr(canonical, field, value)
 
-    await db.flush()
+    await flush_member_changes(db)
 
     # Re-point everything that references the duplicate. VolunteerPeriod matters
     # most: its FK cascades on delete, so a period left pointing at the duplicate
     # is destroyed below rather than transferred, leaving a person carrying the
     # volunteer role with no help periods.
+    await db.execute(update(StampCard).where(StampCard.person_id == duplicate_id).values(person_id=canonical.id))
     await db.execute(update(Registration).where(Registration.person_id == duplicate_id).values(person_id=canonical.id))
     await db.execute(
         update(Organization)
@@ -455,6 +488,6 @@ async def merge_people(
         request_id=request_id,
         details={"duplicate_id": duplicate_id},
     )
-    await db.commit()
+    await commit_member_changes(db)
     await db.refresh(canonical)
     return person_to_dict(canonical)

@@ -21,6 +21,7 @@ import {
   createPollQuestion,
   deletePollQuestion,
   fetchEditions,
+  fetchVolunteerPollEvents,
   fetchPollOrders,
   fetchPollQuestions,
   reorderPollQuestions,
@@ -31,7 +32,7 @@ import { apiErrorMessage } from "@/utils/apiErrors";
 import { pollKindLabel, POLL_QUESTION_KINDS, type PollQuestionKind } from "@/utils/pollKinds";
 import { queryKeys } from "@/utils/queryKeys";
 import PollOrdersTable from "./PollOrdersTable";
-import PollQuestionCard, { QuestionTextFields } from "./PollQuestionCard";
+import PollQuestionCard, { QuestionTextFields, PollEventField } from "./PollQuestionCard";
 import VolunteerPollOrderDialog from "./VolunteerPollOrderDialog";
 import type { Edition } from "./editionTypes";
 
@@ -43,6 +44,7 @@ interface EditionPollModalProps {
 }
 
 const EMPTY_QUESTION: PollQuestionWrite = {
+  eventId: null,
   titleNl: "",
   titleFr: "",
   titleEn: "",
@@ -90,6 +92,12 @@ export default function EditionPollModal({
     enabled,
   });
 
+  const eventsQuery = useQuery({
+    queryKey: queryKeys.admin.pollEventOptions,
+    queryFn: () => fetchVolunteerPollEvents(authHeaders),
+    enabled,
+  });
+  const events = eventsQuery.data ?? [];
   const questions = questionsQuery.data ?? [];
   const orders = ordersQuery.data;
   const otherEditions = (editionsQuery.data ?? []).filter((other) => other.id !== editionId);
@@ -229,6 +237,7 @@ export default function EditionPollModal({
             questions.map((question, index) => (
               <PollQuestionCard
                 key={question.id}
+                events={events}
                 question={question}
                 index={index}
                 count={questions.length}
@@ -260,7 +269,10 @@ export default function EditionPollModal({
                 size="sm"
                 className="bg-muted text-content border-input"
                 value={kind}
-                onValueChange={(value) => setKind(value as PollQuestionKind)}
+                onValueChange={(value) => {
+                  setKind(value as PollQuestionKind);
+                  setDraft({ ...draft, eventId: null });
+                }}
               >
                 {POLL_QUESTION_KINDS.map((option) => (
                   <AdminOption key={option} value={option}>
@@ -270,6 +282,16 @@ export default function EditionPollModal({
               </AdminSelect>
             </AdminField>
             <QuestionTextFields idPrefix="poll-question-add" value={draft} onChange={setDraft} />
+            {eventsQuery.isError && <Alert variant="danger">{m.admin_content_error_load()}</Alert>}
+            {kind === "yes_no" && (
+              <PollEventField
+                id="poll-event-add"
+                events={events}
+                value={draft.eventId}
+                disabled={eventsQuery.isPending}
+                onChange={(eventId) => setDraft({ ...draft, eventId })}
+              />
+            )}
             <div>
               <Button
                 type="submit"

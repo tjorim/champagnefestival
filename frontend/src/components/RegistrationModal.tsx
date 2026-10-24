@@ -310,10 +310,22 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
         </DialogHeader>
 
         <DialogBody>
+          {event?.membersOnly && (
+            <Alert className="mb-3">
+              {m.member_sign_in_prompt()}{" "}
+              <AlertLink href="/me">{m.member_sign_in_link()}</AlertLink>
+            </Alert>
+          )}
+
           {!event ? (
             <Alert variant="danger" className="mb-0">
               <Icon icon={TriangleAlertIcon} className="me-2" />
               {m.registration_error()}
+            </Alert>
+          ) : event.volunteersOnly ? (
+            <Alert>
+              {m.volunteer_event_poll_required()}{" "}
+              <AlertLink href="/me">{m.volunteer_event_portal_link()}</AlertLink>
             </Alert>
           ) : submitSuccess ? (
             <Alert variant="success" className="mb-0">
