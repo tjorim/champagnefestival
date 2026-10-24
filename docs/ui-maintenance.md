@@ -143,7 +143,21 @@ A passing inventory check is bookkeeping, not a compatibility approval.
 
 ## Initial review (2026-10-24)
 
-Base UI 1.9 upgrade PR #1298 has a verified entry-bundle regression: the same PR code built to 476,274 bytes on 1.8 and 583,290 bytes on 1.9, above the 520 KiB budget. Tests and E2E passed. A component-subpath import did not reduce the regression. Tracked in [#1398](https://github.com/tjorim/champagnefestival/issues/1398). This workflow does not resolve or approve that runtime upgrade.
+Base UI 1.9 upgrade PR #1298 exposed an unstable entry-chunk budget
+([#1398](https://github.com/tjorim/champagnefestival/issues/1398)). An A/B build
+on the same source and dependency set with Vite's manifest showed the entry
+moving from 472,542 to 583,315 bytes, while its complete static-import closure
+only grew from 727,278 to 729,833 bytes. Total asset JavaScript decreased from
+2,797,644 to 2,793,374 bytes. Most of the apparent regression was shared modules
+moving into `index`, rather than added code downloaded by visitors.
+
+The build now gives React, React DOM and Scheduler an explicit `react-vendor`
+cache boundary. `pnpm bundle:check` retains the existing 520 KiB entry, 450 KiB
+AdminDashboard and 2,800 KiB total limits, and adds a 720 KiB limit for the full
+eager JavaScript graph. It follows static manifest imports, counts shared
+chunks once, and excludes deferred routes; it does not treat a smaller entry
+file alone as a smaller first load. Missing manifest dependencies fail the check.
+Run it after `pnpm build`; CI also runs its graph/budget regression tests.
 
 ## References
 
