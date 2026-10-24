@@ -26,7 +26,7 @@ from app.models import EmailCategory, OutboxJob, StampCard, StampCardReward
 from app.services.email_categories_service import REWARD_READY
 from app.services.member_mail_audience import eligible_person
 from app.services.member_mail_render import compose_text
-from app.services.member_mail_unsubscribe import unsubscribe_url
+from app.services.member_mail_unsubscribe import unsubscribe_page_url, unsubscribe_url
 from app.services.outbox_service import enqueue_job
 from app.translations import resolve_text
 
@@ -96,7 +96,9 @@ async def deliver_reward_ready_email(resource_id: str) -> bool:
                 recipient=person.email.strip(),
                 sender=settings.member_mail_from,
                 subject=subject,
-                text=compose_text(body.format(reward=label), None, category, language, link),
+                text=compose_text(
+                    body.format(reward=label), None, category, language, unsubscribe_page_url(person.id, category.key)
+                ),
                 unsubscribe_url=link,
             )
         except ValueError:

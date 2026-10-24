@@ -50,6 +50,13 @@ def unsubscribe_url(person_id: str, category_key: str, config: Settings = settin
     return f"{config.frontend_url.rstrip('/')}{UNSUBSCRIBE_PATH}?token={quote(token, safe='')}"
 
 
+def unsubscribe_page_url(person_id: str, category_key: str, config: Settings = settings) -> str:
+    """The visible footer link: the frontend page that asks before unsubscribing, so a mail scanner
+    following it changes nothing."""
+    token = make_unsubscribe_token(person_id, category_key, config)
+    return f"{config.frontend_url.rstrip('/')}/email-unsubscribe?token={quote(token, safe='')}"
+
+
 def read_unsubscribe_token(token: str, config: Settings = settings) -> tuple[str, str]:
     """The ``(person_id, category_key)`` a valid token authorises; anything else is a 404."""
     if not config.member_mail_signing_key:

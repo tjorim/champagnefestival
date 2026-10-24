@@ -58,7 +58,7 @@ from app.schemas import AnnouncementCreate, AnnouncementLevel
 from app.services import announcements_service
 from app.services.member_mail_audience import eligible_people, eligible_person
 from app.services.member_mail_render import render_member_mail
-from app.services.member_mail_unsubscribe import unsubscribe_url
+from app.services.member_mail_unsubscribe import unsubscribe_page_url, unsubscribe_url
 from app.services.outbox_service import enqueue_job
 
 logger = logging.getLogger(__name__)
@@ -247,7 +247,9 @@ async def deliver_composer_email(resource_id: str) -> bool:
             raise MemberMailSkipped("The recipient is no longer eligible.")
 
         link = unsubscribe_url(person.id, category.key)
-        rendered = render_member_mail(message, category, person.preferred_language, link)
+        rendered = render_member_mail(
+            message, category, person.preferred_language, unsubscribe_page_url(person.id, category.key)
+        )
         if rendered is None:
             raise MemberMailRejected("The message has no usable text.")
         subject, text = rendered

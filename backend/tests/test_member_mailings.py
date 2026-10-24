@@ -250,7 +250,9 @@ async def test_each_recipient_gets_one_mail_in_their_language_with_unsubscribe(c
     assert all(str(mail.sender) == "club@mail.example.org" for mail in provider.sent)
     mail = by_recipient["nl@example.org"]
     assert mail.delivery_key == f"composer:{message_id}:{nl}"
-    assert str(mail.unsubscribe_url) in mail.text
+    page = member_mail_unsubscribe.unsubscribe_page_url(nl, "club_news")
+    assert page.startswith("https://festival.example.org/email-unsubscribe?token=")
+    assert page in mail.text
     assert mail.as_message()["List-Unsubscribe-Post"] == "List-Unsubscribe=One-Click"
 
     counts = (await client.get(f"/api/composer/{message_id}", headers=ADMIN_HEADERS)).json()
@@ -433,24 +435,6 @@ async def test_unsubscribe_token_is_scoped_to_its_category(unauth_client, client
     assert rows == {"club_news": False, "new_editions": True}
 
 
-async def test_opening_the_link_redirects_to_the_confirmation_page_without_unsubscribing(
-    unauth_client, client, provider, db_session
-):
-    person = await _person(client, "Ann", "ann@example.org")
-    await _add_consent(db_session, person, "club_news")
-    token = _token(person)
-
-    r = await unauth_client.get("/api/mail/unsubscribe", params={"token": token}, follow_redirects=False)
-
-    assert r.status_code == 303
-    location = urlparse(r.headers["location"])
-    assert (location.netloc, location.path) == ("festival.example.org", "/email-unsubscribe")
-    assert parse_qs(location.query)["token"] == [token]
-    db_session.expire_all()
-    consent = await db_session.scalar(select(EmailConsent).where(EmailConsent.person_id == person))
-    assert consent.revoked_at is None
-
-
 async def test_confirmation_page_can_look_up_the_category(unauth_client, client, provider, db_session):
     person = await _person(client, "Ann", "ann@example.org")
     token = _token(person)
@@ -522,7 +506,7 @@ async def test_reward_ready_mail_is_sent_in_the_members_language(client, provide
     assert mail.category_key == "reward_ready"
     assert mail.subject == "Votre récompense est prête"
     assert "Une bouteille" in mail.text
-    assert str(mail.unsubscribe_url) in mail.text
+    assert member_mail_unsubscribe.unsubscribe_page_url(person_id, "reward_ready") in mail.text
     assert mail.delivery_key == f"reward-ready:{reward_id}"
 
 

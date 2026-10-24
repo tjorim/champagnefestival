@@ -46,10 +46,11 @@ scheduling an `email` message returns `409 member_mail_unavailable`.
   `base64url(person_id NL category_key).HMAC-SHA256`, category-scoped, no expiry, never a session. It
   ends every open consent for that category among people sharing the person's address
   (`revoked_source = unsubscribe_link`), converges on repeat or for a deleted person, and answers 404
-  `unsubscribe_token_invalid` otherwise. Rotating the key invalidates mailed links. The same URL serves
-  people: `GET` redirects (303) to the frontend page `/email-unsubscribe` (nl/fr/en), which names the
-  category (`GET /api/mail/unsubscribe/category`, read-only) and unsubscribes only on a click, so a mail
-  scanner following the link changes nothing.
+  `unsubscribe_token_invalid` otherwise. Rotating the key invalidates mailed links. The `List-Unsubscribe`
+  header carries this API URL. The visible footer link is the frontend page `/email-unsubscribe?token=`
+  (nl/fr/en), which names the category (`GET /api/mail/unsubscribe/category`, read-only) and
+  unsubscribes only on a click, so a mail scanner following the link changes nothing. The API has no
+  redirect: CodeQL flagged a token-bearing redirect (PR #1415) and a direct link needs none.
 - **Suppression.** `email_suppressions` keeps only a SHA-256 of the normalised address with a reason
   (`hard_bounce`, `complaint`); entries are never removed automatically and are not erased with a
   person (a hash is not the address). `email_suppression_service.suppress` exists; the feedback

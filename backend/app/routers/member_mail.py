@@ -1,18 +1,15 @@
 """Public one-click unsubscribe for member mail (#1407).
 
-The URL in a mail's ``List-Unsubscribe`` header and footer: a mail client POSTs
-``List-Unsubscribe=One-Click`` to it (RFC 8058) without a login, a person who opens it in a browser
-(GET) is sent on to the frontend confirmation page, and the signed token in the query string says
-whose consent for which category ends.
+The URL in a mail's ``List-Unsubscribe`` header: a mail client POSTs ``List-Unsubscribe=One-Click``
+to it (RFC 8058) without a login, and the signed token in the query string says whose consent for
+which category ends. The visible footer link points at the frontend confirmation page instead
+(``member_mail_unsubscribe.unsubscribe_page_url``), so the server never redirects to a
+caller-supplied value.
 """
 
-from urllib.parse import quote
-
 from fastapi import APIRouter, Depends, Query, Request, Response, status
-from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
 from app.database import get_db
 from app.ratelimit import check_rate_limit, get_client_ip
 from app.schemas import MemberMailUnsubscribeCategoryOut
@@ -37,14 +34,6 @@ async def unsubscribe(
     except ServiceError as exc:
         raise to_http_exception(exc) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-
-@router.get("/unsubscribe", include_in_schema=False)
-async def open_unsubscribe_link(token: str = Query(default="", max_length=500)) -> RedirectResponse:
-    """A person opening the link: show the frontend page, which asks before unsubscribing, so a mail
-    scanner following the link cannot unsubscribe anyone."""
-    page = f"{settings.frontend_url.rstrip('/')}/email-unsubscribe?token={quote(token, safe='')}"
-    return RedirectResponse(page, status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.get("/unsubscribe/category", response_model=MemberMailUnsubscribeCategoryOut)
