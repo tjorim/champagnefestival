@@ -1629,5 +1629,17 @@
   "order_questions_saved": "Order questions saved.",
   "api_error_order_question_in_use": "This question has already been answered. Deactivate it and add a new question to change its wording, type or options.",
   "api_error_order_question_unavailable": "These questions have changed. Reopen the order form and check your answers.",
-  "admin_poll_notify_removed": "Email {count} affected volunteers"
+  "admin_poll_notify_removed": "Email {count} affected volunteers",
+  "admin_members_settings": "Member overview",
+  "admin_members_settings_help": "Indicators only; leave blank to switch them off. Membership never ends automatically.",
+  "admin_members_limit_label": "Member limit",
+  "admin_members_months_label": "Inactivity after (months)",
+  "admin_members_last_attended": "Last attended",
+  "admin_members_inactivity_exempt": "Exempt from inactivity highlight",
+  "admin_members_exempt_note": "Exemption reason",
+  "admin_members_inactivity_warning": "Long absence",
+  "admin_members_places": "{count} of {limit} places taken",
+  "admin_members_places_unlimited": "{count} current members",
+  "admin_members_limit_warning": "The member limit has been reached. You can still add members.",
+  "api_error_member_email_in_use": "A current member already uses this email address."
 }

@@ -561,6 +561,8 @@ def person_summary_to_dict(p: Person) -> dict:
 
 def app_settings_to_dict(s: AppSettings) -> dict:
     return {
+        "member_limit": s.member_limit,
+        "member_inactivity_months": s.member_inactivity_months,
         "maintenance_mode": s.maintenance_mode,
         "public_email": s.public_email,
         "public_phone": s.public_phone,
@@ -606,6 +608,8 @@ def person_to_dict(p: Person) -> dict:
         "role_history": {role: [dict(s) for s in stretches] for role, stretches in (p.role_history or {}).items()},
         "national_register_number": p.national_register_number,
         "eid_document_number": p.eid_document_number,
+        "inactivity_exempt": p.inactivity_exempt,
+        "inactivity_exempt_note": p.inactivity_exempt_note,
         "visits_per_month": p.visits_per_month,
         "notes": p.notes,
         "anonymised": p.anonymised,

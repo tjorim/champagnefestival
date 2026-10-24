@@ -1629,5 +1629,17 @@
   "order_questions_saved": "Bestelvragen opgeslagen.",
   "api_error_order_question_in_use": "Deze vraag is al beantwoord. Deactiveer deze en voeg een nieuwe vraag toe om de tekst, het type of de opties te wijzigen.",
   "api_error_order_question_unavailable": "Deze vragen zijn gewijzigd. Open het bestelformulier opnieuw en controleer je antwoorden.",
-  "admin_poll_notify_removed": "Stuur {count} betrokken vrijwilligers een e-mail"
+  "admin_poll_notify_removed": "Stuur {count} betrokken vrijwilligers een e-mail",
+  "admin_members_settings": "Ledenoverzicht",
+  "admin_members_settings_help": "Alleen indicatoren; leeg schakelt ze uit. Lidmaatschap wordt nooit automatisch beëindigd.",
+  "admin_members_limit_label": "Maximumaantal leden",
+  "admin_members_months_label": "Inactiviteit na (maanden)",
+  "admin_members_last_attended": "Laatst aanwezig",
+  "admin_members_inactivity_exempt": "Vrijgesteld van inactiviteitsmarkering",
+  "admin_members_exempt_note": "Reden voor vrijstelling",
+  "admin_members_inactivity_warning": "Lang niet aanwezig",
+  "admin_members_places": "{count} van {limit} plaatsen bezet",
+  "admin_members_places_unlimited": "{count} huidige leden",
+  "admin_members_limit_warning": "Het ledenmaximum is bereikt. Je kunt nog steeds leden toevoegen.",
+  "api_error_member_email_in_use": "Een huidig lid gebruikt dit e-mailadres al."
 }

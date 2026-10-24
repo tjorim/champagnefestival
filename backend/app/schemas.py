@@ -23,6 +23,8 @@ from app.schema_types import (
     GuestCount,
     HexColor,
     MarkdownSource,
+    MemberInactivityMonths,
+    MemberLimit,
     MonthlyVisits,
     NonEmptyText,
     NonEmptyText50,
@@ -190,6 +192,8 @@ class PersonOut(BaseModel):
     role_history: dict[str, list[RoleStretchOut]] = {}
     national_register_number: str | None
     eid_document_number: str | None
+    inactivity_exempt: bool = False
+    inactivity_exempt_note: str = ""
     visits_per_month: int | None
     notes: str
     anonymised: bool
@@ -222,6 +226,8 @@ class PersonAdminSummaryOut(BaseModel):
     roles: list[str]
     retired_roles: dict[str, str] = {}
     role_history: dict[str, list[RoleStretchOut]] = {}
+    inactivity_exempt: bool = False
+    inactivity_exempt_note: str = ""
     visits_per_month: int | None
     notes: str
     anonymised: bool
@@ -248,6 +254,8 @@ class PersonPaymentSummary(BaseModel):
 
 
 class PersonListItemOut(PersonAdminSummaryOut):
+    last_attended: dt_date | None = None
+    inactivity_highlight: bool = False
     registration_count: int
 
 
@@ -1563,6 +1571,8 @@ class PersonCreate(RequestModel):
     eid_document_number: Text50 | None = None
     visits_per_month: MonthlyVisits | None = None
     notes: Text2000 = ""
+    inactivity_exempt: bool = False
+    inactivity_exempt_note: Text2000 = ""
     member_since: dt_date | None = None
     """Member endpoints only: the day membership started (defaults to today for a new member)."""
 
@@ -1578,6 +1588,8 @@ class PersonUpdate(RequestModel):
     eid_document_number: Text50 | None = None
     visits_per_month: MonthlyVisits | None = None
     notes: Text2000 | None = None
+    inactivity_exempt: bool | None = None
+    inactivity_exempt_note: Text2000 | None = None
     member_since: dt_date | None = None
     """Member endpoints only: the day the current stretch of membership started."""
     marketing_opt_in: bool | None = None
@@ -2476,6 +2488,8 @@ class IntegrationClientCreatedOut(IntegrationClientOut):
 
 
 class AppSettingsUpdate(RequestModel):
+    member_limit: MemberLimit | None = None
+    member_inactivity_months: MemberInactivityMonths | None = None
     maintenance_mode: bool | None = None
     public_email: EmailStr | Literal[""] | None = None
     public_phone: Text30 | None = None
@@ -2509,6 +2523,8 @@ class AppSettingsUpdate(RequestModel):
 
 
 class AppSettingsOut(BaseModel):
+    member_limit: int | None = None
+    member_inactivity_months: int | None = None
     maintenance_mode: bool
     public_email: str
     public_phone: str

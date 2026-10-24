@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
@@ -53,6 +54,7 @@ export interface AdminDataTableProps<T extends RowData> {
   columnVisibilityKey: string;
   getRowId: (row: T) => string;
   getRowLabel: (row: T) => string;
+  getRowClassName?: (row: T) => string | undefined;
   onOpen: (row: T) => void;
   /** Primary identifiers and status, independent of desktop column visibility. */
   renderCard: (row: T) => ReactNode;
@@ -98,12 +100,14 @@ function AdminControlledTable<T extends RowData>({
   table,
   onOpen,
   getRowLabel,
+  getRowClassName,
   rowActions,
   caption,
   actionsLabel,
 }: {
   onOpen?: (row: T) => void;
   getRowLabel?: (row: T) => string;
+  getRowClassName?: (row: T) => string | undefined;
   rowActions?: (row: T) => ReactNode;
   caption?: string;
   actionsLabel?: string;
@@ -128,6 +132,7 @@ function AdminControlledTable<T extends RowData>({
         {table.getRowModel().rows.map((row) => (
           <TableRow
             key={row.id}
+            className={getRowClassName?.(row.original)}
             tabIndex={onOpen ? 0 : undefined}
             aria-label={getRowLabel?.(row.original)}
             onKeyDown={(event) => {
@@ -168,6 +173,7 @@ function ServerAdminDataTable<T extends RowData>({
   columnVisibilityKey,
   getRowId,
   getRowLabel,
+  getRowClassName,
   onOpen,
   renderCard,
   actions = [],
@@ -397,6 +403,7 @@ function ServerAdminDataTable<T extends RowData>({
           table={table}
           onOpen={onOpen}
           getRowLabel={getRowLabel}
+          getRowClassName={getRowClassName}
           rowActions={hasActionsColumn ? undefined : rowActions}
           caption={labels.caption}
           actionsLabel={labels.actions}
@@ -422,7 +429,13 @@ function ServerAdminDataTable<T extends RowData>({
       </div>
       <ul className="list-none space-y-2 p-0 md:hidden">
         {table.getRowModel().rows.map((row) => (
-          <li key={row.id} className="space-y-2 rounded-md border border-border p-3 break-words">
+          <li
+            key={row.id}
+            className={cn(
+              "space-y-2 rounded-md border border-border p-3 break-words",
+              getRowClassName?.(row.original),
+            )}
+          >
             {renderCard(row.original)}
             {row
               .getVisibleCells()

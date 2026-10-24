@@ -810,3 +810,23 @@ independent file edits stop recovery without overwriting those edits. See
 [UI maintenance recovery](ui-maintenance.md#interrupted-review-record-saves).
 Regression tests inject a second-write exception and process exit, then verify
 check/retry succeeds and the journal is removed.
+
+### Member overview and unique emails (#1403)
+
+- Member create (REST `POST /api/members`, MCP `create_member`) remains a non-idempotent
+  create without automatic retry. Nonempty emails are case-insensitively unique among current
+  members; a repeated create with that email returns `409 member_email_in_use`, rather than
+  claiming an existing member is the result of this request. Empty-email creates can duplicate.
+- Member/person updates and member reactivation validate the resulting current membership.
+  The database partial unique index also covers concurrent writes, with the same stable conflict
+  code. Exemption flag/note updates are absolute assignments; replay converges on the same values
+  but can add audit entries. Reactivation remains a no-op when already active. Clients do not
+  automatically retry these operations.
+- People merge checks the surviving email and combined role state, excluding the duplicate being
+  deleted; the duplicate releases its email inside the same transaction before adoption. Conflicts
+  roll back everything. A successful replay still returns 404 for the removed duplicate; merge has
+  no automatic retry or deduplication guarantee.
+- Settings updates assign the two nullable indicators (null disables, omission preserves). MCP
+  `set_member_indicators` replaces both indicators, including nulls. Replaying converges on the
+  same settings but can add audit entries; no automatic retry is enabled. Neither indicator blocks
+  adding or reactivating members, and no retirement or reminder is triggered.

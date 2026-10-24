@@ -5,7 +5,7 @@ into the [frontend UI guide](frontend-ui.md) on 2026-10-07. Completion records
 and original findings remain below; detailed migration history remains in Git.
 
 
-Updated 2026-10-20. This is the current scope, dependency and preferred-order
+Updated 2026-10-24. This is the current scope, dependency and preferred-order
 record for the August 2026 audit and communications roadmap. GitHub issues
 hold discussion and workflow state; decision documents hold current contracts.
 
@@ -76,6 +76,7 @@ Git history; current decisions live in the linked decisions.
 
 | Issue | Outcome | Completed | Evidence | Implementation note |
 | --- | --- | --- | --- | --- |
+| [#1403](https://github.com/tjorim/champagnefestival/issues/1403) | Repository implementation complete | 2026-10-24 | Migration `010`; member overview, REST/MCP and regression tests | Advisory places/inactivity settings, sortable capsule-exchange attendance, admin exemptions and current-member email uniqueness including role grants, reactivation and merge. #1404 can build on the unique-email invariant; no automated retirement. |
 | [#1360](https://github.com/tjorim/champagnefestival/issues/1360) | Completed | 2026-10-20 | #1360; migration `009`; poll lifecycle, MCP, component/CSV and migration tests | Owner expanded the original third-kind request to all three candidates: single choice, free text (500 characters), and rating (1–5). Typed answer tables and additive wire fields preserve existing reads; volunteer entry/clearing, admin correction after closing, overview and CSV share the kind handlers/maps. Owner-authorised reuse adds optional, event-scoped visitor order questions in migration `009`, with per-order typed answers, shared controls/validation, immutable used definitions, checkout/admin entry and CSV/account display. [Wire and rollback decision](../backend/README.md#volunteer-poll-questions-migration-009). |
 | [#1260](https://github.com/tjorim/champagnefestival/issues/1260) | Repository implementation complete; venue rehearsal retains a separate gate | 2026-10-18 | #1261–#1265 (PRs #1270, #1271, #1272, #1301, #1350) and #1349 (PR #1352); [signage epic summary](#signage-epic-1260) | Public `/signage/{channel}` player synced to the server clock, wake lock, offline worker cache, layered template editor, channel/playlist admin and offline/PNG/MP4 exports. Urgent interrupts and video/audio slides remain out of scope. |
 | [#1265](https://github.com/tjorim/champagnefestival/issues/1265) | Completed | 2026-10-18 | #1265; archive, capture-failure and offline Chromium export tests | Published-channel PNG snapshots and local-folder HTML/JSON bundles reuse the renderer and epoch clock; translated admin actions and setup/retry guidance. |

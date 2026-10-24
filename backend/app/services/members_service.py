@@ -17,7 +17,6 @@ rows; that repair logic remains preserved in the baseline).
 from __future__ import annotations
 
 from datetime import date
-from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -27,7 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.audit import write_audit_entry
 from app.models import Person
 from app.schemas import PersonCreate, PersonUpdate
-from app.services.people_listing import filtered_people_stmt, order_people_stmt
+from app.services.member_email import check_email_integrity, commit_member_changes, ensure_member_email
 from app.services.people_service import normalise_optional_identity, normalise_roles, parse_phone
 from app.services.role_history import reactivate_role, retire_role, set_role_start, sync_roles
 from app.utils import get_or_404, make_id, person_to_dict
@@ -54,7 +53,8 @@ async def ensure_unique_fields(
         stmt = select(Person).where(Person.national_register_number == national_register_number)
         if exclude_id:
             stmt = stmt.where(Person.id != exclude_id)
-        existing = (await db.execute(stmt)).scalar_one_or_none()
+        with db.no_autoflush:
+            existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing is not None:
             raise HTTPException(
                 status_code=409,
@@ -65,7 +65,8 @@ async def ensure_unique_fields(
         stmt = select(Person).where(Person.eid_document_number == eid_document_number)
         if exclude_id:
             stmt = stmt.where(Person.id != exclude_id)
-        existing = (await db.execute(stmt)).scalar_one_or_none()
+        with db.no_autoflush:
+            existing = (await db.execute(stmt)).scalar_one_or_none()
         if existing is not None:
             raise HTTPException(
                 status_code=409,
@@ -96,6 +97,8 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
         eid_document_number=eid,
         visits_per_month=body.visits_per_month,
         notes=body.notes,
+        inactivity_exempt=body.inactivity_exempt,
+        inactivity_exempt_note=body.inactivity_exempt_note,
     )
     sync_roles(person, normalise_roles(body.roles))
     ensure_member_role(person)
@@ -103,6 +106,7 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
         set_role_start(person, "member", body.member_since)
 
     db.add(person)
+    await ensure_member_email(db, person)
     await write_audit_entry(
         db,
         actor=actor,
@@ -116,6 +120,7 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
+        check_email_integrity(exc)
         raise HTTPException(
             status_code=409,
             detail="Person with this national register number or eID document number already exists.",
@@ -124,20 +129,21 @@ async def create_member(db: AsyncSession, *, body: PersonCreate, actor: str, req
     return person_to_dict(person)
 
 
-def search_members_stmt(*, q: str | None = None, active: bool | None = None) -> Any:
-    """Members (people holding the ``member`` role), filtered and ordered on the
-    shared people list contract (``app.services.people_listing``): the same ``q``
-    semantics as ``GET /api/people?role=member``, and a deterministic order
-    ending in ``id``."""
-    stmt = filtered_people_stmt(q=q, role="member", active=active)
-    return order_people_stmt(stmt, q=q)
-
-
 async def apply_member_update(
     db: AsyncSession, person: Person, body: PersonUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
-    for field in ("name", "address", "preferred_language", "visits_per_month", "notes"):
+    for field in (
+        "name",
+        "address",
+        "preferred_language",
+        "visits_per_month",
+        "notes",
+        "inactivity_exempt",
+        "inactivity_exempt_note",
+    ):
         if field in body.model_fields_set:
+            if field.startswith("inactivity_exempt") and getattr(body, field) is None:
+                continue
             setattr(person, field, getattr(body, field))
 
     if "phone" in body.model_fields_set:
@@ -168,6 +174,7 @@ async def apply_member_update(
     if body.member_since is not None:
         set_role_start(person, "member", body.member_since)
 
+    await ensure_member_email(db, person)
     await write_audit_entry(
         db,
         actor=actor,
@@ -181,6 +188,7 @@ async def apply_member_update(
         await db.commit()
     except IntegrityError as exc:
         await db.rollback()
+        check_email_integrity(exc)
         raise HTTPException(
             status_code=409,
             detail="Person with this national register number or eID document number already exists.",
@@ -219,6 +227,7 @@ async def reactivate_member(db: AsyncSession, person: Person, *, actor: str, req
     """Undo ``deactivate_member``: the person counts as an active member again. A repeat is a no-op."""
     person_id = person.id
     if reactivate_role(person, "member"):
+        await ensure_member_email(db, person)
         await write_audit_entry(
             db,
             actor=actor,
@@ -228,5 +237,5 @@ async def reactivate_member(db: AsyncSession, person: Person, *, actor: str, req
             request_id=request_id,
             details={},
         )
-        await db.commit()
+        await commit_member_changes(db)
     return {"reactivated": True, "id": person_id}

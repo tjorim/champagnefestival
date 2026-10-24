@@ -126,6 +126,7 @@ class RegistrationAllocation(Base):
 
 class Registration(Base):
     __tablename__ = "registrations"
+    __table_args__ = (Index("ix_registrations_person_checked_event", "person_id", "checked_in", "event_id"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     event_id: Mapped[str] = mapped_column(
@@ -1058,6 +1059,9 @@ class Person(Base):
     first; no ``ended_on`` means in progress, a null ``started_on`` means unknown). See
     ``app.services.role_history``."""
 
+    inactivity_exempt: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    inactivity_exempt_note: Mapped[str] = mapped_column(Text, default="", server_default="")
+
     national_register_number: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
     """Belgium's National Register Number (NISS) — fixed and lifelong; this is
     what would be used to re-identify the person later. Volunteer-only (see
@@ -1436,6 +1440,8 @@ class AppSettings(Base):
     __tablename__ = "app_settings"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    member_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    member_inactivity_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
     maintenance_mode: Mapped[bool] = mapped_column(Boolean, default=False)
     public_email: Mapped[str] = mapped_column(String(320), default="nancy.cattrysse@telenet.be")
     public_phone: Mapped[str] = mapped_column(String(30), default="+32 478 48 01 77")
@@ -1844,3 +1850,16 @@ class PollDeletionNotification(Base):
     recipient: Mapped[str] = mapped_column(String(320), nullable=False)
     subject: Mapped[str] = mapped_column(String(200), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+Index(
+    "uq_people_current_member_email",
+    func.lower(func.trim(Person.email)),
+    unique=True,
+    postgresql_where=text(
+        "NOT anonymised AND CAST(roles AS text) LIKE '%\"member\"%' AND retired_roles ->> 'member' IS NULL AND trim(email) <> ''"
+    ),
+    sqlite_where=text(
+        "NOT anonymised AND CAST(roles AS text) LIKE '%\"member\"%' AND json_extract(retired_roles, '$.member') IS NULL AND trim(email) <> ''"
+    ),
+)

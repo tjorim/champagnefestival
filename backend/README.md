@@ -861,3 +861,22 @@ request its `email` extra only when email validation is used.
 
 These conventions change validation before a write is executed; they do not
 change retry, ownership, or transaction semantics.
+
+### Member overview (#1403)
+
+`GET /api/people?role=member` includes `last_attended` (latest checked-in capsule-exchange
+**event date**, not the check-in timestamp) and `inactivity_highlight`. Sort with
+`sort=last_attended` (unknown dates last in both directions); filter with
+`last_attended_before` (exclusive) and `last_attended_after` (inclusive), ISO dates.
+An attendance index starts with registration person/check-in/event. The inactivity threshold
+subtracts calendar months from the current UTC day and clamps month-end; equality, unknown
+attendance and `inactivity_exempt` never highlight. Exemption notes stay admin-only.
+
+Settings `member_limit` (1–2147483647) and `member_inactivity_months` (1–1200) are nullable,
+advisory indicators; null disables them. Membership is never automatically ended or blocked.
+Member create/update accepts `inactivity_exempt` and `inactivity_exempt_note` (up to 2000
+characters); MCP supports the same fields and `set_member_indicators` replaces both settings.
+Current members have unique nonempty, trimmed, case-insensitive emails; retired/anonymised
+members and non-members may share them. Conflicts return `409 member_email_in_use` on
+create, update, role grants, reactivation and merge. Migration 010 intentionally refuses an
+existing conflicting dataset; resolve duplicates with the existing merge before migrating.

@@ -11,6 +11,7 @@ import json
 import pytest
 
 from app.live.mapping import (
+    _K_ADMIN_PEOPLE,
     _K_ADMIN_REGISTRATIONS,
     _K_ADMIN_TABLES,
     check_in_changed,
@@ -42,6 +43,7 @@ def test_check_in_changed_scope():
 def test_check_in_changed_keys():
     e = check_in_changed(registration_id="reg-1")
     assert _K_ADMIN_REGISTRATIONS in e.keys
+    assert _K_ADMIN_PEOPLE in e.keys
     assert _K_ADMIN_TABLES not in e.keys
 
 
@@ -65,6 +67,7 @@ def test_registration_changed_actions(action: str):
 def test_registration_changed_keys():
     e = registration_changed(action="updated", registration_id="reg-1")
     assert _K_ADMIN_REGISTRATIONS in e.keys
+    assert _K_ADMIN_PEOPLE in e.keys
 
 
 # ---------------------------------------------------------------------------

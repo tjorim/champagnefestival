@@ -10,17 +10,19 @@ btree indexes; registration counts use the indexed registration person_id.
 
 from __future__ import annotations
 
+from calendar import monthrange
+from datetime import date
 from typing import Any, Literal
 
 from sqlalchemy import Text, and_, cast, func, or_, select
 from sqlalchemy.sql import Select
 
 from app.dependencies import SortDirection
-from app.models import Person, Registration
+from app.models import Edition, Event, Person, Registration
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.utils import roles_contains
 
-PersonSortKey = Literal["name", "email", "created", "updated", "registration_count"]
+PersonSortKey = Literal["name", "email", "created", "updated", "registration_count", "last_attended"]
 VolunteerSortKey = Literal["name", "created", "updated"]
 
 # Name and email sort on the trigger-maintained, unaccented, lower-cased
@@ -30,7 +32,28 @@ registration_count = (
     select(func.count(Registration.id)).where(Registration.person_id == Person.id).correlate(Person).scalar_subquery()
 )
 
+last_attended = (
+    select(func.max(Event.date))
+    .join(Registration, Registration.event_id == Event.id)
+    .join(Edition, Edition.id == Event.edition_id)
+    .where(
+        Registration.person_id == Person.id,
+        Registration.checked_in.is_(True),
+        Edition.edition_type == "capsule_exchange",
+    )
+    .correlate(Person)
+    .scalar_subquery()
+)
+
+
+def inactivity_cutoff(today: date, months: int) -> date:
+    """Subtract calendar months, clamping the day at the end of the target month."""
+    year, month = divmod(today.year * 12 + today.month - 1 - months, 12)
+    return date(year, month + 1, min(today.day, monthrange(year, month + 1)[1]))
+
+
 _SORT_COLUMNS: dict[str, Any] = {
+    "last_attended": last_attended,
     "registration_count": registration_count,
     "name": Person.search_name,
     "email": Person.search_email,
@@ -80,6 +103,8 @@ def filtered_people_stmt(
     q: str | None = None,
     role: str | None = None,
     active: bool | None = None,
+    last_attended_before: date | None = None,
+    last_attended_after: date | None = None,
 ) -> Select[Any]:
     """``select(Person)`` with the shared filters applied and no ordering.
 
@@ -88,6 +113,10 @@ def filtered_people_stmt(
     and everyone who is anonymised).
     """
     stmt = select(Person)
+    if last_attended_before is not None:
+        stmt = stmt.where(last_attended < last_attended_before)
+    if last_attended_after is not None:
+        stmt = stmt.where(last_attended >= last_attended_after)
     if role:
         stmt = stmt.where(roles_contains(role))
     if active is not None:
@@ -117,7 +146,7 @@ def order_people_stmt[SelectT: Select[Any]](
         column = _SORT_COLUMNS[sort]
         descending = sort_dir == "desc"
         return stmt.order_by(
-            column.desc() if descending else column.asc(),
+            (column.desc() if descending else column.asc()).nulls_last(),
             Person.id.desc() if descending else Person.id.asc(),
         )
     if q and (q_stripped := q.strip()):

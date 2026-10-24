@@ -1,4 +1,5 @@
 import {
+  AdminCheck,
   AdminField,
   AdminLabel,
   AdminInput,
@@ -31,6 +32,7 @@ import { roleSince, type Person } from "@/types/person";
 
 interface MemberFormModalProps {
   show: boolean;
+  limitReached?: boolean;
   member: Person | null;
   onSave: (data: MemberFormData) => Promise<void>;
   onHide: () => void;
@@ -45,9 +47,17 @@ export interface MemberFormData {
   notes: string;
   /** ISO day membership started; empty when unknown. */
   memberSince: string;
+  inactivityExempt?: boolean;
+  inactivityExemptNote?: string;
 }
 
-export default function MemberFormModal({ show, member, onSave, onHide }: MemberFormModalProps) {
+export default function MemberFormModal({
+  show,
+  member,
+  onSave,
+  onHide,
+  limitReached = false,
+}: MemberFormModalProps) {
   const isEdit = member != null;
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +74,8 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             preferredLanguage: member.preferredLanguage ?? null,
             address: member.address ?? "",
             notes: member.notes ?? "",
+            inactivityExempt: member.inactivityExempt ?? false,
+            inactivityExemptNote: member.inactivityExemptNote ?? "",
             memberSince: roleSince(member, "member") ?? "",
           }
         : {
@@ -74,6 +86,8 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
             address: "",
             notes: "",
             memberSince: "",
+            inactivityExempt: false,
+            inactivityExemptNote: "",
           },
     [member],
   );
@@ -91,6 +105,8 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           address: value.address.trim(),
           notes: value.notes.trim(),
           memberSince: value.memberSince,
+          inactivityExempt: value.inactivityExempt,
+          inactivityExemptNote: value.inactivityExemptNote,
         });
         onHide();
       } catch (err) {
@@ -144,6 +160,9 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
           noValidate
         >
           <DialogBody>
+            {!isEdit && limitReached && (
+              <Alert variant="warning">{m.admin_members_limit_warning()}</Alert>
+            )}
             {error && (
               <Alert variant="danger" className="py-2 text-sm" onClose={() => setError(null)}>
                 {error}
@@ -290,6 +309,29 @@ export default function MemberFormModal({ show, member, onSave, onHide }: Member
               </form.Field>
             </AdminField>
 
+            <form.Field name="inactivityExempt">
+              {(field) => (
+                <AdminCheck
+                  id="member-inactivity-exempt"
+                  label={m.admin_members_inactivity_exempt()}
+                  checked={field.value ?? false}
+                  onCheckedChange={(checked) => field.handleChange(checked)}
+                />
+              )}
+            </form.Field>
+            <form.Field name="inactivityExemptNote">
+              {(field) => (
+                <AdminField className="mb-4" controlId="member-exempt-note">
+                  <AdminLabel>{m.admin_members_exempt_note()}</AdminLabel>
+                  <AdminTextarea
+                    maxLength={2000}
+                    value={field.value ?? ""}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    onBlur={field.handleBlur}
+                  />
+                </AdminField>
+              )}
+            </form.Field>
             <AdminField className="mb-4" controlId="member-notes">
               <AdminLabel className="text-subtle text-sm">{m.registration_notes()}</AdminLabel>
               <form.Field name="notes">

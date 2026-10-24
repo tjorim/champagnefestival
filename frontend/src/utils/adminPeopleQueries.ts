@@ -6,7 +6,7 @@ export interface PeopleListParams {
   page: number;
   limit: number;
   q?: string;
-  sort?: "name" | "email" | "created" | "updated" | "registration_count";
+  sort?: "name" | "email" | "created" | "updated" | "registration_count" | "last_attended";
   sort_dir?: "asc" | "desc";
   role?: string;
   active?: boolean;

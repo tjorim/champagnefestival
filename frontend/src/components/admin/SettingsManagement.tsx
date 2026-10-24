@@ -33,6 +33,8 @@ interface SettingsManagementProps {
 
 interface ApiAppSettings {
   maintenance_mode: boolean;
+  member_limit: number | null;
+  member_inactivity_months: number | null;
   public_email: string;
   public_phone: string;
   facebook_url: string;
@@ -67,10 +69,35 @@ export default function SettingsManagement({
         m.admin_error_update_settings(),
       ),
     onSettled: () =>
-      void invalidateAdmin(queryClient, [settingsQueryKey, queryKeys.maintenanceMode]),
+      void invalidateAdmin(queryClient, [
+        settingsQueryKey,
+        queryKeys.maintenanceMode,
+        queryKeys.admin.peopleLists,
+      ]),
     retry: false,
   });
 
+  const memberDefaults = useMemo(
+    () => ({
+      limit: settingsQuery.data?.member_limit?.toString() ?? "",
+      months: settingsQuery.data?.member_inactivity_months?.toString() ?? "",
+    }),
+    [settingsQuery.data],
+  );
+  const memberForm = useForm({
+    defaultValues: memberDefaults,
+    onSubmit: async ({ value }) => {
+      await updateMutation.mutateAsync({
+        member_limit: value.limit === "" ? null : Number(value.limit),
+        member_inactivity_months: value.months === "" ? null : Number(value.months),
+      });
+      if (
+        memberForm.state.values.limit === value.limit &&
+        memberForm.state.values.months === value.months
+      )
+        memberForm.reset(value);
+    },
+  });
   const maintenanceMode = settingsQuery.data?.maintenance_mode;
 
   // Derived rather than a static template: `useForm` re-applies `defaultValues`
@@ -116,6 +143,7 @@ export default function SettingsManagement({
   if (settingsQuery.data !== prevSettingsData) {
     setPrevSettingsData(settingsQuery.data);
     if (settingsQuery.data && !form.state.isDirty) form.reset(defaultValues);
+    if (settingsQuery.data && !memberForm.state.isDirty) memberForm.reset(memberDefaults);
   }
 
   return (
@@ -141,6 +169,53 @@ export default function SettingsManagement({
           <>
             {section !== "contact" && (
               <>
+                <form
+                  className="mb-6"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    void memberForm.handleSubmit();
+                  }}
+                >
+                  <h3>{m.admin_members_settings()}</h3>
+                  <p className="text-subtle text-sm">{m.admin_members_settings_help()}</p>
+                  <memberForm.Field name="limit">
+                    {(field) => (
+                      <AdminField className="mb-4" controlId="member-limit">
+                        <AdminLabel>{m.admin_members_limit_label()}</AdminLabel>
+                        <AdminInput
+                          type="number"
+                          max={2147483647}
+                          min={1}
+                          step={1}
+                          value={field.value}
+                          disabled={updateMutation.isPending}
+                          onChange={(event) => field.handleChange(event.target.value)}
+                          onBlur={field.handleBlur}
+                        />
+                      </AdminField>
+                    )}
+                  </memberForm.Field>
+                  <memberForm.Field name="months">
+                    {(field) => (
+                      <AdminField className="mb-4" controlId="member-months">
+                        <AdminLabel>{m.admin_members_months_label()}</AdminLabel>
+                        <AdminInput
+                          type="number"
+                          max={1200}
+                          min={1}
+                          step={1}
+                          value={field.value}
+                          disabled={updateMutation.isPending}
+                          onChange={(event) => field.handleChange(event.target.value)}
+                          onBlur={field.handleBlur}
+                        />
+                      </AdminField>
+                    )}
+                  </memberForm.Field>
+                  <Button type="submit" disabled={updateMutation.isPending}>
+                    {m.admin_people_save()}
+                  </Button>
+                </form>
                 <AdminCheck
                   type="switch"
                   id="maintenance-mode-switch"

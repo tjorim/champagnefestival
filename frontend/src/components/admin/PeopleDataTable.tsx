@@ -21,6 +21,7 @@ export function peopleTableParams(state: AdminTableState, role?: string): People
   const sorts: Record<string, PeopleListParams["sort"]> = {
     name: "name",
     email: "email",
+    lastAttended: "last_attended",
     registrations: "registration_count",
     createdAt: "created",
     updatedAt: "updated",
@@ -87,9 +88,17 @@ interface Props {
   columns: ColumnDef<AdminTableFeatures, Person, any>[];
   onOpen: (person: Person) => void;
   primaryAction: ReactNode;
+  getRowClassName?: (person: Person) => string | undefined;
 }
 
-export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryAction }: Props) {
+export function PeopleDataTable({
+  id,
+  authHeaders,
+  columns,
+  onOpen,
+  primaryAction,
+  getRowClassName,
+}: Props) {
   const role = id === "members" ? "member" : id === "volunteers" ? "volunteer" : undefined;
   const useDataSource = useCallback(
     function useDataSource(state: AdminTableState) {
@@ -147,6 +156,7 @@ export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryActio
       columnVisibilityKey={`admin-col-vis-${id}`}
       getRowId={(person) => person.id}
       getRowLabel={(person) => person.name}
+      getRowClassName={getRowClassName}
       onOpen={onOpen}
       renderCard={(person) => (
         <>

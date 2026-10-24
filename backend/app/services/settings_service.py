@@ -73,6 +73,9 @@ async def update_settings(
     db: AsyncSession, *, actor: str, body: AppSettingsUpdate, request_id: str | None = None
 ) -> dict:
     settings = await get_or_create_settings(db)
+    for field in ("member_limit", "member_inactivity_months"):
+        if field in body.model_fields_set:
+            setattr(settings, field, getattr(body, field))
     if body.maintenance_mode is not None:
         settings.maintenance_mode = body.maintenance_mode
     for field in ("public_email", "public_phone", "facebook_url"):

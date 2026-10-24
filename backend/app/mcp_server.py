@@ -36,6 +36,7 @@ from fastmcp.tools.base import Tool
 from pydantic import Field
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.dependencies import SortDirection
 from app.mcp import check_in as mcp_check_in
 from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
@@ -100,6 +101,7 @@ from app.schemas import (
     TableTypeCreate,
 )
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
+from app.services.people_listing import PersonSortKey
 from app.signage_schemas import SlideKind as SignageSlideKind
 from app.translations import Language
 from app.version import APP_VERSION
@@ -2325,6 +2327,18 @@ class ChampagneFestivalMcpBackend:
         """Return site-wide settings (currently just maintenance mode). No authentication required."""
         return await mcp_admin_settings.get_settings(self.session_factory)
 
+    async def set_member_indicators(
+        self, member_limit: int | None = None, member_inactivity_months: int | None = None
+    ) -> dict:
+        """Replace both member indicators; null switches one off. Requires admin."""
+        self._require_admin()
+        return await mcp_admin_settings.set_member_indicators(
+            self.session_factory,
+            self._actor(),
+            member_limit=member_limit,
+            member_inactivity_months=member_inactivity_months,
+        )
+
     async def set_maintenance_mode(self, maintenance_mode: bool) -> dict:
         """Toggle maintenance mode site-wide. Requires the ``admin`` role."""
         self._require_admin()
@@ -2535,6 +2549,8 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
+        inactivity_exempt: bool = False,
+        inactivity_exempt_note: str = "",
         notes: str = "",
         roles: list[str] | None = None,
     ) -> dict:
@@ -2554,6 +2570,8 @@ class ChampagneFestivalMcpBackend:
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
             notes=notes,
+            inactivity_exempt=inactivity_exempt,
+            inactivity_exempt_note=inactivity_exempt_note,
             roles=roles,
         )
 
@@ -2562,10 +2580,26 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_members.get_member(self.session_factory, person_id)
 
-    async def list_members(self, q: str | None = None, active: bool | None = None) -> dict:
+    async def list_members(
+        self,
+        q: str | None = None,
+        active: bool | None = None,
+        sort: PersonSortKey | None = None,
+        sort_dir: SortDirection = "asc",
+        last_attended_before: dt_date | None = None,
+        last_attended_after: dt_date | None = None,
+    ) -> dict:
         """Search/list members. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_members.list_members(self.session_factory, q, active)
+        return await mcp_admin_members.list_members(
+            self.session_factory,
+            q,
+            active,
+            sort=sort,
+            sort_dir=sort_dir,
+            last_attended_before=last_attended_before,
+            last_attended_after=last_attended_after,
+        )
 
     async def update_member(
         self,
@@ -2577,6 +2611,8 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
+        inactivity_exempt: bool | None = None,
+        inactivity_exempt_note: str | None = None,
         notes: str | None = None,
         roles: list[str] | None = None,
     ) -> dict:
@@ -2594,6 +2630,8 @@ class ChampagneFestivalMcpBackend:
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
             notes=notes,
+            inactivity_exempt=inactivity_exempt,
+            inactivity_exempt_note=inactivity_exempt_note,
             roles=roles,
         )
 
@@ -3155,6 +3193,7 @@ def create_mcp_server(
     register_tool(backend.mark_waitlist_entry_handled)
     register_tool(backend.delete_waitlist_entry)
     register_tool(backend.get_settings)
+    register_tool(backend.set_member_indicators)
     register_tool(backend.set_maintenance_mode)
     register_tool(backend.list_organization_changes)
     register_tool(backend.decide_organization_change)

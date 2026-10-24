@@ -5,7 +5,7 @@ create/update/delete/merge transitions — lives in
 ``app.services.people_service`` and is shared with ``app.mcp.admin.people``.
 """
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select, true
@@ -27,11 +27,13 @@ from app.schemas import (
     PersonPaymentSummary,
     PersonUpdate,
 )
-from app.services import payments_service, people_service
+from app.services import payments_service, people_service, settings_service
 from app.services.people_exports import stream_people_csv
 from app.services.people_listing import (
     PersonSortKey,
     filtered_people_stmt,
+    inactivity_cutoff,
+    last_attended,
     order_people_stmt,
     registration_count,
     role_active,
@@ -71,6 +73,8 @@ async def list_people(
         description="Sort column; overrides the default relevance/newest-first order. "
         "Applies across the whole filtered set, not just the current page.",
     ),
+    last_attended_before: date | None = Query(None),
+    last_attended_after: date | None = Query(None),
     list_query: ListQuery = Depends(),
 ) -> dict:
     """Paged people list on the shared list contract (see ``ListQuery``).
@@ -79,17 +83,40 @@ async def list_people(
     roles. Without ``sort`` a search is ordered by relevance and a plain list
     newest first; every order ends in ``id`` so paging is stable.
     """
-    filtered_stmt = filtered_people_stmt(q=list_query.q, role=role, active=active)
+    filtered_stmt = filtered_people_stmt(
+        q=list_query.q,
+        role=role,
+        active=active,
+        last_attended_before=last_attended_before,
+        last_attended_after=last_attended_after,
+    )
     total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
 
     stmt = order_people_stmt(
-        filtered_stmt.add_columns(registration_count.label("registration_count")),
+        filtered_stmt.add_columns(registration_count.label("registration_count"), last_attended.label("last_attended")),
         q=list_query.q,
         sort=sort,
         sort_dir=list_query.sort_dir,
     )
     rows = (await db.execute(list_query.apply(stmt))).all()
-    return list_query.envelope([{**person_to_dict(p), "registration_count": count} for p, count in rows], total)
+    settings = await settings_service.get_or_create_settings(db)
+    cutoff = (
+        inactivity_cutoff(datetime.now(UTC).date(), settings.member_inactivity_months)
+        if settings.member_inactivity_months
+        else None
+    )
+    return list_query.envelope(
+        [
+            {
+                **person_to_dict(p),
+                "registration_count": count,
+                "last_attended": attended,
+                "inactivity_highlight": bool(cutoff and attended and attended < cutoff and not p.inactivity_exempt),
+            }
+            for p, count, attended in rows
+        ],
+        total,
+    )
 
 
 @router.get("/counts", response_model=PeopleCountsOut)
