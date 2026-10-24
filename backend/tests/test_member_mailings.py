@@ -412,7 +412,14 @@ async def test_unsubscribe_rejects_tampered_foreign_and_malformed_tokens(unauth_
     other_key = member_mail_unsubscribe.make_unsubscribe_token(
         person, "club_news", settings.model_copy(update={"member_mail_signing_key": "z" * 40})
     )
-    for bad in (f"{payload}.{'0' * len(signature)}", other_key, "garbage", "!!!.abc", f"{payload}x.{signature}"):
+    for bad in (
+        f"{payload}.{'0' * len(signature)}",
+        f"{payload}.é",
+        other_key,
+        "garbage",
+        "!!!.abc",
+        f"{payload}x.{signature}",
+    ):
         r = await unauth_client.post("/api/mail/unsubscribe", params={"token": bad})
         assert r.status_code == 404, bad
         assert r.json()["code"] == "unsubscribe_token_invalid"

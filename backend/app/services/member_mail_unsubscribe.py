@@ -67,7 +67,9 @@ def read_unsubscribe_token(token: str, config: Settings = settings) -> tuple[str
         person_id, category_key = payload.decode("utf-8").split("\n")
     except binascii.Error, ValueError:
         raise _invalid() from None
-    if not hmac.compare_digest(signature, _signature(payload, config.member_mail_signing_key)):
+    # Compare bytes: compare_digest raises TypeError for a non-ASCII str, and the signature is caller input.
+    expected = _signature(payload, config.member_mail_signing_key).encode("ascii")
+    if not hmac.compare_digest(signature.encode("utf-8"), expected):
         raise _invalid()
     return person_id, category_key
 

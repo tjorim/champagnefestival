@@ -184,7 +184,9 @@ export default function ComposerManagement({
   const emailCategoryKey = useSelector(form.atom, (s) => s.values.email_category_key);
   const emailSelected = channels.includes("email");
   const categories = useQuery({
-    queryKey: emailConsentKeys.categories,
+    // Localised names differ from the category screen's, so the locale is part of the key; the
+    // shared prefix keeps that screen's invalidation matching.
+    queryKey: [...emailConsentKeys.categories, getLocale()],
     queryFn: ({ signal }) =>
       emailRequest<EmailCategory[]>(
         `/api/email-categories?locale=${encodeURIComponent(getLocale())}`,
