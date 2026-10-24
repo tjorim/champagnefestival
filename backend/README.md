@@ -920,3 +920,39 @@ never move between cards.
 See `docs/retry-safety.md` for retry decisions and
 `docs/decisions/934-data-retention-and-erasure.md` for retention. OpenAPI exposes
 typed request/response schemas for the REST operations.
+
+### Volunteer-only events and linked attendance polls (migration `012`)
+
+An event's `volunteers_only` flag is independent of `members_only`. Public
+registration and waitlist endpoints refuse volunteer-only bookings and direct
+volunteers to their authenticated poll; admins can still enter bookings.
+When both flags are set, answering yes requires both current roles.
+
+In an edition's volunteer poll, admins can select a volunteer-only event for a
+`yes_no` question (`event_id`; nullable). The event may belong to another edition,
+so a festival's poll can include a later thank-you outing. Only the active
+festival edition's poll appears in volunteer self-service, as before. Each event
+can have one attendance question, and the link is immutable once answers or
+poll-created bookings exist. Copies of questions never copy their event links.
+
+A yes answer creates a confirmed registration for the answering volunteer's
+Person and the stated party size. Subsequent saves update that same booking;
+no or an admin-cleared answer cancels it, and yes after cancellation reuses it.
+These are attendance-only bookings: they do not order products or map meal
+choices to products. All booking/answer writes are atomic and share booking
+audit, live updates and confirmation-outbox behavior. Admin/MCP answer entry
+uses the same synchronization. Closed questions keep their existing confirmation
+rules. Already-checked-in or net-paid bookings refuse attendance changes until
+an admin resolves those records. Independent bookings are never silently
+adopted or duplicated.
+
+Poll-created registrations expose `poll_question_id`. Manage their party size,
+status and person through the poll; ordinary booking notes, payment and check-in
+operations remain available. Confirmed question deletion cancels and detaches
+its registrations instead of erasing their history. Remove/unlink linked polls
+before deleting their event/edition or removing volunteer-only access.
+
+REST question create/update and MCP `create_poll_question`/`update_poll_question`
+accept `event_id`; MCP `clear_event` explicitly clears the link. Admin and
+volunteer question responses expose the link. See the retry-safety inventory
+for stable error codes, lock order and reconciliation after timeouts.

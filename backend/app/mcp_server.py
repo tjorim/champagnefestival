@@ -1154,6 +1154,7 @@ class ChampagneFestivalMcpBackend:
         description_fr: str | None = None,
         description_en: str | None = None,
         end_time: str | None = None,
+        volunteers_only: bool = False,
         members_only: bool = False,
         registration_required: bool = False,
         registrations_open_from: datetime | None = None,
@@ -1187,6 +1188,7 @@ class ChampagneFestivalMcpBackend:
             description_fr=description_fr,
             description_en=description_en,
             end_time=end_time,
+            volunteers_only=volunteers_only,
             members_only=members_only,
             registration_required=registration_required,
             registrations_open_from=registrations_open_from,
@@ -1213,6 +1215,7 @@ class ChampagneFestivalMcpBackend:
         start_time: str | None = None,
         end_time: str | None = None,
         category: str | None = None,
+        volunteers_only: bool | None = None,
         members_only: bool | None = None,
         registration_required: bool | None = None,
         registrations_open_from: datetime | None = None,
@@ -1249,6 +1252,7 @@ class ChampagneFestivalMcpBackend:
             start_time=start_time,
             end_time=end_time,
             category=category,
+            volunteers_only=volunteers_only,
             members_only=members_only,
             registration_required=registration_required,
             registrations_open_from=registrations_open_from,
@@ -1543,6 +1547,7 @@ class ChampagneFestivalMcpBackend:
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
+        event_id: str | None = None,
         closes_at: datetime | None = None,
     ) -> dict:
         """Add a question to an edition's volunteer poll, after the existing ones. ``kind`` supports
@@ -1551,12 +1556,13 @@ class ChampagneFestivalMcpBackend:
         example "Will you join the dinner on Sunday?"; volunteers answer yes with a number of people, or no) or
         ``meals`` (add options afterwards with ``create_poll_option``). The Dutch title is required; French and
         English are optional translations. ``closes_at`` (with a timezone) is when volunteers can no longer
-        change their answer. Requires the ``admin`` role."""
+        change their answer. An optional ``event_id`` links an attendance question to a volunteer-only event; yes answers create registrations. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.create_poll_question(
             self.session_factory,
             self._actor(),
             edition_id=edition_id,
+            event_id=event_id,
             kind=kind,
             title_nl=title_nl,
             title_fr=title_fr,
@@ -1576,13 +1582,15 @@ class ChampagneFestivalMcpBackend:
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
+        event_id: str | None = None,
         closes_at: datetime | None = None,
+        clear_event: bool = False,
         reopen: bool = False,
     ) -> dict:
         """Partially update a poll question; omitted fields are left unchanged and an empty string clears a
         translation (the Dutch title cannot be cleared). ``closes_at`` sets when volunteers can no longer change
         their answer (a past time closes the question now); ``reopen=true`` clears it. The kind cannot change.
-        Requires the ``admin`` role."""
+        An optional ``event_id`` links an attendance question to a volunteer-only event; yes answers create registrations. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.update_poll_question(
             self.session_factory,
@@ -1595,6 +1603,8 @@ class ChampagneFestivalMcpBackend:
             description_fr=description_fr,
             description_en=description_en,
             closes_at=closes_at,
+            event_id=event_id,
+            clear_event=clear_event,
             reopen=reopen,
         )
 

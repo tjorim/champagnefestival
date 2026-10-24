@@ -74,6 +74,7 @@ const EMPTY_FORM: EventFormData = {
   startTime: "",
   endTime: "",
   category: "",
+  volunteersOnly: false,
   membersOnly: false,
   registrationRequired: false,
   registrationsOpenFrom: "",
@@ -117,6 +118,7 @@ export default function EventModal({
             startTime: initial.startTime,
             endTime: initial.endTime ?? "",
             category: initial.category,
+            volunteersOnly: initial.volunteersOnly ?? false,
             membersOnly: initial.membersOnly ?? false,
             registrationRequired: initial.registrationRequired,
             registrationsOpenFrom: initial.registrationsOpenFrom ?? "",
@@ -417,6 +419,18 @@ export default function EventModal({
             ))}
             <p className="text-sm text-subtle mb-4">{m.admin_event_translation_limit()}</p>
 
+            <form.Field name="volunteersOnly">
+              {(field) => (
+                <AdminCheck
+                  type="checkbox"
+                  id="modal-event-volunteers-only"
+                  label={m.event_volunteers_only()}
+                  checked={field.value}
+                  onCheckedChange={(value) => field.handleChange(value)}
+                  className="text-content mb-2"
+                />
+              )}
+            </form.Field>
             <form.Field name="membersOnly">
               {(field) => (
                 <AdminCheck

@@ -22,7 +22,7 @@ from app.ratelimit import check_rate_limit, get_client_ip
 from app.schema_types import GuestCount, NonEmptyText200, ResourceId, Text30, Text2000
 from app.schemas import RequestModel
 from app.services import waitlist_service as service
-from app.services.errors import ServiceError, to_http_exception
+from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.spam import check_form_timing, check_honeypot
 from app.utils import product_available_quantity, product_sold_out
 
@@ -80,6 +80,10 @@ async def submit_waitlist_entry(
     if product is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Product not found.")
     event = await db.get(Event, product.event_id)
+    if event is not None and event.volunteers_only:
+        raise ApiHTTPException(
+            403, "volunteer_event_poll_required", "Use the volunteer attendance poll to register for this event."
+        )
     member = None
     if event is not None and event.members_only:
         from app.services.member_registration import verified_member, visitor_user

@@ -1645,5 +1645,21 @@
   "event_members_only": "Alleen voor leden",
   "member_sign_in_prompt": "Meld je aan met het e-mailadres van je lidmaatschap voordat je inschrijft.",
   "member_sign_in_link": "Aanmelden via e-mail",
-  "membership_required": "Voor dit evenement is een actief lidmaatschap vereist."
+  "membership_required": "Voor dit evenement is een actief lidmaatschap vereist.",
+  "event_volunteers_only": "Alleen vrijwilligers",
+  "volunteer_event_poll_required": "Schrijf je voor deze activiteit in via de vrijwilligerspoll.",
+  "volunteer_event_portal_link": "Ga naar je vrijwilligerspagina",
+  "admin_poll_event_label": "Gekoppelde vrijwilligersactiviteit",
+  "admin_poll_event_none": "Geen gekoppelde activiteit",
+  "admin_poll_event_help": "Kies een activiteit met ‘Alleen vrijwilligers’. Een ja-antwoord maakt een inschrijving voor het opgegeven aantal personen. De koppeling staat vast zodra er antwoorden zijn.",
+  "api_error_poll_event_invalid": "Kies een vrijwilligersactiviteit voor een ja/nee-vraag.",
+  "api_error_poll_event_in_use": "Deze activiteit is al gekoppeld aan een andere poll.",
+  "api_error_event_linked_to_poll": "Ontkoppel eerst de vrijwilligerspoll.",
+  "api_error_poll_registration_locked": "Laat een beheerder eerst de aanmelding of betaling van deze inschrijving nakijken. Je antwoord is niet gewijzigd.",
+  "api_error_poll_registration_managed": "Wijzig de deelname via de gekoppelde vrijwilligerspoll.",
+  "api_error_poll_event_unavailable": "De gekoppelde vrijwilligersactiviteit is niet beschikbaar.",
+  "api_error_poll_registration_exists": "Er bestaat al een inschrijving voor deze activiteit. Vraag een beheerder om die eerst na te kijken.",
+  "api_error_volunteer_required": "Voor deze activiteit moet je een huidige vrijwilliger zijn.",
+  "api_error_poll_event_link_locked": "De gekoppelde activiteit kan niet meer worden gewijzigd zodra er antwoorden of inschrijvingen zijn.",
+  "volunteer_poll_event_notice": "Een ja-antwoord schrijft je gezelschap in voor deze activiteit. Een nee-antwoord annuleert die inschrijving."
 }

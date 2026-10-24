@@ -26,6 +26,16 @@ export class ApiError extends Error {
  * operation message, so the backend can introduce codes ahead of the interface.
  */
 const API_ERROR_MESSAGES: Record<string, () => string> = {
+  volunteer_event_poll_required: () => m.volunteer_event_poll_required(),
+  poll_event_invalid: () => m.api_error_poll_event_invalid(),
+  poll_event_link_locked: () => m.api_error_poll_event_link_locked(),
+  poll_event_in_use: () => m.api_error_poll_event_in_use(),
+  event_linked_to_poll: () => m.api_error_event_linked_to_poll(),
+  poll_registration_locked: () => m.api_error_poll_registration_locked(),
+  poll_registration_managed: () => m.api_error_poll_registration_managed(),
+  poll_event_unavailable: () => m.api_error_poll_event_unavailable(),
+  poll_registration_exists: () => m.api_error_poll_registration_exists(),
+  volunteer_required: () => m.api_error_volunteer_required(),
   member_sign_in_required: () => m.member_sign_in_prompt(),
   membership_required: () => m.membership_required(),
   member_email_in_use: () => m.api_error_member_email_in_use(),

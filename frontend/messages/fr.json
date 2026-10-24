@@ -1645,5 +1645,21 @@
   "event_members_only": "Réservé aux membres",
   "member_sign_in_prompt": "Connectez-vous avec l’adresse e-mail de votre adhésion avant de vous inscrire.",
   "member_sign_in_link": "Se connecter par e-mail",
-  "membership_required": "Une adhésion active est requise pour cet événement."
+  "membership_required": "Une adhésion active est requise pour cet événement.",
+  "event_volunteers_only": "Bénévoles uniquement",
+  "volunteer_event_poll_required": "Inscrivez-vous à cette activité via le sondage des bénévoles.",
+  "volunteer_event_portal_link": "Accéder à votre espace bénévole",
+  "admin_poll_event_label": "Activité bénévole liée",
+  "admin_poll_event_none": "Aucune activité liée",
+  "admin_poll_event_help": "Choisissez une activité « Bénévoles uniquement ». Une réponse positive inscrit le nombre de personnes indiqué. Le lien est fixe dès que des réponses existent.",
+  "api_error_poll_event_invalid": "Choisissez une activité réservée aux bénévoles pour une question de participation.",
+  "api_error_poll_event_in_use": "Cette activité est déjà liée à un autre sondage.",
+  "api_error_event_linked_to_poll": "Dissociez d’abord le sondage des bénévoles.",
+  "api_error_poll_registration_locked": "Demandez à un administrateur de régler d’abord la présence ou le paiement de cette inscription. Votre réponse n’a pas changé.",
+  "api_error_poll_registration_managed": "Modifiez la participation via le sondage des bénévoles lié.",
+  "api_error_poll_event_unavailable": "L’activité bénévole liée n’est pas disponible.",
+  "api_error_poll_registration_exists": "Une inscription existe déjà pour cette activité. Demandez à un administrateur de la vérifier d’abord.",
+  "api_error_volunteer_required": "Vous devez être bénévole actif pour cette activité.",
+  "api_error_poll_event_link_locked": "L’activité liée ne peut plus être modifiée dès que des réponses ou inscriptions existent.",
+  "volunteer_poll_event_notice": "Une réponse positive inscrit votre groupe à cette activité. Une réponse négative annule cette inscription."
 }

@@ -486,6 +486,7 @@ class EventCreate(EventTextFields):
     start_time: ClockTime
     end_time: ClockTime | None = None
     category: NonEmptyText50
+    volunteers_only: bool = False
     members_only: bool = False
     registration_required: bool = False
     registrations_open_from: datetime | None = None
@@ -503,6 +504,7 @@ class EventUpdate(EventTextFields):
     start_time: ClockTime | None = None
     end_time: ClockTime | None = None
     category: NonEmptyText50 | None = None
+    volunteers_only: bool | None = None
     members_only: bool | None = None
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
@@ -535,6 +537,7 @@ class EventOut(EventTextOut):
     start_time: str
     end_time: str | None
     category: str
+    volunteers_only: bool = False
     members_only: bool = False
     registration_required: bool
     registrations_open_from: datetime | None
@@ -560,6 +563,7 @@ class EventPublicOut(EventTextOut):
     start_time: str
     end_time: str | None
     category: str
+    volunteers_only: bool = False
     members_only: bool = False
     registration_required: bool
     registrations_open_from: datetime | None
@@ -837,6 +841,7 @@ class StampProgress(BaseModel):
 
 
 class RegistrationOut(BaseModel):
+    poll_question_id: str | None = None
     stamp_progress: StampProgress | None = None
     order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     booked_table_quantity: int = 0
@@ -1221,6 +1226,7 @@ def _timezone_required(value: datetime | None) -> datetime | None:
 
 
 class PollQuestionCreate(PollQuestionTexts):
+    event_id: ResourceId | None = None
     edition_id: ResourceKey
     kind: PollQuestionKind
     closes_at: datetime | None = None
@@ -1233,6 +1239,7 @@ class PollQuestionCreate(PollQuestionTexts):
 
 
 class PollQuestionUpdate(PollQuestionTexts):
+    event_id: ResourceId | None = None
     """Partial update: an empty string clears a translation; `closes_at` sets the closing time (a past time
     closes the question now) and an explicit `null` reopens it. The kind cannot change."""
 
@@ -1315,6 +1322,7 @@ class PollOptionOut(BaseModel):
 
 
 class PollQuestionOut(BaseModel):
+    event_id: str | None = None
     """A question as the admin sees it: every translation, the closing state, its options (meals/single choice) and what
     volunteers answered so far."""
 
@@ -1487,6 +1495,7 @@ class VolunteerPollOptionOut(BaseModel):
 
 
 class VolunteerPollQuestionOut(BaseModel):
+    event_id: str | None = None
     id: str
     kind: PollQuestionKind
     title: str

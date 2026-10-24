@@ -187,7 +187,13 @@ def apply_delivery_updates(order_items: list[dict] | None, updates: list[Registr
 
 
 async def admin_create_registration(
-    db: AsyncSession, *, body: RegistrationAdminCreate, actor: str, request_id: str | None = None
+    db: AsyncSession,
+    *,
+    body: RegistrationAdminCreate,
+    actor: str,
+    request_id: str | None = None,
+    commit: bool = True,
+    poll_question_id: str | None = None,
 ) -> dict:
     person = await people_service.get_person_or_404(db, body.person_id)
     event = await inventory.lock_event(db, body.event_id)
@@ -200,6 +206,7 @@ async def admin_create_registration(
 
     registration = Registration(
         id=make_id("reg"),
+        poll_question_id=poll_question_id,
         event_id=event.id,
         guest_count=body.guest_count,
         notes=body.notes,
@@ -231,7 +238,10 @@ async def admin_create_registration(
             edition_id=event.edition_id,
         ),
     )
-    await db.commit()
+    if commit:
+        await db.commit()
+    else:
+        await db.flush()
 
     registration = await get_registration_or_404(db, registration.id)
     return registration_to_dict(registration, person, event)
@@ -245,6 +255,8 @@ async def apply_registration_update(
     actor: str,
     request_id: str | None = None,
     clear_amount_due: bool = False,
+    commit: bool = True,
+    from_poll: bool = False,
 ) -> dict:
     """Apply a partial registration update and return the refreshed payload.
 
@@ -268,6 +280,12 @@ async def apply_registration_update(
         )
     ).scalar_one()
 
+    if registration.poll_question_id and not from_poll:
+        for field in ("guest_count", "status", "person_id"):
+            if field in body.model_fields_set and getattr(body, field) != getattr(registration, field):
+                raise ApiHTTPException(
+                    409, "poll_registration_managed", "Change attendance through the linked volunteer poll."
+                )
     pre_allocations = [
         TableAllocation(table_id=a.table_id, guest_count=a.guest_count, exclusive=a.exclusive)
         for a in registration.allocations
@@ -472,7 +490,10 @@ async def apply_registration_update(
             request_id=request_id,
             details={"answer_count": len(registration.order_answers)},
         )
-    await db.commit()
+    if commit:
+        await db.commit()
+    else:
+        await db.flush()
     registration = await get_registration_or_404(db, registration.id)
     person_map = await fetch_person_map(db, [registration])
 
@@ -488,6 +509,8 @@ async def delete_registration(
     from app.services.stamp_cards_service import guard_registration_history
 
     await guard_registration_history(db, registration.id)
+    if registration.poll_question_id:
+        raise ApiHTTPException(409, "poll_registration_managed", "Change attendance through the linked volunteer poll.")
     reg_id = registration.id
     event_id = registration.event_id
     edition_id = registration.event.edition_id

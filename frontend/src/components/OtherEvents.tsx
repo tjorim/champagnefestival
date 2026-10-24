@@ -124,6 +124,11 @@ export default function OtherEvents() {
                             )}
                           </p>
                         )}
+                        {item.event.volunteersOnly && (
+                          <Badge variant="info" className="mb-2">
+                            {m.event_volunteers_only()}
+                          </Badge>
+                        )}
                         {item.event.membersOnly && (
                           <Badge variant="info" className="mb-2">
                             {m.event_members_only()}

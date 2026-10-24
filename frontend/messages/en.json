@@ -1645,5 +1645,21 @@
   "event_members_only": "Members only",
   "member_sign_in_prompt": "Sign in using the email address on your membership before registering.",
   "member_sign_in_link": "Sign in by email",
-  "membership_required": "A current membership is required for this event."
+  "membership_required": "A current membership is required for this event.",
+  "event_volunteers_only": "Volunteers only",
+  "volunteer_event_poll_required": "Sign up for this activity through the volunteer poll.",
+  "volunteer_event_portal_link": "Go to your volunteer page",
+  "admin_poll_event_label": "Linked volunteer event",
+  "admin_poll_event_none": "No linked event",
+  "admin_poll_event_help": "Choose an event marked “Volunteers only”. Answering yes registers the specified number of people. The link is fixed once answers exist.",
+  "api_error_poll_event_invalid": "Choose a volunteer-only event for an attendance question.",
+  "api_error_poll_event_in_use": "This event is already linked to another poll.",
+  "api_error_event_linked_to_poll": "Unlink the volunteer poll first.",
+  "api_error_poll_registration_locked": "Ask an administrator to resolve this booking’s check-in or payment first. Your answer has not changed.",
+  "api_error_poll_registration_managed": "Change attendance through the linked volunteer poll.",
+  "api_error_poll_event_unavailable": "The linked volunteer event is unavailable.",
+  "api_error_poll_registration_exists": "A booking already exists for this event. Ask an administrator to resolve it first.",
+  "api_error_volunteer_required": "You must be a current volunteer for this activity.",
+  "api_error_poll_event_link_locked": "The linked event cannot change once answers or registrations exist.",
+  "volunteer_poll_event_notice": "Answering yes registers your party for this activity. Answering no cancels that booking."
 }

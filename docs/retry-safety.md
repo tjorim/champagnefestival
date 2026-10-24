@@ -883,3 +883,48 @@ the existing session idle-time refresh. It introduces no automatic retries.
   deleted (`person_has_stamp_cards`). Person merge transfers cards with their
   registrations and preserves snapshots; its existing no-automatic-retry contract
   is unchanged.
+
+## Volunteer-only events linked to attendance polls (2026-10-24)
+
+- Event create/update (REST and MCP) includes `volunteers_only`. The existing
+  create/update retry contracts apply; no new automatic retry is enabled.
+  Public booking and waitlist submissions refuse volunteer-only events with
+  `volunteer_event_poll_required`; volunteers use their authenticated poll.
+  Admin-created bookings remain possible. If `members_only` is also enabled,
+  a linked poll's yes answer requires both current roles.
+- A `yes_no` poll question can link one volunteer-only event via `event_id`
+  (REST and MCP; MCP `clear_event` unlinks before use). One event has at most one
+  linked question. Linking/unlinking is refused once answers or poll-created
+  registrations exist (`poll_event_link_locked`). Question create remains a
+  server-generated-ID create with no automatic retry. Absolute link updates
+  have no version precondition and must not be blindly retried after timeout.
+  Copying questions clears event links and retains its existing repeat-safe
+  kind/title deduplication. No historical answers are backfilled.
+- Volunteer answer PUT and admin/MCP answer replacement commit the answer and
+  registration changes together. Lock order is question(s), event(s), existing
+  registration(s), then volunteer; events/registrations are sorted for multi-row
+  changes. The unique `(poll_question_id, person_id)` prevents duplicate bookings.
+  Yes creates one confirmed registration or updates its party size; no or
+  clearing an admin answer cancels it. Yes after no reuses the same registration.
+  Registration inventory checks, audit entries, confirmation outbox and live
+  notifications use the shared booking service in the same transaction.
+  Poll answers do not choose products: these are attendance bookings, with no
+  purchased items. Meals remain separate poll choices.
+- Repeating the same desired attendance converges without adding bookings or
+  re-enqueuing creation confirmations. This is state convergence, not a cached
+  response: replay after an intentional later answer may change attendance
+  again. Clients keep their existing no-automatic-retry policy.
+- A changed answer affecting a checked-in or net-paid booking is refused with
+  `poll_registration_locked`, rolling back the whole answer replacement.
+  Admins must resolve check-in/payment first. An existing independent active
+  booking is not silently adopted or duplicated (`poll_registration_exists`).
+  Direct edits to a poll-created booking's person, attendance status or party
+  size, and direct deletion, are refused (`poll_registration_managed`); use the
+  poll so its answer and booking remain consistent.
+- Confirmed poll deletion cancels its bookings, detaches their poll reference,
+  and preserves the booking history. A protected booking prevents the entire
+  deletion. Event/edition deletion or removing volunteer-only access requires
+  linked polls to be removed/unlinked first (`event_linked_to_poll`). Existing
+  question-deletion confirmation and closed-question rules still apply. Deletion
+  has no response replay: after an ambiguous timeout read state; do not retry
+  the old confirmation against changed state.

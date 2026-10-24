@@ -126,11 +126,17 @@ class RegistrationAllocation(Base):
 
 class Registration(Base):
     __tablename__ = "registrations"
-    __table_args__ = (Index("ix_registrations_person_checked_event", "person_id", "checked_in", "event_id"),)
+    __table_args__ = (
+        Index("ix_registrations_person_checked_event", "person_id", "checked_in", "event_id"),
+        UniqueConstraint("poll_question_id", "person_id", name="uq_registration_poll_person"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     event_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("events.id", ondelete="RESTRICT"), index=True, nullable=False
+    )
+    poll_question_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("edition_poll_questions.id", ondelete="SET NULL"), index=True
     )
     guest_count: Mapped[int] = mapped_column(Integer)
     order_answers: Mapped[list[RegistrationOrderAnswer]] = relationship(cascade="all, delete-orphan", lazy="selectin")
@@ -865,6 +871,7 @@ class Event(Base):
         cascade="all, delete-orphan", lazy="selectin", order_by="EventOrderQuestion.sort_order, EventOrderQuestion.id"
     )
 
+    volunteers_only: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     members_only: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -1143,6 +1150,7 @@ class EditionPollQuestion(Base):
 
     __tablename__ = "edition_poll_questions"
     __table_args__ = (
+        CheckConstraint("event_id IS NULL OR kind = 'yes_no'", name="ck_poll_event_attendance"),
         CheckConstraint(
             "kind IN (" + ", ".join(f"'{kind}'" for kind in POLL_QUESTION_KINDS) + ")",
             name="ck_edition_poll_questions_kind",
@@ -1155,6 +1163,7 @@ class EditionPollQuestion(Base):
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
+    event_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("events.id", ondelete="RESTRICT"), unique=True)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     title_nl: Mapped[str] = mapped_column(String(200), nullable=False)
     title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
