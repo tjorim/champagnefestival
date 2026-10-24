@@ -28,12 +28,14 @@ import {
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { queryKeys } from "@/utils/queryKeys";
 import AdminEditorDialog from "./AdminEditorDialog";
-import { apiErrorMessage } from "@/utils/apiErrors";
+import { emailConsentErrorMessage } from "@/utils/emailConsentErrors";
+import { emailConsentKeys, emailRequest, type EmailCategory } from "@/utils/emailCategories";
+import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
 import { useConfirmDialog } from "@/hooks/useConfirmDialog";
 import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 
-type ComposedMessageChannel = "announcement" | "push";
+type ComposedMessageChannel = "announcement" | "push" | "email";
 type ComposedMessageState = "draft" | "scheduled" | "sent";
 
 interface ComposedMessage {
@@ -47,16 +49,23 @@ interface ComposedMessage {
   level: "info" | "warning" | "urgent";
   channels: ComposedMessageChannel[];
   link_url: string | null;
+  email_category_key: string | null;
   state: ComposedMessageState;
   scheduled_at: string | null;
   announcement_id: string | null;
   push_audience_snapshot: string[] | null;
+  email_audience_snapshot: string[] | null;
   sent_at: string | null;
   created_at: string;
   estimated_push_audience: number;
   push_delivered_count: number;
   push_failed_count: number;
   push_pending_count: number;
+  estimated_email_audience: number;
+  email_accepted_count: number;
+  email_failed_count: number;
+  email_skipped_count: number;
+  email_pending_count: number;
 }
 
 type Draft = Pick<
@@ -70,6 +79,7 @@ type Draft = Pick<
   | "level"
   | "channels"
   | "link_url"
+  | "email_category_key"
 >;
 
 const emptyDraft: Draft = {
@@ -82,6 +92,7 @@ const emptyDraft: Draft = {
   level: "info",
   channels: ["announcement"],
   link_url: "",
+  email_category_key: null,
 };
 
 function writePayload(draft: Draft) {
@@ -95,6 +106,7 @@ function writePayload(draft: Draft) {
     level: draft.level,
     channels: draft.channels,
     link_url: draft.link_url || null,
+    email_category_key: draft.channels.includes("email") ? draft.email_category_key : null,
   };
 }
 
@@ -164,11 +176,26 @@ export default function ComposerManagement({
       try {
         await save.mutateAsync(value);
       } catch (reason) {
-        setEditorError(apiErrorMessage(reason, m.admin_composer_error_save()));
+        setEditorError(emailConsentErrorMessage(reason, m.admin_composer_error_save()));
       }
     },
   });
   const channels = useSelector(form.atom, (s) => s.values.channels);
+  const emailCategoryKey = useSelector(form.atom, (s) => s.values.email_category_key);
+  const emailSelected = channels.includes("email");
+  const categories = useQuery({
+    queryKey: emailConsentKeys.categories,
+    queryFn: ({ signal }) =>
+      emailRequest<EmailCategory[]>(
+        `/api/email-categories?locale=${encodeURIComponent(getLocale())}`,
+        authHeaders,
+        m.email_category_load_error(),
+        signal,
+      ),
+    enabled: editor !== null,
+  });
+  // Automatic categories (reward ready) are sent by the application and cannot be composed.
+  const composableCategories = (categories.data ?? []).filter((category) => !category.automatic);
 
   const dirty = useSelector(form.atom, (state) => !state.isDefaultValue);
   const openEditor = useCallback(
@@ -184,6 +211,7 @@ export default function ComposerManagement({
             level: item.level,
             channels: item.channels,
             link_url: item.link_url,
+            email_category_key: item.email_category_key,
           }
         : emptyDraft;
       setEditor({ id: item?.id ?? null, initial });
@@ -199,18 +227,23 @@ export default function ComposerManagement({
   }
 
   const scheduleSend = useMutation({
-    mutationFn: (id: string) =>
+    mutationFn: (item: ComposedMessage) =>
       fetchJsonOrThrowWithUnauthorized(
-        `/api/composer/${id}/schedule`,
+        `/api/composer/${item.id}/schedule`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json", ...authHeaders() },
-          body: JSON.stringify({}),
+          // Confirms the recipient count shown in the dialog; the server refuses a changed list.
+          body: JSON.stringify(
+            item.channels.includes("email")
+              ? { expected_email_audience: item.estimated_email_audience }
+              : {},
+          ),
         },
         m.admin_composer_error_send(),
       ),
     onMutate: () => setError(""),
-    onError: (reason) => setError(apiErrorMessage(reason, m.admin_composer_error_send())),
+    onError: (reason) => setError(emailConsentErrorMessage(reason, m.admin_composer_error_send())),
     onSuccess: () => void refresh(),
     retry: false,
   });
@@ -221,14 +254,20 @@ export default function ComposerManagement({
     async (item: ComposedMessage) => {
       const confirmed = await confirm({
         title: m.admin_composer_send_confirm_title(),
-        body: m.admin_composer_send_confirm_body({
-          audience: item.channels.includes("push") ? item.estimated_push_audience : 0,
-          channels: item.channels.join(", "),
-        }),
+        body: item.channels.includes("email")
+          ? m.admin_composer_send_confirm_body_email({
+              audience: item.channels.includes("push") ? item.estimated_push_audience : 0,
+              emailAudience: item.estimated_email_audience,
+              channels: item.channels.join(", "),
+            })
+          : m.admin_composer_send_confirm_body({
+              audience: item.channels.includes("push") ? item.estimated_push_audience : 0,
+              channels: item.channels.join(", "),
+            }),
         errorFallback: m.admin_composer_error_send(),
         variant: "primary",
       });
-      if (confirmed) scheduleMessage(item.id);
+      if (confirmed) scheduleMessage(item);
     },
     [confirm, scheduleMessage],
   );
@@ -264,24 +303,46 @@ export default function ComposerManagement({
             const item = row.original;
             if (item.state === "sent") {
               return (
-                <span className="text-sm">
-                  {item.channels.includes("push") &&
-                    m.admin_composer_push_results({
-                      delivered: item.push_delivered_count,
-                      failed: item.push_failed_count,
-                      pending: item.push_pending_count,
+                <span className="flex flex-col text-sm">
+                  {item.channels.includes("push") && (
+                    <span>
+                      {m.admin_composer_push_results({
+                        delivered: item.push_delivered_count,
+                        failed: item.push_failed_count,
+                        pending: item.push_pending_count,
+                      })}
+                    </span>
+                  )}
+                  {item.channels.includes("email") && (
+                    <span>
+                      {m.admin_composer_email_results({
+                        accepted: item.email_accepted_count,
+                        skipped: item.email_skipped_count,
+                        failed: item.email_failed_count,
+                        pending: item.email_pending_count,
+                      })}
+                    </span>
+                  )}
+                </span>
+              );
+            }
+            if (!item.channels.includes("push") && !item.channels.includes("email")) return null;
+            return (
+              <span className="flex flex-col text-sm text-subtle">
+                {item.channels.includes("push") && (
+                  <span>
+                    {m.admin_composer_estimated_audience({ count: item.estimated_push_audience })}
+                  </span>
+                )}
+                {item.channels.includes("email") && (
+                  <span>
+                    {m.admin_composer_estimated_email_audience({
+                      count: item.estimated_email_audience,
                     })}
-                </span>
-              );
-            }
-            if (item.channels.includes("push")) {
-              return (
-                <span className="text-sm text-subtle">
-                  {m.admin_composer_estimated_audience({ count: item.estimated_push_audience })}
-                </span>
-              );
-            }
-            return null;
+                  </span>
+                )}
+              </span>
+            );
           },
         }),
         columnHelper.display({
@@ -320,7 +381,7 @@ export default function ComposerManagement({
       <CardContent>
         {(error || query.error) && (
           <Alert variant="danger" role="alert">
-            {error || apiErrorMessage(query.error, m.admin_composer_error_load())}
+            {error || emailConsentErrorMessage(query.error, m.admin_composer_error_load())}
           </Alert>
         )}
         {confirmDialog}
@@ -335,7 +396,9 @@ export default function ComposerManagement({
               <Button
                 type="submit"
                 form="composer-form"
-                disabled={save.isPending || channels.length === 0}
+                disabled={
+                  save.isPending || channels.length === 0 || (emailSelected && !emailCategoryKey)
+                }
               >
                 {editing ? m.admin_composer_save_button() : m.admin_composer_create_button()}
               </Button>
@@ -467,9 +530,47 @@ export default function ComposerManagement({
                           )
                         }
                       />
+                      <AdminCheck
+                        inline
+                        type="checkbox"
+                        id="composer-channel-email"
+                        label={m.admin_composer_channel_email()}
+                        checked={field.value.includes("email")}
+                        onCheckedChange={() =>
+                          field.handleChange(
+                            field.value.includes("email")
+                              ? field.value.filter((c) => c !== "email")
+                              : [...field.value, "email"],
+                          )
+                        }
+                      />
                     </div>
                   )}
                 </form.Field>
+                {emailSelected && (
+                  <AdminField className="mb-4" controlId="composer-email-category">
+                    <AdminLabel>{m.admin_composer_email_category_label()}</AdminLabel>
+                    <form.Field name="email_category_key">
+                      {(field) => (
+                        <AdminSelect
+                          value={field.value ?? ""}
+                          onValueChange={(value) => field.handleChange(value || null)}
+                          onBlur={field.handleBlur}
+                        >
+                          <AdminOption value="">
+                            {m.admin_composer_email_category_placeholder()}
+                          </AdminOption>
+                          {composableCategories.map((category) => (
+                            <AdminOption key={category.key} value={category.key}>
+                              {category.name}
+                            </AdminOption>
+                          ))}
+                        </AdminSelect>
+                      )}
+                    </form.Field>
+                    <p className="text-sm text-subtle mt-1">{m.admin_composer_email_help()}</p>
+                  </AdminField>
+                )}
               </form>
             </fieldset>
           </AdminEditorDialog>

@@ -14,6 +14,12 @@ const EMAIL_CONSENT_ERRORS: Record<string, () => string> = {
   email_category_protected: () => m.api_error_email_category_protected(),
   email_category_in_use: () => m.api_error_email_category_in_use(),
   verified_email_required: () => m.api_error_verified_email_required(),
+  // Member mailings (#1407).
+  member_mail_unavailable: () => m.api_error_member_mail_unavailable(),
+  email_audience_changed: () => m.api_error_email_audience_changed(),
+  email_audience_confirmation_required: () => m.api_error_email_audience_confirmation_required(),
+  email_category_automatic: () => m.api_error_email_category_automatic(),
+  unsubscribe_token_invalid: () => m.api_error_unsubscribe_token_invalid(),
 };
 
 /** Like `apiErrorMessage`, additionally explaining the email category and consent error codes. */

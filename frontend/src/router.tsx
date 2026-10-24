@@ -58,6 +58,7 @@ interface AppRouteComponents {
   PebblePairRoute: RouteComponent;
   MyAccountRoute: RouteComponent;
   EmailConsentRoute: RouteComponent;
+  EmailUnsubscribeRoute: RouteComponent;
   VenuePlanRoute: RouteComponent;
 }
 
@@ -69,6 +70,7 @@ export function createAppRouter({
   PebblePairRoute,
   MyAccountRoute,
   EmailConsentRoute,
+  EmailUnsubscribeRoute,
   VenuePlanRoute,
   queryClient,
 }: AppRouteComponents & { queryClient: QueryClient }) {
@@ -168,6 +170,13 @@ export function createAppRouter({
     component: EmailConsentRoute,
   });
 
+  const emailUnsubscribeRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: "/email-unsubscribe",
+    validateSearch: validateMyRegistrationsSearch,
+    component: EmailUnsubscribeRoute,
+  });
+
   const routeTree = rootRoute.addChildren([
     createRoute({
       getParentRoute: () => rootRoute,
@@ -180,6 +189,7 @@ export function createAppRouter({
     pebblePairRoute,
     myAccountRoute,
     emailConsentRoute,
+    emailUnsubscribeRoute,
   ]);
 
   return createRouter({

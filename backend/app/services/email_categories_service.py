@@ -14,7 +14,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import EmailCategory, EmailConsent, Person
+from app.models import ComposedMessage, EmailCategory, EmailConsent, Person
 from app.schemas import EmailCategoryCreate, EmailCategoryTexts, EmailCategoryUpdate
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
 
@@ -81,7 +81,7 @@ DEFAULT_EMAIL_CATEGORIES: list[dict[str, Any]] = [
         "sort_order": 40,
     },
 ]
-"""The categories every installation starts with. Migration 013 seeds the same rows (a migration must
+"""The categories every installation starts with. Migration 010 seeds the same rows (a migration must
 not import application code); a test keeps the two in step. Test databases are seeded from this list."""
 
 
@@ -207,6 +207,16 @@ async def delete_category(db: AsyncSession, *, actor: str, key: str, request_id:
         raise ConflictError(
             f"Cannot delete email category '{key}': {in_use} consent record(s) refer to it. "
             "Its history is kept; remove the roles that may use it instead.",
+            code="email_category_in_use",
+        )
+    composed = (
+        await db.execute(
+            select(func.count()).select_from(ComposedMessage).where(ComposedMessage.email_category_key == key)
+        )
+    ).scalar_one()
+    if composed:
+        raise ConflictError(
+            f"Cannot delete email category '{key}': {composed} composed message(s) refer to it.",
             code="email_category_in_use",
         )
     await db.delete(category)

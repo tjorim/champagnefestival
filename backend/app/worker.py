@@ -6,7 +6,13 @@ import asyncio
 import logging
 from pathlib import Path
 
-from app.composer_delivery import COMPOSER_MESSAGE_PUSH, deliver_composer_message_dispatch, deliver_composer_push
+from app.composer_delivery import (
+    COMPOSER_MESSAGE_EMAIL,
+    COMPOSER_MESSAGE_PUSH,
+    deliver_composer_email,
+    deliver_composer_message_dispatch,
+    deliver_composer_push,
+)
 from app.config import settings
 from app.database import async_session_factory
 from app.email import (
@@ -24,6 +30,7 @@ from app.services.outbox_service import (
     process_one_job,
 )
 from app.services.poll_notifications import POLL_DELETION
+from app.services.reward_mail import REWARD_READY_EMAIL, deliver_reward_ready_email
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +50,8 @@ async def run() -> None:
         WEB_PUSH_TEST: deliver_web_push_test,
         COMPOSER_MESSAGE_DISPATCH: deliver_composer_message_dispatch,
         COMPOSER_MESSAGE_PUSH: deliver_composer_push,
+        COMPOSER_MESSAGE_EMAIL: deliver_composer_email,
+        REWARD_READY_EMAIL: deliver_reward_ready_email,
     }
     while True:
         HEARTBEAT_PATH.touch()

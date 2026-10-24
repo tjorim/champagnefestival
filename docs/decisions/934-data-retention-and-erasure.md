@@ -198,6 +198,8 @@ exists, with only a disabled adapter. It sends nothing and stores no new
 personal data. The old registration flag never authorized category mail, and it
 no longer exists. Category consent is implemented
 ([#1408](1408-email-categories-and-consent.md)); signed unsubscribe handling,
-suppression, and explicit retention/erasure rules for sent-mail logs and
-person-id audience snapshots remain prerequisites for enabling member mail. The existing retention policy
+suppression are implemented behind the disabled adapter (suppression stores only an address hash and
+survives erasure of a person; `composed_messages.email_audience_snapshot` holds person ids and follows the
+message, and per-recipient jobs follow the outbox retention window). Final retention periods for those
+snapshots and sent-mail jobs remain a prerequisite for enabling member mail. The existing retention policy
 and anonymisation behavior are unchanged by this increment.

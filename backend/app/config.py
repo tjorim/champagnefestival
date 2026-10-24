@@ -6,7 +6,7 @@ from typing import Any, Literal
 from urllib.parse import quote
 
 from limits import parse as parse_rate_limit_string
-from pydantic import field_validator, model_validator
+from pydantic import Field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 logger = logging.getLogger(__name__)
@@ -159,6 +159,14 @@ class Settings(BaseSettings):
     member_mail_provider: Literal["disabled"] = "disabled"
     """Separate from transactional SMTP. Unsupported providers fail configuration
     validation; enabling delivery requires an explicitly implemented adapter."""
+    member_mail_from: str = ""
+    """Bulk sender address, deliberately separate from ``smtp_from`` (transactional). Member mail is
+    unavailable while empty."""
+    member_mail_signing_key: str = ""
+    """Secret signing the category unsubscribe links. Rotating it invalidates every link already
+    mailed. Member mail is unavailable while empty; at least 32 characters when set."""
+    member_mail_max_per_minute: int = Field(default=60, ge=1, le=6000)
+    """Recipients submitted per minute: dispatch staggers the per-recipient jobs accordingly."""
 
     # --- SMTP delivery ---
     smtp_host: str = ""
@@ -398,6 +406,12 @@ class Settings(BaseSettings):
         """
         if self.dev_auth_bypass_token and self.environment != "development":
             raise ValueError("DEV_AUTH_BYPASS_TOKEN must not be set outside environment=development.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_member_mail_signing_key(self) -> Settings:
+        if self.member_mail_signing_key and len(self.member_mail_signing_key) < 32:
+            raise ValueError("MEMBER_MAIL_SIGNING_KEY must be at least 32 characters.")
         return self
 
     @model_validator(mode="after")

@@ -412,7 +412,9 @@ failure the interface can explain carries a stable `code` next to it:
   `category_in_use`, `event_has_registrations`, and for email consent (#1408)
   `email_category_not_found`, `email_category_exists`, `email_category_protected`,
   `email_category_in_use`, `email_category_unavailable`, `verified_email_required`,
-  `consent_confirmation_invalid`. Validation errors (422) and
+  `consent_confirmation_invalid`, and for member mail (#1407) `member_mail_unavailable`,
+  `email_category_automatic`, `email_audience_confirmation_required`, `email_audience_changed`,
+  `unsubscribe_token_invalid`. Validation errors (422) and
   uncoded errors still return `detail` alone.
 
 ### Email categories and consent (#1408)
@@ -420,7 +422,7 @@ failure the interface can explain carries a stable `code` next to it:
 Who may be mailed is decided by consent per **category**, given by the person themselves, never by an
 administrator; sending is #1407. See [the decision](../docs/decisions/1408-email-categories-and-consent.md).
 Categories are admin-managed rows (`email_categories`: stable key, name and description in nl/fr/en
-with Dutch required, `allowed_roles`, `automatic`); migration `013` seeds `club_news` (members),
+with Dutch required, `allowed_roles`, `automatic`); migration `010` seeds `club_news` (members),
 `new_editions` (everyone), `volunteer_news` (volunteers) and `reward_ready` (members, automatic).
 Consent rows (`email_consents`) keep granted/withdrawn dates and their source, so history survives
 anonymisation and merging. The caller is tied to people only through their verified email address;
@@ -951,7 +953,7 @@ See `docs/retry-safety.md` for retry decisions and
 `docs/decisions/934-data-retention-and-erasure.md` for retention. OpenAPI exposes
 typed request/response schemas for the REST operations.
 
-### Volunteer-only events and linked attendance polls (migration `012`)
+### Volunteer-only events and linked attendance polls (migration `010`)
 
 An event's `volunteers_only` flag is independent of `members_only`. Public
 registration and waitlist endpoints refuse volunteer-only bookings and direct

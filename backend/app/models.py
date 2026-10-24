@@ -1575,10 +1575,15 @@ class ComposedMessage(Base):
     body_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
     level: Mapped[str] = mapped_column(String(10), default="info")
     channels: Mapped[list[str]] = mapped_column(JSON, default=list)
-    """Values from ``{"announcement", "push"}`` — at least one, enforced at
+    """Values from ``{"announcement", "push", "email"}`` — at least one, enforced at
     the schema layer (a DB-level check on JSON array membership isn't worth
     the complexity here)."""
     link_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    email_category_key: Mapped[str | None] = mapped_column(
+        ForeignKey("email_categories.key", ondelete="RESTRICT"), nullable=True
+    )
+    """Audience of the ``email`` channel (#1407): the people with consent for this category. Required
+    exactly when ``email`` is a channel."""
     state: Mapped[str] = mapped_column(String(20), default="draft", index=True)
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     announcement_id: Mapped[str | None] = mapped_column(
@@ -1589,10 +1594,29 @@ class ComposedMessage(Base):
     ``draft``/``scheduled``, immutable once set (the transition to ``sent``
     resolves and freezes this in the same transaction). Resolved fresh at
     send time, not compose time."""
+    email_audience_snapshot: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    """``Person`` ids mailed at send time (#1407), frozen like ``push_audience_snapshot``. Each
+    recipient is checked again just before their mail is submitted."""
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sent_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class EmailSuppression(Base):
+    """An address that member mail must never be sent to again (#1407).
+
+    Only a hash of the normalised address is kept: enough to refuse the address, and nothing to erase
+    with a person. Filled from the sending service's verified bounce and complaint feedback once a
+    service is chosen; an entry is never removed automatically.
+    """
+
+    __tablename__ = "email_suppressions"
+    __table_args__ = (CheckConstraint("reason IN ('hard_bounce', 'complaint')", name="ck_email_suppressions_reason"),)
+
+    address_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    reason: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
 class Policy(Base):
