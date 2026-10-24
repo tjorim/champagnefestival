@@ -1,3 +1,5 @@
+import MemberStampCards from "./MemberStampCards";
+import StampCardTypes from "./StampCardTypes";
 import { useQuery } from "@tanstack/react-query";
 import { usePeopleCountsQuery } from "@/hooks/usePeopleListQuery";
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
@@ -51,6 +53,7 @@ export default function MembersManagement({
   onReactivate,
   authHeaders,
 }: MembersManagementProps) {
+  const [stampMember, setStampMember] = useState<Person | null>(null);
   const counts = usePeopleCountsQuery({ role: "member" }, authHeaders);
   const settings = useQuery({
     queryKey: queryKeys.admin.settings,
@@ -187,6 +190,14 @@ export default function MembersManagement({
             const member = row.original;
             return (
               <div className="flex flex-wrap gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setStampMember(member)}
+                  aria-label={`${m.stamp_cards()}: ${member.name}`}
+                >
+                  {m.stamp_cards()}
+                </Button>
                 {member.email && (
                   <Button
                     size="sm"
@@ -252,6 +263,13 @@ export default function MembersManagement({
 
   return (
     <>
+      {stampMember && (
+        <MemberStampCards
+          person={stampMember}
+          authHeaders={authHeaders}
+          onClose={() => setStampMember(null)}
+        />
+      )}
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
       <Card tone="secondary">
         <CardHeader>{m.admin_members_tab()}</CardHeader>
@@ -328,6 +346,8 @@ export default function MembersManagement({
           />
         </CardContent>
       </Card>
+
+      <StampCardTypes authHeaders={authHeaders} />
 
       {deactivatingId && (
         <Dialog

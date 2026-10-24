@@ -104,6 +104,10 @@ async def create_registration(
 
     session_user = await visitor_user(db, request)
     event = await inventory.lock_event(db, body.event_id)
+    if event is not None and event.volunteers_only:
+        raise ApiHTTPException(
+            403, "volunteer_event_poll_required", "Use the volunteer attendance poll to register for this event."
+        )
     member_identity = await verified_member(db, session_user) if event.members_only else None
     await _ensure_public_registration_allowed(db, event)
     from app.services.order_questions_service import validate_answers

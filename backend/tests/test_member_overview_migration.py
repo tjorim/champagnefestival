@@ -76,6 +76,10 @@ def test_member_overview_migration(monkeypatch):
                 == 0
             )
         command.upgrade(config, "010")
+        command.upgrade(config, "head")
+        # Reflection must agree with the model's expression-index SQL as well
+        # as enforce the uniqueness behavior checked above.
+        command.check(config)
     finally:
         database.dispose()
         with admin.begin() as conn:

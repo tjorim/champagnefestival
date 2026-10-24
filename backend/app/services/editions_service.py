@@ -618,6 +618,17 @@ async def delete_edition(db: AsyncSession, edition: Edition, *, actor: str, requ
     # Re-read under the lock: an upload that committed after the caller loaded `edition` must have
     # its new file retired too, not the stale URL.
     edition = await _lock_edition(db, edition_id)
+    from app.models import EditionPollQuestion
+    from app.services.errors import ApiHTTPException
+
+    if await db.scalar(
+        select(EditionPollQuestion.id)
+        .where(EditionPollQuestion.edition_id == edition_id, EditionPollQuestion.event_id.is_not(None))
+        .limit(1)
+    ):
+        raise ApiHTTPException(
+            409, "event_linked_to_poll", "Remove linked attendance polls before deleting their edition."
+        )
     artwork = [getattr(edition, column) for column in edition_artwork.COLUMNS.values()]
     await db.delete(edition)
     for url in artwork:

@@ -322,6 +322,11 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
               <Icon icon={TriangleAlertIcon} className="me-2" />
               {m.registration_error()}
             </Alert>
+          ) : event.volunteersOnly ? (
+            <Alert>
+              {m.volunteer_event_poll_required()}{" "}
+              <AlertLink href="/me">{m.volunteer_event_portal_link()}</AlertLink>
+            </Alert>
           ) : submitSuccess ? (
             <Alert variant="success" className="mb-0">
               <Icon icon={CircleCheckIcon} className="me-2" />

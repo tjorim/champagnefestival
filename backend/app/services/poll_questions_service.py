@@ -17,7 +17,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.audit import write_audit_entry
-from app.models import EditionPollOption, EditionPollQuestion, Person, VolunteerMealNote
+from app.models import EditionPollOption, EditionPollQuestion, Person, Registration, VolunteerMealNote
 from app.schemas import (
     AdminPollOrderIn,
     PollQuestionCopy,
@@ -27,7 +27,7 @@ from app.schemas import (
     PollQuestionUpdate,
     VolunteerPollAnswerIn,
 )
-from app.services import poll_options_service
+from app.services import poll_event_registrations, poll_options_service
 from app.services.editions_service import find_active_edition
 from app.services.errors import ApiHTTPException
 from app.services.events_service import ensure_edition_exists
@@ -64,6 +64,7 @@ def _question_dict(
     return {
         "id": question.id,
         "edition_id": question.edition_id,
+        "event_id": question.event_id,
         "kind": question.kind,
         "title": question.localized_title(locale),
         "title_nl": question.title_nl,
@@ -137,11 +138,13 @@ async def create_poll_question(
     question = EditionPollQuestion(
         id=make_id("pollq"),
         edition_id=body.edition_id,
+        event_id=body.event_id,
         kind=body.kind,
         sort_order=await _next_sort_order(db, body.edition_id),
         closes_at=body.closes_at,
         **{name: getattr(body, name) for name in TEXT_FIELDS},
     )
+    await poll_event_registrations.validate_link(db, question.id, question.kind, question.event_id)
     db.add(question)
     await write_audit_entry(
         db,
@@ -160,6 +163,15 @@ async def update_poll_question(
     db: AsyncSession, question_id: str, body: PollQuestionUpdate, *, actor: str, request_id: str | None = None
 ) -> dict:
     question = await get_question_or_404(db, question_id, lock=True)
+    if "event_id" in body.model_fields_set and body.event_id != question.event_id:
+        if await kind_of(question).answered_count(db, question) or await db.scalar(
+            select(Registration.id).where(Registration.poll_question_id == question.id).limit(1)
+        ):
+            raise ApiHTTPException(
+                409, "poll_event_link_locked", "The event link cannot change after answers or registrations exist."
+            )
+        await poll_event_registrations.validate_link(db, question.id, question.kind, body.event_id)
+        question.event_id = body.event_id
     # Validate the merged texts before mutating: a partial update may change a single translation.
     fields_set = body.model_fields_set
     texts = {name: getattr(question, name) for name in TEXT_FIELDS}
@@ -217,6 +229,18 @@ async def delete_poll_question(
                 "poll_question_in_use",
                 f"{answered} volunteer(s) answered this question; confirm to remove their answers.",
             )
+    registrations = list(
+        (await db.scalars(select(Registration).where(Registration.poll_question_id == question.id))).all()
+    )
+    if question.event_id:
+        await poll_event_registrations.lock_scope(db, [question], None)
+        for registration in registrations:
+            await db.refresh(registration)
+            await poll_event_registrations.sync_answer(
+                db, question, registration.person_id, None, actor=actor, request_id=request_id
+            )
+            registration.poll_question_id = None
+        await db.flush()
     if notify:
         await queue_removed_answers(db, question, actor=actor, request_id=request_id)
     await kind_of(question).delete_question_data(db, question)
@@ -400,6 +424,7 @@ async def _orders(
             {
                 "id": q.id,
                 "kind": q.kind,
+                "event_id": q.event_id,
                 "title": q.localized_title(locale),
                 "closed": is_closed(q),
                 "options": options_by_question.get(q.id, []),
@@ -450,10 +475,21 @@ async def set_volunteer_poll_order(
     Replaces the volunteer's picks and yes/no answers for the edition like their own saves do, and is audited
     with the admin as actor and the volunteer as subject."""
     await ensure_edition_exists(db, edition_id)
-    person = (await db.execute(select(Person).where(Person.id == volunteer_id).with_for_update())).scalar_one_or_none()
+    questions = {question.id: question for question in await _questions(db, edition_id)}
+    if questions:
+        await db.execute(
+            select(EditionPollQuestion.id)
+            .where(EditionPollQuestion.id.in_(sorted(questions)))
+            .order_by(EditionPollQuestion.id)
+            .with_for_update()
+        )
+        # Refresh links after acquiring the locks.
+        for question in questions.values():
+            await db.refresh(question)
+    await poll_event_registrations.lock_scope(db, list(questions.values()), volunteer_id)
+    person = await db.get(Person, volunteer_id)
     if person is None or person.anonymised or "volunteer" not in (person.roles or []):
         raise ApiHTTPException(404, "volunteer_not_found", "Volunteer not found.")
-    questions = {question.id: question for question in await _questions(db, edition_id)}
     option_question = dict(
         (
             await db.execute(
@@ -481,6 +517,10 @@ async def set_volunteer_poll_order(
         )
 
     for question in questions.values():
+        if question.event_id:
+            await poll_event_registrations.sync_answer(
+                db, question, volunteer_id, new_answers.get(question.id), actor=actor, request_id=request_id
+            )
         await kind_of(question).replace_answer(db, volunteer_id, question, new_answers.get(question.id))
     await _apply_note(db, volunteer_id, edition_id, body.note)
     await write_audit_entry(
@@ -543,6 +583,7 @@ async def volunteer_poll_view(db: AsyncSession, volunteer_id: str | None, locale
             {
                 "id": question.id,
                 "kind": question.kind,
+                "event_id": question.event_id,
                 "title": question.localized_title(locale),
                 "description": question.localized_description(locale),
                 "closes_at": question.closes_at,
@@ -573,15 +614,19 @@ async def answer_poll_question(
 ) -> dict:
     """Save the volunteer's own answer to one question of the active festival edition. Safe to repeat: it
     replaces only rows keyed by this volunteer and question, so it never touches another volunteer's answers.
-    Locks the volunteer's own `Person` row first so a double-submit serializes."""
-    await db.execute(select(Person.id).where(Person.id == volunteer_id).with_for_update())
+    Locks the question, linked event/registration, then person so a double-submit serializes."""
+    question = await get_question_or_404(db, question_id, lock=True)
+    await poll_event_registrations.lock_scope(db, [question], volunteer_id)
     edition = await find_active_edition(db, edition_type="festival")
-    question = await get_question_or_404(db, question_id)
     if edition is None or question.edition_id != edition.id:
         raise ApiHTTPException(404, "poll_question_not_found", "Poll question not found.")
     ensure_open(question)
     kind = kind_of(question)
     answer = await kind.volunteer_answer(db, question, body)
+    if question.event_id:
+        await poll_event_registrations.sync_answer(
+            db, question, volunteer_id, answer, actor=actor, request_id=request_id
+        )
     await kind.replace_answer(db, volunteer_id, question, answer)
     details = kind.audit_details(answer)
     await write_audit_entry(

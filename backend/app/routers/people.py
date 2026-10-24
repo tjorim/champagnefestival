@@ -36,6 +36,7 @@ from app.services.people_listing import (
     last_attended,
     order_people_stmt,
     registration_count,
+    reward_due,
     role_active,
 )
 from app.utils import person_to_dict, registration_to_list_dict
@@ -68,6 +69,7 @@ async def list_people(
     db: AsyncSession = Depends(get_db),
     role: str | None = Query(default=None, description="Filter by role (case-insensitive)"),
     active: bool | None = Query(default=None),
+    reward_due_filter: bool | None = Query(default=None, alias="reward_due"),
     sort: PersonSortKey | None = Query(
         default=None,
         description="Sort column; overrides the default relevance/newest-first order. "
@@ -87,13 +89,18 @@ async def list_people(
         q=list_query.q,
         role=role,
         active=active,
+        reward_due_filter=reward_due_filter,
         last_attended_before=last_attended_before,
         last_attended_after=last_attended_after,
     )
     total = (await db.execute(select(func.count()).select_from(filtered_stmt.subquery()))).scalar_one()
 
     stmt = order_people_stmt(
-        filtered_stmt.add_columns(registration_count.label("registration_count"), last_attended.label("last_attended")),
+        filtered_stmt.add_columns(
+            registration_count.label("registration_count"),
+            last_attended.label("last_attended"),
+            reward_due.label("reward_due"),
+        ),
         q=list_query.q,
         sort=sort,
         sort_dir=list_query.sort_dir,
@@ -111,9 +118,10 @@ async def list_people(
                 **person_to_dict(p),
                 "registration_count": count,
                 "last_attended": attended,
+                "reward_due": due,
                 "inactivity_highlight": bool(cutoff and attended and attended < cutoff and not p.inactivity_exempt),
             }
-            for p, count, attended in rows
+            for p, count, attended, due in rows
         ],
         total,
     )
@@ -125,9 +133,10 @@ async def people_counts(
     q: str | None = Query(None),
     role: str | None = Query(None),
     active: bool | None = Query(None),
+    reward_due_filter: bool | None = Query(None, alias="reward_due"),
 ) -> dict:
     """Counts within the full intersection of q, role and active filters."""
-    matching = filtered_people_stmt(q=q, role=role, active=active).subquery()
+    matching = filtered_people_stmt(q=q, role=role, active=active, reward_due_filter=reward_due_filter).subquery()
     active_expr = (
         role_active(role, anonymised_column=matching.c.anonymised, retired_column=matching.c.retired_roles)
         if role
@@ -169,11 +178,12 @@ async def export_people_csv(
     db: AsyncSession = Depends(get_db),
     role: str | None = Query(None),
     active: bool | None = Query(None),
+    reward_due_filter: bool | None = Query(None, alias="reward_due"),
     sort: PersonSortKey | None = Query(None),
     list_query: ListQuery = Depends(),
 ) -> StreamingResponse:
     stmt = order_people_stmt(
-        filtered_people_stmt(q=list_query.q, role=role, active=active),
+        filtered_people_stmt(q=list_query.q, role=role, active=active, reward_due_filter=reward_due_filter),
         q=list_query.q,
         sort=sort,
         sort_dir=list_query.sort_dir,

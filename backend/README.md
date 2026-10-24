@@ -880,3 +880,83 @@ Current members have unique nonempty, trimmed, case-insensitive emails; retired/
 members and non-members may share them. Conflicts return `409 member_email_in_use` on
 create, update, role grants, reactivation and merge. Migration 010 intentionally refuses an
 existing conflicting dataset; resolve duplicates with the existing merge before migrating.
+
+
+### Capsule-exchange stamp cards (#1405)
+
+Admin REST operations (also available as admin-only MCP tools):
+
+- `GET`/`POST /api/stamp-cards/types`, `PUT /api/stamp-cards/types/{id}`:
+  list/create/replace a type (`name_nl`, optional `name_fr`/`name_en`, positive
+  `box_count`, translated `reward_label_*`, `active`). Deactivate rather than
+  deleting types; past cards retain snapshots.
+- `PUT /api/settings` with `stamp_card_type_id` selects the type for new cards;
+  explicit null clears it. MCP: `select_stamp_card_type`.
+- `GET /api/stamp-cards/people/{person_id}` returns cards oldest first, their
+  stamps (including registration IDs), and the optional reward record.
+  MCP: `get_person_stamp_cards`.
+- `PUT /api/stamp-cards/rewards/{id}` with `{"handed_out": true|false}` records
+  hand-out or undoes it. MCP: `set_stamp_reward_handed_out`.
+- MCP `list_stamp_card_types` and `save_stamp_card_type` mirror type operations.
+
+Admin people lists, counts and CSV export accept `reward_due=true|false`; list
+rows include a `reward_due` boolean derived from outstanding rewards across all
+cards. Filtering happens before pagination and does not duplicate people.
+
+QR and manual volunteer check-in, MCP `check_in` and registration updates returning `checked_in`
+include nullable `stamp_progress` (`card_id`, `stamps`, `box_count`,
+`reward_earned`). Only check-ins in `capsule_exchange` editions earn stamps.
+The member gate belongs to #1404; stamping does not add a second membership
+check or rewrite historical attendance when membership changes. No check-in
+backfill runs at migration time.
+
+The check-in transaction locks the registration then its person; stamp creation,
+completion and reward creation commit together with attendance. Uncheck removes
+the stamp and any earned reward, unless handed out (`stamp_reward_handed_out`).
+Missing/inactive configuration conflicts with `stamp_card_type_not_configured`
+or `stamp_card_type_unavailable`. Already-open cards still accept stamps after
+their type is deactivated or the selected type is changed/cleared. A full card blocks a new card until its reward is handed out
+(`stamp_reward_pending`), rolling back the attempted check-in. Undoing hand-out
+is refused once a newer card exists (`stamp_card_has_successor`); this prevents
+reopening an older card after the next one starts. Existing stamps and snapshots
+never move between cards.
+
+See `docs/retry-safety.md` for retry decisions and
+`docs/decisions/934-data-retention-and-erasure.md` for retention. OpenAPI exposes
+typed request/response schemas for the REST operations.
+
+### Volunteer-only events and linked attendance polls (migration `012`)
+
+An event's `volunteers_only` flag is independent of `members_only`. Public
+registration and waitlist endpoints refuse volunteer-only bookings and direct
+volunteers to their authenticated poll; admins can still enter bookings.
+When both flags are set, answering yes requires both current roles.
+
+In an edition's volunteer poll, admins can select a volunteer-only event for a
+`yes_no` question (`event_id`; nullable). The event may belong to another edition,
+so a festival's poll can include a later thank-you outing. Only the active
+festival edition's poll appears in volunteer self-service, as before. Each event
+can have one attendance question, and the link is immutable once answers or
+poll-created bookings exist. Copies of questions never copy their event links.
+
+A yes answer creates a confirmed registration for the answering volunteer's
+Person and the stated party size. Subsequent saves update that same booking;
+no or an admin-cleared answer cancels it, and yes after cancellation reuses it.
+These are attendance-only bookings: they do not order products or map meal
+choices to products. All booking/answer writes are atomic and share booking
+audit, live updates and confirmation-outbox behavior. Admin/MCP answer entry
+uses the same synchronization. Closed questions keep their existing confirmation
+rules. Already-checked-in or net-paid bookings refuse attendance changes until
+an admin resolves those records. Independent bookings are never silently
+adopted or duplicated.
+
+Poll-created registrations expose `poll_question_id`. Manage their party size,
+status and person through the poll; ordinary booking notes, payment and check-in
+operations remain available. Confirmed question deletion cancels and detaches
+its registrations instead of erasing their history. Remove/unlink linked polls
+before deleting their event/edition or removing volunteer-only access.
+
+REST question create/update and MCP `create_poll_question`/`update_poll_question`
+accept `event_id`; MCP `clear_event` explicitly clears the link. Admin and
+volunteer question responses expose the link. See the retry-safety inventory
+for stable error codes, lock order and reconciliation after timeouts.

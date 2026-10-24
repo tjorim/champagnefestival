@@ -57,11 +57,13 @@ async def create_poll_question(
     description_nl: str | None = None,
     description_fr: str | None = None,
     description_en: str | None = None,
+    event_id: str | None = None,
     closes_at: datetime | None = None,
 ) -> dict:
     body = validate_with_schema(
         PollQuestionCreate,
         edition_id=edition_id,
+        event_id=event_id,
         kind=kind,
         title_nl=title_nl,
         title_fr=title_fr,
@@ -89,12 +91,16 @@ async def update_poll_question(
     description_nl: str | None = None,
     description_fr: str | None = None,
     description_en: str | None = None,
+    event_id: str | None = None,
     closes_at: datetime | None = None,
+    clear_event: bool = False,
     reopen: bool = False,
 ) -> dict:
     """Partially update a question. ``closes_at`` sets when volunteers can no longer change their answer (a
     past time closes the question now); ``reopen=True`` clears it. Omitted fields stay as they are, and an
-    empty string clears a translation."""
+    empty string clears a translation. ``event_id`` links a volunteer-only event; ``clear_event`` unlinks it before answers exist."""
+    if clear_event and event_id is not None:
+        raise as_value_error(HTTPException(422, "Give event_id or clear_event, not both."))
     if reopen and closes_at is not None:
         raise as_value_error(HTTPException(422, "Give either closes_at or reopen, not both."))
     provided: dict[str, Any] = {
@@ -109,6 +115,10 @@ async def update_poll_question(
         }.items()
         if value is not None
     }
+    if clear_event:
+        provided["event_id"] = None
+    elif event_id is not None:
+        provided["event_id"] = event_id
     if reopen:
         provided["closes_at"] = None
     elif closes_at is not None:

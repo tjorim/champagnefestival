@@ -39,6 +39,7 @@ from app.services.operational_search import (
     rank_table_reference,
 )
 from app.services.registrations_service import apply_delivery_updates, ensure_registration_can_check_in
+from app.services.stamp_cards_service import sync_check_in
 from app.utils import registration_to_checkin_dict
 
 logger = logging.getLogger(__name__)
@@ -394,6 +395,7 @@ async def volunteer_check_in_registration(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Registration not found.")
     ensure_registration_can_check_in(registration)
 
+    stamp_progress = await sync_check_in(db, registration, True)
     already = registration.checked_in
     changed = False
     strap_newly_issued = False
@@ -445,9 +447,10 @@ async def volunteer_check_in_registration(
                 edition_id=edition_id,
             ),
         )
-        await db.commit()
+    await db.commit()
 
     return {
         "registration": registration_dict,
         "already_checked_in": already,
+        "stamp_progress": stamp_progress,
     }

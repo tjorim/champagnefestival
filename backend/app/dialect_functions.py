@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from sqlalchemy import String
 from sqlalchemy.dialects.postgresql import insert as postgresql_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -40,6 +41,23 @@ def _postgresql(element: FunctionElement, compiler: Any, **kw: Any) -> str:
 @compiles(json_array_elements_text, "sqlite")
 def _sqlite(element: FunctionElement, compiler: Any, **kw: Any) -> str:
     return f"json_each({compiler.process(element.clauses, **kw)})"
+
+
+class trim_spaces(FunctionElement):
+    """Trim ASCII spaces using PostgreSQL's reflected SQL-standard syntax."""
+
+    type = String()
+    inherit_cache = True
+
+
+@compiles(trim_spaces)
+def _trim_spaces_postgresql(element: FunctionElement, compiler: Any, **kw: Any) -> str:
+    return f"TRIM(BOTH FROM {compiler.process(element.clauses, **kw)})"
+
+
+@compiles(trim_spaces, "sqlite")
+def _trim_spaces_sqlite(element: FunctionElement, compiler: Any, **kw: Any) -> str:
+    return f"trim({compiler.process(element.clauses, **kw)})"
 
 
 def dialect_insert(db: AsyncSession) -> Any:

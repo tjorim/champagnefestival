@@ -22,7 +22,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.audit import write_audit_entry
-from app.models import Edition, Event, Layout, Registration, Room
+from app.models import Edition, EditionPollQuestion, Event, Layout, Registration, Room
 from app.schemas import EventCreate, EventTextFields, EventUpdate
 from app.services import event_categories_service
 from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
@@ -166,6 +166,7 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
         registration_required=body.registration_required,
         registrations_open_from=body.registrations_open_from,
         registrations_close_at=body.registrations_close_at,
+        volunteers_only=body.volunteers_only,
         members_only=body.members_only,
         active=body.active,
     )
@@ -251,11 +252,18 @@ async def apply_event_update(
     for field in TEXT_FIELDS:
         setattr(event, field, getattr(validated, field))
 
+    if body.volunteers_only is False and await db.scalar(
+        select(EditionPollQuestion.id).where(EditionPollQuestion.event_id == event.id)
+    ):
+        raise ApiHTTPException(
+            409, "event_linked_to_poll", "Unlink the attendance poll before removing volunteer-only access."
+        )
     for field in (
         "date",
         "start_time",
         "end_time",
         "category",
+        "volunteers_only",
         "members_only",
         "registration_required",
         "registrations_open_from",
@@ -263,7 +271,7 @@ async def apply_event_update(
         "active",
     ):
         if field in fields_set:
-            if field == "members_only" and body.members_only is None:
+            if field in {"members_only", "volunteers_only"} and getattr(body, field) is None:
                 continue
             setattr(event, field, getattr(body, field))
 
@@ -287,6 +295,10 @@ async def delete_event(db: AsyncSession, event: Event, *, actor: str, request_id
     await db.execute(select(Event.id).where(Event.id == event_id).with_for_update())
     if (await db.execute(select(Layout.id).where(Layout.event_id == event_id).limit(1))).first():
         raise HTTPException(409, "Remove the event's floor plans before deleting it.")
+    from app.models import EditionPollQuestion
+
+    if await db.scalar(select(EditionPollQuestion.id).where(EditionPollQuestion.event_id == event_id)):
+        raise ApiHTTPException(409, "event_linked_to_poll", "Unlink the attendance poll before deleting this event.")
     await reject_if_registrations_exist(db, event_id)
     await db.delete(event)
     await write_audit_entry(

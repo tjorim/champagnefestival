@@ -134,6 +134,7 @@ def event_to_summary_dict(
         "start_time": event.start_time,
         "end_time": event.end_time,
         "category": event.category,
+        "volunteers_only": event.volunteers_only,
         "members_only": event.members_only,
         "registration_required": event.registration_required,
         "registrations_open_from": event.registrations_open_from,
@@ -292,6 +293,7 @@ def registration_to_dict(r: Registration, person: Person, event: Event, *, publi
     """
     return {
         "id": r.id,
+        "poll_question_id": r.poll_question_id,
         "person_id": r.person_id,
         "person": person_summary_to_dict(person),
         "event_id": r.event_id,
@@ -565,6 +567,7 @@ def app_settings_to_dict(s: AppSettings) -> dict:
         "member_limit": s.member_limit,
         "member_inactivity_months": s.member_inactivity_months,
         "maintenance_mode": s.maintenance_mode,
+        "stamp_card_type_id": s.stamp_card_type_id,
         "public_email": s.public_email,
         "public_phone": s.public_phone,
         "facebook_url": s.facebook_url,
