@@ -1,0 +1,9 @@
+
+# Read-only upstream UI review reports
+.ui-maintenance/
+
+# Recoverable UI review-record journal and atomic-write staging files
+.ui-maintenance-record.json
+.ui-maintenance-record.json.*.tmp
+ui-maintenance.json.*.tmp
+ui-upstream.json.*.tmp

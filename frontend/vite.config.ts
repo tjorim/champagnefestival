@@ -38,8 +38,18 @@ export default defineConfig(({ command, mode, isPreview }) => {
       ...(session.plugin ? [session.plugin] : []),
     ],
     build: {
+      manifest: true,
       rolldownOptions: {
         output: {
+          // Keep the framework cache boundary stable when dependency sharing changes.
+          codeSplitting: {
+            groups: [
+              {
+                name: "react-vendor",
+                test: /[/\\]node_modules[/\\](react|react-dom|scheduler)[/\\]/,
+              },
+            ],
+          },
           minify: {
             compress: {
               dropConsole: true,

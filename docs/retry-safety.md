@@ -798,3 +798,15 @@ they are kept only while delivery can still be retried or inspected: housekeepin
 deletes each snapshot in the same transaction as its terminal (`delivered` or
 `failed`) outbox job once `OUTBOX_RETENTION_DAYS` has passed. Pending jobs keep
 their snapshot.
+
+## Local UI review-record tooling
+
+`frontend/scripts/ui-maintenance.mjs record` uses a recoverable local write plan,
+not HTTP replay or a second network fetch. `ui-record-store.mjs` publishes the
+exact before/after pair before atomic file replacements. A failed or interrupted
+second write leaves the journal; the next maintenance command finishes the
+saved pair before hash validation. Run these commands serially. Live owners and
+independent file edits stop recovery without overwriting those edits. See
+[UI maintenance recovery](ui-maintenance.md#interrupted-review-record-saves).
+Regression tests inject a second-write exception and process exit, then verify
+check/retry succeeds and the journal is removed.

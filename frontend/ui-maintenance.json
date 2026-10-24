@@ -1,0 +1,342 @@
+{
+  "version": 1,
+  "mode": "shadcn",
+  "style": "base-vega",
+  "directories": ["src/components/ui"],
+  "components": {
+    "accordion": {
+      "files": ["src/components/ui/accordion.tsx"],
+      "registry": "accordion",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/accordion.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "0a02b53f98fc36e2fe877cd1ef4c97b8c61812ade115ab70c096eb18de452169",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "alert-dialog": {
+      "files": ["src/components/ui/alert-dialog.tsx"],
+      "registry": "alert-dialog",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/alert-dialog.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "d8d418ba1ada4c89ec6222bca8e91889211ee9fdd442b959a833086e81594d24",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "alert": {
+      "files": ["src/components/ui/alert.tsx"],
+      "registry": "alert",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/alert.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "96ed009a2a88d57b3e11e128f285c571bc83406db0ea35a5cc819ccdb0c75e5a",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "badge": {
+      "files": ["src/components/ui/badge.tsx"],
+      "registry": "badge",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/badge.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "6cb86279e420a7db5f9e7507dddbbfd2d069ce7021e3b15107b900a90ef26385",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "button-group": {
+      "files": ["src/components/ui/button-group.tsx"],
+      "registry": "button-group",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/button-group.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "c4aa93bbd064e3c51198ef3dbec889f5822a0214fc21ae59966dd80425307ec3",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "button": {
+      "files": ["src/components/ui/button.tsx"],
+      "registry": "button",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/button.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "5e841354e9f96b8c5f04e2673f06d3ca52aa10db9d6167f029a751ef4703a07d",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "card": {
+      "files": ["src/components/ui/card.tsx"],
+      "registry": "card",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/card.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "456874c7795d14a095519311ae395915f491fc460c41943586f50e2e691029a1",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "checkbox": {
+      "files": ["src/components/ui/checkbox.tsx"],
+      "registry": "checkbox",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/checkbox.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "f36be6efff8a1e0a2698085c05b604ca64dfe0bddba93573e7e725adb27149ed",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "collapsible": {
+      "files": ["src/components/ui/collapsible.tsx"],
+      "registry": "collapsible",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/collapsible.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "612c4276f43005077a7305f84d312a117682bf423dcde1d30c638a3a5897b55f",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "combobox": {
+      "files": ["src/components/ui/combobox.tsx"],
+      "registry": "combobox",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/combobox.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "db1899851904a9e9f5ef0114af278b8537e49f6ada42e5a3ba898929a7dff5bd",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "dialog": {
+      "files": ["src/components/ui/dialog.tsx"],
+      "registry": "dialog",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/dialog.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "a901480c91710a66f7a5aea20073549e2c6ae05745901346435c0ac86d26b2bf",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "dropdown-menu": {
+      "files": ["src/components/ui/dropdown-menu.tsx"],
+      "registry": "dropdown-menu",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/dropdown-menu.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "b8c998d4e004a764dc26e87b2c77aeb8e2fd6cd0bbb1c7e2c8dd686b3ab5b44c",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "empty": {
+      "files": ["src/components/ui/empty.tsx"],
+      "registry": "empty",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/empty.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "827043e3c4e5f6cacb28c59e5a738ece74e15b910f27a74b06270dfdaaedbe24",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "field": {
+      "files": ["src/components/ui/field.tsx"],
+      "registry": "field",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/field.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "732b8dfddac3c886a3d037e1fe6f6e580b13eb3e3c27eaf2f01b6e973f89355d",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "input": {
+      "files": ["src/components/ui/input.tsx"],
+      "registry": "input",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/input.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "a2ff19209b5a602715632adc2b75615e5e13f7eaf170ca03093442ab4e85e1b4",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "label": {
+      "files": ["src/components/ui/label.tsx"],
+      "registry": "label",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/label.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "107266bf7354789073cf938ddbe535a50662a93e735b74e63ad84cf1c2ace7f9",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "pagination": {
+      "files": ["src/components/ui/pagination.tsx"],
+      "registry": "pagination",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/pagination.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "615f010cd7e48cbf6e1287150137b41fd331b9565ba953ba4c5fc72e43a1e13d",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "presentation-list": {
+      "files": ["src/components/ui/presentation-list.tsx"],
+      "registry": null,
+      "origin": "local",
+      "reason": "Locally owned composition; maintain against the Base UI APIs it imports and the app UI audit.",
+      "reviewedAt": null,
+      "reviewNote": null
+    },
+    "progress": {
+      "files": ["src/components/ui/progress.tsx"],
+      "registry": "progress",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/progress.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "cc581e3fd631203ee932b0bea108518f066dd91e1a581f6369d67bb84a450926",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "select": {
+      "files": ["src/components/ui/select.tsx"],
+      "registry": "select",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/select.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "40c588500670fbf92e035f2d829379e5cf110cf3f2459c21f744f71d1cca3084",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "separator": {
+      "files": ["src/components/ui/separator.tsx"],
+      "registry": "separator",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/separator.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "962db6533bfe95cf39a1b6034f92d674df942afe6892313483f7495d4848abda",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "sheet": {
+      "files": ["src/components/ui/sheet.tsx"],
+      "registry": "sheet",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/sheet.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "9a5fa49ebe029c60b4a848abf9783971cba96fce2b79795c481f2d6c0cb645b3",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "sidebar": {
+      "files": ["src/components/ui/sidebar.tsx"],
+      "registry": "sidebar",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/sidebar.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "fcd3366d72a2afdc10cbccc6cef6e9559cf09af730e614d12e9a99cfda998295",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "skeleton": {
+      "files": ["src/components/ui/skeleton.tsx"],
+      "registry": "skeleton",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/skeleton.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "b03aa8eb4fc76f28ef673e11e6ca5a59d09dce0b470f5abf40df1078321f4d86",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "spinner": {
+      "files": ["src/components/ui/spinner.tsx"],
+      "registry": "spinner",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/spinner.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "3501471a3beebf3330205d2e3f9be622097f7b13d931d35322f380b33691cb38",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "switch": {
+      "files": ["src/components/ui/switch.tsx"],
+      "registry": "switch",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/switch.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "a84118bc670a6413ba29798412516a1554a014d8a416b54275f0fc8c2f1d1354",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "table": {
+      "files": ["src/components/ui/table.tsx"],
+      "registry": "table",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/table.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "eeaf6b9f2674910d175ac7340cb8e8d8ace60b68a6f9ec62b420d5abb176b26d",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "tabs": {
+      "files": ["src/components/ui/tabs.tsx"],
+      "registry": "tabs",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/tabs.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "e4466f6f839bbc55a78e7175086e2a66a4381adf2044e431a44288a61d6c479e",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "textarea": {
+      "files": ["src/components/ui/textarea.tsx"],
+      "registry": "textarea",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/textarea.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "e9c12a648c8272c1041eae9f16530c751cbbca52f094edc49d02632251cf7b36",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "toggle-group": {
+      "files": ["src/components/ui/toggle-group.tsx"],
+      "registry": "toggle-group",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/toggle-group.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "466f704050f64fef7ae6856e9f19b2e39321ab1e62ce4111a023f28b74b2693f",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "toggle": {
+      "files": ["src/components/ui/toggle.tsx"],
+      "registry": "toggle",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/toggle.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "a5a564cc701e05c53e41a00d3dd189c07378d9453f56c50543e1bacc2b228c74",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "tooltip": {
+      "files": ["src/components/ui/tooltip.tsx"],
+      "registry": "tooltip",
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/tooltip.json",
+      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reviewedAt": null,
+      "reviewNote": null,
+      "upstreamSha256": "7e99f817d2770c3d8a40be92f36d45ae1de0dace82b51239d20df63436ccd87b",
+      "capturedAt": "2026-10-23T22:47:12.357560Z"
+    },
+    "MobileMenu": {
+      "files": ["src/components/MobileMenu.tsx"],
+      "registry": null,
+      "origin": "local",
+      "reason": "App-specific Base UI composition; review direct primitive API changes and interaction tests.",
+      "reviewedAt": null,
+      "reviewNote": null
+    },
+    "use-mobile": {
+      "files": ["src/components/ui/use-mobile.ts"],
+      "registry": null,
+      "origin": "https://ui.shadcn.com/r/styles/base-vega/sidebar.json",
+      "reason": "Sidebar registry helper, owned locally; compare it with the helper source in the captured sidebar definition.",
+      "reviewedAt": null,
+      "reviewNote": null
+    }
+  }
+}

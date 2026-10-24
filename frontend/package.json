@@ -20,7 +20,13 @@
     "test:watch": "vitest",
     "paraglide:compile": "paraglide-js compile --project ./project.inlang --outdir ./src/paraglide --emit-ts-declarations",
     "check-message-parity": "node scripts/check-message-parity.mjs",
-    "locale:audit": "node scripts/locale-audit.mjs"
+    "locale:audit": "node scripts/locale-audit.mjs",
+    "bundle:check": "node scripts/bundle-budget.mjs",
+    "ui:check": "node scripts/ui-maintenance.mjs check",
+    "ui:upstream": "node scripts/ui-maintenance.mjs upstream",
+    "ui:diff": "node scripts/ui-maintenance.mjs diff",
+    "ui:record": "node scripts/ui-maintenance.mjs record",
+    "ui:test": "node --test scripts/ui-maintenance.verify.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
@@ -76,6 +82,7 @@
     "oxc-parser": "^0.155.0",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
+    "shadcn": "4.22.1",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.4",

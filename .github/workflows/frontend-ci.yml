@@ -34,6 +34,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate UI maintenance inventory
+        working-directory: frontend
+        run: |
+          node --test scripts/ui-maintenance.verify.mjs
+          node scripts/ui-maintenance.mjs check
+
       - name: Audit interface strings and catalogues
         run: pnpm run locale:audit
 
@@ -123,33 +129,10 @@ jobs:
           # Web Push opt-in and admin live-update stream (TanStack DB) load on
           # demand, so index fell 683 -> 465 KiB (first visit 347 -> 235 KiB
           # gzipped). Total 2783 KiB, admin 397. Keep this ceiling tight.
-          TOTAL_MAX_KB=2800
-          INDEX_MAX_KB=520
-          ADMIN_MAX_KB=450
-
-          total_kb=$(find dist/assets -name '*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
-          index_kb=$(find dist/assets -name 'index-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
-          admin_kb=$(find dist/assets -name 'AdminDashboard-*.js' -type f -printf '%s\n' | awk '{s+=$1} END{printf "%d", s/1024}')
-
-          echo "Total JS:       ${total_kb} kB  (budget: ${TOTAL_MAX_KB} kB)"
-          echo "index chunk:    ${index_kb} kB  (budget: ${INDEX_MAX_KB} kB)"
-          echo "AdminDashboard: ${admin_kb} kB  (budget: ${ADMIN_MAX_KB} kB)"
-
-          failed=0
-          if [ "$total_kb" -gt "$TOTAL_MAX_KB" ]; then
-            echo "FAIL: total JS ${total_kb} kB exceeds budget ${TOTAL_MAX_KB} kB"
-            failed=1
-          fi
-          if [ "$index_kb" -gt "$INDEX_MAX_KB" ]; then
-            echo "FAIL: index chunk ${index_kb} kB exceeds budget ${INDEX_MAX_KB} kB"
-            failed=1
-          fi
-          if [ "$admin_kb" -gt "$ADMIN_MAX_KB" ]; then
-            echo "FAIL: AdminDashboard chunk ${admin_kb} kB exceeds budget ${ADMIN_MAX_KB} kB"
-            failed=1
-          fi
-          [ "$failed" -eq 0 ] && echo "All chunks within budget."
-          exit $failed
+          # Keep framework splitting from hiding growth in static dependencies.
+          # The full eager graph was 710.2 KiB on Base UI 1.8 and 712.7 on 1.9.
+          node --test scripts/bundle-budget.verify.mjs
+          pnpm bundle:check
 
   e2e:
     name: E2E Tests (Chromium)

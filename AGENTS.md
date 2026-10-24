@@ -161,7 +161,7 @@ Tailwind v4 and Base UI are the frontend stack; Bootstrap was removed in #1111
   an existing component, variant or behaviour. Reuse or generate the supported
   implementation first; add custom code only for requirements it does not cover.
   Apply shared improvements consistently to the relevant consumers.
-- Generate Base UI primitives on demand with `cd frontend && pnpm dlx shadcn@latest
+- Generate Base UI primitives on demand with `cd frontend && pnpm exec shadcn
   add <component>` using the committed `components.json` (`base-vega`, Lucide,
   Tailwind v4). Own and restyle the generated source; never run `init` over the
   existing theme or bulk-generate controls. Use `@/lib/utils` for `cn`, and
@@ -175,3 +175,7 @@ Tailwind v4 and Base UI are the frontend stack; Bootstrap was removed in #1111
 - Runtime themes toggle light/dark through `data-theme-mode` on `<html>` (and on
   the fixed-dark `data-theme-scope="admin"` scope); the Tailwind `dark` variant
   reads the same attribute.
+
+## UI dependency maintenance
+
+Follow [docs/ui-maintenance.md](docs/ui-maintenance.md) for Base UI/runtime updates and the pinned shadcn CLI, registry comparisons and review records. Run `pnpm ui:check` from `frontend/` after changing shared UI. Dependabot does not update owned component source; preserve the documented customisations and validate interactions and bundle budgets.
