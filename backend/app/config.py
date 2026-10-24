@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 from urllib.parse import quote
 
 from limits import parse as parse_rate_limit_string
@@ -154,6 +154,11 @@ class Settings(BaseSettings):
     edition_artwork_public_root: str = "./uploads/public/editions"
     """Public root of edition flyers, heroes and sharing images (#1224); admin uploads go live immediately."""
     """Optional shared mailbox for pending organization proposals; no fallback."""
+
+    # --- Member mailings (#1407): no production adapter selected yet ---
+    member_mail_provider: Literal["disabled"] = "disabled"
+    """Separate from transactional SMTP. Unsupported providers fail configuration
+    validation; enabling delivery requires an explicitly implemented adapter."""
 
     # --- SMTP delivery ---
     smtp_host: str = ""

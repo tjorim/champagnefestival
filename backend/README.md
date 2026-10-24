@@ -210,6 +210,7 @@ location /api/ {
 | `METRICS_HMAC_SECRET` | no    | `""`                                                   | Shared secret for the `X-Metrics-Token` HMAC on `GET /api/metrics`; empty disables the endpoint |
 | `SENTRY_DSN`       | no       | `""`                                                   | Sentry DSN for error tracking; empty disables Sentry                 |
 | `SENTRY_TRACES_SAMPLE_RATE` | no | `0.0`                                              | Fraction (0.0-1.0) of transactions sampled for Sentry performance monitoring |
+| `MEMBER_MAIL_PROVIDER` | no | `disabled` | Only `disabled` is supported; separate from SMTP. See [member-mail foundation](../docs/decisions/1407-member-mail-foundation.md). |
 | `SMTP_HOST`        | no       | `""`                                                   | SMTP server used to deliver guest access links and registration confirmations; empty disables delivery |
 | `SMTP_PORT`        | no       | `587`                                                  | SMTP port                                                            |
 | `SMTP_USER`        | no       | `""`                                                   | SMTP username                                                        |
