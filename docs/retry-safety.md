@@ -848,3 +848,38 @@ retried. Waitlist submission retains its submission UUID conflict/no-op strategy
 retries recheck membership and may be refused after membership/session expiry.
 The membership gate performs no write before accepting the identity, apart from
 the existing session idle-time refresh. It introduces no automatic retries.
+
+
+## Capsule-exchange stamp cards (#1405)
+
+- QR check-in, MCP `check_in`, and registration updates that set `checked_in`
+  add/remove the stamp in the registration transaction. A unique registration
+  on `stamps` makes repeated attendance converge; a person row lock serializes
+  different registrations for one member. A unique reward per card prevents
+  duplicate rewards. New cards use the oldest incomplete card first, or snapshot
+  the selected active type. No type selected is a stable conflict and rolls back
+  the check-in. Retrying a check-in immediately is safe; replaying an old check-in
+  after an intentional uncheck is a new attendance correction, not response replay.
+- Reward hand-out and un-hand-out (`PUT /api/stamp-cards/rewards/{id}`, MCP
+  `set_stamp_reward_handed_out`) converge by reward ID under the same person lock.
+  Repeating the current state preserves the hand-out time and actor. There is no
+  version precondition: **do not automatically retry** a stale request after an
+  intervening opposite action. Read current state after an ambiguous timeout.
+- Card-type creation (`POST /api/stamp-cards/types`, MCP `save_stamp_card_type`
+  without `type_id`) uses a server-generated ID and is **not retry safe**. Reconcile
+  by listing types; do not blindly retry. Type replacement (`PUT`, MCP with ID)
+  and selecting/clearing the settings type are absolute updates without version
+  preconditions: they converge if repeated immediately but can overwrite newer
+  edits; **no automatic retry**.
+- A full card blocks opening another card until its reward is handed out
+  (`stamp_reward_pending`); the attempted check-in rolls back. Before hand-out,
+  unchecking removes the reward and reopens the same card. Unchecking any stamp
+  on a handed-out card fails with `stamp_reward_handed_out`. Hand-out can be undone
+  only before a newer card opens (`stamp_card_has_successor` otherwise), so an
+  older card cannot reopen after the next card starts. Existing stamps never move
+  between cards. Person merges preserve existing snapshots and attendance.
+- Stamped registrations cannot be reassigned or deleted until unchecked
+  (`registration_has_stamp`). People with cards must be anonymised rather than
+  deleted (`person_has_stamp_cards`). Person merge transfers cards with their
+  registrations and preserves snapshots; its existing no-automatic-retry contract
+  is unchanged.

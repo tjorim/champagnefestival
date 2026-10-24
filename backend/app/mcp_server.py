@@ -2325,6 +2325,69 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_waitlist.delete_waitlist_entry(self.session_factory, entry_id)
 
+    async def list_stamp_card_types(self) -> list[dict]:
+        """List stamp card types. Requires admin."""
+        self._require_admin()
+        from app.services import stamp_cards_service as service
+
+        async with self.session_factory() as db:
+            return await service.list_types(db)
+
+    async def save_stamp_card_type(
+        self,
+        name_nl: str,
+        box_count: int,
+        reward_label_nl: str,
+        type_id: str | None = None,
+        name_fr: str | None = None,
+        name_en: str | None = None,
+        reward_label_fr: str | None = None,
+        reward_label_en: str | None = None,
+        active: bool = True,
+    ) -> dict:
+        """Create or replace a stamp card type. Requires admin."""
+        self._require_admin()
+        from app.schemas import StampCardTypeWrite
+        from app.services import stamp_cards_service as service
+
+        body = StampCardTypeWrite(
+            name_nl=name_nl,
+            box_count=box_count,
+            reward_label_nl=reward_label_nl,
+            name_fr=name_fr,
+            name_en=name_en,
+            reward_label_fr=reward_label_fr,
+            reward_label_en=reward_label_en,
+            active=active,
+        )
+        async with self.session_factory() as db:
+            return await service.save_type(db, actor=self._actor(), body=body, type_id=type_id)
+
+    async def get_person_stamp_cards(self, person_id: str) -> list[dict]:
+        """Return a person's stamp cards and rewards. Requires admin."""
+        self._require_admin()
+        from app.services import stamp_cards_service as service
+
+        async with self.session_factory() as db:
+            return await service.list_cards(db, person_id)
+
+    async def set_stamp_reward_handed_out(self, reward_id: str, handed_out: bool) -> dict:
+        """Record or undo reward hand-out. Requires admin."""
+        self._require_admin()
+        from app.services import stamp_cards_service as service
+
+        async with self.session_factory() as db:
+            return await service.set_reward(db, reward_id=reward_id, handed_out=handed_out, actor=self._actor())
+
+    async def select_stamp_card_type(self, type_id: str | None = None) -> dict:
+        """Select the active type used for new cards, or clear the selection. Requires admin."""
+        self._require_admin()
+        from app.schemas import AppSettingsUpdate
+        from app.services.settings_service import update_settings
+
+        async with self.session_factory() as db:
+            return await update_settings(db, actor=self._actor(), body=AppSettingsUpdate(stamp_card_type_id=type_id))
+
     # -- Settings ------------------------------------------------------
 
     async def get_settings(self) -> dict:
@@ -2804,6 +2867,17 @@ class ChampagneFestivalMcpBackend:
             status=status,
         )
 
+    async def check_in(self, registration_id: str, issue_strap: bool = True) -> dict:
+        """Check in a registration and stamp capsule-exchange attendance. Requires admin."""
+        self._require_admin()
+        return await mcp_admin_registrations.update_registration(
+            self.session_factory,
+            self._actor(),
+            registration_id,
+            checked_in=True,
+            strap_issued=True if issue_strap else None,
+        )
+
     async def update_registration(
         self,
         registration_id: str,
@@ -3199,6 +3273,12 @@ def create_mcp_server(
     register_tool(backend.get_settings)
     register_tool(backend.set_member_indicators)
     register_tool(backend.set_maintenance_mode)
+    register_tool(backend.list_stamp_card_types)
+    register_tool(backend.save_stamp_card_type)
+    register_tool(backend.get_person_stamp_cards)
+    register_tool(backend.set_stamp_reward_handed_out)
+    register_tool(backend.select_stamp_card_type)
+
     register_tool(backend.list_organization_changes)
     register_tool(backend.decide_organization_change)
     register_tool(backend.create_organization)
@@ -3225,6 +3305,7 @@ def create_mcp_server(
     register_tool(backend.reactivate_volunteer)
     register_tool(backend.list_registrations)
     register_tool(backend.create_registration)
+    register_tool(backend.check_in)
     register_tool(backend.update_registration)
     register_tool(backend.delete_registration)
     register_tool(backend.create_payment_transaction)

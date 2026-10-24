@@ -565,6 +565,7 @@ def app_settings_to_dict(s: AppSettings) -> dict:
         "member_limit": s.member_limit,
         "member_inactivity_months": s.member_inactivity_months,
         "maintenance_mode": s.maintenance_mode,
+        "stamp_card_type_id": s.stamp_card_type_id,
         "public_email": s.public_email,
         "public_phone": s.public_phone,
         "facebook_url": s.facebook_url,

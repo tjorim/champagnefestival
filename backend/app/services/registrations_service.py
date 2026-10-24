@@ -314,6 +314,10 @@ async def apply_registration_update(
             raise HTTPException(
                 status_code=400, detail="person_id cannot be removed; every registration requires a person."
             )
+        if body.person_id != registration.person_id:
+            from app.services.stamp_cards_service import guard_registration_history
+
+            await guard_registration_history(db, registration.id)
         await people_service.get_person_or_404(db, body.person_id)
         registration.person_id = body.person_id
     resolved_items = pre_order_items
@@ -354,7 +358,11 @@ async def apply_registration_update(
         # because amount_due did, but payment_status can (e.g. a partly-paid
         # booking becomes "paid" once its due amount is lowered to match).
         await payments_service.sync_registration_payment_fields(db, registration)
+    stamp_progress = None
     if body.checked_in is not None:
+        from app.services.stamp_cards_service import sync_check_in
+
+        stamp_progress = await sync_check_in(db, registration, body.checked_in)
         if body.checked_in and not registration.checked_in:
             registration.checked_in_at = datetime.now(UTC)
         if not body.checked_in:
@@ -468,13 +476,18 @@ async def apply_registration_update(
     registration = await get_registration_or_404(db, registration.id)
     person_map = await fetch_person_map(db, [registration])
 
-    return registration_to_dict(registration, person_map[registration.person_id], registration.event)
+    result = registration_to_dict(registration, person_map[registration.person_id], registration.event)
+    result["stamp_progress"] = stamp_progress
+    return result
 
 
 async def delete_registration(
     db: AsyncSession, registration: Registration, *, actor: str, request_id: str | None = None
 ) -> dict:
     await inventory.lock_event(db, registration.event_id)
+    from app.services.stamp_cards_service import guard_registration_history
+
+    await guard_registration_history(db, registration.id)
     reg_id = registration.id
     event_id = registration.event_id
     edition_id = registration.event.edition_id

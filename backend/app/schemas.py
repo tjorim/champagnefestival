@@ -829,7 +829,15 @@ class RegistrationVolunteerAssignment(RequestModel):
     volunteer_id: NonEmptyText
 
 
+class StampProgress(BaseModel):
+    card_id: str
+    stamps: int
+    box_count: int
+    reward_earned: bool
+
+
 class RegistrationOut(BaseModel):
+    stamp_progress: StampProgress | None = None
     order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)
@@ -1546,6 +1554,7 @@ class CheckInRequest(RequestModel):
 
 
 class CheckInOut(BaseModel):
+    stamp_progress: StampProgress | None = None
     registration: CheckInGuestOut
     already_checked_in: bool
 
@@ -2494,6 +2503,8 @@ class IntegrationClientCreatedOut(IntegrationClientOut):
 class AppSettingsUpdate(RequestModel):
     member_limit: MemberLimit | None = None
     member_inactivity_months: MemberInactivityMonths | None = None
+
+    stamp_card_type_id: ResourceId | None = None
     maintenance_mode: bool | None = None
     public_email: EmailStr | Literal[""] | None = None
     public_phone: Text30 | None = None
@@ -2529,6 +2540,8 @@ class AppSettingsUpdate(RequestModel):
 class AppSettingsOut(BaseModel):
     member_limit: int | None = None
     member_inactivity_months: int | None = None
+
+    stamp_card_type_id: str | None = None
     maintenance_mode: bool
     public_email: str
     public_phone: str
@@ -3030,3 +3043,62 @@ class OrganizationChangeOut(BaseModel):
     superseded_fields: list[str]
     reason: str | None
     created_at: datetime
+
+
+class StampCardTypeWrite(RequestModel):
+    name_nl: NonEmptyText200
+    name_fr: Text200 | None = None
+    name_en: Text200 | None = None
+    box_count: PositiveQuantity
+    reward_label_nl: NonEmptyText200
+    reward_label_fr: Text200 | None = None
+    reward_label_en: Text200 | None = None
+    active: bool = True
+
+    @field_validator("name_nl", "reward_label_nl")
+    @classmethod
+    def require_dutch_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Dutch text is required")
+        return value
+
+
+class StampRewardUpdate(RequestModel):
+    handed_out: bool
+
+
+class StampCardTypeOut(StampCardTypeWrite):
+    id: str
+
+
+class StampOut(BaseModel):
+    id: str
+    card_id: str
+    registration_id: str
+    created_at: datetime
+
+
+class StampRewardOut(BaseModel):
+    id: str
+    card_id: str
+    reward_label_nl: str
+    reward_label_fr: str | None
+    reward_label_en: str | None
+    earned_at: datetime
+    handed_out_at: datetime | None
+    handed_out_by: str | None
+
+
+class StampCardOut(BaseModel):
+    id: str
+    person_id: str
+    type_id: str
+    box_count: int
+    reward_label_nl: str
+    reward_label_fr: str | None
+    reward_label_en: str | None
+    opened_at: datetime
+    completed_at: datetime | None
+    stamps: list[StampOut]
+    reward: StampRewardOut | None

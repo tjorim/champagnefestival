@@ -127,6 +127,10 @@ async def post_check_in(
         strap_newly_issued = True
         changed = True
 
+    from app.services.stamp_cards_service import sync_check_in
+
+    stamp_progress = await sync_check_in(db, r, True)
+
     if changed:
         if not already:
             await write_audit_entry(
@@ -158,12 +162,13 @@ async def post_check_in(
                 edition_id=event.edition_id,
             ),
         )
-        await db.commit()
+    await db.commit()
+    if changed:
         await db.refresh(r)
-
     return {
         "registration": registration_to_checkin_dict(r, person, event, table_name=table_name),
         "already_checked_in": already,
+        "stamp_progress": stamp_progress,
     }
 
 

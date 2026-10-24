@@ -880,3 +880,43 @@ Current members have unique nonempty, trimmed, case-insensitive emails; retired/
 members and non-members may share them. Conflicts return `409 member_email_in_use` on
 create, update, role grants, reactivation and merge. Migration 010 intentionally refuses an
 existing conflicting dataset; resolve duplicates with the existing merge before migrating.
+
+
+### Capsule-exchange stamp cards (#1405)
+
+Admin REST operations (also available as admin-only MCP tools):
+
+- `GET`/`POST /api/stamp-cards/types`, `PUT /api/stamp-cards/types/{id}`:
+  list/create/replace a type (`name_nl`, optional `name_fr`/`name_en`, positive
+  `box_count`, translated `reward_label_*`, `active`). Deactivate rather than
+  deleting types; past cards retain snapshots.
+- `PUT /api/settings` with `stamp_card_type_id` selects the type for new cards;
+  explicit null clears it. MCP: `select_stamp_card_type`.
+- `GET /api/stamp-cards/people/{person_id}` returns cards oldest first, their
+  stamps (including registration IDs), and the optional reward record.
+  MCP: `get_person_stamp_cards`.
+- `PUT /api/stamp-cards/rewards/{id}` with `{"handed_out": true|false}` records
+  hand-out or undoes it. MCP: `set_stamp_reward_handed_out`.
+- MCP `list_stamp_card_types` and `save_stamp_card_type` mirror type operations.
+
+QR check-in, MCP `check_in` and registration updates returning `checked_in`
+include nullable `stamp_progress` (`card_id`, `stamps`, `box_count`,
+`reward_earned`). Only check-ins in `capsule_exchange` editions earn stamps.
+The member gate belongs to #1404; stamping does not add a second membership
+check or rewrite historical attendance when membership changes. No check-in
+backfill runs at migration time.
+
+The check-in transaction locks the registration then its person; stamp creation,
+completion and reward creation commit together with attendance. Uncheck removes
+the stamp and any earned reward, unless handed out (`stamp_reward_handed_out`).
+Missing/inactive configuration conflicts with `stamp_card_type_not_configured`
+or `stamp_card_type_unavailable`. Already-open cards still accept stamps after
+their type is deactivated or the selected type is changed/cleared. A full card blocks a new card until its reward is handed out
+(`stamp_reward_pending`), rolling back the attempted check-in. Undoing hand-out
+is refused once a newer card exists (`stamp_card_has_successor`); this prevents
+reopening an older card after the next one starts. Existing stamps and snapshots
+never move between cards.
+
+See `docs/retry-safety.md` for retry decisions and
+`docs/decisions/934-data-retention-and-erasure.md` for retention. OpenAPI exposes
+typed request/response schemas for the REST operations.

@@ -36,7 +36,7 @@ from sqlalchemy.orm import selectinload
 from app.audit import write_audit_entry
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
-from app.models import Organization, Person, Registration, VolunteerPeriod
+from app.models import Organization, Person, Registration, StampCard, VolunteerPeriod
 from app.schemas import PersonCreate, PersonUpdate
 from app.services.member_email import (
     check_email_integrity,
@@ -326,6 +326,10 @@ async def delete_person(db: AsyncSession, person: Person, *, actor: str, request
         }
         for registration in registrations
     ]
+    from app.services.errors import ApiHTTPException
+
+    if await db.scalar(select(StampCard.id).where(StampCard.person_id == person_id).limit(1)):
+        raise ApiHTTPException(409, "person_has_stamp_cards", "Anonymise this person to retain stamp card history.")
     for registration in registrations:
         await db.delete(registration)
     await db.delete(person)
@@ -463,6 +467,7 @@ async def merge_people(
     # most: its FK cascades on delete, so a period left pointing at the duplicate
     # is destroyed below rather than transferred, leaving a person carrying the
     # volunteer role with no help periods.
+    await db.execute(update(StampCard).where(StampCard.person_id == duplicate_id).values(person_id=canonical.id))
     await db.execute(update(Registration).where(Registration.person_id == duplicate_id).values(person_id=canonical.id))
     await db.execute(
         update(Organization)
