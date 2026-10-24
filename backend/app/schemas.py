@@ -254,6 +254,7 @@ class PersonPaymentSummary(BaseModel):
 
 
 class PersonListItemOut(PersonAdminSummaryOut):
+    reward_due: bool = False
     last_attended: dt_date | None = None
     inactivity_highlight: bool = False
     registration_count: int

@@ -26,6 +26,12 @@ export class ApiError extends Error {
  * operation message, so the backend can introduce codes ahead of the interface.
  */
 const API_ERROR_MESSAGES: Record<string, () => string> = {
+  stamp_reward_handed_out: () => m.stamp_error_handed_out(),
+  stamp_card_has_successor: () => m.stamp_error_successor(),
+  stamp_reward_pending: () => m.stamp_error_pending(),
+  stamp_card_type_not_configured: () => m.stamp_error_type(),
+  stamp_card_type_unavailable: () => m.stamp_error_type(),
+  registration_has_stamp: () => m.stamp_error_history(),
   volunteer_event_poll_required: () => m.volunteer_event_poll_required(),
   poll_event_invalid: () => m.api_error_poll_event_invalid(),
   poll_event_link_locked: () => m.api_error_poll_event_link_locked(),

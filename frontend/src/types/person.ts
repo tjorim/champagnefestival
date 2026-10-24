@@ -50,6 +50,7 @@ export function roleSince(person: Person, role: string): string | null {
 export interface Person {
   id: string;
   registrationCount?: number;
+  rewardDue?: boolean;
   lastAttended?: string | null;
   inactivityHighlight?: boolean;
   inactivityExempt?: boolean;
@@ -78,6 +79,7 @@ export interface Person {
 export function apiToPerson(d: Record<string, unknown>): Person {
   return {
     id: d.id as string,
+    rewardDue: d.reward_due === true,
     lastAttended: (d.last_attended as string | null) ?? null,
     inactivityHighlight: d.inactivity_highlight === true,
     inactivityExempt: d.inactivity_exempt === true,

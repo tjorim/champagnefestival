@@ -928,3 +928,20 @@ the existing session idle-time refresh. It introduces no automatic retries.
   question-deletion confirmation and closed-question rules still apply. Deletion
   has no response replay: after an ambiguous timeout read state; do not retry
   the old confirmation against changed state.
+
+## Stamp card admin screens (#1406)
+
+The browser sends card-type creation/update, default-type settings changes and
+reward hand-out/reversal only after an explicit action, with no automatic write
+retries. Creation has no idempotency key; updates have no version precondition.
+After an ambiguous result, refresh and reconcile before resubmitting. Reward
+writes use the existing convergent absolute `handed_out` state under the person
+lock (#1405); the confirmation stays open on errors and successful writes refresh
+member cards, list badges and filtered totals. No optimistic hand-out is shown.
+Card-type errors preserve the editor draft; background reads do not reset it.
+
+Manual volunteer check-in now invokes the same stamp service in the attendance
+transaction as QR/admin check-in. Repeated requests reuse the registration's
+stamp and return its progress; configuration/reward failures roll back attendance.
+The browser still sends it once (`retry: false`), and same-registration repeat and
+rollback behavior are covered by stamp-card integration tests.

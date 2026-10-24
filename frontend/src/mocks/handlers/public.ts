@@ -67,9 +67,16 @@ const publicFaqItemsByLocale = {
 } as const;
 
 export const publicHandlers = [
+  http.put("/api/settings", async ({ request }) => {
+    const body = (await request.json()) as { stamp_card_type_id?: string | null };
+    if (body.stamp_card_type_id !== undefined)
+      localStorage.setItem("msw:stamp-card-type", JSON.stringify(body.stamp_card_type_id));
+    return HttpResponse.json(body);
+  }),
   /** GET /api/settings — site-wide settings; maintenance mode off by default. */
   http.get("/api/settings", () =>
     HttpResponse.json({
+      stamp_card_type_id: seededState("stamp-card-type", null),
       maintenance_mode: seededState("maintenance", false),
       public_email: "nancy.cattrysse@telenet.be",
       public_phone: "+32 478 48 01 77",

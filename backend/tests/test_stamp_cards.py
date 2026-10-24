@@ -240,3 +240,45 @@ def test_stamp_openapi_contract():
     ]["$ref"].endswith("/StampCardTypeOut")
     assert "stamp_progress" in schema["components"]["schemas"]["CheckInOut"]["properties"]
     assert "stamp_progress" in schema["components"]["schemas"]["RegistrationOut"]["properties"]
+
+
+@pytest.mark.anyio
+async def test_reward_due_filter_counts_and_export(client):
+    _, _, registration = await setup_card(client, boxes=1)
+    assert (await check(client, registration)).status_code == 200
+    person_id = registration["person_id"]
+    people = (await client.get("/api/people?reward_due=true&limit=1")).json()
+    assert people["total"] == 1
+    assert people["items"][0]["id"] == person_id
+    assert people["items"][0]["reward_due"] is True
+    assert (await client.get("/api/people/counts?reward_due=true")).json()["total"] == 1
+    assert (await client.get("/api/people?reward_due=false")).json()["total"] == 0
+    assert people["items"][0]["name"] in (await client.get("/api/people/export?reward_due=true")).text
+    cards = (await client.get(f"/api/stamp-cards/people/{person_id}")).json()
+    await client.put(f"/api/stamp-cards/rewards/{cards[0]['reward']['id']}", json={"handed_out": True})
+    assert (await client.get("/api/people?reward_due=true")).json()["total"] == 0
+    assert (await client.get("/api/people/counts?reward_due=true")).json()["total"] == 0
+    assert (await client.get("/api/people?reward_due=false")).json()["items"][0]["reward_due"] is False
+
+
+@pytest.mark.anyio
+async def test_manual_volunteer_check_in_returns_stamp_feedback_and_is_repeatable(client):
+    _, _, registration = await setup_card(client, boxes=1)
+    url = f"/api/volunteer/registrations/{registration['id']}/check-in"
+    first = await client.post(url, json={"issue_strap": False})
+    assert first.status_code == 200, first.text
+    assert first.json()["stamp_progress"]["reward_earned"] is True
+    again = await client.post(url, json={"issue_strap": False})
+    assert again.status_code == 200, again.text
+    assert again.json()["already_checked_in"] is True
+    assert again.json()["stamp_progress"] == first.json()["stamp_progress"]
+
+
+@pytest.mark.anyio
+async def test_manual_volunteer_missing_type_rolls_back(client):
+    event = await _create_event(client, edition_type="capsule_exchange")
+    registration = (await _post_registration(client, event=event)).json()
+    response = await client.post(f"/api/volunteer/registrations/{registration['id']}/check-in", json={})
+    assert response.status_code == 409
+    assert response.json()["code"] == "stamp_card_type_not_configured"
+    assert not (await client.get(f"/api/registrations/{registration['id']}")).json()["checked_in"]
