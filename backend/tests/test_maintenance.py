@@ -15,12 +15,13 @@ def _no_database(monkeypatch):
     monkeypatch.setattr(maintenance, "async_session_factory", _fake_session)
 
 
-def test_housekeeping_covers_every_former_worker_sweep():
+def test_housekeeping_covers_every_former_worker_sweep_and_consent_confirmations():
     assert [name for name, _ in maintenance.SWEEPS] == [
         "terminal outbox jobs",
         "stale rate-limit buckets",
         "expired visitor sessions",
         "expired visitor magic links",
+        "expired email consent confirmations",
         "stale push subscriptions",
     ]
 

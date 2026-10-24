@@ -12,6 +12,7 @@ import {
   HourglassIcon,
   LayersIcon,
   LogOutIcon,
+  MailCheckIcon,
   MailIcon,
   MapPinIcon,
   MegaphoneIcon,
@@ -261,6 +262,7 @@ export default function AdminSidebar({
                     label={m.admin_content_tab()}
                     itemKeys={[
                       "faq",
+                      "email-categories",
                       "announcements",
                       "signage-channels",
                       "policies",
@@ -272,6 +274,12 @@ export default function AdminSidebar({
                       itemKey="faq"
                       icon={CircleQuestionMarkIcon}
                       label={m.admin_content_faq_section()}
+                      {...itemProps}
+                    />
+                    <SidebarItem
+                      itemKey="email-categories"
+                      icon={MailCheckIcon}
+                      label={m.admin_email_categories_section()}
                       {...itemProps}
                     />
                     <SidebarItem

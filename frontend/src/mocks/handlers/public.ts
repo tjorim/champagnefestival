@@ -288,6 +288,12 @@ export const publicHandlers = [
     HttpResponse.json({ preferred_language: null }),
   ),
 
+  /** GET /api/me/email-preferences — no categories by default; override with
+   * server.use to exercise the per-category consent screen (#1408). */
+  http.get("/api/me/email-preferences", () =>
+    HttpResponse.json({ email: "visitor@example.com", categories: [] }),
+  ),
+
   /** GET /api/me/volunteer/poll — an edition with no poll questions by
    * default; override with server.use for tests that exercise the poll. */
   http.get("/api/me/volunteer/poll", () =>

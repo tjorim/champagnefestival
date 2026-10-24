@@ -62,7 +62,7 @@ interface RegistrationFields {
   preferredLanguage: "nl" | "fr" | "en";
   guestCount: number;
   notes: string;
-  marketingOptIn: boolean;
+  newEditionsOptIn: boolean;
   honeypot: string;
   formStartTime: string;
 }
@@ -100,7 +100,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       preferredLanguage: getLocale(),
       guestCount: 1,
       notes: "",
-      marketingOptIn: false,
+      newEditionsOptIn: false,
       honeypot: "",
       formStartTime: new Date().toISOString(),
     } as RegistrationFields,
@@ -282,7 +282,7 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
       preferredLanguage: getLocale(),
       guestCount: 1,
       notes: "",
-      marketingOptIn: false,
+      newEditionsOptIn: false,
       honeypot: "",
       formStartTime: new Date().toISOString(),
     });
@@ -501,17 +501,19 @@ export default function RegistrationModal({ show, onHide, event }: RegistrationM
                 )}
               </form.Field>
 
-              <form.Field name="marketingOptIn">
+              <form.Field name="newEditionsOptIn">
                 {(field) => (
-                  <PublicField className="mb-4" controlId="res-marketing-opt-in">
+                  <PublicField className="mb-4" controlId="res-new-editions-opt-in">
                     <PublicCheck
-                      id="res-marketing-opt-in-check"
-                      label={m.registration_marketing_opt_in()}
+                      id="res-new-editions-opt-in-check"
+                      label={m.registration_new_editions_opt_in()}
                       checked={field.value}
                       onCheckedChange={(checked) => field.handleChange(checked)}
-                      aria-describedby="res-marketing-opt-in-description"
+                      aria-describedby="res-new-editions-opt-in-description"
                     />
-                    <PublicDescription>{m.registration_marketing_opt_in_help()}</PublicDescription>
+                    <PublicDescription>
+                      {m.registration_new_editions_opt_in_help()}
+                    </PublicDescription>
                   </PublicField>
                 )}
               </form.Field>

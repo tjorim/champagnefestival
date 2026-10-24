@@ -38,6 +38,7 @@ from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Organization, Person, Registration, StampCard, VolunteerPeriod
 from app.schemas import PersonCreate, PersonUpdate
+from app.services import email_consent_service
 from app.services.member_email import (
     check_email_integrity,
     commit_member_changes,
@@ -226,25 +227,6 @@ async def apply_person_update(
     if body.roles is not None:
         sync_roles(person, normalise_roles(body.roles))
 
-    if body.marketing_opt_in is not None:
-        # Enforces PersonUpdate.marketing_opt_in's own contract: this path
-        # exists to process an opt-out received through another channel
-        # (e.g. the contact form), never to record consent — that can only
-        # come from the person themselves, via the registration form. A
-        # reject rather than a silent no-op, so an admin who tries it learns
-        # why nothing happened instead of assuming the correction worked.
-        if body.marketing_opt_in:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=(
-                    "marketing_opt_in can only be corrected to false here — "
-                    "consent can only be recorded through the registration form."
-                ),
-            )
-        if person.marketing_opt_in:
-            person.marketing_opt_in = False
-            person.marketing_opt_in_at = None
-
     await ensure_member_email(db, person)
     await write_audit_entry(
         db,
@@ -273,9 +255,10 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
     volunteer role (identified by having a NISS/eID on file) — that
     population's retention is settled as indefinite, and stripping their
     identity would leave a NISS/eID that's useless for the insurance purpose
-    it's kept for. Someone with ``marketing_opt_in`` set keeps their `email`
-    and the opt-in fields; blanking those would silently revoke a still-active
-    consent the anonymisation window was never meant to touch.
+    it's kept for. Someone with an active email consent keeps their `email`;
+    blanking it would silently end a still-active subscription the anonymisation
+    window was never meant to touch. Consent history (category, dates, source) is
+    always kept, and a pending confirmation is dropped.
 
     Deterministic and safe to call again on an already-anonymised person: the
     pseudonym is derived from the stable person ID, so a repeat produces the
@@ -291,8 +274,9 @@ async def anonymise_person(db: AsyncSession, person: Person, *, actor: str, requ
         )
 
     person.name = f"Guest #{person.id[-6:]}"
-    if not person.marketing_opt_in:
+    if not await email_consent_service.has_open_consent(db, person.id):
         person.email = ""
+    await email_consent_service.drop_pending_confirmations(db, person.id)
     person.phone = ""
     person.address = ""
     person.notes = ""
@@ -356,9 +340,10 @@ async def merge_people(
     - All reservations and organization contacts linked to the duplicate are
       re-pointed to the canonical person.
     - Blank string fields on the canonical person are filled from the duplicate.
-    - Marketing consent (marketing_opt_in / marketing_opt_in_at) is adopted from
-      the duplicate if the canonical person hasn't already given it — merging
-      away a duplicate must never silently discard a consent record.
+    - Email consent history moves to the canonical person — merging away a
+      duplicate must never silently discard a consent record. A category the
+      canonical person already has open keeps their record, and consent given
+      for a different address is kept as closed history rather than carried over.
     - Roles are merged (union).
     - Unique identity fields (national_register_number, eid_document_number)
       are adopted from the duplicate only if the canonical person lacks them;
@@ -398,6 +383,11 @@ async def merge_people(
         if not getattr(canonical, field) and getattr(duplicate, field):
             setattr(canonical, field, getattr(duplicate, field))
 
+    # Consent was given for the duplicate's address: it only carries over to the same address.
+    same_address = email_consent_service.normalise_email(canonical.email) == email_consent_service.normalise_email(
+        duplicate.email
+    )
+
     # Fill blank nullable fields on canonical from duplicate.
     for field in ("visits_per_month",):
         if getattr(canonical, field) is None and getattr(duplicate, field) is not None:
@@ -407,14 +397,6 @@ async def merge_people(
     if duplicate.inactivity_exempt and not canonical.inactivity_exempt:
         canonical.inactivity_exempt = True
         canonical.inactivity_exempt_note = duplicate.inactivity_exempt_note
-
-    # Preserve existing marketing consent during a merge:
-    # adopt the duplicate's opt-in if canonical hasn't already given it, so
-    # deleting the duplicate below can never silently discard a consent
-    # record. Canonical's own consent (and its timestamp) wins if already set.
-    if duplicate.marketing_opt_in and not canonical.marketing_opt_in:
-        canonical.marketing_opt_in = True
-        canonical.marketing_opt_in_at = duplicate.marketing_opt_in_at
 
     # Merge roles (union).
     original_roles = set(canonical.roles)
@@ -467,6 +449,7 @@ async def merge_people(
     # most: its FK cascades on delete, so a period left pointing at the duplicate
     # is destroyed below rather than transferred, leaving a person carrying the
     # volunteer role with no help periods.
+    await email_consent_service.merge_consents(db, canonical.id, duplicate_id, same_address=same_address)
     await db.execute(update(StampCard).where(StampCard.person_id == duplicate_id).values(person_id=canonical.id))
     await db.execute(update(Registration).where(Registration.person_id == duplicate_id).values(person_id=canonical.id))
     await db.execute(

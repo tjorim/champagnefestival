@@ -44,6 +44,7 @@ const OrganizationChangeReview = React.lazy(() => import("./OrganizationChangeRe
 const LayoutEditor = React.lazy(() => import("./LayoutEditor"));
 const VenueManagement = React.lazy(() => import("./VenueManagement"));
 const CategoryManagement = React.lazy(() => import("./CategoryManagement"));
+const EmailCategoryManagement = React.lazy(() => import("./EmailCategoryManagement"));
 const FaqManagement = React.lazy(() => import("./FaqManagement"));
 const AnnouncementsSection = React.lazy(() => import("./AnnouncementsSection"));
 const SignageSection = React.lazy(() => import("./SignageSection"));
@@ -663,6 +664,9 @@ export default function AdminDashboard({ visible }: AdminDashboardProps) {
                 )}
                 {canManageAdminSections && activeKey === "product-categories" && (
                   <CategoryManagement kind="product" authHeaders={authHeaders} />
+                )}
+                {canManageAdminSections && activeKey === "email-categories" && (
+                  <EmailCategoryManagement authHeaders={authHeaders} />
                 )}
                 {canManageAdminSections && activeKey === "faq" && (
                   <FaqManagement authHeaders={authHeaders} />

@@ -21,11 +21,13 @@ without logging addresses, tokens or raw provider responses.
 
 ## Remaining acceptance gates
 
-Issue #1407 remains partial and blocked on the provider decision and #1408.
+Issue #1407 remains partial and blocked on the provider decision (#1408 is done).
 Before connecting this boundary to the composer or reward creation:
 
-- Implement category consent and role eligibility from #1408; the legacy
-  marketing checkbox must never authorize member mail.
+- Build the audience from the category consent and role eligibility of
+  [#1408](1408-email-categories-and-consent.md) (`person_allows` and open
+  `EmailConsent` records, rechecked per recipient at send time); the legacy
+  marketing flag is gone and never authorized member mail.
 - Choose the provider, separate bulk sending identity, authenticated feedback,
   rate limits, credentials and domain authentication. Implement an explicit
   adapter and provider-specific timeout reconciliation and retry tests.

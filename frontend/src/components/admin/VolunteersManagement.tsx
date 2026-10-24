@@ -1,6 +1,6 @@
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
+import { MailCheckIcon, PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useCallback, useState, useMemo } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -19,6 +19,7 @@ import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import { isRoleActive, lastHelpedDay, roleSince, type Person } from "@/types/person";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
+import PersonEmailConsents from "./PersonEmailConsents";
 import VolunteerFormModal, { type VolunteerFormData } from "./VolunteerFormModal";
 
 interface VolunteersManagementProps {
@@ -49,6 +50,7 @@ export default function VolunteersManagement({
   const [deactivateSuccess, setDeactivateSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingVolunteer, setEditingVolunteer] = useState<Person | null>(null);
+  const [consentPerson, setConsentPerson] = useState<Person | null>(null);
   const [deactivatingId, setDeactivatingId] = useState<string | null>(null);
   const [deactivating, setDeactivating] = useState(false);
   const [deactivateError, setDeactivateError] = useState("");
@@ -172,6 +174,15 @@ export default function VolunteersManagement({
                 <Button
                   size="sm"
                   variant="outline"
+                  onClick={() => setConsentPerson(volunteer)}
+                  title={m.admin_email_consents()}
+                  aria-label={`${m.admin_email_consents()}: ${volunteer.name}`}
+                >
+                  <Icon icon={MailCheckIcon} />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => {
                     setEditingVolunteer(volunteer);
                     setShowForm(true);
@@ -210,11 +221,25 @@ export default function VolunteersManagement({
           },
         }),
       ]),
-    [setEditingVolunteer, setShowForm, setDeactivatingId, setDeactivateError, handleReactivate],
+    [
+      setEditingVolunteer,
+      setShowForm,
+      setDeactivatingId,
+      setDeactivateError,
+      setConsentPerson,
+      handleReactivate,
+    ],
   );
 
   return (
     <>
+      {consentPerson && (
+        <PersonEmailConsents
+          person={consentPerson}
+          authHeaders={authHeaders}
+          onClose={() => setConsentPerson(null)}
+        />
+      )}
       <Card tone="secondary">
         <CardHeader>{m.admin_volunteers_tab()}</CardHeader>
 

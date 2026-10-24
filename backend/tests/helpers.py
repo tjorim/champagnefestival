@@ -242,3 +242,23 @@ async def seed_layout_event(db, room_id: str = "room-1", number: int = 1) -> str
     )
     await db.flush()
     return event_id
+
+
+async def _add_consent(db_session, person_id: str, category_key: str = "new_editions", **overrides):
+    """Insert an email consent row directly: the API only grants through the person's own verified action."""
+    from datetime import UTC, datetime
+
+    from app.models import EmailConsent
+    from app.utils import make_id
+
+    consent = EmailConsent(
+        id=make_id("ecn"),
+        person_id=person_id,
+        category_key=category_key,
+        granted_at=datetime.now(UTC),
+        source="self_service",
+        **overrides,
+    )
+    db_session.add(consent)
+    await db_session.commit()
+    return consent

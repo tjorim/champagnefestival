@@ -19,6 +19,7 @@ from app.dependencies import ListQuery, get_request_id
 from app.dialect_functions import json_array_elements_text
 from app.models import Event, Person, Registration
 from app.schemas import (
+    EmailConsentOut,
     PeopleCountsOut,
     PersonAdminSummaryOut,
     PersonCreate,
@@ -27,7 +28,8 @@ from app.schemas import (
     PersonPaymentSummary,
     PersonUpdate,
 )
-from app.services import payments_service, people_service, settings_service
+from app.services import email_consent_service, payments_service, people_service, settings_service
+from app.services.errors import ServiceError, to_http_exception
 from app.services.people_exports import stream_people_csv
 from app.services.people_listing import (
     PersonSortKey,
@@ -321,3 +323,31 @@ async def anonymise_person(
     """
     person = await people_service.get_person_or_404(db, person_id)
     return await people_service.anonymise_person(db, person, actor=actor, request_id=request_id)
+
+
+@router.get("/{person_id}/email-consents", response_model=list[EmailConsentOut])
+async def list_person_email_consents(person_id: str, db: AsyncSession = Depends(get_db)) -> list[dict]:
+    """Every grant and withdrawal of email consent for this person, newest first (read-only)."""
+    person = await people_service.get_person_or_404(db, person_id)
+    return await email_consent_service.list_person_consents(db, person.id)
+
+
+@router.post("/{person_id}/email-consents/{category_key}/opt-out", response_model=list[EmailConsentOut])
+async def record_email_opt_out(
+    person_id: str,
+    category_key: str,
+    db: AsyncSession = Depends(get_db),
+    actor: str = Depends(get_actor_id),
+    request_id: str | None = Depends(get_request_id),
+) -> list[dict]:
+    """Record that this person no longer wants a category (for example after asking by phone).
+
+    Administrators can only withdraw consent, never grant it; repeating the call changes nothing.
+    """
+    person = await people_service.get_person_or_404(db, person_id)
+    try:
+        return await email_consent_service.record_admin_opt_out(
+            db, person, category_key, actor=actor, request_id=request_id
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
