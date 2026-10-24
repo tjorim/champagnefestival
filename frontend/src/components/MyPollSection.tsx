@@ -84,6 +84,9 @@ export default function MyPollSection({ getAccessToken }: { getAccessToken: () =
               {question.title}
             </h4>
             {question.description && <p className="text-sm mb-2">{question.description}</p>}
+            {question.eventId && (
+              <p className="text-sm text-subtle mb-2">{m.volunteer_poll_event_notice()}</p>
+            )}
             <Closing question={question} />
             <AnswerInput question={question} saving={saving} save={save} />
           </section>

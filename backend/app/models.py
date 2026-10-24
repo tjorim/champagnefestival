@@ -31,7 +31,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
-from app.dialect_functions import json_array_elements
+from app.dialect_functions import json_array_elements, trim_spaces
 from app.translations import BASE_LANGUAGE, resolve_pair, resolve_text
 
 
@@ -126,10 +126,17 @@ class RegistrationAllocation(Base):
 
 class Registration(Base):
     __tablename__ = "registrations"
+    __table_args__ = (
+        Index("ix_registrations_person_checked_event", "person_id", "checked_in", "event_id"),
+        UniqueConstraint("poll_question_id", "person_id", name="uq_registration_poll_person"),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     event_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("events.id", ondelete="RESTRICT"), index=True, nullable=False
+    )
+    poll_question_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("edition_poll_questions.id", ondelete="SET NULL"), index=True
     )
     guest_count: Mapped[int] = mapped_column(Integer)
     order_answers: Mapped[list[RegistrationOrderAnswer]] = relationship(cascade="all, delete-orphan", lazy="selectin")
@@ -864,6 +871,8 @@ class Event(Base):
         cascade="all, delete-orphan", lazy="selectin", order_by="EventOrderQuestion.sort_order, EventOrderQuestion.id"
     )
 
+    volunteers_only: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    members_only: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     registrations_close_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -1058,6 +1067,9 @@ class Person(Base):
     first; no ``ended_on`` means in progress, a null ``started_on`` means unknown). See
     ``app.services.role_history``."""
 
+    inactivity_exempt: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    inactivity_exempt_note: Mapped[str] = mapped_column(Text, default="", server_default="")
+
     national_register_number: Mapped[str | None] = mapped_column(String(20), unique=True, nullable=True)
     """Belgium's National Register Number (NISS) — fixed and lifelong; this is
     what would be used to re-identify the person later. Volunteer-only (see
@@ -1086,14 +1098,6 @@ class Person(Base):
     anonymised: Mapped[bool] = mapped_column(Boolean, default=False)
     """Set when the record has been anonymised (``people_service.anonymise_person``); such a person
     counts as inactive in every role and is not offered for anonymisation again."""
-
-    marketing_opt_in: Mapped[bool] = mapped_column(Boolean, default=False)
-    """Explicit, unticked-by-default consent to be contacted about future
-    editions — a separate legal basis from the operational purposes covering
-    the rest of this record (see docs/decisions/934-data-retention-and-erasure.md).
-    Never set true by anything other than the person's own action.
-    """
-    marketing_opt_in_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
@@ -1138,6 +1142,7 @@ class EditionPollQuestion(Base):
 
     __tablename__ = "edition_poll_questions"
     __table_args__ = (
+        CheckConstraint("event_id IS NULL OR kind = 'yes_no'", name="ck_poll_event_attendance"),
         CheckConstraint(
             "kind IN (" + ", ".join(f"'{kind}'" for kind in POLL_QUESTION_KINDS) + ")",
             name="ck_edition_poll_questions_kind",
@@ -1150,6 +1155,7 @@ class EditionPollQuestion(Base):
     edition_id: Mapped[str] = mapped_column(
         String(100), ForeignKey("editions.id", ondelete="CASCADE"), index=True, nullable=False
     )
+    event_id: Mapped[str | None] = mapped_column(String(64), ForeignKey("events.id", ondelete="RESTRICT"), unique=True)
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     title_nl: Mapped[str] = mapped_column(String(200), nullable=False)
     title_fr: Mapped[str | None] = mapped_column(String(200), nullable=True)
@@ -1436,6 +1442,10 @@ class AppSettings(Base):
     __tablename__ = "app_settings"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    member_limit: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    member_inactivity_months: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    stamp_card_type_id: Mapped[str | None] = mapped_column(ForeignKey("stamp_card_types.id", ondelete="RESTRICT"))
     maintenance_mode: Mapped[bool] = mapped_column(Boolean, default=False)
     public_email: Mapped[str] = mapped_column(String(320), default="nancy.cattrysse@telenet.be")
     public_phone: Mapped[str] = mapped_column(String(30), default="+32 478 48 01 77")
@@ -1565,10 +1575,15 @@ class ComposedMessage(Base):
     body_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
     level: Mapped[str] = mapped_column(String(10), default="info")
     channels: Mapped[list[str]] = mapped_column(JSON, default=list)
-    """Values from ``{"announcement", "push"}`` — at least one, enforced at
+    """Values from ``{"announcement", "push", "email"}`` — at least one, enforced at
     the schema layer (a DB-level check on JSON array membership isn't worth
     the complexity here)."""
     link_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    email_category_key: Mapped[str | None] = mapped_column(
+        ForeignKey("email_categories.key", ondelete="RESTRICT"), nullable=True
+    )
+    """Audience of the ``email`` channel (#1407): the people with consent for this category. Required
+    exactly when ``email`` is a channel."""
     state: Mapped[str] = mapped_column(String(20), default="draft", index=True)
     scheduled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     announcement_id: Mapped[str | None] = mapped_column(
@@ -1579,10 +1594,29 @@ class ComposedMessage(Base):
     ``draft``/``scheduled``, immutable once set (the transition to ``sent``
     resolves and freezes this in the same transaction). Resolved fresh at
     send time, not compose time."""
+    email_audience_snapshot: Mapped[list[str] | None] = mapped_column(JSON, nullable=True)
+    """``Person`` ids mailed at send time (#1407), frozen like ``push_audience_snapshot``. Each
+    recipient is checked again just before their mail is submitted."""
     sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sent_by: Mapped[str | None] = mapped_column(String(255), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+
+class EmailSuppression(Base):
+    """An address that member mail must never be sent to again (#1407).
+
+    Only a hash of the normalised address is kept: enough to refuse the address, and nothing to erase
+    with a person. Filled from the sending service's verified bounce and complaint feedback once a
+    service is chosen; an entry is never removed automatically.
+    """
+
+    __tablename__ = "email_suppressions"
+    __table_args__ = (CheckConstraint("reason IN ('hard_bounce', 'complaint')", name="ck_email_suppressions_reason"),)
+
+    address_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    reason: Mapped[str] = mapped_column(String(20))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
 
 
 class Policy(Base):
@@ -1844,3 +1878,159 @@ class PollDeletionNotification(Base):
     recipient: Mapped[str] = mapped_column(String(320), nullable=False)
     subject: Mapped[str] = mapped_column(String(200), nullable=False)
     body: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+Index(
+    "uq_people_current_member_email",
+    func.lower(trim_spaces(Person.email)),
+    unique=True,
+    postgresql_where=text(
+        "NOT anonymised AND CAST(roles AS text) LIKE '%\"member\"%' AND retired_roles ->> 'member' IS NULL AND trim(email) <> ''"
+    ),
+    sqlite_where=text(
+        "NOT anonymised AND CAST(roles AS text) LIKE '%\"member\"%' AND json_extract(retired_roles, '$.member') IS NULL AND trim(email) <> ''"
+    ),
+)
+
+
+class StampCardType(Base):
+    __tablename__ = "stamp_card_types"
+    __table_args__ = (
+        CheckConstraint("box_count > 0", name="ck_stamp_card_type_boxes"),
+        CheckConstraint(
+            "length(trim(name_nl)) > 0 AND length(trim(reward_label_nl)) > 0", name="ck_stamp_card_type_nl"
+        ),
+    )
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name_nl: Mapped[str] = mapped_column(String(200))
+    name_fr: Mapped[str | None] = mapped_column(String(200))
+    name_en: Mapped[str | None] = mapped_column(String(200))
+    box_count: Mapped[int] = mapped_column(Integer)
+    reward_label_nl: Mapped[str] = mapped_column(String(200))
+    reward_label_fr: Mapped[str | None] = mapped_column(String(200))
+    reward_label_en: Mapped[str | None] = mapped_column(String(200))
+    active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class StampCard(Base):
+    __tablename__ = "stamp_cards"
+    __table_args__ = (CheckConstraint("box_count > 0", name="ck_stamp_card_boxes"),)
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    person_id: Mapped[str] = mapped_column(ForeignKey("people.id", ondelete="RESTRICT"), index=True)
+    type_id: Mapped[str] = mapped_column(ForeignKey("stamp_card_types.id", ondelete="RESTRICT"))
+    box_count: Mapped[int] = mapped_column(Integer)
+    reward_label_nl: Mapped[str] = mapped_column(String(200))
+    reward_label_fr: Mapped[str | None] = mapped_column(String(200))
+    reward_label_en: Mapped[str | None] = mapped_column(String(200))
+    opened_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Stamp(Base):
+    __tablename__ = "stamps"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    card_id: Mapped[str] = mapped_column(ForeignKey("stamp_cards.id", ondelete="RESTRICT"), index=True)
+    registration_id: Mapped[str] = mapped_column(ForeignKey("registrations.id", ondelete="RESTRICT"), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+
+
+class StampCardReward(Base):
+    __tablename__ = "stamp_card_rewards"
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    card_id: Mapped[str] = mapped_column(ForeignKey("stamp_cards.id", ondelete="RESTRICT"), unique=True)
+    reward_label_nl: Mapped[str] = mapped_column(String(200))
+    reward_label_fr: Mapped[str | None] = mapped_column(String(200))
+    reward_label_en: Mapped[str | None] = mapped_column(String(200))
+    earned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    handed_out_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    handed_out_by: Mapped[str | None] = mapped_column(String(200))
+
+
+class EmailCategory(Base):
+    """A kind of email a person can consent to receive (#1408).
+
+    The key is the stable identity consent records point at. ``allowed_roles`` lists the roles that
+    may use the category (empty means everyone); a role is checked when consent is given and again at
+    send time. ``automatic`` marks categories whose mail is triggered by application code; it is set
+    only for the seeded defaults, so editing a category never adds a sending capability.
+    """
+
+    __tablename__ = "email_categories"
+    __table_args__ = (
+        CheckConstraint("(length(trim(name_nl)) > 0) IS TRUE", name="ck_email_categories_name_nl"),
+        CheckConstraint(_optional_dutch_check("description"), name="ck_email_categories_description_nl"),
+    )
+
+    key: Mapped[str] = mapped_column(String(50), primary_key=True)
+    name_nl: Mapped[str] = mapped_column(String(100))
+    name_fr: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    name_en: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    description_nl: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    description_fr: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    description_en: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    allowed_roles: Mapped[list[str]] = mapped_column(JSON, default=list)
+    automatic: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow, onupdate=_utcnow)
+
+    def localized_name(self, locale: str | None) -> str:
+        return resolve_text({"nl": self.name_nl, "fr": self.name_fr, "en": self.name_en}, locale)
+
+    def localized_description(self, locale: str | None) -> str | None:
+        return (
+            resolve_text({"nl": self.description_nl, "fr": self.description_fr, "en": self.description_en}, locale)
+            or None
+        )
+
+
+class EmailConsent(Base):
+    """One grant of consent by a person for an email category, and how it ended (#1408).
+
+    A grant is written only by the person themselves (the signed-in preferences screen, or the
+    confirmation link of the registration form). Withdrawing sets ``revoked_at``; a new grant after
+    that is a new row, so the history of grants and withdrawals survives. At most one grant per
+    person and category is open at a time.
+    """
+
+    __tablename__ = "email_consents"
+    __table_args__ = (
+        CheckConstraint("(revoked_at IS NULL) = (revoked_source IS NULL)", name="ck_email_consents_revocation"),
+        Index(
+            "uq_email_consents_open",
+            "person_id",
+            "category_key",
+            unique=True,
+            postgresql_where=text("revoked_at IS NULL"),
+            sqlite_where=text("revoked_at IS NULL"),
+        ),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    person_id: Mapped[str] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"), index=True)
+    category_key: Mapped[str] = mapped_column(ForeignKey("email_categories.key", ondelete="RESTRICT"), index=True)
+    granted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)
+    source: Mapped[str] = mapped_column(String(30))
+    """``self_service`` (preferences screen) or ``registration_form`` (confirmed through the emailed link)."""
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_source: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    """``self_service``, ``admin`` (an administrator recorded an opt-out) or ``merged`` (superseded by the
+    surviving person's own open grant when two people were merged)."""
+
+
+class EmailConsentConfirmation(Base):
+    """A pending, emailed request to activate consent for an address nobody has verified yet (#1408).
+
+    Created when the registration form's updates option is ticked without a verified email for the
+    person. Only the token hash is stored; opening the link activates the consent and removes the row.
+    """
+
+    __tablename__ = "email_consent_confirmations"
+    __table_args__ = (UniqueConstraint("person_id", "category_key", name="uq_email_consent_confirmation"),)
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    person_id: Mapped[str] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"), index=True)
+    category_key: Mapped[str] = mapped_column(ForeignKey("email_categories.key", ondelete="CASCADE"))
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_utcnow)

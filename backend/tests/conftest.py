@@ -17,9 +17,10 @@ from app import sqlite_compat
 from app.auth import get_actor_id, get_current_claims, require_admin, require_volunteer
 from app.database import Base, get_db
 from app.main import app
-from app.models import EventCategory, ProductCategory
+from app.models import EmailCategory, EventCategory, ProductCategory
 from app.operational_search_schema import OPERATIONAL_SEARCH_SCHEMA_STATEMENTS, OPERATIONAL_SEARCH_SQLITE_STATEMENTS
 from app.payment_ledger_schema import PAYMENT_LEDGER_SCHEMA_STATEMENTS
+from app.services.email_categories_service import DEFAULT_EMAIL_CATEGORIES
 from app.services.public_render_cache import public_render_cache
 from app.services.users_service import get_or_create_user
 from app.visitor_session import get_current_user, get_current_user_with_claims
@@ -162,6 +163,8 @@ async def db_session(engine):
             await session.merge(EventCategory(key=key, label_nl=label))
         for key, label in DEFAULT_TEST_PRODUCT_CATEGORIES.items():
             await session.merge(ProductCategory(key=key, label_nl=label))
+        for category in DEFAULT_EMAIL_CATEGORIES:
+            await session.merge(EmailCategory(**category))
         await session.commit()
         yield session
     async with engine.begin() as conn:

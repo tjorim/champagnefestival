@@ -30,6 +30,8 @@ from app.routers import (
     contact,
     edition_artwork,
     editions,
+    email_categories,
+    email_consent,
     event_categories,
     events,
     faq,
@@ -38,6 +40,7 @@ from app.routers import (
     layouts,
     live,
     me,
+    member_mail,
     members,
     my_organizations,
     organization_logos,
@@ -55,6 +58,7 @@ from app.routers import (
     rooms,
     signage,
     signage_video,
+    stamp_cards,
     table_types,
     tables,
     venue_plan,
@@ -227,9 +231,13 @@ app.include_router(signage.assets_router)
 app.include_router(auth.router)
 app.include_router(audit.router)
 app.include_router(members.router)
+app.include_router(email_categories.router)
+app.include_router(email_consent.router)
+app.include_router(member_mail.router)
 app.include_router(event_categories.router)
 app.include_router(product_categories.router)
 app.include_router(events.router)
+app.include_router(stamp_cards.router)
 app.include_router(check_in.router)
 app.include_router(composer.router)
 app.include_router(contact.router)

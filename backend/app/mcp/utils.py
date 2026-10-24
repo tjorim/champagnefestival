@@ -155,6 +155,8 @@ def event_dict(event: Any, locale: str | None = None) -> dict:
         "start_time": event.start_time,
         "end_time": event.end_time,
         "category": event.category,
+        "members_only": event.members_only,
+        "volunteers_only": event.volunteers_only,
         "registration_required": event.registration_required,
         "active": event.active,
     }

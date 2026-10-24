@@ -110,3 +110,15 @@ describe("codeFromErrorBody", () => {
     expect(codeFromErrorBody(null)).toBeUndefined();
   });
 });
+
+it.each(["nl", "fr", "en"] as const)("translates membership gates in %s", (locale) => {
+  setLocale(locale, { reload: false });
+  for (const code of ["member_sign_in_required", "membership_required"]) {
+    const message = apiErrorMessage(
+      new ApiError("English diagnostic", { status: 403, code }),
+      "Fallback",
+    );
+    expect(message).not.toBe("English diagnostic");
+    expect(message).not.toBe("Fallback");
+  }
+});

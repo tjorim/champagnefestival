@@ -1,9 +1,11 @@
+import type { StampProgress } from "@/utils/stampCards";
 import { apiErrorFromResponse, apiErrorMessage } from "@/utils/apiErrors";
 import { parseOrderAnswers, orderAnswersBody, type OrderAnswer } from "@/utils/orderQuestions";
 import { m } from "@/paraglide/messages";
 import type { PaymentStatus, RegistrationFormData, RegistrationStatus } from "@/types/registration";
 
 export interface CheckInData {
+  stampProgress?: StampProgress | null;
   id: string;
   name: string;
   eventId: string;
@@ -47,6 +49,7 @@ interface CheckInResponseRegistration {
 }
 
 interface CheckInMutationResponse {
+  stamp_progress?: StampProgress | null;
   registration?: CheckInResponseRegistration;
   already_checked_in?: boolean;
 }
@@ -125,7 +128,10 @@ export async function fetchCheckInRegistration(
   }
 
   if (!response.ok) {
-    throw new CheckInError("request_failed", m.checkin_error());
+    throw new CheckInError(
+      "request_failed",
+      apiErrorMessage(await apiErrorFromResponse(response, m.checkin_error()), m.checkin_error()),
+    );
   }
 
   return mapCheckInData((await response.json()) as CheckInResponseRegistration);
@@ -146,12 +152,18 @@ export async function submitCheckIn(
   }
 
   if (!response.ok) {
-    throw new CheckInError("request_failed", m.checkin_error());
+    throw new CheckInError(
+      "request_failed",
+      apiErrorMessage(await apiErrorFromResponse(response, m.checkin_error()), m.checkin_error()),
+    );
   }
 
   const data = (await response.json()) as CheckInMutationResponse;
   return {
-    registration: mapCheckInData(data.registration ?? {}),
+    registration: {
+      ...mapCheckInData(data.registration ?? {}),
+      stampProgress: data.stamp_progress,
+    },
     alreadyCheckedIn: data.already_checked_in ?? false,
   };
 }
@@ -501,7 +513,7 @@ export async function submitRegistration(
       })),
       notes: payload.notes,
       ...(payload.orderAnswers ? { order_answers: orderAnswersBody(payload.orderAnswers) } : {}),
-      marketing_opt_in: payload.marketingOptIn,
+      new_editions_opt_in: payload.newEditionsOptIn,
       honeypot: payload.honeypot ?? "",
       form_start_time: payload.formStartTime,
     }),
@@ -548,9 +560,11 @@ export async function submitWaitlistEntry(
     }),
   });
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
     throw new RegistrationSubmitError(
-      (data as { detail?: string }).detail ?? m.registration_waitlist_error(),
+      apiErrorMessage(
+        await apiErrorFromResponse(response, m.registration_waitlist_error()),
+        m.registration_waitlist_error(),
+      ),
     );
   }
 }

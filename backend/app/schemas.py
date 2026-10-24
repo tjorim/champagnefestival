@@ -23,6 +23,8 @@ from app.schema_types import (
     GuestCount,
     HexColor,
     MarkdownSource,
+    MemberInactivityMonths,
+    MemberLimit,
     MonthlyVisits,
     NonEmptyText,
     NonEmptyText50,
@@ -34,6 +36,7 @@ from app.schema_types import (
     ProductPrice,
     ResourceId,
     ResourceKey,
+    RoleKey,
     RoomDimension,
     SortOrder,
     StockQuantity,
@@ -190,11 +193,11 @@ class PersonOut(BaseModel):
     role_history: dict[str, list[RoleStretchOut]] = {}
     national_register_number: str | None
     eid_document_number: str | None
+    inactivity_exempt: bool = False
+    inactivity_exempt_note: str = ""
     visits_per_month: int | None
     notes: str
     anonymised: bool
-    marketing_opt_in: bool
-    marketing_opt_in_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -222,11 +225,11 @@ class PersonAdminSummaryOut(BaseModel):
     roles: list[str]
     retired_roles: dict[str, str] = {}
     role_history: dict[str, list[RoleStretchOut]] = {}
+    inactivity_exempt: bool = False
+    inactivity_exempt_note: str = ""
     visits_per_month: int | None
     notes: str
     anonymised: bool
-    marketing_opt_in: bool
-    marketing_opt_in_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
@@ -248,6 +251,9 @@ class PersonPaymentSummary(BaseModel):
 
 
 class PersonListItemOut(PersonAdminSummaryOut):
+    reward_due: bool = False
+    last_attended: dt_date | None = None
+    inactivity_highlight: bool = False
     registration_count: int
 
 
@@ -339,6 +345,120 @@ class CategoryOut(BaseModel):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class EmailCategoryTexts(RequestModel):
+    """An email category's name and description per language (#1408): Dutch is required for the name
+    (and for the description once it has any text), French and English are optional translations, and
+    recipients fall back to Dutch. A blank text is stored as `None`."""
+
+    name_nl: Text100 | None = None
+    name_fr: Text100 | None = None
+    name_en: Text100 | None = None
+    description_nl: Text500 | None = None
+    description_fr: Text500 | None = None
+    description_en: Text500 | None = None
+
+    @field_validator(
+        "name_nl", "name_fr", "name_en", "description_nl", "description_fr", "description_en", mode="before"
+    )
+    @classmethod
+    def normalize_text(cls, value: str | None) -> str | None:
+        return value.strip() or None if isinstance(value, str) else value
+
+    def validate_dutch(self) -> Self:
+        if not self.name_nl:
+            raise ValueError("An email category requires a non-empty Dutch name.")
+        if any((self.description_fr, self.description_en)) and not self.description_nl:
+            raise ValueError("A description requires non-empty Dutch text.")
+        return self
+
+
+class EmailCategoryCreate(EmailCategoryTexts):
+    key: str = Field(
+        pattern=CATEGORY_KEY_PATTERN,
+        description="Stable identifier consent records point at: lowercase letters, digits, `-` and `_`. Cannot be changed.",
+    )
+    allowed_roles: list[RoleKey] = Field(
+        default_factory=list,
+        max_length=10,
+        description="Roles that may use the category (any one of them, not retired); empty means everyone.",
+    )
+    sort_order: SortOrder = 0
+
+    @model_validator(mode="after")
+    def check_texts(self) -> Self:
+        return self.validate_dutch()
+
+
+class EmailCategoryUpdate(EmailCategoryTexts):
+    """Partial update; the key is immutable and `automatic` is not editable."""
+
+    allowed_roles: list[RoleKey] | None = Field(default=None, max_length=10)
+    sort_order: SortOrder | None = None
+
+
+class EmailCategoryOut(BaseModel):
+    key: str
+    name: str
+    """The name resolved for the requested `locale` (Dutch when none)."""
+    description: str | None
+    name_nl: str
+    name_fr: str | None
+    name_en: str | None
+    description_nl: str | None
+    description_fr: str | None
+    description_en: str | None
+    allowed_roles: list[str]
+    automatic: bool
+    """Sent by application code when something happens (not composed by an administrator)."""
+    sort_order: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class EmailPreferenceOut(BaseModel):
+    key: str
+    name: str
+    description: str | None
+    automatic: bool
+    consented: bool
+    granted_at: datetime | None
+
+
+class EmailPreferencesOut(BaseModel):
+    email: str | None
+    """The verified address the preferences are for; `None` when the sign-in has no verified address."""
+    categories: list[EmailPreferenceOut]
+
+
+class EmailPreferencesUpdate(RequestModel):
+    consents: dict[ResourceKey, bool] = Field(
+        min_length=1,
+        max_length=100,
+        description="Category key to the wanted state; categories that are not listed stay unchanged.",
+    )
+
+
+class EmailConsentConfirm(RequestModel):
+    token: NonEmptyText200
+    locale: Literal["nl", "fr", "en"] | None = None
+
+
+class EmailConsentConfirmedOut(BaseModel):
+    category_key: str
+    category_name: str
+    """The category name resolved for the requested `locale` (Dutch when none)."""
+
+
+class EmailConsentOut(BaseModel):
+    id: str
+    category_key: str
+    category_name: str
+    source: str
+    granted_at: datetime
+    revoked_at: datetime | None
+    revoked_source: str | None
 
 
 class PollQuestionTexts(RequestModel):
@@ -478,6 +598,8 @@ class EventCreate(EventTextFields):
     start_time: ClockTime
     end_time: ClockTime | None = None
     category: NonEmptyText50
+    volunteers_only: bool = False
+    members_only: bool = False
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
@@ -494,6 +616,8 @@ class EventUpdate(EventTextFields):
     start_time: ClockTime | None = None
     end_time: ClockTime | None = None
     category: NonEmptyText50 | None = None
+    volunteers_only: bool | None = None
+    members_only: bool | None = None
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
@@ -525,6 +649,8 @@ class EventOut(EventTextOut):
     start_time: str
     end_time: str | None
     category: str
+    volunteers_only: bool = False
+    members_only: bool = False
     registration_required: bool
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None
@@ -549,6 +675,8 @@ class EventPublicOut(EventTextOut):
     start_time: str
     end_time: str | None
     category: str
+    volunteers_only: bool = False
+    members_only: bool = False
     registration_required: bool
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None
@@ -772,11 +900,13 @@ class RegistrationCreate(RegistrationNotesRequest):
     guest_count: GuestCount
     order_items: list[OrderItemRequest] = Field(default_factory=list, max_length=50)
     notes: Text4000 = ""
-    marketing_opt_in: bool = Field(
+    new_editions_opt_in: bool = Field(
         default=False,
         description=(
-            "Explicit, unticked-by-default consent to be contacted about future editions — "
-            "a separate legal basis from the operational registration purpose. Never implied."
+            "Explicit, unticked-by-default wish to be mailed when registrations open for a new edition — "
+            "a separate legal basis from the operational registration purpose. It only becomes consent "
+            "(category `new_editions`) once the email address is verified: directly for a signed-in person "
+            "using their own verified address, otherwise through an emailed confirmation link. Never implied."
         ),
     )
     honeypot: str = Field(default="", exclude=True)
@@ -817,7 +947,16 @@ class RegistrationVolunteerAssignment(RequestModel):
     volunteer_id: NonEmptyText
 
 
+class StampProgress(BaseModel):
+    card_id: str
+    stamps: int
+    box_count: int
+    reward_earned: bool
+
+
 class RegistrationOut(BaseModel):
+    poll_question_id: str | None = None
+    stamp_progress: StampProgress | None = None
     order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)
@@ -1201,6 +1340,7 @@ def _timezone_required(value: datetime | None) -> datetime | None:
 
 
 class PollQuestionCreate(PollQuestionTexts):
+    event_id: ResourceId | None = None
     edition_id: ResourceKey
     kind: PollQuestionKind
     closes_at: datetime | None = None
@@ -1213,6 +1353,7 @@ class PollQuestionCreate(PollQuestionTexts):
 
 
 class PollQuestionUpdate(PollQuestionTexts):
+    event_id: ResourceId | None = None
     """Partial update: an empty string clears a translation; `closes_at` sets the closing time (a past time
     closes the question now) and an explicit `null` reopens it. The kind cannot change."""
 
@@ -1295,6 +1436,7 @@ class PollOptionOut(BaseModel):
 
 
 class PollQuestionOut(BaseModel):
+    event_id: str | None = None
     """A question as the admin sees it: every translation, the closing state, its options (meals/single choice) and what
     volunteers answered so far."""
 
@@ -1467,6 +1609,7 @@ class VolunteerPollOptionOut(BaseModel):
 
 
 class VolunteerPollQuestionOut(BaseModel):
+    event_id: str | None = None
     id: str
     kind: PollQuestionKind
     title: str
@@ -1534,6 +1677,7 @@ class CheckInRequest(RequestModel):
 
 
 class CheckInOut(BaseModel):
+    stamp_progress: StampProgress | None = None
     registration: CheckInGuestOut
     already_checked_in: bool
 
@@ -1563,6 +1707,8 @@ class PersonCreate(RequestModel):
     eid_document_number: Text50 | None = None
     visits_per_month: MonthlyVisits | None = None
     notes: Text2000 = ""
+    inactivity_exempt: bool = False
+    inactivity_exempt_note: Text2000 = ""
     member_since: dt_date | None = None
     """Member endpoints only: the day membership started (defaults to today for a new member)."""
 
@@ -1578,12 +1724,10 @@ class PersonUpdate(RequestModel):
     eid_document_number: Text50 | None = None
     visits_per_month: MonthlyVisits | None = None
     notes: Text2000 | None = None
+    inactivity_exempt: bool | None = None
+    inactivity_exempt_note: Text2000 | None = None
     member_since: dt_date | None = None
     """Member endpoints only: the day the current stretch of membership started."""
-    marketing_opt_in: bool | None = None
-    """Admin-initiated correction only (e.g. processing an opt-out request
-    received through the contact form) — the registration form is the actual
-    consent channel; this is not exposed there."""
 
 
 # ---------------------------------------------------------------------------
@@ -2476,6 +2620,10 @@ class IntegrationClientCreatedOut(IntegrationClientOut):
 
 
 class AppSettingsUpdate(RequestModel):
+    member_limit: MemberLimit | None = None
+    member_inactivity_months: MemberInactivityMonths | None = None
+
+    stamp_card_type_id: ResourceId | None = None
     maintenance_mode: bool | None = None
     public_email: EmailStr | Literal[""] | None = None
     public_phone: Text30 | None = None
@@ -2509,6 +2657,10 @@ class AppSettingsUpdate(RequestModel):
 
 
 class AppSettingsOut(BaseModel):
+    member_limit: int | None = None
+    member_inactivity_months: int | None = None
+
+    stamp_card_type_id: str | None = None
     maintenance_mode: bool
     public_email: str
     public_phone: str
@@ -2852,7 +3004,9 @@ class PushTestRequest(RequestModel):
 # Central composer (#942)
 # ---------------------------------------------------------------------------
 
-ComposedMessageChannel = Literal["announcement", "push"]
+ComposedMessageChannel = Literal["announcement", "push", "email"]
+ComposedMessageToolChannel = Literal["announcement", "push"]
+"""Channels the MCP tools offer: member mail (#1407) is composed and sent from the admin only."""
 ComposedMessageState = Literal["draft", "scheduled", "sent"]
 
 
@@ -2873,6 +3027,8 @@ class _ComposedMessageFields[
     level: LevelT
     channels: ChannelsT
     link_url: Text1000 | None = None
+    email_category_key: ResourceKey | None = None
+    """Audience of the ``email`` channel (#1407); set exactly when ``email`` is a channel."""
 
     _safe_link_url = field_validator("link_url")(_validate_safe_announcement_url)
 
@@ -2908,6 +3064,8 @@ class ComposedMessageWrite(_ComposedMessageFields[AnnouncementLevel, list[Compos
     def validate_composed_message(self):
         if not self.title_nl or not self.body_nl:
             raise ValueError("a composed message needs a Dutch title and a Dutch body")
+        if ("email" in self.channels) != (self.email_category_key is not None):
+            raise ValueError("email_category_key is required for the email channel, and only valid with it")
         if "push" in self.channels:
             for locale in LOCALES:
                 text = pick_locale_text(self, locale)
@@ -2936,10 +3094,12 @@ class ComposedMessageOut(BaseModel):
     level: AnnouncementLevel
     channels: list[str]
     link_url: str | None
+    email_category_key: str | None
     state: ComposedMessageState
     scheduled_at: datetime | None
     announcement_id: str | None
     push_audience_snapshot: list[str] | None
+    email_audience_snapshot: list[str] | None
     sent_at: datetime | None
     sent_by: str | None
     created_at: datetime
@@ -2955,14 +3115,34 @@ class ComposedMessageOut(BaseModel):
     zero until ``state == "sent"``. Never exposes a subscription's endpoint
     or keys, only counts (acceptance criterion: "per-channel results are
     visible without exposing secrets")."""
+    estimated_email_audience: int
+    """People who would be mailed now for ``email_category_key`` (consent, role, address, not
+    suppressed); 0 without the email channel. An estimate: each recipient is checked again when
+    their mail is submitted."""
+    email_accepted_count: int
+    email_failed_count: int
+    email_skipped_count: int
+    email_pending_count: int
+    """Counts of this message's email jobs, zero until ``state == "sent"``. *Accepted* means the
+    sending service took the mail, not that it reached an inbox; a mail whose outcome was uncertain
+    counts as failed and is never submitted again. *Skipped* recipients were no longer eligible when
+    their turn came (consent withdrawn, role retired, address suppressed)."""
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class MemberMailUnsubscribeCategoryOut(BaseModel):
+    category_key: str
+    category_name: str
 
 
 class ComposedMessageScheduleRequest(RequestModel):
     scheduled_at: datetime | None = None
     """``None`` sends as soon as the worker next polls (#947) — "publish now"
     is "schedule for right now", not a separate code path."""
+    expected_email_audience: int | None = Field(default=None, ge=0)
+    """The ``estimated_email_audience`` the administrator confirmed (#1407). Required for the email
+    channel; a different current count is refused so nobody mails a list they did not see."""
 
     @field_validator("scheduled_at")
     @classmethod
@@ -3010,3 +3190,62 @@ class OrganizationChangeOut(BaseModel):
     superseded_fields: list[str]
     reason: str | None
     created_at: datetime
+
+
+class StampCardTypeWrite(RequestModel):
+    name_nl: NonEmptyText200
+    name_fr: Text200 | None = None
+    name_en: Text200 | None = None
+    box_count: PositiveQuantity
+    reward_label_nl: NonEmptyText200
+    reward_label_fr: Text200 | None = None
+    reward_label_en: Text200 | None = None
+    active: bool = True
+
+    @field_validator("name_nl", "reward_label_nl")
+    @classmethod
+    def require_dutch_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Dutch text is required")
+        return value
+
+
+class StampRewardUpdate(RequestModel):
+    handed_out: bool
+
+
+class StampCardTypeOut(StampCardTypeWrite):
+    id: str
+
+
+class StampOut(BaseModel):
+    id: str
+    card_id: str
+    registration_id: str
+    created_at: datetime
+
+
+class StampRewardOut(BaseModel):
+    id: str
+    card_id: str
+    reward_label_nl: str
+    reward_label_fr: str | None
+    reward_label_en: str | None
+    earned_at: datetime
+    handed_out_at: datetime | None
+    handed_out_by: str | None
+
+
+class StampCardOut(BaseModel):
+    id: str
+    person_id: str
+    type_id: str
+    box_count: int
+    reward_label_nl: str
+    reward_label_fr: str | None
+    reward_label_en: str | None
+    opened_at: datetime
+    completed_at: datetime | None
+    stamps: list[StampOut]
+    reward: StampRewardOut | None

@@ -36,6 +36,7 @@ from fastmcp.tools.base import Tool
 from pydantic import Field
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
+from app.dependencies import SortDirection
 from app.mcp import check_in as mcp_check_in
 from app.mcp import delivery as mcp_delivery
 from app.mcp import orders as mcp_orders
@@ -83,7 +84,7 @@ from app.schemas import (
     X_POSITION_DESCRIPTION,
     Y_POSITION_DESCRIPTION,
     AnnouncementLevel,
-    ComposedMessageChannel,
+    ComposedMessageToolChannel,
     DietaryTag,
     EditionType,
     FaqLocale,
@@ -100,6 +101,7 @@ from app.schemas import (
     TableTypeCreate,
 )
 from app.services.integration_clients_service import DEFAULT_RATE_LIMIT_PER_MINUTE
+from app.services.people_listing import PersonSortKey
 from app.signage_schemas import SlideKind as SignageSlideKind
 from app.translations import Language
 from app.version import APP_VERSION
@@ -1152,6 +1154,8 @@ class ChampagneFestivalMcpBackend:
         description_fr: str | None = None,
         description_en: str | None = None,
         end_time: str | None = None,
+        volunteers_only: bool = False,
+        members_only: bool = False,
         registration_required: bool = False,
         registrations_open_from: datetime | None = None,
         registrations_close_at: datetime | None = None,
@@ -1184,6 +1188,8 @@ class ChampagneFestivalMcpBackend:
             description_fr=description_fr,
             description_en=description_en,
             end_time=end_time,
+            volunteers_only=volunteers_only,
+            members_only=members_only,
             registration_required=registration_required,
             registrations_open_from=registrations_open_from,
             registrations_close_at=registrations_close_at,
@@ -1209,6 +1215,8 @@ class ChampagneFestivalMcpBackend:
         start_time: str | None = None,
         end_time: str | None = None,
         category: str | None = None,
+        volunteers_only: bool | None = None,
+        members_only: bool | None = None,
         registration_required: bool | None = None,
         registrations_open_from: datetime | None = None,
         registrations_close_at: datetime | None = None,
@@ -1244,6 +1252,8 @@ class ChampagneFestivalMcpBackend:
             start_time=start_time,
             end_time=end_time,
             category=category,
+            volunteers_only=volunteers_only,
+            members_only=members_only,
             registration_required=registration_required,
             registrations_open_from=registrations_open_from,
             registrations_close_at=registrations_close_at,
@@ -1537,6 +1547,7 @@ class ChampagneFestivalMcpBackend:
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
+        event_id: str | None = None,
         closes_at: datetime | None = None,
     ) -> dict:
         """Add a question to an edition's volunteer poll, after the existing ones. ``kind`` supports
@@ -1545,12 +1556,13 @@ class ChampagneFestivalMcpBackend:
         example "Will you join the dinner on Sunday?"; volunteers answer yes with a number of people, or no) or
         ``meals`` (add options afterwards with ``create_poll_option``). The Dutch title is required; French and
         English are optional translations. ``closes_at`` (with a timezone) is when volunteers can no longer
-        change their answer. Requires the ``admin`` role."""
+        change their answer. An optional ``event_id`` links an attendance question to a volunteer-only event; yes answers create registrations. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.create_poll_question(
             self.session_factory,
             self._actor(),
             edition_id=edition_id,
+            event_id=event_id,
             kind=kind,
             title_nl=title_nl,
             title_fr=title_fr,
@@ -1570,13 +1582,15 @@ class ChampagneFestivalMcpBackend:
         description_nl: str | None = None,
         description_fr: str | None = None,
         description_en: str | None = None,
+        event_id: str | None = None,
         closes_at: datetime | None = None,
+        clear_event: bool = False,
         reopen: bool = False,
     ) -> dict:
         """Partially update a poll question; omitted fields are left unchanged and an empty string clears a
         translation (the Dutch title cannot be cleared). ``closes_at`` sets when volunteers can no longer change
         their answer (a past time closes the question now); ``reopen=true`` clears it. The kind cannot change.
-        Requires the ``admin`` role."""
+        An optional ``event_id`` links an attendance question to a volunteer-only event; yes answers create registrations. Requires the ``admin`` role."""
         self._require_admin()
         return await mcp_admin_poll.update_poll_question(
             self.session_factory,
@@ -1589,6 +1603,8 @@ class ChampagneFestivalMcpBackend:
             description_fr=description_fr,
             description_en=description_en,
             closes_at=closes_at,
+            event_id=event_id,
+            clear_event=clear_event,
             reopen=reopen,
         )
 
@@ -1938,7 +1954,7 @@ class ChampagneFestivalMcpBackend:
 
     async def create_composed_message(
         self,
-        channels: list[ComposedMessageChannel],
+        channels: list[ComposedMessageToolChannel],
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
@@ -1972,7 +1988,7 @@ class ChampagneFestivalMcpBackend:
     async def update_composed_message(
         self,
         message_id: str,
-        channels: list[ComposedMessageChannel] | None = None,
+        channels: list[ComposedMessageToolChannel] | None = None,
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
@@ -2319,11 +2335,86 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_waitlist.delete_waitlist_entry(self.session_factory, entry_id)
 
+    async def list_stamp_card_types(self) -> list[dict]:
+        """List stamp card types. Requires admin."""
+        self._require_admin()
+        from app.services import stamp_cards_service as service
+
+        async with self.session_factory() as db:
+            return await service.list_types(db)
+
+    async def save_stamp_card_type(
+        self,
+        name_nl: str,
+        box_count: int,
+        reward_label_nl: str,
+        type_id: str | None = None,
+        name_fr: str | None = None,
+        name_en: str | None = None,
+        reward_label_fr: str | None = None,
+        reward_label_en: str | None = None,
+        active: bool = True,
+    ) -> dict:
+        """Create or replace a stamp card type. Requires admin."""
+        self._require_admin()
+        from app.schemas import StampCardTypeWrite
+        from app.services import stamp_cards_service as service
+
+        body = StampCardTypeWrite(
+            name_nl=name_nl,
+            box_count=box_count,
+            reward_label_nl=reward_label_nl,
+            name_fr=name_fr,
+            name_en=name_en,
+            reward_label_fr=reward_label_fr,
+            reward_label_en=reward_label_en,
+            active=active,
+        )
+        async with self.session_factory() as db:
+            return await service.save_type(db, actor=self._actor(), body=body, type_id=type_id)
+
+    async def get_person_stamp_cards(self, person_id: str) -> list[dict]:
+        """Return a person's stamp cards and rewards. Requires admin."""
+        self._require_admin()
+        from app.services import stamp_cards_service as service
+
+        async with self.session_factory() as db:
+            return await service.list_cards(db, person_id)
+
+    async def set_stamp_reward_handed_out(self, reward_id: str, handed_out: bool) -> dict:
+        """Record or undo reward hand-out. Requires admin."""
+        self._require_admin()
+        from app.services import stamp_cards_service as service
+
+        async with self.session_factory() as db:
+            return await service.set_reward(db, reward_id=reward_id, handed_out=handed_out, actor=self._actor())
+
+    async def select_stamp_card_type(self, type_id: str | None = None) -> dict:
+        """Select the active type used for new cards, or clear the selection. Requires admin."""
+        self._require_admin()
+        from app.schemas import AppSettingsUpdate
+        from app.services.settings_service import update_settings
+
+        async with self.session_factory() as db:
+            return await update_settings(db, actor=self._actor(), body=AppSettingsUpdate(stamp_card_type_id=type_id))
+
     # -- Settings ------------------------------------------------------
 
     async def get_settings(self) -> dict:
         """Return site-wide settings (currently just maintenance mode). No authentication required."""
         return await mcp_admin_settings.get_settings(self.session_factory)
+
+    async def set_member_indicators(
+        self, member_limit: int | None = None, member_inactivity_months: int | None = None
+    ) -> dict:
+        """Replace both member indicators; null switches one off. Requires admin."""
+        self._require_admin()
+        return await mcp_admin_settings.set_member_indicators(
+            self.session_factory,
+            self._actor(),
+            member_limit=member_limit,
+            member_inactivity_months=member_inactivity_months,
+        )
 
     async def set_maintenance_mode(self, maintenance_mode: bool) -> dict:
         """Toggle maintenance mode site-wide. Requires the ``admin`` role."""
@@ -2535,6 +2626,8 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
+        inactivity_exempt: bool = False,
+        inactivity_exempt_note: str = "",
         notes: str = "",
         roles: list[str] | None = None,
     ) -> dict:
@@ -2554,6 +2647,8 @@ class ChampagneFestivalMcpBackend:
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
             notes=notes,
+            inactivity_exempt=inactivity_exempt,
+            inactivity_exempt_note=inactivity_exempt_note,
             roles=roles,
         )
 
@@ -2562,10 +2657,26 @@ class ChampagneFestivalMcpBackend:
         self._require_admin()
         return await mcp_admin_members.get_member(self.session_factory, person_id)
 
-    async def list_members(self, q: str | None = None, active: bool | None = None) -> dict:
+    async def list_members(
+        self,
+        q: str | None = None,
+        active: bool | None = None,
+        sort: PersonSortKey | None = None,
+        sort_dir: SortDirection = "asc",
+        last_attended_before: dt_date | None = None,
+        last_attended_after: dt_date | None = None,
+    ) -> dict:
         """Search/list members. Requires the ``admin`` role."""
         self._require_admin()
-        return await mcp_admin_members.list_members(self.session_factory, q, active)
+        return await mcp_admin_members.list_members(
+            self.session_factory,
+            q,
+            active,
+            sort=sort,
+            sort_dir=sort_dir,
+            last_attended_before=last_attended_before,
+            last_attended_after=last_attended_after,
+        )
 
     async def update_member(
         self,
@@ -2577,6 +2688,8 @@ class ChampagneFestivalMcpBackend:
         national_register_number: str | None = None,
         eid_document_number: str | None = None,
         visits_per_month: int | None = None,
+        inactivity_exempt: bool | None = None,
+        inactivity_exempt_note: str | None = None,
         notes: str | None = None,
         roles: list[str] | None = None,
     ) -> dict:
@@ -2594,6 +2707,8 @@ class ChampagneFestivalMcpBackend:
             eid_document_number=eid_document_number,
             visits_per_month=visits_per_month,
             notes=notes,
+            inactivity_exempt=inactivity_exempt,
+            inactivity_exempt_note=inactivity_exempt_note,
             roles=roles,
         )
 
@@ -2760,6 +2875,17 @@ class ChampagneFestivalMcpBackend:
             notes=notes,
             accessibility_note=accessibility_note,
             status=status,
+        )
+
+    async def check_in(self, registration_id: str, issue_strap: bool = True) -> dict:
+        """Check in a registration and stamp capsule-exchange attendance. Requires admin."""
+        self._require_admin()
+        return await mcp_admin_registrations.update_registration(
+            self.session_factory,
+            self._actor(),
+            registration_id,
+            checked_in=True,
+            strap_issued=True if issue_strap else None,
         )
 
     async def update_registration(
@@ -3155,7 +3281,14 @@ def create_mcp_server(
     register_tool(backend.mark_waitlist_entry_handled)
     register_tool(backend.delete_waitlist_entry)
     register_tool(backend.get_settings)
+    register_tool(backend.set_member_indicators)
     register_tool(backend.set_maintenance_mode)
+    register_tool(backend.list_stamp_card_types)
+    register_tool(backend.save_stamp_card_type)
+    register_tool(backend.get_person_stamp_cards)
+    register_tool(backend.set_stamp_reward_handed_out)
+    register_tool(backend.select_stamp_card_type)
+
     register_tool(backend.list_organization_changes)
     register_tool(backend.decide_organization_change)
     register_tool(backend.create_organization)
@@ -3182,6 +3315,7 @@ def create_mcp_server(
     register_tool(backend.reactivate_volunteer)
     register_tool(backend.list_registrations)
     register_tool(backend.create_registration)
+    register_tool(backend.check_in)
     register_tool(backend.update_registration)
     register_tool(backend.delete_registration)
     register_tool(backend.create_payment_transaction)

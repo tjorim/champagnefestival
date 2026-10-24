@@ -27,6 +27,8 @@ function renderAt(path: string) {
     PrivacyPolicyRoute: page("Privacy"),
     PebblePairRoute: page("Pebble"),
     MyAccountRoute: page("Account"),
+    EmailConsentRoute: page("Email consent"),
+    EmailUnsubscribeRoute: page("Email unsubscribe"),
     VenuePlanRoute: page("Venue plan"),
     queryClient: new QueryClient(),
   });

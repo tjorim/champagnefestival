@@ -210,6 +210,7 @@ location /api/ {
 | `METRICS_HMAC_SECRET` | no    | `""`                                                   | Shared secret for the `X-Metrics-Token` HMAC on `GET /api/metrics`; empty disables the endpoint |
 | `SENTRY_DSN`       | no       | `""`                                                   | Sentry DSN for error tracking; empty disables Sentry                 |
 | `SENTRY_TRACES_SAMPLE_RATE` | no | `0.0`                                              | Fraction (0.0-1.0) of transactions sampled for Sentry performance monitoring |
+| `MEMBER_MAIL_PROVIDER` | no | `disabled` | Only `disabled` is supported; separate from SMTP. See [member-mail foundation](../docs/decisions/1407-member-mail-foundation.md). |
 | `SMTP_HOST`        | no       | `""`                                                   | SMTP server used to deliver guest access links and registration confirmations; empty disables delivery |
 | `SMTP_PORT`        | no       | `587`                                                  | SMTP port                                                            |
 | `SMTP_USER`        | no       | `""`                                                   | SMTP username                                                        |
@@ -288,6 +289,15 @@ See `.env.example` for a template.
 | `PUT`    | `/api/people/{id}`              | admin          | Update person + roles                                                      |
 | `DELETE` | `/api/people/{id}`              | admin          | Delete person                                                              |
 | `GET`    | `/api/people/{id}/registrations` | admin          | List grouped registration history for that person                          |
+| `GET`    | `/api/people/{id}/email-consents` | admin         | The person's email consent history (grants and withdrawals), read-only      |
+| `POST`   | `/api/people/{id}/email-consents/{key}/opt-out` | admin | Record an opt-out for a category; admins can never grant consent (repeat is a no-op) |
+| `GET`    | `/api/email-categories`         | admin          | Email categories with all stored texts, the roles that may use each, and `automatic` |
+| `POST`   | `/api/email-categories`         | admin          | Create a category (stable `key`, Dutch name required, optional `allowed_roles`); never automatic |
+| `PUT`    | `/api/email-categories/{key}`   | admin          | Edit texts, roles and order; `automatic` is not editable                    |
+| `DELETE` | `/api/email-categories/{key}`   | admin          | Delete; refused for `new_editions`, `reward_ready` and a category with consent history |
+| `GET`    | `/api/me/email-preferences`     | user (bearer or visitor session) | The categories available to the people behind the caller's verified address, with state (`?locale=`) |
+| `PUT`    | `/api/me/email-preferences`     | user (bearer or visitor session) | `{"consents": {"club_news": true}}`: set the wanted state of the listed categories (absolute, safe to repeat) |
+| `POST`   | `/api/email-consents/confirm`   | public + token | Activate the consent behind an emailed single-use link (registration form updates option) |
 | `GET`    | `/api/health/liveness`          | public         | Fast alive check — no DB hit (for load-balancer liveness probes)           |
 | `GET`    | `/api/health/readiness`         | public         | DB connectivity check with 2 s timeout (for load-balancer readiness probes)|
 | `GET`    | `/api/health`                   | public         | Summary with links to liveness and readiness endpoints                     |
@@ -399,8 +409,26 @@ failure the interface can explain carries a stable `code` next to it:
   `organization_change_submission_reused`, and the delete guards
   `table_type_in_use`, `venue_has_editions`, `venue_has_rooms`, `room_has_layouts`,
   `layout_has_tables`, `table_has_registrations`, `category_protected`,
-  `category_in_use`, `event_has_registrations`. Validation errors (422) and
+  `category_in_use`, `event_has_registrations`, and for email consent (#1408)
+  `email_category_not_found`, `email_category_exists`, `email_category_protected`,
+  `email_category_in_use`, `email_category_unavailable`, `verified_email_required`,
+  `consent_confirmation_invalid`, and for member mail (#1407) `member_mail_unavailable`,
+  `email_category_automatic`, `email_audience_confirmation_required`, `email_audience_changed`,
+  `unsubscribe_token_invalid`. Validation errors (422) and
   uncoded errors still return `detail` alone.
+
+### Email categories and consent (#1408)
+
+Who may be mailed is decided by consent per **category**, given by the person themselves, never by an
+administrator; sending is #1407. See [the decision](../docs/decisions/1408-email-categories-and-consent.md).
+Categories are admin-managed rows (`email_categories`: stable key, name and description in nl/fr/en
+with Dutch required, `allowed_roles`, `automatic`); migration `010` seeds `club_news` (members),
+`new_editions` (everyone), `volunteer_news` (volunteers) and `reward_ready` (members, automatic).
+Consent rows (`email_consents`) keep granted/withdrawn dates and their source, so history survives
+anonymisation and merging. The caller is tied to people only through their verified email address;
+`email_categories_service.person_allows` is the role rule applied when consent is given and again at
+send time. The registration form's `new_editions_opt_in` only becomes consent for a verified address
+(directly when signed in with it, else through the emailed link behind `/email-consent`).
 
 ## Frontend integration
 
@@ -861,3 +889,102 @@ request its `email` extra only when email validation is used.
 
 These conventions change validation before a write is executed; they do not
 change retry, ownership, or transaction semantics.
+
+### Member overview (#1403)
+
+`GET /api/people?role=member` includes `last_attended` (latest checked-in capsule-exchange
+**event date**, not the check-in timestamp) and `inactivity_highlight`. Sort with
+`sort=last_attended` (unknown dates last in both directions); filter with
+`last_attended_before` (exclusive) and `last_attended_after` (inclusive), ISO dates.
+An attendance index starts with registration person/check-in/event. The inactivity threshold
+subtracts calendar months from the current UTC day and clamps month-end; equality, unknown
+attendance and `inactivity_exempt` never highlight. Exemption notes stay admin-only.
+
+Settings `member_limit` (1–2147483647) and `member_inactivity_months` (1–1200) are nullable,
+advisory indicators; null disables them. Membership is never automatically ended or blocked.
+Member create/update accepts `inactivity_exempt` and `inactivity_exempt_note` (up to 2000
+characters); MCP supports the same fields and `set_member_indicators` replaces both settings.
+Current members have unique nonempty, trimmed, case-insensitive emails; retired/anonymised
+members and non-members may share them. Conflicts return `409 member_email_in_use` on
+create, update, role grants, reactivation and merge. Migration 010 intentionally refuses an
+existing conflicting dataset; resolve duplicates with the existing merge before migrating.
+
+
+### Capsule-exchange stamp cards (#1405)
+
+Admin REST operations (also available as admin-only MCP tools):
+
+- `GET`/`POST /api/stamp-cards/types`, `PUT /api/stamp-cards/types/{id}`:
+  list/create/replace a type (`name_nl`, optional `name_fr`/`name_en`, positive
+  `box_count`, translated `reward_label_*`, `active`). Deactivate rather than
+  deleting types; past cards retain snapshots.
+- `PUT /api/settings` with `stamp_card_type_id` selects the type for new cards;
+  explicit null clears it. MCP: `select_stamp_card_type`.
+- `GET /api/stamp-cards/people/{person_id}` returns cards oldest first, their
+  stamps (including registration IDs), and the optional reward record.
+  MCP: `get_person_stamp_cards`.
+- `PUT /api/stamp-cards/rewards/{id}` with `{"handed_out": true|false}` records
+  hand-out or undoes it. MCP: `set_stamp_reward_handed_out`.
+- MCP `list_stamp_card_types` and `save_stamp_card_type` mirror type operations.
+
+Admin people lists, counts and CSV export accept `reward_due=true|false`; list
+rows include a `reward_due` boolean derived from outstanding rewards across all
+cards. Filtering happens before pagination and does not duplicate people.
+
+QR and manual volunteer check-in, MCP `check_in` and registration updates returning `checked_in`
+include nullable `stamp_progress` (`card_id`, `stamps`, `box_count`,
+`reward_earned`). Only check-ins in `capsule_exchange` editions earn stamps.
+The member gate belongs to #1404; stamping does not add a second membership
+check or rewrite historical attendance when membership changes. No check-in
+backfill runs at migration time.
+
+The check-in transaction locks the registration then its person; stamp creation,
+completion and reward creation commit together with attendance. Uncheck removes
+the stamp and any earned reward, unless handed out (`stamp_reward_handed_out`).
+Missing/inactive configuration conflicts with `stamp_card_type_not_configured`
+or `stamp_card_type_unavailable`. Already-open cards still accept stamps after
+their type is deactivated or the selected type is changed/cleared. A full card blocks a new card until its reward is handed out
+(`stamp_reward_pending`), rolling back the attempted check-in. Undoing hand-out
+is refused once a newer card exists (`stamp_card_has_successor`); this prevents
+reopening an older card after the next one starts. Existing stamps and snapshots
+never move between cards.
+
+See `docs/retry-safety.md` for retry decisions and
+`docs/decisions/934-data-retention-and-erasure.md` for retention. OpenAPI exposes
+typed request/response schemas for the REST operations.
+
+### Volunteer-only events and linked attendance polls (migration `010`)
+
+An event's `volunteers_only` flag is independent of `members_only`. Public
+registration and waitlist endpoints refuse volunteer-only bookings and direct
+volunteers to their authenticated poll; admins can still enter bookings.
+When both flags are set, answering yes requires both current roles.
+
+In an edition's volunteer poll, admins can select a volunteer-only event for a
+`yes_no` question (`event_id`; nullable). The event may belong to another edition,
+so a festival's poll can include a later thank-you outing. Only the active
+festival edition's poll appears in volunteer self-service, as before. Each event
+can have one attendance question, and the link is immutable once answers or
+poll-created bookings exist. Copies of questions never copy their event links.
+
+A yes answer creates a confirmed registration for the answering volunteer's
+Person and the stated party size. Subsequent saves update that same booking;
+no or an admin-cleared answer cancels it, and yes after cancellation reuses it.
+These are attendance-only bookings: they do not order products or map meal
+choices to products. All booking/answer writes are atomic and share booking
+audit, live updates and confirmation-outbox behavior. Admin/MCP answer entry
+uses the same synchronization. Closed questions keep their existing confirmation
+rules. Already-checked-in or net-paid bookings refuse attendance changes until
+an admin resolves those records. Independent bookings are never silently
+adopted or duplicated.
+
+Poll-created registrations expose `poll_question_id`. Manage their party size,
+status and person through the poll; ordinary booking notes, payment and check-in
+operations remain available. Confirmed question deletion cancels and detaches
+its registrations instead of erasing their history. Remove/unlink linked polls
+before deleting their event/edition or removing volunteer-only access.
+
+REST question create/update and MCP `create_poll_question`/`update_poll_question`
+accept `event_id`; MCP `clear_event` explicitly clears the link. Admin and
+volunteer question responses expose the link. See the retry-safety inventory
+for stable error codes, lock order and reconciliation after timeouts.

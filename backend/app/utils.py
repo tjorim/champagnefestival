@@ -134,6 +134,8 @@ def event_to_summary_dict(
         "start_time": event.start_time,
         "end_time": event.end_time,
         "category": event.category,
+        "volunteers_only": event.volunteers_only,
+        "members_only": event.members_only,
         "registration_required": event.registration_required,
         "registrations_open_from": event.registrations_open_from,
         "registrations_close_at": event.registrations_close_at,
@@ -291,6 +293,7 @@ def registration_to_dict(r: Registration, person: Person, event: Event, *, publi
     """
     return {
         "id": r.id,
+        "poll_question_id": r.poll_question_id,
         "person_id": r.person_id,
         "person": person_summary_to_dict(person),
         "event_id": r.event_id,
@@ -561,7 +564,10 @@ def person_summary_to_dict(p: Person) -> dict:
 
 def app_settings_to_dict(s: AppSettings) -> dict:
     return {
+        "member_limit": s.member_limit,
+        "member_inactivity_months": s.member_inactivity_months,
         "maintenance_mode": s.maintenance_mode,
+        "stamp_card_type_id": s.stamp_card_type_id,
         "public_email": s.public_email,
         "public_phone": s.public_phone,
         "facebook_url": s.facebook_url,
@@ -606,11 +612,11 @@ def person_to_dict(p: Person) -> dict:
         "role_history": {role: [dict(s) for s in stretches] for role, stretches in (p.role_history or {}).items()},
         "national_register_number": p.national_register_number,
         "eid_document_number": p.eid_document_number,
+        "inactivity_exempt": p.inactivity_exempt,
+        "inactivity_exempt_note": p.inactivity_exempt_note,
         "visits_per_month": p.visits_per_month,
         "notes": p.notes,
         "anonymised": p.anonymised,
-        "marketing_opt_in": p.marketing_opt_in,
-        "marketing_opt_in_at": p.marketing_opt_in_at,
         "created_at": p.created_at,
         "updated_at": p.updated_at,
     }

@@ -22,3 +22,14 @@ async def set_maintenance_mode(session_factory: Any, actor: str, *, maintenance_
     body = validate_with_schema(AppSettingsUpdate, maintenance_mode=maintenance_mode)
     async with session_factory() as db:
         return await settings_service.update_settings(db, actor=actor, body=body)
+
+
+async def set_member_indicators(
+    session_factory: Any, actor: str, *, member_limit: int | None = None, member_inactivity_months: int | None = None
+) -> dict:
+    """Replace both indicators; null switches an indicator off."""
+    body = validate_with_schema(
+        AppSettingsUpdate, member_limit=member_limit, member_inactivity_months=member_inactivity_months
+    )
+    async with session_factory() as db:
+        return await settings_service.update_settings(db, actor=actor, body=body)

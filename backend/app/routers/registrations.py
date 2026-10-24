@@ -30,6 +30,7 @@ from starlette.responses import StreamingResponse
 from app.auth import get_actor_id, get_optional_claims, require_admin
 from app.database import get_db
 from app.dependencies import DEFAULT_LIST_LIMIT, Pagination, apply_pagination
+from app.email import send_email_consent_confirmation
 from app.live import mapping as live_mapping
 from app.live import notify_live_event
 from app.models import Edition, Event, Person, Registration, Table
@@ -47,13 +48,13 @@ from app.schemas import (
     RegistrationUpdate,
     RegistrationVolunteerAssignment,
 )
-from app.services import events_service, payments_service, registrations_service
+from app.services import email_consent_service, events_service, payments_service, registrations_service
 from app.services.allocations_service import allocated_registration_filter
 from app.services.errors import ApiHTTPException
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.services.outbox_service import enqueue_registration_confirmation
 from app.services.people_service import parse_phone
-from app.services.users_service import get_or_create_user
+from app.services.users_service import get_or_create_user, verified_email_from_claims
 from app.spam import check_form_timing, check_honeypot
 from app.utils import (
     csv_safe,
@@ -63,6 +64,7 @@ from app.utils import (
     registration_to_dict_with_token,
     registration_to_list_dict,
 )
+from app.visitor_session import actor_for_user
 
 router = APIRouter(prefix="/api/registrations", tags=["registrations"])
 logger = logging.getLogger(__name__)
@@ -100,8 +102,15 @@ async def create_registration(
         user = await get_or_create_user(db, claims["sub"])
 
     from app.services import product_inventory as inventory
+    from app.services.member_registration import verified_member, visitor_user
 
+    session_user = await visitor_user(db, request)
     event = await inventory.lock_event(db, body.event_id)
+    if event is not None and event.volunteers_only:
+        raise ApiHTTPException(
+            403, "volunteer_event_poll_required", "Use the volunteer attendance poll to register for this event."
+        )
+    member_identity = await verified_member(db, session_user) if event.members_only else None
     await _ensure_public_registration_allowed(db, event)
     from app.services.order_questions_service import validate_answers
 
@@ -109,42 +118,67 @@ async def create_registration(
     resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
     await inventory.check_stock(db, event, resolved_order_items)
 
-    email_norm = str(body.email).lower().strip()
-    name_norm = " ".join(body.name.lower().split())
-    phone_norm = parse_phone(body.phone)
-
-    candidates = (
-        (await db.execute(select(Person).where(Person.email == email_norm, Person.phone == phone_norm))).scalars().all()
-    )
-    person = next(
-        (candidate for candidate in candidates if " ".join(candidate.name.lower().split()) == name_norm),
-        None,
-    )
-    if person is None:
-        person = Person(
-            id=make_id("per"),
-            preferred_language=body.preferred_language,
-            name=body.name,
-            email=email_norm,
-            phone=phone_norm,
-            marketing_opt_in=body.marketing_opt_in,
-            marketing_opt_in_at=datetime.now(UTC) if body.marketing_opt_in else None,
-        )
-        db.add(person)
-        await db.flush()
+    if member_identity is not None:
+        person, user = member_identity
     else:
-        if user is not None and await db.scalar(
-            select(Registration.id).where(Registration.person_id == person.id, Registration.user_id == user.id).limit(1)
-        ):
-            person.preferred_language = body.preferred_language
-        # Opting in is a one-way ratchet through this form: ticking the box
-        # records consent even on a returning visitor's record, but leaving it
-        # unticked on a later registration must not silently revoke a consent
-        # already given — that's a decision for an explicit unsubscribe, not
-        # an absent checkbox.
-        if body.marketing_opt_in and not person.marketing_opt_in:
-            person.marketing_opt_in = True
-            person.marketing_opt_in_at = datetime.now(UTC)
+        email_norm = str(body.email).lower().strip()
+        name_norm = " ".join(body.name.lower().split())
+        phone_norm = parse_phone(body.phone)
+
+        candidates = (
+            (await db.execute(select(Person).where(Person.email == email_norm, Person.phone == phone_norm)))
+            .scalars()
+            .all()
+        )
+        person = next(
+            (candidate for candidate in candidates if " ".join(candidate.name.lower().split()) == name_norm),
+            None,
+        )
+        if person is None:
+            person = Person(
+                id=make_id("per"),
+                preferred_language=body.preferred_language,
+                name=body.name,
+                email=email_norm,
+                phone=phone_norm,
+            )
+            db.add(person)
+            await db.flush()
+        else:
+            if user is not None and await db.scalar(
+                select(Registration.id)
+                .where(Registration.person_id == person.id, Registration.user_id == user.id)
+                .limit(1)
+            ):
+                person.preferred_language = body.preferred_language
+
+    consent_confirmation = None
+    if body.new_editions_opt_in:
+        # Ticking the box is a request, not consent: it becomes consent only for a verified address.
+        if claims is not None:
+            consent_actor, consent_auth_source = claims["sub"], None
+        elif session_user is not None:
+            consent_actor, consent_auth_source = actor_for_user(session_user, None)
+        else:
+            consent_actor, consent_auth_source = "anonymous", None
+        consent_confirmation = await email_consent_service.request_new_editions_consent(
+            db,
+            person,
+            verified_emails=[
+                email
+                for email in (verified_email_from_claims(claims), session_user.verified_email if session_user else None)
+                if email
+            ],
+            actor=consent_actor,
+            auth_source=consent_auth_source,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    consent_mail = (
+        (person.email, consent_confirmation[0], consent_confirmation[1].localized_name(person.preferred_language))
+        if consent_confirmation is not None
+        else None
+    )
+    consent_language = person.preferred_language
 
     registration = Registration(
         id=make_id("reg"),
@@ -176,6 +210,14 @@ async def create_registration(
         ),
     )
     await db.commit()
+
+    if consent_mail is not None:
+        # Best effort, like the sign-in link: the registration stands either way and the person can
+        # tick the option again (or use the preferences screen) if the mail does not arrive.
+        recipient, token, category_name = consent_mail
+        await send_email_consent_confirmation(
+            email=recipient, token=token, category_name=category_name, language=consent_language
+        )
 
     registration = await registrations_service.get_registration_or_404(db, registration.id)
     return registration_to_dict(registration, person, event, public=True)

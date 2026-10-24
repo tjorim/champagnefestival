@@ -160,6 +160,9 @@ export const exclusions = {
   "state/LiveUpdatesProvider.tsx": {
     Bearer: "HTTP authorization scheme",
   },
+  "utils/emailConsentApi.ts": {
+    Bearer: "HTTP authorization scheme",
+  },
   "utils/liveStream.ts": {
     Bearer: "HTTP authorization scheme",
   },

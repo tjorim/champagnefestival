@@ -31,14 +31,15 @@ _STAMPS = [_BASE + timedelta(days=d) for d in range(3)]
 async def _seed(db_session, count: int = 24) -> list[Person]:
     """``count`` people with only a handful of distinct names, e-mails and timestamps.
 
-    Every sortable column therefore has many ties, so only the id tiebreak makes
-    the order total. Every third person also holds the volunteer role.
+    Names and timestamps have many ties; volunteer emails tie as well, while
+    current members need distinct nonempty emails. The id tiebreak makes the
+    order total. Every third person holds the volunteer role.
     """
     people = [
         Person(
             id=f"per_{i:03d}",
             name=_NAMES[i % len(_NAMES)],
-            email=_EMAILS[i % len(_EMAILS)],
+            email=_EMAILS[i % len(_EMAILS)] if i % 3 == 0 else f"member{i:03d}@x.io",
             roles=["volunteer"] if i % 3 == 0 else ["member"],
             anonymised=i % 4 == 0,
             created_at=_STAMPS[i % len(_STAMPS)],

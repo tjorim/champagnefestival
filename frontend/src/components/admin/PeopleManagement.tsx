@@ -8,6 +8,7 @@ import {
   CircleCheckIcon,
   EyeIcon,
   FileSpreadsheetIcon,
+  MailCheckIcon,
   MailIcon,
   NotebookTextIcon,
   PencilIcon,
@@ -48,6 +49,7 @@ import {
 } from "@/utils/adminFetch";
 import { devError } from "@/utils/devLog";
 import { createAppColumnHelper } from "@/hooks/useAdminTable";
+import PersonEmailConsents from "./PersonEmailConsents";
 import PersonFormModal, { type PersonFormData } from "./PersonFormModal";
 import LedgerModal, { LEDGER_SORT_KEY_BY_COLUMN } from "./LedgerModal";
 import { buildMemberEmailDraft, type EmailDraft } from "@/utils/emailComposer";
@@ -89,6 +91,7 @@ export default function PeopleManagement({
   const [deleteError, setDeleteError] = useState("");
   const [viewRegistrationsPerson, setViewRegistrationsPerson] = useState<Person | null>(null);
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
+  const [consentPerson, setConsentPerson] = useState<Person | null>(null);
   const [exportingLedger, setExportingLedger] = useState(false);
   const [ledgerExportError, setLedgerExportError] = useState("");
   const [showLedgerModal, setShowLedgerModal] = useState(false);
@@ -311,6 +314,15 @@ export default function PeopleManagement({
             const person = row.original;
             return (
               <div className="flex flex-wrap gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConsentPerson(person)}
+                  title={m.admin_email_consents()}
+                  aria-label={`${m.admin_email_consents()}: ${person.name}`}
+                >
+                  <Icon icon={MailCheckIcon} />
+                </Button>
                 {person.email && (
                   <Button
                     size="sm"
@@ -367,6 +379,7 @@ export default function PeopleManagement({
       setDeletingId,
       setDeleteError,
       setViewRegistrationsPerson,
+      setConsentPerson,
       openMerge,
     ],
   );
@@ -374,6 +387,13 @@ export default function PeopleManagement({
   return (
     <>
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
+      {consentPerson && (
+        <PersonEmailConsents
+          person={consentPerson}
+          authHeaders={authHeaders}
+          onClose={() => setConsentPerson(null)}
+        />
+      )}
       <Card tone="secondary">
         <CardHeader>{m.admin_people_tab()}</CardHeader>
 

@@ -43,7 +43,7 @@ scope.
 
 The window uses the most recent registration event date so returning visitors
 retain their existing Person linkage. A new registration resets that clock;
-marketing consent does not.
+email consent does not.
 
 ## Scheduled sweeps
 
@@ -106,13 +106,16 @@ resource key, convergent state only" entry already in that inventory.
 
 Anonymisation preserves operational registrations and a stable person
 pseudonym, clears identity fields, and deactivates the person. It refuses
-records with NISS/eID fields. Marketing opt-in preserves email and consent
-while other identity fields are cleared; it does not extend the retention
-clock. Public registration cannot revoke existing consent with an absent
-checkbox; administrators can process corrections/opt-outs. Merge behavior
-preserves consent. No bulk-email send channel or double opt-in was built;
-consent verification and unsubscribe requirements must be addressed before
-any future marketing sender uses this flag.
+records with NISS/eID fields. Email consent is recorded per category (see
+[#1408](1408-email-categories-and-consent.md)): consent history (category,
+dates, source) always survives anonymisation and merging, and a person with any
+consent still active keeps their email address, so a live subscription is never
+ended silently. Other identity fields are cleared and the retention clock does
+not move. Consent is given only by the person themselves, after verifying the
+address; an absent checkbox never revokes it, and administrators can only record
+an opt-out. Person anonymisation stays a manual, per-person admin action; any
+future automatic anonymisation needs admin confirmation first. The sending
+requirements (unsubscribe link, suppression) belong to #1407.
 
 NISS/eID remain available on the admin volunteer surface and write responses,
 but are excluded from generic people/member list and single-record reads.
@@ -123,7 +126,7 @@ The eID document number is treated as a point-in-time card record.
 ## Implemented (2026-09-07)
 
 1. `people_service.anonymise_person`, with the volunteer refusal and the
-   marketing-consent carve-out described above. Exposed as
+   email-consent carve-out described above. Exposed as
    `POST /api/people/{id}/anonymise` (admin-only), with
    `GET /api/people/due-for-anonymisation` surfacing candidates — see
    "Scheduled sweeps" item 4.
@@ -145,11 +148,11 @@ The eID document number is treated as a point-in-time card record.
    materially different exposure than a list an admin scrolls through for
    unrelated reasons. `/api/volunteers` is unaffected either way — it already
    has its own schema and was never the leak.
-4. `Person.marketing_opt_in` / `marketing_opt_in_at`, the unticked-by-default
-   registration consent checkbox and its copy in `nl`/`en`/`fr`, plus an
-   admin-only correction path via `PersonUpdate` (e.g. to process an opt-out
-   received through the contact form) that the registration form itself does
-   not expose.
+4. The unticked-by-default registration updates checkbox and its copy in
+   `nl`/`en`/`fr`. It first shipped as `Person.marketing_opt_in` /
+   `marketing_opt_in_at`; #1408 replaced that flag with per-category consent
+   records (nothing was migrated, nobody was registered yet). Administrators now
+   record an opt-out through `POST /api/people/{id}/email-consents/{key}/opt-out`.
 5. `docs/retry-safety.md` entries: the new admin anonymisation endpoint in the
    main inventory, and the VPS-scheduled audit-IP job documented alongside
    the pre-existing idempotency-key job's equivalent note.
@@ -176,3 +179,27 @@ implementation should author unilaterally.
 
 Consolidated 2026-09-08. Original proposals and implementation history remain
 in Git at `88396baf3275ae40cdd907239a0df6a04baed137`; they are not current requirements.
+
+## Stamp-card retention (#1405, 2026-10-24)
+
+Stamp cards, attendance stamps and earned reward records survive person
+anonymisation, like the registrations they reference. Cards and rewards contain
+translated reward snapshots and operational dates, not copied member contact
+information. `handed_out_by` records the admin actor for accountability under the
+existing audit policy. Anonymisation leaves these records attached to the
+anonymised person. Hard deletion is refused for a person with cards; use the
+anonymisation operation. Merging people transfers cards to the surviving person
+alongside registrations, preserving stamps, rewards and type snapshots.
+
+## Member-mail foundation (#1407, 2026-10-24)
+
+A [provider-neutral transport boundary](1407-member-mail-foundation.md) now
+exists, with only a disabled adapter. It sends nothing and stores no new
+personal data. The old registration flag never authorized category mail, and it
+no longer exists. Category consent is implemented
+([#1408](1408-email-categories-and-consent.md)); signed unsubscribe handling,
+suppression are implemented behind the disabled adapter (suppression stores only an address hash and
+survives erasure of a person; `composed_messages.email_audience_snapshot` holds person ids and follows the
+message, and per-recipient jobs follow the outbox retention window). Final retention periods for those
+snapshots and sent-mail jobs remain a prerequisite for enabling member mail. The existing retention policy
+and anonymisation behavior are unchanged by this increment.

@@ -300,6 +300,8 @@ export async function saveEditionEvent(
         start_time: payload.formData.startTime,
         end_time: payload.formData.endTime || null,
         category: payload.formData.category,
+        volunteers_only: payload.formData.volunteersOnly ?? false,
+        members_only: payload.formData.membersOnly ?? false,
         registration_required: payload.formData.registrationRequired,
         registrations_open_from:
           payload.formData.registrationRequired && payload.formData.registrationsOpenFrom
@@ -539,6 +541,7 @@ export interface PollOptionWrite {
 }
 
 export interface PollQuestion {
+  eventId?: string | null;
   id: string;
   editionId: string;
   kind: PollQuestionKind;
@@ -566,6 +569,7 @@ export interface PollQuestion {
 
 /** The editable texts of a question; a blank French or English text is cleared. */
 export interface PollQuestionWrite {
+  eventId?: string | null;
   titleNl: string;
   titleFr: string;
   titleEn: string;
@@ -594,6 +598,7 @@ function apiToPollQuestion(data: Record<string, unknown>): PollQuestion {
   return {
     id: String(data.id ?? ""),
     editionId: String(data.edition_id ?? ""),
+    eventId: typeof data.event_id === "string" ? data.event_id : null,
     kind: parsePollKind(data.kind),
     title: String(data.title ?? ""),
     titleNl: String(data.title_nl ?? data.title ?? ""),
@@ -624,6 +629,7 @@ function pollOptionBody(write: PollOptionWrite) {
 
 function pollQuestionBody(write: PollQuestionWrite) {
   return {
+    ...(write.eventId === undefined ? {} : { event_id: write.eventId || null }),
     title_nl: write.titleNl.trim(),
     title_fr: write.titleFr.trim() || null,
     title_en: write.titleEn.trim() || null,
@@ -950,4 +956,16 @@ export async function fetchPollOrders(
     })),
     volunteerCount: Number(data.volunteer_count ?? 0),
   };
+}
+
+export async function fetchVolunteerPollEvents(
+  authHeaders: () => Record<string, string>,
+): Promise<Event[]> {
+  const response = await safeFetch(
+    "/api/events",
+    { headers: authHeaders() },
+    m.admin_content_error_load(),
+  );
+  const events = (await response.json()) as Record<string, unknown>[];
+  return events.map(apiToEvent).filter((event) => event.volunteersOnly);
 }

@@ -137,7 +137,7 @@ export interface RegistrationFormData {
   guestCount: number;
   orderItems: OrderItem[];
   notes: string;
-  marketingOptIn: boolean;
+  newEditionsOptIn: boolean;
   honeypot?: string;
   formStartTime: string;
 }

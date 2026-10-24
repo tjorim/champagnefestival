@@ -21,6 +21,7 @@ export function peopleTableParams(state: AdminTableState, role?: string): People
   const sorts: Record<string, PeopleListParams["sort"]> = {
     name: "name",
     email: "email",
+    lastAttended: "last_attended",
     registrations: "registration_count",
     createdAt: "created",
     updatedAt: "updated",
@@ -33,6 +34,7 @@ export function peopleTableParams(state: AdminTableState, role?: string): People
     sort,
     sort_dir: state.sortDir,
     role: role ?? state.filters.role,
+    reward_due: role === "member" && state.filters.reward_due === "true" ? true : undefined,
     // Active only means something within a role: the person-wide flag only marks anonymised people.
     active:
       !(role ?? state.filters.role) || !state.filters.active
@@ -76,6 +78,7 @@ export function PersonName({ person, role }: { person: Person; role?: string }) 
             {m.admin_people_retired_role_badge({ role: retired })}
           </Badge>
         ))}
+      {person.rewardDue && <Badge variant="warning">{m.stamp_reward_due()}</Badge>}
       {pending > 0 && <Spinner size="sm" label={m.admin_settings_saving()} />}
     </span>
   );
@@ -87,15 +90,26 @@ interface Props {
   columns: ColumnDef<AdminTableFeatures, Person, any>[];
   onOpen: (person: Person) => void;
   primaryAction: ReactNode;
+  getRowClassName?: (person: Person) => string | undefined;
 }
 
-export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryAction }: Props) {
+export function PeopleDataTable({
+  id,
+  authHeaders,
+  columns,
+  onOpen,
+  primaryAction,
+  getRowClassName,
+}: Props) {
   const role = id === "members" ? "member" : id === "volunteers" ? "volunteer" : undefined;
   const useDataSource = useCallback(
     function useDataSource(state: AdminTableState) {
       const params = peopleEndpointParams(state, role);
       const query = usePeopleListQuery(params, authHeaders);
-      const activeCounts = usePeopleCountsQuery({ q: params.q, role: params.role }, authHeaders);
+      const activeCounts = usePeopleCountsQuery(
+        { q: params.q, role: params.role, reward_due: params.reward_due },
+        authHeaders,
+      );
       const roleCounts = usePeopleCountsQuery(
         { q: params.q, active: params.active },
         authHeaders,
@@ -104,6 +118,15 @@ export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryActio
       return {
         ...query,
         filters: [
+          ...(role === "member"
+            ? [
+                {
+                  id: "reward_due",
+                  label: m.stamp_reward_due(),
+                  options: [{ value: "true", label: m.stamp_reward_due() }],
+                },
+              ]
+            : []),
           ...(params.role
             ? [
                 {
@@ -147,10 +170,11 @@ export function PeopleDataTable({ id, authHeaders, columns, onOpen, primaryActio
       columnVisibilityKey={`admin-col-vis-${id}`}
       getRowId={(person) => person.id}
       getRowLabel={(person) => person.name}
+      getRowClassName={getRowClassName}
       onOpen={onOpen}
       renderCard={(person) => (
         <>
-          <PersonName person={person} />
+          <PersonName person={person} role={role} />
           <p>{person.email || person.address}</p>
         </>
       )}

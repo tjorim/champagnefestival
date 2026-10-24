@@ -14,9 +14,9 @@ from app.mcp.utils import MCPToolError, validate_with_schema
 from app.ratelimit import check_rate_limit
 from app.schemas import (
     AnnouncementLevel,
-    ComposedMessageChannel,
     ComposedMessageCreate,
     ComposedMessageScheduleRequest,
+    ComposedMessageToolChannel,
     ComposedMessageUpdate,
 )
 from app.services import composer_service as service
@@ -41,7 +41,7 @@ async def create_composed_message(
     session_factory: Any,
     actor: str,
     *,
-    channels: list[ComposedMessageChannel],
+    channels: list[ComposedMessageToolChannel],
     title_nl: str | None = None,
     title_fr: str | None = None,
     title_en: str | None = None,
@@ -75,7 +75,7 @@ async def update_composed_message(
     actor: str,
     message_id: str,
     *,
-    channels: list[ComposedMessageChannel] | None = None,
+    channels: list[ComposedMessageToolChannel] | None = None,
     title_nl: str | None = None,
     title_fr: str | None = None,
     title_en: str | None = None,

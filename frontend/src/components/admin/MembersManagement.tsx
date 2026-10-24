@@ -1,6 +1,13 @@
+import MemberStampCards from "./MemberStampCards";
+import PersonEmailConsents from "./PersonEmailConsents";
+import StampCardTypes from "./StampCardTypes";
+import { useQuery } from "@tanstack/react-query";
+import { usePeopleCountsQuery } from "@/hooks/usePeopleListQuery";
+import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
+import { queryKeys } from "@/utils/queryKeys";
 import { PeopleDataTable, PersonName } from "./PeopleDataTable";
 import { Button } from "@/components/ui/button";
-import { MailIcon, PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
+import { MailCheckIcon, MailIcon, PencilIcon, RotateCcwIcon, TrashIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
 import { useCallback, useState, useMemo } from "react";
 import { Alert } from "@/components/ui/alert";
@@ -47,6 +54,20 @@ export default function MembersManagement({
   onReactivate,
   authHeaders,
 }: MembersManagementProps) {
+  const [stampMember, setStampMember] = useState<Person | null>(null);
+  const [consentPerson, setConsentPerson] = useState<Person | null>(null);
+  const counts = usePeopleCountsQuery({ role: "member" }, authHeaders);
+  const settings = useQuery({
+    queryKey: queryKeys.admin.settings,
+    queryFn: () =>
+      fetchJsonOrThrowWithUnauthorized<{ member_limit: number | null }>(
+        "/api/settings",
+        { headers: authHeaders() },
+        m.admin_error_load_settings(),
+      ),
+  });
+  const limit = settings.data?.member_limit;
+  const full = limit != null && counts.data != null && counts.data.active >= limit;
   const [createSuccess, setCreateSuccess] = useState(false);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [deactivateSuccess, setDeactivateSuccess] = useState(false);
@@ -113,6 +134,23 @@ export default function MembersManagement({
             <span className="text-sm">{String(getValue() ?? "") || "—"}</span>
           ),
         }),
+        columnHelper.accessor("lastAttended", {
+          id: "lastAttended",
+          header: m.admin_members_last_attended(),
+          cell: ({ row }) => (
+            <span>
+              {row.original.lastAttended ?? "—"}
+              {row.original.inactivityHighlight && !row.original.inactivityExempt && (
+                <span className="ms-2 text-warning">{m.admin_members_inactivity_warning()}</span>
+              )}
+              {row.original.inactivityExempt && (
+                <span className="ms-2 text-subtle" title={row.original.inactivityExemptNote}>
+                  {m.admin_members_inactivity_exempt()}
+                </span>
+              )}
+            </span>
+          ),
+        }),
         columnHelper.accessor("phone", {
           enableSorting: false,
           header: m.registration_phone(),
@@ -154,6 +192,23 @@ export default function MembersManagement({
             const member = row.original;
             return (
               <div className="flex flex-wrap gap-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setStampMember(member)}
+                  aria-label={`${m.stamp_cards()}: ${member.name}`}
+                >
+                  {m.stamp_cards()}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setConsentPerson(member)}
+                  title={m.admin_email_consents()}
+                  aria-label={`${m.admin_email_consents()}: ${member.name}`}
+                >
+                  <Icon icon={MailCheckIcon} />
+                </Button>
                 {member.email && (
                   <Button
                     size="sm"
@@ -219,11 +274,37 @@ export default function MembersManagement({
 
   return (
     <>
+      {consentPerson && (
+        <PersonEmailConsents
+          person={consentPerson}
+          authHeaders={authHeaders}
+          onClose={() => setConsentPerson(null)}
+        />
+      )}
+      {stampMember && (
+        <MemberStampCards
+          person={stampMember}
+          authHeaders={authHeaders}
+          onClose={() => setStampMember(null)}
+        />
+      )}
       <EmailComposeModal draft={emailDraft} onClose={() => setEmailDraft(null)} />
       <Card tone="secondary">
         <CardHeader>{m.admin_members_tab()}</CardHeader>
 
         <CardContent className="p-0">
+          {counts.data && (
+            <p className="m-4">
+              {limit != null
+                ? m.admin_members_places({ count: counts.data.active, limit })
+                : m.admin_members_places_unlimited({ count: counts.data.active })}
+            </p>
+          )}
+          {full && (
+            <Alert variant="warning" className="m-4">
+              {m.admin_members_limit_warning()}
+            </Alert>
+          )}
           {createSuccess && (
             <Alert variant="success" className="m-4 mb-0" onClose={() => setCreateSuccess(false)}>
               {m.admin_members_create_success()}
@@ -260,6 +341,9 @@ export default function MembersManagement({
 
           <PeopleDataTable
             id="members"
+            getRowClassName={(person) =>
+              person.inactivityHighlight && !person.inactivityExempt ? "bg-warning/10" : undefined
+            }
             authHeaders={authHeaders}
             columns={columns}
             onOpen={(person) => {
@@ -280,6 +364,8 @@ export default function MembersManagement({
           />
         </CardContent>
       </Card>
+
+      <StampCardTypes authHeaders={authHeaders} />
 
       {deactivatingId && (
         <Dialog
@@ -331,6 +417,7 @@ export default function MembersManagement({
 
       <MemberFormModal
         show={showForm}
+        limitReached={full}
         member={editingMember}
         onSave={handleSaveMember}
         onHide={() => {

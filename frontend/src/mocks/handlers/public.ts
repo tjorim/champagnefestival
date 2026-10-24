@@ -29,7 +29,10 @@ function hydrateEditionEvents(edition: SeedEdition): SeedEdition {
   return {
     ...edition,
     dates,
-    events: editionEvents,
+    events: editionEvents.map((event) => ({
+      ...event,
+      members_only: seededState("members-only", false),
+    })),
   };
 }
 
@@ -64,9 +67,16 @@ const publicFaqItemsByLocale = {
 } as const;
 
 export const publicHandlers = [
+  http.put("/api/settings", async ({ request }) => {
+    const body = (await request.json()) as { stamp_card_type_id?: string | null };
+    if (body.stamp_card_type_id !== undefined)
+      localStorage.setItem("msw:stamp-card-type", JSON.stringify(body.stamp_card_type_id));
+    return HttpResponse.json(body);
+  }),
   /** GET /api/settings — site-wide settings; maintenance mode off by default. */
   http.get("/api/settings", () =>
     HttpResponse.json({
+      stamp_card_type_id: seededState("stamp-card-type", null),
       maintenance_mode: seededState("maintenance", false),
       public_email: "nancy.cattrysse@telenet.be",
       public_phone: "+32 478 48 01 77",
@@ -121,7 +131,7 @@ export const publicHandlers = [
     const matching = editions.filter(
       (e) => e.active && (!editionType || e.edition_type === editionType),
     );
-    return HttpResponse.json(matching[0] ?? null);
+    return HttpResponse.json(matching[0] ? hydrateEditionEvents(matching[0]) : null);
   }),
 
   /** GET /api/editions/upcoming — returns upcoming public editions, optionally by type. */
@@ -148,7 +158,10 @@ export const publicHandlers = [
     const registrationRequired = url.searchParams.get("registration_required");
     const editionId = url.searchParams.get("edition_id");
 
-    let result = [...events];
+    let result = events.map((event) => ({
+      ...event,
+      members_only: seededState("members-only", false),
+    }));
     if (registrationRequired === "true") {
       result = result.filter((e) => e.registration_required);
     }
@@ -273,6 +286,12 @@ export const publicHandlers = [
    * override with server.use to exercise a stored language. */
   http.get("/api/me/communication-preference", () =>
     HttpResponse.json({ preferred_language: null }),
+  ),
+
+  /** GET /api/me/email-preferences — no categories by default; override with
+   * server.use to exercise the per-category consent screen (#1408). */
+  http.get("/api/me/email-preferences", () =>
+    HttpResponse.json({ email: "visitor@example.com", categories: [] }),
   ),
 
   /** GET /api/me/volunteer/poll — an edition with no poll questions by

@@ -264,19 +264,28 @@ def actor_for_user(user: User, claims: dict[str, Any] | None) -> tuple[str, str 
     return user.id, VISITOR_AUTH_SOURCE
 
 
+def verified_email_for_caller(user: User, claims: dict[str, Any] | None) -> str | None:
+    """The caller's verified email from whichever sign-in they used.
+
+    Keycloak password and magic-link sign-ins produce the same OIDC subject
+    and roles. Only an explicitly verified token email counts; usernames and
+    unverified profile fields never do. A bearer token always wins over a
+    cookie, so a linked account never borrows an address from its stored
+    ``verified_email`` while using Keycloak. A visitor session's address is the
+    one its magic link proved.
+    """
+    if claims is None:
+        return user.verified_email.lower().strip() if user.verified_email else None
+    return verified_email_from_claims(claims)
+
+
 async def get_organization_contact_email(
     user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
 ) -> str | None:
     """Resolve contact email from either sign-in method's verified identity.
 
-    Keycloak password and magic-link sign-ins produce the same OIDC subject
-    and roles. Only an explicitly verified token email can grant contact
-    access; usernames and unverified profile fields cannot. An authenticated
-    account without a verified email simply has no managed organizations. A
-    bearer token always wins over a cookie, so a linked account never borrows
-    contact access from its stored ``verified_email`` while using Keycloak.
+    An authenticated account without a verified email simply has no managed
+    organizations; see ``verified_email_for_caller`` for what counts as verified.
     """
     user, claims = user_and_claims
-    if claims is None:
-        return user.verified_email.lower().strip() if user.verified_email else None
-    return verified_email_from_claims(claims)
+    return verified_email_for_caller(user, claims)

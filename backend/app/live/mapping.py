@@ -16,6 +16,7 @@ from app.utils import make_id
 
 _K_ADMIN_REGISTRATIONS: tuple[str, ...] = ("admin", "registrations")
 _K_ADMIN_TABLES: tuple[str, ...] = ("admin", "tables")
+_K_ADMIN_PEOPLE: tuple[str, ...] = ("admin", "people")
 
 
 # ---------------------------------------------------------------------------
@@ -59,7 +60,7 @@ def check_in_changed(
             event_id=event_id,
             registration_id=registration_id,
         ),
-        keys=(_K_ADMIN_REGISTRATIONS,),
+        keys=(_K_ADMIN_REGISTRATIONS, _K_ADMIN_PEOPLE),
     )
 
 
@@ -79,7 +80,7 @@ def registration_changed(
             event_id=event_id,
             registration_id=registration_id,
         ),
-        keys=(_K_ADMIN_REGISTRATIONS,),
+        keys=(_K_ADMIN_REGISTRATIONS, _K_ADMIN_PEOPLE),
     )
 
 

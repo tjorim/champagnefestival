@@ -23,6 +23,24 @@ If none is implemented, the operation is **not retry safe**. Clients must first
 reconcile state with a read and must not blindly retry it. Calling this out is a
 deliberate decision, not an implicit idempotency guarantee.
 
+## Member-mail transport foundation (#1407)
+
+`MemberMailProvider.send` is **not retry safe** by contract and performs no
+automatic retries. Only the disabled adapter ships; it returns `disabled`
+without any side effect. The delivery key is an integration requirement, not
+implemented provider deduplication. A future adapter must document and test
+provider replay/reconciliation before durable outbox retries are enabled.
+`accepted` does not mean delivered; `unknown` must be reconciled rather than
+blindly resubmitted. See the [foundation boundaries](decisions/1407-member-mail-foundation.md).
+
+Composer `email` channel: `composer_message_email` jobs (one per frozen recipient) have a single
+attempt and are **not retry safe**; no outcome other than `accepted` is ever resubmitted, and a job
+reclaimed after a lost worker (`attempt_count > 1`) is recorded as uncertain instead of sent again.
+Scheduling follows the existing composer strategy (row lock plus state check). Dispatch is convergent
+(a sent message is a no-op). `POST /api/mail/unsubscribe` is **convergent and safe to repeat**: it
+ends the open consent for the signed category and a repeat changes nothing. `email_suppressions` writes
+are convergent (the first reason is kept). The `reward_ready_email` job is single-attempt and not retry safe on the same terms as composer email; its dedup key (`reward-ready:{reward id}`) makes queuing it convergent. The composer UI uses `retry: false` for scheduling and sends `expected_email_audience`, so a stale confirmation is refused rather than sent; an ambiguous schedule request is reconciled by re-reading the message state.
+
 ## Inventory
 
 | Operations | Callers | Decision |
@@ -810,3 +828,175 @@ independent file edits stop recovery without overwriting those edits. See
 [UI maintenance recovery](ui-maintenance.md#interrupted-review-record-saves).
 Regression tests inject a second-write exception and process exit, then verify
 check/retry succeeds and the journal is removed.
+
+### Member overview and unique emails (#1403)
+
+- Member create (REST `POST /api/members`, MCP `create_member`) remains a non-idempotent
+  create without automatic retry. Nonempty emails are case-insensitively unique among current
+  members; a repeated create with that email returns `409 member_email_in_use`, rather than
+  claiming an existing member is the result of this request. Empty-email creates can duplicate.
+- Member/person updates and member reactivation validate the resulting current membership.
+  The database partial unique index also covers concurrent writes, with the same stable conflict
+  code. Exemption flag/note updates are absolute assignments; replay converges on the same values
+  but can add audit entries. Reactivation remains a no-op when already active. Clients do not
+  automatically retry these operations.
+- People merge checks the surviving email and combined role state, excluding the duplicate being
+  deleted; the duplicate releases its email inside the same transaction before adoption. Conflicts
+  roll back everything. A successful replay still returns 404 for the removed duplicate; merge has
+  no automatic retry or deduplication guarantee.
+- Settings updates assign the two nullable indicators (null disables, omission preserves). MCP
+  `set_member_indicators` replaces both indicators, including nulls. Replaying converges on the
+  same settings but can add audit entries; no automatic retry is enabled. Neither indicator blocks
+  adding or reactivating members, and no retirement or reminder is triggered.
+
+
+### Members-only events (#1404)
+
+`members_only` on event create/update follows the existing event write strategy:
+create is not automatically retried; setting the same flag again converges. Turning
+it on keeps all existing registrations, ownership, payments and waitlist entries.
+Only subsequent public registration and waitlist submissions require a valid
+visitor cookie and a current member with the session's verified email. Admin
+registration creation remains exempt. The submitted contact fields cannot select
+a different member: bookings use that member's Person and session User; waitlist
+contact details come from the member record.
+
+Registration creation remains non-idempotent and must not be automatically
+retried. Waitlist submission retains its submission UUID conflict/no-op strategy;
+retries recheck membership and may be refused after membership/session expiry.
+The membership gate performs no write before accepting the identity, apart from
+the existing session idle-time refresh. It introduces no automatic retries.
+
+
+## Capsule-exchange stamp cards (#1405)
+
+- QR check-in, MCP `check_in`, and registration updates that set `checked_in`
+  add/remove the stamp in the registration transaction. A unique registration
+  on `stamps` makes repeated attendance converge; a person row lock serializes
+  different registrations for one member. A unique reward per card prevents
+  duplicate rewards. New cards use the oldest incomplete card first, or snapshot
+  the selected active type. No type selected is a stable conflict and rolls back
+  the check-in. Retrying a check-in immediately is safe; replaying an old check-in
+  after an intentional uncheck is a new attendance correction, not response replay.
+- Reward hand-out and un-hand-out (`PUT /api/stamp-cards/rewards/{id}`, MCP
+  `set_stamp_reward_handed_out`) converge by reward ID under the same person lock.
+  Repeating the current state preserves the hand-out time and actor. There is no
+  version precondition: **do not automatically retry** a stale request after an
+  intervening opposite action. Read current state after an ambiguous timeout.
+- Card-type creation (`POST /api/stamp-cards/types`, MCP `save_stamp_card_type`
+  without `type_id`) uses a server-generated ID and is **not retry safe**. Reconcile
+  by listing types; do not blindly retry. Type replacement (`PUT`, MCP with ID)
+  and selecting/clearing the settings type are absolute updates without version
+  preconditions: they converge if repeated immediately but can overwrite newer
+  edits; **no automatic retry**.
+- A full card blocks opening another card until its reward is handed out
+  (`stamp_reward_pending`); the attempted check-in rolls back. Before hand-out,
+  unchecking removes the reward and reopens the same card. Unchecking any stamp
+  on a handed-out card fails with `stamp_reward_handed_out`. Hand-out can be undone
+  only before a newer card opens (`stamp_card_has_successor` otherwise), so an
+  older card cannot reopen after the next card starts. Existing stamps never move
+  between cards. Person merges preserve existing snapshots and attendance.
+- Stamped registrations cannot be reassigned or deleted until unchecked
+  (`registration_has_stamp`). People with cards must be anonymised rather than
+  deleted (`person_has_stamp_cards`). Person merge transfers cards with their
+  registrations and preserves snapshots; its existing no-automatic-retry contract
+  is unchanged.
+
+## Volunteer-only events linked to attendance polls (2026-10-24)
+
+- Event create/update (REST and MCP) includes `volunteers_only`. The existing
+  create/update retry contracts apply; no new automatic retry is enabled.
+  Public booking and waitlist submissions refuse volunteer-only events with
+  `volunteer_event_poll_required`; volunteers use their authenticated poll.
+  Admin-created bookings remain possible. If `members_only` is also enabled,
+  a linked poll's yes answer requires both current roles.
+- A `yes_no` poll question can link one volunteer-only event via `event_id`
+  (REST and MCP; MCP `clear_event` unlinks before use). One event has at most one
+  linked question. Linking/unlinking is refused once answers or poll-created
+  registrations exist (`poll_event_link_locked`). Question create remains a
+  server-generated-ID create with no automatic retry. Absolute link updates
+  have no version precondition and must not be blindly retried after timeout.
+  Copying questions clears event links and retains its existing repeat-safe
+  kind/title deduplication. No historical answers are backfilled.
+- Volunteer answer PUT and admin/MCP answer replacement commit the answer and
+  registration changes together. Lock order is question(s), event(s), existing
+  registration(s), then volunteer; events/registrations are sorted for multi-row
+  changes. The unique `(poll_question_id, person_id)` prevents duplicate bookings.
+  Yes creates one confirmed registration or updates its party size; no or
+  clearing an admin answer cancels it. Yes after no reuses the same registration.
+  Registration inventory checks, audit entries, confirmation outbox and live
+  notifications use the shared booking service in the same transaction.
+  Poll answers do not choose products: these are attendance bookings, with no
+  purchased items. Meals remain separate poll choices.
+- Repeating the same desired attendance converges without adding bookings or
+  re-enqueuing creation confirmations. This is state convergence, not a cached
+  response: replay after an intentional later answer may change attendance
+  again. Clients keep their existing no-automatic-retry policy.
+- A changed answer affecting a checked-in or net-paid booking is refused with
+  `poll_registration_locked`, rolling back the whole answer replacement.
+  Admins must resolve check-in/payment first. An existing independent active
+  booking is not silently adopted or duplicated (`poll_registration_exists`).
+  Direct edits to a poll-created booking's person, attendance status or party
+  size, and direct deletion, are refused (`poll_registration_managed`); use the
+  poll so its answer and booking remain consistent.
+- Confirmed poll deletion cancels its bookings, detaches their poll reference,
+  and preserves the booking history. A protected booking prevents the entire
+  deletion. Event/edition deletion or removing volunteer-only access requires
+  linked polls to be removed/unlinked first (`event_linked_to_poll`), including
+  polls owned by another edition that reference an event in the deleted edition.
+  This guard rejects before any deletion; retry guidance is unchanged. Existing
+  question-deletion confirmation and closed-question rules still apply. Deletion
+  has no response replay: after an ambiguous timeout read state; do not retry
+  the old confirmation against changed state.
+
+## Stamp card admin screens (#1406)
+
+The browser sends card-type creation/update, default-type settings changes and
+reward hand-out/reversal only after an explicit action, with no automatic write
+retries. Creation has no idempotency key; updates have no version precondition.
+After an ambiguous result, refresh and reconcile before resubmitting. Reward
+writes use the existing convergent absolute `handed_out` state under the person
+lock (#1405); the confirmation stays open on errors and successful writes refresh
+member cards, list badges and filtered totals. No optimistic hand-out is shown.
+Card-type errors preserve the editor draft; background reads do not reset it.
+
+Manual volunteer check-in now invokes the same stamp service in the attendance
+transaction as QR/admin check-in. Repeated requests reuse the registration's
+stamp and return its progress; configuration/reward failures roll back attendance.
+The browser still sends it once (`retry: false`), and same-registration repeat and
+rollback behavior are covered by stamp-card integration tests.
+
+## Email categories and consent (#1408)
+
+Design and rules: [decision](decisions/1408-email-categories-and-consent.md). The browser sends
+none of these writes automatically (`retry: false`) and reports success only after the response.
+
+- **Set preferences** (`PUT /api/me/email-preferences`): **convergent, safe to retry.** The body
+  is an absolute wanted state per category, never a toggle. A category that already matches writes
+  nothing and audits nothing; granting opens at most one record (a partial unique index allows one
+  open record per person and category, and the people for the address are locked while it runs).
+  Every key is validated before anything is written, so a rejected request changes nothing.
+- **Registration form updates option** (`new_editions_opt_in` on `POST /api/registrations`): the
+  registration itself is **not retry safe** (as before; each success creates a booking). The option
+  is **convergent**: an open consent is never duplicated or revoked by an absent checkbox, and the
+  confirmation request replaces its pending row and is not sent again to the same person within an
+  hour. The confirmation mail is best effort after the commit; if it is lost the visitor ticks the
+  option again (after the hour) or uses the preferences screen.
+- **Confirm a consent link** (`POST /api/email-consents/confirm`): **not retry safe with the same
+  link, by design.** The link is consumed in the transaction that grants the consent (row lock on
+  the pending request), so a replay gets a 404 `consent_confirmation_invalid`; it must not
+  re-grant a consent the person has withdrawn since. After an ambiguous response, sign in and read
+  the preferences screen instead of replaying the token.
+- **Record an opt-out** (`POST /api/people/{id}/email-consents/{key}/opt-out`): **convergent.**
+  Ends the open record and cancels a pending confirmation; with nothing open it changes and audits
+  nothing. There is no admin write that grants consent.
+- **Email category create / update / delete** (`/api/email-categories`): create is a natural-key
+  insert (409 `email_category_exists` on a repeat, so a lost response is reconciled by a read);
+  update replaces the supplied fields under a row lock but has **no version precondition**, so a
+  concurrent edit by another administrator can be overwritten; delete is convergent apart from
+  the second call returning 404. The admin UI sends each once and reports errors from their codes.
+- **Housekeeping** removes expired pending confirmations; a repeat finds nothing to do.
+- **Merge** moves consent history under the existing merge transaction; see the people entry above
+  (merge stays not retry safe).
+- **Removed write field:** `PersonUpdate` (REST and MCP) no longer accepts `marketing_opt_in`; an
+  old client sending it gets a 422. Opt-outs go through the endpoint above.
