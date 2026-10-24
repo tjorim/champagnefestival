@@ -27,6 +27,8 @@ export interface Event {
   startTime: string;
   endTime?: string;
   category: string;
+  volunteersOnly?: boolean;
+  membersOnly?: boolean;
   registrationRequired: boolean;
   /** Earliest date/time from which registrations are accepted for this event. */
   registrationsOpenFrom?: Date;

@@ -254,6 +254,7 @@ class PersonPaymentSummary(BaseModel):
 
 
 class PersonListItemOut(PersonAdminSummaryOut):
+    reward_due: bool = False
     last_attended: dt_date | None = None
     inactivity_highlight: bool = False
     registration_count: int
@@ -486,6 +487,8 @@ class EventCreate(EventTextFields):
     start_time: ClockTime
     end_time: ClockTime | None = None
     category: NonEmptyText50
+    volunteers_only: bool = False
+    members_only: bool = False
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
@@ -502,6 +505,8 @@ class EventUpdate(EventTextFields):
     start_time: ClockTime | None = None
     end_time: ClockTime | None = None
     category: NonEmptyText50 | None = None
+    volunteers_only: bool | None = None
+    members_only: bool | None = None
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
@@ -533,6 +538,8 @@ class EventOut(EventTextOut):
     start_time: str
     end_time: str | None
     category: str
+    volunteers_only: bool = False
+    members_only: bool = False
     registration_required: bool
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None
@@ -557,6 +564,8 @@ class EventPublicOut(EventTextOut):
     start_time: str
     end_time: str | None
     category: str
+    volunteers_only: bool = False
+    members_only: bool = False
     registration_required: bool
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None
@@ -825,7 +834,16 @@ class RegistrationVolunteerAssignment(RequestModel):
     volunteer_id: NonEmptyText
 
 
+class StampProgress(BaseModel):
+    card_id: str
+    stamps: int
+    box_count: int
+    reward_earned: bool
+
+
 class RegistrationOut(BaseModel):
+    poll_question_id: str | None = None
+    stamp_progress: StampProgress | None = None
     order_answers: list[OrderAnswerOut] = Field(default_factory=list)
     booked_table_quantity: int = 0
     allocations: list[TableAllocation] = Field(default_factory=list)
@@ -1209,6 +1227,7 @@ def _timezone_required(value: datetime | None) -> datetime | None:
 
 
 class PollQuestionCreate(PollQuestionTexts):
+    event_id: ResourceId | None = None
     edition_id: ResourceKey
     kind: PollQuestionKind
     closes_at: datetime | None = None
@@ -1221,6 +1240,7 @@ class PollQuestionCreate(PollQuestionTexts):
 
 
 class PollQuestionUpdate(PollQuestionTexts):
+    event_id: ResourceId | None = None
     """Partial update: an empty string clears a translation; `closes_at` sets the closing time (a past time
     closes the question now) and an explicit `null` reopens it. The kind cannot change."""
 
@@ -1303,6 +1323,7 @@ class PollOptionOut(BaseModel):
 
 
 class PollQuestionOut(BaseModel):
+    event_id: str | None = None
     """A question as the admin sees it: every translation, the closing state, its options (meals/single choice) and what
     volunteers answered so far."""
 
@@ -1475,6 +1496,7 @@ class VolunteerPollOptionOut(BaseModel):
 
 
 class VolunteerPollQuestionOut(BaseModel):
+    event_id: str | None = None
     id: str
     kind: PollQuestionKind
     title: str
@@ -1542,6 +1564,7 @@ class CheckInRequest(RequestModel):
 
 
 class CheckInOut(BaseModel):
+    stamp_progress: StampProgress | None = None
     registration: CheckInGuestOut
     already_checked_in: bool
 
@@ -2490,6 +2513,8 @@ class IntegrationClientCreatedOut(IntegrationClientOut):
 class AppSettingsUpdate(RequestModel):
     member_limit: MemberLimit | None = None
     member_inactivity_months: MemberInactivityMonths | None = None
+
+    stamp_card_type_id: ResourceId | None = None
     maintenance_mode: bool | None = None
     public_email: EmailStr | Literal[""] | None = None
     public_phone: Text30 | None = None
@@ -2525,6 +2550,8 @@ class AppSettingsUpdate(RequestModel):
 class AppSettingsOut(BaseModel):
     member_limit: int | None = None
     member_inactivity_months: int | None = None
+
+    stamp_card_type_id: str | None = None
     maintenance_mode: bool
     public_email: str
     public_phone: str
@@ -3026,3 +3053,62 @@ class OrganizationChangeOut(BaseModel):
     superseded_fields: list[str]
     reason: str | None
     created_at: datetime
+
+
+class StampCardTypeWrite(RequestModel):
+    name_nl: NonEmptyText200
+    name_fr: Text200 | None = None
+    name_en: Text200 | None = None
+    box_count: PositiveQuantity
+    reward_label_nl: NonEmptyText200
+    reward_label_fr: Text200 | None = None
+    reward_label_en: Text200 | None = None
+    active: bool = True
+
+    @field_validator("name_nl", "reward_label_nl")
+    @classmethod
+    def require_dutch_text(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("Dutch text is required")
+        return value
+
+
+class StampRewardUpdate(RequestModel):
+    handed_out: bool
+
+
+class StampCardTypeOut(StampCardTypeWrite):
+    id: str
+
+
+class StampOut(BaseModel):
+    id: str
+    card_id: str
+    registration_id: str
+    created_at: datetime
+
+
+class StampRewardOut(BaseModel):
+    id: str
+    card_id: str
+    reward_label_nl: str
+    reward_label_fr: str | None
+    reward_label_en: str | None
+    earned_at: datetime
+    handed_out_at: datetime | None
+    handed_out_by: str | None
+
+
+class StampCardOut(BaseModel):
+    id: str
+    person_id: str
+    type_id: str
+    box_count: int
+    reward_label_nl: str
+    reward_label_fr: str | None
+    reward_label_en: str | None
+    opened_at: datetime
+    completed_at: datetime | None
+    stamps: list[StampOut]
+    reward: StampRewardOut | None

@@ -1,3 +1,4 @@
+import type { StampProgress } from "@/utils/stampCards";
 import { m } from "@/paraglide/messages";
 import { fetchArrayOrThrow, fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import type { CheckInData } from "@/utils/publicRegistrationApi";
@@ -91,9 +92,10 @@ export async function submitVolunteerCheckIn(
   );
 
   return {
-    registration: mapVolunteerRegistration(
-      registration.registration as VolunteerRegistrationResponse,
-    ),
+    registration: {
+      ...mapVolunteerRegistration(registration.registration as VolunteerRegistrationResponse),
+      stampProgress: registration.stamp_progress as StampProgress | null | undefined,
+    },
     alreadyCheckedIn: Boolean(registration.already_checked_in),
   };
 }

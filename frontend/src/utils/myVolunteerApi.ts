@@ -97,6 +97,7 @@ export const MAX_POLL_PEOPLE = 10;
 type MyPollSelections = Record<string, number>;
 
 export interface MyPollQuestion {
+  eventId?: string;
   id: string;
   kind: PollQuestionKind;
   title: string;
@@ -141,6 +142,7 @@ function parseQuestion(raw: Record<string, unknown>): MyPollQuestion {
     }
   }
   return {
+    ...(typeof raw.event_id === "string" ? { eventId: raw.event_id } : {}),
     id: String(raw.id ?? ""),
     kind: parsePollKind(raw.kind),
     title: String(raw.title ?? ""),

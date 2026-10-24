@@ -176,3 +176,14 @@ implementation should author unilaterally.
 
 Consolidated 2026-09-08. Original proposals and implementation history remain
 in Git at `88396baf3275ae40cdd907239a0df6a04baed137`; they are not current requirements.
+
+## Stamp-card retention (#1405, 2026-10-24)
+
+Stamp cards, attendance stamps and earned reward records survive person
+anonymisation, like the registrations they reference. Cards and rewards contain
+translated reward snapshots and operational dates, not copied member contact
+information. `handed_out_by` records the admin actor for accountability under the
+existing audit policy. Anonymisation leaves these records attached to the
+anonymised person. Hard deletion is refused for a person with cards; use the
+anonymisation operation. Merging people transfers cards to the surviving person
+alongside registrations, preserving stamps, rewards and type snapshots.

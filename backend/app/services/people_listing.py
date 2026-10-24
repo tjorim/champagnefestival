@@ -18,7 +18,7 @@ from sqlalchemy import Text, and_, cast, func, or_, select
 from sqlalchemy.sql import Select
 
 from app.dependencies import SortDirection
-from app.models import Edition, Event, Person, Registration
+from app.models import Edition, Event, Person, Registration, StampCard, StampCardReward
 from app.services.operational_search import person_search_order_by, person_search_predicate
 from app.utils import roles_contains
 
@@ -30,6 +30,15 @@ VolunteerSortKey = Literal["name", "created", "updated"]
 # which a plain collation-dependent sort on `name`/`email` would not guarantee.
 registration_count = (
     select(func.count(Registration.id)).where(Registration.person_id == Person.id).correlate(Person).scalar_subquery()
+)
+
+# EXISTS avoids duplicating people when several rewards are outstanding.
+reward_due = (
+    select(StampCardReward.id)
+    .join(StampCard, StampCard.id == StampCardReward.card_id)
+    .where(StampCard.person_id == Person.id, StampCardReward.handed_out_at.is_(None))
+    .correlate(Person)
+    .exists()
 )
 
 last_attended = (
@@ -103,6 +112,7 @@ def filtered_people_stmt(
     q: str | None = None,
     role: str | None = None,
     active: bool | None = None,
+    reward_due_filter: bool | None = None,
     last_attended_before: date | None = None,
     last_attended_after: date | None = None,
 ) -> Select[Any]:
@@ -113,6 +123,8 @@ def filtered_people_stmt(
     and everyone who is anonymised).
     """
     stmt = select(Person)
+    if reward_due_filter is not None:
+        stmt = stmt.where(reward_due if reward_due_filter else ~reward_due)
     if last_attended_before is not None:
         stmt = stmt.where(last_attended < last_attended_before)
     if last_attended_after is not None:
