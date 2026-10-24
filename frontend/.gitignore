@@ -2,6 +2,8 @@
 # Read-only upstream UI review reports
 .ui-maintenance/
 
+# Also ignore a worktree dependency directory supplied as a symlink.
+node_modules
 # Recoverable UI review-record journal and atomic-write staging files
 .ui-maintenance-record.json
 .ui-maintenance-record.json.*.tmp

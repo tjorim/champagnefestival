@@ -22,11 +22,12 @@
     "check-message-parity": "node scripts/check-message-parity.mjs",
     "locale:audit": "node scripts/locale-audit.mjs",
     "bundle:check": "node scripts/bundle-budget.mjs",
-    "ui:check": "node scripts/ui-maintenance.mjs check",
+    "ui:check": "node scripts/ui-maintenance.mjs check && node scripts/ui-imports.mjs",
     "ui:upstream": "node scripts/ui-maintenance.mjs upstream",
     "ui:diff": "node scripts/ui-maintenance.mjs diff",
     "ui:record": "node scripts/ui-maintenance.mjs record",
-    "ui:test": "node --test scripts/ui-maintenance.verify.mjs"
+    "ui:test": "node --test scripts/ui-maintenance.verify.mjs scripts/ui-imports.verify.mjs",
+    "ui:usage": "node scripts/ui-imports.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
