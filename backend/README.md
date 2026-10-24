@@ -210,6 +210,7 @@ location /api/ {
 | `METRICS_HMAC_SECRET` | no    | `""`                                                   | Shared secret for the `X-Metrics-Token` HMAC on `GET /api/metrics`; empty disables the endpoint |
 | `SENTRY_DSN`       | no       | `""`                                                   | Sentry DSN for error tracking; empty disables Sentry                 |
 | `SENTRY_TRACES_SAMPLE_RATE` | no | `0.0`                                              | Fraction (0.0-1.0) of transactions sampled for Sentry performance monitoring |
+| `MEMBER_MAIL_PROVIDER` | no | `disabled` | Only `disabled` is supported; separate from SMTP. See [member-mail foundation](../docs/decisions/1407-member-mail-foundation.md). |
 | `SMTP_HOST`        | no       | `""`                                                   | SMTP server used to deliver guest access links and registration confirmations; empty disables delivery |
 | `SMTP_PORT`        | no       | `587`                                                  | SMTP port                                                            |
 | `SMTP_USER`        | no       | `""`                                                   | SMTP username                                                        |
@@ -288,6 +289,15 @@ See `.env.example` for a template.
 | `PUT`    | `/api/people/{id}`              | admin          | Update person + roles                                                      |
 | `DELETE` | `/api/people/{id}`              | admin          | Delete person                                                              |
 | `GET`    | `/api/people/{id}/registrations` | admin          | List grouped registration history for that person                          |
+| `GET`    | `/api/people/{id}/email-consents` | admin         | The person's email consent history (grants and withdrawals), read-only      |
+| `POST`   | `/api/people/{id}/email-consents/{key}/opt-out` | admin | Record an opt-out for a category; admins can never grant consent (repeat is a no-op) |
+| `GET`    | `/api/email-categories`         | admin          | Email categories with all stored texts, the roles that may use each, and `automatic` |
+| `POST`   | `/api/email-categories`         | admin          | Create a category (stable `key`, Dutch name required, optional `allowed_roles`); never automatic |
+| `PUT`    | `/api/email-categories/{key}`   | admin          | Edit texts, roles and order; `automatic` is not editable                    |
+| `DELETE` | `/api/email-categories/{key}`   | admin          | Delete; refused for `new_editions`, `reward_ready` and a category with consent history |
+| `GET`    | `/api/me/email-preferences`     | user (bearer or visitor session) | The categories available to the people behind the caller's verified address, with state (`?locale=`) |
+| `PUT`    | `/api/me/email-preferences`     | user (bearer or visitor session) | `{"consents": {"club_news": true}}`: set the wanted state of the listed categories (absolute, safe to repeat) |
+| `POST`   | `/api/email-consents/confirm`   | public + token | Activate the consent behind an emailed single-use link (registration form updates option) |
 | `GET`    | `/api/health/liveness`          | public         | Fast alive check — no DB hit (for load-balancer liveness probes)           |
 | `GET`    | `/api/health/readiness`         | public         | DB connectivity check with 2 s timeout (for load-balancer readiness probes)|
 | `GET`    | `/api/health`                   | public         | Summary with links to liveness and readiness endpoints                     |
@@ -399,8 +409,26 @@ failure the interface can explain carries a stable `code` next to it:
   `organization_change_submission_reused`, and the delete guards
   `table_type_in_use`, `venue_has_editions`, `venue_has_rooms`, `room_has_layouts`,
   `layout_has_tables`, `table_has_registrations`, `category_protected`,
-  `category_in_use`, `event_has_registrations`. Validation errors (422) and
+  `category_in_use`, `event_has_registrations`, and for email consent (#1408)
+  `email_category_not_found`, `email_category_exists`, `email_category_protected`,
+  `email_category_in_use`, `email_category_unavailable`, `verified_email_required`,
+  `consent_confirmation_invalid`, and for member mail (#1407) `member_mail_unavailable`,
+  `email_category_automatic`, `email_audience_confirmation_required`, `email_audience_changed`,
+  `unsubscribe_token_invalid`. Validation errors (422) and
   uncoded errors still return `detail` alone.
+
+### Email categories and consent (#1408)
+
+Who may be mailed is decided by consent per **category**, given by the person themselves, never by an
+administrator; sending is #1407. See [the decision](../docs/decisions/1408-email-categories-and-consent.md).
+Categories are admin-managed rows (`email_categories`: stable key, name and description in nl/fr/en
+with Dutch required, `allowed_roles`, `automatic`); migration `010` seeds `club_news` (members),
+`new_editions` (everyone), `volunteer_news` (volunteers) and `reward_ready` (members, automatic).
+Consent rows (`email_consents`) keep granted/withdrawn dates and their source, so history survives
+anonymisation and merging. The caller is tied to people only through their verified email address;
+`email_categories_service.person_allows` is the role rule applied when consent is given and again at
+send time. The registration form's `new_editions_opt_in` only becomes consent for a verified address
+(directly when signed in with it, else through the emailed link behind `/email-consent`).
 
 ## Frontend integration
 
@@ -925,7 +953,7 @@ See `docs/retry-safety.md` for retry decisions and
 `docs/decisions/934-data-retention-and-erasure.md` for retention. OpenAPI exposes
 typed request/response schemas for the REST operations.
 
-### Volunteer-only events and linked attendance polls (migration `012`)
+### Volunteer-only events and linked attendance polls (migration `010`)
 
 An event's `volunteers_only` flag is independent of `members_only`. Public
 registration and waitlist endpoints refuse volunteer-only bookings and direct

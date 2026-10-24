@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 
-from tests.helpers import ADMIN_HEADERS, _create_event, _registration_body
+from tests.helpers import ADMIN_HEADERS, _add_consent
 
 VOLUNTEER = {
     "name": "Sofie De Smet",
@@ -78,59 +80,68 @@ async def test_merge_transfers_volunteer_help_periods(client):
 
 
 @pytest.mark.anyio
-async def test_merge_adopts_marketing_opt_in_from_duplicate(client):
+async def test_merge_moves_email_consent_history_to_the_survivor(client, db_session):
     """Merging away a duplicate must not silently discard their consent —
     docs/decisions/934-data-retention-and-erasure.md."""
-    event = await _create_event(client)
-    r = await client.post(
-        "/api/registrations",
-        json=_registration_body(
-            event, name="Opted In", email="optedin@example.com", phone="+32470000777", marketing_opt_in=True
-        ),
-    )
-    assert r.status_code == 201, r.text
-    duplicate_id = r.json()["person_id"]
-
-    r = await client.post("/api/people", json=PLAIN, headers=ADMIN_HEADERS)
+    r = await client.post("/api/people", json={**PLAIN, "roles": []}, headers=ADMIN_HEADERS)
     canonical_id = r.json()["id"]
-    assert r.json()["marketing_opt_in"] is False
+    r = await client.post("/api/people", json={**PLAIN, "email": "SOFIE@example.com"}, headers=ADMIN_HEADERS)
+    duplicate_id = r.json()["id"]
+    open_consent = await _add_consent(db_session, duplicate_id, "new_editions")
+    closed = await _add_consent(
+        db_session,
+        duplicate_id,
+        "club_news",
+        revoked_at=datetime.now(UTC),
+        revoked_source="self_service",
+    )
 
     r = await _merge(client, canonical_id, duplicate_id)
     assert r.status_code == 200, r.text
-    assert r.json()["marketing_opt_in"] is True
-    assert r.json()["marketing_opt_in_at"] is not None
+
+    r = await client.get(f"/api/people/{canonical_id}/email-consents", headers=ADMIN_HEADERS)
+    by_id = {row["id"]: row for row in r.json()}
+    assert by_id[open_consent.id]["revoked_at"] is None
+    assert by_id[closed.id]["revoked_source"] == "self_service"
 
 
 @pytest.mark.anyio
-async def test_merge_keeps_canonical_opt_in_and_timestamp_when_both_have_one(client):
-    event = await _create_event(client)
-    r = await client.post(
-        "/api/registrations",
-        json=_registration_body(
-            event, name="Opted In Dup", email="dup@example.com", phone="+32470000888", marketing_opt_in=True
-        ),
-    )
-    assert r.status_code == 201, r.text
-    duplicate_id = r.json()["person_id"]
-
-    # Opt the canonical person in via the legitimate channel too, so both
-    # sides of the merge already have their own consent and timestamp.
-    r = await client.post(
-        "/api/registrations",
-        json=_registration_body(
-            event, name="Sofie De Smet", email="sofie@example.com", phone="+32470000999", marketing_opt_in=True
-        ),
-    )
-    assert r.status_code == 201, r.text
-    canonical_id = r.json()["person_id"]
-    r = await client.get(f"/api/people/{canonical_id}", headers=ADMIN_HEADERS)
-    canonical_opted_in_at = r.json()["marketing_opt_in_at"]
-    assert canonical_opted_in_at is not None
+async def test_merge_keeps_the_survivors_own_consent_when_both_have_one(client, db_session):
+    r = await client.post("/api/people", json={**PLAIN, "roles": []}, headers=ADMIN_HEADERS)
+    canonical_id = r.json()["id"]
+    r = await client.post("/api/people", json={**PLAIN, "roles": []}, headers=ADMIN_HEADERS)
+    duplicate_id = r.json()["id"]
+    kept = await _add_consent(db_session, canonical_id, "new_editions")
+    superseded = await _add_consent(db_session, duplicate_id, "new_editions")
 
     r = await _merge(client, canonical_id, duplicate_id)
     assert r.status_code == 200, r.text
-    assert r.json()["marketing_opt_in"] is True
-    assert r.json()["marketing_opt_in_at"] == canonical_opted_in_at
+
+    r = await client.get(f"/api/people/{canonical_id}/email-consents", headers=ADMIN_HEADERS)
+    by_id = {row["id"]: row for row in r.json()}
+    assert by_id[kept.id]["revoked_at"] is None
+    assert by_id[superseded.id]["revoked_source"] == "merged"
+    assert sum(row["revoked_at"] is None for row in by_id.values()) == 1
+
+
+@pytest.mark.anyio
+async def test_merge_does_not_carry_consent_to_a_different_address(client, db_session):
+    """Consent was given for the duplicate's address, so it must not start mailing another one."""
+    r = await client.post("/api/people", json={**PLAIN, "roles": []}, headers=ADMIN_HEADERS)
+    canonical_id = r.json()["id"]
+    r = await client.post(
+        "/api/people", json={**PLAIN, "roles": [], "email": "other@example.com"}, headers=ADMIN_HEADERS
+    )
+    duplicate_id = r.json()["id"]
+    consent = await _add_consent(db_session, duplicate_id, "new_editions")
+
+    r = await _merge(client, canonical_id, duplicate_id)
+    assert r.status_code == 200, r.text
+
+    r = await client.get(f"/api/people/{canonical_id}/email-consents", headers=ADMIN_HEADERS)
+    [row] = r.json()
+    assert row["id"] == consent.id
+    assert row["revoked_source"] == "merged"
 
 
 @pytest.mark.anyio

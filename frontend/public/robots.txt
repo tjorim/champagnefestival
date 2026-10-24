@@ -5,5 +5,7 @@ Disallow: /check-in
 Disallow: /venue-plan
 Disallow: /me
 Disallow: /pebble-pair
+Disallow: /email-consent
+Disallow: /email-unsubscribe
 
 Sitemap: https://champagnefestival.tjor.im/sitemap.xml

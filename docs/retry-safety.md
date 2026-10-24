@@ -23,6 +23,24 @@ If none is implemented, the operation is **not retry safe**. Clients must first
 reconcile state with a read and must not blindly retry it. Calling this out is a
 deliberate decision, not an implicit idempotency guarantee.
 
+## Member-mail transport foundation (#1407)
+
+`MemberMailProvider.send` is **not retry safe** by contract and performs no
+automatic retries. Only the disabled adapter ships; it returns `disabled`
+without any side effect. The delivery key is an integration requirement, not
+implemented provider deduplication. A future adapter must document and test
+provider replay/reconciliation before durable outbox retries are enabled.
+`accepted` does not mean delivered; `unknown` must be reconciled rather than
+blindly resubmitted. See the [foundation boundaries](decisions/1407-member-mail-foundation.md).
+
+Composer `email` channel: `composer_message_email` jobs (one per frozen recipient) have a single
+attempt and are **not retry safe**; no outcome other than `accepted` is ever resubmitted, and a job
+reclaimed after a lost worker (`attempt_count > 1`) is recorded as uncertain instead of sent again.
+Scheduling follows the existing composer strategy (row lock plus state check). Dispatch is convergent
+(a sent message is a no-op). `POST /api/mail/unsubscribe` is **convergent and safe to repeat**: it
+ends the open consent for the signed category and a repeat changes nothing. `email_suppressions` writes
+are convergent (the first reason is kept). The `reward_ready_email` job is single-attempt and not retry safe on the same terms as composer email; its dedup key (`reward-ready:{reward id}`) makes queuing it convergent. The composer UI uses `retry: false` for scheduling and sends `expected_email_audience`, so a stale confirmation is refused rather than sent; an ambiguous schedule request is reconciled by re-reading the message state.
+
 ## Inventory
 
 | Operations | Callers | Decision |
@@ -947,3 +965,38 @@ transaction as QR/admin check-in. Repeated requests reuse the registration's
 stamp and return its progress; configuration/reward failures roll back attendance.
 The browser still sends it once (`retry: false`), and same-registration repeat and
 rollback behavior are covered by stamp-card integration tests.
+
+## Email categories and consent (#1408)
+
+Design and rules: [decision](decisions/1408-email-categories-and-consent.md). The browser sends
+none of these writes automatically (`retry: false`) and reports success only after the response.
+
+- **Set preferences** (`PUT /api/me/email-preferences`): **convergent, safe to retry.** The body
+  is an absolute wanted state per category, never a toggle. A category that already matches writes
+  nothing and audits nothing; granting opens at most one record (a partial unique index allows one
+  open record per person and category, and the people for the address are locked while it runs).
+  Every key is validated before anything is written, so a rejected request changes nothing.
+- **Registration form updates option** (`new_editions_opt_in` on `POST /api/registrations`): the
+  registration itself is **not retry safe** (as before; each success creates a booking). The option
+  is **convergent**: an open consent is never duplicated or revoked by an absent checkbox, and the
+  confirmation request replaces its pending row and is not sent again to the same person within an
+  hour. The confirmation mail is best effort after the commit; if it is lost the visitor ticks the
+  option again (after the hour) or uses the preferences screen.
+- **Confirm a consent link** (`POST /api/email-consents/confirm`): **not retry safe with the same
+  link, by design.** The link is consumed in the transaction that grants the consent (row lock on
+  the pending request), so a replay gets a 404 `consent_confirmation_invalid`; it must not
+  re-grant a consent the person has withdrawn since. After an ambiguous response, sign in and read
+  the preferences screen instead of replaying the token.
+- **Record an opt-out** (`POST /api/people/{id}/email-consents/{key}/opt-out`): **convergent.**
+  Ends the open record and cancels a pending confirmation; with nothing open it changes and audits
+  nothing. There is no admin write that grants consent.
+- **Email category create / update / delete** (`/api/email-categories`): create is a natural-key
+  insert (409 `email_category_exists` on a repeat, so a lost response is reconciled by a read);
+  update replaces the supplied fields under a row lock but has **no version precondition**, so a
+  concurrent edit by another administrator can be overwritten; delete is convergent apart from
+  the second call returning 404. The admin UI sends each once and reports errors from their codes.
+- **Housekeeping** removes expired pending confirmations; a repeat finds nothing to do.
+- **Merge** moves consent history under the existing merge transaction; see the people entry above
+  (merge stays not retry safe).
+- **Removed write field:** `PersonUpdate` (REST and MCP) no longer accepts `marketing_opt_in`; an
+  old client sending it gets a 422. Opt-outs go through the endpoint above.

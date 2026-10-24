@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Literal, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
 from sqlalchemy import delete, select
@@ -21,13 +21,16 @@ from app.ratelimit import get_client_ip
 from app.schemas import (
     CommunicationPreferenceOut,
     CommunicationPreferenceUpdate,
+    EmailPreferencesOut,
+    EmailPreferencesUpdate,
     MyRegistrationOut,
     PaymentStatus,
     PebbleAccessTokenOut,
     RegistrationGuestOut,
     RegistrationStatus,
 )
-from app.services.errors import ApiHTTPException
+from app.services import email_consent_service
+from app.services.errors import ApiHTTPException, ServiceError, to_http_exception
 from app.services.outbox_service import enqueue_contact_notification
 from app.services.pebble_access import (
     authenticate_pebble_token,
@@ -39,8 +42,9 @@ from app.services.users_service import (
     get_or_create_user,
     verified_email_from_claims,
 )
+from app.translations import Language
 from app.utils import registration_to_guest_dict
-from app.visitor_session import actor_for_user, get_current_user_with_claims
+from app.visitor_session import actor_for_user, get_current_user_with_claims, verified_email_for_caller
 from app.visitor_session import get_current_user as get_current_portal_user
 
 router = APIRouter(prefix="/api/me", tags=["me"])
@@ -107,6 +111,63 @@ async def update_communication_preference(
         )
     await db.commit()
     return CommunicationPreferenceOut(preferred_language=body.preferred_language)
+
+
+@router.get("/email-preferences", response_model=EmailPreferencesOut)
+async def get_email_preferences(
+    response: Response,
+    locale: Language | None = Query(default=None),
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """The email categories available to the people behind the caller's *verified* address, with their state.
+
+    Only the verified address counts: a booking linked to the account (``Registration.user_id``) does
+    not give access to its contact address. A category appears when a person with this address holds a
+    role it needs (or already consented to it, so it can be withdrawn).
+    """
+    # Identity-linked and reachable by cookie: keep intermediary caches from reusing it.
+    response.headers["Cache-Control"] = "no-store"
+    user, claims = user_and_claims
+    return await email_consent_service.preferences(db, verified_email_for_caller(user, claims), locale=locale)
+
+
+@router.put("/email-preferences", response_model=EmailPreferencesOut)
+async def update_email_preferences(
+    body: EmailPreferencesUpdate,
+    request: Request,
+    response: Response,
+    locale: Language | None = Query(default=None),
+    user_and_claims: tuple[User, dict[str, Any] | None] = Depends(get_current_user_with_claims),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Set consent for the listed categories; the others stay as they are.
+
+    Consent is given only here, by the signed-in person for their own verified address, with no extra
+    confirmation step. Absolute state per category, so repeating a request changes nothing.
+    """
+    response.headers["Cache-Control"] = "no-store"
+    user, claims = user_and_claims
+    email = verified_email_for_caller(user, claims)
+    if email is None:
+        raise ApiHTTPException(
+            status.HTTP_409_CONFLICT,
+            "verified_email_required",
+            "A verified email address is required to manage email preferences.",
+        )
+    actor, auth_source = actor_for_user(user, claims)
+    try:
+        await email_consent_service.update_preferences(
+            db,
+            email,
+            body.consents,
+            actor=actor,
+            auth_source=auth_source,
+            request_id=getattr(request.state, "request_id", None),
+        )
+    except ServiceError as exc:
+        raise to_http_exception(exc) from exc
+    return await email_consent_service.preferences(db, email, locale=locale)
 
 
 async def _registrations_for_user(db: AsyncSession, user_id: str) -> list[MyRegistrationOut]:

@@ -4,6 +4,7 @@ import {
   CalendarPlusIcon,
   CircleArrowDownIcon,
   CircleUserRoundIcon,
+  MailCheckIcon,
   CupSodaIcon,
   ExternalLinkIcon,
   MapIcon,
@@ -90,6 +91,8 @@ const VenuePlanPage = lazy(() => import("./components/VenuePlanPage"));
 const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
 const MyAccountPage = lazy(() => import("./components/MyAccountPage"));
+const EmailConsentConfirmPage = lazy(() => import("./components/EmailConsentConfirmPage"));
+const EmailUnsubscribePage = lazy(() => import("./components/EmailUnsubscribePage"));
 // Below-the-fold components
 const LogoWall = lazy(() => import("./components/LogoWall"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -140,6 +143,31 @@ function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) 
   );
 }
 
+/** The shared shell of the standalone pages: skip link, navigation bar and a suspended, error-bounded main area. */
+function StandaloneRoute({
+  icon,
+  title,
+  errorFallbackText,
+  children,
+}: {
+  icon: LucideIcon;
+  title: string;
+  errorFallbackText: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="App standalone-app">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar icon={icon} title={title} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={errorFallbackText}>{children}</AppSuspense>
+      </main>
+    </div>
+  );
+}
+
 // Helper component for LogoWall with Suspense and ErrorBoundary
 function SuspendedLogoWall({
   itemsType,
@@ -181,17 +209,13 @@ function SuspendedLogoWall({
 function AdminPage() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={ShieldIcon} title={m.admin_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.admin_error_load_dashboard()}>
-          <AdminDashboard visible={true} />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={ShieldIcon}
+      title={m.admin_title()}
+      errorFallbackText={m.admin_error_load_dashboard()}
+    >
+      <AdminDashboard visible={true} />
+    </StandaloneRoute>
   );
 }
 
@@ -199,17 +223,13 @@ function AdminPage() {
 function CheckInRoute() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={ScanQrCodeIcon} title={m.checkin_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.admin_error_load_checkin()}>
-          <CheckInPage />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={ScanQrCodeIcon}
+      title={m.checkin_title()}
+      errorFallbackText={m.admin_error_load_checkin()}
+    >
+      <CheckInPage />
+    </StandaloneRoute>
   );
 }
 
@@ -248,17 +268,13 @@ function PrivacyPolicyRoute() {
 function PebblePairRoute() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={WatchIcon} title={m.pebble_pair_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.pebble_pair_error()}>
-          <PebblePairPage />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={WatchIcon}
+      title={m.pebble_pair_title()}
+      errorFallbackText={m.pebble_pair_error()}
+    >
+      <PebblePairPage />
+    </StandaloneRoute>
   );
 }
 
@@ -271,17 +287,41 @@ function PebblePairRoute() {
 function MyAccountRoute() {
   useNoIndex();
   return (
-    <div className="App standalone-app">
-      <a href="#main-content" className="skip-link">
-        {m.accessibility_skip_to_content()}
-      </a>
-      <StandaloneNavBar icon={CircleUserRoundIcon} title={m.my_account_title()} />
-      <main id="main-content" className="standalone-main">
-        <AppSuspense errorFallbackText={m.my_account_delete_error()}>
-          <MyAccountPage />
-        </AppSuspense>
-      </main>
-    </div>
+    <StandaloneRoute
+      icon={CircleUserRoundIcon}
+      title={m.my_account_title()}
+      errorFallbackText={m.my_account_delete_error()}
+    >
+      <MyAccountPage />
+    </StandaloneRoute>
+  );
+}
+
+/** Route component for /email-unsubscribe, where the unsubscribe link of member mail lands (#1407). */
+function EmailUnsubscribeRoute() {
+  useNoIndex();
+  return (
+    <StandaloneRoute
+      icon={MailCheckIcon}
+      title={m.email_unsubscribe_title()}
+      errorFallbackText={m.email_unsubscribe_error()}
+    >
+      <EmailUnsubscribePage />
+    </StandaloneRoute>
+  );
+}
+
+/** Route component for /email-consent, the target of the emailed consent confirmation link (#1408). */
+function EmailConsentRoute() {
+  useNoIndex();
+  return (
+    <StandaloneRoute
+      icon={MailCheckIcon}
+      title={m.email_consent_confirm_title()}
+      errorFallbackText={m.email_consent_confirm_error()}
+    >
+      <EmailConsentConfirmPage />
+    </StandaloneRoute>
   );
 }
 
@@ -862,6 +902,8 @@ const router = createAppRouter({
   PrivacyPolicyRoute,
   PebblePairRoute,
   MyAccountRoute,
+  EmailConsentRoute,
+  EmailUnsubscribeRoute,
   VenuePlanRoute,
   queryClient,
 });

@@ -1,3 +1,4 @@
+import EmailPreferences from "@/components/EmailPreferences";
 import MyOrganizationsSection, {
   type ManagedOrganization,
 } from "@/components/MyOrganizationsSection";
@@ -367,6 +368,17 @@ export default function MyAccountPage() {
     });
   if (isVolunteer)
     tabs.push({ key: "volunteer", title: m.my_eid_title(), content: volunteerSection });
+  if (isAuthenticated || emailRegistrations !== null)
+    tabs.push({
+      key: "email-preferences",
+      title: m.email_preferences_title(),
+      content: (
+        <EmailPreferences
+          key={`${sessionEpoch}-${accountId ?? "email"}`}
+          getAccessToken={getAccessToken}
+        />
+      ),
+    });
   if (isAuthenticated)
     tabs.push({ key: "account", title: m.my_account_title(), content: accountSection });
 
