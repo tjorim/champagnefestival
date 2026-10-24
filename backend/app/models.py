@@ -31,7 +31,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy.orm import Mapped, column_property, mapped_column, relationship
 
 from app.database import Base
-from app.dialect_functions import json_array_elements
+from app.dialect_functions import json_array_elements, trim_spaces
 from app.translations import BASE_LANGUAGE, resolve_pair, resolve_text
 
 
@@ -1866,7 +1866,7 @@ class PollDeletionNotification(Base):
 
 Index(
     "uq_people_current_member_email",
-    func.lower(func.trim(Person.email)),
+    func.lower(trim_spaces(Person.email)),
     unique=True,
     postgresql_where=text(
         "NOT anonymised AND CAST(roles AS text) LIKE '%\"member\"%' AND retired_roles ->> 'member' IS NULL AND trim(email) <> ''"
