@@ -1,4 +1,4 @@
-"""Migration 010 preserves existing people and enforces current-member uniqueness."""
+"""Migration 010 preserves people, enforces member uniqueness and adds the event gate."""
 
 import os
 from pathlib import Path
@@ -42,6 +42,14 @@ def test_member_overview_migration(monkeypatch):
                 text("SELECT inactivity_exempt, inactivity_exempt_note FROM people WHERE id = 'existing'")
             ).one()
             assert row == (False, "")
+            column = conn.execute(
+                text(
+                    "SELECT is_nullable, column_default FROM information_schema.columns "
+                    "WHERE table_schema = :schema AND table_name = 'events' AND column_name = 'members_only'"
+                ),
+                {"schema": schema},
+            ).one()
+            assert column == ("NO", "false")
             conn.execute(
                 text(
                     "INSERT INTO people (id, name, email, roles, retired_roles, role_history, anonymised) VALUES ('retired', 'Retired', 'MEMBER@example.com', '[\"member\"]', '{\"member\": \"2026-10-01\"}', '{}', false)"
@@ -57,6 +65,16 @@ def test_member_overview_migration(monkeypatch):
         command.downgrade(config, "009")
         with database.begin() as conn:
             assert conn.execute(text("SELECT count(*) FROM people")).scalar_one() == 3
+            assert (
+                conn.execute(
+                    text(
+                        "SELECT count(*) FROM information_schema.columns "
+                        "WHERE table_schema = :schema AND table_name = 'events' AND column_name = 'members_only'"
+                    ),
+                    {"schema": schema},
+                ).scalar_one()
+                == 0
+            )
         command.upgrade(config, "010")
     finally:
         database.dispose()

@@ -865,6 +865,7 @@ class Event(Base):
         cascade="all, delete-orphan", lazy="selectin", order_by="EventOrderQuestion.sort_order, EventOrderQuestion.id"
     )
 
+    members_only: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
     registration_required: Mapped[bool] = mapped_column(Boolean, default=False)
     registrations_open_from: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     registrations_close_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

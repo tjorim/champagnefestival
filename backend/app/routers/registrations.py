@@ -100,8 +100,11 @@ async def create_registration(
         user = await get_or_create_user(db, claims["sub"])
 
     from app.services import product_inventory as inventory
+    from app.services.member_registration import verified_member, visitor_user
 
+    session_user = await visitor_user(db, request)
     event = await inventory.lock_event(db, body.event_id)
+    member_identity = await verified_member(db, session_user) if event.members_only else None
     await _ensure_public_registration_allowed(db, event)
     from app.services.order_questions_service import validate_answers
 
@@ -109,42 +112,49 @@ async def create_registration(
     resolved_order_items, snapshot = inventory.resolve_booking(event, body.order_items, body.guest_count)
     await inventory.check_stock(db, event, resolved_order_items)
 
-    email_norm = str(body.email).lower().strip()
-    name_norm = " ".join(body.name.lower().split())
-    phone_norm = parse_phone(body.phone)
-
-    candidates = (
-        (await db.execute(select(Person).where(Person.email == email_norm, Person.phone == phone_norm))).scalars().all()
-    )
-    person = next(
-        (candidate for candidate in candidates if " ".join(candidate.name.lower().split()) == name_norm),
-        None,
-    )
-    if person is None:
-        person = Person(
-            id=make_id("per"),
-            preferred_language=body.preferred_language,
-            name=body.name,
-            email=email_norm,
-            phone=phone_norm,
-            marketing_opt_in=body.marketing_opt_in,
-            marketing_opt_in_at=datetime.now(UTC) if body.marketing_opt_in else None,
-        )
-        db.add(person)
-        await db.flush()
+    if member_identity is not None:
+        person, user = member_identity
     else:
-        if user is not None and await db.scalar(
-            select(Registration.id).where(Registration.person_id == person.id, Registration.user_id == user.id).limit(1)
-        ):
-            person.preferred_language = body.preferred_language
-        # Opting in is a one-way ratchet through this form: ticking the box
-        # records consent even on a returning visitor's record, but leaving it
-        # unticked on a later registration must not silently revoke a consent
-        # already given — that's a decision for an explicit unsubscribe, not
-        # an absent checkbox.
-        if body.marketing_opt_in and not person.marketing_opt_in:
-            person.marketing_opt_in = True
-            person.marketing_opt_in_at = datetime.now(UTC)
+        email_norm = str(body.email).lower().strip()
+        name_norm = " ".join(body.name.lower().split())
+        phone_norm = parse_phone(body.phone)
+
+        candidates = (
+            (await db.execute(select(Person).where(Person.email == email_norm, Person.phone == phone_norm)))
+            .scalars()
+            .all()
+        )
+        person = next(
+            (candidate for candidate in candidates if " ".join(candidate.name.lower().split()) == name_norm),
+            None,
+        )
+        if person is None:
+            person = Person(
+                id=make_id("per"),
+                preferred_language=body.preferred_language,
+                name=body.name,
+                email=email_norm,
+                phone=phone_norm,
+                marketing_opt_in=body.marketing_opt_in,
+                marketing_opt_in_at=datetime.now(UTC) if body.marketing_opt_in else None,
+            )
+            db.add(person)
+            await db.flush()
+        else:
+            if user is not None and await db.scalar(
+                select(Registration.id)
+                .where(Registration.person_id == person.id, Registration.user_id == user.id)
+                .limit(1)
+            ):
+                person.preferred_language = body.preferred_language
+            # Opting in is a one-way ratchet through this form: ticking the box
+            # records consent even on a returning visitor's record, but leaving it
+            # unticked on a later registration must not silently revoke a consent
+            # already given — that's a decision for an explicit unsubscribe, not
+            # an absent checkbox.
+            if body.marketing_opt_in and not person.marketing_opt_in:
+                person.marketing_opt_in = True
+                person.marketing_opt_in_at = datetime.now(UTC)
 
     registration = Registration(
         id=make_id("reg"),

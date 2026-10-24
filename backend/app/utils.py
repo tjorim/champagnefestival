@@ -134,6 +134,7 @@ def event_to_summary_dict(
         "start_time": event.start_time,
         "end_time": event.end_time,
         "category": event.category,
+        "members_only": event.members_only,
         "registration_required": event.registration_required,
         "registrations_open_from": event.registrations_open_from,
         "registrations_close_at": event.registrations_close_at,

@@ -1641,5 +1641,9 @@
   "admin_members_places": "{count} van {limit} plaatsen bezet",
   "admin_members_places_unlimited": "{count} huidige leden",
   "admin_members_limit_warning": "Het ledenmaximum is bereikt. Je kunt nog steeds leden toevoegen.",
-  "api_error_member_email_in_use": "Een huidig lid gebruikt dit e-mailadres al."
+  "api_error_member_email_in_use": "Een huidig lid gebruikt dit e-mailadres al.",
+  "event_members_only": "Alleen voor leden",
+  "member_sign_in_prompt": "Meld je aan met het e-mailadres van je lidmaatschap voordat je inschrijft.",
+  "member_sign_in_link": "Aanmelden via e-mail",
+  "membership_required": "Voor dit evenement is een actief lidmaatschap vereist."
 }

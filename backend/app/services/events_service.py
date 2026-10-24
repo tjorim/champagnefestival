@@ -166,6 +166,7 @@ async def create_event(db: AsyncSession, *, body: EventCreate, actor: str, reque
         registration_required=body.registration_required,
         registrations_open_from=body.registrations_open_from,
         registrations_close_at=body.registrations_close_at,
+        members_only=body.members_only,
         active=body.active,
     )
     db.add(event)
@@ -255,12 +256,15 @@ async def apply_event_update(
         "start_time",
         "end_time",
         "category",
+        "members_only",
         "registration_required",
         "registrations_open_from",
         "registrations_close_at",
         "active",
     ):
         if field in fields_set:
+            if field == "members_only" and body.members_only is None:
+                continue
             setattr(event, field, getattr(body, field))
 
     await write_audit_entry(

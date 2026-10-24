@@ -127,6 +127,11 @@ const Schedule: React.FC<ScheduleProps> = ({ events }) => {
                             </div>
                             <div className="grow">
                               <h5 className="event-title mb-1">{eventTitle(event, locale)}</h5>
+                              {event.membersOnly && (
+                                <Badge variant="info" className="mb-2">
+                                  {m.event_members_only()}
+                                </Badge>
+                              )}
                               {label && (
                                 <Badge variant={getCategoryColor(event.category)} className="mb-2">
                                   {label}

@@ -26,6 +26,8 @@ export class ApiError extends Error {
  * operation message, so the backend can introduce codes ahead of the interface.
  */
 const API_ERROR_MESSAGES: Record<string, () => string> = {
+  member_sign_in_required: () => m.member_sign_in_prompt(),
+  membership_required: () => m.membership_required(),
   member_email_in_use: () => m.api_error_member_email_in_use(),
   order_question_in_use: () => m.api_error_order_question_in_use(),
   order_question_unavailable: () => m.api_error_order_question_unavailable(),

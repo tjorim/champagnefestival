@@ -1641,5 +1641,9 @@
   "admin_members_places": "{count} places occupées sur {limit}",
   "admin_members_places_unlimited": "{count} membres actuels",
   "admin_members_limit_warning": "Le maximum de membres est atteint. Vous pouvez toujours ajouter des membres.",
-  "api_error_member_email_in_use": "Un membre actuel utilise déjà cette adresse e-mail."
+  "api_error_member_email_in_use": "Un membre actuel utilise déjà cette adresse e-mail.",
+  "event_members_only": "Réservé aux membres",
+  "member_sign_in_prompt": "Connectez-vous avec l’adresse e-mail de votre adhésion avant de vous inscrire.",
+  "member_sign_in_link": "Se connecter par e-mail",
+  "membership_required": "Une adhésion active est requise pour cet événement."
 }

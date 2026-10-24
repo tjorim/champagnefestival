@@ -830,3 +830,21 @@ check/retry succeeds and the journal is removed.
   `set_member_indicators` replaces both indicators, including nulls. Replaying converges on the
   same settings but can add audit entries; no automatic retry is enabled. Neither indicator blocks
   adding or reactivating members, and no retirement or reminder is triggered.
+
+
+### Members-only events (#1404)
+
+`members_only` on event create/update follows the existing event write strategy:
+create is not automatically retried; setting the same flag again converges. Turning
+it on keeps all existing registrations, ownership, payments and waitlist entries.
+Only subsequent public registration and waitlist submissions require a valid
+visitor cookie and a current member with the session's verified email. Admin
+registration creation remains exempt. The submitted contact fields cannot select
+a different member: bookings use that member's Person and session User; waitlist
+contact details come from the member record.
+
+Registration creation remains non-idempotent and must not be automatically
+retried. Waitlist submission retains its submission UUID conflict/no-op strategy;
+retries recheck membership and may be refused after membership/session expiry.
+The membership gate performs no write before accepting the identity, apart from
+the existing session idle-time refresh. It introduces no automatic retries.

@@ -548,9 +548,11 @@ export async function submitWaitlistEntry(
     }),
   });
   if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
     throw new RegistrationSubmitError(
-      (data as { detail?: string }).detail ?? m.registration_waitlist_error(),
+      apiErrorMessage(
+        await apiErrorFromResponse(response, m.registration_waitlist_error()),
+        m.registration_waitlist_error(),
+      ),
     );
   }
 }

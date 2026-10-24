@@ -29,7 +29,10 @@ function hydrateEditionEvents(edition: SeedEdition): SeedEdition {
   return {
     ...edition,
     dates,
-    events: editionEvents,
+    events: editionEvents.map((event) => ({
+      ...event,
+      members_only: seededState("members-only", false),
+    })),
   };
 }
 
@@ -121,7 +124,7 @@ export const publicHandlers = [
     const matching = editions.filter(
       (e) => e.active && (!editionType || e.edition_type === editionType),
     );
-    return HttpResponse.json(matching[0] ?? null);
+    return HttpResponse.json(matching[0] ? hydrateEditionEvents(matching[0]) : null);
   }),
 
   /** GET /api/editions/upcoming — returns upcoming public editions, optionally by type. */
@@ -148,7 +151,10 @@ export const publicHandlers = [
     const registrationRequired = url.searchParams.get("registration_required");
     const editionId = url.searchParams.get("edition_id");
 
-    let result = [...events];
+    let result = events.map((event) => ({
+      ...event,
+      members_only: seededState("members-only", false),
+    }));
     if (registrationRequired === "true") {
       result = result.filter((e) => e.registration_required);
     }

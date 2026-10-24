@@ -486,6 +486,7 @@ class EventCreate(EventTextFields):
     start_time: ClockTime
     end_time: ClockTime | None = None
     category: NonEmptyText50
+    members_only: bool = False
     registration_required: bool = False
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
@@ -502,6 +503,7 @@ class EventUpdate(EventTextFields):
     start_time: ClockTime | None = None
     end_time: ClockTime | None = None
     category: NonEmptyText50 | None = None
+    members_only: bool | None = None
     registration_required: bool | None = None
     registrations_open_from: datetime | None = None
     registrations_close_at: datetime | None = None
@@ -533,6 +535,7 @@ class EventOut(EventTextOut):
     start_time: str
     end_time: str | None
     category: str
+    members_only: bool = False
     registration_required: bool
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None
@@ -557,6 +560,7 @@ class EventPublicOut(EventTextOut):
     start_time: str
     end_time: str | None
     category: str
+    members_only: bool = False
     registration_required: bool
     registrations_open_from: datetime | None
     registrations_close_at: datetime | None

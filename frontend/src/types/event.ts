@@ -108,6 +108,7 @@ export interface Event extends EventTranslations {
   startTime: string;
   endTime?: string;
   category: string;
+  membersOnly?: boolean;
   registrationRequired: boolean;
   registrationsOpenFrom?: string;
   registrationsCloseAt?: string;
@@ -137,6 +138,7 @@ export interface EventFormData {
   startTime: string;
   endTime: string;
   category: string;
+  membersOnly?: boolean;
   registrationRequired: boolean;
   registrationsOpenFrom: string;
   registrationsCloseAt: string;
@@ -204,6 +206,7 @@ export function apiToEvent(data: Record<string, unknown>): Event {
     startTime: String(data.start_time ?? ""),
     endTime: typeof data.end_time === "string" ? data.end_time : undefined,
     category: String(data.category ?? ""),
+    membersOnly: Boolean(data.members_only),
     registrationRequired: Boolean(data.registration_required),
     registrationsOpenFrom:
       typeof data.registrations_open_from === "string" ? data.registrations_open_from : undefined,
