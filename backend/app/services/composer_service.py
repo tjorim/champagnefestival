@@ -15,51 +15,95 @@ from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app import member_mail
 from app.audit import write_audit_entry
-from app.models import ComposedMessage, OutboxJob, PushSubscription
+from app.member_mail import MemberMailSkipped
+from app.models import ComposedMessage, EmailCategory, OutboxJob, PushSubscription
 from app.schemas import ComposedMessageCreate, ComposedMessageUpdate, ComposedMessageWrite
 from app.services.errors import ConflictError, NotFoundError, ValidationFailedError
+from app.services.member_mail_audience import eligible_people
 from app.services.outbox_service import enqueue_job
 from app.utils import make_id
 
 COMPOSER_MESSAGE_DISPATCH = "composer_message_dispatch"
 _COMPOSER_MESSAGE_PUSH = "composer_message_push"
+_COMPOSER_MESSAGE_EMAIL = "composer_message_email"
 
 
 async def _estimated_push_audience(db: AsyncSession) -> int:
     return (await db.execute(select(func.count()).select_from(PushSubscription))).scalar_one()
 
 
-async def _push_result_counts(db: AsyncSession, message_id: str) -> dict[str, int]:
-    """Aggregate this message's ``composer_message_push`` job outcomes.
+async def _estimated_email_audience(db: AsyncSession, item: ComposedMessage) -> int:
+    if "email" not in item.channels or item.email_category_key is None:
+        return 0
+    category = await db.get(EmailCategory, item.email_category_key)
+    return len(await eligible_people(db, category)) if category is not None else 0
 
-    A job that resolved a dead subscription (404/410) also counts as
+
+async def _check_email_category(db: AsyncSession, fields: dict) -> None:
+    """The email channel mails the people who consented to a category an administrator may compose
+    for. Automatic categories (``reward_ready``) are sent by application code, never composed."""
+    if "email" not in (fields.get("channels") or []):
+        return
+    category = await db.get(EmailCategory, fields.get("email_category_key"))
+    if category is None:
+        raise NotFoundError("Email category not found.", code="email_category_not_found")
+    if category.automatic:
+        raise ValidationFailedError(
+            f"Email category '{category.key}' is sent automatically and cannot be composed.",
+            code="email_category_automatic",
+        )
+
+
+async def _job_result_counts(db: AsyncSession, message_id: str, job_type: str) -> dict[str, int]:
+    """Count this message's per-recipient jobs of *job_type* by state.
+
+    A push job that resolved a dead subscription (404/410) also counts as
     "delivered" — the outbox job itself completed without needing a retry,
     matching how #941's admin test-send already treats retirement as a
-    terminal, non-retried outcome. Counts only, never a subscription's
-    endpoint/keys — see ``ComposedMessageOut.push_delivered_count``'s docstring.
+    terminal, non-retried outcome. Email jobs that ended because the recipient was no longer
+    eligible are counted apart as "skipped". Counts only, never a subscription's
+    endpoint/keys or an address — see ``ComposedMessageOut.push_delivered_count``'s docstring.
     """
     rows = (
         await db.execute(
-            select(OutboxJob.state, func.count())
+            select(OutboxJob.state, OutboxJob.last_error_code, func.count())
             .where(
-                OutboxJob.job_type == _COMPOSER_MESSAGE_PUSH,
+                OutboxJob.job_type == job_type,
                 # startswith() auto-escapes LIKE wildcards (%, _) in the
                 # literal — message_id itself contains underscores
                 # (make_id's own separator), which a raw .like() pattern
                 # would misinterpret as single-character wildcards.
                 OutboxJob.resource_id.startswith(f"{message_id}:"),
             )
-            .group_by(OutboxJob.state)
+            .group_by(OutboxJob.state, OutboxJob.last_error_code)
         )
     ).all()
-    counts: dict[str, int] = {}
-    for state, count in rows:
-        counts[state] = count
+    counts = {"delivered": 0, "failed": 0, "skipped": 0, "pending": 0}
+    for state, error_code, count in rows:
+        if state == "failed" and error_code == MemberMailSkipped.__name__:
+            counts["skipped"] += count
+        elif state in ("pending", "processing"):
+            counts["pending"] += count
+        else:
+            counts[state] += count
+    return counts
+
+
+async def _result_fields(db: AsyncSession, item: ComposedMessage) -> dict[str, int]:
+    push = email = {"delivered": 0, "failed": 0, "skipped": 0, "pending": 0}
+    if item.state == "sent":
+        push = await _job_result_counts(db, item.id, _COMPOSER_MESSAGE_PUSH)
+        email = await _job_result_counts(db, item.id, _COMPOSER_MESSAGE_EMAIL)
     return {
-        "push_delivered_count": counts.get("delivered", 0),
-        "push_failed_count": counts.get("failed", 0),
-        "push_pending_count": counts.get("pending", 0) + counts.get("processing", 0),
+        "push_delivered_count": push["delivered"],
+        "push_failed_count": push["failed"],
+        "push_pending_count": push["pending"],
+        "email_accepted_count": email["delivered"],
+        "email_failed_count": email["failed"],
+        "email_skipped_count": email["skipped"],
+        "email_pending_count": email["pending"],
     }
 
 
@@ -75,24 +119,19 @@ async def to_dict(db: AsyncSession, item: ComposedMessage) -> dict:
         "level": item.level,
         "channels": item.channels,
         "link_url": item.link_url,
+        "email_category_key": item.email_category_key,
         "state": item.state,
         "scheduled_at": item.scheduled_at,
         "announcement_id": item.announcement_id,
         "push_audience_snapshot": item.push_audience_snapshot,
+        "email_audience_snapshot": item.email_audience_snapshot,
         "sent_at": item.sent_at,
         "sent_by": item.sent_by,
         "created_at": item.created_at,
         "updated_at": item.updated_at,
         "estimated_push_audience": await _estimated_push_audience(db),
-        **(
-            await _push_result_counts(db, item.id)
-            if item.state == "sent"
-            else {
-                "push_delivered_count": 0,
-                "push_failed_count": 0,
-                "push_pending_count": 0,
-            }
-        ),
+        "estimated_email_audience": await _estimated_email_audience(db, item),
+        **await _result_fields(db, item),
     }
 
 
@@ -109,6 +148,7 @@ async def get_message(db: AsyncSession, message_id: str) -> ComposedMessage:
 
 
 async def create_draft(db: AsyncSession, *, actor: str, body: ComposedMessageCreate, request_id: str | None) -> dict:
+    await _check_email_category(db, body.model_dump())
     item = ComposedMessage(id=make_id("cmp"), **body.model_dump())
     db.add(item)
     await write_audit_entry(
@@ -138,6 +178,7 @@ async def update_draft(
         ComposedMessageWrite.model_validate(merged)
     except ValidationError as exc:
         raise ValidationFailedError(str(exc)) from exc
+    await _check_email_category(db, merged)
     for name in fields_set:
         setattr(item, name, merged[name])
     await write_audit_entry(
@@ -155,7 +196,13 @@ async def update_draft(
 
 
 async def schedule_send(
-    db: AsyncSession, *, actor: str, message_id: str, scheduled_at: datetime | None, request_id: str | None
+    db: AsyncSession,
+    *,
+    actor: str,
+    message_id: str,
+    scheduled_at: datetime | None,
+    request_id: str | None,
+    expected_email_audience: int | None = None,
 ) -> dict:
     """Transition ``draft`` -> ``scheduled`` and hand off to the outbox.
 
@@ -177,6 +224,23 @@ async def schedule_send(
         ComposedMessageWrite.model_validate({name: getattr(item, name) for name in ComposedMessageWrite.model_fields})
     except ValidationError as exc:
         raise ValidationFailedError(str(exc)) from exc
+
+    if "email" in item.channels:
+        if not member_mail.member_mail_available():
+            raise ConflictError(
+                "Member mail is not configured; the email channel cannot be sent.", code="member_mail_unavailable"
+            )
+        await _check_email_category(db, {name: getattr(item, name) for name in ComposedMessageWrite.model_fields})
+        if expected_email_audience is None:
+            raise ValidationFailedError(
+                "Confirm the number of recipients before sending email.", code="email_audience_confirmation_required"
+            )
+        current = await _estimated_email_audience(db, item)
+        if current != expected_email_audience:
+            raise ConflictError(
+                f"The email audience is now {current} people, not {expected_email_audience}.",
+                code="email_audience_changed",
+            )
 
     when = scheduled_at or datetime.now(UTC)
     item.state = "scheduled"

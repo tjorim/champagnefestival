@@ -84,7 +84,7 @@ from app.schemas import (
     X_POSITION_DESCRIPTION,
     Y_POSITION_DESCRIPTION,
     AnnouncementLevel,
-    ComposedMessageChannel,
+    ComposedMessageToolChannel,
     DietaryTag,
     EditionType,
     FaqLocale,
@@ -1954,7 +1954,7 @@ class ChampagneFestivalMcpBackend:
 
     async def create_composed_message(
         self,
-        channels: list[ComposedMessageChannel],
+        channels: list[ComposedMessageToolChannel],
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,
@@ -1988,7 +1988,7 @@ class ChampagneFestivalMcpBackend:
     async def update_composed_message(
         self,
         message_id: str,
-        channels: list[ComposedMessageChannel] | None = None,
+        channels: list[ComposedMessageToolChannel] | None = None,
         title_nl: str | None = None,
         title_fr: str | None = None,
         title_en: str | None = None,

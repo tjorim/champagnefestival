@@ -6,5 +6,6 @@ Disallow: /venue-plan
 Disallow: /me
 Disallow: /pebble-pair
 Disallow: /email-consent
+Disallow: /email-unsubscribe
 
 Sitemap: %VITE_PUBLIC_URL%/sitemap.xml

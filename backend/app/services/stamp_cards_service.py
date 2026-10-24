@@ -19,6 +19,7 @@ from app.models import (
     StampCardType,
 )
 from app.schemas import StampCardTypeWrite
+from app.services import reward_mail
 from app.services.errors import ApiHTTPException
 
 LABELS = ("reward_label_nl", "reward_label_fr", "reward_label_en")
@@ -116,8 +117,10 @@ async def sync_check_in(db: AsyncSession, registration: Registration, checked_in
     result = await progress(db, card)
     if result["stamps"] == card.box_count:
         card.completed_at = datetime.now(UTC)
-        db.add(StampCardReward(id=uuid4().hex, card_id=card.id, **{key: getattr(card, key) for key in LABELS}))
+        reward = StampCardReward(id=uuid4().hex, card_id=card.id, **{key: getattr(card, key) for key in LABELS})
+        db.add(reward)
         await db.flush()
+        await reward_mail.enqueue_reward_ready(db, reward, card)
         result["reward_earned"] = True
     return result
 

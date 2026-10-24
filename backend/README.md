@@ -412,7 +412,9 @@ failure the interface can explain carries a stable `code` next to it:
   `category_in_use`, `event_has_registrations`, and for email consent (#1408)
   `email_category_not_found`, `email_category_exists`, `email_category_protected`,
   `email_category_in_use`, `email_category_unavailable`, `verified_email_required`,
-  `consent_confirmation_invalid`. Validation errors (422) and
+  `consent_confirmation_invalid`, and for member mail (#1407) `member_mail_unavailable`,
+  `email_category_automatic`, `email_audience_confirmation_required`, `email_audience_changed`,
+  `unsubscribe_token_invalid`. Validation errors (422) and
   uncoded errors still return `detail` alone.
 
 ### Email categories and consent (#1408)

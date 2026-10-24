@@ -92,6 +92,7 @@ const PrivacyPolicyPage = lazy(() => import("./components/PrivacyPolicyPage"));
 const PebblePairPage = lazy(() => import("./components/PebblePairPage"));
 const MyAccountPage = lazy(() => import("./components/MyAccountPage"));
 const EmailConsentConfirmPage = lazy(() => import("./components/EmailConsentConfirmPage"));
+const EmailUnsubscribePage = lazy(() => import("./components/EmailUnsubscribePage"));
 // Below-the-fold components
 const LogoWall = lazy(() => import("./components/LogoWall"));
 const MapComponent = lazy(() => import("./components/MapComponent"));
@@ -281,6 +282,24 @@ function MyAccountRoute() {
       <main id="main-content" className="standalone-main">
         <AppSuspense errorFallbackText={m.my_account_delete_error()}>
           <MyAccountPage />
+        </AppSuspense>
+      </main>
+    </div>
+  );
+}
+
+/** Route component for /email-unsubscribe, where the unsubscribe link of member mail lands (#1407). */
+function EmailUnsubscribeRoute() {
+  useNoIndex();
+  return (
+    <div className="App standalone-app">
+      <a href="#main-content" className="skip-link">
+        {m.accessibility_skip_to_content()}
+      </a>
+      <StandaloneNavBar icon={MailCheckIcon} title={m.email_unsubscribe_title()} />
+      <main id="main-content" className="standalone-main">
+        <AppSuspense errorFallbackText={m.email_unsubscribe_error()}>
+          <EmailUnsubscribePage />
         </AppSuspense>
       </main>
     </div>
@@ -883,6 +902,7 @@ const router = createAppRouter({
   PebblePairRoute,
   MyAccountRoute,
   EmailConsentRoute,
+  EmailUnsubscribeRoute,
   VenuePlanRoute,
   queryClient,
 });

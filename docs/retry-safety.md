@@ -33,6 +33,14 @@ provider replay/reconciliation before durable outbox retries are enabled.
 `accepted` does not mean delivered; `unknown` must be reconciled rather than
 blindly resubmitted. See the [foundation boundaries](decisions/1407-member-mail-foundation.md).
 
+Composer `email` channel: `composer_message_email` jobs (one per frozen recipient) have a single
+attempt and are **not retry safe**; no outcome other than `accepted` is ever resubmitted, and a job
+reclaimed after a lost worker (`attempt_count > 1`) is recorded as uncertain instead of sent again.
+Scheduling follows the existing composer strategy (row lock plus state check). Dispatch is convergent
+(a sent message is a no-op). `POST /api/mail/unsubscribe` is **convergent and safe to repeat**: it
+ends the open consent for the signed category and a repeat changes nothing. `email_suppressions` writes
+are convergent (the first reason is kept). The `reward_ready_email` job is single-attempt and not retry safe on the same terms as composer email; its dedup key (`reward-ready:{reward id}`) makes queuing it convergent. The composer UI uses `retry: false` for scheduling and sends `expected_email_audience`, so a stale confirmation is refused rather than sent; an ambiguous schedule request is reconciled by re-reading the message state.
+
 ## Inventory
 
 | Operations | Callers | Decision |
