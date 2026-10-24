@@ -160,6 +160,13 @@ chunks once, and excludes deferred routes; it does not treat a smaller entry
 file alone as a smaller first load. Missing manifest dependencies fail the check.
 Run it after `pnpm build`; CI also runs its graph/budget regression tests.
 
+Re-verified on main with Base UI 1.9.0 (2026-10-24): `pnpm typecheck` and
+`pnpm test` (174 files, 1,229 tests) pass, and `pnpm bundle:check` reports
+total 2,729.7 KiB, entry 367.5 KiB, AdminDashboard 388.8 KiB and eager graph
+712.5 KiB against unchanged budgets. The regression was chunk placement, not
+added code, so no application code was deferred. The eager graph has only
+7.5 KiB of headroom; investigate before adding eager dependencies.
+
 ## References
 
 - [Base UI releases](https://base-ui.com/react/overview/releases)
