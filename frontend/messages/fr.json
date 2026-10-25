@@ -942,6 +942,7 @@
   "api_error_checked_in_cannot_cancel": "Annulez l’enregistrement à l’arrivée avant d’annuler cette inscription.",
   "api_error_payment_amount_zero": "Le montant du paiement ne peut pas être nul.",
   "api_error_payment_reversal_target_invalid": "La transaction à annuler doit appartenir à la même réservation.",
+  "api_error_payment_reversal_amount_invalid": "Une annulation doit être un remboursement d'au plus le montant encore remboursable d'un paiement.",
   "api_error_pebble_token_invalid": "Cette association Pebble n’est plus valide. Associez à nouveau votre montre.",
   "api_error_organization_not_found": "Cette organisation est introuvable, ou vous ne la gérez plus.",
   "api_error_pending_logo_not_found": "Ce logo n’est plus en attente.",

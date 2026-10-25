@@ -83,10 +83,21 @@ def test_organization_rename_preserves_data_and_reverses(monkeypatch):
                 assert f"{other}s" not in inspector.get_table_names(schema=schema)
                 row = connection.execute(text(f"SELECT name, image, contact_person_id FROM {domain}s")).one()
                 assert row == ("The exhibitor association", f"/uploads/{domain}s/logo.png", "contact")
-                assert connection.execute(text(f"SELECT {domain}s, co_organizer_{domain}_id FROM editions")).one() == (
-                    [organization_id],
-                    organization_id,
-                )
+                if domain == "organization":
+                    # Revision 011 moved the lineup from a JSON column to a join table.
+                    assert connection.scalar(text("SELECT co_organizer_organization_id FROM editions")) == (
+                        organization_id
+                    )
+                    assert connection.scalars(text("SELECT organization_id FROM edition_organizations")).all() == [
+                        organization_id
+                    ]
+                else:
+                    assert connection.execute(
+                        text("SELECT exhibitors, co_organizer_exhibitor_id FROM editions")
+                    ).one() == (
+                        [organization_id],
+                        organization_id,
+                    )
                 assert connection.scalar(text(f"SELECT {domain}_id FROM areas")) == organization_id
                 tables = inspector.get_table_names(schema=schema)
                 if domain == "organization":

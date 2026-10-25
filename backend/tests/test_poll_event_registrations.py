@@ -254,3 +254,14 @@ async def test_edition_deletion_preserves_linked_poll_event(client, volunteer_cl
     assert response.json()["code"] == "event_linked_to_poll"
     assert await db_session.get(Event, event["id"]) is not None
     assert await db_session.get(EditionPollQuestion, question["id"]) is not None
+
+
+@pytest.mark.anyio
+async def test_volunteer_who_is_not_a_member_can_attend_a_members_event(client, volunteer_client_as, db_session):
+    event, question, volunteers, person = await setup(client, volunteer_client_as, db_session)
+    assert "member" not in person.roles
+    response = await client.put(f"/api/events/{event['id']}", json={"members_only": True})
+    assert response.status_code == 200, response.text
+
+    assert (await answer(volunteers, question, True, 2)).status_code == 200
+    assert (await booking(db_session, question)).person_id == person.id

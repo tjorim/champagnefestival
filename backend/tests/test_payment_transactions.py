@@ -207,6 +207,40 @@ async def test_reversed_transaction_id_must_belong_to_same_booking(client):
 
 
 @pytest.mark.anyio
+async def test_reversal_must_be_a_refund_within_the_refundable_amount(client):
+    registration_id = await _registration(client, amount_due="100.00")
+    url = f"/api/registrations/{registration_id}/transactions"
+
+    async def post(amount: str, reversed_id: str | None = None):
+        body = {"amount": amount, "effective_date": "2026-01-01"}
+        if reversed_id:
+            body["reversed_transaction_id"] = reversed_id
+        return await client.post(url, json=body, headers=ADMIN_HEADERS)
+
+    payment_id = (await post("50.00")).json()["id"]
+
+    # A positive amount is not a reversal, and a refund over the payment is too large.
+    for amount in ("10.00", "-50.01"):
+        r = await post(amount, payment_id)
+        assert r.status_code == 400, r.text
+        assert r.json()["code"] == "payment_reversal_amount_invalid"
+
+    refund = await post("-30.00", payment_id)
+    assert refund.status_code == 201, refund.text
+
+    # Only 20.00 remains refundable on the payment.
+    r = await post("-20.01", payment_id)
+    assert r.status_code == 400, r.text
+    assert r.json()["code"] == "payment_reversal_amount_invalid"
+    assert (await post("-20.00", payment_id)).status_code == 201
+
+    # A refund cannot itself be reversed.
+    r = await post("-5.00", refund.json()["id"])
+    assert r.status_code == 400, r.text
+    assert r.json()["code"] == "payment_reversal_amount_invalid"
+
+
+@pytest.mark.anyio
 async def test_deleting_a_booking_with_ledger_entries_is_rejected(client):
     registration_id = await _registration(client, amount_due="10.00")
     r = await client.post(
@@ -711,7 +745,7 @@ async def test_create_payment_transaction_stores_idempotency_key_scoped_to_payme
 async def test_concurrent_first_use_of_same_idempotency_key_records_exactly_one_transaction(
     client, db_session, engine, monkeypatch
 ):
-    """Two concurrent submissions with the same key: exactly one commits."""
+    """Two concurrent submissions with the same key: exactly one is recorded, both get its result."""
     registration_id = await _registration(client, amount_due="25.00")
 
     import app.services.payments_service as payments_service_module
@@ -763,8 +797,11 @@ async def test_concurrent_first_use_of_same_idempotency_key_records_exactly_one_
     release_first.set()
     outcomes = await asyncio.wait_for(asyncio.gather(first_task, second_task), timeout=2)
 
-    assert sum(isinstance(outcome, dict) for outcome in outcomes) == 1
-    assert outcomes.count(409) == 1
+    # With row locks (PostgreSQL) the loser waits, then replays the winner's recorded result; without
+    # them (SQLite) it loses the race at commit with a 409. Either way exactly one entry is recorded.
+    results = [outcome for outcome in outcomes if isinstance(outcome, dict)]
+    assert results and len({result["id"] for result in results}) == 1
+    assert all(isinstance(outcome, dict) or outcome == 409 for outcome in outcomes)
 
     rows = (
         (

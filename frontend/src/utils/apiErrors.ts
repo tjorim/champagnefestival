@@ -56,6 +56,7 @@ const API_ERROR_MESSAGES: Record<string, () => string> = {
   checked_in_cannot_cancel: () => m.api_error_checked_in_cannot_cancel(),
   payment_amount_zero: () => m.api_error_payment_amount_zero(),
   payment_reversal_target_invalid: () => m.api_error_payment_reversal_target_invalid(),
+  payment_reversal_amount_invalid: () => m.api_error_payment_reversal_amount_invalid(),
   table_type_in_use: () => m.api_error_table_type_in_use(),
   venue_has_editions: () => m.api_error_venue_has_editions(),
   venue_has_rooms: () => m.api_error_venue_has_rooms(),

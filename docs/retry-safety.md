@@ -301,7 +301,10 @@ a payment or refund — against a booking. There is no `kind` field: a
 positive amount is a payment, a negative one is a refund, and that sign is
 the only distinction stored. A refund never rewrites a prior entry; it's a
 new row, optionally linked via `reversed_transaction_id` to the entry it
-reverses. A PostgreSQL trigger (`payment_transactions_append_only`,
+reverses. A reversal must be a negative amount against a positive payment on
+the same booking, and the refunds linked to one payment can never total more
+than it (`payment_reversal_amount_invalid`); this is checked under the booking
+lock, so it does not change the retry strategy. A PostgreSQL trigger (`payment_transactions_append_only`,
 `app.payment_ledger_schema`) rejects UPDATE/DELETE against the table
 unconditionally — the append-only contract holds even against a bug, a
 future migration, or a direct psql session, not just against
