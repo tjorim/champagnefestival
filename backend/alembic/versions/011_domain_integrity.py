@@ -20,7 +20,6 @@ depends_on = None
 _CHECKS = (
     ("registrations", "ck_registrations_status", "status IN ('pending', 'confirmed', 'cancelled')"),
     ("registrations", "ck_registrations_payment_status", "payment_status IN ('unpaid', 'partial', 'paid')"),
-    ("events", "ck_events_single_audience", "NOT (volunteers_only AND members_only)"),
     ("editions", "ck_editions_edition_type", "edition_type IN ('festival', 'bourse', 'capsule_exchange')"),
 )
 
@@ -101,9 +100,22 @@ def _downgrade_lineup() -> None:
     op.drop_table("edition_organizations")
 
 
+def _check_existing_values() -> None:
+    """Fail with a readable list before any DDL if a row would violate a new constraint."""
+    bind = op.get_bind()
+    problems = []
+    for table, name, condition in _CHECKS:
+        count = bind.execute(
+            sa.text(f"SELECT count(*) FROM {table} WHERE NOT COALESCE(({condition}), false)")
+        ).scalar_one()
+        if count:
+            problems.append(f"{count} row(s) in {table} violate {name} ({condition})")
+    if problems:
+        raise RuntimeError("Fix these rows before upgrading to 011: " + "; ".join(problems))
+
+
 def upgrade() -> None:
-    # A volunteers-only event never takes public registrations, so members-only was already moot there.
-    op.execute("UPDATE events SET members_only = false WHERE volunteers_only AND members_only")
+    _check_existing_values()
     for table, name, condition in _CHECKS:
         with op.batch_alter_table(table) as batch:
             batch.create_check_constraint(name, sa.text(condition))

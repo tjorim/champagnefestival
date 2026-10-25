@@ -79,27 +79,3 @@ async def test_admin_bypass_and_mcp_switch(client, db_session):
     schemas = (await client.get("/openapi.json")).json()["components"]["schemas"]
     for name in ("EventCreate", "EventUpdate", "EventOut", "EventPublicOut"):
         assert "members_only" in schemas[name]["properties"]
-
-
-async def test_event_is_for_volunteers_or_members_not_both(client):
-    event = await _create_event(client)
-    await client.put(f"/api/events/{event['id']}", headers=ADMIN_HEADERS, json={"members_only": True})
-
-    response = await client.put(f"/api/events/{event['id']}", headers=ADMIN_HEADERS, json={"volunteers_only": True})
-    assert response.status_code == 422, response.text
-    assert response.json()["code"] == "event_single_audience"
-
-    created = await client.post(
-        "/api/events",
-        headers=ADMIN_HEADERS,
-        json={
-            "edition_id": event["edition_id"],
-            "title_nl": "Both",
-            "date": "2026-11-21",
-            "start_time": "09:00",
-            "category": "other",
-            "volunteers_only": True,
-            "members_only": True,
-        },
-    )
-    assert created.status_code == 422, created.text

@@ -274,10 +274,6 @@ async def apply_event_update(
             if field in {"members_only", "volunteers_only"} and getattr(body, field) is None:
                 continue
             setattr(event, field, getattr(body, field))
-    if event.volunteers_only and event.members_only:
-        raise ApiHTTPException(
-            422, "event_single_audience", "An event is either for volunteers or for members, not both."
-        )
 
     await write_audit_entry(
         db,

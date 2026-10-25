@@ -863,7 +863,6 @@ class Event(Base):
     __table_args__ = (
         CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_events_title_nl"),
         CheckConstraint(_optional_dutch_check("description"), name="ck_events_description_nl"),
-        CheckConstraint("NOT (volunteers_only AND members_only)", name="ck_events_single_audience"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

@@ -59,12 +59,20 @@ def test_lineup_moves_to_a_join_table_and_back(monkeypatch):
         assert [tuple(row) for row in rows] == [(3, 0, "partner"), (1, 1, None), (2, 2, "main")]
 
         with pytest.raises(IntegrityError), database.begin() as connection:
-            connection.execute(text("UPDATE registrations SET status = 'bogus'"))
-            connection.execute(
-                text(
-                    "INSERT INTO edition_organizations (edition_id, organization_id, sponsor_tier) VALUES ('edition', 1, 'x')"
-                )
+            connection.execute(text("UPDATE edition_organizations SET sponsor_tier = 'x'"))
+        with database.begin() as connection:
+            names = set(
+                connection.execute(
+                    text(
+                        "SELECT conname FROM pg_constraint WHERE contype = 'c' AND connamespace = current_schema()::regnamespace"
+                    )
+                ).scalars()
             )
+        assert {
+            "ck_registrations_status",
+            "ck_registrations_payment_status",
+            "ck_editions_edition_type",
+        } <= names
 
         command.downgrade(config, "010")
         with database.begin() as connection:

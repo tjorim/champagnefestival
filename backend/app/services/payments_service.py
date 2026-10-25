@@ -295,15 +295,19 @@ async def record_payment_transaction(
             "reversed_transaction_id": reversed_transaction_id,
         }
     )
-    if idempotency_key:
+
+    async def replay() -> dict | None:
+        if not idempotency_key:
+            return None
         try:
-            cached = await check_idempotency_key(
+            return await check_idempotency_key(
                 db, scope=PAYMENT_TRANSACTION_SCOPE, key=idempotency_key, actor=actor, request_hash=request_hash
             )
         except ConflictError as exc:
             raise to_http_exception(exc) from exc
-        if cached is not None:
-            return cached
+
+    if (cached := await replay()) is not None:
+        return cached
 
     if reversed_transaction_id is not None:
         reversed_row = await db.get(PaymentTransaction, reversed_transaction_id)
@@ -326,6 +330,11 @@ async def record_payment_transaction(
     await db.execute(select(Registration.id).where(Registration.id == registration.id).with_for_update())
     await db.refresh(registration, attribute_names=["amount_due"])
 
+    # A concurrent request with the same key may have committed while we waited for the lock; replay
+    # its result rather than judging this retry against the balance it already changed.
+    if (cached := await replay()) is not None:
+        return cached
+
     if reversed_transaction_id is not None:
         # Checked under the booking lock so two concurrent refunds cannot both
         # reverse the same remaining amount.
@@ -334,7 +343,8 @@ async def record_payment_transaction(
         already_reversed = (
             await db.execute(
                 select(func.coalesce(func.sum(PaymentTransaction.amount), 0)).where(
-                    PaymentTransaction.reversed_transaction_id == reversed_transaction_id
+                    PaymentTransaction.reversed_transaction_id == reversed_transaction_id,
+                    PaymentTransaction.amount < 0,
                 )
             )
         ).scalar_one()

@@ -943,7 +943,6 @@
   "api_error_payment_amount_zero": "Het betaalbedrag mag niet nul zijn.",
   "api_error_payment_reversal_target_invalid": "De terug te boeken transactie moet bij dezelfde boeking horen.",
   "api_error_payment_reversal_amount_invalid": "Een terugboeking moet een terugbetaling zijn van maximaal het nog terug te betalen bedrag van een betaling.",
-  "api_error_event_single_audience": "Een evenement is ofwel voor vrijwilligers ofwel voor leden, niet beide.",
   "api_error_pebble_token_invalid": "Deze Pebble-koppeling is niet meer geldig. Koppel je horloge opnieuw.",
   "api_error_organization_not_found": "Deze organisatie werd niet gevonden, of je beheert ze niet meer.",
   "api_error_pending_logo_not_found": "Dit logo staat niet meer in afwachting.",

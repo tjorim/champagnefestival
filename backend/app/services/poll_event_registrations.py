@@ -76,8 +76,7 @@ async def sync_answer(
             raise ApiHTTPException(403, "volunteer_required", "A current volunteer is required for this event.")
         if not event.volunteers_only or not event.active:
             raise ApiHTTPException(409, "poll_event_unavailable", "The linked volunteer event is unavailable.")
-        if event.members_only and ("member" not in person.roles or "member" in person.retired_roles):
-            raise ApiHTTPException(403, "membership_required", "A current membership is also required for this event.")
+        # members_only deliberately does not apply here: a current volunteer may attend a members event.
     if registration is None:
         if not attending:
             return
