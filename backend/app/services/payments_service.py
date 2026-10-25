@@ -326,6 +326,25 @@ async def record_payment_transaction(
     await db.execute(select(Registration.id).where(Registration.id == registration.id).with_for_update())
     await db.refresh(registration, attribute_names=["amount_due"])
 
+    if reversed_transaction_id is not None:
+        # Checked under the booking lock so two concurrent refunds cannot both
+        # reverse the same remaining amount.
+        original = await db.get(PaymentTransaction, reversed_transaction_id)
+        assert original is not None
+        already_reversed = (
+            await db.execute(
+                select(func.coalesce(func.sum(PaymentTransaction.amount), 0)).where(
+                    PaymentTransaction.reversed_transaction_id == reversed_transaction_id
+                )
+            )
+        ).scalar_one()
+        if original.amount <= 0 or amount >= 0 or -amount > original.amount + Decimal(already_reversed):
+            raise ApiHTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                "payment_reversal_amount_invalid",
+                "A reversal must be a refund of at most the amount still refundable on a payment.",
+            )
+
     transaction = PaymentTransaction(
         id=make_id("paytxn"),
         registration_id=registration.id,

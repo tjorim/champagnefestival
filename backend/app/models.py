@@ -129,6 +129,8 @@ class Registration(Base):
     __table_args__ = (
         Index("ix_registrations_person_checked_event", "person_id", "checked_in", "event_id"),
         UniqueConstraint("poll_question_id", "person_id", name="uq_registration_poll_person"),
+        CheckConstraint("status IN ('pending', 'confirmed', 'cancelled')", name="ck_registrations_status"),
+        CheckConstraint("payment_status IN ('unpaid', 'partial', 'paid')", name="ck_registrations_payment_status"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
@@ -706,6 +708,7 @@ class Edition(Base):
             postgresql_where=text("active = true"),
             sqlite_where=text("active = true"),
         ),
+        CheckConstraint("edition_type IN ('festival', 'bourse', 'capsule_exchange')", name="ck_editions_edition_type"),
     )
 
     id: Mapped[str] = mapped_column(String(100), primary_key=True)
@@ -716,18 +719,41 @@ class Edition(Base):
 
     venue_id: Mapped[str] = mapped_column(String(64), ForeignKey("venues.id", ondelete="RESTRICT"), nullable=False)
     edition_type: Mapped[str] = mapped_column(String(20), default="festival")
-    organizations: Mapped[list[int]] = mapped_column(JSON, default=list)
-    """The festival lineup — producers and sponsors programmed for this edition.
+    lineup: Mapped[list[EditionOrganization]] = relationship(
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="EditionOrganization.position",
+    )
+    """The festival lineup — producers and sponsors programmed for this edition, in the
+    admin-defined order (kept: sponsors appear on the public site in this order within their
+    tier, #1226). Sponsorship is per edition, so a sponsor's level lives on its lineup row
+    rather than on the organization. Read and written through `organizations` and
+    `sponsor_tiers`; see `app.services.editions_service`."""
 
-    The list order is admin-defined and is kept: sponsors appear on the public site in this
-    order within their tier (#1226)."""
+    @property
+    def organizations(self) -> list[int]:
+        return [entry.organization_id for entry in self.lineup]
 
-    sponsor_tiers: Mapped[dict[str, str]] = mapped_column(JSON, default=dict)
-    """Sponsor level for this edition, ``{organization id (string): "main" | "partner" | "supporter"}``.
+    @organizations.setter
+    def organizations(self, organization_ids: list[int]) -> None:
+        existing = {entry.organization_id: entry for entry in self.lineup}
+        entries = []
+        for position, organization_id in enumerate(dict.fromkeys(organization_ids)):
+            entry = existing.get(organization_id) or EditionOrganization(organization_id=organization_id)
+            entry.position = position
+            entries.append(entry)
+        self.lineup = entries
 
-    Sponsorship is per edition, so the level lives on the lineup rather than on the
-    organization. Only sponsors in `organizations` may have one; a sponsor without an entry
-    is untiered and listed after the tiered ones. See `app.services.editions_service`."""
+    @property
+    def sponsor_tiers(self) -> dict[str, str]:
+        """Sponsor level per lineup organization, ``{organization id (string): "main" | "partner" |
+        "supporter"}``. Set `organizations` first: only lineup members can hold a level."""
+        return {str(entry.organization_id): entry.sponsor_tier for entry in self.lineup if entry.sponsor_tier}
+
+    @sponsor_tiers.setter
+    def sponsor_tiers(self, tiers: dict[str, str]) -> None:
+        for entry in self.lineup:
+            entry.sponsor_tier = tiers.get(str(entry.organization_id))
 
     co_organizer_organization_id: Mapped[int | None] = mapped_column(
         Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True
@@ -770,6 +796,27 @@ class Edition(Base):
         cascade="all, delete-orphan",
         order_by="Event.date, Event.start_time, Event.created_at",
     )
+
+
+class EditionOrganization(Base):
+    """One organization in an edition's lineup (see `Edition.lineup`)."""
+
+    __tablename__ = "edition_organizations"
+    __table_args__ = (
+        CheckConstraint(
+            "sponsor_tier IS NULL OR sponsor_tier IN ('main', 'partner', 'supporter')",
+            name="ck_edition_organizations_sponsor_tier",
+        ),
+    )
+
+    edition_id: Mapped[str] = mapped_column(
+        String(100), ForeignKey("editions.id", ondelete="CASCADE"), primary_key=True
+    )
+    organization_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("organizations.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
+    position: Mapped[int] = mapped_column(Integer, default=0)
+    sponsor_tier: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
 
 class _CategoryColumns:
@@ -816,6 +863,7 @@ class Event(Base):
     __table_args__ = (
         CheckConstraint("(length(trim(title_nl)) > 0) IS TRUE", name="ck_events_title_nl"),
         CheckConstraint(_optional_dutch_check("description"), name="ck_events_description_nl"),
+        CheckConstraint("NOT (volunteers_only AND members_only)", name="ck_events_single_audience"),
     )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)

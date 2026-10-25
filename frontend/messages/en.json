@@ -942,6 +942,8 @@
   "api_error_checked_in_cannot_cancel": "Undo the check-in before cancelling this registration.",
   "api_error_payment_amount_zero": "The payment amount cannot be zero.",
   "api_error_payment_reversal_target_invalid": "The transaction to reverse must belong to the same booking.",
+  "api_error_payment_reversal_amount_invalid": "A reversal must be a refund of at most the amount still refundable on a payment.",
+  "api_error_event_single_audience": "An event is either for volunteers or for members, not both.",
   "api_error_pebble_token_invalid": "This Pebble pairing is no longer valid. Pair your watch again.",
   "api_error_organization_not_found": "This organisation could not be found, or you no longer manage it.",
   "api_error_pending_logo_not_found": "This logo is no longer pending.",

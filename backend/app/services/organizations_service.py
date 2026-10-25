@@ -180,11 +180,7 @@ async def delete_organization(db: AsyncSession, e: Organization, *, actor: str, 
         organization_logos.retire_pending(db, change)
     old_image = e.image
     organization_id = e.id
-    editions_result = await db.execute(select(Edition))
-    for edition in editions_result.scalars().all():
-        if organization_id in edition.organizations:
-            edition.organizations = [eid for eid in edition.organizations if eid != organization_id]
-            edition.sponsor_tiers = {k: v for k, v in edition.sponsor_tiers.items() if k != str(organization_id)}
+    # Lineup rows (and their sponsor levels) go with the organization via ON DELETE CASCADE.
     await db.delete(e)
     await write_audit_entry(
         db,

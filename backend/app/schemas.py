@@ -607,6 +607,8 @@ class EventCreate(EventTextFields):
 
     @model_validator(mode="after")
     def check_text(self) -> Self:
+        if self.volunteers_only and self.members_only:
+            raise ValueError("An event is either for volunteers or for members, not both.")
         return self.validate_dutch()
 
 
