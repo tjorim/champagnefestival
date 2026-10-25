@@ -160,6 +160,11 @@ chunks once, and excludes deferred routes; it does not treat a smaller entry
 file alone as a smaller first load. Missing manifest dependencies fail the check.
 Run it after `pnpm build`; CI also runs its graph/budget regression tests.
 
+The eager limit was raised from 720 to 725 KiB (2026-10-25). The graph measured 719.7 KiB on main, so
+the one new translated API error message (`payment_reversal_amount_invalid`, three languages) was
+enough to cross it (720.1 KiB). Messages are bundled eagerly, so each stable error code costs a few
+hundred bytes; the 5 KiB of headroom covers a handful of them before the next review.
+
 Re-verified on main with Base UI 1.9.0 (2026-10-24): `pnpm typecheck` and
 `pnpm test` (174 files, 1,229 tests) pass, and `pnpm bundle:check` reports
 total 2,729.7 KiB, entry 367.5 KiB, AdminDashboard 388.8 KiB and eager graph
