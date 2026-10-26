@@ -64,12 +64,24 @@ def test_build_event_json_ld_matches_the_expected_structure():
         },
         "image": ["https://champagnefestival.tjor.im/images/og-image.jpg"],
         "description": "Een viering van fijne champagne en gemeenschap",
-        "offers": {
-            "@type": "Offer",
-            "url": "https://champagnefestival.tjor.im",
-            "availability": "https://schema.org/InStock",
-            "priceCurrency": "EUR",
-        },
+        "offers": [
+            {
+                "@type": "Offer",
+                "name": "Toegangsticket",
+                "url": "https://champagnefestival.tjor.im",
+                "price": "25.00",
+                "priceCurrency": "EUR",
+                "availability": "https://schema.org/InStock",
+            },
+            {
+                "@type": "Offer",
+                "name": "Brunchticket",
+                "url": "https://champagnefestival.tjor.im",
+                "price": "45.50",
+                "priceCurrency": "EUR",
+                "availability": "https://schema.org/SoldOut",
+            },
+        ],
         "inLanguage": "nl",
         "organizer": {
             "@type": "Organization",
@@ -108,6 +120,36 @@ def test_build_event_json_ld_names_sub_events_in_the_requested_locale_with_fallb
     assert [event["name"] for event in french] == ["Réception d'ouverture", "Brunch"]
     # Only the Dutch description exists, so every locale shows it.
     assert english[0]["description"] == french[0]["description"] == "Welkom met een glas champagne"
+
+
+def test_build_event_json_ld_advertises_only_required_priced_products():
+    edition = _load_edition_fixture()
+
+    offers = build_event_json_ld(edition, base_url="https://example.test", locale="nl")["offers"]
+
+    # The optional "Champagnepakket" extra is not an entry offer.
+    assert [offer["name"] for offer in offers] == ["Toegangsticket", "Brunchticket"]
+    assert all(offer["price"] and offer["priceCurrency"] == "EUR" for offer in offers)
+
+
+def test_build_event_json_ld_merges_a_shared_product_and_is_sold_out_only_when_all_are():
+    edition = _load_edition_fixture()
+    ticket = edition["events"][0]["products"][0]
+    edition["events"][0]["products"][0] = {**ticket, "sold_out": True}
+    edition["events"][1]["products"] = [{**ticket, "sold_out": False}]
+
+    offers = build_event_json_ld(edition, base_url="https://example.test", locale="nl")["offers"]
+
+    assert len(offers) == 1
+    assert offers[0]["availability"] == "https://schema.org/InStock"
+
+
+def test_build_event_json_ld_omits_offers_without_required_products():
+    edition = _load_edition_fixture()
+    for event in edition["events"]:
+        event["products"] = []
+
+    assert "offers" not in build_event_json_ld(edition, base_url="https://example.test", locale="nl")
 
 
 def test_build_event_json_ld_omits_sub_events_without_events():

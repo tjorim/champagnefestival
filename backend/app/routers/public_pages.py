@@ -27,6 +27,7 @@ from app.services.errors import NotFoundError
 from app.services.frontend_i18n_snippets import Locale
 from app.services.policy_markdown import render_markdown
 from app.services.public_render import (
+    hero_preload_link,
     inject_marker,
     json_ld_script,
     render_home_content,
@@ -39,6 +40,10 @@ from app.utils import faq_item_to_public_dict
 logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["public-pages"])
+
+# The static photo the themes fall back to while an edition has no uploaded hero
+# (`DEFAULT_HERO` in frontend/src/utils/editionArtwork.ts).
+DEFAULT_HERO_IMAGE = "/images/champagne-hero.webp"
 
 
 class _ShellCache:
@@ -98,6 +103,7 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
     events: list[dict] = []
     json_ld = None
     share_image = None
+    hero_image = DEFAULT_HERO_IMAGE
     # The site's own tagline, not edition-dependent — matches the static
     # shell's pre-existing default description, so a quiet period between
     # editions never regresses to a bare site name.
@@ -107,6 +113,7 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
         events = payload["events"]
         json_ld = jsonld_service.build_event_json_ld(payload, base_url=settings.public_url, locale=locale)
         share_image = jsonld_service.edition_share_image(payload, base_url=settings.public_url)
+        hero_image = payload.get("hero_image") or DEFAULT_HERO_IMAGE
 
     html_out = rewrite_head_meta(
         shell,
@@ -116,7 +123,7 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
         locale=locale,
         image=share_image,
     )
-    head_fragment = json_ld_script(json_ld) if json_ld is not None else ""
+    head_fragment = hero_preload_link(hero_image) + (json_ld_script(json_ld) if json_ld is not None else "")
     content = render_home_content(faq_items=faq_items, events=events, locale=locale)
     html_out = inject_marker(html_out, "ssr:head", head_fragment)
     return inject_marker(html_out, "ssr:content", content)

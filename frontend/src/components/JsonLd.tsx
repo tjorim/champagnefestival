@@ -5,7 +5,7 @@ import { getFestivalDateRange, useActiveEdition } from "@/hooks/useActiveEdition
 import { baseUrl } from "@/config/site";
 import type { Event } from "@/types/event";
 import { DEFAULT_SHARE, editionShareImage } from "@/utils/editionArtwork";
-import { eventDescription, eventTitle } from "@/utils/eventText";
+import { eventDescription, eventTitle, productName } from "@/utils/eventText";
 
 /** Marks the JSON-LD <script> the backend renders into <head> for GET /.
  * Kept in sync with
@@ -31,6 +31,41 @@ function subEvents(events: Event[], locale: string) {
       ...(description ? { description } : {}),
     };
   });
+}
+
+const IN_STOCK = "https://schema.org/InStock";
+const SOLD_OUT = "https://schema.org/SoldOut";
+
+/**
+ * One `Offer` per distinct required (entry) product, with its real price; a product is sold
+ * out only when every event offering it is. Optional extras are not advertised. Mirrors
+ * `_offers` in backend/app/services/jsonld_service.py.
+ */
+function offers(events: Event[], locale: string) {
+  const seen = new Map<string, Record<string, string>>();
+  for (const event of events) {
+    for (const product of event.products ?? []) {
+      if (!product.required) continue;
+      const name = productName(product, locale);
+      const price = product.price.toFixed(2);
+      const key = JSON.stringify([name, price]);
+      const available = !product.soldOut;
+      const existing = seen.get(key);
+      if (existing) {
+        if (available) existing.availability = IN_STOCK;
+        continue;
+      }
+      seen.set(key, {
+        "@type": "Offer",
+        name,
+        url: baseUrl,
+        price,
+        priceCurrency: "EUR",
+        availability: available ? IN_STOCK : SOLD_OUT,
+      });
+    }
+  }
+  return [...seen.values()];
 }
 
 /**
@@ -63,6 +98,7 @@ const EventStructuredData: React.FC = () => {
   const festivalName = m.festival_name();
   const { venueName, address, city, postalCode, country, coordinates } = edition.venue;
 
+  const ticketOffers = offers(edition.events, getLocale());
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -89,12 +125,7 @@ const EventStructuredData: React.FC = () => {
     },
     image: [`${baseUrl}${editionShareImage(edition) ?? DEFAULT_SHARE}`],
     description: m.welcome_subtitle(),
-    offers: {
-      "@type": "Offer",
-      url: baseUrl,
-      availability: "https://schema.org/InStock",
-      priceCurrency: "EUR",
-    },
+    ...(ticketOffers.length > 0 ? { offers: ticketOffers } : {}),
     inLanguage: getLocale(),
     organizer: {
       "@type": "Organization",
