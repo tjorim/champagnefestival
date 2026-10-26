@@ -292,8 +292,6 @@ export default function EditionCard({
             );
           })()}
 
-          <EditionArtwork edition={edition} authHeaders={authHeaders} onUpdated={onUpdated} />
-
           <div className="flex justify-between items-center mb-1">
             <h6 className="text-highlight mb-0 text-sm">{m.admin_content_edition_schedule()}</h6>
             <Button size="sm" variant="outline" onClick={openAddEvent}>
@@ -365,6 +363,9 @@ export default function EditionCard({
               ))}
             </PresentationList>
           )}
+
+          {/* After the schedule: events are what organisers edit most, artwork rarely. */}
+          <EditionArtwork edition={edition} authHeaders={authHeaders} onUpdated={onUpdated} />
         </CollapsibleContent>
 
         <EditionModal

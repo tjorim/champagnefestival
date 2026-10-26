@@ -161,13 +161,27 @@ describe.each(["people", "members", "volunteers"] as const)("%s server screen", 
     await screen.findByRole("row", { name: "Person 00" });
     fireEvent.click(
       within(row("Person 00")).getByRole("button", {
-        name: kind === "people" ? "admin_people_delete_title" : `admin_${kind}_deactivate_title`,
+        name:
+          kind === "people"
+            ? "admin_people_delete_title: Person 00"
+            : `admin_${kind}_deactivate_title`,
       }),
     );
     const dialog = await screen.findByRole("dialog");
+    if (kind === "people") {
+      // The confirmation names who is deleted, and says what goes with them.
+      expect(
+        within(dialog).getByText('admin_people_delete_confirm({"name":"Person 00"})'),
+      ).toBeInTheDocument();
+    }
     fireEvent.click(
       within(dialog).getByRole("button", {
-        name: kind === "members" ? "admin_members_deactivate_title" : "admin_action_confirm",
+        name:
+          kind === "members"
+            ? "admin_members_deactivate_title"
+            : kind === "people"
+              ? "admin_delete"
+              : "admin_action_confirm",
       }),
     );
     // An unknown code shows the translated operation fallback, never the English detail.

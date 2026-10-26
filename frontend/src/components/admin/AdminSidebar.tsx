@@ -81,7 +81,9 @@ function SidebarItem({
         <Icon icon={icon} />
         <span>{label}</span>
         {count > 0 && (
-          <span className="ml-auto rounded bg-muted px-1.5 text-xs tabular-nums">{count}</span>
+          <span className="ml-auto rounded bg-muted px-1.5 text-xs text-foreground tabular-nums">
+            {count}
+          </span>
         )}
       </SidebarMenuButton>
     </SidebarMenuItem>

@@ -57,7 +57,7 @@ import { useAppTable, createAppColumnHelper } from "@/hooks/useAdminTable";
 import { exportToCsv } from "@/utils/csvExport";
 import RegistrationCreateModal from "./RegistrationCreateModal";
 import { ColumnVisibilityDropdown } from "./ColumnVisibilityDropdown";
-import { loadColVis, saveColVis } from "@/utils/columnVisibility";
+import { hideColumnUntilUsed, loadColVis, saveColVis } from "@/utils/columnVisibility";
 import {
   downloadRegistrationsCsv,
   fetchEventCheckInStats,
@@ -830,13 +830,20 @@ export default function RegistrationList({
     clearSelection();
   }, [onFilterChange, clearSelection]);
 
+  // The hall-layout column only has something to choose while a floor plan has tables, so it
+  // starts hidden until then. It also frees the width the actions column needs on a laptop or
+  // tablet; an explicit choice in the Columns menu always wins.
+  const effectiveColumnVisibility = useMemo<ColumnVisibilityState>(
+    () => hideColumnUntilUsed(columnVisibility, "table", tables.length > 0),
+    [columnVisibility, tables.length],
+  );
   const table = useAppTable(
     {
       data: pageRegistrations,
       manualSorting: true,
       manualFiltering: true,
       columns,
-      state: { sorting, columnVisibility },
+      state: { sorting, columnVisibility: effectiveColumnVisibility },
       getRowId: (row) => row.id,
       onSortingChange: (updater) => {
         const next = typeof updater === "function" ? updater(sorting) : updater;
@@ -844,7 +851,7 @@ export default function RegistrationList({
         setPage(1);
       },
       onColumnVisibilityChange: (updater) => {
-        const next = typeof updater === "function" ? updater(columnVisibility) : updater;
+        const next = typeof updater === "function" ? updater(effectiveColumnVisibility) : updater;
         setColumnVisibility(next);
         saveColVis(COL_VIS_KEY, next);
       },

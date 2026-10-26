@@ -86,7 +86,7 @@ export default function PeopleManagement({
   const [deleteSuccess, setDeleteSuccess] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingPerson, setEditingPerson] = useState<Person | null>(null);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingPerson, setDeletingPerson] = useState<Person | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [viewRegistrationsPerson, setViewRegistrationsPerson] = useState<Person | null>(null);
@@ -123,13 +123,13 @@ export default function PeopleManagement({
   }, []);
 
   const handleDeleteConfirm = async () => {
-    if (!deletingId) return;
+    if (!deletingPerson) return;
     setDeleting(true);
     setDeleteError("");
     try {
-      await onDelete(deletingId);
+      await onDelete(deletingPerson.id);
       setDeleteSuccess(true);
-      setDeletingId(null);
+      setDeletingPerson(null);
     } catch (err) {
       setDeleteError(apiErrorMessage(err, m.admin_error_delete_person()));
     } finally {
@@ -358,11 +358,11 @@ export default function PeopleManagement({
                   size="sm"
                   variant="outline-danger"
                   onClick={() => {
-                    setDeletingId(person.id);
+                    setDeletingPerson(person);
                     setDeleteError("");
                   }}
                   title={m.admin_people_delete_title()}
-                  aria-label={m.admin_people_delete_title()}
+                  aria-label={`${m.admin_people_delete_title()}: ${person.name}`}
                 >
                   <Icon icon={TrashIcon} />
                 </Button>
@@ -376,7 +376,7 @@ export default function PeopleManagement({
       authHeaders,
       setEditingPerson,
       setShowForm,
-      setDeletingId,
+      setDeletingPerson,
       setDeleteError,
       setViewRegistrationsPerson,
       setConsentPerson,
@@ -562,11 +562,11 @@ export default function PeopleManagement({
       )}
 
       {/* Delete confirm modal */}
-      {deletingId && (
+      {deletingPerson && (
         <Dialog
           open={true}
           onOpenChange={(open) => {
-            if (!open) setDeletingId(null);
+            if (!open) setDeletingPerson(null);
           }}
         >
           <DialogContent admin size="default">
@@ -582,15 +582,24 @@ export default function PeopleManagement({
                   {deleteError}
                 </Alert>
               )}
-              <p>{m.admin_people_delete_confirm()}</p>
+              <p>{m.admin_people_delete_confirm({ name: deletingPerson.name })}</p>
+              {(deletingPerson.registrationCount ?? 0) > 0 && (
+                <p className="font-semibold">
+                  {deletingPerson.registrationCount === 1
+                    ? m.admin_people_delete_registrations_one()
+                    : m.admin_people_delete_registrations_other({
+                        count: deletingPerson.registrationCount ?? 0,
+                      })}
+                </p>
+              )}
             </DialogBody>
             <DialogFooter>
-              <Button variant="outline" size="sm" onClick={() => setDeletingId(null)}>
+              <Button variant="outline" size="sm" onClick={() => setDeletingPerson(null)}>
                 {m.admin_action_cancel()}
               </Button>
               <Button variant="danger" size="sm" onClick={handleDeleteConfirm} disabled={deleting}>
                 {deleting ? <Spinner size="sm" /> : <Icon icon={TrashIcon} />}
-                {m.admin_action_confirm()}
+                {m.admin_delete()}
               </Button>
             </DialogFooter>
           </DialogContent>

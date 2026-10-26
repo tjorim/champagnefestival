@@ -308,7 +308,10 @@ describe("LayoutEditor", () => {
 
   it("renders the empty state when there are no rooms", async () => {
     renderLayoutEditor();
-    expect(screen.getByText("admin_room_no_rooms")).toBeInTheDocument();
+    // Points the organiser to where rooms are created, not just that none exist.
+    expect(
+      screen.getByText('admin_floor_plan_no_rooms({"section":"admin_venues_rooms_tab"})'),
+    ).toBeInTheDocument();
   });
 
   it("renders a realistic fixture: room tab and table names appear", async () => {

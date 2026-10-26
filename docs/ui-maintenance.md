@@ -165,6 +165,10 @@ the one new translated API error message (`payment_reversal_amount_invalid`, thr
 enough to cross it (720.1 KiB). Messages are bundled eagerly, so each stable error code costs a few
 hundred bytes; the 5 KiB of headroom covers a handful of them before the next review.
 
+The total limit was raised from 2,800 to 2,820 KiB (2026-10-26) for the public-site and admin
+usability pass (+4.4 KiB: 2,797.5 to 2,801.9). The new code is small and the eager graph moved
+720.1 to 722.5 KiB, still inside its 725 KiB ceiling; no dependencies were added.
+
 Re-verified on main with Base UI 1.9.0 (2026-10-24): `pnpm typecheck` and
 `pnpm test` (174 files, 1,229 tests) pass, and `pnpm bundle:check` reports
 total 2,729.7 KiB, entry 367.5 KiB, AdminDashboard 388.8 KiB and eager graph
