@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { axe } from "jest-axe";
 import { describe, expect, it, vi } from "vitest";
@@ -95,6 +96,26 @@ describe("RegistrationList — scoped error display", () => {
     expect(festivals).toHaveAttribute("aria-pressed", "true");
     expect(all).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("group", { name: "admin_filter_status_aria" })).toBeInTheDocument();
+  });
+
+  it("saves column choices without persisting the temporary empty-table default", async () => {
+    const key = "admin-col-vis-registrations";
+    localStorage.removeItem(key);
+    const user = userEvent.setup();
+    renderRegistrationList();
+    await user.click(screen.getByRole("button", { name: "admin_columns" }));
+    const tableColumn = document.getElementById("col-vis-registrations-table")!;
+    expect(tableColumn).toHaveAttribute("aria-checked", "false");
+    const otherColumn = screen
+      .getAllByRole("menuitemcheckbox")
+      .find((item) => item !== tableColumn)!;
+    await user.click(otherColumn);
+    expect(JSON.parse(localStorage.getItem(key)!)).not.toHaveProperty("table");
+    await user.click(tableColumn);
+    expect(JSON.parse(localStorage.getItem(key)!)).toHaveProperty("table", true);
+    await user.click(tableColumn);
+    expect(JSON.parse(localStorage.getItem(key)!)).toHaveProperty("table", false);
+    localStorage.removeItem(key);
   });
 
   it("has no axe violations", async () => {

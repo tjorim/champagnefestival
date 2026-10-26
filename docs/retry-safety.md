@@ -8,6 +8,14 @@ writes that browsers, event-day clients, MCP callers, or automation may retry.
 An idempotency key is an opaque retry token. It is never a credential, does not
 grant access to a stored response, and does not replace normal authorization.
 
+## Registration column preferences
+
+Registration column visibility replaces the localStorage value with the complete
+saved user choices. Repeating the same save is retry safe because it writes the
+same value; no automatic retries are performed. Temporary defaults for empty
+columns are derived only for rendering and are not included when saving another
+column choice.
+
 ## Supported strategies
 
 - **Natural-key upsert:** repeated application of the desired state converges on
