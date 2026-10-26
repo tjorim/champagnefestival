@@ -68,6 +68,15 @@
     -->
     <!--ssr:head-->
 
+    <!-- Hide the disposable server fragment before the JavaScript app paints. -->
+    <style>
+      @layer components {
+        html[data-visual-theme] .site-server-content {
+          display: none;
+        }
+      }
+    </style>
+
     <script>
       (() => {
         // Sets data-theme-mode (the light/dark mode that Tailwind's dark variant and the

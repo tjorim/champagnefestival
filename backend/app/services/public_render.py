@@ -133,15 +133,15 @@ def render_schedule_section(events: list[dict], *, locale: Locale) -> str:
 
 def render_home_content(*, faq_items: list[dict], events: list[dict], locale: Locale) -> str:
     """Fragment for `/`'s `<!--ssr:content-->` slot: crawler-visible FAQ and
-    schedule text, given just enough inline layout to read well before the
-    SPA mounts.
+    schedule text, visible without JavaScript, with a readable inline layout. The shell
+    hides this wrapper before first paint when its theme bootstrap runs.
     Replaced wholesale when React mounts (`createRoot`, not `hydrateRoot` —
     see decision 4: no hydration-mismatch failure mode to design around, so
     this doesn't try to pixel-match the client render). The JSON-LD script
     is a separate fragment (`json_ld_script`) injected into `<!--ssr:head-->`
     instead — see `app.routers.public_pages`."""
     return (
-        f'<div style="{_CONTENT_WRAPPER_STYLE}">'
+        f'<div class="site-server-content" style="{_CONTENT_WRAPPER_STYLE}">'
         + render_schedule_section(events, locale=locale)
         + render_faq_section(faq_items, locale=locale)
         + "</div>"
@@ -154,7 +154,7 @@ def render_privacy_content(*, title: str, html_body: str) -> str:
     — the single renderer/sanitizer pair #944 established, reused rather than
     a second one (see decision 1's "Escaping is the part worth being
     deliberate about" section)."""
-    return f'<div style="{_CONTENT_WRAPPER_STYLE}"><h1>{_text(title)}</h1>{html_body}</div>'
+    return f'<div class="site-server-content" style="{_CONTENT_WRAPPER_STYLE}"><h1>{_text(title)}</h1>{html_body}</div>'
 
 
 __all__ = [
