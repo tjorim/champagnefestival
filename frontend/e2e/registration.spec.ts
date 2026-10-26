@@ -98,6 +98,11 @@ test.describe("Guest registration", () => {
 test("members-only booking shows an email sign-in prompt", async ({ page }) => {
   await page.clock.setFixedTime(new Date("2027-02-01T12:00:00Z"));
   await page.addInitScript(() => localStorage.setItem("msw:members-only", "true"));
+  const authRequests: string[] = [];
+  page.on("request", (request) => {
+    if (/OidcRuntime|react-oidc-context|oidc-client-ts/.test(request.url()))
+      authRequests.push(request.url());
+  });
   await page.goto("/");
   await page
     .locator("#registrations")
@@ -108,4 +113,8 @@ test("members-only booking shows an email sign-in prompt", async ({ page }) => {
   await expect(
     dialog.getByRole("link", { name: /sign in by email|aanmelden via e-mail/i }),
   ).toHaveAttribute("href", "/me");
+  expect(authRequests).toEqual([]);
+  await dialog.getByRole("link", { name: /sign in by email|aanmelden via e-mail/i }).click();
+  await expect(page).toHaveURL(/\/me$/);
+  await expect.poll(() => authRequests.length).toBeGreaterThan(0);
 });

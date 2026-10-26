@@ -45,6 +45,12 @@ export default defineConfig(({ command, mode, isPreview }) => {
           codeSplitting: {
             groups: [
               {
+                name: "oidc-vendor",
+                // Keep shared React dependencies in their own eager chunk.
+                includeDependenciesRecursively: false,
+                test: /[/\\]node_modules[/\\](oidc-client-ts|react-oidc-context)[/\\]/,
+              },
+              {
                 name: "react-vendor",
                 test: /[/\\]node_modules[/\\](react|react-dom|scheduler)[/\\]/,
               },

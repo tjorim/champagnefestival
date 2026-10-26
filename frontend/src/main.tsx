@@ -22,15 +22,13 @@ import React, { lazy, useCallback, useEffect, useMemo, useRef, useState } from "
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import { Link, RouterProvider } from "@tanstack/react-router";
-import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
 
 import "./config/localeQuery";
 import "./styles/tailwind.css";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 
-import { createOidcConfig } from "./config/oidc";
-import { AuthProvider } from "./contexts/AuthContext";
+import { LazyAuthProvider } from "./contexts/LazyAuthProvider";
 
 import Footer from "./components/Footer";
 import Header from "./components/Header";
@@ -980,10 +978,6 @@ const router = createAppRouter({
   queryClient,
 });
 
-const oidcConfig = createOidcConfig({
-  navigateTo: (to) => router.navigate({ to }),
-});
-
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
@@ -1019,13 +1013,18 @@ function registerServiceWorker(): void {
 function renderApp(): void {
   ReactDOM.createRoot(rootElement!).render(
     <React.StrictMode>
-      <OidcAuthProvider {...oidcConfig}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <RouterProvider router={router} />
-          </AuthProvider>
-        </QueryClientProvider>
-      </OidcAuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <LazyAuthProvider
+          navigateTo={(to) => router.navigate({ to })}
+          subscribe={(onNavigate) =>
+            router.subscribe("onBeforeNavigate", ({ toLocation }) =>
+              onNavigate(toLocation.pathname),
+            )
+          }
+        >
+          <RouterProvider router={router} />
+        </LazyAuthProvider>
+      </QueryClientProvider>
     </React.StrictMode>,
   );
 }

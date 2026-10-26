@@ -2,7 +2,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const budgets = { total: 2820, entry: 520, admin: 450, eager: 725 };
+export const budgets = { total: 2810, entry: 315, admin: 450, eager: 665 };
 
 export async function measureBundle(directory) {
   const manifest = JSON.parse(await readFile(resolve(directory, ".vite/manifest.json"), "utf8"));
@@ -13,6 +13,8 @@ export async function measureBundle(directory) {
     seen.add(key);
     const chunk = manifest[key];
     if (!chunk) throw new Error(`Missing imported chunk in build manifest: ${key}`);
+    if (/\/oidc-vendor[.-]/.test(chunk.file))
+      throw new Error("OIDC runtime must not be in the public eager graph");
     let bytes = (await stat(resolve(directory, chunk.file))).size;
     for (const dependency of chunk.imports ?? []) bytes += await eagerSize(dependency);
     return bytes;

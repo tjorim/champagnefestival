@@ -45,7 +45,7 @@ describe("app-level persisted session ownership", () => {
       const removeUser = session(["visitor"]);
       render(
         <QueryClientProvider client={client}>
-          <AuthProvider>
+          <AuthProvider oidcAuth={useOidcAuth()}>
             <Consumer />
           </AuthProvider>
         </QueryClientProvider>,
@@ -68,7 +68,7 @@ describe("app-level persisted session ownership", () => {
     session(["admin"]);
     const tree = () => (
       <QueryClientProvider client={client}>
-        <AuthProvider>
+        <AuthProvider oidcAuth={useOidcAuth()}>
           <Consumer />
         </AuthProvider>
       </QueryClientProvider>
@@ -91,7 +91,7 @@ describe("app-level persisted session ownership", () => {
     const removeUser = session(["volunteer"]);
     render(
       <QueryClientProvider client={client}>
-        <AuthProvider>
+        <AuthProvider oidcAuth={useOidcAuth()}>
           <Consumer />
         </AuthProvider>
       </QueryClientProvider>,
@@ -119,7 +119,7 @@ describe("app-level persisted session ownership", () => {
     mockState.user!.expires_at = Date.now() / 1000 + 0.3;
     render(
       <QueryClientProvider client={client}>
-        <AuthProvider>
+        <AuthProvider oidcAuth={useOidcAuth()}>
           <Consumer />
         </AuthProvider>
       </QueryClientProvider>,
@@ -142,7 +142,7 @@ describe("app-level persisted session ownership", () => {
     session(["admin"]);
     render(
       <QueryClientProvider client={client}>
-        <AuthProvider>
+        <AuthProvider oidcAuth={useOidcAuth()}>
           <Consumer />
         </AuthProvider>
       </QueryClientProvider>,
