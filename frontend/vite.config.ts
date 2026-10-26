@@ -28,7 +28,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
       paraglideVitePlugin({
         project: "./project.inlang",
         outdir: "./src/paraglide",
-        strategy: ["localStorage", "preferredLanguage", "baseLocale"],
+        strategy: ["custom-queryParam", "localStorage", "preferredLanguage", "baseLocale"],
       }),
       reactPlugin(),
       // Serves /mockServiceWorker.js from the msw package in dev. Nothing imports `virtual:msw`,

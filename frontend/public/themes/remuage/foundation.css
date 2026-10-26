@@ -289,6 +289,20 @@ html[data-visual-theme="remuage"] .remuage-hero__subtitle {
   line-height: 1.65;
 }
 
+html[data-visual-theme="remuage"] .remuage-hero__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.5rem;
+  margin: 1.25rem 0 0;
+  color: var(--rem-ink);
+  font-weight: 750;
+}
+
+html[data-visual-theme="remuage"] .remuage-hero__note {
+  margin: 1rem 0 0;
+  color: var(--rem-muted);
+}
+
 html[data-visual-theme="remuage"] .remuage-hero__actions {
   display: flex;
   flex-wrap: wrap;

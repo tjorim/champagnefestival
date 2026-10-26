@@ -230,7 +230,7 @@
         rgba(16, 15, 13, 0.34) 68%,
         rgba(16, 15, 13, 0.62) 100%
       ),
-      var(--edition-hero-image, url("/images/champagne-hero.png")) center / cover no-repeat;
+      var(--edition-hero-image, url("/images/champagne-hero.webp")) center / cover no-repeat;
   }
 
   .hero::after {
@@ -323,10 +323,26 @@
     line-height: 1.6;
   }
 
+  .hero-meta {
+    color: rgba(251, 246, 236, 0.92);
+    font-size: clamp(1rem, 2vw, 1.2rem);
+  }
+
+  /* Reserves the date and venue lines (two on a phone) until the edition has loaded. */
+  .hero-meta[data-pending] {
+    min-height: 1.5em;
+  }
+
   .hero-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 0.8rem;
+  }
+
+  /* Keeps the outlined secondary action readable over the photo, including where it fades out. */
+  .hero-actions [data-slot="button"] {
+    background-color: rgba(16, 15, 13, 0.45);
+    backdrop-filter: blur(4px);
   }
 
   [data-slot="button"]:not([data-theme-scope="admin"] *) {
@@ -786,7 +802,7 @@
           rgba(16, 15, 13, 0.88) 54%,
           rgba(16, 15, 13, 0.58) 100%
         ),
-        var(--edition-hero-image, url("/images/champagne-hero.png")) 62% center / cover no-repeat;
+        var(--edition-hero-image, url("/images/champagne-hero.webp")) 62% center / cover no-repeat;
     }
 
     .features {
@@ -810,8 +826,17 @@
     }
 
     .hero {
-      min-height: 76vh;
-      padding: 3rem 0.25rem;
+      align-items: flex-start;
+      min-height: min(70svh, 36rem);
+      padding: 3rem 0.25rem 5rem;
+    }
+
+    .hero-meta[data-pending] {
+      min-height: 3em;
+    }
+
+    .hero::after {
+      height: 5rem;
     }
 
     .hero-content {
@@ -893,7 +918,7 @@
     .hero {
       background:
         linear-gradient(90deg, rgba(16, 15, 13, 0.98), rgba(16, 15, 13, 0.82)),
-        var(--edition-hero-image, url("/images/champagne-hero.png")) 66% center / cover no-repeat;
+        var(--edition-hero-image, url("/images/champagne-hero.webp")) 66% center / cover no-repeat;
     }
 
     .hero-kicker {
@@ -997,7 +1022,7 @@
           rgba(18, 15, 11, 0.26) 68%,
           rgba(18, 15, 11, 0.44) 100%
         ),
-        var(--edition-hero-image, url("/images/champagne-hero.png")) center / cover no-repeat;
+        var(--edition-hero-image, url("/images/champagne-hero.webp")) center / cover no-repeat;
     }
 
     .hero::after {

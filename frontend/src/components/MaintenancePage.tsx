@@ -46,7 +46,7 @@ import "./maintenancePage.css";
  * too — while we're still evaluating which one to keep, this page
  * shouldn't look like it was only ever tested against one of them.
  *
- * `champagne-hero.png` is a wide (~1.87:1), deliberately asymmetric shot:
+ * `champagne-hero.webp` is a wide (~1.87:1), deliberately asymmetric shot:
  * roughly its left half is a plain dark table with no subject, its right
  * half has the bottles/glasses/candles. A narrow (mobile) viewport crops
  * `background-size: cover` down to a tall sliver near the image's

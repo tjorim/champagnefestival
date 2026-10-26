@@ -23,7 +23,7 @@ const LocationInfo: React.FC<LocationInfoProps> = ({ location }) => {
         <div className="flex flex-wrap -mx-3 *:w-full *:px-column-gutter">
           <div className="w-full site-md:w-6/12 mb-4 site-md:mb-0">
             <div className="mb-6">
-              <h5>{m.location_address()}</h5>
+              <h5 aria-level={4}>{m.location_address()}</h5>
               <p className="mb-1">{location.address}</p>
               <p className="mb-1">
                 {location.postalCode} {location.city}
@@ -33,7 +33,7 @@ const LocationInfo: React.FC<LocationInfoProps> = ({ location }) => {
           </div>
           <div className="w-full site-md:w-6/12">
             <div>
-              <h5>{m.location_opening_hours()}</h5>
+              <h5 aria-level={4}>{m.location_opening_hours()}</h5>
               <p>{m.location_opening_hours_value()}</p>
             </div>
           </div>

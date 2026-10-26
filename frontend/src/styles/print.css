@@ -1,0 +1,74 @@
+/*
+ * Printing the public pages (a visitor printing the schedule, FAQ or privacy policy). Themes are
+ * screen designs: dark pages, photo heroes, white-on-photo titles, a fixed header that would
+ * repeat on every sheet. Print is plain black on white and leaves out what cannot be used on
+ * paper. `!important` is deliberate: the rules must win over every runtime theme, whatever its
+ * layer order, and only apply to print.
+ */
+@layer components {
+  @media print {
+    html,
+    body,
+    .App,
+    main,
+    main * {
+      color: #000 !important;
+      background: none !important;
+      text-shadow: none !important;
+      box-shadow: none !important;
+      filter: none !important;
+    }
+
+    body {
+      padding-top: 0 !important;
+    }
+
+    .site-header,
+    .standalone-navbar,
+    .skip-link,
+    .theme-switcher,
+    .announcement-ticker,
+    .bubble-container,
+    .site-footer nav,
+    [data-slot="festival-mascot"],
+    [data-slot="festival-facts"] button,
+    .hero-actions,
+    .hero-meta[data-pending],
+    .leaflet-container,
+    #registrations,
+    #contact form,
+    #next-festival {
+      display: none !important;
+    }
+
+    .hero {
+      min-height: 0 !important;
+      padding: 0 0 1rem !important;
+    }
+
+    .content-section {
+      padding: 1rem 0 !important;
+    }
+
+    h1,
+    h2,
+    h3 {
+      break-after: avoid;
+    }
+
+    .event-card,
+    details,
+    li {
+      break-inside: avoid;
+    }
+
+    /* Show what a collapsed FAQ answer says. */
+    details > :not(summary) {
+      display: block !important;
+    }
+
+    a {
+      text-decoration: underline;
+    }
+  }
+}

@@ -1,6 +1,7 @@
 import { CircleArrowDownIcon } from "lucide-react";
 import { Icon } from "@/components/Icon";
-interface RemuageHeroProps {
+import type { HeroRegistrationProps } from "@/components/heroRegistration";
+interface RemuageHeroProps extends HeroRegistrationProps {
   festivalName: string;
   title: string;
   subtitle: string;
@@ -16,6 +17,9 @@ const RemuageHero = ({
   subtitle,
   learnMoreLabel,
   scheduleLabel,
+  facts = [],
+  registration,
+  note,
 }: RemuageHeroProps) => {
   return (
     <section className="remuage-hero" id="welcome">
@@ -23,15 +27,33 @@ const RemuageHero = ({
         <span className="remuage-hero__eyebrow">{festivalName}</span>
         <h1 className="remuage-hero__title">{title}</h1>
         <p className="remuage-hero__subtitle">{subtitle}</p>
+        {facts.length > 0 && (
+          <p className="remuage-hero__meta">
+            {facts.map((fact) => (
+              <span key={fact}>{fact}</span>
+            ))}
+          </p>
+        )}
         <div className="remuage-hero__actions">
-          <a href="#what-we-do" className="remuage-button remuage-button--primary">
-            {learnMoreLabel}
-            <Icon icon={CircleArrowDownIcon} />
-          </a>
+          {registration ? (
+            <button
+              type="button"
+              className="remuage-button remuage-button--primary"
+              onClick={registration.onRegister}
+            >
+              {registration.label}
+            </button>
+          ) : (
+            <a href="#what-we-do" className="remuage-button remuage-button--primary">
+              {learnMoreLabel}
+              <Icon icon={CircleArrowDownIcon} />
+            </a>
+          )}
           <a href="#schedule" className="remuage-button remuage-button--secondary">
             {scheduleLabel}
           </a>
         </div>
+        {note && <p className="remuage-hero__note">{note}</p>}
       </div>
 
       <div className="remuage-hero__rack" aria-hidden="true">

@@ -97,7 +97,9 @@ export default function OtherEvents() {
                   <CardContent>
                     <div className="flex justify-between items-start gap-4 flex-wrap">
                       <div>
-                        <h5 className="mb-1">{getEditionTitle(item.editionType)}</h5>
+                        <h5 aria-level={3} className="mb-1">
+                          {getEditionTitle(item.editionType)}
+                        </h5>
                         <p className="mb-1 font-semibold">{eventTitle(item.event, locale)}</p>
                         <p className="mb-1 text-subtle">
                           <Icon icon={CalendarDaysIcon} className="me-2" />

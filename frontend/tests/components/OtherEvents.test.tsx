@@ -94,7 +94,7 @@ describe("OtherEvents", () => {
 
     renderOtherEvents();
 
-    const headings = await screen.findAllByRole("heading", { level: 5 });
+    const headings = await screen.findAllByRole("heading", { level: 3 });
     expect(headings.map((heading) => heading.textContent)).toEqual(["Capsule Exchange", "Bourse"]);
   });
 

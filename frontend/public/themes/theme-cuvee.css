@@ -2,7 +2,7 @@
  * Cuvée is the champagne-label theme: a dark bottle-glass green page on which
  * every content section sits as an ivory label — square-cornered, framed by a
  * double rule, accented with gold foil. Display type is Fraunces; body stays
- * Inter (already loaded globally). Light-only by design, standalone like Riviera.
+ * Inter (self-hosted globally). Light-only by design, standalone like Riviera.
  *
  * Unlike the other variants, Cuvée also restyles the admin panel ("the cellar
  * ledger"): a bottle-green sidebar with gold actives and an ivory ledger main
@@ -10,7 +10,28 @@
  * the cascade, so every admin override below is prefixed with
  * html[data-visual-theme="cuvee"] to win on specificity instead of order.
  */
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&display=swap");
+/* Self-hosted Fraunces (variable: weight and optical size), see public/fonts/README.md. */
+@font-face {
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/fraunces-latin-opsz-normal.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: "Fraunces";
+  font-style: italic;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/fonts/fraunces-latin-opsz-italic.woff2") format("woff2");
+  unicode-range:
+    U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+    U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 @layer components {
   :root {
@@ -399,6 +420,26 @@
     font-size: clamp(1.05rem, 2vw, 1.25rem);
     font-style: italic;
     font-weight: 400;
+  }
+
+  .cuvee-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.5rem;
+    justify-content: center;
+    margin: 1.25rem 0 0;
+    color: var(--ink);
+    font-size: 0.8rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .cuvee-hero__note {
+    margin: 1rem 0 0;
+    color: var(--ink-soft);
+    font-family: var(--serif-display);
+    font-style: italic;
   }
 
   .cuvee-hero__actions {

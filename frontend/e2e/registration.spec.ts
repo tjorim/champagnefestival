@@ -18,6 +18,17 @@ test.describe("Guest registration", () => {
     ).toBeVisible();
   });
 
+  test("offers registration as the primary hero action with the date and place", async ({
+    page,
+  }) => {
+    await page.clock.setFixedTime(new Date("2027-02-01T12:00:00Z"));
+    await page.goto("/");
+
+    const hero = page.locator("#welcome");
+    await expect(hero.getByRole("button", { name: /register now|registreer nu/i })).toBeVisible();
+    await expect(hero.locator(".hero-meta")).not.toBeEmpty();
+  });
+
   test("announces when registrations open instead of a disabled CTA", async ({ page }) => {
     // The MSW mock edition has events with registrations_open_from in the future
     // (2027-01-01), so the pre-festival period shows the opening date, not a dead button.
