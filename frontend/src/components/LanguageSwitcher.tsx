@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from "react";
 import { getLocale, setLocale, isLocale } from "@/paraglide/runtime";
+import { localizedPublicUrl } from "@/config/localePath";
 import { m } from "@/paraglide/messages";
 
 const LanguageSwitcher = () => {
@@ -33,9 +34,12 @@ const LanguageSwitcher = () => {
   };
 
   // Handle language change
-  const changeLanguage = (langCode: string) => {
+  const changeLanguage = async (langCode: string) => {
     if (isLocale(langCode)) {
-      setLocale(langCode);
+      const destination = localizedPublicUrl(window.location.href, langCode);
+      await setLocale(langCode, { reload: false });
+      if (destination.href === window.location.href) window.location.reload();
+      else window.location.assign(destination.href);
       setCurrentLang(langCode);
     }
   };

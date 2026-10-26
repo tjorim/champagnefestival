@@ -18,6 +18,7 @@ import html
 import json
 import re
 from collections.abc import Mapping
+from urllib.parse import urlsplit
 
 from app.services.frontend_i18n_snippets import FAQ_TITLE, SCHEDULE_TITLE, Locale
 
@@ -91,6 +92,18 @@ def rewrite_head_meta(
         html_out = _rewrite_meta_content(html_out, attr="property", value="og:image", content=image)
         html_out = _rewrite_meta_content(html_out, attr="name", value="twitter:image", content=image)
     html_out = _rewrite_link_href(html_out, rel="canonical", href=url)
+    # Alternates must follow the current document (including privacy), not the shell's homepage.
+    parsed = urlsplit(url)
+    path = parsed.path
+    if path.split("/")[1:2] in (["en"], ["fr"]):
+        path = path[3:]
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    html_out = re.sub(r'<link\b(?=[^>]*\brel=["\']alternate["\'])(?=[^>]*\bhreflang=)[^>]*>', "", html_out)
+    alternates = "".join(
+        f'<link rel="alternate" hreflang="{language}" href="{html.escape(base + prefix + path, quote=True)}">'
+        for language, prefix in (("nl", ""), ("en", "/en"), ("fr", "/fr"), ("x-default", ""))
+    )
+    html_out = html_out.replace("</head>", alternates + "</head>")
     html_out = _rewrite_html_lang(html_out, locale)
     return html_out
 

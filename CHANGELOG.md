@@ -25,12 +25,13 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Changed
 
+- Public English and French home and privacy pages use `/en` and `/fr` paths, with matching canonical URLs, language alternates and sitemap entries. Switching language preserves the hash. Query-string language selection has been removed (#1418; deploy apps#296 routing first).
+
 - The Refresh hero offers **Register now** as its primary action while registration is open, repeats the dates and venue, and shows the opening date when it is not. On phones the hero is shorter and its secondary button stays readable over the photo.
 - Inter and Fraunces are served from `/fonts` instead of Google Fonts, so no visitor address is sent to a third party and the first render no longer waits on one; Inter's main file is preloaded.
 - The default hero photo is a 127 KB WebP instead of a 2 MB PNG, and `GET /` preloads the active edition's hero (or the default) in the page head.
 - The home page's JSON-LD `offers` now lists one priced `Offer` per required entry product (sold out only when every event offering it is) and is omitted when there are none; it used to claim `InStock` with no price. The backend render and the frontend fallback share the updated fixture.
 - The Riviera, Cuvée, Remuage and Classic heroes offer the same **Register now** button, dates/venue line and opening-date note as the Refresh hero.
-- `/?lng=nl|en|fr` now opens the site in that language. The hreflang alternates, the sitemap and the server-rendered metadata already advertised those URLs, but the app ignored the parameter and showed the browser's language, so a crawler or shared link got English. The switcher keeps an explicit parameter in step; without one, the saved choice and then the browser language apply as before.
 - The home page no longer jumps while the edition loads (layout shift 0.26 → 0.005 in a Lighthouse mobile run on the built site): the hero keeps room for its date line and the at-a-glance strip keeps its height. The theme stylesheet is preloaded from the pre-paint script, and the Leaflet map loads when the visitor scrolls near it instead of on every visit.
 - Event, edition and address sub-headings carry `aria-level` so the heading outline no longer skips levels (Lighthouse accessibility 99 → 100); their styling is unchanged.
 - Printing a public page gives plain black-on-white output without the fixed header, photo hero, buttons, map and contact form, and with the FAQ answers open (a visitor printing the schedule used to get seven sheets with the title invisible). Only the schedule day that is selected prints.

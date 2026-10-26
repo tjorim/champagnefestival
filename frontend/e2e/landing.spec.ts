@@ -47,18 +47,32 @@ test.describe("Public landing page", () => {
 });
 
 test.describe("Language links", () => {
-  test("?lng opens the page in that language and keeps in step with the switcher", async ({
-    page,
-  }) => {
-    await page.goto("/?lng=fr");
+  test("locale paths select the language and switching preserves the hash", async ({ page }) => {
+    await page.goto("/fr#faq");
     await expect(page.locator("html")).toHaveAttribute("lang", "fr");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Bienvenue");
 
     await page.locator(".site-lang-toggle").click();
     await page.getByRole("menuitem", { name: /English/ }).click();
 
-    await expect(page).toHaveURL(/lng=en/);
+    await expect(page).toHaveURL(/\/en#faq$/);
     await expect(page.locator("html")).toHaveAttribute("lang", "en");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Welcome");
+
+    await page.locator(".site-lang-toggle").click();
+    await page.getByRole("menuitem", { name: /Nederlands/ }).click();
+    await expect(page).toHaveURL(/\/#faq$/);
+    await expect(page.locator("html")).toHaveAttribute("lang", "nl");
   });
+});
+
+test("privacy locale switching keeps the document and hash", async ({ page }) => {
+  await page.goto("/fr/privacy#privacy-policy");
+  await expect(page.locator("#privacy-policy")).toBeVisible();
+  await expect(page.locator("html")).toHaveAttribute("lang", "fr");
+  await page.locator(".site-lang-toggle").click();
+  await page.getByRole("menuitem", { name: /English/ }).click();
+  await expect(page).toHaveURL(/\/en\/privacy#privacy-policy$/);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#privacy-policy")).toBeVisible();
 });

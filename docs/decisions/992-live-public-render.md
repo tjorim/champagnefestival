@@ -14,8 +14,13 @@ an API restart. Missing or unreadable builds return 404.
 `<!--ssr:head-->` and `<!--ssr:content-->` are fragment slots. Existing title,
 description, Open Graph, Twitter, canonical and language metadata are rewritten
 rather than duplicated. `/` includes active-edition metadata and FAQ/schedule text;
-`/privacy` includes the published policy for the requested locale. `?lng=nl|en|fr`
-selects the language, with Dutch as the default for unsupported values.
+`/privacy` includes the published policy for the requested locale. `/en` and `/fr`
+select the home-page language; `/en/privacy` and
+`/fr/privacy` select the privacy language (#1418). Unprefixed render routes
+use Dutch. Query-string locale selection has been removed: the site had not
+gone live, so no compatibility aliases or redirects are needed. The client
+retains saved/browser-language fallbacks on unprefixed pages. Canonical,
+Open Graph and hreflang URLs use the matching document paths.
 
 Interpolated text and attributes are escaped. Policy Markdown uses the shared
 sanitising renderer. JSON-LD escapes script-breaking characters. Server fragments
@@ -44,6 +49,10 @@ no application write or automatic write retry.
 ## Deployment
 
 The API needs a read-only mount of the same frontend build Caddy serves.
-Caddy routes exactly `/` and `/privacy` to the API and falls back to its static
-file server on a backend 404; other frontend paths retain normal SPA routing.
+Caddy must route `/`, `/privacy`, `/en`, `/fr`, `/en/privacy` and `/fr/privacy`
+to the API, with a fallback to its static file server on a backend 404; other frontend paths retain normal SPA routing.
 The production stack lives in the separate infrastructure repository.
+
+Deploy the additive routing in [tjorim/apps#296](https://github.com/tjorim/apps/issues/296)
+before releasing #1418’s path-based hreflang and sitemap. The sitemap lists
+all six documents with reciprocal language alternates.

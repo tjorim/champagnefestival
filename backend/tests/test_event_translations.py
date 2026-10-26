@@ -211,7 +211,7 @@ async def test_server_rendered_home_and_json_ld_use_the_locale_text(client, monk
     assert plain.status_code == 201
 
     for locale, title in (("nl", "Openingsavond"), ("fr", "Soirée d'ouverture"), ("en", "Opening night")):
-        page = await client.get("/", params={"lng": locale})
+        page = await client.get("/" if locale == "nl" else f"/{locale}")
         assert page.status_code == 200
         assert f"<li>{title} —" in page.text, locale
         ld = json.loads(page.text.split('data-ssr-jsonld="true">')[1].split("</script>")[0])
@@ -220,7 +220,7 @@ async def test_server_rendered_home_and_json_ld_use_the_locale_text(client, monk
 
     # An event without a translation shows its Dutch text in every locale.
     for locale in ("nl", "fr", "en"):
-        page = await client.get("/", params={"lng": locale})
+        page = await client.get("/" if locale == "nl" else f"/{locale}")
         assert "Brunch" in page.text
 
 

@@ -55,3 +55,16 @@ describe("admin live updates", () => {
     expect(await screen.findByTestId("live-updates")).toBeInTheDocument();
   });
 });
+
+describe("localized public routes", () => {
+  it.each(["/en", "/fr"])("renders the home page at %s", async (path) => {
+    renderAt(path);
+    expect(await screen.findByRole("heading", { name: "Home" })).toBeInTheDocument();
+    expect(screen.queryByTestId("live-updates")).not.toBeInTheDocument();
+  });
+  it.each(["/en/privacy", "/fr/privacy"])("renders the privacy page at %s", async (path) => {
+    renderAt(path);
+    expect(await screen.findByRole("heading", { name: "Privacy" })).toBeInTheDocument();
+    expect(screen.queryByTestId("live-updates")).not.toBeInTheDocument();
+  });
+});
