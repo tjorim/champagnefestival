@@ -27,6 +27,22 @@ sanitising renderer. JSON-LD escapes script-breaking characters. Server fragment
 provide readable content; they do not reproduce the interactive UI or require
 React hydration. Their wrapper styling is independent of Bootstrap.
 
+### Pre-mount visibility (#1419)
+
+The server fragment wrapper has the `site-server-content` class. An inline
+`components` layer rule in the frontend shell hides it with `display: none`
+when `html[data-visual-theme]` is present. The existing synchronous theme
+bootstrap sets that attribute in the head, before the body can paint. This
+prevents unstyled fallback text from flashing and shifting the page when React
+replaces it. The rule targets only the disposable fragment, not React's root.
+
+Without JavaScript the attribute is absent, so FAQ/schedule and published policy
+text retain their readable inline layout. The text remains in the HTML response
+for crawlers; JavaScript-rendering crawlers see the final application content.
+We retain `createRoot`: reproducing the interactive UI on the server for hydration
+would be a substantially larger change. First contentful paint now reflects the
+application appearing; eager-bundle performance is separate work.
+
 The server marks its JSON-LD with `data-ssr-jsonld="true"`; the client suppresses
 its duplicate when that marker exists. Both builders share the
 [edition fixture](../fixtures/jsonld-edition.json), with contract tests using

@@ -99,6 +99,7 @@ async def test_home_page_renders_faq_and_schedule_and_json_ld(client):
     assert "Vrijdagavond" in r.text
     assert "Wat is dit?" in r.text
     assert "Een champagnefestival." in r.text
+    assert '<div class="site-server-content" style="' in r.text
     assert 'data-ssr-jsonld="true"' in r.text
     assert '"@type":"Event"' in r.text
     assert 'rel="preload" as="image" href="/images/champagne-hero.webp"' in r.text
@@ -211,6 +212,7 @@ async def test_privacy_page_renders_published_markdown_content(client, db_sessio
     assert "<h2>Titel</h2>" in r_privacy.text
     assert "<strong>bold</strong>" in r_privacy.text
     assert "Privacybeleid" in r_privacy.text
+    assert '<div class="site-server-content" style="' in r_privacy.text
     assert 'href="https://champagnefestival.tjor.im/privacy"' in r_privacy.text
     # Unrelated route's own render is unaffected.
     assert r.status_code == 200
