@@ -1,8 +1,9 @@
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 vi.mock("@/paraglide/runtime", () => ({
+  defineCustomClientStrategy: vi.fn(),
   getLocale: vi.fn().mockReturnValue("nl"),
   setLocale: vi.fn(),
   isLocale: vi.fn().mockReturnValue(true),
@@ -40,13 +41,18 @@ describe("LanguageSwitcher component", () => {
   });
 
   it("calls setLocale when a language is selected", async () => {
+    const assign = vi.spyOn(window.location, "assign").mockImplementation(() => {});
     const { setLocale } = await import("@/paraglide/runtime");
     render(<LanguageSwitcher />);
     await act(async () => {});
     fireEvent.click(screen.getByRole("button", { name: /select language/i }));
     // Click French option (nativeName 'Français' is unique)
     fireEvent.click(screen.getByText("Français").closest('[role="menuitem"]')!);
-    expect(setLocale).toHaveBeenCalledWith("fr");
+    expect(setLocale).toHaveBeenCalledWith("fr", { reload: false });
+    await waitFor(() =>
+      expect(assign).toHaveBeenCalledWith(new URL("/fr", window.location.href).href),
+    );
+    assign.mockRestore();
   });
 
   it("shows a checkmark for the active language", async () => {

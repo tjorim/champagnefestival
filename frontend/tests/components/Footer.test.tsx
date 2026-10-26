@@ -1,5 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
+import { getLocale } from "@/paraglide/runtime";
 import Footer from "@/components/Footer";
 
 vi.mock("@/paraglide/messages", () => ({
@@ -47,7 +48,10 @@ describe("Footer component", () => {
 
     const privacyLink = screen.getByRole("link", { name: "Privacy Policy" });
     expect(privacyLink).toBeInTheDocument();
-    expect(privacyLink).toHaveAttribute("href", "/privacy");
+    expect(privacyLink).toHaveAttribute(
+      "href",
+      getLocale() === "nl" ? "/privacy" : `/${getLocale()}/privacy`,
+    );
   });
 
   it("renders a small link to the administration page", () => {

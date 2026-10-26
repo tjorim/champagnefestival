@@ -14,13 +14,34 @@ an API restart. Missing or unreadable builds return 404.
 `<!--ssr:head-->` and `<!--ssr:content-->` are fragment slots. Existing title,
 description, Open Graph, Twitter, canonical and language metadata are rewritten
 rather than duplicated. `/` includes active-edition metadata and FAQ/schedule text;
-`/privacy` includes the published policy for the requested locale. `?lng=nl|en|fr`
-selects the language, with Dutch as the default for unsupported values.
+`/privacy` includes the published policy for the requested locale. `/en` and `/fr`
+select the home-page language; `/en/privacy` and
+`/fr/privacy` select the privacy language (#1418). Unprefixed render routes
+use Dutch. Query-string locale selection has been removed: the site had not
+gone live, so no compatibility aliases or redirects are needed. The client
+retains saved/browser-language fallbacks on unprefixed pages. Canonical,
+Open Graph and hreflang URLs use the matching document paths.
 
 Interpolated text and attributes are escaped. Policy Markdown uses the shared
 sanitising renderer. JSON-LD escapes script-breaking characters. Server fragments
 provide readable content; they do not reproduce the interactive UI or require
 React hydration. Their wrapper styling is independent of Bootstrap.
+
+### Pre-mount visibility (#1419)
+
+The server fragment wrapper has the `site-server-content` class. An inline
+`components` layer rule in the frontend shell hides it with `display: none`
+when `html[data-visual-theme]` is present. The existing synchronous theme
+bootstrap sets that attribute in the head, before the body can paint. This
+prevents unstyled fallback text from flashing and shifting the page when React
+replaces it. The rule targets only the disposable fragment, not React's root.
+
+Without JavaScript the attribute is absent, so FAQ/schedule and published policy
+text retain their readable inline layout. The text remains in the HTML response
+for crawlers; JavaScript-rendering crawlers see the final application content.
+We retain `createRoot`: reproducing the interactive UI on the server for hydration
+would be a substantially larger change. First contentful paint now reflects the
+application appearing; eager-bundle performance is separate work.
 
 The server marks its JSON-LD with `data-ssr-jsonld="true"`; the client suppresses
 its duplicate when that marker exists. Both builders share the
@@ -44,6 +65,10 @@ no application write or automatic write retry.
 ## Deployment
 
 The API needs a read-only mount of the same frontend build Caddy serves.
-Caddy routes exactly `/` and `/privacy` to the API and falls back to its static
-file server on a backend 404; other frontend paths retain normal SPA routing.
+Caddy must route `/`, `/privacy`, `/en`, `/fr`, `/en/privacy` and `/fr/privacy`
+to the API, with a fallback to its static file server on a backend 404; other frontend paths retain normal SPA routing.
 The production stack lives in the separate infrastructure repository.
+
+Deploy the additive routing in [tjorim/apps#296](https://github.com/tjorim/apps/issues/296)
+before releasing #1418’s path-based hreflang and sitemap. The sitemap lists
+all six documents with reciprocal language alternates.

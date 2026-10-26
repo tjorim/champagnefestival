@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import "@/config/localeQuery";
+import "@/config/localePath";
 import { getLocale, setLocale } from "@/paraglide/runtime";
 
-describe("the lng query parameter", () => {
+describe("public locale paths", () => {
   beforeEach(() => {
     window.localStorage.clear();
     window.history.replaceState(null, "", "/");
@@ -15,7 +15,7 @@ describe("the lng query parameter", () => {
 
   it("opens the site in the requested language, over a saved choice", () => {
     window.localStorage.setItem("PARAGLIDE_LOCALE", "en");
-    window.history.replaceState(null, "", "/?lng=fr");
+    window.history.replaceState(null, "", "/fr");
 
     expect(getLocale()).toBe("fr");
   });
@@ -27,20 +27,9 @@ describe("the lng query parameter", () => {
     expect(getLocale()).toBe("en");
   });
 
-  it("keeps an explicit parameter in step with a language switch", () => {
-    window.history.replaceState(null, "", "/?lng=fr&x=1#faq");
-
-    setLocale("en", { reload: false });
-
-    expect(window.location.search).toBe("?lng=en&x=1");
-    expect(window.location.hash).toBe("#faq");
-    expect(getLocale()).toBe("en");
-  });
-
-  it("leaves a page opened without the parameter alone", () => {
+  it("persists a choice without rewriting the current document URL", () => {
     setLocale("fr", { reload: false });
-
-    expect(window.location.search).toBe("");
+    expect(window.location.pathname).toBe("/");
     expect(getLocale()).toBe("fr");
   });
 });

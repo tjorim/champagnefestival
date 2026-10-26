@@ -1,11 +1,4 @@
-"""GET / and GET /privacy — live backend rendering (#992).
-
-Both routes are read-only and perform no persisted mutations.
-
-Reads nothing from the request except an optional ``?lng=`` locale — the
-same query parameter the SPA already uses, kept as part of the cache key on
-both sides per decision 2.
-"""
+"""Read-only public home and privacy render routes, with path locales (#1418)."""
 
 from __future__ import annotations
 
@@ -13,7 +6,7 @@ import logging
 from pathlib import Path
 from typing import cast
 
-from fastapi import APIRouter, Depends, Query, Response
+from fastapi import APIRouter, Depends, Request, Response
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -83,8 +76,14 @@ def _read_shell() -> str | None:
     return _shell_cache.read(shell_path)
 
 
-def _resolve_locale(raw: str | None) -> FaqLocale:
-    return raw if raw in ("nl", "en", "fr") else "nl"
+def _request_locale(request: Request) -> FaqLocale:
+    prefix = request.url.path.split("/")[1]
+    return prefix if prefix in ("en", "fr") else "nl"
+
+
+def _public_url(locale: FaqLocale, path: str = "") -> str:
+    prefix = f"/{locale}" if locale != "nl" else ""
+    return f"{settings.public_url.rstrip('/')}{prefix}{path}"
 
 
 async def _load_active_faq_items(db: AsyncSession, *, locale: FaqLocale) -> list[dict]:
@@ -119,7 +118,7 @@ async def _render_home(db: AsyncSession, *, locale: FaqLocale) -> str:
         shell,
         title="Champagnefestival",
         description=description,
-        url=settings.public_url,
+        url=_public_url(locale),
         locale=locale,
         image=share_image,
     )
@@ -144,16 +143,18 @@ async def _render_privacy(db: AsyncSession, *, locale: FaqLocale) -> str:
         shell,
         title=f"{title} — Champagnefestival",
         description=title,
-        url=f"{settings.public_url}/privacy",
+        url=_public_url(locale, "/privacy"),
         locale=cast(Locale, content_locale),
     )
     content = render_privacy_content(title=title, html_body=html_body)
     return inject_marker(inject_marker(html_out, "ssr:head", ""), "ssr:content", content)
 
 
+@router.get("/en", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/fr", response_class=HTMLResponse, include_in_schema=False)
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)
-async def get_home_page(lng: str | None = Query(default=None), db: AsyncSession = Depends(get_db)) -> Response:
-    locale = _resolve_locale(lng)
+async def get_home_page(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    locale = _request_locale(request)
     try:
         html_out = await public_render_cache.get_or_render(f"/:{locale}", lambda: _render_home(db, locale=locale))
     except NotFoundError:
@@ -165,9 +166,11 @@ async def get_home_page(lng: str | None = Query(default=None), db: AsyncSession 
     return HTMLResponse(html_out, headers={"Cache-Control": "public, max-age=60"})
 
 
+@router.get("/en/privacy", response_class=HTMLResponse, include_in_schema=False)
+@router.get("/fr/privacy", response_class=HTMLResponse, include_in_schema=False)
 @router.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
-async def get_privacy_page(lng: str | None = Query(default=None), db: AsyncSession = Depends(get_db)) -> Response:
-    locale = _resolve_locale(lng)
+async def get_privacy_page(request: Request, db: AsyncSession = Depends(get_db)) -> Response:
+    locale = _request_locale(request)
     try:
         html_out = await public_render_cache.get_or_render(
             f"/privacy:{locale}", lambda: _render_privacy(db, locale=locale)

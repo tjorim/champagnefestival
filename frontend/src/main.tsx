@@ -21,9 +21,9 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import React, { lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { Link, RouterProvider } from "@tanstack/react-router";
+import { RouterProvider } from "@tanstack/react-router";
 
-import "./config/localeQuery";
+import { localizedPublicPath } from "./config/localePath";
 import "./styles/tailwind.css";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
@@ -52,7 +52,6 @@ import AnnouncementBanner from "./components/AnnouncementBanner";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import MaintenancePage from "./components/MaintenancePage";
-import { useLanguage } from "./hooks/useLanguage";
 import { useMaintenanceMode } from "./hooks/useMaintenanceMode";
 import { useNoIndex } from "./hooks/useNoIndex";
 import { initializeVisualTheme, useVisualTheme } from "./hooks/useVisualTheme";
@@ -133,7 +132,11 @@ function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) 
         </span>
         <div className="standalone-navbar-actions flex shrink-0 gap-2 items-center">
           <LanguageSwitcher />
-          <ButtonLink render={<Link to="/" />} variant="outline" size="sm">
+          <ButtonLink
+            render={<a href={localizedPublicPath("/", getLocale())} />}
+            variant="outline"
+            size="sm"
+          >
             <Icon icon={ArrowLeftIcon} />
             {/* Icon-only on phones so the title keeps its room; the text stays the accessible name. */}
             <span className="sr-only site-sm:not-sr-only">{m.back_to_site()}</span>
@@ -327,8 +330,6 @@ function EmailConsentRoute() {
 }
 
 function App() {
-  // Use custom hooks for language
-  useLanguage();
   const { variant, setVariant } = useVisualTheme();
   const { isMaintenanceMode } = useMaintenanceMode();
 
