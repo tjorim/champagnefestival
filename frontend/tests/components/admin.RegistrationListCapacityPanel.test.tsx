@@ -4,7 +4,7 @@
  * — instead of counting whatever registrations this client happens to hold.
  */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
@@ -135,6 +135,12 @@ describe("RegistrationList — per-event capacity panel", () => {
     expect(screen.getByText(/admin_checked_in: 0\/2/)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText(/admin_checked_in: 12\/30/)).toBeInTheDocument());
     expect(screen.getByText("Historical event title")).toBeInTheDocument();
+    const summary = screen.getByRole("button", { name: /admin_event_checkin_summary/ });
+    expect(summary).toHaveTextContent('"checkedIn":12,"total":32');
+    expect(summary).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByText("Historical event title")).not.toBeVisible();
+    fireEvent.click(summary);
+    expect(screen.getByText("Historical event title")).toBeVisible();
   });
 
   it("falls back to the locally derived counts when the stats request fails", async () => {

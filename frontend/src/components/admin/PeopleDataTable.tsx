@@ -168,6 +168,18 @@ export function PeopleDataTable({
       columns={columns}
       useDataSource={useDataSource}
       columnVisibilityKey={`admin-col-vis-${id}`}
+      defaultColumnVisibility={
+        id === "members"
+          ? { phone: false, memberSince: false, notes: false }
+          : id === "volunteers"
+            ? {
+                nationalRegisterNumber: false,
+                eidDocumentNumber: false,
+                volunteerSince: false,
+                helpPeriods: false,
+              }
+            : { phone: false }
+      }
       getRowId={(person) => person.id}
       getRowLabel={(person) => person.name}
       getRowClassName={getRowClassName}

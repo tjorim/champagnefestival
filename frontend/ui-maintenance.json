@@ -118,7 +118,7 @@
       "files": ["src/components/ui/dropdown-menu.tsx"],
       "registry": "dropdown-menu",
       "origin": "https://ui.shadcn.com/r/styles/base-vega/dropdown-menu.json",
-      "reason": "Adapted registry component; preserve app tokens, accessibility and documented wrapper decisions.",
+      "reason": "Adapted registry component; preserve app tokens, admin portal scope, accessible labels and viewport bounds using Base UI available-width/height variables (#1427).",
       "reviewedAt": null,
       "reviewNote": null,
       "upstreamSha256": "b8c998d4e004a764dc26e87b2c77aeb8e2fd6cd0bbb1c7e2c8dd686b3ab5b44c",

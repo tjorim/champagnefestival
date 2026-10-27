@@ -43,7 +43,6 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarMenuSub,
-  SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Spinner } from "@/components/ui/spinner";
@@ -430,11 +429,6 @@ export default function AdminSidebar({
           </div>
         </SidebarFooter>
       </Sidebar>
-
-      <SidebarTrigger
-        className="fixed bottom-5 right-5 z-10 size-11 rounded-full border border-border bg-sidebar shadow-lg site-lg:hidden"
-        aria-label={m.admin_toggle_navigation()}
-      />
     </>
   );
 }

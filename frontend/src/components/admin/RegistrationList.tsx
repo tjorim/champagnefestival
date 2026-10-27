@@ -1,3 +1,8 @@
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { AdminTableSortMenu } from "./AdminTableSortMenu";
+import { useIsMobile } from "@/components/ui/use-mobile";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { QRCodeSVG } from "qrcode.react";
 import { orderAnswerText, questionText } from "@/utils/orderQuestions";
 import { AdminEmptyState } from "./AdminEmptyState";
 import { Spinner } from "@/components/ui/spinner";
@@ -8,6 +13,7 @@ import { AdminTablePagination } from "./AdminTablePagination";
 import { AdminSelect, AdminOption, AdminInput } from "@/components/admin/AdminFields";
 import {
   CheckIcon,
+  ChevronDownIcon,
   CircleCheckIcon,
   ContactRoundIcon,
   DownloadIcon,
@@ -16,6 +22,7 @@ import {
   FileSpreadsheetIcon,
   LogInIcon,
   PlusIcon,
+  PencilIcon,
   QrCodeIcon,
   ShoppingCartIcon,
   XIcon,
@@ -112,7 +119,7 @@ interface RegistrationListProps {
   onRecordPayment: (id: string) => Promise<void>;
   onAssignTable: (registrationId: string, tableId: string | undefined) => void;
   onViewDetail: (registration: Registration) => void;
-  onCheckIn: (registrationId: string) => Promise<void>;
+  onCheckIn: (registrationId: string, checkedIn?: boolean) => Promise<boolean | void>;
   onIssueStrap: (registrationId: string) => Promise<void>;
   onAddRegistration: (registration: Registration) => void;
   authHeaders: () => Record<string, string>;
@@ -192,7 +199,11 @@ export default function RegistrationList({
   sectionError,
   onClearSectionError,
 }: RegistrationListProps) {
+  const isMobile = useIsMobile();
+  const isOnline = useOnlineStatus();
+  const [attendanceFeedback, setAttendanceFeedback] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [qrTargetId, setQrTargetId] = useState<string | null>(null);
   const [allocationFilter, setAllocationFilter] = useState("");
   const [editionFilter, setEditionFilter] = useState<EditionFilter>("all");
   const [activeEditionOnly, setActiveEditionOnly] = useState(false);
@@ -205,6 +216,7 @@ export default function RegistrationList({
   const [columnVisibility, setColumnVisibility] = useState<ColumnVisibilityState>(() =>
     loadColVis(COL_VIS_KEY),
   );
+  const [selectionRecords, setSelectionRecords] = useState<Map<string, Registration>>(new Map());
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   // True only once the user has explicitly expanded a full-page selection to
   // "every registration matching these filters" (the Gmail-style banner
@@ -229,6 +241,8 @@ export default function RegistrationList({
   // held-over selection (page-scoped or "all matching") no longer means what
   // it did — clear it rather than silently acting on a stale set later.
   const clearSelection = useCallback(() => {
+    setAttendanceFeedback("");
+    setSelectionRecords(new Map());
     setSelectedIds(new Set());
     setSelectAllMatchingActive(false);
     setSelectAllMatchingError(null);
@@ -435,6 +449,12 @@ export default function RegistrationList({
   const effectivePageSize = pageQuery.data?.limit ?? pageSize;
   const totalPages = Math.max(1, Math.ceil(total / effectivePageSize));
 
+  const qrRegistration = qrTargetId
+    ? (pageRegistrations.find((record) => record.id === qrTargetId) ??
+      registrationsById.get(qrTargetId) ??
+      null)
+    : null;
+
   // Gmail-style expansion offer: the whole visible page is selected, but the
   // filters match more than fits on one page, and the user hasn't already
   // expanded to "all matching" (or manually adjusted the selection since).
@@ -478,6 +498,13 @@ export default function RegistrationList({
               checked={allSelected}
               indeterminate={!allSelected && allIds.some((id) => selectedIdsRef.current.has(id))}
               onCheckedChange={() => {
+                setSelectionRecords(
+                  (previous) =>
+                    new Map([
+                      ...previous,
+                      ...pageRegistrationsRef.current.map((record) => [record.id, record] as const),
+                    ]),
+                );
                 setSelectAllMatchingActive(false);
                 setSelectAllMatchingError(null);
                 if (allSelected) {
@@ -498,6 +525,7 @@ export default function RegistrationList({
           <Checkbox
             checked={selectedIds.has(row.id)}
             onCheckedChange={() => {
+              setSelectionRecords((previous) => new Map(previous).set(row.id, row.original));
               setSelectAllMatchingActive(false);
               setSelectAllMatchingError(null);
               setSelectedIds((prev) => {
@@ -517,11 +545,18 @@ export default function RegistrationList({
   );
 
   const handleCheckIn = useCallback(
-    async (id: string) => {
-      if (processingIds.has(id)) return;
+    async (id: string, checkedIn = true) => {
+      if (!isOnline || processingIds.has(id)) return;
       setProcessingIds((prev) => new Set(prev).add(id));
+      setAttendanceFeedback("");
       try {
-        await onCheckIn(id);
+        const succeeded = checkedIn ? await onCheckIn(id) : await onCheckIn(id, false);
+        if (succeeded === true) {
+          const guest = pageRegistrations.find((record) => record.id === id);
+          setAttendanceFeedback(
+            `${guest?.person.name ? `${guest.person.name}: ` : ""}${checkedIn ? m.admin_checked_in() : m.admin_not_checked_in()}`,
+          );
+        }
       } finally {
         setProcessingIds((prev) => {
           const next = new Set(prev);
@@ -530,12 +565,12 @@ export default function RegistrationList({
         });
       }
     },
-    [onCheckIn, processingIds],
+    [isOnline, onCheckIn, pageRegistrations, processingIds],
   );
 
   const handleIssueStrap = useCallback(
     async (id: string) => {
-      if (processingIds.has(id)) return;
+      if (!isOnline || processingIds.has(id)) return;
       setProcessingIds((prev) => new Set(prev).add(id));
       try {
         await onIssueStrap(id);
@@ -547,7 +582,7 @@ export default function RegistrationList({
         });
       }
     },
-    [onIssueStrap, processingIds],
+    [isOnline, onIssueStrap, processingIds],
   );
 
   const handleRecordPayment = useCallback(
@@ -580,7 +615,14 @@ export default function RegistrationList({
             return (
               <>
                 <div className="font-semibold flex items-center gap-1">
-                  {reg.person.name}
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-left whitespace-normal"
+                    onClick={() => onViewDetail(reg)}
+                  >
+                    {reg.person.name}
+                  </Button>
                   {isLinked && (
                     <span
                       role="img"
@@ -707,17 +749,16 @@ export default function RegistrationList({
           enableSorting: false,
           cell: ({ row }) => {
             const reg = row.original;
-            const hasMoreActions = reg.status !== "cancelled" || reg.paymentStatus !== "paid";
             return (
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-wrap items-center gap-1 md:flex-nowrap">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={() => onViewDetail(reg)}
-                  title={m.admin_qr_code()}
-                  aria-label={m.admin_qr_code()}
+                  title={m.admin_view_edit_booking()}
+                  aria-label={`${m.admin_view_edit_booking()}: ${reg.person.name}`}
                 >
-                  <Icon icon={QrCodeIcon} />
+                  <Icon icon={PencilIcon} />
                 </Button>
                 {reg.status === "pending" && (
                   <Button
@@ -730,16 +771,17 @@ export default function RegistrationList({
                     <Icon icon={CheckIcon} />
                   </Button>
                 )}
-                {!reg.checkedIn && (
+                {!reg.checkedIn && reg.status !== "cancelled" && (
                   <Button
                     size="sm"
                     variant="outline-success"
                     onClick={() => handleCheckIn(reg.id)}
-                    disabled={processingIds.has(reg.id)}
+                    disabled={!isOnline || processingIds.has(reg.id)}
                     title={m.admin_mark_checked_in()}
                     aria-label={m.admin_mark_checked_in()}
                   >
                     <Icon icon={LogInIcon} />
+                    <span>{m.admin_mark_checked_in()}</span>
                   </Button>
                 )}
                 {reg.checkedIn && !reg.strapIssued && !isStandaloneRegistration(reg) && (
@@ -747,44 +789,63 @@ export default function RegistrationList({
                     size="sm"
                     variant="outline-info"
                     onClick={() => handleIssueStrap(reg.id)}
-                    disabled={processingIds.has(reg.id)}
+                    disabled={!isOnline || processingIds.has(reg.id)}
                     title={m.admin_issue_strap()}
                     aria-label={m.admin_issue_strap()}
                   >
                     <Icon icon={ContactRoundIcon} />
+                    <span>{m.admin_issue_strap()}</span>
                   </Button>
                 )}
-                {hasMoreActions && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger
-                      render={<Button variant="outline" size="sm" />}
-                      id={`reg-more-${reg.id}`}
-                      aria-label={m.admin_more_actions_for({ name: reg.person.name })}
-                    >
-                      <EllipsisIcon className="size-4" aria-hidden="true" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      {reg.status !== "cancelled" && (
-                        <DropdownMenuItem
-                          className="text-destructive"
-                          onClick={() => onUpdateStatus(reg.id, "cancelled")}
-                        >
-                          <XIcon className="size-4" aria-hidden="true" />
-                          {m.admin_action_cancel()}
-                        </DropdownMenuItem>
-                      )}
-                      {reg.paymentStatus !== "paid" && (
-                        <DropdownMenuItem
-                          disabled={processingIds.has(reg.id)}
-                          onClick={() => void handleRecordPayment(reg.id)}
-                        >
-                          <EuroIcon className="size-4" aria-hidden="true" />
-                          {m.admin_action_mark_paid()}
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                <DropdownMenu>
+                  <DropdownMenuTrigger
+                    render={<Button variant="outline" size="sm" />}
+                    id={`reg-more-${reg.id}`}
+                    aria-label={m.admin_more_actions_for({ name: reg.person.name })}
+                  >
+                    <EllipsisIcon className="size-4" aria-hidden="true" />
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    finalFocus={() => document.getElementById(`reg-more-${reg.id}`) ?? false}
+                  >
+                    {reg.checkedIn && (
+                      <DropdownMenuItem
+                        disabled={!isOnline || processingIds.has(reg.id)}
+                        onClick={() => void handleCheckIn(reg.id, false)}
+                      >
+                        {m.admin_undo_check_in()}
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => onViewDetail(reg)}>
+                      {m.admin_view_edit_booking()}
+                    </DropdownMenuItem>
+                    {reg.checkInToken && (
+                      <DropdownMenuItem onClick={() => setQrTargetId(reg.id)}>
+                        <QrCodeIcon className="size-4" aria-hidden="true" />
+                        {m.admin_qr_code()}
+                      </DropdownMenuItem>
+                    )}
+                    {reg.status !== "cancelled" && (
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => onUpdateStatus(reg.id, "cancelled")}
+                      >
+                        <XIcon className="size-4" aria-hidden="true" />
+                        {m.admin_action_cancel()}
+                      </DropdownMenuItem>
+                    )}
+                    {reg.paymentStatus !== "paid" && (
+                      <DropdownMenuItem
+                        disabled={processingIds.has(reg.id)}
+                        onClick={() => void handleRecordPayment(reg.id)}
+                      >
+                        <EuroIcon className="size-4" aria-hidden="true" />
+                        {m.admin_action_mark_paid()}
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             );
           },
@@ -800,6 +861,7 @@ export default function RegistrationList({
       handleCheckIn,
       handleIssueStrap,
       handleRecordPayment,
+      isOnline,
       processingIds,
     ],
   );
@@ -967,6 +1029,7 @@ export default function RegistrationList({
     setSelectAllMatchingError(null);
     try {
       const matching = await fetchAllMatchingRegistrations();
+      setSelectionRecords(new Map(matching.map((record) => [record.id, record])));
       setSelectedIds(new Set(matching.map((r) => r.id)));
       setSelectAllMatchingActive(true);
     } catch (err) {
@@ -1010,8 +1073,37 @@ export default function RegistrationList({
     }
   }, [bulkAction, onRecordPayment, onUpdateStatus, selectedIds, clearSelection]);
 
+  const selectedRecords = [...selectedIds]
+    .map(
+      (id) =>
+        registrationsById.get(id) ??
+        pageRegistrations.find((record) => record.id === id) ??
+        selectionRecords.get(id),
+    )
+    .filter((record): record is Registration => record !== undefined);
+  const selectedEvents = new Map<string, { title: string; count: number }>();
+  for (const record of selectedRecords) {
+    const previous = selectedEvents.get(record.eventId);
+    selectedEvents.set(record.eventId, {
+      title: `${record.event?.title ?? record.eventId}${record.event?.date ? ` · ${record.event.date}` : ""}`,
+      count: (previous?.count ?? 0) + 1,
+    });
+  }
+
   return (
     <>
+      <p
+        role="status"
+        className={attendanceFeedback ? "mb-2 text-sm text-success-text" : "sr-only"}
+      >
+        {attendanceFeedback ||
+          `${pageRegistrations.filter((registration) => registration.checkedIn).length} ${m.admin_checked_in()}`}
+      </p>
+      {!isOnline && (
+        <Alert variant="warning" role="status">
+          {m.checkin_offline_banner()}
+        </Alert>
+      )}
       <Card tone="secondary">
         <CardHeader className="pb-2">
           {/* Row 1: title + stats + add */}
@@ -1042,157 +1134,201 @@ export default function RegistrationList({
               </Button>
             </div>
           </div>
-          {/* Row 2: filters + search */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <AdminInput
+            size="sm"
+            type="search"
+            placeholder={m.admin_search_person_placeholder()}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            className="bg-muted text-content border-input max-w-72"
+          />
+          <Collapsible>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
-                {m.admin_filter_edition_caption()}
+              <CollapsibleTrigger render={<Button variant="outline" size="sm" />}>
+                {m.admin_registration_filters()}
+              </CollapsibleTrigger>
+              <span className="text-sm" role="status">
+                {[
+                  activeEditionOnly
+                    ? m.admin_filter_active_edition()
+                    : m.admin_filter_edition_all(),
+                  editionFilter !== "all"
+                    ? editionFilter === "festival"
+                      ? m.admin_filter_edition_festivals()
+                      : m.admin_filter_edition_standalone()
+                    : null,
+                  filter !== "all" ? statusLabel(filter) : null,
+                  dateFilter === "today" ? m.admin_filter_today() : null,
+                  allocationOptions.find((option) => option.key === allocationFilter)?.label,
+                  q || null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
               </span>
-              <div className="flex flex-wrap gap-1">
-                <ToggleGroup
-                  aria-label={m.admin_filter_edition_aria()}
-                  variant="outline"
-                  size="sm"
-                  spacing={1}
-                  value={[editionFilter]}
-                  onValueChange={(values) => {
-                    const value = values[0];
-                    if (value === "all" || value === "festival" || value === "standalone")
-                      changeEditionFilter(value);
-                  }}
-                >
-                  <ToggleGroupItem value="all">
-                    {m.admin_filter_edition_all()} ({editionCounts.all})
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="festival">
-                    {m.admin_filter_edition_festivals()} ({editionCounts.festival})
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="standalone">
-                    {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
-                  </ToggleGroupItem>
-                </ToggleGroup>
-                <Toggle
-                  variant="outline"
-                  size="sm"
-                  pressed={activeEditionOnly}
-                  onPressedChange={toggleActiveEditionOnly}
-                >
-                  {m.admin_filter_active_edition()} ({editionCounts.active})
-                </Toggle>
-              </div>
-              {allocationOptions.length > 0 && (
-                <AdminSelect
-                  size="sm"
-                  className="bg-muted text-content border-input max-w-50"
-
-                  value={allocationFilter}
-                  onValueChange={(e) => changeAllocationFilter(e)}
-                  aria-label={m.admin_filter_allocation_aria()}
-                >
-                  <AdminOption value="">{m.admin_all_allocations()}</AdminOption>
-                  {allocationOptions.map((o) => (
-                    <AdminOption key={o.key} value={o.key}>
-                      {o.label}
-                    </AdminOption>
-                  ))}
-                </AdminSelect>
+              {hasActiveRegistrationFilters && (
+                <Button variant="ghost" size="sm" onClick={handleClearRegistrationFilters}>
+                  {m.admin_content_clear_filters()}
+                </Button>
               )}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
-                {m.admin_filter_date_caption()}
-              </span>
-              <ToggleGroup
-                aria-label={m.admin_filter_date_aria()}
-                variant="outline"
-                size="sm"
-                value={dateFilter === "today" ? ["today"] : []}
-                onValueChange={toggleDateFilter}
-              >
-                <ToggleGroupItem value="today">
-                  {m.admin_filter_today()} ({todayCount})
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
-                {m.admin_filter_status_caption()}
-              </span>
-              <ToggleGroup
-                aria-label={m.admin_filter_status_aria()}
-                variant="outline"
-                size="sm"
-                value={[filter]}
-                onValueChange={(values) => {
-                  const value = values[0];
-                  if (value === "all" || value === "pending" || value === "confirmed")
-                    changeStatusFilter(value);
-                }}
-              >
-                <ToggleGroupItem value="all">
-                  {m.admin_filter_all()} ({statusCounts.all})
-                </ToggleGroupItem>
-                <ToggleGroupItem value="pending">
-                  {m.admin_filter_pending()} ({statusCounts.pending})
-                </ToggleGroupItem>
-                <ToggleGroupItem value="confirmed">
-                  {m.admin_filter_confirmed()} ({statusCounts.confirmed})
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-            <AdminInput
-              size="sm"
-              type="search"
-              placeholder={m.admin_search_person_placeholder()}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="bg-muted text-content border-input max-w-72"
-            />
-          </div>
-          {eventCapacityStats.length > 0 && (
-            <div className="mt-2 pt-2 border-t border-subtle">
-              <div className="flex flex-col gap-2">
-                {eventCapacityStats.map((eventStats) => {
-                  const checkInPercent =
-                    eventStats.total > 0 ? (eventStats.checkedIn / eventStats.total) * 100 : 0;
+            <CollapsibleContent>
+              {/* Row 2: filters + search */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
+                    {m.admin_filter_edition_caption()}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-1 md:flex-nowrap">
+                    <ToggleGroup
+                      aria-label={m.admin_filter_edition_aria()}
+                      variant="outline"
+                      size="sm"
+                      spacing={1}
+                      value={[editionFilter]}
+                      onValueChange={(values) => {
+                        const value = values[0];
+                        if (value === "all" || value === "festival" || value === "standalone")
+                          changeEditionFilter(value);
+                      }}
+                    >
+                      <ToggleGroupItem value="all">
+                        {m.admin_filter_edition_all()} ({editionCounts.all})
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="festival">
+                        {m.admin_filter_edition_festivals()} ({editionCounts.festival})
+                      </ToggleGroupItem>
+                      <ToggleGroupItem value="standalone">
+                        {m.admin_filter_edition_standalone()} ({editionCounts.standalone})
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                    <Toggle
+                      variant="outline"
+                      size="sm"
+                      pressed={activeEditionOnly}
+                      onPressedChange={toggleActiveEditionOnly}
+                    >
+                      {m.admin_filter_active_edition()} ({editionCounts.active})
+                    </Toggle>
+                  </div>
+                  {allocationOptions.length > 0 && (
+                    <AdminSelect
+                      size="sm"
+                      className="bg-muted text-content border-input max-w-50"
 
-                  return (
-                    <div key={eventStats.eventId}>
-                      <div className="flex justify-between gap-2 text-sm mb-1 flex-wrap">
-                        <span className="text-subtle truncate">
-                          {eventCapacityStats.length > 1 && (
-                            <span className="font-semibold text-content me-2">
-                              {eventStats.title}
-                            </span>
-                          )}
-                          {m.admin_checked_in()}: {eventStats.checkedIn}/{eventStats.total}{" "}
-                          {m.admin_guests_count()}
-                        </span>
-                        <span className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="py-0 px-1"
-                            disabled={exportingEventId === eventStats.eventId}
-                            onClick={() => void handleExportEventCsv(eventStats.eventId)}
-                            title={m.admin_registrations_export_event_csv()}
-                            aria-label={m.admin_registrations_export_event_csv_for({
-                              event: eventStats.title,
-                            })}
-                          >
-                            <Icon icon={FileSpreadsheetIcon} />
-                          </Button>
-                        </span>
-                      </div>
-                      <Progress
-                        value={checkInPercent}
-                        aria-label={`${eventStats.title}: ${eventStats.checkedIn}/${eventStats.total} ${m.admin_checked_in()}`}
-                      />
-                    </div>
-                  );
-                })}
+                      value={allocationFilter}
+                      onValueChange={(e) => changeAllocationFilter(e)}
+                      aria-label={m.admin_filter_allocation_aria()}
+                    >
+                      <AdminOption value="">{m.admin_all_allocations()}</AdminOption>
+                      {allocationOptions.map((o) => (
+                        <AdminOption key={o.key} value={o.key}>
+                          {o.label}
+                        </AdminOption>
+                      ))}
+                    </AdminSelect>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
+                    {m.admin_filter_date_caption()}
+                  </span>
+                  <ToggleGroup
+                    aria-label={m.admin_filter_date_aria()}
+                    variant="outline"
+                    size="sm"
+                    value={dateFilter === "today" ? ["today"] : []}
+                    onValueChange={toggleDateFilter}
+                  >
+                    <ToggleGroupItem value="today">
+                      {m.admin_filter_today()} ({todayCount})
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-subtle text-xs uppercase tracking-wide" aria-hidden="true">
+                    {m.admin_filter_status_caption()}
+                  </span>
+                  <ToggleGroup
+                    aria-label={m.admin_filter_status_aria()}
+                    variant="outline"
+                    size="sm"
+                    value={[filter]}
+                    onValueChange={(values) => {
+                      const value = values[0];
+                      if (value === "all" || value === "pending" || value === "confirmed")
+                        changeStatusFilter(value);
+                    }}
+                  >
+                    <ToggleGroupItem value="all">
+                      {m.admin_filter_all()} ({statusCounts.all})
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="pending">
+                      {m.admin_filter_pending()} ({statusCounts.pending})
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="confirmed">
+                      {m.admin_filter_confirmed()} ({statusCounts.confirmed})
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
               </div>
-            </div>
+            </CollapsibleContent>
+          </Collapsible>
+          {eventCapacityStats.length > 0 && (
+            <Collapsible className="mt-2 pt-2 border-t border-subtle">
+              <CollapsibleTrigger
+                render={<Button variant="ghost" size="sm" />}
+                className="h-auto max-w-full whitespace-normal text-left"
+              >
+                {m.admin_event_checkin_summary({
+                  checkedIn: eventCapacityStats.reduce((sum, event) => sum + event.checkedIn, 0),
+                  total: eventCapacityStats.reduce((sum, event) => sum + event.total, 0),
+                })}
+                <ChevronDownIcon className="size-4 shrink-0" aria-hidden="true" />
+              </CollapsibleTrigger>
+              <CollapsibleContent keepMounted>
+                <div className="flex flex-col gap-2">
+                  {eventCapacityStats.map((eventStats) => {
+                    const checkInPercent =
+                      eventStats.total > 0 ? (eventStats.checkedIn / eventStats.total) * 100 : 0;
+
+                    return (
+                      <div key={eventStats.eventId}>
+                        <div className="flex justify-between gap-2 text-sm mb-1 flex-wrap">
+                          <span className="text-subtle truncate">
+                            {eventCapacityStats.length > 1 && (
+                              <span className="font-semibold text-content me-2">
+                                {eventStats.title}
+                              </span>
+                            )}
+                            {m.admin_checked_in()}: {eventStats.checkedIn}/{eventStats.total}{" "}
+                            {m.admin_guests_count()}
+                          </span>
+                          <span className="flex items-center gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="py-0 px-1"
+                              disabled={exportingEventId === eventStats.eventId}
+                              onClick={() => void handleExportEventCsv(eventStats.eventId)}
+                              title={m.admin_registrations_export_event_csv()}
+                              aria-label={m.admin_registrations_export_event_csv_for({
+                                event: eventStats.title,
+                              })}
+                            >
+                              <Icon icon={FileSpreadsheetIcon} />
+                            </Button>
+                          </span>
+                        </div>
+                        <Progress
+                          value={checkInPercent}
+                          aria-label={`${eventStats.title}: ${eventStats.checkedIn}/${eventStats.total} ${m.admin_checked_in()}`}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
           {bulkError && (
             <Alert
@@ -1229,7 +1365,13 @@ export default function RegistrationList({
           )}
           {/* Bulk action bar */}
           {selectedIds.size > 0 && (
-            <div className="mt-2 pt-2 border-t border-subtle">
+            <div
+              id="registration-bulk-actions"
+              role="region"
+              aria-label={m.admin_bulk_selected({ count: selectedIds.size })}
+              tabIndex={-1}
+              className="mt-2 pt-2 border-t border-subtle"
+            >
               {canExpandSelectionToAllMatching && (
                 <div className="flex items-center gap-2 flex-wrap text-sm text-subtle mb-2">
                   <span>
@@ -1259,7 +1401,7 @@ export default function RegistrationList({
                 </Alert>
               )}
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-subtle text-sm">
+                <span role="status" className="text-subtle text-sm">
                   {selectAllMatchingActive
                     ? m.admin_bulk_all_matching_selected({ total: selectedIds.size })
                     : m.admin_bulk_selected({ count: selectedIds.size })}
@@ -1324,8 +1466,75 @@ export default function RegistrationList({
               <AdminEmptyState>{m.admin_no_registrations()}</AdminEmptyState>
             )
           ) : (
-            <div className="w-full">
-              <AdminDataTable table={table} />
+            <>
+              {!isMobile ? (
+                <div className="w-full">
+                  <AdminDataTable table={table} />
+                </div>
+              ) : (
+                <ul className="list-none space-y-3 p-3">
+                  <li className="flex flex-wrap items-center justify-between gap-2">
+                    <AdminTableSortMenu table={table} />
+                    {table.getHeaderGroups().flatMap((group) =>
+                      group.headers
+                        .filter((header) => header.column.id === "select")
+                        .map((header) => (
+                          <label key={header.id} className="flex items-center gap-2">
+                            <table.FlexRender header={header} />
+                            {m.admin_select_all()}
+                          </label>
+                        )),
+                    )}
+                  </li>
+                  {table.getRowModel().rows.map((row) => (
+                    <li
+                      key={row.id}
+                      className="space-y-2 rounded-md border border-border p-3 break-words"
+                    >
+                      {row
+                        .getAllCells()
+                        .filter((cell) =>
+                          [
+                            "select",
+                            "name",
+                            "event",
+                            "guestCount",
+                            "status",
+                            "paymentStatus",
+                            "checkedIn",
+                            "actions",
+                          ].includes(cell.column.id),
+                        )
+                        .map((cell) => (
+                          <div key={cell.id}>
+                            {["guestCount", "status", "paymentStatus"].includes(cell.column.id) &&
+                              typeof cell.column.columnDef.header === "string" && (
+                                <span className="me-2 text-subtle">
+                                  {cell.column.columnDef.header}:
+                                </span>
+                              )}
+                            <table.FlexRender cell={cell} />
+                          </div>
+                        ))}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+          {selectedIds.size > 0 && (
+            <div className="p-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const toolbar = document.getElementById("registration-bulk-actions");
+                  toolbar?.focus();
+                  toolbar?.scrollIntoView({ block: "nearest" });
+                }}
+              >
+                {m.admin_review_selected_bookings({ count: selectedIds.size })}
+              </Button>
             </div>
           )}
           {!pageQuery.isLoading && !pageQuery.isError && total > 0 && (
@@ -1344,6 +1553,38 @@ export default function RegistrationList({
         </CardContent>
       </Card>
 
+      <Dialog
+        open={qrRegistration !== null}
+        onOpenChange={(open) => {
+          if (!open) setQrTargetId(null);
+        }}
+      >
+        <DialogContent admin>
+          <DialogHeader>
+            <DialogTitle>
+              {m.admin_qr_code()} — {qrRegistration?.person.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 p-4 text-center">
+            <p>{qrRegistration?.event?.title ?? qrRegistration?.eventId}</p>
+            <p>{m.admin_qr_scan_info()}</p>
+            {qrRegistration?.status === "cancelled" && (
+              <Alert variant="warning">{m.admin_status_cancelled()}</Alert>
+            )}
+            {qrRegistration && qrRegistration.status !== "cancelled" && (
+              <div className="inline-block rounded-md bg-white p-4">
+                <QRCodeSVG
+                  role="img"
+                  aria-label={m.admin_qr_code()}
+                  value={`${window.location.origin}${import.meta.env.BASE_URL.replace(/\/$/, "")}/check-in?id=${encodeURIComponent(qrRegistration.id)}#token=${encodeURIComponent(qrRegistration.checkInToken ?? "")}`}
+                  size={180}
+                  level="M"
+                />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
       <RegistrationCreateModal
         show={showCreateModal}
         authHeaders={authHeaders}
@@ -1372,6 +1613,33 @@ export default function RegistrationList({
           </DialogHeader>
           <DialogBody>
             {m.admin_bulk_confirm_action({ count: selectedIds.size })}
+            <ul className="my-3 space-y-1">
+              {[...selectedEvents].map(([id, event]) => (
+                <li key={id}>
+                  {event.title}: {event.count}
+                </li>
+              ))}
+            </ul>
+            <Collapsible>
+              <CollapsibleTrigger render={<Button variant="outline" size="sm" />}>
+                {m.admin_bulk_selected({ count: selectedIds.size })}
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <ul
+                  tabIndex={0}
+                  aria-label={m.admin_bulk_selected({ count: selectedIds.size })}
+                  className="mt-2 max-h-48 overflow-y-auto space-y-2 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+                >
+                  {selectedRecords.map((record) => (
+                    <li key={record.id}>
+                      {record.person.name} · {record.event?.title ?? record.eventId}
+                      {record.event?.date ? ` · ${record.event.date}` : ""} ·{" "}
+                      {m.admin_guests_count()}: {record.guestCount}
+                    </li>
+                  ))}
+                </ul>
+              </CollapsibleContent>
+            </Collapsible>
             {bulkProgress && (
               <div className="mt-2 text-subtle text-sm">
                 {m.admin_bulk_progress({ done: bulkProgress.done, total: bulkProgress.total })}

@@ -139,6 +139,16 @@ async def test_admin_uncheckin_clears_checked_in_at(client):
     assert unchecked.json()["checked_in"] is False
     assert unchecked.json()["checked_in_at"] is None
 
+    repeated = await client.put(
+        f"/api/registrations/{reservation_id}",
+        json={"checked_in": False},
+        headers=ADMIN_HEADERS,
+    )
+    assert repeated.status_code == 200
+    assert repeated.json()["checked_in"] is False
+    assert repeated.json()["checked_in_at"] is None
+    assert repeated.json()["strap_issued"] == unchecked.json()["strap_issued"]
+
 
 @pytest.mark.anyio
 async def test_admin_cannot_check_in_canceled_registration(client):

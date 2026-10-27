@@ -8,7 +8,7 @@
  * actions at one page's worth of rows.
  */
 
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { http, HttpResponse } from "msw/http";
 import { describe, expect, it, vi } from "vitest";
@@ -191,6 +191,16 @@ describe("RegistrationList — Gmail-style select-all-matching", () => {
       ).toBeInTheDocument(),
     );
 
+    const dialog = screen.getByRole("dialog");
+    expect(
+      within(dialog).getByText(`Bulk Selection Test Event · 2026-03-06: ${TOTAL_REGISTRATIONS}`),
+    ).toBeInTheDocument();
+    fireEvent.click(
+      within(dialog).getByRole("button", {
+        name: `admin_bulk_selected({"count":${TOTAL_REGISTRATIONS}})`,
+      }),
+    );
+    expect(within(dialog).getByText(/Bulk Guest 60/)).toBeInTheDocument();
     fireEvent.click(screen.getByText("admin_action_confirm"));
 
     await waitFor(() => expect(onUpdateStatus).toHaveBeenCalledTimes(TOTAL_REGISTRATIONS));

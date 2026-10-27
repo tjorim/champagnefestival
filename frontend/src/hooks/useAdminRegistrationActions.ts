@@ -68,7 +68,7 @@ export function useAdminRegistrationActions({
   setRegistrationError,
   confirmOverCapacity,
 }: UseAdminRegistrationActionsOptions) {
-  const { updateRegistrationMutation, createPaymentTransactionMutation } =
+  const { updateRegistrationMutation, updateEntranceMutation, createPaymentTransactionMutation } =
     useRegistrationAdminMutations({
       queryClient,
       authHeaders,
@@ -380,7 +380,7 @@ export function useAdminRegistrationActions({
     async (registrationId: string, updatedOrders: OrderItem[]) => {
       try {
         const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
+          await updateEntranceMutation.mutateAsync({
             id: registrationId,
             payload: {
               order_items: updatedOrders.map((order) => ({
@@ -414,18 +414,18 @@ export function useAdminRegistrationActions({
       registrationsQueryKey,
       setDetailRegistration,
       setRegistrationError,
-      updateRegistrationMutation,
+      updateEntranceMutation,
     ],
   );
 
   const handleCheckIn = useCallback(
-    async (registrationId: string) => {
+    async (registrationId: string, checkedIn = true) => {
       try {
         const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
+          await updateEntranceMutation.mutateAsync({
             id: registrationId,
-            payload: { checked_in: true },
-            fallbackMessage: m.admin_error_check_in(),
+            payload: { checked_in: checkedIn },
+            fallbackMessage: checkedIn ? m.admin_error_check_in() : m.admin_error_undo_check_in(),
           }),
         );
         queryClient.setQueryData<Registration[]>(registrationsQueryKey, (prev) =>
@@ -436,9 +436,16 @@ export function useAdminRegistrationActions({
             : prev,
         );
         setDetailRegistration((prev) => (prev?.id === registrationId ? updated : prev));
+        return true;
       } catch (err) {
-        devError("Failed to check in guest", err);
-        setRegistrationError(apiErrorMessage(err, m.admin_error_check_in()));
+        devError("Failed to update guest attendance", err);
+        setRegistrationError(
+          apiErrorMessage(
+            err,
+            checkedIn ? m.admin_error_check_in() : m.admin_error_undo_check_in(),
+          ),
+        );
+        return false;
       }
     },
     [
@@ -446,7 +453,7 @@ export function useAdminRegistrationActions({
       registrationsQueryKey,
       setDetailRegistration,
       setRegistrationError,
-      updateRegistrationMutation,
+      updateEntranceMutation,
     ],
   );
 
@@ -454,7 +461,7 @@ export function useAdminRegistrationActions({
     async (registrationId: string) => {
       try {
         const updated = apiToRegistration(
-          await updateRegistrationMutation.mutateAsync({
+          await updateEntranceMutation.mutateAsync({
             id: registrationId,
             payload: { strap_issued: true },
             fallbackMessage: m.admin_error_issue_strap(),
@@ -478,7 +485,7 @@ export function useAdminRegistrationActions({
       registrationsQueryKey,
       setDetailRegistration,
       setRegistrationError,
-      updateRegistrationMutation,
+      updateEntranceMutation,
     ],
   );
 

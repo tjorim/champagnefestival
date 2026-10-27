@@ -1,3 +1,4 @@
+import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { OrderAnswerSummary } from "@/components/OrderAnswers";
 import {
   AdminField,
@@ -98,6 +99,7 @@ export default function RegistrationDetail({
   actionError,
   onClearActionError,
 }: RegistrationDetailProps) {
+  const isOnline = useOnlineStatus();
   const [emailDraft, setEmailDraft] = useState<EmailDraft | null>(null);
   const [emailTemplate, setEmailTemplate] = useState<RegistrationEmailTemplate>("general");
   const checkInUrl = registration
@@ -114,7 +116,7 @@ export default function RegistrationDetail({
 
   const handleSetDeliveredQuantity = useCallback(
     (productId: string, quantity: number) => {
-      if (!registration || !Number.isFinite(quantity)) return;
+      if (!isOnline || !registration || !Number.isFinite(quantity)) return;
       const updatedOrders = registration.orderItems.map((item) => {
         if (item.productId !== productId) return item;
         const deliveredQuantity = Math.max(0, Math.min(item.quantity, Math.trunc(quantity)));
@@ -127,7 +129,7 @@ export default function RegistrationDetail({
       });
       onToggleDelivered(registration.id, updatedOrders);
     },
-    [registration, onToggleDelivered],
+    [isOnline, registration, onToggleDelivered],
   );
 
   const handleAdjustDeliveredQuantity = useCallback(
@@ -162,9 +164,58 @@ export default function RegistrationDetail({
             <Icon icon={UserIcon} className="me-2" />
             {registration.person.name}
           </DialogTitle>
+          <p className="text-sm text-subtle">
+            {registration.event?.title ?? registration.eventId} · {m.admin_guests_count()}:{" "}
+            {registration.guestCount}
+          </p>
+          <p className="text-sm">
+            {m.admin_inventory_paid()}: €{(registration.amountPaid ?? 0).toFixed(2)} ·{" "}
+            {m.admin_booking_balance()}: €
+            {Math.max(0, (registration.amountDue ?? 0) - (registration.amountPaid ?? 0)).toFixed(2)}
+          </p>
+          <nav className="flex flex-wrap gap-2" aria-label={m.admin_booking_editor()}>
+            {onSaveBooking && (
+              <a className="text-primary underline" href="#registration-booking">
+                {m.admin_booking_editor()}
+              </a>
+            )}
+            {onSaveBooking && (
+              <>
+                <a className="text-primary underline" href="#registration-seating">
+                  {m.admin_action_assign_table()}
+                </a>
+                <a className="text-primary underline" href="#registration-payments">
+                  {m.admin_booking_payments()}
+                </a>
+              </>
+            )}
+            {registration.person.email && (
+              <a className="text-primary underline" href="#registration-email-heading">
+                {m.admin_email_registration_title()}
+              </a>
+            )}
+            {!simpleRsvp && registration.orderItems.length > 0 && (
+              <a className="text-primary underline" href="#registration-fulfillment">
+                {m.admin_bottle_fulfillment()}
+              </a>
+            )}
+            <a className="text-primary underline" href="#registration-entrance">
+              {m.admin_check_in_title()}
+            </a>
+            {registration.checkInToken && (
+              <a className="text-primary underline" href="#registration-qr">
+                {m.admin_qr_code()}
+              </a>
+            )}
+          </nav>
         </DialogHeader>
 
         <DialogBody>
+          {!isOnline && (
+            <Alert variant="warning" role="status">
+              {m.checkin_offline_banner()}
+            </Alert>
+          )}
           {(registration.refundDue ?? 0) > 0 && (
             <Alert variant="warning">
               {m.admin_inventory_refund()}: €{registration.refundDue?.toFixed(2)}
@@ -305,7 +356,11 @@ export default function RegistrationDetail({
               </span>
             </PresentationListItem>
             {onSaveBooking && (
-              <PresentationListItem className="border-border">
+              <PresentationListItem
+                className="border-border"
+                id="registration-booking"
+                tabIndex={-1}
+              >
                 <BookingEditor
                   key={`${registration.id}:${registration.updatedAt}`}
                   registration={registration}
@@ -328,10 +383,14 @@ export default function RegistrationDetail({
 
           {registration.person.email && (
             <section className="mb-6" aria-labelledby="registration-email-heading">
-              <h6 id="registration-email-heading" className="text-highlight mb-2">
+              <h3
+                id="registration-email-heading"
+                tabIndex={-1}
+                className="text-base font-medium text-highlight mb-2"
+              >
                 <Icon icon={MailIcon} className="me-2" />
                 {m.admin_email_registration_title()}
-              </h6>
+              </h3>
               <div className="flex flex-wrap items-end gap-2">
                 <AdminField controlId="registration-email-template" className="grow">
                   <AdminLabel>{m.admin_email_template_label()}</AdminLabel>
@@ -359,15 +418,19 @@ export default function RegistrationDetail({
 
           {!simpleRsvp && registration.orderItems.length > 0 && (
             <div className="mb-6">
-              <h6 className="text-highlight mb-2">
+              <h3
+                id="registration-fulfillment"
+                tabIndex={-1}
+                className="text-base font-medium text-highlight mb-2"
+              >
                 <Icon icon={ShoppingBasketIcon} className="me-2" />
                 {m.admin_bottle_fulfillment()}
-              </h6>
+              </h3>
               <PresentationList>
                 {registration.orderItems.map((item) => (
                   <PresentationListItem
                     key={item.productId}
-                    className="flex items-center justify-between"
+                    className="flex flex-wrap items-center justify-between gap-3"
                   >
                     <span>
                       {item.name}{" "}
@@ -375,7 +438,7 @@ export default function RegistrationDetail({
                         ×{item.quantity}
                       </Badge>
                     </span>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <Badge variant={item.delivered ? "success" : "secondary"}>
                         {m.admin_bottle_delivered()}: {item.deliveredQuantity}/{item.quantity}
                       </Badge>
@@ -387,13 +450,15 @@ export default function RegistrationDetail({
                           size="sm"
                           variant="outline"
                           onClick={() => handleAdjustDeliveredQuantity(item.productId, -1)}
-                          disabled={item.deliveredQuantity <= 0}
+                          disabled={!isOnline || item.deliveredQuantity <= 0}
                           title={m.admin_mark_not_delivered()}
+                          aria-label={`${m.admin_mark_not_delivered()}: ${item.name}`}
                         >
                           <Icon icon={MinusIcon} />
                         </Button>
                         <AdminInput
                           key={item.deliveredQuantity}
+                          disabled={!isOnline}
                           aria-label={`${m.admin_bottle_delivered()} ${item.name}`}
                           className="text-center w-20"
                           inputMode="numeric"
@@ -428,8 +493,9 @@ export default function RegistrationDetail({
                           size="sm"
                           variant={item.delivered ? "success" : "outline-success"}
                           onClick={() => handleAdjustDeliveredQuantity(item.productId, 1)}
-                          disabled={item.deliveredQuantity >= item.quantity}
+                          disabled={!isOnline || item.deliveredQuantity >= item.quantity}
                           title={m.admin_mark_delivered()}
+                          aria-label={`${m.admin_mark_delivered()}: ${item.name}`}
                         >
                           <Icon icon={PlusIcon} />
                         </Button>
@@ -442,15 +508,20 @@ export default function RegistrationDetail({
           )}
 
           <div className="mb-6">
-            <h6 className="text-highlight mb-2">
+            <h3
+              id="registration-entrance"
+              tabIndex={-1}
+              className="text-base font-medium text-highlight mb-2"
+            >
               <Icon icon={UserCheckIcon} className="me-2" />
               {m.admin_check_in_title()}
-            </h6>
+            </h3>
             <div className="flex gap-2 flex-wrap">
               {!registration.checkedIn && (
                 <Button
                   variant="outline-success"
                   size="sm"
+                  disabled={!isOnline}
                   onClick={() => onCheckIn(registration.id)}
                 >
                   <Icon icon={LogInIcon} />
@@ -461,6 +532,7 @@ export default function RegistrationDetail({
                 <Button
                   variant="outline-info"
                   size="sm"
+                  disabled={!isOnline}
                   onClick={() => onIssueStrap(registration.id)}
                 >
                   <Icon icon={ContactRoundIcon} />
@@ -472,10 +544,14 @@ export default function RegistrationDetail({
 
           {registration.checkInToken && (
             <div className="text-center">
-              <h6 className="text-highlight mb-2">
+              <h3
+                id="registration-qr"
+                tabIndex={-1}
+                className="text-base font-medium text-highlight mb-2"
+              >
                 <Icon icon={QrCodeIcon} className="me-2" />
                 {m.admin_qr_code()}
-              </h6>
+              </h3>
               <p className="text-subtle text-sm mb-4">{m.admin_qr_scan_info()}</p>
               <div className="inline-block rounded-md bg-white p-4">
                 <QRCodeSVG value={checkInUrl} size={180} level="M" includeMargin={false} />

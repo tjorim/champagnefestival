@@ -145,3 +145,45 @@ describe("useAdminRegistrationActions errors", () => {
     expect(setRegistrationError).toHaveBeenCalledWith("Failed to update registration.");
   });
 });
+
+describe("admin attendance correction", () => {
+  it("sends an absolute false on each deliberate undo without changing strap issuance", async () => {
+    const bodies: unknown[] = [];
+    server.use(
+      http.put("/api/registrations/reg-1", async ({ request }) => {
+        const body = await request.json();
+        bodies.push(body);
+        return HttpResponse.json({ id: "reg-1", checked_in: false, strap_issued: true });
+      }),
+    );
+    const { result, setRegistrationError } = setup();
+    await act(async () => {
+      expect(await result.current.handleCheckIn("reg-1", false)).toBe(true);
+    });
+    expect(bodies).toEqual([{ checked_in: false }]);
+    await act(async () => {
+      expect(await result.current.handleCheckIn("reg-1", false)).toBe(true);
+    });
+    expect(bodies).toEqual([{ checked_in: false }, { checked_in: false }]);
+    expect(setRegistrationError).not.toHaveBeenCalled();
+  });
+
+  it("does not retry a refused undo or expose diagnostic details", async () => {
+    const request = vi.fn(() =>
+      HttpResponse.json(
+        { code: "stamp_reward_handed_out", detail: "Private diagnostic" },
+        { status: 409 },
+      ),
+    );
+    server.use(http.put("/api/registrations/reg-1", request));
+    const { result, setRegistrationError } = setup();
+    await act(async () => {
+      expect(await result.current.handleCheckIn("reg-1", false)).toBe(false);
+    });
+    expect(request).toHaveBeenCalledOnce();
+    expect(setRegistrationError).toHaveBeenCalledOnce();
+    expect(setRegistrationError).not.toHaveBeenCalledWith(
+      expect.stringContaining("Private diagnostic"),
+    );
+  });
+});

@@ -171,7 +171,12 @@ export default function CheckInScanner({ onDecode }: CheckInScannerProps) {
 
   return (
     <div className="mb-4">
-      <div className="relative aspect-4/3 overflow-hidden rounded-md bg-black">
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-md bg-black",
+          status === "starting" || status === "scanning" ? "aspect-4/3" : "hidden",
+        )}
+      >
         {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
         <video
           ref={videoRef}

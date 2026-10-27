@@ -87,6 +87,7 @@ describe("RegistrationList — scoped error display", () => {
 
   it("labels the filter groups and moves aria-pressed when a filter is chosen", () => {
     renderRegistrationList();
+    fireEvent.click(screen.getByRole("button", { name: "admin_registration_filters" }));
     const group = screen.getByRole("group", { name: "admin_filter_edition_aria" });
     const all = within(group).getByRole("button", { name: /admin_filter_edition_all/ });
     const festivals = within(group).getByRole("button", { name: /admin_filter_edition_festivals/ });
@@ -96,6 +97,15 @@ describe("RegistrationList — scoped error display", () => {
     expect(festivals).toHaveAttribute("aria-pressed", "true");
     expect(all).toHaveAttribute("aria-pressed", "false");
     expect(screen.getByRole("group", { name: "admin_filter_status_aria" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "admin_registration_filters" }));
+    expect(
+      screen.queryByRole("group", { name: "admin_filter_edition_aria" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole("status")
+        .some((status) => status.textContent?.includes("admin_filter_edition_festivals")),
+    ).toBe(true);
   });
 
   it("saves column choices without persisting the temporary empty-table default", async () => {
