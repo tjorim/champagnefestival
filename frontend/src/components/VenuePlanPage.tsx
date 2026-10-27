@@ -12,11 +12,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { m } from "@/paraglide/messages";
 import { safeRoomColor } from "@/utils/layoutUtils";
-import {
-  fetchVenuePlanEditionChoices,
-  venuePlanFailure,
-  venuePlanQueryOptions,
-} from "@/utils/venuePlanApi";
+import { fetchVenuePlanEditionChoices, venuePlanFailure } from "@/utils/venuePlanEditions";
+import { venuePlanQueryOptions } from "@/utils/venuePlanApi";
 
 function Loading() {
   return (

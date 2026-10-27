@@ -614,6 +614,41 @@ export const adminHandlers = [
     const body = (await request.json()) as Record<string, unknown>;
     const person = people.find((p) => p.id === body.person_id);
     const event = events.find((e) => e.id === body.event_id);
+    const requested = Array.isArray(body.order_items)
+      ? (body.order_items as { product_id: string; quantity: number }[])
+      : [];
+    const orderItems = requested.flatMap(({ product_id, quantity }) => {
+      const product = event?.products.find((candidate) => candidate.id === product_id);
+      return product
+        ? [
+            {
+              product_id: product.id,
+              name: product.name,
+              price: product.price,
+              category: product.category,
+              quantity,
+              included_quantity: 0,
+              delivered_quantity: 0,
+              delivered: false,
+            },
+          ]
+        : [];
+    });
+    const requiredIds = new Set(
+      (event?.products ?? []).filter((product) => product.required).map((product) => product.id),
+    );
+    if (
+      orderItems.length > 0 &&
+      requiredIds.size > 0 &&
+      !orderItems.some((item) => requiredIds.has(item.product_id))
+    ) {
+      return HttpResponse.json(
+        {
+          detail: "This event requires a required product before optional products can be ordered.",
+        },
+        { status: 400 },
+      );
+    }
     const newReg = {
       id: uid(),
       person_id: String(body.person_id ?? ""),
@@ -628,10 +663,13 @@ export const adminHandlers = [
       event_id: String(body.event_id ?? ""),
       event: event ?? null,
       guest_count: Number(body.guest_count ?? 1),
-      order_items: [],
+      order_items: orderItems,
+      amount_due: orderItems.length
+        ? orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0)
+        : null,
       notes: String(body.notes ?? ""),
       table_id: null,
-      status: "pending",
+      status: "confirmed",
       payment_status: "unpaid",
       checked_in: false,
       checked_in_at: null,

@@ -12,6 +12,8 @@ export interface PersonOption {
   name: string;
   email: string;
   phone: string;
+  /** Existing bookings, so two people with the same name can be told apart. */
+  registrationCount: number;
 }
 
 interface PersonSearchResult {
@@ -19,16 +21,28 @@ interface PersonSearchResult {
   name: string;
   email: string;
   phone: string;
+  registration_count?: number;
 }
 
 export type EditionEvent = Event;
 
 export interface CreateRegistrationPayload {
   orderAnswers?: OrderAnswer[];
+  /** Purchased quantities per product; an empty list is a deliberate no-product booking. */
+  orderItems?: { productId: string; quantity: number }[];
   personId: string;
   eventId: string;
   guestCount: number;
   notes: string;
+  /** Makes a retry after a lost response return the first booking instead of booking twice. */
+  idempotencyKey?: string;
+}
+
+export interface CreatePersonPayload {
+  name: string;
+  email: string;
+  phone: string;
+  preferredLanguage: "nl" | "fr" | "en" | null;
 }
 
 export interface PersonRegistration {
@@ -116,14 +130,42 @@ export async function fetchAdminPersonOptions(
   if (!Array.isArray(payload.items)) {
     throw new Error("Invalid /api/people response: expected {items, total, limit, page}.");
   }
-  return payload.items.map((person) => ({
+  return payload.items.map(personSearchResultToOption);
+}
+
+function personSearchResultToOption(person: PersonSearchResult): PersonOption {
+  return {
     value: person.id,
     label: person.name,
     sub: [person.email, person.phone].filter(Boolean).join(" · "),
     name: person.name,
     email: person.email,
     phone: person.phone,
-  }));
+    registrationCount: person.registration_count ?? 0,
+  };
+}
+
+/**
+ * Creates a person for a booking that is being drafted. The caller selects the
+ * returned person straight away, so a failed booking afterwards is retried
+ * against that person instead of creating a second one.
+ */
+export async function createAdminPerson(
+  payload: CreatePersonPayload,
+  authHeaders: () => Record<string, string>,
+): Promise<PersonOption> {
+  const res = await fetch("/api/people", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...authHeaders() },
+    body: JSON.stringify({
+      name: payload.name,
+      email: payload.email || null,
+      phone: payload.phone,
+      preferred_language: payload.preferredLanguage,
+    }),
+  });
+  if (!res.ok) throw await apiErrorFromResponse(res, m.admin_people_error_create());
+  return personSearchResultToOption((await res.json()) as PersonSearchResult);
 }
 
 export async function fetchAdminPersonRegistrations(
@@ -201,10 +243,14 @@ export async function createAdminRegistration(
       person_id: payload.personId,
       event_id: payload.eventId,
       guest_count: payload.guestCount,
-      order_items: [],
+      order_items: (payload.orderItems ?? []).map((item) => ({
+        product_id: item.productId,
+        quantity: item.quantity,
+      })),
       notes: payload.notes,
       ...(payload.orderAnswers ? { order_answers: orderAnswersBody(payload.orderAnswers) } : {}),
       status: "confirmed",
+      ...(payload.idempotencyKey ? { idempotency_key: payload.idempotencyKey } : {}),
     }),
   });
 

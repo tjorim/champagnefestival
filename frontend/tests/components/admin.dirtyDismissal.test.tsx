@@ -170,6 +170,7 @@ const cases: Case[] = [
         show={show}
         authHeaders={authHeaders}
         onSaved={noop}
+        onOpenBooking={noop}
         onHide={onHide}
       />
     ),

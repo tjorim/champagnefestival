@@ -533,3 +533,50 @@ async def test_composed_message_requires_a_complete_dutch_pair(client):
     translated = await client.put(f"/api/composer/{message_id}", json={"body_fr": "Corps"}, headers=ADMIN_HEADERS)
     assert translated.status_code == 200
     assert translated.json()["body_fr"] == "Corps"
+
+
+async def test_schedule_refuses_a_message_saved_after_it_was_reviewed(client):
+    created = await client.post("/api/composer", json=_draft_body(channels=["announcement"]), headers=ADMIN_HEADERS)
+    message_id = created.json()["id"]
+    reviewed_at = created.json()["updated_at"]
+    edited = await client.put(
+        f"/api/composer/{message_id}", json={"title_nl": "Aangepaste titel"}, headers=ADMIN_HEADERS
+    )
+    assert edited.json()["updated_at"] != reviewed_at
+
+    stale = await client.post(
+        f"/api/composer/{message_id}/schedule", json={"expected_updated_at": reviewed_at}, headers=ADMIN_HEADERS
+    )
+    assert (stale.status_code, stale.json()["code"]) == (409, "composed_message_changed")
+    assert (await client.get(f"/api/composer/{message_id}", headers=ADMIN_HEADERS)).json()["state"] == "draft"
+
+    current = await client.post(
+        f"/api/composer/{message_id}/schedule",
+        json={"expected_updated_at": edited.json()["updated_at"]},
+        headers=ADMIN_HEADERS,
+    )
+    assert current.status_code == 200
+    assert current.json()["state"] == "scheduled"
+
+
+async def test_schedule_requires_a_timezone_on_the_reviewed_version(client):
+    created = await client.post("/api/composer", json=_draft_body(channels=["announcement"]), headers=ADMIN_HEADERS)
+    response = await client.post(
+        f"/api/composer/{created.json()['id']}/schedule",
+        json={"expected_updated_at": "2026-10-26T12:00:00"},
+        headers=ADMIN_HEADERS,
+    )
+    assert response.status_code == 422
+
+
+async def test_output_reports_whether_member_mail_is_available(client, monkeypatch):
+    from app import member_mail
+
+    created = await client.post("/api/composer", json=_draft_body(channels=["announcement"]), headers=ADMIN_HEADERS)
+    message_id = created.json()["id"]
+    monkeypatch.setattr(member_mail, "member_mail_available", lambda *args, **kwargs: False)
+    unavailable = await client.get(f"/api/composer/{message_id}", headers=ADMIN_HEADERS)
+    assert unavailable.json()["member_mail_available"] is False
+    monkeypatch.setattr(member_mail, "member_mail_available", lambda *args, **kwargs: True)
+    available = await client.get(f"/api/composer/{message_id}", headers=ADMIN_HEADERS)
+    assert available.json()["member_mail_available"] is True
