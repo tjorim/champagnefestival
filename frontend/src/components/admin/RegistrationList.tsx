@@ -851,7 +851,7 @@ export default function RegistrationList({
         setPage(1);
       },
       onColumnVisibilityChange: (updater) => {
-        const next = typeof updater === "function" ? updater(effectiveColumnVisibility) : updater;
+        const next = typeof updater === "function" ? updater(columnVisibility) : updater;
         setColumnVisibility(next);
         saveColVis(COL_VIS_KEY, next);
       },

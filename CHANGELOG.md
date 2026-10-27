@@ -26,7 +26,6 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 ### Changed
 
 - Public English and French home and privacy pages use `/en` and `/fr` paths, with matching canonical URLs, language alternates and sitemap entries. Switching language preserves the hash. Query-string language selection has been removed (#1418; deploy apps#296 routing first).
-
 - The Refresh hero offers **Register now** as its primary action while registration is open, repeats the dates and venue, and shows the opening date when it is not. On phones the hero is shorter and its secondary button stays readable over the photo.
 - Inter and Fraunces are served from `/fonts` instead of Google Fonts, so no visitor address is sent to a third party and the first render no longer waits on one; Inter's main file is preloaded.
 - The default hero photo is a 127 KB WebP instead of a 2 MB PNG, and `GET /` preloads the active edition's hero (or the default) in the page head.

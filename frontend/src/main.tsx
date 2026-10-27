@@ -823,7 +823,10 @@ function App() {
                 )}
                 <LoadWhenVisible
                   placeholder={
-                    <div className="aspect-video rounded-md border border-border bg-muted" />
+                    <div
+                      data-slot="location-map-placeholder"
+                      className="aspect-video rounded-md border border-border bg-muted"
+                    />
                   }
                 >
                   <SuspenseWithBoundary
