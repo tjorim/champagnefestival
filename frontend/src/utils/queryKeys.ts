@@ -125,7 +125,10 @@ export const queryKeys = {
     settings: ["admin", "settings"] as const,
     editionScratchpad: (editionId: string) => ["admin", "edition-scratchpad", editionId] as const,
     contactMessages: ["admin", "contact-messages"] as const,
+    contactMessagesPage: (query: string) => ["admin", "contact-messages", "page", query] as const,
     waitlistEntries: ["admin", "waitlist-entries"] as const,
+    waitlistEntriesPage: (query: string) => ["admin", "waitlist-entries", "page", query] as const,
+    waitlistScopes: ["admin", "waitlist-entries", "scopes"] as const,
     contentManagement: {
       section: (sectionKey: string) => ["admin", "content-management", sectionKey] as const,
       editions: ["admin", "content-management", "editions"] as const,

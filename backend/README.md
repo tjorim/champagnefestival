@@ -256,7 +256,7 @@ See `.env.example` for a template.
 | `POST`   | `/api/check-in/{id}/lookup`      | public + token | Verify QR token and return guest information                                |
 | `POST`   | `/api/check-in/{id}`            | public + token | Mark checked-in, issue strap                                               |
 | `POST`   | `/api/contact`                  | public         | Persist a contact submission and notify the configured recipient           |
-| `GET`    | `/api/contact`                  | admin          | List persisted contact messages                                            |
+| `GET`    | `/api/contact`                  | admin          | Paged list (`status`, `q`; `total` spans the filtered inbox), newest first |
 | `PUT`    | `/api/contact/{id}/handled`     | admin          | Mark a contact message as handled                                          |
 | `GET`    | `/api/settings`                 | public         | Get maintenance mode and public contact settings                           |
 | `PUT`    | `/api/settings`                 | admin          | Update maintenance mode or public contact settings                         |
