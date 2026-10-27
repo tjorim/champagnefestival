@@ -68,10 +68,14 @@
     -->
     <!--ssr:head-->
 
-    <!-- Hide the disposable server fragment before the JavaScript app paints. -->
+    <!--
+      Hide the disposable server fragment until the JavaScript app replaces it.
+      data-app-pending is set by the bootstrap below and cleared on mount (main.tsx)
+      or when the bundle fails to load, so the readable fragment is never lost.
+    -->
     <style>
       @layer components {
-        html[data-visual-theme] .site-server-content {
+        html[data-app-pending] .site-server-content {
           display: none;
         }
       }
@@ -92,6 +96,20 @@
           if (VARIANTS.includes(stored)) visualTheme = stored;
         } catch {}
         document.documentElement.dataset.visualTheme = visualTheme;
+
+        // Hides the server fragment until React replaces it. If the application never mounts
+        // (a script fails to load, or it stalls), restore the fragment instead of a blank page.
+        const root = document.documentElement;
+        root.dataset.appPending = "";
+        const restoreFragment = () => root.removeAttribute("data-app-pending");
+        window.addEventListener(
+          "error",
+          (event) => {
+            if (event.target instanceof HTMLScriptElement) restoreFragment();
+          },
+          true,
+        );
+        window.setTimeout(restoreFragment, 8000);
 
         // The theme stylesheet is attached by main.tsx once the bundle has run; fetching it now
         // takes that round trip off the first paint. Keep the path in step with useVisualTheme.ts.

@@ -1008,7 +1008,9 @@ none of these writes automatically (`retry: false`) and reports success only aft
 
 The public auth facade loads the OIDC runtime before forwarding sign-in,
 sign-out or silent-renewal requests. Each invocation is forwarded once; loading
-failure rejects it without replaying it. Existing redirect/session operations
+failure rejects it without replaying it. A later, user-initiated invocation
+retries the failed import and is then forwarded once; the earlier rejected call
+is never replayed. Existing redirect/session operations
 remain **not automatically retry safe**: no write retry, token revocation retry
 or visitor-session sign-out retry was added. Sign-out still requires successful
 visitor-session revocation before wiping caches and starting the IdP redirect.

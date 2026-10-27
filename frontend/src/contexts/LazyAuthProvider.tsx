@@ -53,6 +53,8 @@ export function LazyAuthProvider({
   const [auth, setAuth] = useState<AuthContextProps | null>(null);
   const [Runtime, setRuntime] = useState<ComponentType<RuntimeProps> | null>(null);
   const [loadError, setLoadError] = useState<Error | null>(null);
+  // Bumped by a new sign-in/renewal attempt after a failed import, to retry it.
+  const [attempt, setAttempt] = useState(0);
   const ready = useRef<
     { resolve: (auth: AuthContextProps) => void; reject: (error: Error) => void }[]
   >([]);
@@ -72,7 +74,7 @@ export function LazyAuthProvider({
     return () => {
       current = false;
     };
-  }, [enabled]);
+  }, [enabled, attempt]);
   const onReady = useCallback((value: AuthContextProps) => {
     setAuth(value);
     for (const pending of ready.current.splice(0)) pending.resolve(value);
@@ -95,8 +97,15 @@ export function LazyAuthProvider({
   const load = useCallback((): Promise<AuthContextProps> => {
     setEnabled(true);
     if (auth) return Promise.resolve(auth);
-    if (loadError) return Promise.reject(loadError);
-    return new Promise((resolve, reject) => ready.current.push({ resolve, reject }));
+    const pending = new Promise<AuthContextProps>((resolve, reject) =>
+      ready.current.push({ resolve, reject }),
+    );
+    if (loadError) {
+      // A new attempt retries the failed import; it never replays an earlier sign-in.
+      setLoadError(null);
+      setAttempt((value) => value + 1);
+    }
+    return pending;
   }, [auth, loadError]);
   const snapshot = useMemo(
     () =>

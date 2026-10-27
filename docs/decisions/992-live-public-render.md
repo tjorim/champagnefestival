@@ -31,12 +31,15 @@ React hydration. Their wrapper styling is independent of Bootstrap.
 
 The server fragment wrapper has the `site-server-content` class. An inline
 `components` layer rule in the frontend shell hides it with `display: none`
-when `html[data-visual-theme]` is present. The existing synchronous theme
-bootstrap sets that attribute in the head, before the body can paint. This
-prevents unstyled fallback text from flashing and shifting the page when React
-replaces it. The rule targets only the disposable fragment, not React's root.
+while `html[data-app-pending]` is present. The synchronous bootstrap in the head
+sets that attribute before the body can paint, which prevents unstyled fallback
+text from flashing and shifting the page when React replaces it. The application
+clears it on mount (`MarkAppMounted` in `main.tsx`). The bootstrap also clears it
+when a script fails to load or after eight seconds, so the readable fragment is
+restored rather than leaving a blank page if the application never mounts. The
+rule targets only the disposable fragment, not React's root.
 
-Without JavaScript the attribute is absent, so FAQ/schedule and published policy
+Without JavaScript the attribute is never set, so FAQ/schedule and published policy
 text retain their readable inline layout. The text remains in the HTML response
 for crawlers; JavaScript-rendering crawlers see the final application content.
 We retain `createRoot`: reproducing the interactive UI on the server for hydration

@@ -1011,9 +1011,18 @@ function registerServiceWorker(): void {
   }
 }
 
+/** Lets the pre-mount stylesheet in index.html stop hiding the server fragment React replaced. */
+function MarkAppMounted() {
+  useEffect(() => {
+    document.documentElement.removeAttribute("data-app-pending");
+  }, []);
+  return null;
+}
+
 function renderApp(): void {
   ReactDOM.createRoot(rootElement!).render(
     <React.StrictMode>
+      <MarkAppMounted />
       <QueryClientProvider client={queryClient}>
         <LazyAuthProvider
           navigateTo={(to) => router.navigate({ to })}
