@@ -84,3 +84,13 @@ mode so a newly started server cannot silently move to a different port.
 `pnpm exec playwright test --config playwright.signage.config.ts` builds and
 serves the production app on port 5178, testing the shared worker without MSW.
 This runs separately in CI after the standard browser suite.
+
+## What CI runs
+
+Most specs repeat across the six visual themes, both colour schemes and two widths. To keep
+feedback fast, pull request runs skip every title containing `classic`, `riviera`, `cuvee`,
+`remuage` or `millesime` (`--grep-invert`, set in `.github/workflows/frontend-ci.yml`), which
+leaves the default `refresh` theme at every width and colour scheme. Pushes to `main` and manual
+runs (`gh workflow run frontend-ci.yml --ref <branch>`) run all themes, so run that before merging
+a change to themes, CSS layers or shared UI. Name theme-specific test titles after the theme so
+the filter applies to them. A job-level timeout stops a run that hangs.

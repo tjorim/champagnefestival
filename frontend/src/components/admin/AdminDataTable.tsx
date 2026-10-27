@@ -453,7 +453,7 @@ function ServerAdminDataTable<T extends RowData>({
           actionsLabel={labels.actions}
         />
       </div>
-      <div className="flex flex-wrap gap-2 md:hidden" aria-label={labels.sort}>
+      <div role="group" className="flex flex-wrap gap-2 md:hidden" aria-label={labels.sort}>
         {table
           .getAllLeafColumns()
           .filter((column) => column.getCanSort())

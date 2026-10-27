@@ -59,7 +59,7 @@ test("edits channels and playlists, previews drafts and supports accessible reor
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page
     .getByRole("alertdialog", { name: "Discard changes?", exact: true })
-    .getByRole("button", { name: "Discard", exact: true })
+    .getByRole("button", { name: "Discard changes", exact: true })
     .click();
   await page.getByRole("button", { name: "Edit Hall five", exact: true }).click();
   await expect(page.getByLabel("Name", { exact: true })).toHaveValue("Hall five");
@@ -137,7 +137,7 @@ test("edits channels and playlists, previews drafts and supports accessible reor
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
   await page
     .getByRole("alertdialog", { name: "Discard changes?", exact: true })
-    .getByRole("button", { name: "Discard", exact: true })
+    .getByRole("button", { name: "Discard changes", exact: true })
     .click();
   await notice.click();
   await expect(page.getByLabel("Starts at (local time)")).toHaveValue("");

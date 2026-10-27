@@ -1,6 +1,7 @@
 import { fetchJsonOrThrowWithUnauthorized } from "@/utils/adminApi";
 import { getLocale } from "@/paraglide/runtime";
 import { m } from "@/paraglide/messages";
+import { pickTranslation } from "@/utils/translatedText";
 
 export interface StampProgress {
   card_id: string;
@@ -37,22 +38,31 @@ export interface StampCard extends Omit<StampReward, "earned_at" | "handed_out_a
   stamps: { id: string; created_at: string }[];
   reward: StampReward | null;
 }
-export function stampLabel(value: {
+export function stampLabelText(value: {
   reward_label_nl: string;
   reward_label_fr: string | null;
   reward_label_en: string | null;
 }) {
-  const locale = getLocale();
   return (
-    (locale === "fr" ? value.reward_label_fr : locale === "en" ? value.reward_label_en : null) ||
-    value.reward_label_nl
+    pickTranslation(
+      { nl: value.reward_label_nl, fr: value.reward_label_fr, en: value.reward_label_en },
+      getLocale(),
+    ) ?? { text: value.reward_label_nl, lang: undefined }
+  );
+}
+export function stampLabel(value: Parameters<typeof stampLabelText>[0]) {
+  return stampLabelText(value).text;
+}
+export function stampTypeNameText(value: StampCardType) {
+  return (
+    pickTranslation({ nl: value.name_nl, fr: value.name_fr, en: value.name_en }, getLocale()) ?? {
+      text: value.name_nl,
+      lang: undefined,
+    }
   );
 }
 export function stampTypeName(value: StampCardType) {
-  const locale = getLocale();
-  return (
-    (locale === "fr" ? value.name_fr : locale === "en" ? value.name_en : null) || value.name_nl
-  );
+  return stampTypeNameText(value).text;
 }
 export const stampKeys = {
   types: ["admin", "stamp-cards", "types"] as const,

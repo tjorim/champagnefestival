@@ -115,7 +115,8 @@ Required status checks on `main`:
 
 - `Backend CI / Lint, Typecheck, Migrate & Test`
 - `Frontend CI / Typecheck, Lint, Test & Build`
-- `Frontend CI / E2E Tests (Chromium)`
+- `Frontend CI / E2E Tests (Chromium)` (pull requests run the default theme only; `main` and
+  manual runs run all themes, see `frontend/e2e/README.md`)
 - `Android CI / Lint, Unit Test & Build` (when Android changes are required)
 - Relevant CodeQL checks (`CodeQL Backend`, `CodeQL Frontend`, `CodeQL Actions`, `CodeQL Android`)
 
