@@ -748,6 +748,16 @@ and update requests, overlapping-submit prevention, pending dismissal, failed
 saves without retries and draft preservation during refetch. Browser tests cover
 guarded dismissal, focus return, translated fields and desktop/mobile layouts.
 
+### Dirty-draft dismissal for record editors (#1428)
+
+The event, edition, content item, person, member, volunteer and manual
+registration editors now share the announcement dismissal policy: dismissing a
+dirty draft asks before discarding it and a pending save blocks dismissal. This
+adds no write, changes no request and retries nothing; the existing create and
+update strategies of those editors are unchanged, and a failed save still keeps
+the draft for a deliberate retry. See the dismissal policy in
+[the frontend guide](frontend-ui.md).
+
 ### Optional admin volunteer details (2026-10-19)
 
 `POST /api/volunteers` (including MCP `create_volunteer`) now permits omitted/null

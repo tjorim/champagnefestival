@@ -1549,6 +1549,8 @@
   "admin_announcement_edit": "Modifier l’annonce",
   "admin_composer_new": "Nouveau brouillon de message",
   "admin_composer_edit": "Modifier le brouillon de message",
+  "admin_editor_keep_editing": "Continuer à modifier",
+  "admin_editor_discard_changes": "Abandonner les modifications",
   "admin_editor_discard_error": "Impossible de fermer l’éditeur. Veuillez réessayer.",
   "admin_products_description_required": "Saisissez une description en néerlandais, ou effacez tous les textes de description.",
   "admin_poll_delete_body_in_use": "{volunteers} bénévole(s) ont choisi « {label} » ({quantity} au total). La supprimer retire leurs choix.",

@@ -10,7 +10,7 @@ import {
 import { SaveIcon, UserPlusIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { Alert } from "@/components/ui/alert";
 
@@ -23,6 +23,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Person } from "@/types/person";
@@ -97,23 +98,29 @@ function parseRoles(raw: string): string[] {
 }
 
 export default function PersonFormModal({ show, person, onSave, onHide }: PersonFormModalProps) {
-  const isEdit = person != null;
   const [error, setError] = useState<string | null>(null);
 
   // Derived rather than a static template: `useForm` re-applies `defaultValues`
   // on every render, so a template that disagrees with what `form.reset(record)`
   // stored gets re-applied and blanks the form. See EventModal for the details.
+  //
+  // Seeded from the record as it was when the editor opened (`useEditorSession`),
+  // so a background refresh of the people list neither rewrites fields the user
+  // has not touched nor moves the baseline used to decide whether to confirm a
+  // discard.
+  const { record, sessionId } = useEditorSession(show, person?.id ?? "", person);
+  const isEdit = record != null;
   const defaultValues = useMemo(
     () =>
-      person
+      record
         ? {
-            name: person.name,
-            email: person.email ?? "",
-            phone: person.phone ?? "",
-            preferredLanguage: person.preferredLanguage ?? null,
-            address: person.address ?? "",
-            rolesInput: person.roles.join(", "),
-            notes: person.notes ?? "",
+            name: record.name,
+            email: record.email ?? "",
+            phone: record.phone ?? "",
+            preferredLanguage: record.preferredLanguage ?? null,
+            address: record.address ?? "",
+            rolesInput: record.roles.join(", "),
+            notes: record.notes ?? "",
           }
         : {
             name: "",
@@ -124,7 +131,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
             rolesInput: "",
             notes: "",
           },
-    [person],
+    [record],
   );
 
   const form = useForm({
@@ -153,21 +160,27 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
     },
   });
 
-  // Re-open should always start from the record again, discarding edits that were
-  // abandoned by closing the modal. Reset during render rather than in an effect
-  // (the "adjusting state when a prop changes" pattern) since this only needs to
-  // react to the show=false->true transition, not to every render.
+  // Every editing session starts from the record again, discarding edits that were
+  // abandoned by closing the modal: `defaultValues` alone cannot do that because the
+  // library keeps the fields a user has touched.
+  useLayoutEffect(() => {
+    if (show) form.reset(defaultValues);
+    // `sessionId` covers reopening the same record, which leaves `defaultValues` unchanged.
+  }, [show, sessionId, form, defaultValues]);
   const [wasShown, setWasShown] = useState(show);
   if (show !== wasShown) {
     setWasShown(show);
-    if (show) {
-      form.reset(defaultValues);
-      setError(null);
-    }
+    if (show) setError(null);
   }
 
   const nameValue = useSelector(form.atom, (s) => s.values.name);
   const isSubmitting = useSelector(form.atom, (s) => s.isSubmitting);
+  const values = useSelector(form.atom, (s) => s.values);
+  const { requestClose, confirmDialog } = useDirtyDismiss({
+    dirty: isDraftDirty(values, defaultValues),
+    busy: isSubmitting,
+    onDismiss: onHide,
+  });
   const rolesInput = useSelector(form.atom, (s) => s.values.rolesInput) ?? "";
   const currentRoles = parseRoles(rolesInput);
 
@@ -182,7 +195,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
     <Dialog
       open={show}
       onOpenChange={(open) => {
-        if (!open) onHide();
+        if (!open) void requestClose();
       }}
     >
       <DialogContent admin size="lg">
@@ -379,7 +392,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
           </DialogBody>
 
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={() => void requestClose()}>
               {m.admin_action_cancel()}
             </Button>
             <Button
@@ -394,6 +407,7 @@ export default function PersonFormModal({ show, person, onSave, onHide }: Person
           </DialogFooter>
         </form>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

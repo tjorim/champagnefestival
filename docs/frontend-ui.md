@@ -213,6 +213,37 @@ list refreshes must not reset its fields or change its create/update target.
 Close after a successful save and refresh the list; preserve the draft on error.
 Do not automatically retry writes; see [retry safety](retry-safety.md).
 
+### Dirty-draft dismissal policy (#1428)
+
+Every admin create/edit editor follows one policy, implemented by
+`useDirtyDismiss` (`frontend/src/hooks/useDirtyDismiss.tsx`) on top of the
+shared confirmation dialog. `AdminEditorDialog` and the `show`-driven modals
+(`EventModal`, `EditionModal`, `ItemModal`, `PersonFormModal`, `MemberFormModal`,
+`VolunteerFormModal`, `RegistrationCreateModal`) all use it.
+
+- Escape, the header close button, the backdrop and the explicit Cancel/Close
+  button are one path. A pristine draft closes immediately.
+- A dirty draft asks "Discard changes?" with **Keep editing** and **Discard
+  changes**. Keep editing leaves every field untouched and returns focus to the
+  control that had it; Discard closes, and the next opening reseeds the form.
+- Dismissal is ignored while a save is pending (`busy`). A successful save
+  closes the editor through its own handler, so it never prompts; a failed save
+  keeps the dialog and the draft open for a deliberate retry.
+- "Dirty" compares the current values with the baseline captured when the
+  editing session started (`useEditorSession`), not with whatever the server
+  returns now. Server refreshes therefore neither overwrite fields the user has
+  not touched nor move the baseline. Values filled in by the editor itself
+  (the first event category, organisation option details) are part of the
+  baseline, so they do not count as edits.
+
+Navigation and sign-out: these editors are modal, so the sidebar, section tabs
+and the Sign out button cannot be reached while one is open. Two exits remain
+outside the guard on purpose: an expired session signs the admin out so they
+are not trapped behind a draft that can no longer be saved, and a browser
+reload or closed tab discards the draft because drafts are never persisted
+(no `beforeunload` prompt, no local storage). Nothing here saves, retries or
+persists a draft automatically.
+
 
 All admin sections with tabs (Screens, Announcements and People) use the generated
 shadcn `base-vega` Tabs component and its built-in `TabsList` **line** variant.

@@ -10,7 +10,7 @@ import {
 import { SaveIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Alert } from "@/components/ui/alert";
@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/combobox";
 import { EditionLineupOrder } from "@/components/admin/EditionLineupOrder";
 import type { SponsorTier } from "@/config/editions";
+import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import type { ItemDraft } from "./itemTypes";
@@ -117,6 +118,10 @@ function typeLabel(type: EditionType) {
   }
 }
 
+function draftOf<T extends { selectedOrganizations: ItemOption[] }>(values: T) {
+  return { ...values, selectedOrganizations: values.selectedOrganizations.map((o) => o.value) };
+}
+
 export default function EditionModal({
   show,
   initial,
@@ -127,6 +132,9 @@ export default function EditionModal({
 }: EditionModalProps) {
   const hydratedRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
+  // The edition as it was when the editor opened, so a background refresh neither
+  // rewrites untouched fields nor moves the baseline for the discard prompt.
+  const { record, sessionId } = useEditorSession(show, initial?.id ?? "", initial);
 
   // Keyed on the resolved id rather than the `venues` array: callers pass
   // `query.data ?? []`, so a fresh empty array on every render would otherwise
@@ -139,30 +147,30 @@ export default function EditionModal({
   // stored gets re-applied and blanks the form. See EventModal for the details.
   const defaultValues = useMemo(
     () => ({
-      id: initial?.id ?? "",
-      year: initial?.year ?? new Date().getFullYear(),
-      month: initial?.month ?? "",
-      editionType: (initial?.editionType ?? "festival") as EditionType,
-      venueId: initial?.venue?.id ?? fallbackVenueId,
-      active: initial?.active ?? true,
-      coOrganizerId: initial?.coOrganizer?.id ? String(initial.coOrganizer.id) : "",
+      id: record?.id ?? "",
+      year: record?.year ?? new Date().getFullYear(),
+      month: record?.month ?? "",
+      editionType: (record?.editionType ?? "festival") as EditionType,
+      venueId: record?.venue?.id ?? fallbackVenueId,
+      active: record?.active ?? true,
+      coOrganizerId: record?.coOrganizer?.id ? String(record.coOrganizer.id) : "",
       // Producers and sponsors only — the API rejects vendor ids on an edition,
       // so vendors are deliberately not selectable and not submitted.
       // In lineup order: the public site lists sponsors in this order (#1226).
-      selectedOrganizations: lineupOptions(initial),
+      selectedOrganizations: lineupOptions(record),
       sponsorTiers: Object.fromEntries(
-        (initial?.sponsors ?? []).flatMap((sponsor) =>
+        (record?.sponsors ?? []).flatMap((sponsor) =>
           sponsor.sponsorTier ? [[sponsor.id, sponsor.sponsorTier]] : [],
         ),
       ) as Record<number, SponsorTier>,
     }),
-    [fallbackVenueId, initial],
+    [fallbackVenueId, record],
   );
 
   const form = useForm({
     defaultValues,
     onSubmit: async ({ value }) => {
-      if (!initial && value.id.trim() === "") {
+      if (!record && value.id.trim() === "") {
         setError(m.admin_edition_id_required());
         return;
       }
@@ -200,18 +208,19 @@ export default function EditionModal({
     },
   });
 
-  // Re-open should always start from the record again, discarding edits that were
-  // abandoned by closing the modal — `defaultValues` alone can't do that, because
-  // the library skips re-seeding a form the user has already touched. Reset during
-  // render rather than in an effect (the "adjusting state when a prop changes"
-  // pattern) since this only needs to react to the show=false->true transition.
+  // Every editing session starts from the record again, discarding edits that were
+  // abandoned by closing the modal: `defaultValues` alone cannot do that because the
+  // library keeps the fields a user has touched. Read through an effect event so a
+  // venue list that arrives later (which refreshes `defaultValues`) cannot re-seed
+  // a draft in progress.
+  const seedForm = useEffectEvent(() => form.reset(defaultValues));
+  useLayoutEffect(() => {
+    if (show) seedForm();
+  }, [show, sessionId]);
   const [wasShown, setWasShown] = useState(show);
   if (show !== wasShown) {
     setWasShown(show);
-    if (show) {
-      form.reset(defaultValues);
-      setError(null);
-    }
+    if (show) setError(null);
   }
 
   // Ref mutations belong in an effect, not render — this just marks the
@@ -239,12 +248,20 @@ export default function EditionModal({
       organizationIds: number[];
       sponsorTiers: Record<number, SponsorTier>;
       coOrganizerOrganizationId: number | null;
-    }) => saveEdition(payload, authHeaders, initial?.id),
+    }) => saveEdition(payload, authHeaders, record?.id),
     retry: false,
   });
 
   const allOrganizations = useMemo(() => organizationsQuery.data ?? [], [organizationsQuery.data]);
-  const isEdit = !!initial;
+  const isEdit = !!record;
+  const values = useSelector(form.atom, (s) => s.values);
+  const { requestClose, confirmDialog } = useDirtyDismiss({
+    // Compare the lineup by id: loading the organization list enriches the
+    // selected options (archived, type) without the user changing anything.
+    dirty: isDraftDirty(draftOf(values), draftOf(defaultValues)),
+    busy: saveEditionMutation.isPending,
+    onDismiss: onHide,
+  });
   const editionType = useSelector(form.atom, (s) => s.values.editionType as EditionType);
   const sponsorTiers = useSelector(
     form.atom,
@@ -266,10 +283,10 @@ export default function EditionModal({
     // Keep the saved lineup order; only the option details (archived, type) are refreshed.
     form.setFieldValue(
       "selectedOrganizations",
-      lineupOptions(initial).flatMap((option) => byId.get(option.value) ?? []),
+      lineupOptions(record).flatMap((option) => byId.get(option.value) ?? []),
     );
     hydratedRef.current = true;
-  }, [allOrganizations, programmableOrganizations, initial, form, show]);
+  }, [allOrganizations, programmableOrganizations, record, form, show]);
   const organizationGroups = useMemo(() => {
     const { active: act, archived: arch } = toOptions(programmableOrganizations);
     const groups: { label: string; items: ItemOption[] }[] = [];
@@ -279,20 +296,20 @@ export default function EditionModal({
   }, [programmableOrganizations]);
 
   const comboboxAnchor = useComboboxAnchor();
-  const previewDates = useMemo(() => initial?.dates ?? [], [initial?.dates]);
+  const previewDates = useMemo(() => record?.dates ?? [], [record?.dates]);
 
   return (
     <Dialog
       open={show}
       onOpenChange={(open) => {
-        if (!open) onHide();
+        if (!open) void requestClose();
       }}
     >
       <DialogContent admin size="lg">
         <DialogHeader>
           <DialogTitle>
             {isEdit
-              ? m.admin_edition_edit_title({ id: initial!.id })
+              ? m.admin_edition_edit_title({ id: record!.id })
               : m.admin_content_edition_add()}
           </DialogTitle>
         </DialogHeader>
@@ -654,7 +671,7 @@ export default function EditionModal({
             )}
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={() => void requestClose()}>
               {m.close()}
             </Button>
             <Button
@@ -669,6 +686,7 @@ export default function EditionModal({
           </DialogFooter>
         </form>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

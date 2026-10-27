@@ -3,7 +3,7 @@ import { AdminField, AdminLabel, AdminInput, AdminTextarea } from "@/components/
 import { CirclePlusIcon, SaveIcon, ThumbsUpIcon, TrashIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Icon } from "@/components/Icon";
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { useForm, useSelector } from "@tanstack/react-form";
 import { Alert } from "@/components/ui/alert";
 
@@ -16,6 +16,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
+import { isDraftDirty, useDirtyDismiss, useEditorSession } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import type { Person, VolunteerHelpPeriod } from "@/types/person";
@@ -59,21 +60,24 @@ export default function VolunteerFormModal({
   onSave,
   onHide,
 }: VolunteerFormModalProps) {
-  const isEdit = volunteer != null;
   const [error, setError] = useState<string | null>(null);
+  // The record as it was when the editor opened, so a background refresh neither
+  // rewrites untouched fields nor moves the baseline for the discard prompt.
+  const { record, sessionId } = useEditorSession(show, volunteer?.id ?? "", volunteer);
+  const isEdit = record != null;
 
   // Derived rather than a static template: `useForm` re-applies `defaultValues`
   // on every render, so a template that disagrees with what `form.reset(record)`
   // stored gets re-applied and blanks the form. See EventModal for the details.
   const defaultValues = useMemo(
     (): VolunteerFormData =>
-      volunteer
+      record
         ? {
-            name: volunteer.name,
-            address: volunteer.address ?? "",
-            nationalRegisterNumber: volunteer.nationalRegisterNumber ?? "",
-            eidDocumentNumber: volunteer.eidDocumentNumber ?? "",
-            helpPeriods: volunteer.helpPeriods.map(mapPeriod),
+            name: record.name,
+            address: record.address ?? "",
+            nationalRegisterNumber: record.nationalRegisterNumber ?? "",
+            eidDocumentNumber: record.eidDocumentNumber ?? "",
+            helpPeriods: record.helpPeriods.map(mapPeriod),
           }
         : {
             name: "",
@@ -82,7 +86,7 @@ export default function VolunteerFormModal({
             eidDocumentNumber: "",
             helpPeriods: [],
           },
-    [volunteer],
+    [record],
   );
 
   const form = useForm({
@@ -129,28 +133,34 @@ export default function VolunteerFormModal({
     },
   });
 
-  // Re-open should always start from the record again, discarding edits that were
-  // abandoned by closing the modal. Reset during render rather than in an effect
-  // (the "adjusting state when a prop changes" pattern) since this only needs to
-  // react to the show=false->true transition, not to every render.
+  // Every editing session starts from the record again, discarding edits that were
+  // abandoned by closing the modal: `defaultValues` alone cannot do that because the
+  // library keeps the fields a user has touched.
+  useLayoutEffect(() => {
+    if (show) form.reset(defaultValues);
+    // `sessionId` covers reopening the same record, which leaves `defaultValues` unchanged.
+  }, [show, sessionId, form, defaultValues]);
   const [wasShown, setWasShown] = useState(show);
   if (show !== wasShown) {
     setWasShown(show);
-    if (show) {
-      form.reset(defaultValues);
-      setError(null);
-    }
+    if (show) setError(null);
   }
 
   const nameValue = useSelector(form.atom, (s) => s.values.name);
   const helpPeriods = useSelector(form.atom, (s) => s.values.helpPeriods);
   const isSubmitting = useSelector(form.atom, (s) => s.isSubmitting);
+  const values = useSelector(form.atom, (s) => s.values);
+  const { requestClose, confirmDialog } = useDirtyDismiss({
+    dirty: isDraftDirty(values, defaultValues),
+    busy: isSubmitting,
+    onDismiss: onHide,
+  });
 
   return (
     <Dialog
       open={show}
       onOpenChange={(open) => {
-        if (!open) onHide();
+        if (!open) void requestClose();
       }}
     >
       <DialogContent admin size="lg">
@@ -351,7 +361,7 @@ export default function VolunteerFormModal({
           </DialogBody>
 
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={() => void requestClose()}>
               {m.admin_action_cancel()}
             </Button>
             <Button
@@ -366,6 +376,7 @@ export default function VolunteerFormModal({
           </DialogFooter>
         </form>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

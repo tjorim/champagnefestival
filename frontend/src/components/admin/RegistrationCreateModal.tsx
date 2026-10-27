@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/combobox";
 import { activeEditionQueryKey } from "@/hooks/useActiveEdition";
 import type { Registration } from "@/types/registration";
+import { isDraftDirty, useDirtyDismiss } from "@/hooks/useDirtyDismiss";
 import { m } from "@/paraglide/messages";
 import { apiErrorMessage } from "@/utils/apiErrors";
 import { queryKeys } from "@/utils/queryKeys";
@@ -63,6 +64,13 @@ interface RegistrationCreateForm {
   personOption: PersonOption | null;
 }
 
+const BLANK_FORM: RegistrationCreateForm = {
+  eventId: "",
+  guestCount: 1,
+  notes: "",
+  personOption: null,
+};
+
 export default function RegistrationCreateModal({
   show,
   authHeaders,
@@ -75,12 +83,7 @@ export default function RegistrationCreateModal({
   const [debouncedPersonQuery, setDebouncedPersonQuery] = useState("");
 
   const form = useForm({
-    defaultValues: {
-      eventId: "",
-      guestCount: 1,
-      notes: "",
-      personOption: null,
-    } as RegistrationCreateForm,
+    defaultValues: BLANK_FORM,
     onSubmit: async ({ value }) => {
       const isValidEvent = events.some((event) => event.id === value.eventId);
       if (!value.personOption || !isValidEvent) return;
@@ -128,7 +131,7 @@ export default function RegistrationCreateModal({
   if (show !== wasShown) {
     setWasShown(show);
     if (show) {
-      form.reset({ eventId: "", guestCount: 1, notes: "", personOption: null });
+      form.reset(BLANK_FORM);
       setPersonQuery("");
       setOrderAnswers([]);
       setDebouncedPersonQuery("");
@@ -177,13 +180,19 @@ export default function RegistrationCreateModal({
   const watchedEventId = useSelector(form.atom, (state) => state.values.eventId);
   const watchedPersonOption = useSelector(form.atom, (state) => state.values.personOption);
   const isSubmitting = useSelector(form.atom, (state) => state.isSubmitting);
+  const values = useSelector(form.atom, (state) => state.values);
+  const { requestClose, confirmDialog } = useDirtyDismiss({
+    dirty: isDraftDirty(values, BLANK_FORM),
+    busy: isSubmitting || createRegistrationMutation.isPending,
+    onDismiss: onHide,
+  });
   const hasValidEventSelection = events.some((event) => event.id === watchedEventId);
 
   return (
     <Dialog
       open={show}
       onOpenChange={(open) => {
-        if (!open) onHide();
+        if (!open) void requestClose();
       }}
     >
       <DialogContent admin size="lg">
@@ -356,7 +365,7 @@ export default function RegistrationCreateModal({
             </form.Field>
           </DialogBody>
           <DialogFooter>
-            <Button variant="outline" size="sm" onClick={onHide}>
+            <Button variant="outline" size="sm" onClick={() => void requestClose()}>
               {m.admin_action_cancel()}
             </Button>
             <Button
@@ -371,6 +380,7 @@ export default function RegistrationCreateModal({
           </DialogFooter>
         </form>
       </DialogContent>
+      {confirmDialog}
     </Dialog>
   );
 }

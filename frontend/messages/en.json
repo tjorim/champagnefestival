@@ -1549,6 +1549,8 @@
   "admin_announcement_edit": "Edit announcement",
   "admin_composer_new": "New message draft",
   "admin_composer_edit": "Edit message draft",
+  "admin_editor_keep_editing": "Keep editing",
+  "admin_editor_discard_changes": "Discard changes",
   "admin_editor_discard_error": "Could not close the editor. Please try again.",
   "admin_products_description_required": "Enter a description in Dutch, or clear all description texts.",
   "admin_poll_delete_body_in_use": "{volunteers} volunteer(s) picked \"{label}\" ({quantity} in total). Deleting it removes their picks.",

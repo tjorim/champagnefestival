@@ -1549,6 +1549,8 @@
   "admin_announcement_edit": "Aankondiging bewerken",
   "admin_composer_new": "Nieuw berichtconcept",
   "admin_composer_edit": "Berichtconcept bewerken",
+  "admin_editor_keep_editing": "Verder bewerken",
+  "admin_editor_discard_changes": "Wijzigingen verwerpen",
   "admin_editor_discard_error": "De editor kon niet worden gesloten. Probeer het opnieuw.",
   "admin_products_description_required": "Vul een beschrijving in het Nederlands in, of wis alle beschrijvingsteksten.",
   "admin_poll_delete_body_in_use": "{volunteers} vrijwilliger(s) kozen \"{label}\" (samen {quantity}). Verwijderen haalt hun keuzes weg.",
