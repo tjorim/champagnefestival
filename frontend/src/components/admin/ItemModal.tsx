@@ -43,11 +43,19 @@ interface ItemModalProps {
   show: boolean;
   initial: ItemDraft | null; // null = new item
   authHeaders: () => Record<string, string>;
+  saving?: boolean;
   onSave: (item: ItemDraft) => void;
   onHide: () => void;
 }
 
-export default function ItemModal({ show, initial, authHeaders, onSave, onHide }: ItemModalProps) {
+export default function ItemModal({
+  show,
+  initial,
+  authHeaders,
+  saving,
+  onSave,
+  onHide,
+}: ItemModalProps) {
   const queryClient = useQueryClient();
   const [descriptionError, setDescriptionError] = useState(false);
   const [personQuery, setPersonQuery] = useState("");
@@ -138,6 +146,7 @@ export default function ItemModal({ show, initial, authHeaders, onSave, onHide }
   const values = useSelector(form.atom, (s) => s.values);
   const { requestClose, confirmDialog } = useDirtyDismiss({
     dirty: isDraftDirty(values, defaultValues),
+    busy: saving,
     onDismiss: onHide,
   });
 

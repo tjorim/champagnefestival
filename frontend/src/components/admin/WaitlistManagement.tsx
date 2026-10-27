@@ -162,7 +162,12 @@ export default function WaitlistManagement({
           id: "product",
           label: m.admin_waitlist_filter_product(),
           options: (scopes.data?.products ?? [])
-            .filter((scope) => !state.filters.event || scope.eventId === state.filters.event)
+            .filter(
+              (scope) =>
+                !state.filters.event ||
+                scope.eventId === state.filters.event ||
+                scope.id === state.filters.product,
+            )
             .map((scope) => ({
               value: scope.id,
               label: `${scope.label} (${scopeCount(scope, status)})`,

@@ -147,6 +147,10 @@ submission and ignores submit events while saving; this prevents overlapping
 browser submissions, but does not make creates idempotent. Create and merged
 updates validate complete locale pairs and push payload size before persisting.
 
+Update takes the same row lock as scheduling before it checks the `draft` state, so an
+edit cannot commit over a message that was just scheduled; it is then refused with `409`.
+This changes no retry behaviour.
+
 Scheduling revalidates content before changing state or enqueueing a job.
 The admin UI displays scheduling failures and does not automatically retry.
 

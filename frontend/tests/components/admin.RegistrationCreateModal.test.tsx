@@ -344,6 +344,39 @@ describe("RegistrationCreateModal", () => {
     );
   });
 
+  it("lets Enter activate a duplicate's Use button instead of creating a person", async () => {
+    useEvents([ticket]);
+    usePeople([alice]);
+    let posted = 0;
+    server.use(
+      http.post("/api/people", () => {
+        posted += 1;
+        return HttpResponse.json({}, { status: 201 });
+      }),
+    );
+    renderModal();
+    await chooseEvent();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "admin_registration_person_add_generic" }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /registration_email/ }),
+      "ALICE@example.com",
+    );
+    (
+      await screen.findByRole("button", {
+        name: /admin_registration_use_person\(\{"name":"Alice Janssens"\}\)/,
+      })
+    ).focus();
+    await userEvent.keyboard("{Enter}");
+
+    expect(await screen.findByRole("combobox", { name: "admin_person_label" })).toHaveValue(
+      "Alice Janssens",
+    );
+    expect(posted).toBe(0);
+  });
+
   it("keeps the draft after a failed create and retries with the same idempotency key", async () => {
     useEvents([ticket]);
     usePeople([alice]);

@@ -145,8 +145,8 @@ async def list_messages(db: AsyncSession) -> list[dict]:
     return [await to_dict(db, item) for item in result.scalars()]
 
 
-async def get_message(db: AsyncSession, message_id: str) -> ComposedMessage:
-    item = await db.get(ComposedMessage, message_id)
+async def get_message(db: AsyncSession, message_id: str, *, for_update: bool = False) -> ComposedMessage:
+    item = await db.get(ComposedMessage, message_id, with_for_update=for_update or None)
     if item is None:
         raise NotFoundError(f"Composed message '{message_id}' not found.")
     return item
@@ -173,7 +173,8 @@ async def create_draft(db: AsyncSession, *, actor: str, body: ComposedMessageCre
 async def update_draft(
     db: AsyncSession, *, actor: str, message_id: str, body: ComposedMessageUpdate, request_id: str | None
 ) -> dict:
-    item = await get_message(db, message_id)
+    # Same row lock as schedule_send, so an edit cannot commit over a message that was just scheduled.
+    item = await get_message(db, message_id, for_update=True)
     if item.state != "draft":
         raise ConflictError(f"Composed message '{message_id}' is no longer a draft; it cannot be edited.")
     fields_set = body.model_fields_set

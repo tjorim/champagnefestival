@@ -384,6 +384,7 @@ export default function EditionCard({
           edition={edition}
           initial={editingEvent}
           authHeaders={authHeaders}
+          saving={saveEventMutation.isPending}
           onSave={handleEventSaved}
           onHide={() => setEventModalOpen(false)}
         />

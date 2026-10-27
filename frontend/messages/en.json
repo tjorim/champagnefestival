@@ -519,6 +519,7 @@
   "admin_registration_event_required": "Choose an event.",
   "admin_registration_person_required": "Choose a person, or add a new one.",
   "admin_registration_guests_invalid": "Enter between 1 and 20 guests.",
+  "admin_registration_quantity_invalid": "Enter a whole number between 0 and 1000.",
   "admin_registration_fix_before_create": "Complete the marked fields before creating the booking.",
   "admin_registration_products_heading": "Products",
   "admin_registration_products_none": "This event has no products to order, so the booking has no total.",

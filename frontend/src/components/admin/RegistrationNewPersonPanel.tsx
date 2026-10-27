@@ -111,7 +111,8 @@ export default function RegistrationNewPersonPanel({
 
   // This panel sits inside the booking form; Enter must add the person, not submit the booking.
   const submitOnEnter = (event: KeyboardEvent) => {
-    if (event.key !== "Enter") return;
+    // Buttons, selects and the duplicate "Use" actions keep their own Enter behaviour.
+    if (event.key !== "Enter" || !(event.target instanceof HTMLInputElement)) return;
     event.preventDefault();
     submit();
   };

@@ -59,6 +59,7 @@ interface EventModalProps {
   edition: Edition;
   initial: Event | null;
   authHeaders: () => Record<string, string>;
+  saving?: boolean;
   onSave: (formData: EventFormData) => void;
   onHide: () => void;
 }
@@ -89,6 +90,7 @@ export default function EventModal({
   edition,
   initial,
   authHeaders,
+  saving,
   onSave,
   onHide,
 }: EventModalProps) {
@@ -199,6 +201,7 @@ export default function EventModal({
   const values = useSelector(form.atom, (s) => s.values);
   const { requestClose, confirmDialog } = useDirtyDismiss({
     dirty: isDraftDirty(values, defaultValues),
+    busy: saving,
     onDismiss: onHide,
   });
 

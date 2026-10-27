@@ -262,3 +262,28 @@ describe.each(cases)("$name dismissal", ({ modal, field, typed, pristine }) => {
     expect(screen.getByRole("dialog")).toBeTruthy();
   });
 });
+
+describe("dismissal while saving", () => {
+  it("keeps a dirty editor open without asking while its save is pending", async () => {
+    const user = userEvent.setup();
+    const onHide = vi.fn();
+    render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <ItemModal
+          show
+          initial={null}
+          authHeaders={authHeaders}
+          saving
+          onSave={noop}
+          onHide={onHide}
+        />
+      </QueryClientProvider>,
+    );
+    await user.type(await screen.findByLabelText("admin_content_name_placeholder"), "Draft item");
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByText("admin_editor_discard_title")).toBeNull();
+    expect(onHide).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+});

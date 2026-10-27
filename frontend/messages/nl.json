@@ -519,6 +519,7 @@
   "admin_registration_event_required": "Kies een evenement.",
   "admin_registration_person_required": "Kies een persoon of voeg een nieuwe toe.",
   "admin_registration_guests_invalid": "Geef een aantal gasten van 1 tot 20 op.",
+  "admin_registration_quantity_invalid": "Geef een geheel getal van 0 tot 1000 op.",
   "admin_registration_fix_before_create": "Vul de gemarkeerde velden in voordat je de boeking aanmaakt.",
   "admin_registration_products_heading": "Producten",
   "admin_registration_products_none": "Voor dit evenement zijn er geen producten om te bestellen, dus de boeking heeft geen totaal.",

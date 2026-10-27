@@ -258,7 +258,7 @@ export default function RegistrationCreateModal({
           products: productState.required.map((product) => product.name).join(", "),
         })
       : Object.values(quantities).some((quantity) => !isValidQuantity(quantity))
-        ? m.admin_registration_guests_invalid()
+        ? m.admin_registration_quantity_invalid()
         : undefined,
     exempt:
       productState.exempt && !exemptConfirmed ? m.admin_registration_exempt_required() : undefined,

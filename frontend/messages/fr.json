@@ -519,6 +519,7 @@
   "admin_registration_event_required": "Choisissez un événement.",
   "admin_registration_person_required": "Choisissez une personne ou ajoutez-en une nouvelle.",
   "admin_registration_guests_invalid": "Indiquez entre 1 et 20 invités.",
+  "admin_registration_quantity_invalid": "Indiquez un nombre entier entre 0 et 1000.",
   "admin_registration_fix_before_create": "Complétez les champs marqués avant de créer la réservation.",
   "admin_registration_products_heading": "Produits",
   "admin_registration_products_none": "Cet événement n’a aucun produit à commander ; la réservation n’a donc pas de total.",
