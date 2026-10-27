@@ -1011,3 +1011,14 @@ none of these writes automatically (`retry: false`) and reports success only aft
   (merge stays not retry safe).
 - **Removed write field:** `PersonUpdate` (REST and MCP) no longer accepts `marketing_opt_in`; an
   old client sending it gets a 422. Opt-outs go through the endpoint above.
+
+## Deferred OIDC runtime (#1417)
+
+The public auth facade loads the OIDC runtime before forwarding sign-in,
+sign-out or silent-renewal requests. Each invocation is forwarded once; loading
+failure rejects it without replaying it. A later, user-initiated invocation
+retries the failed import and is then forwarded once; the earlier rejected call
+is never replayed. Existing redirect/session operations
+remain **not automatically retry safe**: no write retry, token revocation retry
+or visitor-session sign-out retry was added. Sign-out still requires successful
+visitor-session revocation before wiping caches and starting the IdP redirect.

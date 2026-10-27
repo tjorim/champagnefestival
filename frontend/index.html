@@ -54,8 +54,8 @@
     />
 
     <!-- Language alternates for SEO -->
-    <link rel="alternate" hreflang="en" href="%VITE_PUBLIC_URL%?lng=en" />
-    <link rel="alternate" hreflang="fr" href="%VITE_PUBLIC_URL%?lng=fr" />
+    <link rel="alternate" hreflang="en" href="%VITE_PUBLIC_URL%/en" />
+    <link rel="alternate" hreflang="fr" href="%VITE_PUBLIC_URL%/fr" />
     <link rel="alternate" hreflang="nl" href="%VITE_PUBLIC_URL%" />
     <link rel="alternate" hreflang="x-default" href="%VITE_PUBLIC_URL%" />
     <link rel="canonical" href="%VITE_PUBLIC_URL%" />
@@ -67,6 +67,19 @@
       comment. See docs/decisions/992-live-public-render.md decision 1.
     -->
     <!--ssr:head-->
+
+    <!--
+      Hide the disposable server fragment until the JavaScript app replaces it.
+      data-app-pending is set by the bootstrap below and cleared on mount (main.tsx)
+      or when the bundle fails to load, so the readable fragment is never lost.
+    -->
+    <style>
+      @layer components {
+        html[data-app-pending] .site-server-content {
+          display: none;
+        }
+      }
+    </style>
 
     <script>
       (() => {
@@ -83,6 +96,20 @@
           if (VARIANTS.includes(stored)) visualTheme = stored;
         } catch {}
         document.documentElement.dataset.visualTheme = visualTheme;
+
+        // Hides the server fragment until React replaces it. If the application never mounts
+        // (a script fails to load, or it stalls), restore the fragment instead of a blank page.
+        const root = document.documentElement;
+        root.dataset.appPending = "";
+        const restoreFragment = () => root.removeAttribute("data-app-pending");
+        window.addEventListener(
+          "error",
+          (event) => {
+            if (event.target instanceof HTMLScriptElement) restoreFragment();
+          },
+          true,
+        );
+        window.setTimeout(restoreFragment, 8000);
 
         // The theme stylesheet is attached by main.tsx once the bundle has run; fetching it now
         // takes that round trip off the first paint. Keep the path in step with useVisualTheme.ts.

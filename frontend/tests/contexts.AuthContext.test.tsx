@@ -46,7 +46,7 @@ describe("AuthProvider", () => {
   it("shows the same provider error again after the provider clears and re-emits it", () => {
     mockOidcError(new Error("Keycloak is unavailable."));
     const { rerender } = renderWithProviders(
-      <AuthProvider>
+      <AuthProvider oidcAuth={useOidcAuth()}>
         <AuthErrorConsumer />
       </AuthProvider>,
     );
@@ -59,7 +59,7 @@ describe("AuthProvider", () => {
 
     mockOidcError(null);
     rerender(
-      <AuthProvider>
+      <AuthProvider oidcAuth={useOidcAuth()}>
         <AuthErrorConsumer />
       </AuthProvider>,
     );
@@ -68,7 +68,7 @@ describe("AuthProvider", () => {
 
     mockOidcError(new Error("Keycloak is unavailable."));
     rerender(
-      <AuthProvider>
+      <AuthProvider oidcAuth={useOidcAuth()}>
         <AuthErrorConsumer />
       </AuthProvider>,
     );
@@ -104,7 +104,7 @@ describe("AuthProvider", () => {
       }
 
       renderWithProviders(
-        <AuthProvider>
+        <AuthProvider oidcAuth={useOidcAuth()}>
           <RenewConsumer />
         </AuthProvider>,
       );

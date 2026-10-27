@@ -21,16 +21,14 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import React, { lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
-import { Link, RouterProvider } from "@tanstack/react-router";
-import { AuthProvider as OidcAuthProvider } from "react-oidc-context";
+import { RouterProvider } from "@tanstack/react-router";
 
-import "./config/localeQuery";
+import { localizedPublicPath } from "./config/localePath";
 import "./styles/tailwind.css";
 import { Alert } from "@/components/ui/alert";
 import { Spinner } from "@/components/ui/spinner";
 
-import { createOidcConfig } from "./config/oidc";
-import { AuthProvider } from "./contexts/AuthContext";
+import { LazyAuthProvider } from "./contexts/LazyAuthProvider";
 
 import Footer from "./components/Footer";
 import Header from "./components/Header";
@@ -54,7 +52,6 @@ import AnnouncementBanner from "./components/AnnouncementBanner";
 
 import LanguageSwitcher from "./components/LanguageSwitcher";
 import MaintenancePage from "./components/MaintenancePage";
-import { useLanguage } from "./hooks/useLanguage";
 import { useMaintenanceMode } from "./hooks/useMaintenanceMode";
 import { useNoIndex } from "./hooks/useNoIndex";
 import { initializeVisualTheme, useVisualTheme } from "./hooks/useVisualTheme";
@@ -135,7 +132,11 @@ function StandaloneNavBar({ icon, title }: { icon: LucideIcon; title: string }) 
         </span>
         <div className="standalone-navbar-actions flex shrink-0 gap-2 items-center">
           <LanguageSwitcher />
-          <ButtonLink render={<Link to="/" />} variant="outline" size="sm">
+          <ButtonLink
+            render={<a href={localizedPublicPath("/", getLocale())} />}
+            variant="outline"
+            size="sm"
+          >
             <Icon icon={ArrowLeftIcon} />
             {/* Icon-only on phones so the title keeps its room; the text stays the accessible name. */}
             <span className="sr-only site-sm:not-sr-only">{m.back_to_site()}</span>
@@ -329,8 +330,6 @@ function EmailConsentRoute() {
 }
 
 function App() {
-  // Use custom hooks for language
-  useLanguage();
   const { variant, setVariant } = useVisualTheme();
   const { isMaintenanceMode } = useMaintenanceMode();
 
@@ -983,10 +982,6 @@ const router = createAppRouter({
   queryClient,
 });
 
-const oidcConfig = createOidcConfig({
-  navigateTo: (to) => router.navigate({ to }),
-});
-
 declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
@@ -1019,16 +1014,30 @@ function registerServiceWorker(): void {
   }
 }
 
+/** Lets the pre-mount stylesheet in index.html stop hiding the server fragment React replaced. */
+function MarkAppMounted() {
+  useEffect(() => {
+    document.documentElement.removeAttribute("data-app-pending");
+  }, []);
+  return null;
+}
+
 function renderApp(): void {
   ReactDOM.createRoot(rootElement!).render(
     <React.StrictMode>
-      <OidcAuthProvider {...oidcConfig}>
-        <QueryClientProvider client={queryClient}>
-          <AuthProvider>
-            <RouterProvider router={router} />
-          </AuthProvider>
-        </QueryClientProvider>
-      </OidcAuthProvider>
+      <MarkAppMounted />
+      <QueryClientProvider client={queryClient}>
+        <LazyAuthProvider
+          navigateTo={(to) => router.navigate({ to })}
+          subscribe={(onNavigate) =>
+            router.subscribe("onBeforeNavigate", ({ toLocation }) =>
+              onNavigate(toLocation.pathname),
+            )
+          }
+        >
+          <RouterProvider router={router} />
+        </LazyAuthProvider>
+      </QueryClientProvider>
     </React.StrictMode>,
   );
 }

@@ -28,7 +28,7 @@ export default defineConfig(({ command, mode, isPreview }) => {
       paraglideVitePlugin({
         project: "./project.inlang",
         outdir: "./src/paraglide",
-        strategy: ["custom-queryParam", "localStorage", "preferredLanguage", "baseLocale"],
+        strategy: ["custom-localePath", "localStorage", "preferredLanguage", "baseLocale"],
       }),
       reactPlugin(),
       // Serves /mockServiceWorker.js from the msw package in dev. Nothing imports `virtual:msw`,
@@ -44,6 +44,12 @@ export default defineConfig(({ command, mode, isPreview }) => {
           // Keep the framework cache boundary stable when dependency sharing changes.
           codeSplitting: {
             groups: [
+              {
+                name: "oidc-vendor",
+                // Keep shared React dependencies in their own eager chunk.
+                includeDependenciesRecursively: false,
+                test: /[/\\]node_modules[/\\](oidc-client-ts|react-oidc-context)[/\\]/,
+              },
               {
                 name: "react-vendor",
                 test: /[/\\]node_modules[/\\](react|react-dom|scheduler)[/\\]/,

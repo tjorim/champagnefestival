@@ -58,3 +58,15 @@ test("moving code out of the entry cannot bypass the eager budget", () => {
     ["eager"],
   );
 });
+
+test("OIDC is allowed behind a dynamic import but never an eager dependency", async (t) => {
+  const f = await fixture(t);
+  f.manifest.oidc = { file: "assets/oidc-vendor-test.js" };
+  await writeFile(join(f.root, "assets/oidc-vendor-test.js"), "runtime");
+  f.manifest["index.html"].dynamicImports.push("oidc");
+  await f.save();
+  await measureBundle(f.root);
+  f.manifest.shared.imports.push("oidc");
+  await f.save();
+  await assert.rejects(measureBundle(f.root), /OIDC runtime must not/);
+});

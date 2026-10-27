@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useNavigationItems } from "@/hooks/useNavigationItems";
+import { getLocale } from "@/paraglide/runtime";
+import { localizedPublicPath } from "@/config/localePath";
 import { m } from "@/paraglide/messages";
 
 const Footer = () => {
@@ -26,9 +28,12 @@ const Footer = () => {
             </p>
           </div>
           <div className="site-md:w-6/12 flex flex-wrap items-baseline justify-center gap-x-4 gap-y-1 site-md:justify-end">
-            <Link to="/privacy" className="text-inverse no-underline footer-link">
+            <a
+              href={localizedPublicPath("/privacy", getLocale())}
+              className="text-inverse no-underline footer-link"
+            >
               {m.footer_privacy()}
-            </Link>
+            </a>
             {/* Staff entry point: a plain small footer link rather than a header button. */}
             <Link to="/admin" className="text-inverse text-sm no-underline footer-link">
               {m.admin_title()}

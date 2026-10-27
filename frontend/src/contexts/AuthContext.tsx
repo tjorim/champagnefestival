@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { createContext, useCallback, useContext, useMemo, useState, useEffect } from "react";
-import { useAuth as useOidcAuth } from "react-oidc-context";
+import type { AuthContextProps } from "react-oidc-context";
 import { useQueryClient } from "@tanstack/react-query";
 import { adminCachePersistence, ADMIN_CACHE_WIPE_SIGNAL } from "@/state/adminCachePersistence";
 import { OIDC_USER_STORAGE_KEY } from "@/config/oidc";
@@ -115,10 +115,10 @@ export function useAuth(): AuthContextType {
 
 interface AuthProviderProps {
   children: ReactNode;
+  oidcAuth: AuthContextProps;
 }
 
-export function AuthProvider({ children }: AuthProviderProps) {
-  const oidcAuth = useOidcAuth();
+export function AuthProvider({ children, oidcAuth }: AuthProviderProps) {
   const queryClient = useQueryClient();
   const cache = useMemo(() => adminCachePersistence(queryClient), [queryClient]);
   const [cacheOwnerReady, setCacheOwnerReady] = useState<string | null | undefined>(undefined);

@@ -9,6 +9,8 @@ import {
   lazyRouteComponent,
 } from "@tanstack/react-router";
 
+import { useLanguage } from "./hooks/useLanguage";
+
 import { validateAdminSearch } from "./utils/adminTableState";
 
 import { getStoredAccessToken } from "./config/oidc";
@@ -76,6 +78,10 @@ export function createAppRouter({
 }: AppRouteComponents & { queryClient: QueryClient }) {
   const rootRoute = createRootRouteWithContext<RouterContext>()({
     notFoundComponent: App,
+    component: function RootDocument() {
+      useLanguage();
+      return <Outlet />;
+    },
   });
 
   const indexRoute = createRoute({
@@ -183,6 +189,20 @@ export function createAppRouter({
       path: "/signage/$channel",
       component: lazyRouteComponent(() => import("./signage/SignagePage")),
     }),
+    ...(["/en", "/fr"] as const).map((path) =>
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path,
+        component: App,
+      }),
+    ),
+    ...(["/en/privacy", "/fr/privacy"] as const).map((path) =>
+      createRoute({
+        getParentRoute: () => rootRoute,
+        path,
+        component: PrivacyPolicyRoute,
+      }),
+    ),
     indexRoute,
     adminLayoutRoute.addChildren([adminRoute, checkInRoute, venuePlanRoute]),
     privacyPolicyRoute,

@@ -9,7 +9,7 @@ export default defineConfig({
     paraglideVitePlugin({
       project: "./project.inlang",
       outdir: "./src/paraglide",
-      strategy: ["custom-queryParam", "localStorage", "preferredLanguage", "baseLocale"],
+      strategy: ["custom-localePath", "localStorage", "preferredLanguage", "baseLocale"],
     }) as any,
     reactPlugin(),
   ],

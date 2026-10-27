@@ -18,6 +18,7 @@ import html
 import json
 import re
 from collections.abc import Mapping
+from urllib.parse import urlsplit
 
 from app.services.frontend_i18n_snippets import FAQ_TITLE, SCHEDULE_TITLE, Locale
 
@@ -91,6 +92,18 @@ def rewrite_head_meta(
         html_out = _rewrite_meta_content(html_out, attr="property", value="og:image", content=image)
         html_out = _rewrite_meta_content(html_out, attr="name", value="twitter:image", content=image)
     html_out = _rewrite_link_href(html_out, rel="canonical", href=url)
+    # Alternates must follow the current document (including privacy), not the shell's homepage.
+    parsed = urlsplit(url)
+    path = parsed.path
+    if path.split("/")[1:2] in (["en"], ["fr"]):
+        path = path[3:]
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    html_out = re.sub(r'<link\b(?=[^>]*\brel=["\']alternate["\'])(?=[^>]*\bhreflang=)[^>]*>', "", html_out)
+    alternates = "".join(
+        f'<link rel="alternate" hreflang="{language}" href="{html.escape(base + prefix + path, quote=True)}">'
+        for language, prefix in (("nl", ""), ("en", "/en"), ("fr", "/fr"), ("x-default", ""))
+    )
+    html_out = html_out.replace("</head>", alternates + "</head>")
     html_out = _rewrite_html_lang(html_out, locale)
     return html_out
 
@@ -120,15 +133,15 @@ def render_schedule_section(events: list[dict], *, locale: Locale) -> str:
 
 def render_home_content(*, faq_items: list[dict], events: list[dict], locale: Locale) -> str:
     """Fragment for `/`'s `<!--ssr:content-->` slot: crawler-visible FAQ and
-    schedule text, given just enough inline layout to read well before the
-    SPA mounts.
+    schedule text, visible without JavaScript, with a readable inline layout. The shell
+    hides this wrapper before first paint when its theme bootstrap runs.
     Replaced wholesale when React mounts (`createRoot`, not `hydrateRoot` —
     see decision 4: no hydration-mismatch failure mode to design around, so
     this doesn't try to pixel-match the client render). The JSON-LD script
     is a separate fragment (`json_ld_script`) injected into `<!--ssr:head-->`
     instead — see `app.routers.public_pages`."""
     return (
-        f'<div style="{_CONTENT_WRAPPER_STYLE}">'
+        f'<div class="site-server-content" style="{_CONTENT_WRAPPER_STYLE}">'
         + render_schedule_section(events, locale=locale)
         + render_faq_section(faq_items, locale=locale)
         + "</div>"
@@ -141,7 +154,7 @@ def render_privacy_content(*, title: str, html_body: str) -> str:
     — the single renderer/sanitizer pair #944 established, reused rather than
     a second one (see decision 1's "Escaping is the part worth being
     deliberate about" section)."""
-    return f'<div style="{_CONTENT_WRAPPER_STYLE}"><h1>{_text(title)}</h1>{html_body}</div>'
+    return f'<div class="site-server-content" style="{_CONTENT_WRAPPER_STYLE}"><h1>{_text(title)}</h1>{html_body}</div>'
 
 
 __all__ = [

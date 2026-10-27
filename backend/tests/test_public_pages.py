@@ -99,6 +99,7 @@ async def test_home_page_renders_faq_and_schedule_and_json_ld(client):
     assert "Vrijdagavond" in r.text
     assert "Wat is dit?" in r.text
     assert "Een champagnefestival." in r.text
+    assert '<div class="site-server-content" style="' in r.text
     assert 'data-ssr-jsonld="true"' in r.text
     assert '"@type":"Event"' in r.text
     assert 'rel="preload" as="image" href="/images/champagne-hero.webp"' in r.text
@@ -159,7 +160,7 @@ async def test_home_page_escapes_admin_authored_faq_content(client):
     assert "<img src=x" not in page.text
 
 
-async def test_home_page_respects_locale_query_param(client):
+async def test_home_page_respects_locale_path(client):
     faq = await client.post(
         "/api/faq",
         json={
@@ -175,14 +176,14 @@ async def test_home_page_respects_locale_query_param(client):
     )
     assert faq.status_code == 201
 
-    r = await client.get("/?lng=en")
+    r = await client.get("/en")
     assert r.status_code == 200
     assert 'html lang="en"' in r.text
     assert "EN question" in r.text
     assert "NL vraag" not in r.text
     assert 'content="A celebration of fine champagne and community"' in r.text
 
-    r_fr = await client.get("/?lng=fr")
+    r_fr = await client.get("/fr")
     assert r_fr.status_code == 200
     assert 'html lang="fr"' in r_fr.text
     assert "FR question" in r_fr.text
@@ -211,6 +212,7 @@ async def test_privacy_page_renders_published_markdown_content(client, db_sessio
     assert "<h2>Titel</h2>" in r_privacy.text
     assert "<strong>bold</strong>" in r_privacy.text
     assert "Privacybeleid" in r_privacy.text
+    assert '<div class="site-server-content" style="' in r_privacy.text
     assert 'href="https://champagnefestival.tjor.im/privacy"' in r_privacy.text
     # Unrelated route's own render is unaffected.
     assert r.status_code == 200
@@ -226,7 +228,7 @@ async def test_privacy_page_falls_back_to_the_original_language(client, db_sessi
     published.content_fr = None
     await db_session.commit()
 
-    r = await client.get("/privacy", params={"lng": "fr"})
+    r = await client.get("/fr/privacy")
     assert r.status_code == 200
     assert "<h2>Titel</h2>" in r.text
     assert 'html lang="nl"' in r.text  # the page says which language its content is in
@@ -298,3 +300,25 @@ async def test_home_page_serves_last_known_good_render_on_a_database_failure(cli
     second = await client.get("/")
     assert second.status_code == 200
     assert second.text == first.text
+
+
+@pytest.mark.parametrize("locale,prefix", [("nl", ""), ("en", "/en"), ("fr", "/fr")])
+async def test_localized_documents_metadata(client, db_session, locale, prefix):
+    await _seed_policy(db_session)
+    await _publish_policy(client)
+    for suffix in ("", "/privacy"):
+        response = await client.get((prefix + suffix) or "/")
+        assert response.status_code == 200
+        assert f'html lang="{locale}"' in response.text
+        url = settings.public_url + prefix + suffix
+        assert f'rel="canonical" href="{url}"' in response.text
+        assert f'property="og:url" content="{url}"' in response.text
+        for language, alternate_prefix in (("nl", ""), ("en", "/en"), ("fr", "/fr"), ("x-default", "")):
+            assert f'hreflang="{language}" href="{settings.public_url}{alternate_prefix}{suffix}"' in response.text
+
+
+async def test_query_locale_no_longer_selects_language(client):
+    response = await client.get("/?lng=en")
+    assert 'html lang="nl"' in response.text
+    response = await client.get("/fr?lng=en")
+    assert 'html lang="fr"' in response.text

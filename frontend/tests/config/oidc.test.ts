@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createOidcConfig } from "../../src/config/oidc";
+import { createOidcConfig } from "../../src/config/oidcRuntime";
 
 type SigninUser = Parameters<
   NonNullable<ReturnType<typeof createOidcConfig>["onSigninCallback"]>

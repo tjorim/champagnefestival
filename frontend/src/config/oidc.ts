@@ -9,20 +9,17 @@
  *   VITE_OIDC_SCOPE                — Requested OAuth scopes (default: openid profile email)
  */
 
-import type { AuthProviderProps } from "react-oidc-context";
-import { WebStorageStateStore } from "oidc-client-ts";
-
-const OIDC_AUTHORITY =
+export const OIDC_AUTHORITY =
   import.meta.env.VITE_OIDC_AUTHORITY ?? "http://localhost:9000/application/o/champagnefestival";
-const OIDC_CLIENT_ID = import.meta.env.VITE_OIDC_CLIENT_ID ?? "champagnefestival";
-const OIDC_REDIRECT_URI =
+export const OIDC_CLIENT_ID = import.meta.env.VITE_OIDC_CLIENT_ID ?? "champagnefestival";
+export const OIDC_REDIRECT_URI =
   import.meta.env.VITE_OIDC_REDIRECT_URI ?? `${window.location.origin}/admin`;
-const OIDC_SILENT_REDIRECT_URI =
+export const OIDC_SILENT_REDIRECT_URI =
   import.meta.env.VITE_OIDC_SILENT_REDIRECT_URI ?? `${window.location.origin}/admin`;
 export const OIDC_USER_STORAGE_KEY = `oidc.user:${OIDC_AUTHORITY}:${OIDC_CLIENT_ID}`;
-const OIDC_SCOPE = import.meta.env.VITE_OIDC_SCOPE ?? "openid profile email";
+export const OIDC_SCOPE = import.meta.env.VITE_OIDC_SCOPE ?? "openid profile email";
 
-interface OidcConfigOptions {
+export interface OidcConfigOptions {
   navigateTo: (to: string) => void | Promise<void>;
 }
 
@@ -55,26 +52,4 @@ export function resolvePostSigninReturnTo(state: unknown): string {
   return typeof returnTo === "string" && returnTo.startsWith("/") && !returnTo.startsWith("//")
     ? returnTo
     : "/admin";
-}
-
-export function createOidcConfig({ navigateTo }: OidcConfigOptions): AuthProviderProps {
-  return {
-    authority: OIDC_AUTHORITY,
-    client_id: OIDC_CLIENT_ID,
-    redirect_uri: OIDC_REDIRECT_URI,
-    scope: OIDC_SCOPE,
-    post_logout_redirect_uri: window.location.origin,
-    silent_redirect_uri: OIDC_SILENT_REDIRECT_URI,
-    automaticSilentRenew: true,
-    monitorSession: true,
-    revokeTokensOnSignout: true,
-    // sessionStorage is thrown away on tab close, forcing a re-login even
-    // though the still-valid Keycloak session (and refresh token behind it)
-    // would otherwise let the app resume silently. See tjorim/worktime#1228
-    // and tjorim/daynest#805 for the same fix.
-    userStore: new WebStorageStateStore({ store: window.localStorage }),
-    onSigninCallback: (user) => {
-      return navigateTo(resolvePostSigninReturnTo(user?.state));
-    },
-  };
 }
