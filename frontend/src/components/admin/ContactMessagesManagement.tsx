@@ -32,7 +32,7 @@ const mapMessage = (item: Record<string, unknown>): ContactMessage => ({
 
 const columnHelper = createAppColumnHelper<ContactMessage>();
 
-const filters: AdminTableFilter[] = [
+const contactMessageFilters = (): AdminTableFilter[] => [
   {
     id: "status",
     label: m.admin_status_label(),
@@ -73,7 +73,7 @@ export default function ContactMessagesManagement({
           ),
         placeholderData: keepPreviousData,
       });
-      return { ...page, filters };
+      return { ...page, filters: contactMessageFilters() };
     },
     [authHeaders],
   );

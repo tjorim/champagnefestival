@@ -97,12 +97,12 @@ test("creates a layered template, validates bindings and preserves edits through
   await page.keyboard.press("Escape");
   const discard = page.getByRole("alertdialog", { name: "Discard changes?", exact: true });
   await expect(discard).toBeVisible();
-  await discard.getByRole("button", { name: "Cancel", exact: true }).click();
+  await discard.getByRole("button", { name: "Keep editing", exact: true }).click();
   await expect(page.getByLabel("Name", { exact: true }).first()).toHaveValue(
     "Unsaved template name",
   );
   await page.getByRole("button", { name: "Cancel", exact: true }).click();
-  await discard.getByRole("button", { name: "Discard", exact: true }).click();
+  await discard.getByRole("button", { name: "Discard changes", exact: true }).click();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.getByRole("button", { name: "Edit Festival template", exact: true }).click();
   await expect(page.getByLabel("Name", { exact: true }).first()).toHaveValue("Festival template");

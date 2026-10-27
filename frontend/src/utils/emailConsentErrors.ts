@@ -19,6 +19,8 @@ const EMAIL_CONSENT_ERRORS: Record<string, () => string> = {
   email_audience_changed: () => m.api_error_email_audience_changed(),
   email_audience_confirmation_required: () => m.api_error_email_audience_confirmation_required(),
   email_category_automatic: () => m.api_error_email_category_automatic(),
+  // Reviewed composed message (#1432).
+  composed_message_changed: () => m.api_error_composed_message_changed(),
   unsubscribe_token_invalid: () => m.api_error_unsubscribe_token_invalid(),
 };
 

@@ -13,6 +13,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Fixed
 
+- The cascade layer order is declared before the first `@layer components` rule in `index.html`. The inline style that hides the server fragment mentioned `components` first, which put the runtime themes below Tailwind's preflight: the fixed header covered the top of the page, and theme headings and spacing were reset. The mobile sort controls of admin tables are exposed as a labelled group.
 - The count badge on the active admin sidebar item (for example the number of registrations) was unreadable (contrast 1.1:1: dark text on a dark badge); it now uses the foreground colour.
 - The floor-plan editor no longer colours the room name with the room's saved colour, which fell below contrast on the dark admin background for many colours (a default grey measured 3.5:1); the colour is now a swatch beside the name.
 - A table that scrolls sideways (the audit log at desktop width) is reachable by keyboard: the scroll container takes a tab stop only while it overflows.
@@ -25,6 +26,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Changed
 
+- The composed-message send confirmation (Announcements → Compose & send) names the channels in the interface language, shows the saved title and text per language (and which language falls back to Dutch), the link, and only the audience of the selected channels (Web Push subscribers, email category and recipients; none for an in-app only message). It states that the message sends immediately, ends with a specific final button (**Publish announcement** or **Send now**) and a **Keep as draft** cancel. The send request carries `expected_updated_at`, so a draft saved after it was reviewed is refused (`composed_message_changed`); an email draft is blocked, with the reason, while member mail is not set up (#1432).
 - Public English and French home and privacy pages use `/en` and `/fr` paths, with matching canonical URLs, language alternates and sitemap entries. Switching language preserves the hash. Query-string language selection has been removed (#1418; deploy apps#296 routing first).
 - The Refresh hero offers **Register now** as its primary action while registration is open, repeats the dates and venue, and shows the opening date when it is not. On phones the hero is shorter and its secondary button stays readable over the photo.
 - Inter and Fraunces are served from `/fonts` instead of Google Fonts, so no visitor address is sent to a third party and the first render no longer waits on one; Inter's main file is preloaded.

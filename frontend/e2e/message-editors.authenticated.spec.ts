@@ -85,10 +85,10 @@ for (const kind of ["announcements", "composer"] as const) {
       await page.keyboard.press("Escape");
       const discard = page.getByRole("alertdialog", { name: "Discard changes?", exact: true });
       await expect(discard).toBeVisible();
-      await discard.getByRole("button", { name: "Cancel", exact: true }).click();
+      await discard.getByRole("button", { name: "Keep editing", exact: true }).click();
       await expect(field).toHaveValue("Unsaved change");
       await editing.getByRole("button", { name: "Close", exact: true }).click();
-      await discard.getByRole("button", { name: "Discard", exact: true }).click();
+      await discard.getByRole("button", { name: "Discard changes", exact: true }).click();
       await expect(editing).toHaveCount(0);
       await expect(row.getByRole("button", { name: "Edit", exact: true })).toBeFocused();
       await row.getByRole("button", { name: "Edit", exact: true }).click();
@@ -127,7 +127,7 @@ for (const kind of ["announcements", "composer"] as const) {
       // The viewport margin is outside the dialog at both tested widths.
       await page.mouse.click(2, 2);
       await expect(discard).toBeVisible();
-      await discard.getByRole("button", { name: "Discard", exact: true }).click();
+      await discard.getByRole("button", { name: "Discard changes", exact: true }).click();
       await expect(dialog).toHaveCount(0);
       expect(
         await page.evaluate(() =>

@@ -30,6 +30,11 @@ export const exclusions = {
     English: "language autonym",
     "×": "multiplication sign before a quantity",
   },
+  "components/admin/RegistrationNewPersonPanel.tsx": {
+    Nederlands: "language autonym",
+    Français: "language autonym",
+    English: "language autonym",
+  },
   "components/RegistrationModal.tsx": {
     Nederlands: "language autonym",
     Français: "language autonym",

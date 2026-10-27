@@ -150,6 +150,14 @@ updates validate complete locale pairs and push payload size before persisting.
 Scheduling revalidates content before changing state or enqueueing a job.
 The admin UI displays scheduling failures and does not automatically retry.
 
+The schedule request also carries `expected_updated_at` (#1432), the `updated_at`
+of the saved message the administrator reviewed in the send confirmation. Under
+the same row lock, a draft saved since then is refused with `409
+composed_message_changed` before any state change or enqueue, so the reviewed
+text is what goes out. The field is optional (the MCP schedule tool omits it),
+adds no new write, and does not change the retry strategy: the check is a
+read-only precondition, and a refused request leaves the draft untouched.
+
 Schedule/send (`POST /api/composer/{id}/schedule`) is **natural resource key,
 convergent state only**. The message's `draft -> scheduled` transition and the
 outbox enqueue happen in one transaction under the message row's own lock: a

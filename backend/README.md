@@ -414,7 +414,7 @@ failure the interface can explain carries a stable `code` next to it:
   `email_category_in_use`, `email_category_unavailable`, `verified_email_required`,
   `consent_confirmation_invalid`, and for member mail (#1407) `member_mail_unavailable`,
   `email_category_automatic`, `email_audience_confirmation_required`, `email_audience_changed`,
-  `unsubscribe_token_invalid`. Validation errors (422) and
+  `unsubscribe_token_invalid`, and for composed messages (#1432) `composed_message_changed`. Validation errors (422) and
   uncoded errors still return `detail` alone.
 
 ### Email categories and consent (#1408)
