@@ -13,6 +13,7 @@ SemVer — see "Versioning" in `AGENTS.md`. Existing SemVer entries below predat
 
 ### Fixed
 
+- The cascade layer order is declared before the first `@layer components` rule in `index.html`. The inline style that hides the server fragment mentioned `components` first, which put the runtime themes below Tailwind's preflight: the fixed header covered the top of the page, and theme headings and spacing were reset. The mobile sort controls of admin tables are exposed as a labelled group.
 - The count badge on the active admin sidebar item (for example the number of registrations) was unreadable (contrast 1.1:1: dark text on a dark badge); it now uses the foreground colour.
 - The floor-plan editor no longer colours the room name with the room's saved colour, which fell below contrast on the dark admin background for many colours (a default grey measured 3.5:1); the colour is now a swatch beside the name.
 - A table that scrolls sideways (the audit log at desktop width) is reachable by keyboard: the scroll container takes a tab stop only while it overflows.

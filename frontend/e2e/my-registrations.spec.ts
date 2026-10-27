@@ -72,9 +72,9 @@ test.describe("Guest self-service (/me)", () => {
   test("back to site link navigates home", async ({ page }) => {
     await page.goto("/me");
 
-    const backLink = page.locator('a[href="/"]');
+    const backLink = page.locator('a[href="/en"]');
     await expect(backLink).toBeVisible();
     await backLink.click();
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL("/en");
   });
 });
